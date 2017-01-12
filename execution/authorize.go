@@ -52,12 +52,14 @@ func (this *Authorize) Copy() Operator {
 
 func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(AUTHORIZE, d) }
+		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer close(this.itemChannel)                // Broadcast that I have stopped
+		defer this.notify()                          // Notify that I have stopped
 
-		timer := time.Now()
-
+		this.switchPhase(_SERVTIME)
 		ds := datastore.GetDatastore()
 		if ds != nil {
 			authenticatedUsers, err := ds.Authorize(this.plan.Privileges(), context.Credentials(), context.OriginalHttpRequest())
@@ -68,9 +70,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 			context.authenticatedUsers = authenticatedUsers
 		}
 
-		t := time.Since(timer)
-		context.AddPhaseTime(AUTHORIZE, t)
-		this.addTime(t)
+		this.switchPhase(_EXECTIME)
 
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)
@@ -79,9 +79,11 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 		go this.child.RunOnce(context, parent)
 
+		this.switchPhase(_CHANTIME)
 		for {
 			select {
 			case <-this.childChannel: // Never closed
+
 				// Wait for child
 				return
 			case <-this.stopChannel: // Never closed
@@ -100,7 +102,7 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
-	r["child"] = this.child
+	r["~child"] = this.child
 	return json.Marshal(r)
 }
 

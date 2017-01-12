@@ -45,6 +45,7 @@ func (this *SendDelete) Copy() Operator {
 }
 
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(DELETE, d) }
 	this.runConsumer(this, context, parent)
 }
 
@@ -115,13 +116,11 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		keys = append(keys, key)
 	}
 
-	timer := time.Now()
+	this.switchPhase(_SERVTIME)
 
 	deleted_keys, e := this.plan.Keyspace().Delete(keys)
 
-	t := time.Since(timer)
-	context.AddPhaseTime(DELETE, t)
-	this.addTime(t)
+	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(deleted_keys)))

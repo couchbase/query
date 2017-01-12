@@ -45,6 +45,7 @@ func (this *SendInsert) Copy() Operator {
 }
 
 func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INSERT, d) }
 	this.runConsumer(this, context, parent)
 }
 
@@ -156,15 +157,13 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	dpairs = dpairs[0:i]
 
-	timer := time.Now()
+	this.switchPhase(_SERVTIME)
 
 	// Perform the actual INSERT
 	var er errors.Error
 	dpairs, er = this.plan.Keyspace().Insert(dpairs)
 
-	t := time.Since(timer)
-	context.AddPhaseTime(INSERT, t)
-	this.addTime(t)
+	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of inserted docs
 	context.AddMutationCount(uint64(len(dpairs)))

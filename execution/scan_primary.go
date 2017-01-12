@@ -46,8 +46,9 @@ func (this *PrimaryScan) Copy() Operator {
 
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover() // Recover from any panic
 		context.AddPhaseOperator(PRIMARY_SCAN)
-		defer context.Recover()       // Recover from any panic
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(PRIMARY_SCAN, d) }
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
@@ -56,17 +57,10 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
+	this.switchPhase(_EXECTIME)
+	defer this.switchPhase(_NOTIME)
 	conn := this.newIndexConnection(context)
 	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
-
-	timer := time.Now()
-	addTime := func() {
-
-		t := time.Since(timer) - this.chanTime
-		context.AddPhaseTime(PRIMARY_SCAN, t)
-		this.addTime(t)
-	}
-	defer addTime()
 
 	go this.scanEntries(context, conn)
 
@@ -83,6 +77,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	}()
 
 	for ok {
+		this.switchPhase(_CHANTIME) // could be _SERVTIME
 		select {
 		case <-this.stopChannel:
 			return
@@ -91,6 +86,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 		select {
 		case entry, ok = <-conn.EntryChannel():
+			this.switchPhase(_EXECTIME)
 			if ok {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
@@ -127,18 +123,11 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 }
 
 func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, chunkSize int, indexEntry *datastore.IndexEntry) *datastore.IndexEntry {
+	this.switchPhase(_EXECTIME)
+	defer this.switchPhase(_NOTIME)
 	conn, _ := datastore.NewSizedIndexConnection(int64(chunkSize), context)
 	conn.SetPrimary()
 	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
-
-	timer := time.Now()
-	addTime := func() {
-
-		t := time.Since(timer) - this.chanTime
-		context.AddPhaseTime(PRIMARY_SCAN, t)
-		this.addTime(t)
-	}
-	defer addTime()
 
 	go this.scanChunk(context, conn, chunkSize, indexEntry)
 
@@ -155,6 +144,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 	}()
 
 	for ok {
+		this.switchPhase(_CHANTIME) // could be _SERVTIME
 		select {
 		case <-this.stopChannel:
 			return nil
@@ -163,6 +153,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 		select {
 		case entry, ok = <-conn.EntryChannel():
+			this.switchPhase(_EXECTIME)
 			if ok {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
@@ -202,6 +193,7 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 
 	index := this.plan.Index()
 	index_us, ok := index.(datastore.PrimaryIndexUserSensitive)
+	this.switchPhase(_SERVTIME)
 	if ok {
 		index_us.ScanEntriesForUsers(context.RequestId(), limit,
 			context.ScanConsistency(), scanVector, context.AuthenticatedUsers(), conn)
@@ -209,6 +201,7 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 		index.ScanEntries(context.RequestId(), limit,
 			context.ScanConsistency(), scanVector, conn)
 	}
+	this.switchPhase(_EXECTIME)
 }
 
 func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, chunkSize int, indexEntry *datastore.IndexEntry) {
@@ -221,8 +214,10 @@ func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnec
 	}
 	keyspace := this.plan.Keyspace()
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
+	this.switchPhase(_SERVTIME)
 	this.plan.Index().Scan(context.RequestId(), ds, true, int64(chunkSize),
 		context.ScanConsistency(), scanVector, conn)
+	this.switchPhase(_EXECTIME)
 }
 
 func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexConnection {

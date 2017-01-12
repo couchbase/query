@@ -44,10 +44,8 @@ func (this *Join) Copy() Operator {
 }
 
 func (this *Join) RunOnce(context *Context, parent value.Value) {
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(JOIN, d) }
 	this.runConsumer(this, context, parent)
-	t := this.duration - this.chanTime
-	context.AddPhaseTime(JOIN, t)
-	this.addTime(t)
 }
 
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -71,16 +69,11 @@ func (this *Join) flushBatch(context *Context) bool {
 		return true
 	}
 
-	timer := time.Now()
-
 	keyCount := _STRING_KEYCOUNT_POOL.Get()
 	pairMap := _STRING_ANNOTATED_POOL.Get()
 
 	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
 	defer _STRING_ANNOTATED_POOL.Put(pairMap)
-	defer func() {
-		this.duration += time.Since(timer)
-	}()
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 

@@ -47,6 +47,7 @@ func (this *SendUpdate) Copy() Operator {
 }
 
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(UPDATE, d) }
 	this.runConsumer(this, context, parent)
 }
 
@@ -147,13 +148,11 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 	}
 
-	timer := time.Now()
+	this.switchPhase(_SERVTIME)
 
 	pairs, e := this.plan.Keyspace().Update(pairs)
 
-	t := time.Since(timer)
-	context.AddPhaseTime(UPDATE, t)
-	this.addTime(t)
+	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of updated docs
 	context.AddMutationCount(uint64(len(pairs)))

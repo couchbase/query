@@ -60,15 +60,12 @@ func (this *Merge) Copy() Operator {
 
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
-
-		addTime := func() {
-			context.AddPhaseTime(MERGE, this.duration)
-			this.addTime(this.duration)
-		}
-		defer addTime()
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(MERGE, d) }
+		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer close(this.itemChannel)                // Broadcast that I have stopped
+		defer this.notify()                          // Notify that I have stopped
 
 		if context.Readonly() {
 			return
@@ -107,21 +104,22 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		ok := true
 	loop:
 		for ok {
+			this.switchPhase(_CHANTIME)
 			select {
 			case <-this.stopChannel: // Never closed
+				this.switchPhase(_EXECTIME)
 				break loop
 			default:
 			}
 
-			t := time.Now()
 			select {
 			case item, ok = <-this.input.ItemChannel():
-				this.chanTime += time.Since(t)
+				this.switchPhase(_EXECTIME)
 				if ok {
 					ok = this.processMatch(item, context, update, delete, insert)
 				}
 			case <-this.stopChannel: // Never closed
-				this.chanTime += time.Since(t)
+				this.switchPhase(_EXECTIME)
 				break loop
 			}
 		}
@@ -133,6 +131,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		// Wait for all children
 		n := len(this.children)
+		this.switchPhase(_CHANTIME)
 		for n > 0 {
 			select {
 			case <-this.childChannel: // Never closed
@@ -147,11 +146,8 @@ func (this *Merge) ChildChannel() StopChannel {
 }
 
 func (this *Merge) mergeSendItem(op Operator, item value.AnnotatedValue) bool {
-	t := time.Now()
-	addTime := func() {
-		this.chanTime += time.Since(t)
-	}
-	defer addTime()
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
 
 	select {
 	case <-this.stopChannel: // Never closed
@@ -183,12 +179,12 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
-	timer := time.Now()
+	this.switchPhase(_SERVTIME)
 
 	ok = true
 	bvs, errs := this.plan.Keyspace().Fetch([]string{k})
 
-	this.duration += time.Since(timer)
+	this.switchPhase(_EXECTIME)
 
 	for _, err := range errs {
 		context.Error(err)

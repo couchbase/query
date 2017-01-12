@@ -44,20 +44,16 @@ func (this *InferKeyspace) Copy() Operator {
 
 func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INFER, d) }
+		defer func() { this.switchPhase(_NOTIME) }()
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
 		conn := datastore.NewValueConnection(context)
 		defer notifyConn(conn.StopChannel())
 
-		timer := time.Now()
-		addTime := func() {
-			t := time.Since(timer) - this.chanTime
-			context.AddPhaseTime(INFER, t)
-			this.addTime(t)
-		}
-		defer addTime()
 		using := this.plan.Node().Using()
 		infer, err := context.Datastore().Inferencer(using)
 		if err != nil {
@@ -70,6 +66,7 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 
 		ok := true
 		for ok {
+			this.switchPhase(_CHANTIME) // could be _SERVTIME!
 			select {
 			case <-this.stopChannel:
 				return
@@ -78,7 +75,9 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case val, ok = <-conn.ValueChannel():
+				this.switchPhase(_EXECTIME)
 				if ok {
+					this.addInDocs(1)
 					ok = this.sendItem(value.NewAnnotatedValue(val))
 				}
 			case <-this.stopChannel:

@@ -50,11 +50,8 @@ func (this *IndexJoin) Copy() Operator {
 }
 
 func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
-	start := time.Now()
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_JOIN, d) }
 	this.runConsumer(this, context, parent)
-	t := time.Since(start) - this.joinTime - this.chanTime
-	context.AddPhaseTime(INDEX_JOIN, t)
-	this.addTime(t)
 }
 
 func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) bool {

@@ -56,6 +56,7 @@ func (this *Order) Copy() Operator {
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(SORT, d) }
 	context.AddPhaseOperator(SORT)
 	this.runConsumer(this, context, parent)
 }
@@ -88,11 +89,7 @@ func (this *Order) afterItems(context *Context) {
 	}()
 
 	this.setupTerms(context)
-	timer := time.Now()
 	sort.Sort(this)
-	t := time.Since(timer)
-	context.AddPhaseTime(SORT, t)
-	this.addTime(t)
 
 	context.SetSortCount(uint64(this.Len()))
 	context.AddPhaseCount(SORT, uint64(this.Len()))

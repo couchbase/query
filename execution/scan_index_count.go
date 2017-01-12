@@ -45,17 +45,12 @@ func (this *IndexCountScan) Copy() Operator {
 
 func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
-
-		timer := time.Now()
-		addTime := func() {
-			t := time.Since(timer) - this.chanTime
-			context.AddPhaseTime(INDEX_COUNT, t)
-			this.addTime(t)
-		}
-		defer addTime()
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_COUNT, d) }
+		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer close(this.itemChannel)                // Broadcast that I have stopped
+		defer this.notify()                          // Notify that I have stopped
 
 		spans := this.plan.Spans()
 		n := len(spans)
@@ -70,6 +65,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		for n > 0 {
+			this.switchPhase(_CHANTIME) // could be _SERVTIME
 			select {
 			case <-this.stopChannel:
 				return
@@ -78,6 +74,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case subcount = <-this.childChannel:
+				this.switchPhase(_EXECTIME)
 				count += subcount
 				n--
 			case <-this.stopChannel:

@@ -51,10 +51,13 @@ func (this *IndexScan) Copy() Operator {
 
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_SCAN, d) }
+		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer close(this.itemChannel)                // Broadcast that I have stopped
+		defer this.notify()                          // Notify that I have stopped
 		context.AddPhaseOperator(INDEX_SCAN)
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
 
 		spans := this.plan.Spans()
 		n := len(spans)
@@ -68,6 +71,8 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			go this.children[i].RunOnce(context, parent)
 		}
 
+		// a bit of an oversimplification, but...
+		this.switchPhase(_CHANTIME)
 		for n > 0 {
 			select {
 			case <-this.stopChannel:
@@ -141,21 +146,15 @@ func (this *spanScan) Copy() Operator {
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		this.switchPhase(_EXECTIME)
+		defer context.Recover()                      // Recover from any panic
+		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer close(this.itemChannel)                // Broadcast that I have stopped
+		defer this.notify()                          // Notify that I have stopped
+		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_SCAN, d) }
 
 		conn := datastore.NewIndexConnection(context)
 		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
-
-		timer := time.Now()
-		addTime := func() {
-
-			t := time.Since(timer) - this.chanTime
-			context.AddPhaseTime(INDEX_SCAN, t)
-			this.addTime(t)
-		}
-		defer addTime()
 
 		go this.scan(context, conn)
 
@@ -171,6 +170,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		defer countDocs()
 
 		for ok {
+			this.switchPhase(_CHANTIME) // could be _SERVTIME
 			select {
 			case <-this.stopChannel:
 				return
@@ -179,6 +179,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case entry, ok = <-conn.EntryChannel():
+				this.switchPhase(_EXECTIME)
 				if ok {
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)

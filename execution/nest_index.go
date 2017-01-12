@@ -49,11 +49,8 @@ func (this *IndexNest) Copy() Operator {
 }
 
 func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
-	start := time.Now()
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_NEST, d) }
 	this.runConsumer(this, context, parent)
-	t := time.Since(start) - this.chanTime
-	context.AddPhaseTime(INDEX_NEST, t)
-	this.addTime(t)
 }
 
 func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) bool {

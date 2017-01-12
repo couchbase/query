@@ -47,6 +47,7 @@ func (this *Fetch) Copy() Operator {
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 	context.AddPhaseOperator(FETCH)
+	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(FETCH, d) }
 	this.runConsumer(this, context, parent)
 }
 
@@ -110,14 +111,12 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
-	timer := time.Now()
+	this.switchPhase(_SERVTIME)
 
 	// Fetch
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
 
-	t := time.Since(timer)
-	context.AddPhaseTime(FETCH, t)
-	this.addTime(t)
+	this.switchPhase(_EXECTIME)
 
 	fetchOk := true
 	for _, err := range errs {
