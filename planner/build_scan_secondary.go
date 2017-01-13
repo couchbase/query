@@ -54,13 +54,8 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		return nil, 0, err
 	}
 
-	if (this.order != nil || limit != nil) && len(indexes) > 1 {
-		// This makes IntersectScan disable limit pushdown, don't use index order
-		this.resetOrderLimit()
-		limit = nil
-	}
-
-	if this.order != nil && this.maxParallelism > 1 {
+	// This makes IntersectScan disable limit pushdown, don't use index order
+	if this.order != nil && (len(indexes) > 1 || this.maxParallelism > 1) {
 		this.resetOrderLimit()
 		limit = nil
 	}
@@ -76,16 +71,18 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	sargLength := 0
 	var scan plan.SecondaryScan
 	for index, entry := range indexes {
+		lim := limit
+
 		if this.order != nil {
 			if !this.useIndexOrder(entry, entry.keys) {
 				this.resetOrderLimit()
-				limit = nil
-			} else {
+				lim = nil
+			} else if len(indexes) == 1 {
 				this.maxParallelism = 1
 			}
 		}
 
-		if limit != nil {
+		if lim != nil {
 			pushDown := false
 			arrayIndex := indexHasArrayIndexKey(index)
 
@@ -98,11 +95,11 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 			if arrayIndex || !pushDown {
 				this.limit = nil
-				limit = nil
+				lim = nil
 			}
 		}
 
-		scan = entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, nil, nil)
+		scan = entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, lim, nil, nil)
 		scans = append(scans, scan)
 
 		if len(entry.sargKeys) > sargLength {
@@ -113,7 +110,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	if len(scans) == 1 {
 		return scans[0], sargLength, nil
 	} else {
-		return plan.NewIntersectScan(scans...), sargLength, nil
+		return plan.NewIntersectScan(limit, scans...), sargLength, nil
 	}
 }
 

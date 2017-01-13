@@ -68,7 +68,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		go this.scan.RunOnce(context, parent)
 
 		var item value.AnnotatedValue
-		limit := int(this.getLimit(context))
+		limit := int(getLimit(this.plan.Limit(), this.plan.Covering(), context))
 		n := 1
 		ok := true
 

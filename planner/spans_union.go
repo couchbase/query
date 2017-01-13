@@ -47,7 +47,7 @@ func (this *UnionSpans) CreateScan(
 		scans[i] = s.CreateScan(index, term, distinct, overlap, array, limit, covers, filterCovers)
 	}
 
-	return plan.NewUnionScan(scans...)
+	return plan.NewUnionScan(limit, scans...)
 }
 
 func (this *UnionSpans) Compose(prev SargSpans) SargSpans {
@@ -150,7 +150,7 @@ func (this *UnionSpans) Streamline() SargSpans {
 }
 
 func (this *UnionSpans) CanUseIndexOrder() bool {
-	return false
+	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder()
 }
 
 func (this *UnionSpans) SkipsLeadingNulls() bool {

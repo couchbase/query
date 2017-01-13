@@ -174,6 +174,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	secondary plan.SecondaryScan, sargLength int, err error) {
 
+	var scanbuf [4]plan.SecondaryScan
+	scans := scanbuf[0:0]
+
 	sargables, all, arrays, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if er != nil {
 		return nil, 0, er
@@ -188,8 +191,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 			return nil, 0, err
 		}
 
-		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
-			return secondary, sargLength, nil
+		if secondary != nil {
+			if len(this.coveringScans) > 0 || this.countScan != nil {
+				return secondary, sargLength, nil
+			}
+
+			scans = append(scans, secondary)
 		}
 	}
 
@@ -207,14 +214,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 				return unnest, unnestSargLength, err
 			}
 
-			if secondary == nil {
-				secondary = unnest
+			scans = append(scans, unnest)
+			if sargLength < unnestSargLength {
 				sargLength = unnestSargLength
-			} else {
-				secondary = plan.NewIntersectScan(secondary, unnest)
-				if sargLength < unnestSargLength {
-					sargLength = unnestSargLength
-				}
 			}
 		}
 	}
@@ -228,16 +230,20 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		}
 
 		if dynamic != nil {
-			if secondary == nil {
-				secondary = dynamic
+			scans = append(scans, dynamic)
+			if sargLength < dynamicSargLength {
 				sargLength = dynamicSargLength
-			} else {
-				secondary = plan.NewIntersectScan(secondary, dynamic)
-				if sargLength < dynamicSargLength {
-					sargLength = dynamicSargLength
-				}
 			}
 		}
+	}
+
+	switch len(scans) {
+	case 0:
+		secondary = nil
+	case 1:
+		secondary = scans[0]
+	default:
+		secondary = plan.NewIntersectScan(limit, scans...)
 	}
 
 	// Return secondary scan, if any

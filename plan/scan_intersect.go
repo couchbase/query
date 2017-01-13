@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
 )
 
@@ -20,11 +21,13 @@ import (
 type IntersectScan struct {
 	readonly
 	scans []SecondaryScan
+	limit expression.Expression
 }
 
-func NewIntersectScan(scans ...SecondaryScan) *IntersectScan {
+func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *IntersectScan {
 	return &IntersectScan{
 		scans: scans,
+		limit: limit,
 	}
 }
 
@@ -52,6 +55,10 @@ func (this *IntersectScan) Scans() []SecondaryScan {
 	return this.scans
 }
 
+func (this *IntersectScan) Limit() expression.Expression {
+	return this.limit
+}
+
 func (this *IntersectScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
@@ -63,10 +70,14 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 
 func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IntersectScan"}
+	r["scans"] = this.scans
+
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
+	}
+
 	if f != nil {
 		f(r)
-	} else {
-		r["scans"] = this.scans
 	}
 	return r
 }
@@ -75,6 +86,7 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string            `json:"#operator"`
 		Scans []json.RawMessage `json:"scans"`
+		Limit string            `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -100,6 +112,13 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 		}
 
 		this.scans = append(this.scans, scan_op.(SecondaryScan))
+	}
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

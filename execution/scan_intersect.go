@@ -26,6 +26,7 @@ type IntersectScan struct {
 	values       map[string]value.AnnotatedValue
 	bits         map[string]int64
 	childChannel StopChannel
+	sent         int64
 }
 
 func NewIntersectScan(plan *plan.IntersectScan, scans []Operator) *IntersectScan {
@@ -96,6 +97,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		var item value.AnnotatedValue
+		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
 		n := len(this.scans)
 		nscans := len(this.scans)
 		stopped := false
@@ -115,7 +117,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context)
+					ok = this.processKey(item, context, limit)
 				}
 			case childBit = <-this.childChannel:
 				n--
@@ -137,7 +139,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		if !stopped && len(this.values) > 0 {
-			this.sendItems(childBits)
+			this.sendItems(childBits, limit)
 		}
 	})
 }
@@ -146,7 +148,9 @@ func (this *IntersectScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Context) bool {
+func (this *IntersectScan) processKey(item value.AnnotatedValue,
+	context *Context, limit int64) bool {
+
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
@@ -172,8 +176,12 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 			delete(this.bits, key)
 		}
 
+		if limit > 0 {
+			this.sent++
+		}
+
 		item.SetBit(this.bit)
-		return this.sendItem(item)
+		return this.sendItem(item) && (limit <= 0 || limit < this.sent)
 	}
 
 	this.counts[key] = count + 1
@@ -188,11 +196,14 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 	return true
 }
 
-func (this *IntersectScan) sendItems(childBits int64) {
+func (this *IntersectScan) sendItems(childBits int64, limit int64) {
+	sent := this.sent
+
 	for key, val := range this.values {
 		if ((this.bits[key] & childBits) ^ childBits) == 0 {
+			sent++
 			val.SetBit(this.bit)
-			if !this.sendItem(val) {
+			if !this.sendItem(val) || limit >= sent {
 				return
 			}
 		}
