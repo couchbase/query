@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -21,11 +22,13 @@ import (
 type UnionScan struct {
 	readonly
 	scans []SecondaryScan
+	limit expression.Expression
 }
 
-func NewUnionScan(scans ...SecondaryScan) *UnionScan {
+func NewUnionScan(limit expression.Expression, scans ...SecondaryScan) *UnionScan {
 	return &UnionScan{
 		scans: scans,
+		limit: limit,
 	}
 }
 
@@ -53,6 +56,10 @@ func (this *UnionScan) Scans() []SecondaryScan {
 	return this.scans
 }
 
+func (this *UnionScan) Limit() expression.Expression {
+	return this.limit
+}
+
 func (this *UnionScan) Streamline() SecondaryScan {
 	scans := make([]SecondaryScan, 0, len(this.scans))
 	hash := _STRING_SCANS_POOL.Get()
@@ -72,7 +79,7 @@ func (this *UnionScan) Streamline() SecondaryScan {
 	case len(this.scans):
 		return this
 	default:
-		return NewUnionScan(scans...)
+		return NewUnionScan(this.limit, scans...)
 	}
 }
 
@@ -84,6 +91,11 @@ func (this *UnionScan) String() string {
 func (this *UnionScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "UnionScan"}
 	r["scans"] = this.scans
+
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
+	}
+
 	return json.Marshal(r)
 }
 
@@ -91,6 +103,7 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string            `json:"#operator"`
 		Scans []json.RawMessage `json:"scans"`
+		Limit string            `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -116,6 +129,13 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 		}
 
 		this.scans = append(this.scans, scan_op.(SecondaryScan))
+	}
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

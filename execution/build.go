@@ -124,7 +124,7 @@ func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, 
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewIntersectScan(scans), nil
+	return NewIntersectScan(plan, scans), nil
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
@@ -139,7 +139,7 @@ func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewUnionScan(scans), nil
+	return NewUnionScan(plan, scans), nil
 }
 
 func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {

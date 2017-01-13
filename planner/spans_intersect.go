@@ -48,7 +48,7 @@ func (this *IntersectSpans) CreateScan(
 		scans[i] = s.CreateScan(index, term, distinct, false, true, nil, covers, filterCovers)
 	}
 
-	return plan.NewIntersectScan(scans...)
+	return plan.NewIntersectScan(limit, scans...)
 }
 
 func (this *IntersectSpans) Compose(prev SargSpans) SargSpans {
@@ -115,13 +115,7 @@ func (this *IntersectSpans) Streamline() SargSpans {
 }
 
 func (this *IntersectSpans) CanUseIndexOrder() bool {
-	for _, span := range this.spans {
-		if !span.CanUseIndexOrder() {
-			return false
-		}
-	}
-
-	return true
+	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder()
 }
 
 func (this *IntersectSpans) SkipsLeadingNulls() bool {

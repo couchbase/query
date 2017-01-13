@@ -205,7 +205,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	if len(scans) == 1 {
 		return scans[0], sargLength, nil
 	} else {
-		return plan.NewIntersectScan(scans...), sargLength, nil
+		return plan.NewIntersectScan(nil, scans...), sargLength, nil
 	}
 }
 

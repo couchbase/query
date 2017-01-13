@@ -98,6 +98,6 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		}
 	}
 
-	rv := plan.NewUnionScan(scans...)
+	rv := plan.NewUnionScan(limit, scans...)
 	return rv.Streamline(), minSargLength, nil
 }
