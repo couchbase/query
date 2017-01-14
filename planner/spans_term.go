@@ -45,7 +45,7 @@ func (this *TermSpans) CreateScan(
 	if (len(this.spans) > 1 && (overlap || !exact)) ||
 		(!array && indexHasArrayIndexKey(index)) {
 		scan := plan.NewIndexScan(index, term, this.spans, distinct, nil, covers, filterCovers)
-		return plan.NewDistinctScan(scan, limit)
+		return plan.NewDistinctScan(limit, scan)
 	} else {
 		return plan.NewIndexScan(index, term, this.spans, distinct, limit, covers, filterCovers)
 	}

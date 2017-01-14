@@ -69,6 +69,7 @@ type builder struct {
 	coveredUnnests  map[*algebra.Unnest]bool
 	countScan       *plan.IndexCountScan
 	skipDynamic     bool
+	orderScan       plan.SecondaryScan
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {

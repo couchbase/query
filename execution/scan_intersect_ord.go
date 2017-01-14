@@ -15,22 +15,23 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
-type IntersectScan struct {
+type OrderedIntersectScan struct {
 	base
-	plan         *plan.IntersectScan
+	plan         *plan.OrderedIntersectScan
 	scans        []Operator
-	counts       map[string]int
 	values       map[string]value.AnnotatedValue
 	bits         map[string]int64
+	queue        *util.Queue
 	childChannel StopChannel
 	sent         int64
 }
 
-func NewIntersectScan(plan *plan.IntersectScan, scans []Operator) *IntersectScan {
-	rv := &IntersectScan{
+func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, scans []Operator) *OrderedIntersectScan {
+	rv := &OrderedIntersectScan{
 		base:         newBase(),
 		plan:         plan,
 		scans:        scans,
@@ -41,18 +42,18 @@ func NewIntersectScan(plan *plan.IntersectScan, scans []Operator) *IntersectScan
 	return rv
 }
 
-func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitIntersectScan(this)
+func (this *OrderedIntersectScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitOrderedIntersectScan(this)
 }
 
-func (this *IntersectScan) Copy() Operator {
+func (this *OrderedIntersectScan) Copy() Operator {
 	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, s := range this.scans {
 		scans = append(scans, s.Copy())
 	}
 
-	return &IntersectScan{
+	return &OrderedIntersectScan{
 		base:         this.base.copy(),
 		plan:         this.plan,
 		scans:        scans,
@@ -60,31 +61,28 @@ func (this *IntersectScan) Copy() Operator {
 	}
 }
 
-func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
+func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		this.counts = _INDEX_COUNT_POOL.Get()
+		this.values = _INDEX_VALUE_POOL.Get()
+		this.bits = _INDEX_BIT_POOL.Get()
+		this.queue = _QUEUE_POOL.Get()
 		defer func() {
-			_INDEX_COUNT_POOL.Put(this.counts)
-			this.counts = nil
+			_INDEX_VALUE_POOL.Put(this.values)
+			_INDEX_BIT_POOL.Put(this.bits)
+			_QUEUE_POOL.Put(this.queue)
+			this.values = nil
+			this.bits = nil
+			this.queue = nil
 		}()
 
-		if len(this.scans) <= 64 {
-			this.bits = _INDEX_BIT_POOL.Get()
-			this.values = _INDEX_VALUE_POOL.Get()
-			defer func() {
-				_INDEX_BIT_POOL.Put(this.bits)
-				_INDEX_VALUE_POOL.Put(this.values)
-				this.bits = nil
-				this.values = nil
-			}()
-
-			for i, scan := range this.scans {
-				scan.SetBit(uint8(i))
-			}
+		sendBits := int64(0)
+		for i, scan := range this.scans {
+			scan.SetBit(uint8(i))
+			sendBits |= int64(0x01) << uint8(i)
 		}
 
 		channel := NewChannel()
@@ -99,7 +97,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		var item value.AnnotatedValue
 		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
 		n := len(this.scans)
-		nscans := len(this.scans)
 		stopped := false
 		ok := true
 		childBit := 0
@@ -117,7 +114,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context, limit)
+					ok = this.processKey(item, context, sendBits, limit)
 				}
 			case childBit = <-this.childChannel:
 				n--
@@ -126,7 +123,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				stopped = true
 				break loop
 			default:
-				if n == 0 || (n < nscans && (this.bits != nil || len(this.counts) == 0)) {
+				if n == 0 || (childBits&0x01) != 0 {
 					break loop
 				}
 			}
@@ -138,18 +135,18 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			<-this.childChannel
 		}
 
-		if !stopped && len(this.bits) > 0 && (limit <= 0 || this.sent < limit) {
-			this.sendItems(childBits)
+		if !stopped && (limit <= 0 || this.sent < limit) {
+			this.processQueue(childBits, -1, true)
 		}
 	})
 }
 
-func (this *IntersectScan) ChildChannel() StopChannel {
+func (this *OrderedIntersectScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *IntersectScan) processKey(item value.AnnotatedValue,
-	context *Context, limit int64) bool {
+func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
+	context *Context, sendBits, limit int64) bool {
 
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
@@ -167,48 +164,52 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue,
 		return false
 	}
 
-	count := this.counts[key]
-
-	if count+1 == len(this.scans) {
-		delete(this.counts, key)
-		if this.values != nil {
-			delete(this.values, key)
-			delete(this.bits, key)
-		}
-
-		if limit > 0 {
-			this.sent++
-		}
-
-		item.SetBit(this.bit)
-		return this.sendItem(item) && (limit <= 0 || this.sent < limit)
+	if _, ok := this.values[key]; !ok {
+		this.values[key] = item
 	}
 
-	this.counts[key] = count + 1
+	if item.Bit() == 0 {
+		this.queue.Add(key)
+	}
 
-	if this.values != nil {
-		this.bits[key] |= int64(0x01) << item.Bit()
-		if count == 0 {
-			this.values[key] = item
+	this.bits[key] |= int64(01) << item.Bit()
+	return this.processQueue(sendBits, limit, false)
+}
+
+func (this *OrderedIntersectScan) processQueue(sendBits, limit int64, all bool) bool {
+	queue := this.queue
+	for next := queue.Peek(); next != nil; next = queue.Peek() {
+		key := next.(string)
+		if ((this.bits[key] & sendBits) ^ sendBits) == 0 {
+			item := this.values[key]
+
+			queue.Remove()
+			if !all {
+				delete(this.values, key)
+				delete(this.bits, key)
+			}
+
+			if !this.sendItem(item) {
+				return false
+			}
+
+			if limit > 0 {
+				this.sent++
+				if this.sent >= limit {
+					return false
+				}
+			}
+		} else if all {
+			queue.Remove()
+		} else {
+			break
 		}
 	}
 
 	return true
 }
 
-func (this *IntersectScan) sendItems(childBits int64) {
-	for key, bits := range this.bits {
-		if ((bits & childBits) ^ childBits) == 0 {
-			val := this.values[key]
-			val.SetBit(this.bit)
-			if !this.sendItem(val) {
-				return
-			}
-		}
-	}
-}
-
-func (this *IntersectScan) MarshalJSON() ([]byte, error) {
+func (this *OrderedIntersectScan) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 		r["scans"] = this.scans
@@ -216,7 +217,7 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *IntersectScan) Done() {
+func (this *OrderedIntersectScan) Done() {
 	for s, scan := range this.scans {
 		scan.Done()
 		this.scans[s] = nil
@@ -224,3 +225,5 @@ func (this *IntersectScan) Done() {
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil
 }
+
+var _QUEUE_POOL = util.NewQueuePool(256)

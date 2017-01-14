@@ -17,68 +17,67 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-// IntersectScan scans multiple indexes and intersects the results.
-type IntersectScan struct {
+// IntersectScan that preserves index order of first scan.
+type OrderedIntersectScan struct {
 	readonly
 	scans []SecondaryScan
 	limit expression.Expression
 }
 
-func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *IntersectScan {
-	n := len(scans)
-	if n > 64 {
-		return NewIntersectScan(
+func NewOrderedIntersectScan(limit expression.Expression, scans ...SecondaryScan) *OrderedIntersectScan {
+	if len(scans) > 64 {
+		return NewOrderedIntersectScan(
 			limit,
-			NewIntersectScan(nil, scans[0:n/2]...),
-			NewIntersectScan(nil, scans[n/2:]...),
+			scans[0],
+			NewIntersectScan(nil, scans[1:]...),
 		)
 	}
 
-	return &IntersectScan{
+	return &OrderedIntersectScan{
 		scans: scans,
 		limit: limit,
 	}
 }
 
-func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitIntersectScan(this)
+func (this *OrderedIntersectScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitOrderedIntersectScan(this)
 }
 
-func (this *IntersectScan) New() Operator {
-	return &IntersectScan{}
+func (this *OrderedIntersectScan) New() Operator {
+	return &OrderedIntersectScan{}
 }
 
-func (this *IntersectScan) Covers() expression.Covers {
+func (this *OrderedIntersectScan) Covers() expression.Covers {
 	return this.scans[0].Covers()
 }
 
-func (this *IntersectScan) FilterCovers() map[*expression.Cover]value.Value {
+func (this *OrderedIntersectScan) FilterCovers() map[*expression.Cover]value.Value {
 	return this.scans[0].FilterCovers()
 }
 
-func (this *IntersectScan) Covering() bool {
+func (this *OrderedIntersectScan) Covering() bool {
 	return this.scans[0].Covering()
 }
 
-func (this *IntersectScan) Scans() []SecondaryScan {
+func (this *OrderedIntersectScan) Scans() []SecondaryScan {
 	return this.scans
 }
 
-func (this *IntersectScan) Limit() expression.Expression {
+func (this *OrderedIntersectScan) Limit() expression.Expression {
 	return this.limit
 }
 
-func (this *IntersectScan) String() string {
+func (this *OrderedIntersectScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
 }
 
-func (this *IntersectScan) MarshalJSON() ([]byte, error) {
+func (this *OrderedIntersectScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IntersectScan"}
+func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+	r := map[string]interface{}{"#operator": "OrderedIntersectScan"}
 	r["scans"] = this.scans
 
 	if this.limit != nil {
@@ -91,7 +90,7 @@ func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[strin
 	return r
 }
 
-func (this *IntersectScan) UnmarshalJSON(body []byte) error {
+func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string            `json:"#operator"`
 		Scans []json.RawMessage `json:"scans"`

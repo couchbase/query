@@ -60,7 +60,7 @@ func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
 
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {
 
-	// FIXME: this should be handled by the planner
+	// FIXME: should this be handled by the planner?
 	distinct := NewDistinct(plan.NewDistinct(), true)
 	sequence := NewSequence(plan.NewSequence(), this.second, distinct)
 	sequence.SetParent(this)

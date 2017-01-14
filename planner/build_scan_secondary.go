@@ -54,34 +54,37 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		return nil, 0, err
 	}
 
-	// This makes IntersectScan disable limit pushdown, don't use index order
-	if this.order != nil && (len(indexes) > 1 || this.maxParallelism > 1) {
-		this.resetOrderLimit()
-		limit = nil
+	// Find ordering index
+	var orderIndex datastore.Index
+	if this.order != nil {
+		for index, entry := range indexes {
+			if this.useIndexOrder(entry, entry.keys) {
+				orderIndex = index
+				this.maxParallelism = 1
+				break
+			}
+		}
+
+		// No ordering index, disable ORDER and LIMIT pushdown
+		if orderIndex == nil {
+			this.resetOrderLimit()
+			limit = nil
+		}
 	}
 
+	// Ordering scan, if any, will go into scans[0]
 	var scanBuf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan
 	if len(indexes) <= len(scanBuf) {
-		scans = scanBuf[0:0]
+		scans = scanBuf[0:1]
 	} else {
-		scans = make([]plan.SecondaryScan, 0, len(indexes))
+		scans = make([]plan.SecondaryScan, 1, len(indexes))
 	}
 
 	sargLength := 0
 	var scan plan.SecondaryScan
 	for index, entry := range indexes {
 		lim := limit
-
-		if this.order != nil {
-			if !this.useIndexOrder(entry, entry.keys) {
-				this.resetOrderLimit()
-				lim = nil
-			} else if len(indexes) == 1 {
-				this.maxParallelism = 1
-			}
-		}
-
 		if lim != nil {
 			pushDown := false
 			arrayIndex := indexHasArrayIndexKey(index)
@@ -94,13 +97,16 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 
 			if arrayIndex || !pushDown {
-				this.limit = nil
 				lim = nil
 			}
 		}
 
 		scan = entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, lim, nil, nil)
-		scans = append(scans, scan)
+		if index == orderIndex {
+			scans[0] = scan
+		} else {
+			scans = append(scans, scan)
+		}
 
 		if len(entry.sargKeys) > sargLength {
 			sargLength = len(entry.sargKeys)
@@ -108,9 +114,16 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	}
 
 	if len(scans) == 1 {
+		this.orderScan = scans[0]
 		return scans[0], sargLength, nil
+	} else if scans[0] == nil && len(scans) == 2 {
+		return scans[1], sargLength, nil
+	} else if scans[0] == nil {
+		return plan.NewIntersectScan(limit, scans[1:]...), sargLength, nil
 	} else {
-		return plan.NewIntersectScan(limit, scans...), sargLength, nil
+		scan = plan.NewOrderedIntersectScan(limit, scans...)
+		this.orderScan = scan
+		return scan, sargLength, nil
 	}
 }
 
