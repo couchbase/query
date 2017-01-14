@@ -24,7 +24,7 @@ type DistinctScan struct {
 	limit expression.Expression
 }
 
-func NewDistinctScan(scan SecondaryScan, limit expression.Expression) *DistinctScan {
+func NewDistinctScan(limit expression.Expression, scan SecondaryScan) *DistinctScan {
 	return &DistinctScan{
 		scan:  scan,
 		limit: limit,

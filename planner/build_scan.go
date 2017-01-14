@@ -175,7 +175,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	secondary plan.SecondaryScan, sargLength int, err error) {
 
 	var scanbuf [4]plan.SecondaryScan
-	scans := scanbuf[0:0]
+	scans := scanbuf[0:1]
 
 	sargables, all, arrays, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if er != nil {
@@ -183,6 +183,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	}
 
 	minimals := minimalIndexes(sargables, false)
+
+	order := this.order
+	defer func() { this.orderScan = nil }()
 
 	// Try secondary scan
 	if len(minimals) > 0 {
@@ -196,7 +199,11 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 				return secondary, sargLength, nil
 			}
 
-			scans = append(scans, secondary)
+			if secondary == this.orderScan {
+				scans[0] = secondary
+			} else {
+				scans = append(scans, secondary)
+			}
 		}
 	}
 
@@ -237,13 +244,29 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		}
 	}
 
+	if this.orderScan != nil {
+		this.order = order
+	}
+
 	switch len(scans) {
 	case 0:
 		secondary = nil
 	case 1:
 		secondary = scans[0]
 	default:
-		secondary = plan.NewIntersectScan(limit, scans...)
+		if scans[0] == nil {
+			if len(scans) == 2 {
+				secondary = scans[1]
+			} else {
+				secondary = plan.NewIntersectScan(limit, scans[1:]...)
+			}
+		} else {
+			if ordered, ok := scans[0].(*plan.OrderedIntersectScan); ok {
+				scans = append(ordered.Scans(), scans[1:]...)
+			}
+
+			secondary = plan.NewOrderedIntersectScan(limit, scans...)
+		}
 	}
 
 	// Return secondary scan, if any

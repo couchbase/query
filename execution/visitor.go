@@ -19,9 +19,10 @@ type Visitor interface {
 	VisitDummyScan(op *DummyScan) (interface{}, error)
 	VisitCountScan(op *CountScan) (interface{}, error)
 	VisitIndexCountScan(op *IndexCountScan) (interface{}, error)
-	VisitIntersectScan(op *IntersectScan) (interface{}, error)
-	VisitUnionScan(op *UnionScan) (interface{}, error)
 	VisitDistinctScan(op *DistinctScan) (interface{}, error)
+	VisitUnionScan(op *UnionScan) (interface{}, error)
+	VisitIntersectScan(op *IntersectScan) (interface{}, error)
+	VisitOrderedIntersectScan(op *OrderedIntersectScan) (interface{}, error)
 	VisitExpressionScan(op *ExpressionScan) (interface{}, error)
 
 	// Fetch
