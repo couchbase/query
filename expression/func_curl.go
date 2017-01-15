@@ -116,8 +116,18 @@ func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, erro
 	}
 
 	// For Silent mode where we dont want any output.
-	if len(result) == 0 {
-		return value.MISSING_VALUE, nil
+	switch results := result.(type) {
+	case map[string]interface{}:
+		if len(results) == 0 {
+			return value.MISSING_VALUE, nil
+		}
+	case []interface{}:
+		if len(results) == 0 {
+			return value.MISSING_VALUE, nil
+		}
+
+	default:
+		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(result), nil
@@ -138,7 +148,7 @@ func (this *Curl) Constructor() FunctionConstructor {
 	return NewCurl
 }
 
-func (this *Curl) handleCurl(curl_method string, url string, options map[string]interface{}) (map[string]interface{}, error) {
+func (this *Curl) handleCurl(curl_method string, url string, options map[string]interface{}) (interface{}, error) {
 	// Handle different cases
 
 	// For silent mode
@@ -366,7 +376,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 	}
 
 	if b.Len() != 0 {
-		var dat map[string]interface{}
+		// The return type can either be and ARRAY or an OBJECT
+		var dat interface{}
+
 		if err := json.Unmarshal(b.Bytes(), &dat); err != nil {
 			if show_error == true {
 				return nil, fmt.Errorf("Invalid JSON endpoint %v", url)
