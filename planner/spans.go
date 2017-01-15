@@ -45,12 +45,18 @@ type SargSpans interface {
 	Copy() SargSpans                                        // Deep copy
 }
 
-func CopySpans(spans []SargSpans) []SargSpans {
+func CopySpans(spans SargSpans) SargSpans {
+	if spans == nil {
+		return nil
+	} else {
+		return spans.Copy()
+	}
+}
+
+func CopyAllSpans(spans []SargSpans) []SargSpans {
 	spans2 := make([]SargSpans, len(spans))
 	for i, s := range spans {
-		if s != nil {
-			spans2[i] = s.Copy()
-		}
+		spans2[i] = CopySpans(s)
 	}
 
 	return spans2

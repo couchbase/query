@@ -140,7 +140,7 @@ func (this *IntersectSpans) Size() int {
 }
 
 func (this *IntersectSpans) Copy() SargSpans {
-	return NewIntersectSpans(CopySpans(this.spans)...)
+	return NewIntersectSpans(CopyAllSpans(this.spans)...)
 }
 
 func (this *IntersectSpans) String() string {

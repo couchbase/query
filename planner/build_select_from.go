@@ -95,6 +95,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	if node.IsKeyspace() {
 		return node.KeyspaceTerm().Accept(this)
 	}
+
 	this.resetOrderLimit()
 	this.resetCountMin()
 
@@ -108,8 +109,12 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	this.resetOrderLimit()
 	this.resetCountMin()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+		this.resetLimit()
+	} else {
+		this.resetOrderLimit()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -139,8 +144,12 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
-	this.resetOrderLimit()
 	this.resetCountMin()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+		this.resetLimit()
+	} else {
+		this.resetOrderLimit()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -236,8 +245,10 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	this.resetOrderLimit()
-	this.resetCountMin()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); !ok || !term.IsKeyspace() {
+		this.resetCountMin()
+		this.resetOrderLimit()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -310,6 +321,10 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 
 func (this *builder) resetOrderLimit() {
 	this.order = nil
+	this.limit = nil
+}
+
+func (this *builder) resetLimit() {
 	this.limit = nil
 }
 

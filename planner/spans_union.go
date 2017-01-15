@@ -173,7 +173,7 @@ func (this *UnionSpans) Size() int {
 }
 
 func (this *UnionSpans) Copy() SargSpans {
-	return NewUnionSpans(CopySpans(this.spans)...)
+	return NewUnionSpans(CopyAllSpans(this.spans)...)
 }
 
 func (this *UnionSpans) String() string {

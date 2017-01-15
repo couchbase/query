@@ -19,11 +19,13 @@ type DNF struct {
 	expression.MapperBase
 	expr         expression.Expression
 	dnfTermCount int
+	like         bool
 }
 
-func NewDNF(expr expression.Expression) *DNF {
+func NewDNF(expr expression.Expression, like bool) *DNF {
 	rv := &DNF{
 		expr: expr,
+		like: like,
 	}
 	rv.SetMapper(rv)
 	return rv
@@ -430,8 +432,8 @@ func dnfComplexity(expr *expression.And, max int) int {
 
 func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	err := expr.MapChildren(this)
-	if err != nil {
-		return nil, err
+	if err != nil || !this.like {
+		return expr, err
 	}
 
 	re := expr.Regexp()
