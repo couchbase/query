@@ -168,7 +168,7 @@ outer:
 		this.limit = nil
 	}
 
-	if this.order != nil && !this.useIndexOrder(entry, keys) {
+	if this.order != nil && !this.useIndexOrder(entry, entry.keys) {
 		this.resetOrderLimit()
 		limit = nil
 	}

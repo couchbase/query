@@ -107,13 +107,6 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		return _EMPTY_PLAN, nil, nil
 	}
 
-	pred = pred.Copy()
-	dnf := NewDNF(pred)
-	pred, err = dnf.Map(pred)
-	if err != nil {
-		return
-	}
-
 	primaryKey := expression.Expressions{id}
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 
@@ -177,19 +170,42 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	var scanbuf [4]plan.SecondaryScan
 	scans := scanbuf[0:1]
 
-	sargables, all, arrays, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
-	if er != nil {
-		return nil, 0, er
+	dnfPred := pred.Copy()
+	dnf := NewDNF(dnfPred, true)
+	dnfPred, err = dnf.Map(dnfPred)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	sargables, all, arrays, err := sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	minimals := minimalIndexes(sargables, false)
 
 	order := this.order
-	defer func() { this.orderScan = nil }()
+	limitExpr := this.limit
+	countAgg := this.countAgg
+	minAgg := this.minAgg
+	defer func() {
+		if this.orderScan != nil {
+			this.order = order
+		}
+		this.orderScan = nil
+	}()
 
 	// Try secondary scan
 	if len(minimals) > 0 {
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
+		lmt := limit
+		if this.from != nil {
+			if _, ok := this.from.(*algebra.KeyspaceTerm); !ok {
+				lmt = nil
+				this.resetCountMin()
+			}
+		}
+
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, lmt)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -209,15 +225,19 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 
 	// Try UNNEST scan
 	if this.from != nil {
-		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, limit, all)
+		// Try pushdowns for covering UNNEST index
+		this.order = order
+		this.limit = limitExpr
+		this.countAgg = countAgg
+		this.minAgg = minAgg
+
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, dnfPred, limit, all)
 		if err != nil {
 			return nil, 0, err
 		}
 
 		if unnest != nil {
-			this.resetCountMin()
-
-			if len(this.coveringScans) > 0 {
+			if len(this.coveringScans) > 0 || this.countScan != nil {
 				return unnest, unnestSargLength, err
 			}
 
@@ -226,12 +246,22 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 				sargLength = unnestSargLength
 			}
 		}
+
+		this.resetOrderLimit()
+		this.resetCountMin()
 	}
 
 	// Try dynamic scan
 	if len(arrays) > 0 {
+		dynamicPred := pred.Copy()
+		dnf := NewDNF(dynamicPred, false)
+		dynamicPred, err = dnf.Map(dynamicPred)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		dynamic, dynamicSargLength, err :=
-			this.buildDynamicScan(node, id, pred, arrays, primaryKey, formalizer)
+			this.buildDynamicScan(node, id, dynamicPred, arrays, primaryKey, formalizer)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -242,10 +272,6 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 				sargLength = dynamicSargLength
 			}
 		}
-	}
-
-	if this.orderScan != nil {
-		this.order = order
 	}
 
 	switch len(scans) {

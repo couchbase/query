@@ -288,7 +288,7 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	}
 
 	for _, unnest := range primaryUnnests {
-		andTerms = append(andTerms, expression.NewIsNotMissing(unnest.Expression()))
+		andTerms = append(andTerms, expression.NewIsArray(unnest.Expression()))
 	}
 
 	this.where = expression.NewAnd(andTerms...)

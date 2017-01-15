@@ -21,18 +21,6 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type indexEntry struct {
-	index      datastore.Index
-	keys       expression.Expressions
-	sargKeys   expression.Expressions
-	minKeys    int
-	sumKeys    int
-	cond       expression.Expression
-	origCond   expression.Expression
-	spans      SargSpans
-	exactSpans bool
-}
-
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
 	plan.SecondaryScan, int, error) {
@@ -158,7 +146,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 					return
 				}
 
-				dnf := NewDNF(key)
+				dnf := NewDNF(key, true)
 				key, err = dnf.Map(key)
 				if err != nil {
 					return
@@ -188,7 +176,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 			origCond = cond.Copy()
 
-			dnf := NewDNF(cond)
+			dnf := NewDNF(cond, true)
 			cond, err = dnf.Map(cond)
 			if err != nil {
 				return
@@ -325,7 +313,7 @@ outer:
 			return false
 		}
 
-		if isArray, _ := entry.keys[i].IsArrayIndexKey(); isArray {
+		if isArray, _ := keys[i].IsArrayIndexKey(); isArray {
 			return false
 		}
 

@@ -56,7 +56,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	var pred expression.Expression
 	pred = expression.NewIsNotNull(node.Keys().Copy())
-	dnf := NewDNF(pred)
+	dnf := NewDNF(pred, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {
 		return nil, nil, nil, err
@@ -65,7 +65,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	subset := pred
 	if this.where != nil {
 		subset = expression.NewAnd(subset, this.where.Copy())
-		dnf = NewDNF(subset)
+		dnf = NewDNF(subset, true)
 		subset, err = dnf.Map(subset)
 		if err != nil {
 			return nil, nil, nil, err
