@@ -192,20 +192,11 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		if this.orderScan != nil {
 			this.order = order
 		}
-		this.orderScan = nil
 	}()
 
 	// Try secondary scan
 	if len(minimals) > 0 {
-		lmt := limit
-		if this.from != nil {
-			if _, ok := this.from.(*algebra.KeyspaceTerm); !ok {
-				lmt = nil
-				this.resetCountMin()
-			}
-		}
-
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, lmt)
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, limit)
 		if err != nil {
 			return nil, 0, err
 		}
