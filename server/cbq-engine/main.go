@@ -80,7 +80,7 @@ var PROFILE = flag.String("profile", "off", "Profiling state: off, phases, timin
 var CONTROLS = flag.Bool("controls", false, "Response to include controls section")
 
 // GOGC
-var _GOGC_PERCENT = 100 // temporary
+var _GOGC_PERCENT = 200
 
 func init() {
 	debug.SetGCPercent(_GOGC_PERCENT)
