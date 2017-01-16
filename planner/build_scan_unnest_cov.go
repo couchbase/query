@@ -22,6 +22,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, l
 	plan.SecondaryScan, int, error) {
 
 	order := this.order
+	limitExpr := this.limit
 	countAgg := this.countAgg
 	minAgg := this.minAgg
 
@@ -29,6 +30,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, l
 
 	for _, index := range unnestIndexes {
 		this.order = order
+		this.limit = limitExpr
 		this.countAgg = countAgg
 		this.minAgg = minAgg
 
