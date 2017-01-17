@@ -79,10 +79,10 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			this.queue = nil
 		}()
 
-		sendBits := int64(0)
+		fullBits := int64(0)
 		for i, scan := range this.scans {
 			scan.SetBit(uint8(i))
-			sendBits |= int64(0x01) << uint8(i)
+			fullBits |= int64(0x01) << uint8(i)
 		}
 
 		channel := NewChannel()
@@ -125,7 +125,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context, sendBits, limit)
+					ok = this.processKey(item, context, fullBits, limit)
 				}
 			case childBit = <-this.childChannel:
 				if childBit == 0 || len(this.bits) == 0 {
@@ -150,7 +150,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		}
 
 		if !stopped && (limit <= 0 || this.sent < limit) {
-			this.processQueue(childBits, -1, true)
+			this.processQueue(fullBits, childBits, limit, true)
 		}
 	})
 }
@@ -160,7 +160,7 @@ func (this *OrderedIntersectScan) ChildChannel() StopChannel {
 }
 
 func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
-	context *Context, sendBits, limit int64) bool {
+	context *Context, fullBits, limit int64) bool {
 
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
@@ -187,17 +187,26 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 	}
 
 	this.bits[key] |= int64(01) << item.Bit()
-	return this.processQueue(sendBits, limit, false)
+	return this.processQueue(fullBits, fullBits, limit, false)
 }
 
-func (this *OrderedIntersectScan) processQueue(sendBits, limit int64, all bool) bool {
+func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64, all bool) bool {
 	queue := this.queue
 	for next := queue.Peek(); next != nil; next = queue.Peek() {
 		key := next.(string)
-		if ((this.bits[key] & sendBits) ^ sendBits) == 0 {
-			item := this.values[key]
+		bits := this.bits[key]
 
+		if limit > 0 && ((bits&fullBits)^fullBits) == 0 {
+			this.sent++
+			if this.sent > limit {
+				return false
+			}
+		}
+
+		if ((bits & sendBits) ^ sendBits) == 0 {
+			item := this.values[key]
 			queue.Remove()
+
 			if !all {
 				delete(this.values, key)
 				delete(this.bits, key)
@@ -205,13 +214,6 @@ func (this *OrderedIntersectScan) processQueue(sendBits, limit int64, all bool) 
 
 			if !this.sendItem(item) {
 				return false
-			}
-
-			if limit > 0 {
-				this.sent++
-				if this.sent >= limit {
-					return false
-				}
 			}
 		} else if all {
 			queue.Remove()
