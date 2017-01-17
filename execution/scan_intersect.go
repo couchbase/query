@@ -115,11 +115,24 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			select {
+			case childBit = <-this.childChannel:
+				if n == nscans && (this.bits != nil || len(this.counts) == 0) {
+					notifyChildren(this.scans...)
+				}
+				n--
+				childBits |= int64(0x01) << uint(childBit)
+			default:
+			}
+
+			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
 					ok = this.processKey(item, context, limit)
 				}
 			case childBit = <-this.childChannel:
+				if n == nscans && (this.bits != nil || len(this.counts) == 0) {
+					notifyChildren(this.scans...)
+				}
 				n--
 				childBits |= int64(0x01) << uint(childBit)
 			case <-this.stopChannel:
