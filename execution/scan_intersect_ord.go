@@ -97,6 +97,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		var item value.AnnotatedValue
 		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
 		n := len(this.scans)
+		nscans := len(this.scans)
 		stopped := false
 		ok := true
 		childBit := 0
@@ -112,18 +113,31 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			}
 
 			select {
+			case childBit = <-this.childChannel:
+				if childBit == 0 || len(this.bits) == 0 {
+					notifyChildren(this.scans...)
+				}
+				n--
+				childBits |= int64(0x01) << uint(childBit)
+			default:
+			}
+
+			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
 					ok = this.processKey(item, context, sendBits, limit)
 				}
 			case childBit = <-this.childChannel:
+				if childBit == 0 || len(this.bits) == 0 {
+					notifyChildren(this.scans...)
+				}
 				n--
 				childBits |= int64(0x01) << uint(childBit)
 			case <-this.stopChannel:
 				stopped = true
 				break loop
 			default:
-				if n == 0 || (childBits&0x01) != 0 {
+				if n == 0 || (n < nscans && ((childBits&0x01) != 0 || len(this.bits) == 0)) {
 					break loop
 				}
 			}
@@ -209,4 +223,4 @@ func (this *OrderedIntersectScan) processQueue(sendBits, limit int64, all bool) 
 	return true
 }
 
-var _QUEUE_POOL = util.NewQueuePool(256)
+var _QUEUE_POOL = util.NewQueuePool(1024)
