@@ -170,7 +170,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		defer countDocs()
 
 		for ok {
-			this.switchPhase(_CHANTIME) // could be _SERVTIME
+			this.switchPhase(_SERVTIME)
 			select {
 			case <-this.stopChannel:
 				return
@@ -181,6 +181,10 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 			case entry, ok = <-conn.EntryChannel():
 				this.switchPhase(_EXECTIME)
 				if ok {
+
+					// current policy is to only count 'in' documents
+					// from operators, not kv
+					// add this.addInDocs(1) if this changes
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)
 

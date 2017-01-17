@@ -54,6 +54,7 @@ func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) bool {
+	defer this.switchPhase(_EXECTIME)
 	idv, e := this.plan.IdExpr().Evaluate(item, context)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, fmt.Sprintf("NEST FOR %s", this.plan.For())))
@@ -77,6 +78,7 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 
 		ok := true
 		for ok {
+			this.switchPhase(_SERVTIME)
 			select {
 			case <-this.stopChannel:
 				return false
@@ -85,7 +87,12 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 
 			select {
 			case entry, ok = <-conn.EntryChannel():
+				this.switchPhase(_EXECTIME)
 				if ok {
+
+					// current policy is to only count 'in' documents
+					// from operators, not kv
+					// add this.addInDocs(1) if this changes
 					entries = append(entries, entry)
 				}
 			case <-this.stopChannel:

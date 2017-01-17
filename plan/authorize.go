@@ -18,7 +18,7 @@ import (
 type Authorize struct {
 	readonly
 	privs datastore.Privileges `json:"privileges"`
-	child Operator             `json:"child"`
+	child Operator             `json:"~child"`
 }
 
 func NewAuthorize(privs datastore.Privileges, child Operator) *Authorize {
@@ -58,7 +58,7 @@ func (this *Authorize) MarshalBase(f func(map[string]interface{})) map[string]in
 	if f != nil {
 		f(r)
 	} else {
-		r["child"] = this.child
+		r["~child"] = this.child
 	}
 	return r
 }
@@ -67,7 +67,7 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string               `json:"#operator"`
 		Privs datastore.Privileges `json:"privileges"`
-		Child json.RawMessage      `json:"child"`
+		Child json.RawMessage      `json:"~child"`
 	}
 	var child_type struct {
 		Operator string `json:"#operator"`

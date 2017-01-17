@@ -43,7 +43,9 @@ func (this *GrantRole) Copy() Operator {
 
 func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 

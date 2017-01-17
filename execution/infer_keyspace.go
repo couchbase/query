@@ -66,7 +66,7 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 
 		ok := true
 		for ok {
-			this.switchPhase(_CHANTIME) // could be _SERVTIME!
+			this.switchPhase(_SERVTIME)
 			select {
 			case <-this.stopChannel:
 				return
@@ -77,7 +77,10 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 			case val, ok = <-conn.ValueChannel():
 				this.switchPhase(_EXECTIME)
 				if ok {
-					this.addInDocs(1)
+
+					// current policy is to only count 'in' documents
+					// from operators, not kv
+					// add this.addInDocs(1) if this changes
 					ok = this.sendItem(value.NewAnnotatedValue(val))
 				}
 			case <-this.stopChannel:

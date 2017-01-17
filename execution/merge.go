@@ -116,6 +116,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			case item, ok = <-this.input.ItemChannel():
 				this.switchPhase(_EXECTIME)
 				if ok {
+					this.addInDocs(1)
 					ok = this.processMatch(item, context, update, delete, insert)
 				}
 			case <-this.stopChannel: // Never closed
@@ -157,6 +158,7 @@ func (this *Merge) mergeSendItem(op Operator, item value.AnnotatedValue) bool {
 
 	select {
 	case op.Input().ItemChannel() <- item:
+		this.addOutDocs(1)
 		return true
 	case <-this.stopChannel: // Never closed
 		return false

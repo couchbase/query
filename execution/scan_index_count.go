@@ -65,7 +65,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		for n > 0 {
-			this.switchPhase(_CHANTIME) // could be _SERVTIME
+			this.switchPhase(_SERVTIME)
 			select {
 			case <-this.stopChannel:
 				return
@@ -75,6 +75,13 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 			select {
 			case subcount = <-this.childChannel:
 				this.switchPhase(_EXECTIME)
+
+				// current policy is to only count 'in' documents
+				// from operators, not kv
+				// add this.addInDocs(1) if this changes
+				// this could be used for diagnostic purposes:
+				// if docsIn != spans, somethimg has gone wrong
+				// somewhere
 				count += subcount
 				n--
 			case <-this.stopChannel:

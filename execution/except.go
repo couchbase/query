@@ -67,6 +67,7 @@ func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
 	go sequence.RunOnce(context, parent)
 
 	stopped := false
+	this.switchPhase(_CHANTIME)
 loop:
 	for {
 		select {
@@ -79,6 +80,7 @@ loop:
 			notifyChildren(sequence)
 		}
 	}
+	this.switchPhase(_EXECTIME)
 
 	if stopped {
 		return false

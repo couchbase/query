@@ -42,11 +42,11 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 
 func (this *UnionAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "UnionAll"}
-	r["children"] = this.children
+	r["~children"] = this.children
 	if f != nil {
 		f(r)
 	} else {
-		r["children"] = this.children
+		r["~children"] = this.children
 	}
 	return r
 }
@@ -54,7 +54,7 @@ func (this *UnionAll) MarshalBase(f func(map[string]interface{})) map[string]int
 func (this *UnionAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_        string            `json:"#operator"`
-		Children []json.RawMessage `json:"children"`
+		Children []json.RawMessage `json:"~children"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

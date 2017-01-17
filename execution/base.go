@@ -410,10 +410,18 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 }
 
 func (this *base) switchPhase(p timePhases) {
-	oldTime := this.startTime
 	oldPhase := this.timePhase
-	this.startTime = time.Now()
 	this.timePhase = p
+
+	// not switching phases
+	if oldPhase == p {
+		return
+	}
+	oldTime := this.startTime
+	this.startTime = time.Now()
+
+	// starting or restarting after a stop
+	// either way, no time to accrue as of yet
 	if oldPhase == _NOTIME {
 		return
 	}

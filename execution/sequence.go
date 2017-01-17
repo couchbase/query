@@ -56,7 +56,9 @@ func (this *Sequence) Copy() Operator {
 
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
@@ -82,6 +84,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		// Run last child
 		go last_child.RunOnce(context, parent)
 
+		this.switchPhase(_CHANTIME)
 		for {
 			select {
 			case <-this.childChannel: // Never closed

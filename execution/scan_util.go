@@ -43,6 +43,7 @@ func eval(cx expression.Expressions, context *Context, parent value.Value) (valu
 }
 
 func notifyConn(stopchannel datastore.StopChannel) {
+	// TODO we should accrue channel or service time here
 	select {
 	case stopchannel <- false:
 	default:

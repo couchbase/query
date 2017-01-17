@@ -47,7 +47,12 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
-	return context.Result(item)
+	this.switchPhase(_CHANTIME)
+	ok := context.Result(item)
+	if ok {
+		this.addOutDocs(1)
+	}
+	return ok
 }
 
 func (this *Stream) afterItems(context *Context) {

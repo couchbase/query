@@ -54,7 +54,9 @@ func (this *DistinctScan) Copy() Operator {
 
 func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
@@ -74,6 +76,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 
 	loop:
 		for ok {
+			this.switchPhase(_SERVTIME)
 			select {
 			case <-this.stopChannel:
 				break loop
@@ -82,7 +85,9 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case item, ok = <-this.scan.ItemChannel():
+				this.switchPhase(_EXECTIME)
 				if ok {
+					this.addInDocs(1)
 					ok = this.processKey(item, context, limit)
 				}
 			case <-this.childChannel:
@@ -94,6 +99,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 
 		// Await child scan
 		if n > 0 {
+			this.switchPhase(_CHANTIME)
 			notifyChildren(this.scan)
 			<-this.childChannel
 		}

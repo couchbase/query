@@ -63,7 +63,9 @@ func (this *OrderedIntersectScan) Copy() Operator {
 
 func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
+		defer context.Recover() // Recover from any panic
+		this.switchPhase(_EXECTIME)
+		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
@@ -105,6 +107,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 	loop:
 		for ok {
+			this.switchPhase(_CHANTIME)
 			select {
 			case <-this.stopChannel:
 				stopped = true
@@ -124,7 +127,9 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 			select {
 			case item, ok = <-channel.ItemChannel():
+				this.switchPhase(_EXECTIME)
 				if ok {
+					this.addInDocs(1)
 					ok = this.processKey(item, context, fullBits, limit)
 				}
 			case childBit = <-this.childChannel:
@@ -144,6 +149,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		}
 
 		// Await children
+		this.switchPhase(_CHANTIME)
 		notifyChildren(this.scans...)
 		for ; n > 0; n-- {
 			<-this.childChannel
