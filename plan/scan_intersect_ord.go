@@ -25,11 +25,17 @@ type OrderedIntersectScan struct {
 }
 
 func NewOrderedIntersectScan(limit expression.Expression, scans ...SecondaryScan) *OrderedIntersectScan {
-	if len(scans) > 64 {
+	buf := make([]SecondaryScan, 0, 2*len(scans))
+	buf = flattenOrderedIntersectScans(scans[0], buf)
+	scans = append(buf, flattenIntersectScans(scans[1:], buf[len(buf):])...)
+
+	n := len(scans)
+	if n > 64 {
 		return NewOrderedIntersectScan(
 			limit,
 			scans[0],
-			NewIntersectScan(nil, scans[1:]...),
+			NewIntersectScan(nil, scans[1:n/2]...),
+			NewIntersectScan(nil, scans[n/2:]...),
 		)
 	}
 
@@ -130,4 +136,16 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 	}
 
 	return nil
+}
+
+func flattenOrderedIntersectScans(scan SecondaryScan, buf []SecondaryScan) []SecondaryScan {
+	switch scan := scan.(type) {
+	case *OrderedIntersectScan:
+		buf = flattenOrderedIntersectScans(scan.scans[0], buf)
+		buf = append(buf, scan.scans[1:]...)
+	default:
+		buf = append(buf, scan)
+	}
+
+	return buf
 }
