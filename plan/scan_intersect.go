@@ -25,6 +25,9 @@ type IntersectScan struct {
 }
 
 func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *IntersectScan {
+	buf := make([]SecondaryScan, 0, 2*len(scans))
+	scans = flattenIntersectScans(scans, buf)
+
 	n := len(scans)
 	if n > 64 {
 		return NewIntersectScan(
@@ -124,4 +127,17 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 	}
 
 	return nil
+}
+
+func flattenIntersectScans(scans, buf []SecondaryScan) []SecondaryScan {
+	for _, scan := range scans {
+		switch scan := scan.(type) {
+		case *IntersectScan:
+			buf = flattenIntersectScans(scan.scans, buf)
+		default:
+			buf = append(buf, scan)
+		}
+	}
+
+	return buf
 }

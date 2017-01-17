@@ -195,15 +195,17 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64, 
 	for next := queue.Peek(); next != nil; next = queue.Peek() {
 		key := next.(string)
 		bits := this.bits[key]
+		full := false
 
 		if limit > 0 && ((bits&fullBits)^fullBits) == 0 {
 			this.sent++
 			if this.sent > limit {
 				return false
 			}
+			full = true
 		}
 
-		if ((bits & sendBits) ^ sendBits) == 0 {
+		if full || ((bits&sendBits)^sendBits) == 0 {
 			item := this.values[key]
 			queue.Remove()
 
