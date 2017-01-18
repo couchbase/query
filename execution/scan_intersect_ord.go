@@ -102,6 +102,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		ok := true
 		childBit := 0
 		childBits := int64(0)
+		finalScan := false
 
 	loop:
 		for ok {
@@ -114,30 +115,31 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 			select {
 			case childBit = <-this.childChannel:
-				if childBit == 0 || len(this.bits) == 0 {
-					notifyChildren(this.scans...)
+				if n == nscans {
+					notifyChildren(this.scans[1:]...)
+					childBits |= int64(0x01) << uint(childBit)
 				}
 				n--
-				childBits |= int64(0x01) << uint(childBit)
 			default:
 			}
 
 			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context, fullBits, limit)
+					ok = this.processKey(item, context, fullBits, limit, finalScan)
 				}
 			case childBit = <-this.childChannel:
-				if childBit == 0 || len(this.bits) == 0 {
-					notifyChildren(this.scans...)
+				if n == nscans {
+					notifyChildren(this.scans[1:]...)
+					childBits |= int64(0x01) << uint(childBit)
 				}
 				n--
-				childBits |= int64(0x01) << uint(childBit)
 			case <-this.stopChannel:
 				stopped = true
 				break loop
 			default:
-				if n == 0 || (n < nscans && ((childBits&0x01) != 0 || len(this.bits) == 0)) {
+				finalScan = finalScan || (nscans > 1 && n == 1)
+				if n == 0 || (childBits&0x01) != 0 || (finalScan && len(this.bits) == 0) {
 					break loop
 				}
 			}
@@ -160,7 +162,7 @@ func (this *OrderedIntersectScan) ChildChannel() StopChannel {
 }
 
 func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
-	context *Context, fullBits, limit int64) bool {
+	context *Context, fullBits, limit int64, finalScan bool) bool {
 
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
@@ -178,19 +180,27 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 		return false
 	}
 
-	if _, ok := this.values[key]; !ok {
-		this.values[key] = item
+	bit := item.Bit()
+	bits, found := this.bits[key]
+
+	if found || !finalScan || bit != 0 {
+		if !found {
+			this.values[key] = item
+		}
+
+		if bit == 0 {
+			this.queue.Add(key)
+		}
+
+		this.bits[key] = bits | (int64(01) << bit)
 	}
 
-	if item.Bit() == 0 {
-		this.queue.Add(key)
-	}
-
-	this.bits[key] |= int64(01) << item.Bit()
-	return this.processQueue(fullBits, fullBits, limit, false)
+	return this.processQueue(fullBits, fullBits, limit, finalScan)
 }
 
-func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64, all bool) bool {
+func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
+	final bool) bool {
+
 	queue := this.queue
 	for next := queue.Peek(); next != nil; next = queue.Peek() {
 		key := next.(string)
@@ -208,17 +218,17 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64, 
 		if full || ((bits&sendBits)^sendBits) == 0 {
 			item := this.values[key]
 			queue.Remove()
+			delete(this.values, key)
+			delete(this.bits, key)
 
-			if !all {
-				delete(this.values, key)
-				delete(this.bits, key)
-			}
-
+			item.SetBit(this.bit)
 			if !this.sendItem(item) {
 				return false
 			}
-		} else if all {
+		} else if final {
 			queue.Remove()
+			delete(this.values, key)
+			delete(this.bits, key)
 		} else {
 			break
 		}
