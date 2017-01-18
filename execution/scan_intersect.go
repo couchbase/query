@@ -180,6 +180,11 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue,
 	}
 
 	bits := this.bits[key]
+	if bits == 0 {
+		this.values[key] = item
+	}
+
+	bits |= int64(0x01) << item.Bit()
 
 	if (bits&fullBits)^fullBits == 0 {
 		delete(this.values, key)
@@ -193,11 +198,7 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue,
 		return this.sendItem(item) && (limit <= 0 || this.sent < limit)
 	}
 
-	this.bits[key] |= int64(0x01) << item.Bit()
-	if bits == 0 {
-		this.values[key] = item
-	}
-
+	this.bits[key] = bits
 	return true
 }
 
