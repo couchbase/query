@@ -73,18 +73,17 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	var scan plan.SecondaryScan
 	for index, entry := range indexes {
 		lim := limit
-		if lim != nil {
-			pushDown := false
-			arrayIndex := indexHasArrayIndexKey(index)
+		if len(indexes) > 2 || (orderIndex != nil && len(indexes) > 1) {
+			lim = nil
+		}
 
-			if !arrayIndex {
-				pushDown, err = allowedPushDown(entry, pred, node.Alias())
-				if err != nil {
-					return nil, 0, err
-				}
+		if lim != nil {
+			pushDown, err := allowedPushDown(entry, pred, node.Alias())
+			if err != nil {
+				return nil, 0, err
 			}
 
-			if arrayIndex || !pushDown {
+			if !pushDown {
 				lim = nil
 			}
 		}

@@ -139,31 +139,29 @@ outer:
 		return nil, 0, err
 	}
 
-	if !arrayIndex && pushDown {
-		if this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
-			if countIndex, ok := index.(datastore.CountIndex); ok {
-				if termSpans, ok := entry.spans.(*TermSpans); ok && (termSpans.Size() == 1 || !pred.MayOverlapSpans()) {
-					this.maxParallelism = 1
-					this.countScan = plan.NewIndexCountScan(countIndex, node, termSpans.Spans(), covers, filterCovers)
-					return this.countScan, sargLength, nil
-				}
+	if !arrayIndex && pushDown && this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
+		if countIndex, ok := index.(datastore.CountIndex); ok {
+			if termSpans, ok := entry.spans.(*TermSpans); ok && (termSpans.Size() == 1 || !pred.MayOverlapSpans()) {
+				this.maxParallelism = 1
+				this.countScan = plan.NewIndexCountScan(countIndex, node, termSpans.Spans(), covers, filterCovers)
+				return this.countScan, sargLength, nil
 			}
 		}
+	}
 
-		if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
-			this.maxParallelism = 1
-			limit = expression.ONE_EXPR
-			scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
-			if scan != nil {
-				this.coveringScans = append(this.coveringScans, scan)
-			}
-			return scan, sargLength, nil
+	if pushDown && this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
+		this.maxParallelism = 1
+		limit = expression.ONE_EXPR
+		scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+		if scan != nil {
+			this.coveringScans = append(this.coveringScans, scan)
 		}
+		return scan, sargLength, nil
 	}
 
 	this.resetCountMin()
 
-	if limit != nil && (arrayIndex || !pushDown) {
+	if limit != nil && !pushDown {
 		limit = nil
 		this.limit = nil
 	}

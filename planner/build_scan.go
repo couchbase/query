@@ -216,7 +216,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 
 	// Try UNNEST scan
 	if this.from != nil {
-		// Try pushdowns for covering UNNEST index
+		// Try pushdowns
 		this.order = order
 		this.limit = limitExpr
 		this.countAgg = countAgg
@@ -244,6 +244,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 
 	// Try dynamic scan
 	if len(arrays) > 0 {
+		// Try pushdowns
+		this.limit = limitExpr
+
 		dynamicPred := pred.Copy()
 		dnf := NewDNF(dynamicPred, false)
 		dynamicPred, err = dnf.Map(dynamicPred)
@@ -252,7 +255,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		}
 
 		dynamic, dynamicSargLength, err :=
-			this.buildDynamicScan(node, id, dynamicPred, arrays, primaryKey, formalizer)
+			this.buildDynamicScan(node, id, dynamicPred, limit, arrays, primaryKey, formalizer)
 		if err != nil {
 			return nil, 0, err
 		}
