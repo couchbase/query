@@ -27,6 +27,7 @@ type OrderedIntersectScan struct {
 	queue        *util.Queue
 	childChannel StopChannel
 	sent         int64
+	fullCount    int64
 }
 
 func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, scans []Operator) *OrderedIntersectScan {
@@ -136,6 +137,10 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 					}
 
 					ok = this.processKey(item, context, fullBits, sendBits, limit, finalScan)
+					if ok && limit > 0 && this.fullCount >= limit {
+						childBits |= int64(0x01)
+						break loop
+					}
 				}
 			case childBit = <-this.childChannel:
 				if childBit == 0 || n == nscans {
@@ -208,6 +213,9 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 		}
 
 		this.bits[key] = bits | (int64(01) << bit)
+		if limit > 0 && ((this.bits[key]&fullBits)^fullBits) == 0 {
+			this.fullCount++
+		}
 	}
 
 	return this.processQueue(fullBits, sendBits, limit, finalScan)
