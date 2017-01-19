@@ -203,19 +203,17 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 	bit := item.Bit()
 	bits, found := this.bits[key]
 
-	if found || !finalScan || bit != 0 {
-		if !found {
-			this.values[key] = item
-		}
+	if !found {
+		this.values[key] = item
+	}
 
-		if bit == 0 {
-			this.queue.Add(key)
-		}
+	if bit == 0 {
+		this.queue.Add(key)
+	}
 
-		this.bits[key] = bits | (int64(01) << bit)
-		if limit > 0 && ((this.bits[key]&fullBits)^fullBits) == 0 {
-			this.fullCount++
-		}
+	this.bits[key] = bits | (int64(01) << bit)
+	if limit > 0 && ((this.bits[key]&fullBits)^fullBits) == 0 {
+		this.fullCount++
 	}
 
 	return this.processQueue(fullBits, sendBits, limit, finalScan)
