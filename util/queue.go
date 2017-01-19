@@ -79,6 +79,10 @@ func (q *Queue) Capacity() int {
 	return len(q.nodes)
 }
 
+func (q *Queue) Size() int {
+	return q.count
+}
+
 func (q *Queue) Clear() {
 	n := len(q.nodes)
 
