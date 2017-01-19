@@ -102,6 +102,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		ok := true
 		childBit := 0
 		childBits := int64(0)
+		sendBits := int64(0)
 		finalScan := false
 
 	loop:
@@ -115,8 +116,10 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 			select {
 			case childBit = <-this.childChannel:
-				if n == nscans {
-					notifyChildren(this.scans[1:]...)
+				if childBit == 0 || n == nscans {
+					if len(this.scans) > 1 {
+						notifyChildren(this.scans[1:]...)
+					}
 					childBits |= int64(0x01) << uint(childBit)
 				}
 				n--
@@ -126,11 +129,19 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context, fullBits, limit, finalScan)
+					if finalScan {
+						sendBits = childBits
+					} else {
+						sendBits = fullBits
+					}
+
+					ok = this.processKey(item, context, fullBits, sendBits, limit, finalScan)
 				}
 			case childBit = <-this.childChannel:
-				if n == nscans {
-					notifyChildren(this.scans[1:]...)
+				if childBit == 0 || n == nscans {
+					if len(this.scans) > 1 {
+						notifyChildren(this.scans[1:]...)
+					}
 					childBits |= int64(0x01) << uint(childBit)
 				}
 				n--
@@ -138,9 +149,13 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 				stopped = true
 				break loop
 			default:
-				finalScan = finalScan || (nscans > 1 && n == 1)
-				if n == 0 || (childBits&0x01) != 0 || (finalScan && len(this.bits) == 0) {
+				if n == 0 {
 					break loop
+				}
+
+				finalScan = finalScan || (n == 1 && (childBits&0x01 == 0))
+				if finalScan && len(this.bits) == 0 {
+					notifyChildren(this.scans[0])
 				}
 			}
 		}
@@ -162,7 +177,7 @@ func (this *OrderedIntersectScan) ChildChannel() StopChannel {
 }
 
 func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
-	context *Context, fullBits, limit int64, finalScan bool) bool {
+	context *Context, fullBits, sendBits, limit int64, finalScan bool) bool {
 
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
@@ -195,7 +210,7 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 		this.bits[key] = bits | (int64(01) << bit)
 	}
 
-	return this.processQueue(fullBits, fullBits, limit, finalScan)
+	return this.processQueue(fullBits, sendBits, limit, finalScan)
 }
 
 func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
@@ -209,9 +224,6 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
 
 		if limit > 0 && ((bits&fullBits)^fullBits) == 0 {
 			this.sent++
-			if this.sent > limit {
-				return false
-			}
 			full = true
 		}
 
@@ -222,7 +234,7 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
 			delete(this.bits, key)
 
 			item.SetBit(this.bit)
-			if !this.sendItem(item) {
+			if !this.sendItem(item) && (limit <= 0 || this.sent < limit) {
 				return false
 			}
 		} else if final {
