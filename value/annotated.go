@@ -95,6 +95,7 @@ func (this *annotatedValue) Copy() Value {
 		Value:       this.Value.Copy(),
 		attachments: copyMap(this.attachments, self),
 		covers:      this.covers,
+		bit:         this.bit,
 	}
 }
 
@@ -103,6 +104,7 @@ func (this *annotatedValue) CopyForUpdate() Value {
 		Value:       this.Value.CopyForUpdate(),
 		attachments: copyMap(this.attachments, self),
 		covers:      this.covers,
+		bit:         this.bit,
 	}
 }
 
