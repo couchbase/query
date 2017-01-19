@@ -21,8 +21,8 @@ type dynamicKey struct {
 	pairs    *expression.Pairs
 }
 
-func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm,
-	id, pred expression.Expression, arrays map[datastore.Index]*indexEntry,
+func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm, id, pred,
+	limit expression.Expression, arrays map[datastore.Index]*indexEntry,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	op plan.SecondaryScan, sargLength int, err error) {
 
@@ -62,7 +62,7 @@ outer:
 		return nil, 0, err
 	}
 
-	return this.buildTermScan(node, id, newPred, nil, []datastore.Index{index}, primaryKey, formalizer)
+	return this.buildTermScan(node, id, newPred, limit, []datastore.Index{index}, primaryKey, formalizer)
 }
 
 func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression) *dynamicKey {
