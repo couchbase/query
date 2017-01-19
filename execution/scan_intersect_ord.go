@@ -234,8 +234,12 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
 			delete(this.bits, key)
 
 			item.SetBit(this.bit)
-			if !this.sendItem(item) && (limit <= 0 || this.sent < limit) {
+			if !this.sendItem(item) {
 				return false
+			}
+
+			if limit > 0 && this.sent >= limit {
+				break
 			}
 		} else if final {
 			queue.Remove()
