@@ -846,7 +846,7 @@ expr opt_as_alias opt_use
      switch other := $1.(type) {
          case *algebra.Subquery:
               if $3 != algebra.EMPTY_USE {
-                   yylex.Error("FROM Subquery should not have USE KEYS.")
+                   yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
               }
               $$ = algebra.NewSubqueryTerm(other.Select(), $2)
          case *expression.Identifier:
@@ -854,7 +854,7 @@ expr opt_as_alias opt_use
               $$ = algebra.NewExpressionTerm(other, $2, ksterm)
          default:
               if $3 != algebra.EMPTY_USE {
-                  yylex.Error("FROM Expression should not have USE KEYS.")
+                  yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
               }
               $$ = algebra.NewExpressionTerm(other,$2, nil)
      }
