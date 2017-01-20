@@ -54,6 +54,7 @@ the Expressions that are implicitly covered.
 For IsMissing, simply list this expression.
 */
 func (this *IsMissing) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.Operand().String()] = value.MISSING_VALUE
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
 }

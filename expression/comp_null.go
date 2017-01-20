@@ -50,6 +50,7 @@ the Expressions that are implicitly covered.
 For IsNull, simply list this expression.
 */
 func (this *IsNull) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.Operand().String()] = value.NULL_VALUE
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
 }

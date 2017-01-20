@@ -141,6 +141,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.limit = nil
 	}
 
+	// Skip fixed values in ORDER BY
+	if this.order != nil && this.where != nil {
+		order := this.order
+		this.order = skipFixedOrderTerms(this.order, this.where)
+		if this.order == nil {
+			defer func() { this.order = order }()
+		}
+	}
+
 	err = this.visitFrom(node, group)
 	if err != nil {
 		return nil, err
@@ -437,4 +446,32 @@ func constrainGroupTerm(expr expression.Expression, groupKeys expression.Express
 	}
 
 	return nil
+}
+
+func skipFixedOrderTerms(order *algebra.Order, pred expression.Expression) *algebra.Order {
+	filterCovers := _FILTER_COVERS_POOL.Get()
+	defer _FILTER_COVERS_POOL.Put(filterCovers)
+
+	filterCovers = pred.FilterCovers(filterCovers)
+	if len(filterCovers) == 0 {
+		return order
+	}
+
+	sortTerms := make(algebra.SortTerms, 0, len(order.Terms()))
+	for _, term := range order.Terms() {
+		expr := term.Expression()
+		if expr.Static() != nil {
+			continue
+		}
+
+		if val, ok := filterCovers[expr.String()]; !ok || val == nil {
+			sortTerms = append(sortTerms, term)
+		}
+	}
+
+	if len(sortTerms) == 0 {
+		return nil
+	} else {
+		return algebra.NewOrder(sortTerms)
+	}
 }
