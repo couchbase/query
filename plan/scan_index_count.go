@@ -72,6 +72,13 @@ func (this *IndexCountScan) Covering() bool {
 	return len(this.covers) > 0
 }
 
+func (this *IndexCountScan) Limit() expression.Expression {
+	return nil
+}
+
+func (this *IndexCountScan) SetLimit(limit expression.Expression) {
+}
+
 func (this *IndexCountScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

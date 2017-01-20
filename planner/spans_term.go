@@ -52,18 +52,18 @@ func (this *TermSpans) CreateScan(
 }
 
 func (this *TermSpans) Compose(prev SargSpans) SargSpans {
-	return prev.Copy().ComposeSpans(this)
+	return prev.Copy().ComposeTerm(this)
 }
 
-func (this *TermSpans) ComposeSpans(next *TermSpans) SargSpans {
-	return composeSpans(this, next)
+func (this *TermSpans) ComposeTerm(next *TermSpans) SargSpans {
+	return composeTerms(this, next)
 }
 
 func (this *TermSpans) Constrain(other SargSpans) SargSpans {
-	return other.Copy().ConstrainSpans(this)
+	return other.Copy().ConstrainTerm(this)
 }
 
-func (this *TermSpans) ConstrainSpans(spans *TermSpans) SargSpans {
+func (this *TermSpans) ConstrainTerm(spans *TermSpans) SargSpans {
 	return constrainSpans(this.spans, spans.spans)
 }
 
@@ -180,7 +180,7 @@ func (this *TermSpans) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func composeSpans(rs, ns *TermSpans) SargSpans {
+func composeTerms(rs, ns *TermSpans) SargSpans {
 	// Cross product of prev and next spans
 	sp := make(plan.Spans, 0, len(rs.spans)*len(ns.spans))
 

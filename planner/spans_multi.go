@@ -25,9 +25,9 @@ func (this *multiSpansBase) compose(prev SargSpans) {
 	}
 }
 
-func (this *multiSpansBase) composeSpans(next *TermSpans) {
+func (this *multiSpansBase) composeTerm(next *TermSpans) {
 	for i, s := range this.spans {
-		this.spans[i] = s.ComposeSpans(next)
+		this.spans[i] = s.ComposeTerm(next)
 	}
 }
 
@@ -37,9 +37,9 @@ func (this *multiSpansBase) constrain(other SargSpans) {
 	}
 }
 
-func (this *multiSpansBase) constrainSpans(spans *TermSpans) {
+func (this *multiSpansBase) constrainTerm(spans *TermSpans) {
 	for i, s := range this.spans {
-		this.spans[i] = s.ConstrainSpans(spans)
+		this.spans[i] = s.ConstrainTerm(spans)
 	}
 }
 

@@ -44,4 +44,7 @@ type CoveringOperator interface {
 type SecondaryScan interface {
 	CoveringOperator
 	fmt.Stringer
+
+	Limit() expression.Expression
+	SetLimit(limit expression.Expression)
 }

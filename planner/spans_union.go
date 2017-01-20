@@ -70,8 +70,8 @@ func (this *UnionSpans) Compose(prev SargSpans) SargSpans {
 	return this
 }
 
-func (this *UnionSpans) ComposeSpans(next *TermSpans) SargSpans {
-	this.composeSpans(next)
+func (this *UnionSpans) ComposeTerm(next *TermSpans) SargSpans {
+	this.composeTerm(next)
 	return this
 }
 
@@ -80,8 +80,8 @@ func (this *UnionSpans) Constrain(other SargSpans) SargSpans {
 	return this
 }
 
-func (this *UnionSpans) ConstrainSpans(spans *TermSpans) SargSpans {
-	this.constrainSpans(spans)
+func (this *UnionSpans) ConstrainTerm(spans *TermSpans) SargSpans {
+	this.constrainTerm(spans)
 	return this
 }
 

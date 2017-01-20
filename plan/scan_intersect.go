@@ -25,6 +25,12 @@ type IntersectScan struct {
 }
 
 func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *IntersectScan {
+	for _, scan := range scans {
+		if scan.Limit() != nil {
+			scan.SetLimit(nil)
+		}
+	}
+
 	buf := make([]SecondaryScan, 0, 2*len(scans))
 	scans = flattenIntersectScans(scans, buf)
 
@@ -69,6 +75,10 @@ func (this *IntersectScan) Scans() []SecondaryScan {
 
 func (this *IntersectScan) Limit() expression.Expression {
 	return this.limit
+}
+
+func (this *IntersectScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
 }
 
 func (this *IntersectScan) String() string {
