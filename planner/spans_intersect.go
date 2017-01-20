@@ -56,8 +56,8 @@ func (this *IntersectSpans) Compose(prev SargSpans) SargSpans {
 	return this
 }
 
-func (this *IntersectSpans) ComposeSpans(next *TermSpans) SargSpans {
-	this.composeSpans(next)
+func (this *IntersectSpans) ComposeTerm(next *TermSpans) SargSpans {
+	this.composeTerm(next)
 	return this
 }
 
@@ -66,8 +66,8 @@ func (this *IntersectSpans) Constrain(other SargSpans) SargSpans {
 	return this
 }
 
-func (this *IntersectSpans) ConstrainSpans(spans *TermSpans) SargSpans {
-	this.constrainSpans(spans)
+func (this *IntersectSpans) ConstrainTerm(spans *TermSpans) SargSpans {
+	this.constrainTerm(spans)
 	return this
 }
 

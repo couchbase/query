@@ -30,9 +30,9 @@ type SargSpans interface {
 		filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan
 
 	Compose(prev SargSpans) SargSpans                       // Apply to previous composite keys
-	ComposeSpans(next *TermSpans) SargSpans                 // Apply next composite keys
+	ComposeTerm(next *TermSpans) SargSpans                  // Apply next composite keys
 	Constrain(other SargSpans) SargSpans                    // Apply AND constraint
-	ConstrainSpans(spans *TermSpans) SargSpans              // Apply AND constraint
+	ConstrainTerm(spans *TermSpans) SargSpans               // Apply AND constraint
 	Streamline() SargSpans                                  // Dedup and discard empty spans
 	Exact() bool                                            // Are all spans exact
 	SetExact(exact bool)                                    // Set exact on spans

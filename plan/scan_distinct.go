@@ -59,6 +59,10 @@ func (this *DistinctScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *DistinctScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
+}
+
 func (this *DistinctScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

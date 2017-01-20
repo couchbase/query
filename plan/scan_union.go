@@ -60,6 +60,16 @@ func (this *UnionScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *UnionScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
+
+	for _, scan := range this.scans {
+		if scan.Limit() != nil {
+			scan.SetLimit(limit)
+		}
+	}
+}
+
 func (this *UnionScan) Streamline() SecondaryScan {
 	scans := make([]SecondaryScan, 0, len(this.scans))
 	hash := _STRING_SCANS_POOL.Get()
