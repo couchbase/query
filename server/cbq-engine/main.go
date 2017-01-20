@@ -184,6 +184,7 @@ func main() {
 		os.Exit(1)
 	}
 	system.SetRemoteAccess(http.NewSystemRemoteAccess(configstore, server))
+	system.SetConfigStore(configstore)
 
 	datastore_package.SetSystemstore(server.Systemstore())
 

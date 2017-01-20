@@ -243,6 +243,7 @@ func Start(site, pool, namespace string) *MockServer {
 			logging.Pair{"error", err},
 		)
 	}
+	system.SetConfigStore(configstore)
 
 	acctstore, err := acct_resolver.NewAcctstore("stub:")
 	if err != nil {

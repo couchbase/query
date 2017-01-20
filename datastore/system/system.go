@@ -12,6 +12,7 @@ package system
 import (
 	"net/http"
 
+	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -32,6 +33,7 @@ const KEYSPACE_NAME_REQUESTS = "completed_requests"
 const KEYSPACE_NAME_ACTIVE = "active_requests"
 const KEYSPACE_NAME_USER_INFO = "user_info"
 const KEYSPACE_NAME_MY_USER_INFO = "my_user_info"
+const KEYSPACE_NAME_NODES = "nodes"
 
 type store struct {
 	actualStore              datastore.Datastore
@@ -144,9 +146,14 @@ type SystemRemoteAccess interface {
 }
 
 var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()
+var _CONFIGSTORE clustering.ConfigurationStore
 
 func SetRemoteAccess(remoteAccess SystemRemoteAccess) {
 	_REMOTEACCESS = remoteAccess
+}
+
+func SetConfigStore(configStore clustering.ConfigurationStore) {
+	_CONFIGSTORE = configStore
 }
 
 type systemIndexer struct {
