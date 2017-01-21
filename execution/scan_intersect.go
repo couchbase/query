@@ -143,7 +143,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			<-this.childChannel
 		}
 
-		if !stopped && (limit <= 0 || this.sent < limit) {
+		if !stopped && ok && childBits != 0 && (limit <= 0 || this.sent < limit) {
 			this.sendItems(childBits)
 		}
 	})
@@ -196,6 +196,10 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue,
 }
 
 func (this *IntersectScan) sendItems(childBits int64) {
+	if childBits == 0 {
+		return
+	}
+
 	for key, bits := range this.bits {
 		if (bits&childBits)^childBits == 0 {
 			item := this.values[key]
