@@ -24,6 +24,8 @@ import (
 type StopChannel chan int
 
 type Operator interface {
+	json.Marshaler // used for profiling
+
 	Accept(visitor Visitor) (interface{}, error)
 	ItemChannel() value.AnnotatedChannel          // Closed by this operator
 	StopChannel() StopChannel                     // Never closed, just garbage-collected
@@ -39,7 +41,6 @@ type Operator interface {
 	SetBit(b uint8)                               // Child bit
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
-	json.Marshaler                                // used for profiling
 	Done()                                        // frees and pools resources
 }
 

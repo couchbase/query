@@ -15,9 +15,14 @@ import (
 
 // Converts the predicate to use a dynamic index
 func DynamicFor(pred expression.Expression, variable *expression.Identifier, pairs *expression.Pairs) (
-	expression.Expression, error) {
+	expr expression.Expression, err error) {
 
 	pred = pred.Copy()
+	pred, err = Fold(pred)
+	if err != nil {
+		return nil, err
+	}
+
 	dyn := newDynamic(variable, pairs)
 	rv, err := pred.Accept(dyn)
 	if err != nil {
