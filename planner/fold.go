@@ -76,7 +76,11 @@ outer:
 		}
 	}
 
-	return expression.NewAnd(terms...), nil
+	if len(terms) == 1 {
+		return terms[0], nil
+	} else {
+		return expression.NewAnd(terms...), nil
+	}
 }
 
 func (this *fold) VisitOr(expr *expression.Or) (interface{}, error) {
@@ -113,5 +117,9 @@ outer:
 		}
 	}
 
-	return expression.NewOr(terms...), nil
+	if len(terms) == 1 {
+		return terms[0], nil
+	} else {
+		return expression.NewOr(terms...), nil
+	}
 }
