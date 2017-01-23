@@ -509,7 +509,10 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	timeout := request.Timeout()
-	if timeout == 0 {
+
+	// never allow request side timeout to be higher than
+	// server side timeout
+	if this.timeout > 0 && (this.timeout < timeout || timeout <= 0) {
 		timeout = this.timeout
 	}
 	if timeout > 0 {
