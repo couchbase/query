@@ -30,25 +30,33 @@ const (
 	_SERVTIME
 )
 
+var _PHASENAMES = []string{
+	_NOTIME:   "",
+	_EXECTIME: "running",
+	_CHANTIME: "kernel",
+	_SERVTIME: "services",
+}
+
 type base struct {
-	itemChannel value.AnnotatedChannel
-	stopChannel StopChannel // Never closed
-	input       Operator
-	output      Operator
-	stop        Operator
-	parent      Parent
-	once        sync.Once
-	batch       []value.AnnotatedValue
-	timePhase   timePhases
-	startTime   time.Time
-	phaseTimes  func(time.Duration)
-	execTime    time.Duration
-	chanTime    time.Duration
-	servTime    time.Duration
-	inDocs      int64
-	outDocs     int64
-	stopped     bool
-	bit         uint8
+	itemChannel   value.AnnotatedChannel
+	stopChannel   StopChannel // Never closed
+	input         Operator
+	output        Operator
+	stop          Operator
+	parent        Parent
+	once          sync.Once
+	batch         []value.AnnotatedValue
+	timePhase     timePhases
+	startTime     time.Time
+	phaseTimes    func(time.Duration)
+	execTime      time.Duration
+	chanTime      time.Duration
+	servTime      time.Duration
+	inDocs        int64
+	outDocs       int64
+	phaseSwitches int64
+	stopped       bool
+	bit           uint8
 }
 
 const _ITEM_CAP = 512
@@ -425,6 +433,9 @@ func (this *base) switchPhase(p timePhases) {
 	if oldPhase == _NOTIME {
 		return
 	}
+
+	// keep track of phase switching
+	go_atomic.AddInt64((*int64)(&this.phaseSwitches), 1)
 	d := this.startTime.Sub(oldTime)
 	switch oldPhase {
 	case _EXECTIME:
@@ -459,7 +470,8 @@ func (this *base) addOutDocs(d int64) {
 }
 
 func (this *base) marshalTimes(r map[string]interface{}) {
-	stats := make(map[string]interface{}, 5)
+	var d time.Duration
+	stats := make(map[string]interface{}, 6)
 
 	if this.inDocs != 0 {
 		stats["#itemsIn"] = this.inDocs
@@ -467,14 +479,34 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	if this.outDocs != 0 {
 		stats["#itemsOut"] = this.outDocs
 	}
-	if this.execTime != 0 {
-		stats["execTime"] = this.execTime.String()
+	if this.phaseSwitches != 0 {
+		stats["#phaseSwitches"] = this.phaseSwitches
 	}
-	if this.chanTime != 0 {
-		stats["kernTime"] = this.chanTime.String()
+
+	execTime := this.execTime
+	chanTime := this.chanTime
+	servTime := this.servTime
+	if this.timePhase != _NOTIME {
+		d = time.Since(this.startTime)
+		switch this.timePhase {
+		case _EXECTIME:
+			execTime += d
+		case _SERVTIME:
+			servTime += d
+		case _CHANTIME:
+			chanTime += d
+		}
+		stats["state"] = _PHASENAMES[this.timePhase]
 	}
-	if this.servTime != 0 {
-		stats["servTime"] = this.servTime.String()
+
+	if execTime != 0 {
+		stats["execTime"] = execTime.String()
+	}
+	if chanTime != 0 {
+		stats["kernTime"] = chanTime.String()
+	}
+	if servTime != 0 {
+		stats["servTime"] = servTime.String()
 	}
 
 	// chosen to follow "#operator" in the subdocument
