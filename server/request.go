@@ -52,6 +52,7 @@ type Request interface {
 	PositionalArgs() value.Values
 	Namespace() string
 	Timeout() time.Duration
+	SetTimer(*time.Timer)
 	MaxParallelism() int
 	Readonly() value.Tristate
 	Metrics() value.Tristate
@@ -151,6 +152,7 @@ type BaseRequest struct {
 	positionalArgs value.Values
 	namespace      string
 	timeout        time.Duration
+	timer          *time.Timer
 	maxParallelism int
 	readonly       value.Tristate
 	signature      value.Tristate
@@ -213,6 +215,8 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		namedArgs:      namedArgs,
 		positionalArgs: positionalArgs,
 		namespace:      namespace,
+
+		timeout:        -1,
 		maxParallelism: maxParallelism,
 		readonly:       readonly,
 		signature:      signature,
@@ -244,13 +248,12 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	return rv
 }
 
-func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
+func (this *BaseRequest) SetTimeout(timeout time.Duration) {
 	this.timeout = timeout
+}
 
-	// Apply request timeout
-	if timeout > 0 {
-		time.AfterFunc(timeout, func() { request.Expire(TIMEOUT, timeout) })
-	}
+func (this *BaseRequest) SetTimer(timer *time.Timer) {
+	this.timer = timer
 }
 
 func (this *BaseRequest) Id() RequestID {
@@ -571,6 +574,10 @@ func (this *BaseRequest) Close() {
 func (this *BaseRequest) CompleteRequest(requestTime time.Duration, serviceTime time.Duration,
 	resultCount int, resultSize int, errorCount int, server *Server) {
 
+	if this.timer != nil {
+		this.timer.Stop()
+		this.timer = nil
+	}
 	LogRequest(requestTime, serviceTime, resultCount,
 		resultSize, errorCount, this, server)
 

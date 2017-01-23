@@ -236,7 +236,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		req:         req,
 	}
 
-	rv.SetTimeout(rv, timeout)
+	rv.SetTimeout(timeout)
 
 	rv.writer = NewBufferedWriter(rv, bp)
 

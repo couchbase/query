@@ -508,10 +508,12 @@ func (this *Server) serviceRequest(request Request) {
 		return
 	}
 
-	// Apply server execution timeout
-	if this.Timeout() > 0 {
-		timer := time.AfterFunc(this.Timeout(), func() { request.Expire(TIMEOUT, this.Timeout()) })
-		defer timer.Stop()
+	timeout := request.Timeout()
+	if timeout == 0 {
+		timeout = this.timeout
+	}
+	if timeout > 0 {
+		request.SetTimer(time.AfterFunc(timeout, func() { request.Expire(TIMEOUT, timeout) }))
 	}
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
