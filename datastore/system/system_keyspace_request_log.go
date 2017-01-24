@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/server"
@@ -45,7 +46,7 @@ func (b *requestLogKeyspace) Count() (int64, errors.Error) {
 	var count int
 
 	count = 0
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "completed_requests", func(id string) {
+	distributed.RemoteAccess().GetRemoteKeys([]string{}, "completed_requests", func(id string) {
 		count++
 	}, func(warn errors.Error) {
 
@@ -67,11 +68,11 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		node, localKey := _REMOTEACCESS.SplitKey(key)
+		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
 		// remote entry
-		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
-			_REMOTEACCESS.GetRemoteDoc(node, localKey,
+		if len(node) != 0 && node != distributed.RemoteAccess().WhoAmI() {
+			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"completed_requests", "POST",
 				func(doc map[string]interface{}) {
 
@@ -175,12 +176,12 @@ func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	var err errors.Error
 
 	for i, name := range deletes {
-		node, localKey := _REMOTEACCESS.SplitKey(name)
+		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 		// remote entry
-		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+		if len(node) != 0 && node != distributed.RemoteAccess().WhoAmI() {
 
-			_REMOTEACCESS.GetRemoteDoc(node, localKey,
+			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"completed_requests", "DELETE",
 				nil,
 
@@ -275,10 +276,10 @@ func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datas
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 	server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
-		indexEntry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), id)}
+		indexEntry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
 		conn.EntryChannel() <- &indexEntry
 	})
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "completed_requests", func(id string) {
+	distributed.RemoteAccess().GetRemoteKeys([]string{}, "completed_requests", func(id string) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		conn.EntryChannel() <- &indexEntry
 	}, func(warn errors.Error) {

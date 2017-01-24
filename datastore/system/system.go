@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
 )
 
@@ -130,27 +129,7 @@ func (s *store) loadNamespace() errors.Error {
 	return nil
 }
 
-// Interface to access remote system data over various protocols
-type SystemRemoteAccess interface {
-	MakeKey(node string, key string) string // given a node and a local key, produce a cluster key
-	SplitKey(key string) (string, string)   // given a cluster key, return node and local key
-
-	GetRemoteKeys(nodes []string, endpoint string, keyFn func(id string),
-		warnFn func(warn errors.Error)) // collect cluster keys for a keyspace from a set of remote nodes
-	GetRemoteDoc(node string, key string, endpoint string, command string,
-		docFn func(doc map[string]interface{}),
-		warnFn func(warn errors.Error)) // collect a document for a keyspace from a remote node
-	WhoAmI() string             // local node name, if known
-	GetControls() bool          // Controls systemwide setting
-	GetProfile() server.Profile // Profile systemwide setting
-}
-
-var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()
 var _CONFIGSTORE clustering.ConfigurationStore
-
-func SetRemoteAccess(remoteAccess SystemRemoteAccess) {
-	_REMOTEACCESS = remoteAccess
-}
 
 func SetConfigStore(configStore clustering.ConfigurationStore) {
 	_CONFIGSTORE = configStore

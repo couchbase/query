@@ -29,6 +29,7 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -183,7 +184,7 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-	system.SetRemoteAccess(http.NewSystemRemoteAccess(configstore, server))
+	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
 	system.SetConfigStore(configstore)
 
 	datastore_package.SetSystemstore(server.Systemstore())

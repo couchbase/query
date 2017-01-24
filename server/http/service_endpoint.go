@@ -38,6 +38,7 @@ type HttpEndpoint struct {
 	listenerTLS   net.Listener
 	mux           *mux.Router
 	actives       server.ActiveRequests
+	options       server.ServerOptions
 }
 
 const (
@@ -56,9 +57,11 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 		minTlsVersion: minTlsVersion,
 		bufpool:       NewSyncPool(srv.KeepAlive()),
 		actives:       NewActiveRequests(),
+		options:       NewHttpOptions(srv),
 	}
 
 	server.SetActives(rv.actives)
+	server.SetOptions(rv.options)
 
 	rv.registerHandlers(staticPath)
 	return rv
@@ -202,11 +205,16 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	service_time := time.Since(request.ServiceTime())
 	request_time := time.Since(request.RequestTime())
 	acctstore := this.server.AccountingStore()
+	prepared := request.Prepared() != nil
+	preparedText := ""
+	if prepared {
+		preparedText = request.Prepared().Text()
+	}
 
 	plan.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
-		request.Prepared(), (request.State() != server.COMPLETED),
+		prepared, preparedText, (request.State() != server.COMPLETED),
 		string(request.ScanConsistency()))
 
 	request.CompleteRequest(request_time, service_time, request.resultCount,
@@ -279,4 +287,23 @@ func (this *activeHttpRequests) ForEach(f func(string, server.Request)) {
 	for requestId, request := range this.requests {
 		f(requestId, request)
 	}
+}
+
+// httpOptions implements server.ServerOptions for http servers
+type httpOptions struct {
+	server *server.Server
+}
+
+func NewHttpOptions(server *server.Server) server.ServerOptions {
+	return &httpOptions{
+		server: server,
+	}
+}
+
+func (this *httpOptions) Controls() bool {
+	return this.server.Controls()
+}
+
+func (this *httpOptions) Profile() server.Profile {
+	return this.server.Profile()
 }

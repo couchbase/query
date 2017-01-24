@@ -303,6 +303,9 @@ var _FUNCTIONS = map[string]Function{
 	"uuid":        &Uuid{},
 	"version":     &Version{},
 
+	// Distributed
+	"node_name": &NodeName{},
+
 	// Type checking
 	"is_array":   &IsArray{},
 	"is_atom":    &IsAtom{},

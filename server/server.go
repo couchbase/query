@@ -578,3 +578,23 @@ func logExplain(prepared *plan.Prepared) {
 
 	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
 }
+
+// API for tracking server options
+type ServerOptions interface {
+	Controls() bool
+	Profile() Profile
+}
+
+var options ServerOptions
+
+func SetOptions(o ServerOptions) {
+	options = o
+}
+
+func GetControls() bool {
+	return options.Controls()
+}
+
+func GetProfile() Profile {
+	return options.Profile()
+}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/server"
@@ -46,7 +47,7 @@ func (b *activeRequestsKeyspace) Count() (int64, errors.Error) {
 	var count int
 
 	count = 0
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "active_requests", func(id string) {
+	distributed.RemoteAccess().GetRemoteKeys([]string{}, "active_requests", func(id string) {
 		count++
 	}, func(warn errors.Error) {
 
@@ -69,11 +70,11 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		node, localKey := _REMOTEACCESS.SplitKey(key)
+		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
 		// remote entry
-		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
-			_REMOTEACCESS.GetRemoteDoc(node, localKey,
+		if len(node) != 0 && node != distributed.RemoteAccess().WhoAmI() {
+			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"active_requests", "POST",
 				func(doc map[string]interface{}) {
 
@@ -136,7 +137,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 				}
 				prof := request.Profile()
 				if prof == server.ProfUnset {
-					prof = _REMOTEACCESS.GetProfile()
+					prof = server.GetProfile()
 				}
 				if prof != server.ProfOff {
 					item.SetField("phaseTimes", request.Output().FmtPhaseTimes())
@@ -145,7 +146,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 				var ctrl bool
 				ctr := request.Controls()
 				if ctr == value.NONE {
-					ctrl = _REMOTEACCESS.GetControls()
+					ctrl = server.GetControls()
 				} else {
 					ctrl = (ctr == value.TRUE)
 				}
@@ -204,12 +205,12 @@ func (b *activeRequestsKeyspace) Delete(deletes []string) ([]string, errors.Erro
 	var done bool
 
 	for i, name := range deletes {
-		node, localKey := _REMOTEACCESS.SplitKey(name)
+		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 		// remote entry
-		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+		if len(node) != 0 && node != distributed.RemoteAccess().WhoAmI() {
 
-			_REMOTEACCESS.GetRemoteDoc(node, localKey,
+			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"active_requests", "DELETE",
 				nil,
 
@@ -306,11 +307,11 @@ func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons d
 	defer close(conn.EntryChannel())
 
 	server.ActiveRequestsForEach(func(id string, request server.Request) {
-		entry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), id)}
+		entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
 		conn.EntryChannel() <- &entry
 	})
 
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "active_requests", func(id string) {
+	distributed.RemoteAccess().GetRemoteKeys([]string{}, "active_requests", func(id string) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		conn.EntryChannel() <- &indexEntry
 	}, func(warn errors.Error) {

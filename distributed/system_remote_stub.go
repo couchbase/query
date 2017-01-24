@@ -7,11 +7,10 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package system
+package distributed
 
 import (
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 )
 
 // a stub implementation of SystemRemoteAccess
@@ -52,18 +51,4 @@ func (this systemRemoteStub) WhoAmI() string {
 
 	// always local
 	return ""
-}
-
-// returns controls setting
-func (this systemRemoteStub) GetControls() bool {
-
-	// always unset
-	return false
-}
-
-// returns controls setting
-func (this systemRemoteStub) GetProfile() server.Profile {
-
-	// always unset
-	return server.ProfOff
 }

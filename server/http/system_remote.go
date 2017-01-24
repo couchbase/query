@@ -23,9 +23,8 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/clustering"
-	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 )
 
@@ -33,17 +32,15 @@ import (
 type systemRemoteHttp struct {
 	localNode   string
 	configStore clustering.ConfigurationStore
-	server      *server.Server
 }
 
 // flags that we've evaluated WhoAmI, and couldn't establish it
 const _UNSET = "_"
 
-func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore, server *server.Server) system.SystemRemoteAccess {
+func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) distributed.SystemRemoteAccess {
 	return &systemRemoteHttp{
 		localNode:   "",
 		configStore: cfgStore,
-		server:      server,
 	}
 }
 
@@ -339,14 +336,4 @@ func searchName(configStore clustering.ConfigurationStore, name string) bool {
 		}
 	}
 	return false
-}
-
-// returns controls setting
-func (this systemRemoteHttp) GetControls() bool {
-	return this.server.Controls()
-}
-
-// returns controls setting
-func (this systemRemoteHttp) GetProfile() server.Profile {
-	return this.server.Profile()
 }

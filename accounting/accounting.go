@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/plan"
 )
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)
@@ -257,8 +256,8 @@ func RegisterMetrics(acctstore AccountingStore) {
 func RecordMetrics(acctstore AccountingStore,
 	request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
-	error_count int, warn_count int, stmt string, prepared *plan.Prepared,
-	cancelled bool, scanConsistency string) {
+	error_count int, warn_count int, stmt string, prepared bool,
+	preparedText string, cancelled bool, scanConsistency string) {
 
 	ms := acctstore.MetricRegistry()
 	ms.Counter(REQUESTS).Inc(1)
@@ -283,7 +282,7 @@ func RecordMetrics(acctstore AccountingStore,
 	ms.Meter(REQUEST_RATE).Mark(1)
 	ms.Timer(REQUEST_TIMER).Update(request_time)
 
-	if prepared != nil {
+	if prepared {
 		ms.Meter(PREPARED).Mark(1)
 	}
 
@@ -308,20 +307,20 @@ func RecordMetrics(acctstore AccountingStore,
 
 	// record the type of request if 0 errors
 	if error_count == 0 {
-		if t := requestType(stmt, prepared); t != UNKNOWN {
+		if t := requestType(stmt, prepared, preparedText); t != UNKNOWN {
 			ms.Counter(t).Inc(1)
 		}
 	}
 }
 
-func requestType(stmt string, prepared *plan.Prepared) string {
+func requestType(stmt string, prepared bool, preparedText string) string {
 	var tokens []string
 
 	// FIXME - this is a proper hack! should be using algebra.Statement
 	// or something similar to determine the statement type!
-	if prepared != nil && prepared.Text() != "" {
+	if prepared && preparedText != "" {
 		// Second or fourth token determines type of statement
-		tokens = strings.Split(strings.TrimSpace(prepared.Text()), " ")[1:]
+		tokens = strings.Split(strings.TrimSpace(preparedText), " ")[1:]
 	} else {
 		if stmt != "" {
 			// First token determines type of statement
