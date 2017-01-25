@@ -149,6 +149,10 @@ func newSystemIndexer(keyspace datastore.Keyspace, primary datastore.PrimaryInde
 	}
 }
 
+func (si *systemIndexer) AddIndex(name string, idx datastore.Index) {
+	si.indexes[name] = idx
+}
+
 func (si *systemIndexer) KeyspaceId() string {
 	return si.keyspace.Id()
 }
@@ -198,19 +202,19 @@ func (si *systemIndexer) CreatePrimaryIndex(requestId, name string, with value.V
 	return nil, errors.NewSystemNotSupportedError(nil, "CREATE PRIMARY INDEX is not supported for system datastore.")
 }
 
-func (mi *systemIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
+func (si *systemIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewSystemNotSupportedError(nil, "CREATE INDEX is not supported for system datastore.")
 }
 
-func (mi *systemIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
+func (si *systemIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
 	return errors.NewSystemNotSupportedError(nil, "BUILD INDEXES is not supported for system datastore.")
 }
 
-func (mi *systemIndexer) Refresh() errors.Error {
+func (si *systemIndexer) Refresh() errors.Error {
 	return nil
 }
 
-func (mi *systemIndexer) SetLogLevel(level logging.Level) {
+func (si *systemIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
 }

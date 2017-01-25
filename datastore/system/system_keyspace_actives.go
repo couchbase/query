@@ -11,12 +11,14 @@ package system
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
@@ -241,8 +243,30 @@ func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Er
 	b.namespace = p
 	b.name = KEYSPACE_NAME_ACTIVE
 
-	primary := &activeRequestsIndex{name: "#primary", keyspace: b}
+	primary := &activeRequestsIndex{
+		name:     "#primary",
+		keyspace: b,
+		primary:  true,
+	}
 	b.indexer = newSystemIndexer(b, primary)
+
+	// add a secondary index on `node`
+	if distributed.RemoteAccess().WhoAmI() != "" {
+		expr, err := parser.Parse(`node`)
+
+		if err == nil {
+			key := expression.Expressions{expr}
+			nodes := &activeRequestsIndex{
+				name:     "#nodes",
+				keyspace: b,
+				primary:  false,
+				seekKey:  key,
+			}
+			b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
+		} else {
+			return nil, errors.NewSystemDatastoreError(err, "")
+		}
+	}
 
 	return b, nil
 }
@@ -250,6 +274,8 @@ func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Er
 type activeRequestsIndex struct {
 	name     string
 	keyspace *activeRequestsKeyspace
+	primary  bool
+	seekKey  expression.Expressions
 }
 
 func (pi *activeRequestsIndex) KeyspaceId() string {
@@ -269,7 +295,7 @@ func (pi *activeRequestsIndex) Type() datastore.IndexType {
 }
 
 func (pi *activeRequestsIndex) SeekKey() expression.Expressions {
-	return nil
+	return pi.seekKey
 }
 
 func (pi *activeRequestsIndex) RangeKey() expression.Expressions {
@@ -281,7 +307,7 @@ func (pi *activeRequestsIndex) Condition() expression.Expression {
 }
 
 func (pi *activeRequestsIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *activeRequestsIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -299,7 +325,37 @@ func (pi *activeRequestsIndex) Drop(requestId string) errors.Error {
 
 func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.ScanEntries(requestId, limit, cons, vector, conn)
+	if span == nil || len(span.Seek) == 0 || !pi.primary {
+		pi.ScanEntries(requestId, limit, cons, vector, conn)
+	} else {
+		defer close(conn.EntryChannel())
+
+	loop:
+		for _, seek := range span.Seek {
+			val := seek.Actual()
+			switch t := val.(type) {
+			case string:
+			default:
+				conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", t, val)))
+				continue loop
+			}
+			key := val.(string)
+			if key == distributed.RemoteAccess().WhoAmI() {
+				server.ActiveRequestsForEach(func(id string, request server.Request) {
+					entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
+					conn.EntryChannel() <- &entry
+				})
+			} else {
+				distributed.RemoteAccess().GetRemoteKeys([]string{key}, "active_requests", func(id string) {
+					indexEntry := datastore.IndexEntry{PrimaryKey: id}
+					conn.EntryChannel() <- &indexEntry
+				}, func(warn errors.Error) {
+					conn.Warning(warn)
+				})
+			}
+		}
+
+	}
 }
 
 func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
