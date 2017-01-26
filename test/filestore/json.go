@@ -203,13 +203,14 @@ func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Erro
 func Start(site, pool string) *MockServer {
 
 	mockServer := &MockServer{}
-	datastore, err := resolver.NewDatastore("dir:./json")
+	ds, err := resolver.NewDatastore("dir:./json")
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	datastore.SetDatastore(ds)
 
-	sys, err := system.NewDatastore(datastore)
+	sys, err := system.NewDatastore(ds)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
@@ -239,7 +240,7 @@ func Start(site, pool string) *MockServer {
 	// need to do it before NewServer() or server scope's changes to
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
-	server, err := server.NewServer(datastore, sys, configstore, acctstore, "json",
+	server, err := server.NewServer(ds, sys, configstore, acctstore, "json",
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true,
 		server.ProfOff, false)
 	if err != nil {
@@ -252,6 +253,6 @@ func Start(site, pool string) *MockServer {
 	go server.Serve()
 	mockServer.server = server
 	mockServer.acctstore = acctstore
-	mockServer.dstore = datastore
+	mockServer.dstore = ds
 	return mockServer
 }

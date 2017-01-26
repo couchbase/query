@@ -140,18 +140,20 @@ func (pi *myUserInfoIndex) Scan(requestId string, span *datastore.Span, distinct
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 
 	noUsers := make(datastore.AuthenticatedUsers, 0)
-	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noUsers, conn)
+	noCredentials := make(datastore.Credentials, 0)
+	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
 }
 
 func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 
 	noUsers := make(datastore.AuthenticatedUsers, 0)
-	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noUsers, conn)
+	noCredentials := make(datastore.Credentials, 0)
+	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
 }
 
 func (pi *myUserInfoIndex) ScanEntriesForUsers(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, creds datastore.Credentials, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	f := func(userId string) bool {

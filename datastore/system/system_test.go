@@ -23,6 +23,7 @@ func TestSystem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create mock store: %v", err)
 	}
+	datastore.SetDatastore(m)
 
 	// Create systems store with mock m as the ActualStore
 	s, err := NewDatastore(m)
@@ -268,7 +269,8 @@ func doPrimaryIndexScanForUsers(t *testing.T, b datastore.Keyspace, au datastore
 	if !ok {
 		return m, errors.NewSystemDatastoreError(nil, "Primary index does not support user-specific ops.")
 	}
-	go idx_u.ScanEntriesForUsers("", nitems, datastore.UNBOUNDED, nil, au, conn)
+	noCredentials := make(datastore.Credentials, 0)
+	go idx_u.ScanEntriesForUsers("", nitems, datastore.UNBOUNDED, nil, noCredentials, au, conn)
 	for {
 		v, ok := <-conn.EntryChannel()
 		if !ok {

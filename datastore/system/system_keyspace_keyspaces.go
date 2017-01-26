@@ -42,6 +42,11 @@ func (b *keyspaceKeyspace) Name() string {
 }
 
 func (b *keyspaceKeyspace) Count() (int64, errors.Error) {
+	noCredentials := make(datastore.Credentials, 0)
+	return b.CountForUsers(noCredentials)
+}
+
+func (b *keyspaceKeyspace) CountForUsers(creds datastore.Credentials) (int64, errors.Error) {
 	count := int64(0)
 	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
 	if excp == nil {
@@ -51,6 +56,9 @@ func (b *keyspaceKeyspace) Count() (int64, errors.Error) {
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
+						if !canRead(creds, namespaceId, keyspaceId) {
+							continue
+						}
 						// The list of keyspace ids can include memcached buckets.
 						// We do not want to include them in the count of
 						// of queryable buckets. Attempting to retrieve the keyspace
@@ -241,13 +249,24 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 
 	keyspace, _ := namespace.KeyspaceById(ids[1])
 	if keyspace != nil {
-		entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespace.Id(), keyspace.Id())}
-		conn.EntryChannel() <- &entry
+		noCredentials := make(datastore.Credentials, 0)
+		if canRead(noCredentials, namespace.Id(), keyspace.Id()) {
+			entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespace.Id(), keyspace.Id())}
+			conn.EntryChannel() <- &entry
+		}
 	}
 }
 
 func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	noUsers := make(datastore.AuthenticatedUsers, 0)
+	noCredentials := make(datastore.Credentials, 0)
+	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
+
+}
+
+func (pi *keyspaceIndex) ScanEntriesForUsers(requestId string, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, creds datastore.Credentials, users datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	var numProduced int64 = 0
@@ -259,6 +278,9 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
 					for _, keyspaceId := range keyspaceIds {
+						if !canRead(creds, namespaceId, keyspaceId) {
+							continue
+						}
 						// The list of keyspace ids can include memcached buckets.
 						// We do not want to include them in the list
 						// of queryable buckets. Attempting to retrieve the keyspace

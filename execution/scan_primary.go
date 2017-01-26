@@ -200,7 +200,7 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 	this.switchPhase(_SERVTIME)
 	if ok {
 		index_us.ScanEntriesForUsers(context.RequestId(), limit,
-			context.ScanConsistency(), scanVector, context.AuthenticatedUsers(), conn)
+			context.ScanConsistency(), scanVector, context.Credentials(), context.AuthenticatedUsers(), conn)
 	} else {
 		index.ScanEntries(context.RequestId(), limit,
 			context.ScanConsistency(), scanVector, conn)

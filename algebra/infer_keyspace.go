@@ -62,23 +62,7 @@ func (this *InferKeyspace) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *InferKeyspace) Privileges() (datastore.Privileges, errors.Error) {
-	var privilege datastore.Privilege
-	if this.keyspace.Namespace() == "#system" {
-		var keyspace = this.keyspace.Keyspace()
-		if keyspace == "user_info" {
-			privilege = datastore.PRIV_SECURITY_READ
-		} else if keyspace == "datastores" || keyspace == "namespace" || keyspace == "dual" {
-			// These system tables are open to all.
-			return datastore.Privileges{}, nil
-		} else {
-			privilege = datastore.PRIV_SYSTEM_READ
-		}
-	} else {
-		privilege = datastore.PRIV_READ
-	}
-	return datastore.Privileges{
-		this.keyspace.Namespace() + ":" + this.keyspace.Keyspace(): privilege,
-	}, nil
+	return privilegesFromKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
 }
 
 func (this *InferKeyspace) Keyspace() *KeyspaceRef {

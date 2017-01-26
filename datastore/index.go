@@ -137,7 +137,7 @@ type PrimaryIndexUserSensitive interface {
 
 	// Perform a scan of all the entries in this index for authenticated users
 	ScanEntriesForUsers(requestId string, limit int64, cons ScanConsistency,
-		vector timestamp.Vector, au AuthenticatedUsers, conn *IndexConnection)
+		vector timestamp.Vector, creds Credentials, au AuthenticatedUsers, conn *IndexConnection)
 }
 
 type SizedIndex interface {

@@ -44,6 +44,11 @@ func (b *indexKeyspace) Name() string {
 }
 
 func (b *indexKeyspace) Count() (int64, errors.Error) {
+	noCredentials := make(datastore.Credentials, 0)
+	return b.CountForUsers(noCredentials)
+}
+
+func (b *indexKeyspace) CountForUsers(creds datastore.Credentials) (int64, errors.Error) {
 	count := int64(0)
 	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
 	if excp == nil {
@@ -53,6 +58,9 @@ func (b *indexKeyspace) Count() (int64, errors.Error) {
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
+						if !canRead(creds, namespaceId, keyspaceId) {
+							continue
+						}
 						keyspace, excp := namespace.KeyspaceById(keyspaceId)
 						if excp == nil {
 							indexers, excp := keyspace.Indexers()
@@ -287,6 +295,21 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 
 func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	noUsers := make(datastore.AuthenticatedUsers, 0)
+	noCredentials := make(datastore.Credentials, 0)
+	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
+}
+
+// Do the presented credentials authorize the user to read the namespace/keyspace bucket?
+func canRead(creds datastore.Credentials, namespace string, keyspace string) bool {
+	privs := make(datastore.Privileges, 1)
+	privs[namespace+":"+keyspace] = datastore.PRIV_READ
+	_, err := datastore.GetDatastore().Authorize(privs, creds, nil)
+	return err == nil
+}
+
+func (pi *indexIndex) ScanEntriesForUsers(requestId string, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, creds datastore.Credentials, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	// eliminate duplicate keys
@@ -301,6 +324,9 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
 					for _, keyspaceId := range keyspaceIds {
+						if !canRead(creds, namespaceId, keyspaceId) {
+							continue
+						}
 						keyspace, err := namespace.KeyspaceById(keyspaceId)
 						if err == nil {
 							indexers, err := keyspace.Indexers()

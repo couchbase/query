@@ -89,6 +89,11 @@ type Keyspace interface {
 	Release() // Release any resources held by this object
 }
 
+// For keyspaces where the number of records shown depends on the user credentials.
+type KeyspaceUserSensitive interface {
+	CountForUsers(Credentials) (int64, errors.Error)
+}
+
 // Globally accessible Datastore instance
 var _DATASTORE Datastore
 var _SYSTEMSTORE Datastore
