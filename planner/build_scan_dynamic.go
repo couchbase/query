@@ -72,6 +72,7 @@ func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression)
 
 			if variable, ok := array.ValueMapping().(*expression.Identifier); ok &&
 				variable.Identifier() == binding.Variable() {
+
 				if pairs, ok := binding.Expression().(*expression.Pairs); ok {
 					scope := pairs.Operand()
 					if scope.EquivalentTo(alias) ||
