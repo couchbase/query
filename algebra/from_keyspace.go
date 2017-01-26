@@ -83,6 +83,9 @@ func (this *KeyspaceTerm) Privileges() (datastore.Privileges, errors.Error) {
 	if this.namespace == "#system" {
 		if this.keyspace == "user_info" {
 			privs[this.namespace+":"+this.keyspace] = datastore.PRIV_SECURITY_READ
+		} else if this.keyspace == "datastores" || this.keyspace == "namespaces" ||
+			this.keyspace == "dual" {
+			// Do nothing. These three tables are open to all.
 		} else {
 			privs[this.namespace+":"+this.keyspace] = datastore.PRIV_SYSTEM_READ
 		}

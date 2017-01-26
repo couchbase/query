@@ -64,8 +64,12 @@ Returns all required privileges.
 func (this *InferKeyspace) Privileges() (datastore.Privileges, errors.Error) {
 	var privilege datastore.Privilege
 	if this.keyspace.Namespace() == "#system" {
-		if this.keyspace.Keyspace() == "user_info" {
+		var keyspace = this.keyspace.Keyspace()
+		if keyspace == "user_info" {
 			privilege = datastore.PRIV_SECURITY_READ
+		} else if keyspace == "datastores" || keyspace == "namespace" || keyspace == "dual" {
+			// These system tables are open to all.
+			return datastore.Privileges{}, nil
 		} else {
 			privilege = datastore.PRIV_SYSTEM_READ
 		}
