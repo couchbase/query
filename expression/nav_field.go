@@ -61,9 +61,8 @@ func (this *Field) Indexable() bool {
 		return false
 	}
 
-	// MB-16772. For META() expressions, only META().id is
-	// indexable.
-
+	// MB-16772, MB-15916, MB-21971. For META() expressions, only
+	// id, cas, and expiration are indexable.
 	if _, ok := this.First().(*Meta); !ok {
 		return true
 	}
@@ -74,7 +73,7 @@ func (this *Field) Indexable() bool {
 	}
 
 	sv, ok := second.Actual().(string)
-	return ok && sv == "id"
+	return ok && (sv == "id" || sv == "cas" || sv == "expiration")
 }
 
 func (this *Field) EquivalentTo(other Expression) bool {
