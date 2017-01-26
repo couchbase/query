@@ -133,6 +133,12 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
+	// Consider pattern matching indexes
+	pred, err = PatternFor(pred, indexes, formalizer)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Prefer OR scan
 	if or, ok := pred.(*expression.Or); ok {
 		scan, _, err := this.buildOrScan(node, id, or, limit, indexes, primaryKey, formalizer)

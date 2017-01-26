@@ -78,8 +78,10 @@ var _FUNCTIONS = map[string]Function{
 	"lt":             &LT{},
 	"like_prefix":    &LikePrefix{},
 	"like_stop":      &LikeStop{},
+	"like_suffix":    &LikeSuffix{},
 	"regexp_prefix":  &RegexpPrefix{},
 	"regexp_stop":    &RegexpStop{},
+	"regexp_suffix":  &RegexpSuffix{},
 
 	// Concat
 	"concat": &Concat{},
@@ -253,7 +255,6 @@ var _FUNCTIONS = map[string]Function{
 	"json_encode":  &JSONEncode{},
 	"pairs":        &Pairs{},
 	"poly_length":  &PolyLength{},
-	"tokens":       &Tokens{},
 
 	// Base64
 	"base64":        &Base64Encode{},
@@ -266,6 +267,10 @@ var _FUNCTIONS = map[string]Function{
 	"greatest":  &Greatest{},
 	"least":     &Least{},
 	"successor": &Successor{},
+
+	// Token
+	"has_token": &HasToken{},
+	"tokens":    &Tokens{},
 
 	// Conditional for unknowns
 	"if_missing":         &IfMissing{},
