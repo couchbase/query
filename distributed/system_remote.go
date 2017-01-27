@@ -23,7 +23,8 @@ type SystemRemoteAccess interface {
 	GetRemoteDoc(node string, key string, endpoint string, command string,
 		docFn func(doc map[string]interface{}),
 		warnFn func(warn errors.Error)) // collect a document for a keyspace from a remote node
-	WhoAmI() string // local node name, if known
+	WhoAmI() string         // local node name, if known
+	GetNodeNames() []string // all the node names
 }
 
 var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()

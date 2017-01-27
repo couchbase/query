@@ -52,3 +52,10 @@ func (this systemRemoteStub) WhoAmI() string {
 	// always local
 	return ""
 }
+
+// get the node names
+func (this systemRemoteStub) GetNodeNames() []string {
+	var names []string
+
+	return names
+}

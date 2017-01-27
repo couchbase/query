@@ -10,9 +10,6 @@
 package system
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -175,22 +172,17 @@ func (pi *storeIndex) Drop(requestId string) errors.Error {
 
 func (pi *storeIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-
-	val := ""
-
-	a := span.Seek[0].Actual()
-	switch a := a.(type) {
-	case string:
-		val = a
-	default:
-		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
-		return
-	}
-
-	if strings.EqualFold(val, pi.keyspace.namespace.store.actualStore.Id()) {
-		entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
-		conn.EntryChannel() <- &entry
+	if span == nil {
+		pi.ScanEntries(requestId, limit, cons, vector, conn)
+	} else {
+		spanEvaluator, err := compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+		} else if spanEvaluator.evaluate(pi.keyspace.namespace.store.actualStore.Id()) {
+			entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
+			conn.EntryChannel() <- &entry
+		}
+		close(conn.EntryChannel())
 	}
 }
 

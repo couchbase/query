@@ -11,7 +11,6 @@ package system
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -325,28 +324,48 @@ func (pi *activeRequestsIndex) Drop(requestId string) errors.Error {
 
 func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	if span == nil || len(span.Seek) == 0 || !pi.primary {
+	if span == nil || pi.primary {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
 		defer close(conn.EntryChannel())
 
-	loop:
-		for _, seek := range span.Seek {
-			val := seek.Actual()
-			switch t := val.(type) {
-			case string:
-			default:
-				conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", t, val)))
-				continue loop
-			}
-			key := val.(string)
-			if key == distributed.RemoteAccess().WhoAmI() {
+		spanEvaluator, err := compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+		if spanEvaluator.isEquals() {
+			if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
 				server.ActiveRequestsForEach(func(id string, request server.Request) {
 					entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
 					conn.EntryChannel() <- &entry
 				})
 			} else {
-				distributed.RemoteAccess().GetRemoteKeys([]string{key}, "active_requests", func(id string) {
+				nodes := []string{spanEvaluator.key()}
+				distributed.RemoteAccess().GetRemoteKeys(nodes, "active_requests", func(id string) {
+					indexEntry := datastore.IndexEntry{PrimaryKey: id}
+					conn.EntryChannel() <- &indexEntry
+				}, func(warn errors.Error) {
+					conn.Warning(warn)
+				})
+			}
+		} else {
+			nodes := distributed.RemoteAccess().GetNodeNames()
+			eligibleNodes := []string{}
+			for _, node := range nodes {
+				if spanEvaluator.evaluate(node) {
+					if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
+						server.ActiveRequestsForEach(func(id string, request server.Request) {
+							entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
+							conn.EntryChannel() <- &entry
+						})
+					} else {
+						eligibleNodes = append(eligibleNodes, node)
+					}
+				}
+			}
+			if len(eligibleNodes) > 0 {
+				distributed.RemoteAccess().GetRemoteKeys(eligibleNodes, "active_requests", func(id string) {
 					indexEntry := datastore.IndexEntry{PrimaryKey: id}
 					conn.EntryChannel() <- &indexEntry
 				}, func(warn errors.Error) {
@@ -354,7 +373,6 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 				})
 			}
 		}
-
 	}
 }
 

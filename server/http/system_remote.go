@@ -337,3 +337,29 @@ func searchName(configStore clustering.ConfigurationStore, name string) bool {
 	}
 	return false
 }
+
+func (this *systemRemoteHttp) GetNodeNames() []string {
+	var names []string
+
+	if len(this.WhoAmI()) == 0 {
+		return names
+	}
+	cm := this.configStore.ConfigurationManager()
+	clusters, err := cm.GetClusters()
+	if err != nil {
+		return names
+	}
+
+	for _, c := range clusters {
+		clm := c.ClusterManager()
+		queryNodes, err := clm.GetQueryNodes()
+		if err != nil {
+			continue
+		}
+
+		for _, queryNode := range queryNodes {
+			names = append(names, queryNode.Name())
+		}
+	}
+	return names
+}

@@ -10,8 +10,6 @@
 package system
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -181,23 +179,32 @@ func (pi *namespaceIndex) Drop(requestId string) errors.Error {
 
 func (pi *namespaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	if span == nil || len(span.Seek) == 0 {
+		pi.ScanEntries(requestId, limit, cons, vector, conn)
+	} else {
+		defer close(conn.EntryChannel())
 
-	val := ""
+		namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+		if err == nil {
+			spanEvaluator, err := compileSpan(span)
+			if err != nil {
+				conn.Error(err)
+			} else {
+				var numProduced int64 = 0
 
-	a := span.Seek[0].Actual()
-	switch a := a.(type) {
-	case string:
-		val = a
-	default:
-		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
-		return
-	}
-
-	namespace, _ := pi.keyspace.namespace.store.actualStore.NamespaceById(val)
-	if namespace != nil {
-		entry := datastore.IndexEntry{PrimaryKey: namespace.Id()}
-		conn.EntryChannel() <- &entry
+			loop:
+				for _, namespaceId := range namespaceIds {
+					if spanEvaluator.evaluate(namespaceId) {
+						entry := datastore.IndexEntry{PrimaryKey: namespaceId}
+						conn.EntryChannel() <- &entry
+						numProduced++
+						if limit > 0 && numProduced >= limit {
+							break loop
+						}
+					}
+				}
+			}
+		}
 	}
 }
 

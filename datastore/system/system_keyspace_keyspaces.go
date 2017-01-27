@@ -120,11 +120,11 @@ func (b *keyspaceKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors
 }
 
 func (b *keyspaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
-	ids := strings.SplitN(key, "/", 2)
+	ns, ks := splitId(key)
 
-	namespace, err := b.namespace.store.actualStore.NamespaceById(ids[0])
+	namespace, err := b.namespace.store.actualStore.NamespaceById(ns)
 	if namespace != nil {
-		keyspace, err := namespace.KeyspaceById(ids[1])
+		keyspace, err := namespace.KeyspaceById(ks)
 		if keyspace != nil {
 			doc := value.NewAnnotatedValue(map[string]interface{}{
 				"id":           keyspace.Id(),
@@ -222,37 +222,65 @@ func (pi *keyspaceIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
+func makeId(n, k string) string {
+	return fmt.Sprintf("%s/%s", n, k)
+}
+
+func splitId(id string) (string, string) {
+	ids := strings.SplitN(id, "/", 2)
+	return ids[0], ids[1]
+}
+
 func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	if span == nil {
+		pi.ScanEntries(requestId, limit, cons, vector, conn)
+	} else {
+		defer close(conn.EntryChannel())
 
-	val := ""
+		spanEvaluator, err := compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
 
-	a := span.Seek[0].Actual()
-	switch a := a.(type) {
-	case string:
-		val = a
-	default:
-		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
-		return
-	}
+		var numProduced int64 = 0
+		namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+		if err == nil {
 
-	ids := strings.SplitN(val, "/", 2)
-	if len(ids) != 2 {
-		return
-	}
+		loop:
+			for _, namespaceId := range namespaceIds {
+				namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
+				if err == nil {
+					keyspaceIds, err := namespace.KeyspaceIds()
+					if err == nil {
+						for _, keyspaceId := range keyspaceIds {
+							// The list of keyspace ids can include memcached buckets.
+							// We do not want to include them in the list
+							// of queryable buckets. Attempting to retrieve the keyspace
+							// record of a memcached bucket returns an error,
+							// which allows us to distinguish these buckets, and exclude them.
+							// See MB-19364 for more info.
+							_, err := namespace.KeyspaceByName(keyspaceId)
+							if err != nil {
+								continue
+							}
 
-	namespace, _ := pi.keyspace.namespace.store.actualStore.NamespaceById(ids[0])
-	if namespace == nil {
-		return
-	}
-
-	keyspace, _ := namespace.KeyspaceById(ids[1])
-	if keyspace != nil {
-		noCredentials := make(datastore.Credentials, 0)
-		if canRead(noCredentials, namespace.Id(), keyspace.Id()) {
-			entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespace.Id(), keyspace.Id())}
-			conn.EntryChannel() <- &entry
+							id := makeId(namespaceId, keyspaceId)
+							noCredentials := make(datastore.Credentials, 0)
+							if canRead(noCredentials, namespaceId, keyspaceId) &&
+								spanEvaluator.evaluate(id) {
+								entry := datastore.IndexEntry{PrimaryKey: id}
+								conn.EntryChannel() <- &entry
+								numProduced++
+								if limit > 0 && numProduced >= limit {
+									break loop
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 }
@@ -272,6 +300,8 @@ func (pi *keyspaceIndex) ScanEntriesForUsers(requestId string, limit int64, cons
 	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
 	if err == nil {
+
+	loop:
 		for _, namespaceId := range namespaceIds {
 			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
 			if err == nil {
@@ -291,12 +321,13 @@ func (pi *keyspaceIndex) ScanEntriesForUsers(requestId string, limit int64, cons
 						if err != nil {
 							continue
 						}
-						if limit > 0 && numProduced > limit {
-							break
-						}
-						entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespaceId, keyspaceId)}
+						id := makeId(namespaceId, keyspaceId)
+						entry := datastore.IndexEntry{PrimaryKey: id}
 						conn.EntryChannel() <- &entry
 						numProduced++
+						if limit > 0 && numProduced >= limit {
+							break loop
+						}
 					}
 				}
 			}
