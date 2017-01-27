@@ -9,13 +9,13 @@
 package testcs_system
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	js "github.com/couchbase/query/test/multistore"
-	"github.com/couchbase/query/datastore"
 )
 
 func Start_test() *js.MockServer {
-	ms :=  js.Start(js.Site_CBS, js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
+	ms := js.Start(js.Site_CBS, js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
 	datastore.SetDatastore(nil)
 	return ms
 }

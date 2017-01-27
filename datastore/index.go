@@ -24,6 +24,7 @@ const (
 	DEFAULT IndexType = "default" // default may vary per backend
 	VIEW    IndexType = "view"    // view index
 	GSI     IndexType = "gsi"     // global secondary index
+	FTS     IndexType = "fts"     // full text index
 )
 
 type Indexer interface {

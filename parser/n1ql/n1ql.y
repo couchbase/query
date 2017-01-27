@@ -136,6 +136,7 @@ tokOffset	 int
 %token FOR
 %token FORCE
 %token FROM
+%token FTS
 %token FUNCTION
 %token GRANT
 %token GROUP
@@ -1821,6 +1822,11 @@ USING VIEW
 USING GSI
 {
     $$ = datastore.GSI
+}
+|
+USING FTS
+{
+    $$ = datastore.FTS
 }
 ;
 

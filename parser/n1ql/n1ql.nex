@@ -157,6 +157,7 @@
 							lval.tokOffset = yylex.curOffset
 							return FROM
 						 }
+/[fF][tT][sS]/					 { yylex.logToken(yylex.Text(), "FTS"); return FTS }
 /[fF][uU][nN][cC][tT][iI][oO][nN]/		 { yylex.logToken(yylex.Text(), "FUNCTION"); return FUNCTION }
 /[gG][rR][aA][nN][tT]/				 { yylex.logToken(yylex.Text(), "GRANT"); return GRANT }
 /[gG][rR][oO][uU][pP]/				 { yylex.logToken(yylex.Text(), "GROUP"); return GROUP }
