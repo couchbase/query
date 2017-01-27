@@ -82,8 +82,8 @@ func (this *pattern) VisitFunction(expr expression.Function) (interface{}, error
 	switch expr := expr.(type) {
 	case *expression.RegexpLike:
 		return this.visitRegexpLike(expr)
-	case *expression.HasToken:
-		return this.visitHasToken(expr)
+	case *expression.ContainsToken:
+		return this.visitContainsToken(expr)
 	default:
 		return expr, nil
 	}
@@ -104,7 +104,7 @@ func (this *pattern) visitRegexpLike(expr *expression.RegexpLike) (interface{}, 
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) visitHasToken(expr *expression.HasToken) (interface{}, error) {
+func (this *pattern) visitContainsToken(expr *expression.ContainsToken) (interface{}, error) {
 	operands := expr.Operands()
 	source := operands[0]
 	variable, ok := this.tokens[source.String()]

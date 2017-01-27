@@ -269,8 +269,9 @@ var _FUNCTIONS = map[string]Function{
 	"successor": &Successor{},
 
 	// Token
-	"has_token": &HasToken{},
-	"tokens":    &Tokens{},
+	"contains_token": &ContainsToken{},
+	"has_token":      &ContainsToken{},
+	"tokens":         &Tokens{},
 
 	// Conditional for unknowns
 	"if_missing":         &IfMissing{},

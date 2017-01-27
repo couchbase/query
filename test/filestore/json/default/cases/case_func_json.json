@@ -367,5 +367,29 @@
             ]
         }
     ]
+},
+{
+  "statements":"SELECT CONTAINS_TOKEN( [ 'jim@abc.com, kim@abc.com, http://abc.com/, 408-555-1212' ], 'abc' )",
+  "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+  "statements":"SELECT CONTAINS_TOKEN( [ 'jim@abc.com, kim@abc.com, http://abc.com/, 408-555-1212' ], 'abcd' )",
+  "results": [
+        {
+            "$1": false
+        }
+    ]
+},
+{
+  "statements":"SELECT CONTAINS_TOKEN( [ 'jim@abc.com, kim@abc.com, http://abc.com/, 408-555-1212' ], 'kim@abc.com', { 'specials': true } )",
+  "results": [
+        {
+            "$1": true
+        }
+    ]
 }
 ]
