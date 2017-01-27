@@ -15,17 +15,17 @@ import (
 
 ///////////////////////////////////////////////////
 //
-// HasToken
+// ContainsToken
 //
 ///////////////////////////////////////////////////
 
-type HasToken struct {
+type ContainsToken struct {
 	FunctionBase
 }
 
-func NewHasToken(operands ...Expression) Function {
-	rv := &HasToken{
-		*NewFunctionBase("has_token", operands...),
+func NewContainsToken(operands ...Expression) Function {
+	rv := &ContainsToken{
+		*NewFunctionBase("contains_token", operands...),
 	}
 
 	rv.expr = rv
@@ -35,17 +35,17 @@ func NewHasToken(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *HasToken) Accept(visitor Visitor) (interface{}, error) {
+func (this *ContainsToken) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *HasToken) Type() value.Type { return value.BOOLEAN }
+func (this *ContainsToken) Type() value.Type { return value.BOOLEAN }
 
-func (this *HasToken) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *ContainsToken) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-func (this *HasToken) Apply(context Context, args ...value.Value) (value.Value, error) {
+func (this *ContainsToken) Apply(context Context, args ...value.Value) (value.Value, error) {
 	source := args[0]
 	token := args[1]
 
@@ -73,15 +73,15 @@ func (this *HasToken) Apply(context Context, args ...value.Value) (value.Value, 
 	return value.NewValue(set.Has(token)), nil
 }
 
-func (this *HasToken) MinArgs() int { return 2 }
+func (this *ContainsToken) MinArgs() int { return 2 }
 
-func (this *HasToken) MaxArgs() int { return 3 }
+func (this *ContainsToken) MaxArgs() int { return 3 }
 
 /*
 Factory method pattern.
 */
-func (this *HasToken) Constructor() FunctionConstructor {
-	return NewHasToken
+func (this *ContainsToken) Constructor() FunctionConstructor {
+	return NewContainsToken
 }
 
 ///////////////////////////////////////////////////
