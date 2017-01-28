@@ -159,3 +159,7 @@ func (this *ObjectConstruct) Copy() Expression {
 
 	return NewObjectConstruct(copies)
 }
+
+func (this *ObjectConstruct) Mapping() map[Expression]Expression {
+	return this.mapping
+}
