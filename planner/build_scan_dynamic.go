@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 type dynamicKey struct {
@@ -76,7 +77,8 @@ func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression)
 				if pairs, ok := binding.Expression().(*expression.Pairs); ok {
 					scope := pairs.Operand()
 					if scope.EquivalentTo(alias) ||
-						pred.CoveredBy(alias.Identifier(), expression.Expressions{scope}) {
+						pred.CoveredBy(alias.Identifier(), expression.Expressions{scope}) ||
+						pred.CoveredBy(alias.Identifier(), aliasNamed(scope)) {
 						return &dynamicKey{
 							variable: variable,
 							pairs:    pairs,
@@ -89,3 +91,32 @@ func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression)
 
 	return nil
 }
+
+func aliasNamed(expr expression.Expression) expression.Expressions {
+	oc, ok := expr.(*expression.ObjectConstruct)
+	if !ok {
+		return _EMPTY_EXPRESSIONS
+	}
+
+	names := _NAMES_POOL.Get()
+	defer _NAMES_POOL.Put(names)
+
+	// Skip duplicate names
+	mapping := oc.Mapping()
+	for name, _ := range mapping {
+		names[name.String()]++
+	}
+
+	rv := make(expression.Expressions, 0, len(mapping))
+	for name, val := range mapping {
+		str := name.String()
+		if names[str] == 1 && str == expression.NewConstant(val.Alias()).String() {
+			rv = append(rv, val)
+		}
+	}
+
+	return rv
+}
+
+var _EMPTY_EXPRESSIONS = expression.Expressions{}
+var _NAMES_POOL = util.NewStringIntPool(64)
