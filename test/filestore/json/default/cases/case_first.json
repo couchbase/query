@@ -29,15 +29,9 @@
     ]
     },
     {
-        "statements": "SELECT FIRST child FOR child IN children WHEN child.age > 14 AND child.gender = \"m\" END AS first_male_over_14 FROM default:contacts ORDER BY first_male_over",
+        "statements": "SELECT FIRST child FOR child IN children WHEN child.age > 14 AND child.gender = \"m\" END AS first_male_over_14 FROM default:contacts ORDER BY first_male_over_14",
         "results": [
-        {
-            "first_male_over_14": {
-                "age": 17,
-                "gender": "m",
-                "name": "aiden"
-            }
-        },
+        {},
         {},
         {},
         {},
@@ -48,7 +42,13 @@
                 "name": "abama"
             }
         },
-        {}
+        {
+            "first_male_over_14": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        }
        ]
     },
 

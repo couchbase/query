@@ -17,14 +17,13 @@
 ## Introduction
 
 This README describes the source code and implementation of the N1QL
-query engine and components. This source code is targeted for N1QL
-Developer Preview 4, Beta and GA.
+query engine and components.
 
 ## Goals
 
 The goals of this implementation are:
 
-* Language completeness for GA
+* Language completeness
 
 * GA code base
 

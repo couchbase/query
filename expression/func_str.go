@@ -13,6 +13,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -404,7 +405,12 @@ func (this *Repeat) Apply(context Context, first, second value.Value) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.Repeat(first.Actual().(string), int(nf))
+	ni := int(nf)
+	if ni > math.MaxInt16 {
+		return nil, errors.NewRangeError("REPEAT()")
+	}
+
+	rv := strings.Repeat(first.Actual().(string), ni)
 	return value.NewValue(rv), nil
 }
 

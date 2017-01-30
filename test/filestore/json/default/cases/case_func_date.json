@@ -680,5 +680,15 @@
             "$2": 1449129600000
         }
     ]
+    },
+    {
+        "statements": "SELECT DATE_RANGE_STR('1980-01-01', '9999-12-31', 'day')",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT DATE_RANGE_MILLIS(0, 10000000000, 'millisecond')",
+        "results": [
+        ]
    }
 ]
