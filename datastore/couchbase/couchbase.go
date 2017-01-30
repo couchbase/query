@@ -61,6 +61,7 @@ type store struct {
 	namespaceCache map[string]*namespace // map of pool-names and IDs
 	CbAuthInit     bool                  // whether cbAuth is initialized
 	inferencer     datastore.Inferencer  // what we use to infer schemas
+	connectionUrl  string                // where to contact ns_server
 }
 
 func (s *store) Id() string {
@@ -124,6 +125,20 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 
 }
 
+// The ns_server admin API is open iff we can access the /pools API without a password.
+func (s *store) adminIsOpen() bool {
+	url := s.connectionUrl + "/pools"
+	resp, err := http.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return false
+	}
+	return true
+}
+
 func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials, req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
@@ -185,6 +200,13 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 
 		thisBucketAuthorized := false
 		var rememberedError error
+
+		if keyspace == "nodes" && privilege == datastore.PRIV_SYSTEM_READ && s.adminIsOpen() {
+			// The system:nodes table follows the underlying ns_server API.
+			// If all tables have passwords, the API requires credentials.
+			// But if any don't, the API is open to read.
+			continue
+		}
 
 		// Check requested privilege against the list of credentials.
 		for _, creds := range credentialsList {
@@ -316,6 +338,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	var client cb.Client
 	var cbAuthInit bool
 	var err error
+	var connectionUrl string
 
 	// initialize cbauth
 	c, err := initCbAuth(u)
@@ -339,12 +362,14 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 				} else {
 					client = *c
 					cbAuthInit = true
+					connectionUrl = "http://" + host
 				}
 			}
 		}
 	} else {
 		client = *c
 		cbAuthInit = true
+		connectionUrl = u
 	}
 
 	if !cbAuthInit {
@@ -364,6 +389,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		client:         client,
 		namespaceCache: make(map[string]*namespace),
 		CbAuthInit:     cbAuthInit,
+		connectionUrl:  connectionUrl,
 	}
 
 	// get the schema inferencer
