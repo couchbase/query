@@ -12,8 +12,10 @@ package errors
 import ()
 
 // Couchbase authorization error
+const DS_AUTH_ERROR = 10000
+
 func NewDatastoreAuthorizationError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 10000, IKey: "datastore.couchbase.authorization_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: DS_AUTH_ERROR, IKey: "datastore.couchbase.authorization_error", ICause: e,
 		InternalMsg: "Authorization Failed " + msg, InternalCaller: CallerN(1)}
 }
 

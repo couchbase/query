@@ -10,10 +10,12 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
@@ -202,9 +204,54 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
+// Credentials can come from two sources: the basic username/password
+// from basic authorizatio, and from a "creds" value, which encodes
+// in JSON an array of username/password pairs, like this:
+//   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
+func getCredentialsFromRequest(req *http.Request) (datastore.Credentials, errors.Error) {
+	creds := make(datastore.Credentials)
+	user, pass, ok := req.BasicAuth()
+	if ok {
+		creds[user] = pass
+	}
+	creds_json := req.FormValue("creds")
+	if creds_json != "" {
+		cred_list := make([]map[string]string, 0, 2)
+		err := json.Unmarshal([]byte(creds_json), &cred_list)
+		if err != nil {
+			return nil, errors.NewAdminCredsError(creds_json, err)
+		} else {
+			for _, v := range cred_list {
+				user, user_ok := v["user"]
+				pass, pass_ok := v["pass"]
+				if !user_ok || !pass_ok {
+					return nil, errors.NewAdminCredsError(creds_json, nil)
+				}
+				creds[user] = pass
+			}
+		}
+	}
+	logging.Errorf("JOHAN got creds %v", creds)
+	return creds, nil
+}
+
+var _SECURE_PREPAREDS_ENDPOINT = false
+
 func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	switch req.Method {
 	case "GET":
+		if _SECURE_PREPAREDS_ENDPOINT {
+			creds, err := getCredentialsFromRequest(req)
+			if err != nil {
+				return nil, err
+			}
+			privs := datastore.NewPrivileges()
+			privs["#system:prepareds"] = datastore.PRIV_SYSTEM_READ
+			_, err = datastore.GetDatastore().Authorize(privs, creds, req)
+			if err != nil {
+				return nil, err
+			}
+		}
 		return plan.SnapshotPrepared(), nil
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)

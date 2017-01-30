@@ -105,3 +105,10 @@ func NewAdminNotSSLEnabledError() Error {
 	return &err{level: EXCEPTION, ICode: ADMIN_SSL_NOT_ENABLED, IKey: "admin.service.ssl_cert",
 		InternalMsg: "server is not ssl enabled", InternalCaller: CallerN(1)}
 }
+
+const ADMIN_CREDS_ERROR = 2150
+
+func NewAdminCredsError(creds string, e error) Error {
+	return &err{level: EXCEPTION, ICode: ADMIN_CREDS_ERROR, IKey: "admin.accounting.bad_creds", ICause: e,
+		InternalMsg: "Not a proper creds JSON array of user/pass structures: " + creds, InternalCaller: CallerN(1)}
+}

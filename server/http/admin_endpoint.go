@@ -65,6 +65,10 @@ func mapErrorToHttpStatus(err errors.Error) int {
 		return http.StatusUnauthorized
 	case errors.ADMIN_SSL_NOT_ENABLED:
 		return http.StatusNotFound
+	case errors.DS_AUTH_ERROR:
+		return http.StatusUnauthorized
+	case errors.ADMIN_CREDS_ERROR:
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}
