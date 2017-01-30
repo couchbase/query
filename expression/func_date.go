@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -976,6 +977,10 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	if capacity < 0 {
 		capacity = -capacity
 	}
+	if capacity > math.MaxInt16 {
+		return nil, errors.NewRangeError("DATE_RANGE_STR()")
+	}
+
 	rv := make([]interface{}, 0, capacity)
 
 	// Max date value is end date/ t2.
@@ -1127,6 +1132,10 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 	if capacity < 0 {
 		capacity = -capacity
 	}
+	if capacity > math.MaxInt16 {
+		return nil, errors.NewRangeError("DATE_RANGE_MILLIS()")
+	}
+
 	rv := make([]interface{}, 0, capacity)
 
 	// Max date value is end date/ t2.
