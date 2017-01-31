@@ -174,7 +174,7 @@ func (b *keyspace) Name() string {
 	return b.name
 }
 
-func (b *keyspace) Count() (int64, errors.Error) {
+func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	return int64(b.nitems), nil
 }
 
@@ -186,7 +186,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.mi}, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {

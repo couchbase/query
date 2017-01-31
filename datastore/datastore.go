@@ -64,19 +64,38 @@ type Namespace interface {
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this namespace using the keyspace's name
 }
 
+// A subset of execution.Context that is useful at the datastore level.
+type QueryContext interface {
+	Credentials() Credentials
+	AuthenticatedUsers() AuthenticatedUsers
+}
+
+type QueryContextImpl struct {
+}
+
+func (ci *QueryContextImpl) Credentials() Credentials {
+	return make(Credentials, 0)
+}
+
+func (ci *QueryContextImpl) AuthenticatedUsers() AuthenticatedUsers {
+	return make(AuthenticatedUsers, 0)
+}
+
+var NULL_QUERY_CONTEXT = &QueryContextImpl{}
+
 // Keyspace is a map of key-value entries (typically key-document, but
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.
 type Keyspace interface {
-	NamespaceId() string                            // Id of the namespace that contains this keyspace
-	Id() string                                     // Id of this keyspace
-	Name() string                                   // Name of this keyspace
-	Count() (int64, errors.Error)                   // Number of key-value entries in this keyspace
-	Indexer(name IndexType) (Indexer, errors.Error) // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
-	Indexers() ([]Indexer, errors.Error)            // List of index providers
+	NamespaceId() string                              // Id of the namespace that contains this keyspace
+	Id() string                                       // Id of this keyspace
+	Name() string                                     // Name of this keyspace
+	Count(context QueryContext) (int64, errors.Error) // Number of key-value entries in this keyspace
+	Indexer(name IndexType) (Indexer, errors.Error)   // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
+	Indexers() ([]Indexer, errors.Error)              // List of index providers
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
+	Fetch(keys []string, context QueryContext) ([]value.AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
 	//Fetch(keys []string, projection, filter expression.Expression) ([]value.AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
@@ -87,11 +106,6 @@ type Keyspace interface {
 	Delete(deletes []string) ([]string, errors.Error)         // Bulk key-value deletes from this keyspace
 
 	Release() // Release any resources held by this object
-}
-
-// For keyspaces where the number of records shown depends on the user credentials.
-type KeyspaceUserSensitive interface {
-	CountForUsers(Credentials) (int64, errors.Error)
 }
 
 // Globally accessible Datastore instance

@@ -708,7 +708,7 @@ func (b *keyspace) Name() string {
 	return b.name
 }
 
-func (b *keyspace) Count() (int64, errors.Error) {
+func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 
 	var staterr error
 	var totalCount int64
@@ -768,7 +768,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 
 	if len(keys) == 0 {
 		return nil, nil

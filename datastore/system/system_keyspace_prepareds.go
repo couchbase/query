@@ -44,7 +44,7 @@ func (b *preparedsKeyspace) Name() string {
 	return b.name
 }
 
-func (b *preparedsKeyspace) Count() (int64, errors.Error) {
+func (b *preparedsKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	var count int
 
 	count = 0
@@ -65,7 +65,7 @@ func (b *preparedsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 

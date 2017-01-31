@@ -40,7 +40,7 @@ func (b *nodeKeyspace) Name() string {
 }
 
 // TODO scan all node types
-func (b *nodeKeyspace) Count() (int64, errors.Error) {
+func (b *nodeKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	var count int64 = 0
 	cm := _CONFIGSTORE.ConfigurationManager()
 	clusters, err := cm.GetClusters()
@@ -70,7 +70,7 @@ func (b *nodeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 // TODO do all node types
 // TODO go-couchbase should also have a proper node map
-func (b *nodeKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 

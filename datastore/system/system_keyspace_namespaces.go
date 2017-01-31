@@ -38,7 +38,7 @@ func (b *namespaceKeyspace) Name() string {
 	return b.name
 }
 
-func (b *namespaceKeyspace) Count() (int64, errors.Error) {
+func (b *namespaceKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
 	if excp == nil {
 		return int64(len(namespaceIds)), nil
@@ -54,7 +54,7 @@ func (b *namespaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *namespaceKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *namespaceKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {

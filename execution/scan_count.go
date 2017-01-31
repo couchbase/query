@@ -13,8 +13,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -52,15 +50,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()                          // Notify that I have stopped
 
 		this.switchPhase(_SERVTIME)
-		var count int64
-		var e errors.Error
-		keyspace := this.plan.Keyspace()
-		keyspace_us, ok := keyspace.(datastore.KeyspaceUserSensitive)
-		if ok {
-			count, e = keyspace_us.CountForUsers(context.Credentials())
-		} else {
-			count, e = keyspace.Count()
-		}
+		count, e := this.plan.Keyspace().Count(context)
 		this.switchPhase(_EXECTIME)
 
 		if e != nil {

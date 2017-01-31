@@ -117,7 +117,7 @@ func TestFile(t *testing.T) {
 		}
 	}
 
-	freds, errs := keyspace.Fetch([]string{"fred"})
+	freds, errs := keyspace.Fetch([]string{"fred"}, datastore.NULL_QUERY_CONTEXT)
 	if errs != nil || len(freds) == 0 {
 		t.Errorf("failed to fetch fred: %v", errs)
 	}

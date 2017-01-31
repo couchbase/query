@@ -43,12 +43,7 @@ func (b *indexKeyspace) Name() string {
 	return b.name
 }
 
-func (b *indexKeyspace) Count() (int64, errors.Error) {
-	noCredentials := make(datastore.Credentials, 0)
-	return b.CountForUsers(noCredentials)
-}
-
-func (b *indexKeyspace) CountForUsers(creds datastore.Credentials) (int64, errors.Error) {
+func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	count := int64(0)
 	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
 	if excp == nil {
@@ -58,7 +53,7 @@ func (b *indexKeyspace) CountForUsers(creds datastore.Credentials) (int64, error
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(creds, namespaceId, keyspaceId) {
+						if !canRead(context.Credentials(), namespaceId, keyspaceId) {
 							continue
 						}
 						keyspace, excp := namespace.KeyspaceById(keyspaceId)
@@ -105,12 +100,19 @@ func (b *indexKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *indexKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys)*2)
 
 	for _, key := range keys {
-		pairs, err := b.fetchOne(key)
+		ids := strings.SplitN(key, "/", 3)
+		namespaceId := ids[0]
+		keyspaceId := ids[1]
+		indexId := ids[2]
+		if !canRead(context.Credentials(), namespaceId, keyspaceId) {
+			continue
+		}
+		pairs, err := b.fetchOne(key, namespaceId, keyspaceId, indexId)
 		if err != nil {
 			if errs == nil {
 				errs = make([]errors.Error, 0, 1)
@@ -125,17 +127,16 @@ func (b *indexKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Er
 	return rv, errs
 }
 
-func (b *indexKeyspace) fetchOne(key string) ([]value.AnnotatedPair, errors.Error) {
+func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId string, indexId string) ([]value.AnnotatedPair, errors.Error) {
 	rv := make([]value.AnnotatedPair, 0, 2)
-	ids := strings.SplitN(key, "/", 3)
 
 	actualStore := b.namespace.store.actualStore
-	namespace, err := actualStore.NamespaceById(ids[0])
+	namespace, err := actualStore.NamespaceById(namespaceId)
 	if err != nil {
 		return nil, err
 	}
 
-	keyspace, err := namespace.KeyspaceById(ids[1])
+	keyspace, err := namespace.KeyspaceById(keyspaceId)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +148,7 @@ func (b *indexKeyspace) fetchOne(key string) ([]value.AnnotatedPair, errors.Erro
 	}
 
 	for _, indexer := range indexers {
-		index, err := indexer.IndexById(ids[2])
+		index, err := indexer.IndexById(indexId)
 		if err != nil {
 			continue
 		}
@@ -293,13 +294,6 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
-func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	noUsers := make(datastore.AuthenticatedUsers, 0)
-	noCredentials := make(datastore.Credentials, 0)
-	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
-}
-
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
 func canRead(creds datastore.Credentials, namespace string, keyspace string) bool {
 	privs := make(datastore.Privileges, 1)
@@ -308,8 +302,8 @@ func canRead(creds datastore.Credentials, namespace string, keyspace string) boo
 	return err == nil
 }
 
-func (pi *indexIndex) ScanEntriesForUsers(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, creds datastore.Credentials, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
+func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	// eliminate duplicate keys
@@ -324,9 +318,6 @@ func (pi *indexIndex) ScanEntriesForUsers(requestId string, limit int64, cons da
 				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(creds, namespaceId, keyspaceId) {
-							continue
-						}
 						keyspace, err := namespace.KeyspaceById(keyspaceId)
 						if err == nil {
 							indexers, err := keyspace.Indexers()

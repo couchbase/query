@@ -103,13 +103,13 @@ func TestMock(t *testing.T) {
 		t.Fatalf("expected b0 name")
 	}
 
-	c, err := b.Count()
+	c, err := b.Count(datastore.NULL_QUERY_CONTEXT)
 	if err != nil || c != int64(DEFAULT_NUM_ITEMS) {
 		t.Fatalf("expected num items")
 	}
 
 	f := []string{"123"}
-	vs, errs := b.Fetch(f)
+	vs, errs := b.Fetch(f, datastore.NULL_QUERY_CONTEXT)
 	if errs != nil || len(vs) == 0 {
 		t.Fatalf("expected item 123")
 	}
@@ -130,12 +130,12 @@ func TestMock(t *testing.T) {
 		t.Fatalf("expected not-a-valid-path to err")
 	}
 
-	vs, errs = b.Fetch([]string{"not-an-item"})
+	vs, errs = b.Fetch([]string{"not-an-item"}, datastore.NULL_QUERY_CONTEXT)
 	if errs == nil || len(vs) > 0 {
 		t.Fatalf("expected not-an-item")
 	}
 
-	vs, errs = b.Fetch([]string{strconv.Itoa(DEFAULT_NUM_ITEMS)})
+	vs, errs = b.Fetch([]string{strconv.Itoa(DEFAULT_NUM_ITEMS)}, datastore.NULL_QUERY_CONTEXT)
 	if errs == nil || len(vs) > 0 {
 		t.Fatalf("expected not-an-item")
 	}
@@ -215,7 +215,7 @@ func doIndexScan(t *testing.T, b datastore.Keyspace, span *datastore.Span) (
 	conn := datastore.NewIndexConnection(&testingContext{t})
 	e = []*datastore.IndexEntry{}
 
-	nitems, excp := b.Count()
+	nitems, excp := b.Count(datastore.NULL_QUERY_CONTEXT)
 	if excp != nil {
 		t.Fatalf("failed to get keyspace count")
 		return

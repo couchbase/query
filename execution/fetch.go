@@ -114,7 +114,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	this.switchPhase(_SERVTIME)
 
 	// Fetch
-	pairs, errs := this.plan.Keyspace().Fetch(keys)
+	pairs, errs := this.plan.Keyspace().Fetch(keys, context)
 
 	this.switchPhase(_EXECTIME)
 

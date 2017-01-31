@@ -41,12 +41,7 @@ func (b *keyspaceKeyspace) Name() string {
 	return b.name
 }
 
-func (b *keyspaceKeyspace) Count() (int64, errors.Error) {
-	noCredentials := make(datastore.Credentials, 0)
-	return b.CountForUsers(noCredentials)
-}
-
-func (b *keyspaceKeyspace) CountForUsers(creds datastore.Credentials) (int64, errors.Error) {
+func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	count := int64(0)
 	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
 	if excp == nil {
@@ -56,7 +51,7 @@ func (b *keyspaceKeyspace) CountForUsers(creds datastore.Credentials) (int64, er
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(creds, namespaceId, keyspaceId) {
+						if !canRead(context.Credentials(), namespaceId, keyspaceId) {
 							continue
 						}
 						// The list of keyspace ids can include memcached buckets.
@@ -90,11 +85,15 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *keyspaceKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
-		item, e := b.fetchOne(k)
+		ns, ks := splitId(k)
+		if !canRead(context.Credentials(), ns, ks) {
+			continue
+		}
+		item, e := b.fetchOne(ns, ks)
 
 		if e != nil {
 			if errs == nil {
@@ -119,9 +118,7 @@ func (b *keyspaceKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors
 	return rv, errs
 }
 
-func (b *keyspaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
-	ns, ks := splitId(key)
-
+func (b *keyspaceKeyspace) fetchOne(ns string, ks string) (value.AnnotatedValue, errors.Error) {
 	namespace, err := b.namespace.store.actualStore.NamespaceById(ns)
 	if namespace != nil {
 		keyspace, err := namespace.KeyspaceById(ks)
@@ -267,9 +264,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 							}
 
 							id := makeId(namespaceId, keyspaceId)
-							noCredentials := make(datastore.Credentials, 0)
-							if canRead(noCredentials, namespaceId, keyspaceId) &&
-								spanEvaluator.evaluate(id) {
+							if spanEvaluator.evaluate(id) {
 								entry := datastore.IndexEntry{PrimaryKey: id}
 								conn.EntryChannel() <- &entry
 								numProduced++
@@ -287,14 +282,6 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 
 func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	noUsers := make(datastore.AuthenticatedUsers, 0)
-	noCredentials := make(datastore.Credentials, 0)
-	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
-
-}
-
-func (pi *keyspaceIndex) ScanEntriesForUsers(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, creds datastore.Credentials, users datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	var numProduced int64 = 0
@@ -308,9 +295,6 @@ func (pi *keyspaceIndex) ScanEntriesForUsers(requestId string, limit int64, cons
 				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(creds, namespaceId, keyspaceId) {
-							continue
-						}
 						// The list of keyspace ids can include memcached buckets.
 						// We do not want to include them in the list
 						// of queryable buckets. Attempting to retrieve the keyspace

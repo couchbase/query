@@ -196,15 +196,9 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
 
 	index := this.plan.Index()
-	index_us, ok := index.(datastore.PrimaryIndexUserSensitive)
 	this.switchPhase(_SERVTIME)
-	if ok {
-		index_us.ScanEntriesForUsers(context.RequestId(), limit,
-			context.ScanConsistency(), scanVector, context.Credentials(), context.AuthenticatedUsers(), conn)
-	} else {
-		index.ScanEntries(context.RequestId(), limit,
-			context.ScanConsistency(), scanVector, conn)
-	}
+	index.ScanEntries(context.RequestId(), limit,
+		context.ScanConsistency(), scanVector, conn)
 	this.switchPhase(_EXECTIME)
 }
 
@@ -229,7 +223,7 @@ func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexCo
 
 	// Use keyspace count to create a sized index connection
 	keyspace := this.plan.Keyspace()
-	size, err := keyspace.Count()
+	size, err := keyspace.Count(context)
 	if err == nil {
 		if size <= 0 {
 			size = 1

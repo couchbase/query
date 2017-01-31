@@ -39,8 +39,17 @@ func (b *myUserInfoKeyspace) Name() string {
 	return b.name
 }
 
-func (b *myUserInfoKeyspace) Count() (int64, errors.Error) {
-	v, err := b.cache.getNumUsers()
+func (b *myUserInfoKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
+	authUsers := context.AuthenticatedUsers()
+	approverFunc := func(id string) bool {
+		for _, v := range authUsers {
+			if id == v {
+				return true
+			}
+		}
+		return false
+	}
+	v, err := b.cache.getNumUsers(approverFunc)
 	return int64(v), err
 }
 
@@ -52,8 +61,17 @@ func (b *myUserInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *myUserInfoKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
-	vals, errs := b.cache.fetch(keys)
+func (b *myUserInfoKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+	authUsers := context.AuthenticatedUsers()
+	approverFunc := func(id string) bool {
+		for _, v := range authUsers {
+			if id == v {
+				return true
+			}
+		}
+		return false
+	}
+	vals, errs := b.cache.fetch(keys, approverFunc)
 	return vals, errs
 }
 
@@ -138,32 +156,12 @@ func (pi *myUserInfoIndex) Drop(requestId string) errors.Error {
 
 func (pi *myUserInfoIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-
-	noUsers := make(datastore.AuthenticatedUsers, 0)
-	noCredentials := make(datastore.Credentials, 0)
-	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
+	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
 func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-
-	noUsers := make(datastore.AuthenticatedUsers, 0)
-	noCredentials := make(datastore.Credentials, 0)
-	pi.ScanEntriesForUsers(requestId, limit, cons, vector, noCredentials, noUsers, conn)
-}
-
-func (pi *myUserInfoIndex) ScanEntriesForUsers(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, creds datastore.Credentials, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	f := func(userId string) bool {
-		for _, v := range au {
-			if v == userId {
-				return true
-			}
-		}
-		return false
-	}
-
-	pi.keyspace.cache.scanEntries(limit, f, conn.EntryChannel())
+	pi.keyspace.cache.scanEntries(limit, conn.EntryChannel())
 }
