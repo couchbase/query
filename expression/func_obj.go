@@ -750,6 +750,148 @@ func (this *ObjectRemove) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ObjectRename
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the function OBJECT_RENAME(obj, old_name, new_name).
+Returns a new object with the name old_name replaced by new_name.
+*/
+type ObjectRename struct {
+	TernaryFunctionBase
+}
+
+func NewObjectRename(obj, old_name, new_name Expression) Function {
+	rv := &ObjectRename{
+		*NewTernaryFunctionBase("object_rename", obj, old_name, new_name),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ObjectRename) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectRename) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectRename) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *ObjectRename) Apply(context Context, obj, old_name, new_name value.Value) (
+	value.Value, error) {
+
+	// Check for type mismatches
+	if obj.Type() == value.MISSING || old_name.Type() == value.MISSING || new_name.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if obj.Type() != value.OBJECT || old_name.Type() != value.STRING || new_name.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	old := old_name.Actual().(string)
+	val, ok := obj.Field(old)
+	if !ok {
+		return obj, nil
+	}
+
+	rv := obj.CopyForUpdate()
+	rv.UnsetField(old)
+	rv.SetField(new_name.Actual().(string), val)
+	return rv, nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *ObjectRename) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectRename(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectReplace
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the function OBJECT_REPLACE(obj, old_val,
+new_val).  Returns a new object with all occurrences of old_val
+replaced by new_val.
+*/
+type ObjectReplace struct {
+	TernaryFunctionBase
+}
+
+func NewObjectReplace(obj, old_val, new_val Expression) Function {
+	rv := &ObjectReplace{
+		*NewTernaryFunctionBase("object_replace", obj, old_val, new_val),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ObjectReplace) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectReplace) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *ObjectReplace) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectReplace) PropagatesNull() bool {
+	return false
+}
+
+func (this *ObjectReplace) Apply(context Context, obj, old_val, new_val value.Value) (
+	value.Value, error) {
+
+	// Check for type mismatches
+	if obj.Type() == value.MISSING || old_val.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if obj.Type() != value.OBJECT || old_val.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
+	dup := obj.CopyForUpdate()
+	fields := dup.Fields()
+	for name, val := range fields {
+		if old_val.Equals(value.NewValue(val)).Truth() {
+			dup.SetField(name, new_val)
+		}
+	}
+
+	return dup, nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *ObjectReplace) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectReplace(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ObjectUnwrap
 //
 ///////////////////////////////////////////////////
