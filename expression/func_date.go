@@ -388,7 +388,7 @@ func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (va
 	pa := part.Actual().(string)
 	t, err := dateAdd(millisToTime(da), int(na), pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
@@ -462,7 +462,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 	pa := part.Actual().(string)
 	t, err = dateAdd(t, int(na), pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToStr(t, fmt)), nil
@@ -526,7 +526,7 @@ func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Valu
 	pa := part.Actual().(string)
 	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(float64(diff)), nil
@@ -601,7 +601,7 @@ func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) 
 	pa := part.Actual().(string)
 	diff, err := dateDiff(t1, t2, pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(float64(diff)), nil
@@ -765,7 +765,7 @@ func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.V
 
 	rv, err := datePart(timeVal, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(float64(rv)), nil
@@ -842,7 +842,7 @@ func (this *DatePartStr) Apply(context Context, first, second value.Value) (valu
 
 	rv, err := datePart(t, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(float64(rv)), nil
@@ -972,7 +972,7 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 	if capacity < 0 {
 		capacity = -capacity
@@ -996,7 +996,7 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 		rv = append(rv, timeToStr(start, fmt1))
 		t, err := dateAdd(start, int(step), partStr)
 		if err != nil {
-			return value.NULL_VALUE, nil
+			return value.NULL_VALUE, err
 		}
 
 		start = t
@@ -1127,7 +1127,7 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 	if capacity < 0 {
 		capacity = -capacity
@@ -1151,7 +1151,7 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 		rv = append(rv, float64(timeToMillis(start)))
 		t, err := dateAdd(start, int(step), partStr)
 		if err != nil {
-			return value.NULL_VALUE, nil
+			return value.NULL_VALUE, err
 		}
 
 		start = t
@@ -1229,7 +1229,7 @@ func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (
 	var err error
 	t, err = dateTrunc(t, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
@@ -1297,7 +1297,7 @@ func (this *DateTruncStr) Apply(context Context, first, second value.Value) (val
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToStr(t, str)), nil
@@ -2444,18 +2444,15 @@ format. In the event t2 is greater than t1, and the result returns
 a negative value, return a negative result.
 */
 func dateDiff(t1, t2 time.Time, part string) (int64, error) {
-	var diff *date
-	if t1.String() >= t2.String() {
-		diff = diffDates(t1, t2)
-		return diffPart(t1, t2, diff, part)
-	} else {
-		diff = diffDates(t2, t1)
-		result, e := diffPart(t1, t2, diff, part)
-		if result != 0 {
-			return -result, e
-		}
-		return result, e
+	sign := 1
+	if t1.String() < t2.String() {
+		t1, t2 = t2, t1
+		sign = -1
 	}
+
+	diff := diffDates(t1, t2)
+	d, err := diffPart(t1, t2, diff, part)
+	return d * int64(sign), err
 }
 
 func GetQuarter(t time.Time) int {
