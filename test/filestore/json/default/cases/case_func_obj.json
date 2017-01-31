@@ -388,7 +388,7 @@
      ]
   },
   {
-    "statements":"select OBJECT_CONCAT({\"a\":1, \"d\":4}, {\"b\":2}, {\"c\":3, \"e\":5}, {})",
+    "statements":"select OBJECT_CONCAT({'a':1, 'd':4}, {'b':2}, {'c':3, 'e':5}, {})",
     "results": [
         {
             "$1": {
@@ -402,11 +402,35 @@
     ]
   },
   {
-    "statements":"select OBJECT_REMOVE({\"a\":1, \"b\":2, \"c\":3}, \"b\", \"c\")",
+    "statements":"select OBJECT_REMOVE({'a':1, 'b':2, 'c':3}, 'b', 'c')",
     "results": [
         {
             "$1": {
                 "a": 1
+            }
+        }
+    ]
+  },
+  {
+    "statements":"select OBJECT_RENAME({'a':1, 'b':2, 'c':3}, 'b', 'd')",
+    "results": [
+        {
+            "$1": {
+                "a": 1,
+                "c": 3,
+                "d": 2
+            }
+        }
+    ]
+  },
+  {
+    "statements":"select OBJECT_REPLACE({'a':1, 'b':2, 'c':3}, 2, 4)",
+    "results": [
+        {
+            "$1": {
+                "a": 1,
+                "b": 4,
+                "c": 3
             }
         }
     ]
