@@ -16,6 +16,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const RANGE_LIMIT = math.MaxInt16 // Maximum range/repeat value
+
 /*
 Type Function is an interface that inherits from Expression.
 It contains additional methods that help define a function

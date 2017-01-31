@@ -977,7 +977,7 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	if capacity < 0 {
 		capacity = -capacity
 	}
-	if capacity > math.MaxInt16 {
+	if capacity > RANGE_LIMIT {
 		return nil, errors.NewRangeError("DATE_RANGE_STR()")
 	}
 
@@ -1132,7 +1132,7 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 	if capacity < 0 {
 		capacity = -capacity
 	}
-	if capacity > math.MaxInt16 {
+	if capacity > RANGE_LIMIT {
 		return nil, errors.NewRangeError("DATE_RANGE_MILLIS()")
 	}
 

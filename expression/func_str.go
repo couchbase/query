@@ -406,7 +406,7 @@ func (this *Repeat) Apply(context Context, first, second value.Value) (value.Val
 	}
 
 	ni := int(nf)
-	if ni > math.MaxInt16 {
+	if ni > RANGE_LIMIT {
 		return nil, errors.NewRangeError("REPEAT()")
 	}
 

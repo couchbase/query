@@ -1357,7 +1357,7 @@ func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value
 	}
 
 	capacity := int(math.Abs(end-start) / math.Abs(step))
-	if capacity > math.MaxInt16 {
+	if capacity > RANGE_LIMIT {
 		return nil, errors.NewRangeError("ARRAY_RANGE()")
 	}
 
@@ -1529,7 +1529,7 @@ func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (valu
 	}
 
 	n := int(sf)
-	if n > math.MaxInt16 {
+	if n > RANGE_LIMIT {
 		return nil, errors.NewRangeError("ARRAY_REPEAT()")
 	}
 
