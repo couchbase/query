@@ -32,7 +32,8 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 	}
 
 	if v, ok := mapping.(*Identifier); ok && when == nil && len(bindings) == 1 &&
-		!bindings[0].Descend() && v.Identifier() == bindings[0].Variable() {
+		!bindings[0].Descend() && v.Identifier() == bindings[0].Variable() &&
+		bindings[0].NameVariable() == "" {
 		rv.identity = true
 	}
 

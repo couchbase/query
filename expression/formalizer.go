@@ -252,7 +252,7 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 		aliases.SetField(b.Variable(), value.TRUE_VALUE)
 
 		if b.NameVariable() != "" {
-			if _, ok := allowed.Field(b.Variable()); ok {
+			if _, ok := allowed.Field(b.NameVariable()); ok {
 				return fmt.Errorf("Duplicate variable %v already in scope.", b.NameVariable())
 			}
 
