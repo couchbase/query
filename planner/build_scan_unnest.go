@@ -265,6 +265,10 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred, limit expression.Expression, 
 		return nil, nil, 0, nil
 	}
 
+	if array.When() != nil && !SubsetOf(pred, array.When()) {
+		return nil, nil, 0, nil
+	}
+
 	arrayMapping := array.ValueMapping()
 	nestedArrayKey, ok := arrayMapping.(*expression.All)
 	if ok {
