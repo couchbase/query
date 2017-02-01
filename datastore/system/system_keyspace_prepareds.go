@@ -202,7 +202,7 @@ func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 				name:     "#nodes",
 				keyspace: b,
 				primary:  false,
-				seekKey:  key,
+				idxKey:   key,
 			}
 			b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
 		} else {
@@ -217,7 +217,7 @@ type preparedsIndex struct {
 	name     string
 	keyspace *preparedsKeyspace
 	primary  bool
-	seekKey  expression.Expressions
+	idxKey   expression.Expressions
 }
 
 func (pi *preparedsIndex) KeyspaceId() string {
@@ -237,11 +237,11 @@ func (pi *preparedsIndex) Type() datastore.IndexType {
 }
 
 func (pi *preparedsIndex) SeekKey() expression.Expressions {
-	return pi.seekKey
+	return pi.idxKey
 }
 
 func (pi *preparedsIndex) RangeKey() expression.Expressions {
-	return nil
+	return pi.idxKey
 }
 
 func (pi *preparedsIndex) Condition() expression.Expression {

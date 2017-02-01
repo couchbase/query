@@ -229,7 +229,7 @@ func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 				name:     "#nodes",
 				keyspace: b,
 				primary:  false,
-				seekKey:  key,
+				idxKey:   key,
 			}
 			b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
 		} else {
@@ -244,7 +244,7 @@ type requestLogIndex struct {
 	name     string
 	keyspace *requestLogKeyspace
 	primary  bool
-	seekKey  expression.Expressions
+	idxKey   expression.Expressions
 }
 
 func (pi *requestLogIndex) KeyspaceId() string {
@@ -264,11 +264,11 @@ func (pi *requestLogIndex) Type() datastore.IndexType {
 }
 
 func (pi *requestLogIndex) SeekKey() expression.Expressions {
-	return pi.seekKey
+	return pi.idxKey
 }
 
 func (pi *requestLogIndex) RangeKey() expression.Expressions {
-	return nil
+	return pi.idxKey
 }
 
 func (pi *requestLogIndex) Condition() expression.Expression {

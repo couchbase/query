@@ -129,12 +129,15 @@ func main() {
 	}
 	datastore_package.SetDatastore(datastore)
 
+	// configstore and remote access should be set before the system datastore
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
 		logging.Errorp("Could not connect to configstore",
 			logging.Pair{"error", err},
 		)
 	}
+	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
+
 	acctstore, err := acct_resolver.NewAcctstore(*ACCTSTORE)
 	if err != nil {
 		logging.Errorp("Could not connect to acctstore",
@@ -184,7 +187,6 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
 	system.SetConfigStore(configstore)
 
 	datastore_package.SetSystemstore(server.Systemstore())

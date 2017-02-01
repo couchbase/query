@@ -194,7 +194,11 @@ func (si *systemIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Erro
 }
 
 func (si *systemIndexer) Indexes() ([]datastore.Index, errors.Error) {
-	return []datastore.Index{si.primary}, nil
+	rv := make([]datastore.Index, 0, len(si.indexes))
+	for _, idx := range si.indexes {
+		rv = append(rv, idx)
+	}
+	return rv, nil
 }
 
 func (si *systemIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (
