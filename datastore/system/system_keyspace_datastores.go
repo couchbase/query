@@ -138,7 +138,7 @@ func (pi *storeIndex) Name() string {
 }
 
 func (pi *storeIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *storeIndex) SeekKey() expression.Expressions {

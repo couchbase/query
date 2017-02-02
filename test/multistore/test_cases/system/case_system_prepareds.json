@@ -3,7 +3,7 @@
 	"statements": "prepare test from select name, statement, uses from system:prepareds",
 	"results": [
         {
-            "encoded_plan": "H4sIAAAJbogA/6RSTWvjMBD9K2Zy2QWxpz3ptpeFvQVyXEIs5JdEqSyrM+OSNLi/vcj5MElLoS3oopk37735OBKS7xo0qxxdIktkKLkWZEkhSoa6DHbaMdkjzaYPLfDYI3mQoRe/DbFhJLL/b0F/et12HJ4LKnN4ChEbyEglB1G0NjOyYzRC9vdwofqS1pxD6/iw8C6RoZAa7MnSLJ/CZOgBB8nOl94m1VO7l/jZFRnqJaQNWWqwdn1UGsyt2l+o336O9J5i7tjFiEjfavtfChpcnHO3gy8LY0gfdaXgVkY09rkAf9RXg/Wvuhisf46e3s2LOkWLpB+BeoGU/PLNdEKaLA3Lobw7yEIZrh1rScImOe0ZZQLn89tJV/Z49TGFiurlNxhS7HWaflXOtlpz11aCCK9V4TPVlcdUpf6MuL/B4TUAAP//gFUPARADAAA=",
+            "encoded_plan": "H4sIAAAJbogA/6RSTWsbMRT8K8vzpQXRU0+69VLozeBjMV6hndpytVrlvbfBjtn89qD12oudEEgCumg0mpn3cSIk3zVoNjm6RJbIUHItyJJClAx1Gey0Y7InWswXWuGhR/IgQ89+F2LDSGT/3pJ+9brrODwVVubwGCK2kFFKjqJobWZkx2iE7M/hIvUpryWH1vFx5V0iQyE1OJClRT7DZOg/jpKdL7XNrudyL/iUigz1EtKWLE3AYG7NfkP97mOa9xJLxy5GRPpS1X9S0ODikrs9fJkXQ/qoGwW3MrJxyIX4rb4GrH/UJWD9fcz05ruoU7RI+h6pF0h5X7/qTkhzpGE9lHNHWSnDteNfkrBNTntG6cC0fXvpyhivOWaouF5ugyHFQefuV2Vrq3/ctZUgwmtV9Ex11TFV+T8x7ldweAkAAP//UF8g8Q8DAAA=",
             "name": "test",
             "operator": {
                 "#operator": "Sequence",
@@ -18,7 +18,7 @@
                                     "index": "#primary",
                                     "keyspace": "prepareds",
                                     "namespace": "#system",
-                                    "using": "default"
+                                    "using": "system"
                                 },
                                 {
                                     "#operator": "Fetch",

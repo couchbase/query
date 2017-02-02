@@ -127,7 +127,7 @@ func (pi *dualIndex) Name() string {
 }
 
 func (pi *dualIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *dualIndex) SeekKey() expression.Expressions {

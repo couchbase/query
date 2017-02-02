@@ -25,6 +25,7 @@ const (
 	VIEW    IndexType = "view"    // view index
 	GSI     IndexType = "gsi"     // global secondary index
 	FTS     IndexType = "fts"     // full text index
+	SYSTEM  IndexType = "system"  // system keyspace indexes
 )
 
 type Indexer interface {

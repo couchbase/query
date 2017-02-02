@@ -60,7 +60,6 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	// Restrict system keyspaces to primary scans
 	pred := this.where
 	if pred != nil {
 		// Handle constant TRUE predicate

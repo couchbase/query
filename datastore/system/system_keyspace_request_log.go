@@ -260,7 +260,7 @@ func (pi *requestLogIndex) Name() string {
 }
 
 func (pi *requestLogIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *requestLogIndex) SeekKey() expression.Expressions {

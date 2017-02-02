@@ -290,7 +290,7 @@ func (pi *activeRequestsIndex) Name() string {
 }
 
 func (pi *activeRequestsIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *activeRequestsIndex) SeekKey() expression.Expressions {

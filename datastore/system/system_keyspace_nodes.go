@@ -180,7 +180,7 @@ func (pi *nodeIndex) Name() string {
 }
 
 func (pi *nodeIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *nodeIndex) SeekKey() expression.Expressions {

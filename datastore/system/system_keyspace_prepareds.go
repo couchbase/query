@@ -239,7 +239,7 @@ func (pi *preparedsIndex) Name() string {
 }
 
 func (pi *preparedsIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *preparedsIndex) SeekKey() expression.Expressions {

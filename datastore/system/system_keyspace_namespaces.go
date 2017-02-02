@@ -145,7 +145,7 @@ func (pi *namespaceIndex) Name() string {
 }
 
 func (pi *namespaceIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *namespaceIndex) SeekKey() expression.Expressions {

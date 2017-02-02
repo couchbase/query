@@ -187,7 +187,7 @@ func (pi *keyspaceIndex) Name() string {
 }
 
 func (pi *keyspaceIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *keyspaceIndex) SeekKey() expression.Expressions {

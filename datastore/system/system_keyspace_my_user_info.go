@@ -122,7 +122,7 @@ func (pi *myUserInfoIndex) Name() string {
 }
 
 func (pi *myUserInfoIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *myUserInfoIndex) SeekKey() expression.Expressions {

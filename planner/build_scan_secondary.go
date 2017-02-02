@@ -280,7 +280,13 @@ func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expr
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
-	if !entry.spans.CanUseIndexOrder() {
+
+	// Force the use of sorts on indexes that we know not to be ordered
+	// (for now system indexes)
+	// for now - if they are of a non descript type, then they aren't sorted
+	// when GSI starts implementing other types of indexes (eg bitmap)
+	// we will revisit this approach
+	if entry.index.Type() == datastore.SYSTEM || !entry.spans.CanUseIndexOrder() {
 		return false
 	}
 

@@ -158,7 +158,7 @@ func (si *systemIndexer) KeyspaceId() string {
 }
 
 func (si *systemIndexer) Name() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (si *systemIndexer) IndexIds() ([]string, errors.Error) {
