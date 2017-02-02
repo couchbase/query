@@ -69,6 +69,11 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext)
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
+	credentials := context.Credentials()
+	creds := make(distributed.Creds, len(credentials))
+	for k, v := range credentials {
+		creds[k] = v
+	}
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
@@ -96,7 +101,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext)
 
 				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
-				})
+				}, creds)
 		} else {
 
 			// local entry
@@ -163,7 +168,8 @@ func (b *preparedsKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 				// FIXME Delete() doesn't do warnings
 				func(warn errors.Error) {
-				})
+				},
+				distributed.NO_CREDS)
 
 			// local entry
 		} else {

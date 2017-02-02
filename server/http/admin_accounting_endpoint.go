@@ -188,18 +188,20 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	vars := mux.Vars(req)
 	name := vars["name"]
 
-	switch req.Method {
-	case "DELETE":
+	if req.Method == "DELETE" {
+		// TODO: secure this one too
 		err := plan.DeletePrepared(name)
 		if err != nil {
 			return nil, err
 		}
 		return true, nil
-	case "GET":
+	} else if req.Method == "GET" || req.Method == "POST" {
+		err := verifyCredentialsFromRequest("prepareds", req)
+		if err != nil {
+			return nil, err
+		}
 		return plan.GetPrepared(value.NewValue(name))
-	case "POST":
-		return plan.GetPrepared(value.NewValue(name))
-	default:
+	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
@@ -231,26 +233,26 @@ func getCredentialsFromRequest(req *http.Request) (datastore.Credentials, errors
 			}
 		}
 	}
-	logging.Errorf("JOHAN got creds %v", creds)
 	return creds, nil
 }
 
-var _SECURE_PREPAREDS_ENDPOINT = false
+func verifyCredentialsFromRequest(api string, req *http.Request) errors.Error {
+	creds, err := getCredentialsFromRequest(req)
+	if err != nil {
+		return err
+	}
+	privs := datastore.NewPrivileges()
+	privs["#system:"+api] = datastore.PRIV_SYSTEM_READ
+	_, err = datastore.GetDatastore().Authorize(privs, creds, req)
+	return err
+}
 
 func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	switch req.Method {
 	case "GET":
-		if _SECURE_PREPAREDS_ENDPOINT {
-			creds, err := getCredentialsFromRequest(req)
-			if err != nil {
-				return nil, err
-			}
-			privs := datastore.NewPrivileges()
-			privs["#system:prepareds"] = datastore.PRIV_SYSTEM_READ
-			_, err = datastore.GetDatastore().Authorize(privs, creds, req)
-			if err != nil {
-				return nil, err
-			}
+		err := verifyCredentialsFromRequest("prepareds", req)
+		if err != nil {
+			return nil, err
 		}
 		return plan.SnapshotPrepared(), nil
 	default:

@@ -22,10 +22,16 @@ type SystemRemoteAccess interface {
 		warnFn func(warn errors.Error)) // collect cluster keys for a keyspace from a set of remote nodes
 	GetRemoteDoc(node string, key string, endpoint string, command string,
 		docFn func(doc map[string]interface{}),
-		warnFn func(warn errors.Error)) // collect a document for a keyspace from a remote node
+		warnFn func(warn errors.Error), creds Creds) // collect a document for a keyspace from a remote node
 	WhoAmI() string         // local node name, if known
 	GetNodeNames() []string // all the node names
 }
+
+// It would be convenient to use datastore/Credentials here, but that causes an import circularity,
+// so we define an equivalent here.
+type Creds map[string]string
+
+var NO_CREDS = make(Creds, 0)
 
 var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()
 

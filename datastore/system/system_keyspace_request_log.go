@@ -96,7 +96,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 
 				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
-				})
+				}, distributed.NO_CREDS)
 		} else {
 
 			// local entry
@@ -188,7 +188,7 @@ func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 				// FIXME Delete() doesn't do warnings
 				func(warn errors.Error) {
-				})
+				}, distributed.NO_CREDS)
 
 			// local entry
 		} else {

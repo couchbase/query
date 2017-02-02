@@ -12,6 +12,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	goErr "errors"
 	"fmt"
@@ -106,7 +107,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					continue
 				}
 
-				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET")
+				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS)
 				if opErr != nil {
 					if warnFn != nil {
 						warnFn(errors.NewSystemRemoteWarning(opErr, "scan", endpoint))
@@ -146,7 +147,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET")
+			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS)
 			if opErr != nil {
 				if warnFn != nil {
 					warnFn(errors.NewSystemRemoteWarning(opErr, "scan", endpoint))
@@ -171,7 +172,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 
 // get a specified remote document from a remote node
 func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint string, command string,
-	docFn func(map[string]interface{}), warnFn func(warn errors.Error)) {
+	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds) {
 	var body []byte
 	var doc map[string]interface{}
 
@@ -183,7 +184,7 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		return
 	}
 
-	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command)
+	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, creds)
 	if opErr != nil {
 		if warnFn != nil {
 			warnFn(errors.NewSystemRemoteWarning(opErr, "fetch", endpoint))
@@ -204,8 +205,28 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 	}
 }
 
+func credsAsJSON(creds distributed.Creds) string {
+	buf := new(bytes.Buffer)
+	buf.WriteString("[")
+	var num = 0
+	for k, v := range creds {
+		if num > 0 {
+			buf.WriteString(",")
+		}
+		buf.WriteString("{")
+		buf.WriteString("\"user\":\"")
+		buf.WriteString(k)
+		buf.WriteString("\",\"pass\":\"")
+		buf.WriteString(v)
+		buf.WriteString("\"}")
+		num++
+	}
+	buf.WriteString("]")
+	return buf.String()
+}
+
 // helper for the REST op
-func doRemoteOp(node clustering.QueryNode, endpoint string, command string) ([]byte, error) {
+func doRemoteOp(node clustering.QueryNode, endpoint string, command string, creds distributed.Creds) ([]byte, error) {
 	var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10} //MaxIdleConnsPerHost}
 	var HTTPClient = &http.Client{Transport: HTTPTransport}
 
@@ -213,9 +234,18 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string) ([]b
 		return nil, goErr.New("missing remote node")
 	}
 
+	numCredentials := len(creds)
 	fullEndpoint := node.ClusterEndpoint() + "/" + endpoint
+	if numCredentials > 1 {
+		fullEndpoint += "?creds=" + credsAsJSON(creds)
+	}
 	request, _ := http.NewRequest(command, fullEndpoint, nil)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	if numCredentials == 1 {
+		for k, v := range creds {
+			request.SetBasicAuth(k, v)
+		}
+	}
 
 	resp, err := HTTPClient.Do(request)
 	if err != nil {

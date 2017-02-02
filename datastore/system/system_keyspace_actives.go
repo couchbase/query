@@ -98,7 +98,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, context datastore.QueryCon
 
 				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
-				})
+				}, distributed.NO_CREDS)
 		} else {
 			var item value.AnnotatedValue
 
@@ -217,7 +217,7 @@ func (b *activeRequestsKeyspace) Delete(deletes []string) ([]string, errors.Erro
 
 				// FIXME Delete() doesn't do warnings
 				func(warn errors.Error) {
-				})
+				}, distributed.NO_CREDS)
 			done = true
 
 			// local entry
