@@ -249,6 +249,10 @@ func (this *parsedValue) Tokens(set *Set, options Value) *Set {
 	return this.unwrap().Tokens(set, options)
 }
 
+func (this *parsedValue) ContainsToken(token, options Value) bool {
+	return this.unwrap().ContainsToken(token, options)
+}
+
 /*
 Delayed parse.
 */

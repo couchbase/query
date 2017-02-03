@@ -210,6 +210,10 @@ func (this *nullValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this *nullValue) ContainsToken(token, options Value) bool {
+	return false
+}
+
 func (this *nullValue) unwrap() Value {
 	return this
 }

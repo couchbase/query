@@ -405,6 +405,27 @@ func (this objectValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this objectValue) ContainsToken(token, options Value) bool {
+	names := token.Type() == STRING
+	if names {
+		if n, ok := options.Field("names"); ok && n.Type() == BOOLEAN {
+			names = n.Truth()
+		}
+	}
+
+	for n, v := range this {
+		if names && NewValue(n).ContainsToken(token, options) {
+			return true
+		}
+
+		if NewValue(v).ContainsToken(token, options) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (this objectValue) unwrap() Value {
 	return this
 }

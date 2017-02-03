@@ -339,6 +339,11 @@ type Value interface {
 	Tokens(set *Set, options Value) *Set
 
 	/*
+	   Token search.
+	*/
+	ContainsToken(token, options Value) bool
+
+	/*
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value
