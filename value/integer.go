@@ -244,6 +244,10 @@ func (this intValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this intValue) ContainsToken(token, options Value) bool {
+	return this.EquivalentTo(token)
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }

@@ -312,6 +312,10 @@ func (this floatValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this floatValue) ContainsToken(token, options Value) bool {
+	return this.EquivalentTo(token)
+}
+
 func (this floatValue) unwrap() Value {
 	return this
 }

@@ -67,10 +67,8 @@ func (this *ContainsToken) Apply(context Context, args ...value.Value) (value.Va
 		}
 	}
 
-	set := _SET_POOL.Get()
-	defer _SET_POOL.Put(set)
-	set = source.Tokens(set, options)
-	return value.NewValue(set.Has(token)), nil
+	contains := source.ContainsToken(token, options)
+	return value.NewValue(contains), nil
 }
 
 func (this *ContainsToken) MinArgs() int { return 2 }

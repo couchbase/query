@@ -248,6 +248,34 @@ func (this stringValue) Recycle() {
 }
 
 func (this stringValue) Tokens(set *Set, options Value) *Set {
+	tokens := _STRING_TOKENS_POOL.Get()
+	defer _STRING_TOKENS_POOL.Put(tokens)
+
+	this.tokens(tokens, options, "")
+	for t, _ := range tokens {
+		set.Add(stringValue(t))
+	}
+
+	return set
+}
+
+func (this stringValue) ContainsToken(token, options Value) bool {
+	if token.Type() != STRING {
+		return false
+	}
+
+	tokens := _STRING_TOKENS_POOL.Get()
+	defer _STRING_TOKENS_POOL.Put(tokens)
+
+	str := token.Actual().(string)
+	return this.tokens(tokens, options, str)
+}
+
+func (this stringValue) unwrap() Value {
+	return this
+}
+
+func (this stringValue) tokens(set map[string]bool, options Value, token string) bool {
 	// Set case folding function, if specified.
 	caseFunc := func(s string) string { return s }
 	if caseOption, ok := options.Field("case"); ok && caseOption.Type() == STRING {
@@ -267,13 +295,18 @@ func (this stringValue) Tokens(set *Set, options Value) *Set {
 		})
 
 	for _, field := range fields {
-		set.Add(stringValue(caseFunc(field)))
+		f := caseFunc(field)
+		if f == token {
+			return true
+		}
+
+		set[f] = true
 	}
 
 	// Return if not tokenizing specials.
 	if specialsOption, ok := options.Field("specials"); !(ok &&
 		specialsOption.Type() == BOOLEAN && specialsOption.Truth()) {
-		return set
+		return false
 	}
 
 	// Tokenize specials. Specials can be used to preserve email
@@ -296,13 +329,16 @@ func (this stringValue) Tokens(set *Set, options Value) *Set {
 			})
 
 		if f != "" {
-			set.Add(stringValue(caseFunc(f)))
+			f = caseFunc(f)
+			if f == token {
+				return true
+			}
+
+			set[f] = true
 		}
 	}
 
-	return set
+	return false
 }
 
-func (this stringValue) unwrap() Value {
-	return this
-}
+var _STRING_TOKENS_POOL = util.NewStringBoolPool(64)
