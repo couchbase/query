@@ -184,28 +184,6 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	name := vars["name"]
-
-	if req.Method == "DELETE" {
-		// TODO: secure this one too
-		err := plan.DeletePrepared(name)
-		if err != nil {
-			return nil, err
-		}
-		return true, nil
-	} else if req.Method == "GET" || req.Method == "POST" {
-		err := verifyCredentialsFromRequest("prepareds", req)
-		if err != nil {
-			return nil, err
-		}
-		return plan.GetPrepared(value.NewValue(name))
-	} else {
-		return nil, errors.NewServiceErrorHttpMethod(req.Method)
-	}
-}
-
 // Credentials can come from two sources: the basic username/password
 // from basic authorizatio, and from a "creds" value, which encodes
 // in JSON an array of username/password pairs, like this:
@@ -247,6 +225,31 @@ func verifyCredentialsFromRequest(api string, req *http.Request) errors.Error {
 	return err
 }
 
+func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	name := vars["name"]
+
+	if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("prepareds", req)
+		if err != nil {
+			return nil, err
+		}
+		err = plan.DeletePrepared(name)
+		if err != nil {
+			return nil, err
+		}
+		return true, nil
+	} else if req.Method == "GET" || req.Method == "POST" {
+		err := verifyCredentialsFromRequest("prepareds", req)
+		if err != nil {
+			return nil, err
+		}
+		return plan.GetPrepared(value.NewValue(name))
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
 func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	switch req.Method {
 	case "GET":
@@ -264,22 +267,25 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	vars := mux.Vars(req)
 	requestId := vars["request"]
 
-	switch req.Method {
-	case "GET":
+	if req.Method == "GET" || req.Method == "POST" {
+		err := verifyCredentialsFromRequest("actives", req)
+		if err != nil {
+			return nil, err
+		}
 		reqMap := activeRequestWorkHorse(endpoint, requestId, false)
 
 		return reqMap, nil
-	case "POST":
-		reqMap := activeRequestWorkHorse(endpoint, requestId, true)
-
-		return reqMap, nil
-	case "DELETE":
+	} else if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("actives", req)
+		if err != nil {
+			return nil, err
+		}
 		if endpoint.actives.Delete(requestId, true) {
 			return nil, errors.NewServiceErrorHttpReq(requestId)
 		}
 
 		return true, nil
-	default:
+	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
@@ -353,6 +359,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 }
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	err := verifyCredentialsFromRequest("actives", req)
+	if err != nil {
+		return nil, err
+	}
+
 	numRequests, err := endpoint.actives.Count()
 	if err != nil {
 		return nil, err
@@ -405,21 +416,25 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	vars := mux.Vars(req)
 	requestId := vars["request"]
 
-	switch req.Method {
-	case "GET":
+	if req.Method == "GET" || req.Method == "POST" {
+		err := verifyCredentialsFromRequest("completed_requests", req)
+		if err != nil {
+			return nil, err
+		}
 		reqMap := completedRequestWorkHorse(requestId, false)
 		return reqMap, nil
-	case "POST":
-		reqMap := completedRequestWorkHorse(requestId, true)
-		return reqMap, nil
-	case "DELETE":
-		err := server.RequestDelete(requestId)
+	} else if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("completed_requests", req)
+		if err != nil {
+			return nil, err
+		}
+		err = server.RequestDelete(requestId)
 		if err != nil {
 			return nil, err
 		} else {
 			return true, nil
 		}
-	default:
+	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
@@ -471,6 +486,11 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	err := verifyCredentialsFromRequest("completed_requests", req)
+	if err != nil {
+		return nil, err
+	}
+
 	numRequests := server.RequestsCount()
 	requests := make([]map[string]interface{}, numRequests)
 	i := 0

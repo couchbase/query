@@ -100,7 +100,7 @@ func TestServer(t *testing.T) {
 		t.Fatalf("Cannot insert key %v", insertKey)
 	}
 
-	deleted, err := ks.Delete([]string{insertKey.Name})
+	deleted, err := ks.Delete([]string{insertKey.Name}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil || (len(deleted) != 1 && deleted[0] != insertKey.Name) {
 		t.Fatalf("Failed to delete %v", err)
 	}

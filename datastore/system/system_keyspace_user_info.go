@@ -220,7 +220,7 @@ func (b *userInfoKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Er
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *userInfoKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *userInfoKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

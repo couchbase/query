@@ -94,7 +94,7 @@ func (b *dualKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error)
 	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
-func (b *dualKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *dualKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 

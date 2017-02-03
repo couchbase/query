@@ -68,6 +68,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
+	creds := credsFromContext(context)
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
@@ -96,7 +97,8 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 
 				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
-				}, distributed.NO_CREDS)
+				},
+				creds)
 		} else {
 
 			// local entry
@@ -173,9 +175,10 @@ func (b *requestLogKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *requestLogKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	var err errors.Error
 
+	creds := credsFromContext(context)
 	for i, name := range deletes {
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
@@ -188,7 +191,8 @@ func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 				// FIXME Delete() doesn't do warnings
 				func(warn errors.Error) {
-				}, distributed.NO_CREDS)
+				},
+				creds)
 
 			// local entry
 		} else {

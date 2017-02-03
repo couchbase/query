@@ -118,7 +118,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
-	deleted_keys, e := this.plan.Keyspace().Delete(keys)
+	deleted_keys, e := this.plan.Keyspace().Delete(keys, context)
 
 	this.switchPhase(_EXECTIME)
 

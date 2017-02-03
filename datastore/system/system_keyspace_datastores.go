@@ -104,7 +104,7 @@ func (b *storeKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *storeKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *storeKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

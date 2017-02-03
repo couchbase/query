@@ -249,7 +249,7 @@ func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }

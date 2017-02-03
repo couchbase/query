@@ -87,7 +87,7 @@ func (b *myUserInfoKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *myUserInfoKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *myUserInfoKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 

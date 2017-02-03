@@ -157,7 +157,7 @@ func TestFile(t *testing.T) {
 	}
 
 	// delete all the freds
-	deleted, err := keyspace.Delete([]string{"fred2", "fred3"})
+	deleted, err := keyspace.Delete([]string{"fred2", "fred3"}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil && len(deleted) != 2 {
 		fmt.Printf("Warning: Failed to delete. Error %v", err)
 	}
@@ -174,7 +174,7 @@ func TestFile(t *testing.T) {
 	}
 
 	// some deletes should fail
-	deleted, err = keyspace.Delete([]string{"fred2", "fred3"})
+	deleted, err = keyspace.Delete([]string{"fred2", "fred3"}, datastore.NULL_QUERY_CONTEXT)
 	if len(deleted) != 1 && deleted[0] != "fred2" {
 		t.Errorf("failed to delete fred2: %v, #deleted=%d", deleted, len(deleted))
 	}

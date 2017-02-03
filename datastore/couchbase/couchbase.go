@@ -957,7 +957,7 @@ func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(UPSERT, upserts)
 }
 
-func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 
 	failedDeletes := make([]string, 0)
 	actualDeletes := make([]string, 0)

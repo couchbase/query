@@ -100,10 +100,10 @@ type Keyspace interface {
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys
-	Insert(inserts []value.Pair) ([]value.Pair, errors.Error) // Bulk key-value insert into this keyspace
-	Update(updates []value.Pair) ([]value.Pair, errors.Error) // Bulk key-value updates into this keyspace
-	Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) // Bulk key-value upserts into this keyspace
-	Delete(deletes []string) ([]string, errors.Error)         // Bulk key-value deletes from this keyspace
+	Insert(inserts []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value insert into this keyspace
+	Update(updates []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value updates into this keyspace
+	Upsert(upserts []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value upserts into this keyspace
+	Delete(deletes []string, context QueryContext) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
 
 	Release() // Release any resources held by this object
 }
