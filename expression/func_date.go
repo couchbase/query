@@ -62,7 +62,7 @@ order to convert it to milliseconds, divide it by
 */
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := time.Now().UnixNano()
-	return value.NewValue(float64(nanos) / (1000000.0)), nil
+	return value.NewValue(float64(nanos) / 1000000.0), nil
 }
 
 func (this *ClockMillis) Static() Expression {
@@ -529,7 +529,7 @@ func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Valu
 		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(diff)), nil
+	return value.NewValue(diff), nil
 }
 
 /*
@@ -604,7 +604,7 @@ func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) 
 		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(diff)), nil
+	return value.NewValue(diff), nil
 }
 
 /*
@@ -688,10 +688,10 @@ func (this *DateFormatStr) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function DATE_PART_MILLIS(expr, part).
-It returns the date part as an integer. The date expr is a
-number representing UNIX milliseconds, and part is one of the
-date part strings.
+This represents the Date function DATE_PART_MILLIS(expr, part, [ tz ]).
+It returns the date part as an integer. The date expr is a number
+representing UNIX milliseconds, and part is one of the date part
+strings.
 */
 type DatePartMillis struct {
 	FunctionBase
@@ -768,7 +768,7 @@ func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.V
 		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(rv)), nil
+	return value.NewValue(rv), nil
 }
 
 /*
@@ -795,10 +795,9 @@ func (this *DatePartMillis) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function DATE_PART_STR(expr, part).
-It returns the date part as an integer. The date expr is a
-string in a supported format, and part is one of the supported
-date part strings.
+This represents the Date function DATE_PART_STR(expr, part).  It
+returns the date part as an integer. The date expr is a string in a
+supported format, and part is one of the supported date part strings.
 */
 type DatePartStr struct {
 	BinaryFunctionBase
@@ -834,18 +833,18 @@ func (this *DatePartStr) Apply(context Context, first, second value.Value) (valu
 	}
 
 	str := first.Actual().(string)
-	part := second.Actual().(string)
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
+	part := second.Actual().(string)
 	rv, err := datePart(t, part)
 	if err != nil {
 		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(rv)), nil
+	return value.NewValue(rv), nil
 }
 
 /*
@@ -1148,7 +1147,7 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 	for (step > 0.0 && start.String() < t2.String()) ||
 		(step < 0.0 && start.String() > t2.String()) {
 		// Compute the new time
-		rv = append(rv, float64(timeToMillis(start)))
+		rv = append(rv, timeToMillis(start))
 		t, err := dateAdd(start, int(step), partStr)
 		if err != nil {
 			return value.NULL_VALUE, err
@@ -1584,7 +1583,7 @@ func (this *NowMillis) Type() value.Type { return value.NUMBER }
 
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := context.Now().UnixNano()
-	return value.NewValue(float64(nanos) / (1000000.0)), nil
+	return value.NewValue(float64(nanos) / 1000000.0), nil
 }
 
 func (this *NowMillis) Static() Expression {
@@ -2175,6 +2174,179 @@ func (this *StrToDuration) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// WeekdayMillis
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function WEEKDAY_MILLIS(expr, [ tz ]).  It
+returns the English name of the weekday as a string. The date expr is
+a number representing UNIX milliseconds.
+*/
+type WeekdayMillis struct {
+	FunctionBase
+}
+
+func NewWeekdayMillis(operands ...Expression) Function {
+	rv := &WeekdayMillis{
+		*NewFunctionBase("weekday_millis", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *WeekdayMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *WeekdayMillis) Type() value.Type { return value.STRING }
+
+func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *WeekdayMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	first := args[0]
+
+	// Initialize timezone to nil to avoid processing if not specified.
+	timeZone := _NIL_VALUE
+
+	// Check if time zone is set
+	if len(args) > 1 {
+		timeZone = args[1]
+	}
+
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	millis := first.Actual().(float64)
+
+	// Convert the input millis to *Time
+	timeVal := millisToTime(millis)
+
+	if timeZone != _NIL_VALUE {
+		// Process the timezone component as it isnt nil
+		if timeZone.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+		if timeZone.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		// Get the timezone and the *Location.
+		tz := timeZone.Actual().(string)
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+		// Use the timezone to get corresponding time component.
+		timeVal = timeVal.In(loc)
+	}
+
+	dow, err := datePart(timeVal, "day_of_week")
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+
+	rv := time.Weekday(dow).String()
+	return value.NewValue(rv), nil
+}
+
+/*
+Minimum input arguments required.
+*/
+func (this *WeekdayMillis) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *WeekdayMillis) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *WeekdayMillis) Constructor() FunctionConstructor {
+	return NewWeekdayMillis
+}
+
+///////////////////////////////////////////////////
+//
+// WeekdayStr
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function WEEKDAY_STR(expr).  It returns the
+English name of the weekday as a string. The date expr is a string in
+a supported format.
+*/
+type WeekdayStr struct {
+	UnaryFunctionBase
+}
+
+func NewWeekdayStr(first Expression) Function {
+	rv := &WeekdayStr{
+		*NewUnaryFunctionBase("weekday_str", first),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *WeekdayStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *WeekdayStr) Type() value.Type { return value.STRING }
+
+func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *WeekdayStr) Apply(context Context, first value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := first.Actual().(string)
+	t, err := strToTime(str)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	dow, err := datePart(t, "day_of_week")
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+
+	rv := time.Weekday(dow).String()
+	return value.NewValue(rv), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *WeekdayStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewWeekdayStr(operands[0])
+	}
+}
+
 /*
 Parse the input string using the defined formats for Date
 and return the time value it represents, and error. The
@@ -2225,15 +2397,15 @@ Convert input milliseconds to time format by multiplying
 with 10^6 and using the Unix method from the time package.
 */
 func millisToTime(millis float64) time.Time {
-	return time.Unix(int64(millis)/1000, int64(math.Mod(millis, 1000)*1000000.0))
+	return time.Unix(int64(millis/1000), int64(math.Mod(millis, 1000)*1000000.0))
 }
 
 /*
 Convert input time to milliseconds from nanoseconds returned
-by UnixNano(). Cast it to float64 number and return it.
+by UnixNano().
 */
 func timeToMillis(t time.Time) float64 {
-	return float64((t.Unix()*1000.0 + int64(t.Round(time.Millisecond).Nanosecond())/1000000.0))
+	return float64(t.Unix()*1000) + float64(t.Round(time.Millisecond).Nanosecond())/1000000
 }
 
 /*
@@ -2576,7 +2748,7 @@ func setDate(d *date, t time.Time) {
 	d.year = t.Year()
 	d.doy = t.YearDay()
 	d.hour, d.minute, d.second = t.Clock()
-	d.millisecond = round(float64(t.Nanosecond()) / 1000000.0)
+	d.millisecond = t.Nanosecond() / 1000000
 }
 
 /*

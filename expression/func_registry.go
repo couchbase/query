@@ -103,9 +103,9 @@ var _FUNCTIONS = map[string]Function{
 	"curl": &Curl{},
 
 	// Date
+	"clock_local":         &ClockStr{},
 	"clock_millis":        &ClockMillis{},
 	"clock_str":           &ClockStr{},
-	"clock_local":         &ClockStr{},
 	"clock_tz":            &ClockTZ{},
 	"clock_utc":           &ClockUTC{},
 	"date_add_millis":     &DateAddMillis{},
@@ -115,8 +115,8 @@ var _FUNCTIONS = map[string]Function{
 	"date_format_str":     &DateFormatStr{},
 	"date_part_millis":    &DatePartMillis{},
 	"date_part_str":       &DatePartStr{},
-	"date_range_str":      &DateRangeStr{},
 	"date_range_millis":   &DateRangeMillis{},
+	"date_range_str":      &DateRangeStr{},
 	"date_trunc_millis":   &DateTruncMillis{},
 	"date_trunc_str":      &DateTruncStr{},
 	"duration_to_str":     &DurationToStr{},
@@ -136,6 +136,8 @@ var _FUNCTIONS = map[string]Function{
 	"str_to_tz":           &StrToZoneName{},
 	"str_to_utc":          &StrToUTC{},
 	"str_to_zone_name":    &StrToZoneName{},
+	"weekday_millis":      &WeekdayMillis{},
+	"weekday_str":         &WeekdayStr{},
 
 	// String
 	"contains":        &Contains{},
