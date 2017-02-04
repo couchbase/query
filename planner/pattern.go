@@ -82,6 +82,8 @@ func (this *pattern) VisitFunction(expr expression.Function) (interface{}, error
 	switch expr := expr.(type) {
 	case *expression.RegexpLike:
 		return this.visitRegexpLike(expr)
+	case *expression.Contains:
+		return this.visitContains(expr)
 	case *expression.ContainsToken:
 		return this.visitContainsToken(expr)
 	default:
@@ -100,6 +102,21 @@ func (this *pattern) visitRegexpLike(expr *expression.RegexpLike) (interface{}, 
 	binding := expression.NewSimpleBinding(variable, suffixes)
 	suffix := expression.NewRegexpSuffix(expr.Second())
 	sat := expression.NewRegexpLike(expression.NewIdentifier(variable), suffix)
+	any := expression.NewAny(expression.Bindings{binding}, sat)
+	return expression.NewAnd(expr, any), nil
+}
+
+func (this *pattern) visitContains(expr *expression.Contains) (interface{}, error) {
+	source := expr.First()
+	variable, ok := this.suffixes[source.String()]
+	if !ok {
+		return expr, nil
+	}
+
+	suffixes := expression.NewSuffixes(source)
+	binding := expression.NewSimpleBinding(variable, suffixes)
+	suffix := expression.NewConcat(expr.Second(), expression.NewConstant("%"))
+	sat := expression.NewLike(expression.NewIdentifier(variable), suffix)
 	any := expression.NewAny(expression.Bindings{binding}, sat)
 	return expression.NewAnd(expr, any), nil
 }
