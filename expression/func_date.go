@@ -926,13 +926,8 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 
 	// Convert end date to time format.
 	da2 := endDate.Actual().(string)
-	t2, fmt2, err := strToTimeFormat(da2)
+	t2, _, err := strToTimeFormat(da2)
 	if err != nil {
-		return value.NULL_VALUE, nil
-	}
-
-	// The dates need to be the same format, if not, return null.
-	if fmt1 != fmt2 {
 		return value.NULL_VALUE, nil
 	}
 
@@ -945,12 +940,12 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	}
 
 	// If the two dates are the same, return an empty array.
-	if t1.String() == t2.String() {
+	if t1.Equal(t2) {
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
 	// If the start date is after the end date
-	if t1.String() > t2.String() {
+	if t1.After(t2) {
 
 		// And the increment is positive return empty array. If
 		// the increment is negative, so populate the array with
@@ -986,11 +981,12 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	// Keep incrementing start date by step for part, and add it to
 	// the array to be returned.
 	start := t1
+	end := t2.String()
 
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && start.String() < t2.String()) ||
-		(step < 0.0 && start.String() > t2.String()) {
+	for (step > 0.0 && start.String() < end) ||
+		(step < 0.0 && start.String() > end) {
 		// Compute the new time
 		rv = append(rv, timeToStr(start, fmt1))
 		t, err := dateAdd(start, int(step), partStr)
