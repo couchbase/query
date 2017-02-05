@@ -52,10 +52,15 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
-	if array.When() != nil &&
-		!SubsetOf(pred.Satisfies(), array.When()) {
+	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
+	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	if err != nil {
+		return nil, err
+	}
+
+	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
 		return sp, nil
 	}
 
-	return sargFor(pred.Satisfies(), array.ValueMapping(), this.missingHigh)
+	return sargFor(satisfies, array.ValueMapping(), this.missingHigh)
 }

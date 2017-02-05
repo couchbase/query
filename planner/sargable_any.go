@@ -36,12 +36,17 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 		return false, nil
 	}
 
-	if array.When() != nil &&
-		!SubsetOf(pred.Satisfies(), array.When()) {
+	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
+	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	if err != nil {
+		return nil, err
+	}
+
+	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
 		return false, nil
 	}
 
 	mappings := expression.Expressions{array.ValueMapping()}
-	min, _ := SargableFor(pred.Satisfies(), mappings)
+	min, _ := SargableFor(satisfies, mappings)
 	return min > 0, nil
 }
