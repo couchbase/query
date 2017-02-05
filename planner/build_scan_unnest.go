@@ -250,58 +250,64 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred, limit expression.Expression, 
 	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, *algebra.Unnest, int, error) {
 
+	var sargKey expression.Expression
+
 	array, ok := arrayKey.Array().(*expression.Array)
-	if !ok {
-		return nil, nil, 0, nil
-	}
-
-	if len(array.Bindings()) != 1 {
-		return nil, nil, 0, nil
-	}
-
-	binding := array.Bindings()[0]
-	if unnest.As() != binding.Variable() ||
-		!unnest.Expression().EquivalentTo(binding.Expression()) {
-		return nil, nil, 0, nil
-	}
-
-	if array.When() != nil && !SubsetOf(pred, array.When()) {
-		return nil, nil, 0, nil
-	}
-
-	arrayMapping := array.ValueMapping()
-	nestedArrayKey, ok := arrayMapping.(*expression.All)
 	if ok {
-		alias := expression.NewIdentifier(unnest.As())
-		for _, u := range unnests {
-			if u == unnest ||
-				!u.Expression().DependsOn(alias) {
-				continue
-			}
-
-			op, un, n, err := matchUnnest(node, pred, limit, u, index, entry, nestedArrayKey, unnests)
-			if op != nil || err != nil {
-				return op, un, n + 1, err
-			}
-		}
-
-		return nil, nil, 0, nil
-	} else {
-		mappings := expression.Expressions{array.ValueMapping()}
-		if min, _ := SargableFor(pred, mappings); min == 0 {
+		if len(array.Bindings()) != 1 {
 			return nil, nil, 0, nil
 		}
 
-		spans, exactSpans, err := SargFor(pred, mappings, 1, 1)
-		if err != nil {
-			return nil, nil, 0, err
+		binding := array.Bindings()[0]
+		if unnest.As() != binding.Variable() ||
+			!unnest.Expression().EquivalentTo(binding.Expression()) {
+			return nil, nil, 0, nil
 		}
 
-		entry.spans = spans
-		entry.exactSpans = exactSpans
-		scan := spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, nil, nil, nil)
-		return scan, unnest, 1, nil
+		if array.When() != nil && !SubsetOf(pred, array.When()) {
+			return nil, nil, 0, nil
+		}
+
+		arrayMapping := array.ValueMapping()
+		nestedArrayKey, ok := arrayMapping.(*expression.All)
+		if ok {
+			alias := expression.NewIdentifier(unnest.As())
+			for _, u := range unnests {
+				if u == unnest ||
+					!u.Expression().DependsOn(alias) {
+					continue
+				}
+
+				op, un, n, err := matchUnnest(node, pred, limit, u, index, entry, nestedArrayKey, unnests)
+				if op != nil || err != nil {
+					return op, un, n + 1, err
+				}
+			}
+
+			return nil, nil, 0, nil
+		}
+
+		sargKey = arrayMapping
+	} else if unnest.As() == "" {
+		return nil, nil, 0, nil
+	} else {
+		sargKey = expression.NewIdentifier(unnest.As())
 	}
+
+	sargKeys := expression.Expressions{sargKey}
+	if min, _ := SargableFor(pred, sargKeys); min == 0 {
+		return nil, nil, 0, nil
+	}
+
+	spans, exactSpans, err := SargFor(pred, sargKeys, 1, 1)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	entry.spans = spans
+	entry.exactSpans = exactSpans
+	scan := spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, nil, nil, nil)
+	return scan, unnest, 1, nil
 }
 
 func minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,

@@ -10,7 +10,8 @@
 package expression
 
 /*
-Inliner is a mapper that inlines bindings, e.g. of a LET clause.
+Replacer is used to rename binding variables, but is a generic
+expression replacer.
 */
 type Replacer struct {
 	MapperBase

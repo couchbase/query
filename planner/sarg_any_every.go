@@ -37,7 +37,15 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 
 	array, ok := all.Array().(*expression.Array)
 	if !ok {
-		return sp, nil
+		bindings := pred.Bindings()
+		if len(bindings) != 1 ||
+			bindings[0].Descend() ||
+			!bindings[0].Expression().EquivalentTo(all.Array()) {
+			return sp, nil
+		}
+
+		variable := expression.NewIdentifier(bindings[0].Variable())
+		return sargFor(pred.Satisfies(), variable, this.missingHigh)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
