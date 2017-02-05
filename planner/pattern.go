@@ -170,34 +170,48 @@ outer:
 
 		for _, key := range index.RangeKey() {
 			if all, ok := key.(*expression.All); ok {
+				sufVar := _DEFAULT_SUFFIXES_VARIABLE
+				suf, _ := all.Array().(*expression.Suffixes)
+
+				tokVar := _DEFAULT_SUFFIXES_VARIABLE
+				tok, _ := all.Array().(*expression.Tokens)
+
 				if array, ok := all.Array().(*expression.Array); ok && len(array.Bindings()) == 1 {
 					binding := array.Bindings()[0]
 
 					if variable, ok := array.ValueMapping().(*expression.Identifier); ok &&
 						variable.Identifier() == binding.Variable() {
 
-						if suf, ok := binding.Expression().(*expression.Suffixes); ok {
-							op := suf.Operand()
-							op, err = formalizer.Map(op)
-							if err != nil {
-								continue outer
-							}
-
-							suffixes[op.String()] = binding.Variable()
-							continue outer
+						if suf, ok = binding.Expression().(*expression.Suffixes); ok {
+							sufVar = binding.Variable()
 						}
 
-						if tok, ok := binding.Expression().(*expression.Tokens); ok {
-							op := tok.Operands()[0]
-							op, err = formalizer.Map(op)
-							if err != nil {
-								continue outer
-							}
-
-							tokens[op.String()] = binding.Variable()
-							continue outer
+						if tok, ok = binding.Expression().(*expression.Tokens); ok {
+							tokVar = binding.Variable()
 						}
 					}
+				}
+
+				if suf != nil {
+					op := suf.Operand()
+					op, err = formalizer.Map(op)
+					if err != nil {
+						continue outer
+					}
+
+					suffixes[op.String()] = sufVar
+					continue outer
+				}
+
+				if tok != nil {
+					op := tok.Operands()[0]
+					op, err = formalizer.Map(op)
+					if err != nil {
+						continue outer
+					}
+
+					tokens[op.String()] = tokVar
+					continue outer
 				}
 			}
 		}
@@ -205,3 +219,5 @@ outer:
 }
 
 var _PATTERN_INDEX_POOL = util.NewStringStringPool(64)
+var _DEFAULT_SUFFIXES_VARIABLE = "s"
+var _DEFAULT_TOKENS_VARIABLE = "t"

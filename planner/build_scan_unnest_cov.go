@@ -108,7 +108,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// Covering expressions from index keys
 	for i, key := range entry.keys {
 		if i == 0 {
-			entry.keys[i] = unrollArrayKeys(key, min)
+			entry.keys[i] = unrollArrayKeys(key, min, unnest)
 		}
 	}
 
@@ -122,7 +122,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// Include filter covers from array key
 	var expr expression.Expression
-	bindings := coveredUnnestBindings(arrayKey, min)
+	bindings := coveredUnnestBindings(arrayKey, min, unnest)
 	for _, bexpr := range bindings {
 		expr = expression.NewIsArray(bexpr)
 		fc = expr.FilterCovers(fc)
@@ -252,12 +252,16 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 var _EMPTY_COVERED_EXPRS = make(map[expression.Expression]bool, 0)
 
-func unrollArrayKeys(expr expression.Expression, min bool) expression.Expression {
+func unrollArrayKeys(expr expression.Expression, min bool, unnest *algebra.Unnest) expression.Expression {
 	for all, ok := expr.(*expression.All); ok && (min || !all.Distinct()); all, ok = expr.(*expression.All) {
 		if array, ok := all.Array().(*expression.Array); ok &&
 			len(array.Bindings()) == 1 && !array.Bindings()[0].Descend() {
 			expr = array.ValueMapping()
 		} else {
+			if !ok {
+				expr = expression.NewIdentifier(unnest.As())
+			}
+
 			break
 		}
 	}
@@ -265,7 +269,7 @@ func unrollArrayKeys(expr expression.Expression, min bool) expression.Expression
 	return expr
 }
 
-func coveredUnnestBindings(key expression.Expression, min bool) map[string]expression.Expression {
+func coveredUnnestBindings(key expression.Expression, min bool, unnest *algebra.Unnest) map[string]expression.Expression {
 	bindings := make(map[string]expression.Expression, 8)
 
 	for all, ok := key.(*expression.All); ok && (min || !all.Distinct()); all, ok = key.(*expression.All) {
@@ -275,6 +279,10 @@ func coveredUnnestBindings(key expression.Expression, min bool) map[string]expre
 			bindings[binding.Variable()] = binding.Expression()
 			key = array.ValueMapping()
 		} else {
+			if !ok {
+				bindings[unnest.As()] = all.Array()
+			}
+
 			break
 		}
 	}

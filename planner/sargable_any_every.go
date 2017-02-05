@@ -25,7 +25,11 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 
 	array, ok := all.Array().(*expression.Array)
 	if !ok {
-		return false, nil
+		bindings := pred.Bindings()
+		return len(bindings) == 1 &&
+				!bindings[0].Descend() &&
+				bindings[0].Expression().EquivalentTo(all.Array()),
+			nil
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {

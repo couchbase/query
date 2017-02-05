@@ -68,22 +68,30 @@ outer:
 
 func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression) *dynamicKey {
 	if all, ok := key.(*expression.All); ok {
-		if array, ok := all.Array().(*expression.Array); ok && len(array.Bindings()) == 1 {
-			binding := array.Bindings()[0]
+		variable := _DEFAULT_PAIRS_VARIABLE
+		pairs, ok := all.Array().(*expression.Pairs)
 
-			if variable, ok := array.ValueMapping().(*expression.Identifier); ok &&
-				variable.Identifier() == binding.Variable() {
+		if !ok {
+			if array, ok := all.Array().(*expression.Array); ok && len(array.Bindings()) == 1 {
+				binding := array.Bindings()[0]
 
-				if pairs, ok := binding.Expression().(*expression.Pairs); ok {
-					scope := pairs.Operand()
-					if scope.EquivalentTo(alias) ||
-						pred.CoveredBy(alias.Identifier(), expression.Expressions{scope}) ||
-						pred.CoveredBy(alias.Identifier(), aliasNamed(scope)) {
-						return &dynamicKey{
-							variable: variable,
-							pairs:    pairs,
-						}
-					}
+				if variable, ok = array.ValueMapping().(*expression.Identifier); ok &&
+					variable.Identifier() == binding.Variable() {
+
+					pairs, _ = binding.Expression().(*expression.Pairs)
+				}
+			}
+		}
+
+		if pairs != nil {
+			scope := pairs.Operand()
+			if scope.EquivalentTo(alias) ||
+				pred.CoveredBy(alias.Identifier(), expression.Expressions{scope}) ||
+				pred.CoveredBy(alias.Identifier(), aliasNamed(scope)) {
+
+				return &dynamicKey{
+					variable: variable,
+					pairs:    pairs,
 				}
 			}
 		}
@@ -120,3 +128,4 @@ func aliasNamed(expr expression.Expression) expression.Expressions {
 
 var _EMPTY_EXPRESSIONS = expression.Expressions{}
 var _NAMES_POOL = util.NewStringIntPool(64)
+var _DEFAULT_PAIRS_VARIABLE = expression.NewIdentifier("p")
