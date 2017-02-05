@@ -16,8 +16,7 @@ import (
 func (this *subset) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.AnyEvery:
-		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
-			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
+		return this.visitCollectionPredicate(expr, expr2)
 	default:
 		return this.visitDefault(expr)
 	}

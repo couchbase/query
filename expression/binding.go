@@ -102,9 +102,8 @@ func (this Bindings) SubsetOf(other Bindings) bool {
 
 	for i, b := range this {
 		o := other[i]
-		if b.variable != o.variable ||
-			(b.descend && !o.descend) ||
-			b.nameVariable != o.nameVariable ||
+		if (b.descend && !o.descend) ||
+			(b.nameVariable != "" && o.nameVariable == "") ||
 			!b.expr.EquivalentTo(o.expr) {
 			return false
 		}

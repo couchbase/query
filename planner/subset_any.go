@@ -16,12 +16,26 @@ import (
 func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.Any:
-		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
-			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
+		return this.visitCollectionPredicate(expr, expr2)
 	case *expression.AnyEvery:
-		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
-			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
+		return this.visitCollectionPredicate(expr, expr2)
 	default:
 		return this.visitDefault(expr)
 	}
+}
+
+func (this *subset) visitCollectionPredicate(expr, expr2 expression.CollectionPredicate) (
+	interface{}, error) {
+
+	if !expr.Bindings().SubsetOf(expr2.Bindings()) {
+		return false, nil
+	}
+
+	renamer := expression.NewRenamer(expr.Bindings(), expr2.Bindings())
+	satisfies, err := renamer.Map(expr.Satisfies().Copy())
+	if err != nil {
+		return nil, err
+	}
+
+	return SubsetOf(satisfies, expr2.Satisfies()), nil
 }

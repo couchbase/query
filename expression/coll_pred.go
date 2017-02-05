@@ -19,7 +19,7 @@ import (
 /*
 Base for ANY, EVERY, and ANY AND EVERY collection predicates.
 */
-type collPred interface {
+type CollectionPredicate interface {
 	Expression
 	Bindings() Bindings
 	Satisfies() Expression
@@ -48,7 +48,7 @@ func (this *collPredBase) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	o := other.(collPred)
+	o := other.(CollectionPredicate)
 	return this.bindings.EquivalentTo(o.Bindings()) &&
 		this.satisfies.EquivalentTo(o.Satisfies())
 }
