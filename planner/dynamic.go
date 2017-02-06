@@ -48,7 +48,23 @@ func newDynamic(variable *expression.Identifier, pairs *expression.Pairs) *dynam
 	rv.SetMapper(rv)
 	rv.SetMapFunc(
 		func(expr expression.Expression) (expression.Expression, error) {
-			return expr, nil
+			alias := expr.Alias()
+			if alias == "" {
+				return expr, nil
+			}
+
+			sat := expression.NewAnd(
+				expression.NewGE(
+					rv.NewVariable(),
+					rv.NewArray(alias, true),
+				),
+				expression.NewLT(
+					rv.NewVariable(),
+					rv.NewArray(expression.NewSuccessor(expression.NewConstant(alias))),
+				),
+			)
+			any := expression.NewAny(rv.NewBindings(), sat)
+			return expression.NewAnd(expr, any), nil
 		})
 
 	return rv
