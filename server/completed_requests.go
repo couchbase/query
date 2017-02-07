@@ -131,7 +131,12 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int, error_count int,
 	request *BaseRequest, server *Server) {
 
-	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
+	// negative threshold means log nothing
+	// zero threshold means log everything (no threshold)
+	// zero limit means log nothing (handled here to avoid time wasting in cache)
+	// negative limit means no upper bound (handled in cache)
+	if requestLog.threshold < 0 || requestLog.cache.Limit() == 0 ||
+		(requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold) {
 		return
 	}
 
