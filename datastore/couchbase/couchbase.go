@@ -103,9 +103,9 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 	case datastore.PRIV_DDL:
 		permission = fmt.Sprintf("cluster.bucket[%s].views!write", bucket)
 	case datastore.PRIV_WRITE:
-		permission = fmt.Sprintf("cluster.bucket[%s].data!write", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!write", bucket)
 	case datastore.PRIV_READ:
-		permission = fmt.Sprintf("cluster.bucket[%s].data!read", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!read", bucket)
 	case datastore.PRIV_SYSTEM_READ:
 		permission = "cluster!read"
 	case datastore.PRIV_SECURITY_READ:
@@ -115,12 +115,15 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}
+	//logging.Errorf("JOHAN doAuthByCreds seeking %s", permission)
 
 	authResult, err := creds.IsAllowed(permission)
 	if err != nil || authResult == false {
+		//logging.Errorf("JOHAN permission denied")
 		return false, err
 	}
 
+	//logging.Errorf("JOHAN permission granted")
 	return true, nil
 
 }
@@ -140,6 +143,7 @@ func (s *store) adminIsOpen() bool {
 }
 
 func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials, req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+	//logging.Errorf("JOHAN: Authorize() with privileges %v credentials %v", privileges, credentials)
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
@@ -170,7 +174,9 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 		creds, err := cbauth.Auth(un, password)
 		if err != nil {
 			logging.Debugf("Unable to authorize %s:%s.", username, password)
+			//logging.Errorf("JOHAN: could not authenticate %s:%s", username, password)
 		} else {
+			//logging.Errorf("JOHAN: authenticated %s:%s", username, password)
 			credentialsList = append(credentialsList, creds)
 			if un != "" {
 				authenticatedUsers = append(authenticatedUsers, un)
