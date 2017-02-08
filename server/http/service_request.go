@@ -215,7 +215,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	var controls value.Tristate
 	if err == nil {
-		controls, err = httpArgs.getTristate(CONTROLS)
+		controls, err = getControlsRequest(httpArgs)
 	}
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs, namespace,
@@ -224,7 +224,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	var prof server.Profile
 	if err == nil {
 		base.SetControls(controls)
-		prof, err = getProfile(httpArgs)
+		prof, err = getProfileRequest(httpArgs)
 		if err == nil {
 			base.SetProfile(prof)
 		}

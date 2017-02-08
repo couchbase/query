@@ -29,7 +29,6 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -75,10 +74,6 @@ var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this fi
 // Monitoring API
 var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed query lasting longer than this many milliseconds")
 var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
-
-// Profiling
-var PROFILE = flag.String("profile", "off", "Profiling state: off, phases, timings")
-var CONTROLS = flag.Bool("controls", false, "Response to include controls section")
 
 // GOGC
 var _GOGC_PERCENT = 200
@@ -129,14 +124,21 @@ func main() {
 	}
 	datastore_package.SetDatastore(datastore)
 
-	// configstore and remote access should be set before the system datastore
+	// configstore should be set before the system datastore
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
 		logging.Errorp("Could not connect to configstore",
 			logging.Pair{"error", err},
 		)
 	}
-	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
+
+	// ditto for distributed access for monitoring
+	prof, ctrl, err := monitoringInit(configstore)
+	if err != nil {
+		logging.Errorp(err.Error())
+		fmt.Printf("\n%v\n", err)
+		os.Exit(1)
+	}
 
 	acctstore, err := acct_resolver.NewAcctstore(*ACCTSTORE)
 	if err != nil {
@@ -178,11 +180,10 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-	prof, _ := server.ParseProfile(*PROFILE)
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
-		*PRETTY, prof, *CONTROLS)
+		*PRETTY, prof, ctrl)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

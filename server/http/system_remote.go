@@ -9,6 +9,8 @@
 
 // This implements remote system keyspace access for the REST based http package
 
+// +build enterprise
+
 package http
 
 import (

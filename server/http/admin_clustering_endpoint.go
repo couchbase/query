@@ -329,30 +329,30 @@ const (
 	_CONTROLS        = "controls"
 )
 
-type checker func(interface{}) bool
+type checker func(interface{}) (bool, errors.Error)
 
-func checkBool(val interface{}) bool {
+func checkBool(val interface{}) (bool, errors.Error) {
 	_, ok := val.(bool)
-	return ok
+	return ok, nil
 }
 
-func checkNumber(val interface{}) bool {
+func checkNumber(val interface{}) (bool, errors.Error) {
 	_, ok := val.(float64)
-	return ok
+	return ok, nil
 }
 
-func checkString(val interface{}) bool {
+func checkString(val interface{}) (bool, errors.Error) {
 	_, ok := val.(string)
-	return ok
+	return ok, nil
 }
 
-func checkLogLevel(val interface{}) bool {
+func checkLogLevel(val interface{}) (bool, errors.Error) {
 	level, is_string := val.(string)
 	if !is_string {
-		return false
+		return false, nil
 	}
 	_, ok := logging.ParseLevel(level)
-	return ok
+	return ok, nil
 }
 
 var _CHECKERS = map[string]checker{
@@ -371,8 +371,8 @@ var _CHECKERS = map[string]checker{
 	_CMPTHRESHOLD:    checkNumber,
 	_CMPLIMIT:        checkNumber,
 	_PRETTY:          checkBool,
-	_PROFILE:         checkString,
-	_CONTROLS:        checkBool,
+	_PROFILE:         checkProfileAdmin,
+	_CONTROLS:        checkControlsAdmin,
 }
 
 type setter func(*server.Server, interface{})
@@ -438,17 +438,8 @@ var _SETTERS = map[string]setter{
 		value, _ := o.(bool)
 		s.SetPretty(value)
 	},
-	_PROFILE: func(s *server.Server, o interface{}) {
-		value, _ := o.(string)
-		prof, ok := server.ParseProfile(value)
-		if ok {
-			s.SetProfile(prof)
-		}
-	},
-	_CONTROLS: func(s *server.Server, o interface{}) {
-		value, _ := o.(bool)
-		s.SetControls(value)
-	},
+	_PROFILE:  setProfileAdmin,
+	_CONTROLS: setControlsAdmin,
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -476,8 +467,13 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			if check_it, ok := _CHECKERS[setting]; !ok {
 				return nil, errors.NewAdminUnknownSettingError(setting)
 			} else {
-				if !check_it(value) {
-					return nil, errors.NewAdminSettingTypeError(setting, value)
+				ok, err := check_it(value)
+				if !ok {
+					if err == nil {
+						return nil, errors.NewAdminSettingTypeError(setting, value)
+					} else {
+						return nil, err
+					}
 				}
 			}
 		}
@@ -507,8 +503,8 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_CMPTHRESHOLD] = server.RequestsThreshold()
 	settings[_CMPLIMIT] = server.RequestsLimit()
 	settings[_PRETTY] = srvr.Pretty()
-	settings[_PROFILE] = srvr.Profile().String()
-	settings[_CONTROLS] = srvr.Controls()
+	settings = getProfileAdmin(settings, srvr)
+	settings = getControlsAdmin(settings, srvr)
 	return settings
 }
 
