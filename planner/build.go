@@ -36,7 +36,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 			return nil, er
 		}
 
-		if len(privs) > 0 {
+		if privs != nil && len(privs.List) > 0 {
 			op = plan.NewAuthorize(privs, op)
 		}
 

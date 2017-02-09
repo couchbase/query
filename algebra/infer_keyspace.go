@@ -61,7 +61,7 @@ func (this *InferKeyspace) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *InferKeyspace) Privileges() (datastore.Privileges, errors.Error) {
+func (this *InferKeyspace) Privileges() (*datastore.Privileges, errors.Error) {
 	return privilegesFromKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
 }
 

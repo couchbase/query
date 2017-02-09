@@ -37,7 +37,7 @@ type FromTerm interface {
 	/*
 	   Returns all required privileges.
 	*/
-	Privileges() (datastore.Privileges, errors.Error)
+	Privileges() (*datastore.Privileges, errors.Error)
 
 	/*
 	   Representation as a N1QL string.

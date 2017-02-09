@@ -63,10 +63,10 @@ func (this *AlterIndex) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *AlterIndex) Privileges() (datastore.Privileges, errors.Error) {
-	return datastore.Privileges{
-		this.keyspace.Namespace() + ":" + this.keyspace.Keyspace(): datastore.PRIV_DDL,
-	}, nil
+func (this *AlterIndex) Privileges() (*datastore.Privileges, errors.Error) {
+	privs := datastore.NewPrivileges()
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_DDL)
+	return privs, nil
 }
 
 func (this *AlterIndex) Keyspace() *KeyspaceRef {

@@ -57,7 +57,7 @@ func (this *Join) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Join) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Join) Privileges() (*datastore.Privileges, errors.Error) {
 	privs, err := this.left.Privileges()
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (this *Join) Privileges() (datastore.Privileges, errors.Error) {
 		return nil, err
 	}
 
-	privs.Add(rprivs)
+	privs.AddAll(rprivs)
 	return privs, nil
 }
 

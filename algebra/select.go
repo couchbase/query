@@ -126,7 +126,7 @@ func (this *Select) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Select) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Select) Privileges() (*datastore.Privileges, errors.Error) {
 	privs, err := this.subresult.Privileges()
 	if err != nil {
 		return nil, err
@@ -151,7 +151,18 @@ func (this *Select) Privileges() (datastore.Privileges, errors.Error) {
 		return nil, err
 	}
 
-	privs.Add(subprivs)
+	privs.AddAll(subprivs)
+
+	// The user must have SELECT permission for every bucket that is read
+	// from in a SELECT statement.
+	selectPrivs := datastore.NewPrivileges()
+	for _, pair := range privs.List {
+		if pair.Priv == datastore.PRIV_READ {
+			selectPrivs.Add(pair.Target, datastore.PRIV_QUERY_SELECT)
+		}
+	}
+	privs.AddAll(selectPrivs)
+
 	return privs, nil
 }
 
@@ -317,7 +328,7 @@ type Subresult interface {
 	/*
 	   Returns all required privileges.
 	*/
-	Privileges() (datastore.Privileges, errors.Error)
+	Privileges() (*datastore.Privileges, errors.Error)
 
 	/*
 	   Representation as a N1QL string.

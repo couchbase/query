@@ -68,7 +68,7 @@ func (this *ExpressionTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *ExpressionTerm) Privileges() (datastore.Privileges, errors.Error) {
+func (this *ExpressionTerm) Privileges() (*datastore.Privileges, errors.Error) {
 	if this.isKeyspace {
 		return this.keyspaceTerm.Privileges()
 	}

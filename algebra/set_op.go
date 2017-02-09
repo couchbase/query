@@ -69,7 +69,7 @@ func (this *setOp) ResultTerms() ResultTerms {
 /*
 Returns all required privileges.
 */
-func (this *setOp) Privileges() (datastore.Privileges, errors.Error) {
+func (this *setOp) Privileges() (*datastore.Privileges, errors.Error) {
 	privs, err := this.first.Privileges()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (this *setOp) Privileges() (datastore.Privileges, errors.Error) {
 		return nil, err
 	}
 
-	privs.Add(sprivs)
+	privs.AddAll(sprivs)
 	return privs, nil
 }
 

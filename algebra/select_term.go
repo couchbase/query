@@ -83,7 +83,7 @@ func (this *SelectTerm) ResultTerms() ResultTerms {
 /*
 Returns all required privileges.
 */
-func (this *SelectTerm) Privileges() (datastore.Privileges, errors.Error) {
+func (this *SelectTerm) Privileges() (*datastore.Privileges, errors.Error) {
 	return this.query.Privileges()
 }
 

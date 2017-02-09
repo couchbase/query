@@ -185,7 +185,7 @@ func (this *Subselect) ResultTerms() ResultTerms {
 /*
 Returns all required privileges.
 */
-func (this *Subselect) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Subselect) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
 
 	if this.from != nil {
@@ -194,7 +194,7 @@ func (this *Subselect) Privileges() (datastore.Privileges, errors.Error) {
 			return nil, err
 		}
 
-		privs.Add(fprivs)
+		privs.AddAll(fprivs)
 	}
 
 	exprs := make(expression.Expressions, 0, 16)
@@ -218,7 +218,7 @@ func (this *Subselect) Privileges() (datastore.Privileges, errors.Error) {
 		return nil, err
 	}
 
-	privs.Add(subprivs)
+	privs.AddAll(subprivs)
 	return privs, nil
 }
 

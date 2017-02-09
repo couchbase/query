@@ -80,7 +80,7 @@ func (this *RevokeRole) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *RevokeRole) Privileges() (datastore.Privileges, errors.Error) {
+func (this *RevokeRole) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
 	// Currently our privileges always attach to buckets. In this case,
 	// the data being updated isn't a bucket, it's system security data,
@@ -88,7 +88,7 @@ func (this *RevokeRole) Privileges() (datastore.Privileges, errors.Error) {
 	// This works because no bucket name is needed for this type of authorization.
 	// If we absolutely had to provide a table name, it would make sense to use system:user_info,
 	// because that's the virtual table where the data can be accessed.
-	privs[""] = datastore.PRIV_SECURITY_WRITE
+	privs.Add("", datastore.PRIV_SECURITY_WRITE)
 	return privs, nil
 }
 

@@ -61,7 +61,7 @@ func (this *Unnest) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Unnest) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Unnest) Privileges() (*datastore.Privileges, errors.Error) {
 	return this.left.Privileges()
 }
 

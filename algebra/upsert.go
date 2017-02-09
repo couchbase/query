@@ -170,9 +170,9 @@ func (this *Upsert) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Upsert) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Upsert) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs[this.keyspace.Namespace()+":"+this.keyspace.Keyspace()] = datastore.PRIV_WRITE
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_WRITE)
 
 	if this.query != nil {
 		qp, err := this.query.Privileges()
@@ -180,7 +180,7 @@ func (this *Upsert) Privileges() (datastore.Privileges, errors.Error) {
 			return nil, err
 		}
 
-		privs.Add(qp)
+		privs.AddAll(qp)
 	}
 
 	subprivs, err := subqueryPrivileges(this.Expressions())
@@ -188,7 +188,7 @@ func (this *Upsert) Privileges() (datastore.Privileges, errors.Error) {
 		return nil, err
 	}
 
-	privs.Add(subprivs)
+	privs.AddAll(subprivs)
 	return privs, nil
 }
 

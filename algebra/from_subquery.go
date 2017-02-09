@@ -51,7 +51,7 @@ func (this *SubqueryTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *SubqueryTerm) Privileges() (datastore.Privileges, errors.Error) {
+func (this *SubqueryTerm) Privileges() (*datastore.Privileges, errors.Error) {
 	return this.subquery.Privileges()
 }
 

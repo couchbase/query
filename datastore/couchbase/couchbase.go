@@ -112,6 +112,22 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 		permission = "cluster.security!read"
 	case datastore.PRIV_SECURITY_WRITE:
 		permission = "cluster.security!write"
+	case datastore.PRIV_QUERY_SELECT:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
+		//logging.Errorf("JOHAN: no-op query_insert for now: granted")
+		return true, nil
+	case datastore.PRIV_QUERY_UPDATE:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.update!execute", bucket)
+		//logging.Errorf("JOHAN: no-op query_insert for now: granted")
+		return true, nil
+	case datastore.PRIV_QUERY_INSERT:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.insert!execute", bucket)
+		//logging.Errorf("JOHAN: no-op query_insert for now: granted")
+		return true, nil
+	case datastore.PRIV_QUERY_DELETE:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
+		//logging.Errorf("JOHAN: no-op query_delete for now: granted")
+		return true, nil
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}
@@ -142,7 +158,7 @@ func (s *store) adminIsOpen() bool {
 	return true
 }
 
-func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials, req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(privileges *datastore.Privileges, credentials datastore.Credentials, req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
 	//logging.Errorf("JOHAN: Authorize() with privileges %v credentials %v", privileges, credentials)
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
@@ -196,7 +212,9 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 
 	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
-	for keyspace, privilege := range privileges {
+	for _, pair := range privileges.List {
+		keyspace := pair.Target
+		privilege := pair.Priv
 		if strings.Contains(keyspace, ":") {
 			q := strings.Split(keyspace, ":")
 			keyspace = q[1]

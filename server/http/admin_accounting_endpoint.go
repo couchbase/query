@@ -220,7 +220,7 @@ func verifyCredentialsFromRequest(api string, req *http.Request) errors.Error {
 		return err
 	}
 	privs := datastore.NewPrivileges()
-	privs["#system:"+api] = datastore.PRIV_SYSTEM_READ
+	privs.Add("system:"+api, datastore.PRIV_SYSTEM_READ)
 	_, err = datastore.GetDatastore().Authorize(privs, creds, req)
 	return err
 }

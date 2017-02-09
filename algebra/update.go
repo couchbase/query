@@ -150,16 +150,18 @@ func (this *Update) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Update) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Update) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs[this.keyspace.Namespace()+":"+this.keyspace.Keyspace()] = datastore.PRIV_WRITE
+	fullKeyspace := this.keyspace.Namespace() + ":" + this.keyspace.Keyspace()
+	privs.Add(fullKeyspace, datastore.PRIV_WRITE)
+	privs.Add(fullKeyspace, datastore.PRIV_QUERY_UPDATE)
 
 	subprivs, err := subqueryPrivileges(this.Expressions())
 	if err != nil {
 		return nil, err
 	}
 
-	privs.Add(subprivs)
+	privs.AddAll(subprivs)
 	return privs, nil
 }
 

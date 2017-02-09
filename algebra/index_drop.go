@@ -86,10 +86,10 @@ func (this *DropIndex) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *DropIndex) Privileges() (datastore.Privileges, errors.Error) {
-	return datastore.Privileges{
-		this.keyspace.Namespace() + ":" + this.keyspace.Keyspace(): datastore.PRIV_DDL,
-	}, nil
+func (this *DropIndex) Privileges() (*datastore.Privileges, errors.Error) {
+	privs := datastore.NewPrivileges()
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_DDL)
+	return privs, nil
 }
 
 /*

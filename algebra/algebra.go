@@ -54,7 +54,7 @@ type Statement interface {
 	/*
 		Returns all required privileges.
 	*/
-	Privileges() (datastore.Privileges, errors.Error)
+	Privileges() (*datastore.Privileges, errors.Error)
 }
 
 /*

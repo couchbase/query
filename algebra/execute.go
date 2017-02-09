@@ -92,7 +92,7 @@ func (this *Execute) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Execute) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Execute) Privileges() (*datastore.Privileges, errors.Error) {
 	return nil, nil
 }
 

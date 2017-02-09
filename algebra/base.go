@@ -22,7 +22,7 @@ type statementBase struct {
 /*
 Returns all required privileges.
 */
-func subqueryPrivileges(exprs expression.Expressions) (datastore.Privileges, errors.Error) {
+func subqueryPrivileges(exprs expression.Expressions) (*datastore.Privileges, errors.Error) {
 	subqueries, err := expression.ListSubqueries(exprs, false)
 	if err != nil {
 		return nil, errors.NewError(err, "")
@@ -36,7 +36,7 @@ func subqueryPrivileges(exprs expression.Expressions) (datastore.Privileges, err
 			return nil, e
 		}
 
-		privileges.Add(sp)
+		privileges.AddAll(sp)
 	}
 
 	return privileges, nil

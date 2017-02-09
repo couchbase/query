@@ -78,26 +78,26 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *KeyspaceTerm) Privileges() (datastore.Privileges, errors.Error) {
+func (this *KeyspaceTerm) Privileges() (*datastore.Privileges, errors.Error) {
 	return privilegesFromKeyspace(this.namespace, this.keyspace)
 }
 
-func privilegesFromKeyspace(namespace, keyspace string) (datastore.Privileges, errors.Error) {
+func privilegesFromKeyspace(namespace, keyspace string) (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
 	fullKeyspace := namespace + ":" + keyspace
 	if namespace == "#system" {
 		if keyspace == "user_info" {
-			privs[fullKeyspace] = datastore.PRIV_SECURITY_READ
+			privs.Add(fullKeyspace, datastore.PRIV_SECURITY_READ)
 		} else if keyspace == "keyspaces" || keyspace == "indexes" {
 			// Do nothing. These two tables handle security internally, by
 			// filtering the results.
 		} else if keyspace == "datastores" || keyspace == "namespaces" || keyspace == "dual" {
 			// Do nothing. These three tables are open to all.
 		} else {
-			privs[fullKeyspace] = datastore.PRIV_SYSTEM_READ
+			privs.Add(fullKeyspace, datastore.PRIV_SYSTEM_READ)
 		}
 	} else {
-		privs[fullKeyspace] = datastore.PRIV_READ
+		privs.Add(fullKeyspace, datastore.PRIV_READ)
 	}
 	return privs, nil
 }

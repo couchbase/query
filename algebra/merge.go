@@ -138,23 +138,23 @@ func (this *Merge) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Merge) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Merge) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs[this.keyspace.Namespace()+":"+this.keyspace.Keyspace()] = datastore.PRIV_WRITE
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_WRITE)
 
 	sp, err := this.source.Privileges()
 	if err != nil {
 		return nil, err
 	}
 
-	privs.Add(sp)
+	privs.AddAll(sp)
 
 	subprivs, err := subqueryPrivileges(this.Expressions())
 	if err != nil {
 		return nil, err
 	}
 
-	privs.Add(subprivs)
+	privs.AddAll(subprivs)
 	return privs, nil
 }
 
@@ -347,7 +347,7 @@ func (this *MergeSource) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *MergeSource) Privileges() (datastore.Privileges, errors.Error) {
+func (this *MergeSource) Privileges() (*datastore.Privileges, errors.Error) {
 	if this.from != nil {
 		return this.from.Privileges()
 	}

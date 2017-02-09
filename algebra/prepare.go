@@ -83,7 +83,7 @@ func (this *Prepare) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Prepare) Privileges() (datastore.Privileges, errors.Error) {
+func (this *Prepare) Privileges() (*datastore.Privileges, errors.Error) {
 	return this.stmt.Privileges()
 }
 
