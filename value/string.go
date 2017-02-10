@@ -251,7 +251,7 @@ func (this stringValue) Tokens(set *Set, options Value) *Set {
 	tokens := _STRING_TOKENS_POOL.Get()
 	defer _STRING_TOKENS_POOL.Put(tokens)
 
-	this.tokens(tokens, options, "")
+	this.tokens(tokens, options, "", nil)
 	for t, _ := range tokens {
 		set.Add(stringValue(t))
 	}
@@ -268,14 +268,23 @@ func (this stringValue) ContainsToken(token, options Value) bool {
 	defer _STRING_TOKENS_POOL.Put(tokens)
 
 	str := token.Actual().(string)
-	return this.tokens(tokens, options, str)
+	return this.tokens(tokens, options, str, nil)
+}
+
+func (this stringValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	tokens := _STRING_TOKENS_POOL.Get()
+	defer _STRING_TOKENS_POOL.Put(tokens)
+
+	return this.tokens(tokens, options, "", matcher)
 }
 
 func (this stringValue) unwrap() Value {
 	return this
 }
 
-func (this stringValue) tokens(set map[string]bool, options Value, token string) bool {
+func (this stringValue) tokens(set map[string]bool, options Value,
+	token string, matcher MatchFunc) bool {
+
 	// Set case folding function, if specified.
 	caseFunc := func(s string) string { return s }
 	if caseOption, ok := options.Field("case"); ok && caseOption.Type() == STRING {
@@ -288,19 +297,43 @@ func (this stringValue) tokens(set map[string]bool, options Value, token string)
 		}
 	}
 
-	// Always tokenize alphanumerics.
-	fields := strings.FieldsFunc(string(this),
-		func(c rune) bool {
-			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
-		})
+	var fields []string
+	split := true
+
+	// To split or not to split.
+	if splitOption, ok := options.Field("split"); ok &&
+		splitOption.Type() == BOOLEAN && !splitOption.Truth() {
+
+		split = false
+
+		// To trim or not to trim.
+		if trimOption, ok := options.Field("trim"); ok &&
+			trimOption.Type() == BOOLEAN && !trimOption.Truth() {
+			fields = []string{string(this)}
+		} else {
+			fields = []string{strings.TrimSpace(string(this))}
+		}
+	}
+
+	// Tokenize alphanumerics.
+	if split {
+		fields = strings.FieldsFunc(string(this),
+			func(c rune) bool {
+				return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+			})
+	}
 
 	for _, field := range fields {
 		f := caseFunc(field)
-		if f == token {
+		if f == token || (matcher != nil && matcher(f)) {
 			return true
 		}
 
 		set[f] = true
+	}
+
+	if !split {
+		return false
 	}
 
 	// Return if not tokenizing specials.
@@ -330,7 +363,7 @@ func (this stringValue) tokens(set map[string]bool, options Value, token string)
 
 		if f != "" {
 			f = caseFunc(f)
-			if f == token {
+			if f == token || (matcher != nil && matcher(f)) {
 				return true
 			}
 

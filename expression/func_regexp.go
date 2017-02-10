@@ -161,18 +161,19 @@ func (this *RegexpLike) Apply(context Context, first, second value.Value) (value
 		return value.NULL_VALUE, nil
 	}
 
-	f := first.Actual().(string)
-	s := second.Actual().(string)
-
-	fullRe := this.re
-	partRe := this.part
-
 	/* MB-20677 make sure full regexp doesn't skew RegexpLike
 	   into accepting wrong partial regexps
 	*/
 	if this.err != nil {
 		return nil, this.err
 	}
+
+	f := first.Actual().(string)
+	s := second.Actual().(string)
+
+	fullRe := this.re
+	partRe := this.part
+
 	if partRe == nil {
 		var err error
 

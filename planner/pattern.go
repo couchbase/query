@@ -80,30 +80,21 @@ func (this *pattern) VisitLike(expr *expression.Like) (interface{}, error) {
 
 func (this *pattern) VisitFunction(expr expression.Function) (interface{}, error) {
 	switch expr := expr.(type) {
-	case *expression.RegexpLike:
-		return this.visitRegexpLike(expr)
 	case *expression.Contains:
 		return this.visitContains(expr)
 	case *expression.ContainsToken:
 		return this.visitContainsToken(expr)
+	case *expression.ContainsTokenLike:
+		return this.visitContainsTokenLike(expr)
+	case *expression.ContainsTokenRegexp:
+		return this.visitContainsTokenRegexp(expr)
+	case *expression.RegexpContains:
+		return this.visitRegexpContains(expr)
+	case *expression.RegexpLike:
+		return this.visitRegexpLike(expr)
 	default:
 		return expr, nil
 	}
-}
-
-func (this *pattern) visitRegexpLike(expr *expression.RegexpLike) (interface{}, error) {
-	source := expr.First()
-	variable, ok := this.suffixes[source.String()]
-	if !ok {
-		return expr, nil
-	}
-
-	suffixes := expression.NewSuffixes(source)
-	binding := expression.NewSimpleBinding(variable, suffixes)
-	suffix := expression.NewRegexpSuffix(expr.Second())
-	sat := expression.NewRegexpLike(expression.NewIdentifier(variable), suffix)
-	any := expression.NewAny(expression.Bindings{binding}, sat)
-	return expression.NewAnd(expr, any), nil
 }
 
 func (this *pattern) visitContains(expr *expression.Contains) (interface{}, error) {
@@ -138,6 +129,78 @@ func (this *pattern) visitContainsToken(expr *expression.ContainsToken) (interfa
 
 	binding := expression.NewSimpleBinding(variable, tokens)
 	sat := expression.NewEq(expression.NewIdentifier(variable), operands[1])
+	any := expression.NewAny(expression.Bindings{binding}, sat)
+	return expression.NewAnd(expr, any), nil
+}
+
+func (this *pattern) visitContainsTokenLike(expr *expression.ContainsTokenLike) (interface{}, error) {
+	operands := expr.Operands()
+	source := operands[0]
+	variable, ok := this.tokens[source.String()]
+	if !ok {
+		return expr, nil
+	}
+
+	var tokens expression.Expression
+	if len(operands) > 2 {
+		tokens = expression.NewTokens(source, operands[2])
+	} else {
+		tokens = expression.NewTokens(source)
+	}
+
+	binding := expression.NewSimpleBinding(variable, tokens)
+	sat := expression.NewLike(expression.NewIdentifier(variable), operands[1])
+	any := expression.NewAny(expression.Bindings{binding}, sat)
+	return expression.NewAnd(expr, any), nil
+}
+
+func (this *pattern) visitContainsTokenRegexp(expr *expression.ContainsTokenRegexp) (interface{}, error) {
+	operands := expr.Operands()
+	source := operands[0]
+	variable, ok := this.tokens[source.String()]
+	if !ok {
+		return expr, nil
+	}
+
+	var tokens expression.Expression
+	if len(operands) > 2 {
+		tokens = expression.NewTokens(source, operands[2])
+	} else {
+		tokens = expression.NewTokens(source)
+	}
+
+	binding := expression.NewSimpleBinding(variable, tokens)
+	sat := expression.NewRegexpLike(expression.NewIdentifier(variable), operands[1])
+	any := expression.NewAny(expression.Bindings{binding}, sat)
+	return expression.NewAnd(expr, any), nil
+}
+
+func (this *pattern) visitRegexpContains(expr *expression.RegexpContains) (interface{}, error) {
+	source := expr.First()
+	variable, ok := this.suffixes[source.String()]
+	if !ok {
+		return expr, nil
+	}
+
+	suffixes := expression.NewSuffixes(source)
+	binding := expression.NewSimpleBinding(variable, suffixes)
+	suffix := expression.NewConcat(expr.Second(), expression.NewConstant("(.*)"))
+	sat := expression.NewRegexpLike(expression.NewIdentifier(variable), suffix)
+	any := expression.NewAny(expression.Bindings{binding}, sat)
+	return expression.NewAnd(expr, any), nil
+}
+
+func (this *pattern) visitRegexpLike(expr *expression.RegexpLike) (interface{}, error) {
+	source := expr.First()
+	variable, ok := this.suffixes[source.String()]
+	if !ok {
+		return expr, nil
+	}
+
+	suffixes := expression.NewSuffixes(source)
+	binding := expression.NewSimpleBinding(variable, suffixes)
+	suffix := expression.NewRegexpSuffix(expr.Second())
+	sat := expression.NewRegexpLike(expression.NewIdentifier(variable), suffix)
 	any := expression.NewAny(expression.Bindings{binding}, sat)
 	return expression.NewAnd(expr, any), nil
 }

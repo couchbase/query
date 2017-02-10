@@ -316,6 +316,10 @@ func (this floatValue) ContainsToken(token, options Value) bool {
 	return this.EquivalentTo(token)
 }
 
+func (this floatValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return matcher(float64(this))
+}
+
 func (this floatValue) unwrap() Value {
 	return this
 }

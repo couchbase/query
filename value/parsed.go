@@ -253,6 +253,10 @@ func (this *parsedValue) ContainsToken(token, options Value) bool {
 	return this.unwrap().ContainsToken(token, options)
 }
 
+func (this *parsedValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return this.unwrap().ContainsMatchingToken(matcher, options)
+}
+
 /*
 Delayed parse.
 */

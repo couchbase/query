@@ -2,7 +2,7 @@
 
 + Status: DRAFT/PROPOSAL
 + Latest: [n1ql-dml](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md)
-+ Modified: 2016-06-04
++ Modified: 2017-02-10
 
 ## Introduction
 
@@ -324,6 +324,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Add syntax for UPDATE with ranging over objects
 * 2016-06-07 - Chained UPDATE FOR
     * Add syntax for chained UPDATE FOR
+* 2017-02-10 - MERGE source
+    * Support expressions as MERGE source
 
 ### Open Issues
 

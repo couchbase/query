@@ -248,6 +248,10 @@ func (this intValue) ContainsToken(token, options Value) bool {
 	return this.EquivalentTo(token)
 }
 
+func (this intValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return matcher(int64(this))
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }
