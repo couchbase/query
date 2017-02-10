@@ -50,7 +50,7 @@ unset-clause ::= 'UNSET' path update-for? (',' path update-for?)*
  */
 merge ::= 'MERGE' 'INTO' keyspace-ref 'USING' merge-source 'ON' key-clause merge-actions limit-clause? returning-clause?
 
-merge-source ::= from-path ('AS'? alias)? | '(' select ')' 'AS'? alias
+merge-source ::= from-keyspace ('AS'? alias)? use-clause? | '(' select ')' 'AS'? alias | expr ('AS'? alias)?
 
 key-clause ::= PRIMARY? KEY expr
 
