@@ -829,6 +829,9 @@ expr opt_as_alias opt_use
 {
      switch other := $1.(type) {
          case *algebra.Subquery:
+              if $2 == "" {
+                   yylex.Error("Subquery in FROM clause must have an alias.")
+              }
               if $3 != algebra.EMPTY_USE {
                    yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
               }
