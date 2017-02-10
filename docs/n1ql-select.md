@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-10-18
+* Modified: 2017-02-10
 
 ## Introduction
 
@@ -1690,6 +1690,9 @@ date expr is a string in a supported format. Since Couchbase 4.6.1.
 __CONTAINS(expr, substr)__ - true if the string contains the
 substring.
 
+__CONTAINS\_REGEXP(expr, pattern)__ - synonym for
+__REGEXP\_CONTAINS__. Since Couchbase 5.0.
+
 __INITCAP(expr), TITLE(expr)__ - converts the string so that the first
 letter of each word is uppercase and every other letter is lowercase.
 
@@ -1970,16 +1973,31 @@ __CONTAINS\_TOKEN(expr, token [, options ])__ - true if _expr_
 contains _token_. See __TOKENS__ for a description of N1QL
 tokenization and _options_. Since Couchbase 4.6.
 
+__CONTAINS\_TOKEN\_LIKE(expr, pattern [, options ])__ - true if _expr_
+contains a token that matches _pattern_ using LIKE pattern
+matching. See __TOKENS__ for a description of N1QL tokenization and
+_options_. Since Couchbase 5.0.
+
+__CONTAINS\_TOKEN\_REGEXP(expr, pattern [, options ])__ - true if
+_expr_ contains a token that matches _pattern_ using REGEXP pattern
+matching. See __TOKENS__ for a description of N1QL tokenization and
+_options_. Since Couchbase 5.0.
+
 __TOKENS(expr [, options ])__ - array of tokens from the input
 expression. Together with array indexing, provides efficient token
 search.  Numbers, booleans, and nulls tokenize as themselves. Strings
-are further tokenized into words. Arrays and objects have their
-contents further tokenized. _options_ is an optional JSON object to
-control tokenization. It can specify _"names", "case",_ and
-_"specials"._ _"names"_ is a boolean for including object
-names. _"case"_ is either "lower" or "upper", and specifies case
-folding. _"specials"_ is a boolean and specifies preservation of
-special strings such as email addresses and URLs. Since Couchbase 4.6.
+are further tokenized into words (unless _split_ is false). Arrays and
+objects have their contents further tokenized. _options_ is an
+optional JSON object to control tokenization. Within _options_:
+
+* _names_ is a boolean to include object names (true)
+* _case_ is either "lower" or "upper" for case folding
+* _specials_ is a boolean to include strings with special characters,
+such as email addresses and URLs (false)
+* _split_ is a boolean to split string values into words (true)
+* _trim_ is a boolean to trim unsplit string values (true)
+
+Since Couchbase 4.6.
 
 ### Comparison functions
 
@@ -2781,6 +2799,12 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Remove support for paths in FROM clause
 * 2016-10-18 - Functions
     * Upate list of functions
+* 2017-02-09 - FROM expression
+    * Support expressions as FROM terms
+* 2017-02-10 - TOKEN functions
+    * Add CONTAINS\_TOKEN()
+    * Add CONTAINS\_TOKEN\_LIKE()
+    * Add CONTAINS\_TOKEN\_REGEXP()
 
 ### Open issues
 

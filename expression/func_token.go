@@ -10,6 +10,8 @@
 package expression
 
 import (
+	"regexp"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -43,6 +45,17 @@ func (this *ContainsToken) Type() value.Type { return value.BOOLEAN }
 
 func (this *ContainsToken) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ContainsToken) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 func (this *ContainsToken) Apply(context Context, args ...value.Value) (value.Value, error) {
@@ -80,6 +93,231 @@ Factory method pattern.
 */
 func (this *ContainsToken) Constructor() FunctionConstructor {
 	return NewContainsToken
+}
+
+///////////////////////////////////////////////////
+//
+// ContainsTokenLike
+//
+///////////////////////////////////////////////////
+
+type ContainsTokenLike struct {
+	FunctionBase
+	re   *regexp.Regexp
+	part *regexp.Regexp
+}
+
+func NewContainsTokenLike(operands ...Expression) Function {
+	rv := &ContainsTokenLike{
+		*NewFunctionBase("contains_token_like", operands...),
+		nil,
+		nil,
+	}
+
+	rv.re, rv.part, _ = precompileLike(operands[1].Value())
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ContainsTokenLike) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ContainsTokenLike) Type() value.Type { return value.BOOLEAN }
+
+func (this *ContainsTokenLike) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ContainsTokenLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *ContainsTokenLike) Apply(context Context, args ...value.Value) (value.Value, error) {
+	source := args[0]
+	pattern := args[1]
+
+	if source.Type() == value.MISSING || pattern.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if source.Type() == value.NULL || pattern.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	options := _EMPTY_OPTIONS
+	if len(args) >= 3 {
+		switch args[2].Type() {
+		case value.OBJECT:
+			options = args[2]
+		case value.MISSING:
+			return value.MISSING_VALUE, nil
+		default:
+			return value.NULL_VALUE, nil
+		}
+	}
+
+	re := this.re
+	if re == nil {
+		var err error
+		re, _, err = likeCompile(pattern.Actual().(string))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	matcher := func(token interface{}) bool {
+		str, ok := token.(string)
+		if !ok {
+			return false
+		}
+
+		return re.MatchString(str)
+	}
+
+	contains := source.ContainsMatchingToken(matcher, options)
+	return value.NewValue(contains), nil
+}
+
+func (this *ContainsTokenLike) MinArgs() int { return 2 }
+
+func (this *ContainsTokenLike) MaxArgs() int { return 3 }
+
+/*
+Factory method pattern.
+*/
+func (this *ContainsTokenLike) Constructor() FunctionConstructor {
+	return NewContainsTokenLike
+}
+
+///////////////////////////////////////////////////
+//
+// ContainsTokenRegexp
+//
+///////////////////////////////////////////////////
+
+type ContainsTokenRegexp struct {
+	FunctionBase
+	re   *regexp.Regexp
+	part *regexp.Regexp
+	err  error
+}
+
+func NewContainsTokenRegexp(operands ...Expression) Function {
+	rv := &ContainsTokenRegexp{
+		*NewFunctionBase("contains_token_regexp", operands...),
+		nil,
+		nil,
+		nil,
+	}
+
+	rv.re, _ = precompileRegexp(operands[1].Value(), true)
+	rv.part, rv.err = precompileRegexp(operands[1].Value(), false)
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ContainsTokenRegexp) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ContainsTokenRegexp) Type() value.Type { return value.BOOLEAN }
+
+func (this *ContainsTokenRegexp) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ContainsTokenRegexp) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *ContainsTokenRegexp) Apply(context Context, args ...value.Value) (value.Value, error) {
+	source := args[0]
+	pattern := args[1]
+
+	if source.Type() == value.MISSING || pattern.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if source.Type() == value.NULL || pattern.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	options := _EMPTY_OPTIONS
+	if len(args) >= 3 {
+		switch args[2].Type() {
+		case value.OBJECT:
+			options = args[2]
+		case value.MISSING:
+			return value.MISSING_VALUE, nil
+		default:
+			return value.NULL_VALUE, nil
+		}
+	}
+
+	/* MB-20677 make sure full regexp doesn't skew RegexpLike
+	   into accepting wrong partial regexps
+	*/
+	if this.err != nil {
+		return nil, this.err
+	}
+
+	fullRe := this.re
+	partRe := this.part
+
+	if partRe == nil {
+		var err error
+		s := pattern.Actual().(string)
+
+		/* MB-20677 ditto */
+		partRe, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
+		}
+		fullRe, err = regexp.Compile("^" + s + "$")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	matcher := func(token interface{}) bool {
+		str, ok := token.(string)
+		if !ok {
+			return false
+		}
+
+		return fullRe.MatchString(str)
+	}
+
+	contains := source.ContainsMatchingToken(matcher, options)
+	return value.NewValue(contains), nil
+}
+
+func (this *ContainsTokenRegexp) MinArgs() int { return 2 }
+
+func (this *ContainsTokenRegexp) MaxArgs() int { return 3 }
+
+/*
+Factory method pattern.
+*/
+func (this *ContainsTokenRegexp) Constructor() FunctionConstructor {
+	return NewContainsTokenRegexp
 }
 
 ///////////////////////////////////////////////////

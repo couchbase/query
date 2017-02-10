@@ -36,7 +36,7 @@ func NewLike(first, second Expression) Function {
 		nil,
 	}
 
-	rv.precompile()
+	rv.re, rv.part, _ = precompileLike(second.Value())
 	rv.expr = rv
 	return rv
 }
@@ -104,21 +104,15 @@ func (this *Like) Regexp() *regexp.Regexp {
 }
 
 /*
-This method sets the regexp field in the Like struct.
+Initializes regexp fields.
 */
-func (this *Like) precompile() {
-	sv := this.Second().Value()
+func precompileLike(sv value.Value) (re, part *regexp.Regexp, err error) {
 	if sv == nil || sv.Type() != value.STRING {
 		return
 	}
 
 	s := sv.Actual().(string)
-	re, part, err := likeCompile(s)
-	if err != nil {
-		return
-	}
-
-	this.re, this.part = re, part
+	return likeCompile(s)
 }
 
 /*

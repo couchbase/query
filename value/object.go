@@ -426,6 +426,25 @@ func (this objectValue) ContainsToken(token, options Value) bool {
 	return false
 }
 
+func (this objectValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	names := true
+	if n, ok := options.Field("names"); ok && n.Type() == BOOLEAN {
+		names = n.Truth()
+	}
+
+	for n, v := range this {
+		if names && NewValue(n).ContainsMatchingToken(matcher, options) {
+			return true
+		}
+
+		if NewValue(v).ContainsMatchingToken(matcher, options) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (this objectValue) unwrap() Value {
 	return this
 }

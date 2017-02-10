@@ -164,6 +164,10 @@ func (this binaryValue) ContainsToken(token, options Value) bool {
 	return this.EquivalentTo(token)
 }
 
+func (this binaryValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return matcher([]byte(this))
+}
+
 func (this binaryValue) unwrap() Value {
 	return this
 }

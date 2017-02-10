@@ -137,13 +137,27 @@ var _FUNCTIONS = map[string]Function{
 	"weekday_str":         &WeekdayStr{},
 
 	// String
-	"contains":        &Contains{},
-	"initcap":         &Title{},
-	"length":          &Length{},
-	"lower":           &Lower{},
-	"ltrim":           &LTrim{},
-	"position":        &Position{},
-	"pos":             &Position{},
+	"contains": &Contains{},
+	"initcap":  &Title{},
+	"length":   &Length{},
+	"lower":    &Lower{},
+	"ltrim":    &LTrim{},
+	"position": &Position{},
+	"pos":      &Position{},
+	"repeat":   &Repeat{},
+	"replace":  &Replace{},
+	"reverse":  &Reverse{},
+	"rtrim":    &RTrim{},
+	"split":    &Split{},
+	"substr":   &Substr{},
+	"suffixes": &Suffixes{},
+	"title":    &Title{},
+	"trim":     &Trim{},
+	"upper":    &Upper{},
+
+	// Regular expressions
+	"contains_regex":  &RegexpContains{},
+	"contains_regexp": &RegexpContains{},
 	"regex_contains":  &RegexpContains{},
 	"regex_like":      &RegexpLike{},
 	"regex_position":  &RegexpPosition{},
@@ -154,16 +168,6 @@ var _FUNCTIONS = map[string]Function{
 	"regexp_position": &RegexpPosition{},
 	"regexp_pos":      &RegexpPosition{},
 	"regexp_replace":  &RegexpReplace{},
-	"repeat":          &Repeat{},
-	"replace":         &Replace{},
-	"reverse":         &Reverse{},
-	"rtrim":           &RTrim{},
-	"split":           &Split{},
-	"substr":          &Substr{},
-	"suffixes":        &Suffixes{},
-	"title":           &Title{},
-	"trim":            &Trim{},
-	"upper":           &Upper{},
 
 	// Numeric
 	"abs":     &Abs{},
@@ -273,9 +277,12 @@ var _FUNCTIONS = map[string]Function{
 	"successor": &Successor{},
 
 	// Token
-	"contains_token": &ContainsToken{},
-	"has_token":      &ContainsToken{},
-	"tokens":         &Tokens{},
+	"contains_token":        &ContainsToken{},
+	"contains_token_like":   &ContainsTokenLike{},
+	"contains_token_regex":  &ContainsTokenRegexp{},
+	"contains_token_regexp": &ContainsTokenRegexp{},
+	"has_token":             &ContainsToken{},
+	"tokens":                &Tokens{},
 
 	// Conditional for unknowns
 	"if_missing":         &IfMissing{},
