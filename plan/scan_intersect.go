@@ -58,15 +58,29 @@ func (this *IntersectScan) New() Operator {
 }
 
 func (this *IntersectScan) Covers() expression.Covers {
-	return this.scans[0].Covers()
+	if this.Covering() {
+		return this.scans[0].Covers()
+	} else {
+		return nil
+	}
 }
 
 func (this *IntersectScan) FilterCovers() map[*expression.Cover]value.Value {
-	return this.scans[0].FilterCovers()
+	if this.Covering() {
+		return this.scans[0].FilterCovers()
+	} else {
+		return nil
+	}
 }
 
 func (this *IntersectScan) Covering() bool {
-	return this.scans[0].Covering()
+	for _, scan := range this.scans {
+		if !scan.Covering() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (this *IntersectScan) Scans() []SecondaryScan {

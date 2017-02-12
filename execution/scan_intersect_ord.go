@@ -210,7 +210,7 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 	bit := item.Bit()
 	bits, found := this.bits[key]
 
-	if !found {
+	if !found || bit == 0 {
 		this.values[key] = item
 	}
 

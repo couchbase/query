@@ -41,15 +41,29 @@ func (this *UnionScan) New() Operator {
 }
 
 func (this *UnionScan) Covers() expression.Covers {
-	return this.scans[0].Covers()
+	if this.Covering() {
+		return this.scans[0].Covers()
+	} else {
+		return nil
+	}
 }
 
 func (this *UnionScan) FilterCovers() map[*expression.Cover]value.Value {
-	return this.scans[0].FilterCovers()
+	if this.Covering() {
+		return this.scans[0].FilterCovers()
+	} else {
+		return nil
+	}
 }
 
 func (this *UnionScan) Covering() bool {
-	return this.scans[0].Covering()
+	for _, scan := range this.scans {
+		if !scan.Covering() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (this *UnionScan) Scans() []SecondaryScan {
