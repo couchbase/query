@@ -62,7 +62,9 @@ Returns all required privileges.
 */
 func (this *BuildIndexes) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_DDL)
+	fullName := this.keyspace.FullName()
+	privs.Add(fullName, datastore.PRIV_DDL)
+	privs.Add(fullName, datastore.PRIV_QUERY_BUILD_INDEX)
 	return privs, nil
 }
 

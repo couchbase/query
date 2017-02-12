@@ -128,10 +128,26 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
 		//logging.Errorf("JOHAN: no-op query_delete for now: granted")
 		return true, nil
+	case datastore.PRIV_QUERY_BUILD_INDEX:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.build_index!execute", bucket)
+		//logging.Errorf("JOHAN: no-op build_index for now: granted")
+		return true, nil
+	case datastore.PRIV_QUERY_CREATE_INDEX:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.create_index!execute", bucket)
+		//logging.Errorf("JOHAN: no-op create_index for now: granted")
+		return true, nil
+	case datastore.PRIV_QUERY_ALTER_INDEX:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.alter_index!execute", bucket)
+		//logging.Errorf("JOHAN: no-op alter_index for now: granted")
+		return true, nil
+	case datastore.PRIV_QUERY_DROP_INDEX:
+		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.drop_index!execute", bucket)
+		//logging.Errorf("JOHAN: no-op drop_index for now: granted")
+		return true, nil
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}
-	//logging.Errorf("JOHAN doAuthByCreds seeking %s", permission)
+	//logging.Errorf("JOHAN doAuthByCreds using %s seeking %s", creds.Name(), permission)
 
 	authResult, err := creds.IsAllowed(permission)
 	if err != nil || authResult == false {

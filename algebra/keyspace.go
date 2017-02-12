@@ -56,6 +56,7 @@ Returns the namespace string.
 */
 func (this *KeyspaceRef) Namespace() string {
 	return this.namespace
+
 }
 
 /*
@@ -105,4 +106,11 @@ func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(r)
+}
+
+/*
+Returns the full keyspace name, including the namespace.
+*/
+func (this *KeyspaceRef) FullName() string {
+	return this.namespace + ":" + this.keyspace
 }

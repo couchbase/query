@@ -62,7 +62,22 @@ func (this *InferKeyspace) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *InferKeyspace) Privileges() (*datastore.Privileges, errors.Error) {
-	return privilegesFromKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	privs, err := privilegesFromKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return privs, err
+	}
+
+	// The user must have SELECT permission for every bucket that is read
+	// from in an INFER statement.
+	selectPrivs := datastore.NewPrivileges()
+	for _, pair := range privs.List {
+		if pair.Priv == datastore.PRIV_READ {
+			selectPrivs.Add(pair.Target, datastore.PRIV_QUERY_SELECT)
+		}
+	}
+	privs.AddAll(selectPrivs)
+
+	return privs, nil
 }
 
 func (this *InferKeyspace) Keyspace() *KeyspaceRef {

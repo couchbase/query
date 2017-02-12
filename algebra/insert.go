@@ -172,7 +172,7 @@ Returns all required privileges.
 */
 func (this *Insert) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	fullKeyspace := this.keyspace.Namespace() + ":" + this.keyspace.Keyspace()
+	fullKeyspace := this.keyspace.FullName()
 	privs.Add(fullKeyspace, datastore.PRIV_WRITE)
 	privs.Add(fullKeyspace, datastore.PRIV_QUERY_INSERT)
 
@@ -181,8 +181,11 @@ func (this *Insert) Privileges() (*datastore.Privileges, errors.Error) {
 		if err != nil {
 			return nil, err
 		}
-
-		privs.AddAll(qp)
+		qp.ForEach(func(pair datastore.PrivilegePair) {
+			if !datastore.IsStatementTypePrivilege(pair.Priv) {
+				privs.AddPair(pair)
+			}
+		})
 	}
 
 	subprivs, err := subqueryPrivileges(this.Expressions())

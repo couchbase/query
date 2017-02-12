@@ -152,7 +152,7 @@ Returns all required privileges.
 */
 func (this *Update) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	fullKeyspace := this.keyspace.Namespace() + ":" + this.keyspace.Keyspace()
+	fullKeyspace := this.keyspace.FullName()
 	privs.Add(fullKeyspace, datastore.PRIV_WRITE)
 	privs.Add(fullKeyspace, datastore.PRIV_QUERY_UPDATE)
 

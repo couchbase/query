@@ -82,7 +82,7 @@ func (this *Explain) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *Explain) Privileges() (*datastore.Privileges, errors.Error) {
-	return nil, nil
+	return this.stmt.Privileges()
 }
 
 /*

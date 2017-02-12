@@ -172,15 +172,21 @@ Returns all required privileges.
 */
 func (this *Upsert) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_WRITE)
+	fullKeyspace := this.keyspace.FullName()
+	privs.Add(fullKeyspace, datastore.PRIV_WRITE)
+	privs.Add(fullKeyspace, datastore.PRIV_QUERY_INSERT)
+	privs.Add(fullKeyspace, datastore.PRIV_QUERY_UPDATE)
 
 	if this.query != nil {
 		qp, err := this.query.Privileges()
 		if err != nil {
 			return nil, err
 		}
-
-		privs.AddAll(qp)
+		qp.ForEach(func(pair datastore.PrivilegePair) {
+			if !datastore.IsStatementTypePrivilege(pair.Priv) {
+				privs.AddPair(pair)
+			}
+		})
 	}
 
 	subprivs, err := subqueryPrivileges(this.Expressions())

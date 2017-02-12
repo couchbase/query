@@ -65,7 +65,9 @@ Returns all required privileges.
 */
 func (this *AlterIndex) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_DDL)
+	fullName := this.keyspace.FullName()
+	privs.Add(fullName, datastore.PRIV_DDL)
+	privs.Add(fullName, datastore.PRIV_QUERY_ALTER_INDEX)
 	return privs, nil
 }
 
