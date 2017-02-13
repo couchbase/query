@@ -10,8 +10,8 @@ port=11224
 
 for i in "${bucket[@]}"
 do
-echo curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=none -d proxyPort=$port $Site
-curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=none -d proxyPort=$port $Site
+echo curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=none -d proxyPort=$port -d bucketType=couchbase $Site
+curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=none -d proxyPort=$port -d bucketType=couchbase $Site
 let port\+=1
 done
 
