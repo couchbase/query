@@ -12,6 +12,8 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -60,10 +62,28 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
-			node.RangeKeys(), node.Where(), node.With())
-		if err != nil {
-			context.Error(err)
+		if indexer2, ok := indexer.(datastore.Indexer2); ok {
+			rangeKey := make(datastore.IndexKeys, 0, len(node.Keys()))
+			for i, term := range node.Keys() {
+				rangeKey[i] = &datastore.IndexKey{Expr: term.Expression(), Desc: term.Descending()}
+			}
+
+			_, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
+				rangeKey, node.Where(), node.With())
+			if err != nil {
+				context.Error(err)
+			}
+		} else {
+			if node.Keys().HasDescending() {
+				context.Error(errors.NewIndexerDescCollationError())
+				return
+			}
+
+			_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
+				node.RangeKeys(), node.Where(), node.With())
+			if err != nil {
+				context.Error(err)
+			}
 		}
 	})
 }

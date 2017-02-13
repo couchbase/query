@@ -45,6 +45,12 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		return nil, er
 	}
 
+	if stmt.Keys().HasDescending() {
+		if _, ok := indexer.(datastore.Indexer2); !ok {
+			return nil, errors.NewIndexerDescCollationError()
+		}
+	}
+
 	// Check that the index does not already exist.
 	index, _ := indexer.IndexByName(stmt.Name())
 	if index != nil {

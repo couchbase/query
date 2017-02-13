@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -58,7 +59,18 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["index"] = this.node.Name()
-	r["keys"] = this.node.Keys()
+	k := make([]interface{}, 0, len(this.node.Keys()))
+	for i, term := range this.node.Keys() {
+		q := make(map[string]interface{})
+		q["expr"] = term.Expression().String()
+
+		if term.Descending() {
+			q["desc"] = term.Descending()
+		}
+
+		k[i] = q
+	}
+	r["indexkey_terms"] = k
 	r["using"] = this.node.Using()
 
 	if this.node.Partition() != nil {
@@ -81,10 +93,14 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string              `json:"#operator"`
-		Keysp     string              `json:"keyspace"`
-		Namesp    string              `json:"namespace"`
-		Index     string              `json:"index"`
+		_             string `json:"#operator"`
+		Keysp         string `json:"keyspace"`
+		Namesp        string `json:"namespace"`
+		Index         string `json:"index"`
+		IndexKeyTerms []struct {
+			Expr string `json:"expr"`
+			Desc bool   `json:"desc"`
+		} `json:"indexkey_terms"`
 		Keys      []string            `json:"keys"`
 		Using     datastore.IndexType `json:"using"`
 		Partition []string            `json:"partition"`
@@ -104,11 +120,38 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 
 	ksref := algebra.NewKeyspaceRef(_unmarshalled.Namesp, _unmarshalled.Keysp, "")
 
-	keys := make(expression.Expressions, len(_unmarshalled.Keys))
-	for i, k := range _unmarshalled.Keys {
-		keys[i], err = parser.Parse(k)
-		if err != nil {
-			return err
+	var keyTerms algebra.IndexKeyTerms
+	var expr expression.Expression
+
+	if len(_unmarshalled.Keys) != 0 {
+		keyTerms = make(algebra.IndexKeyTerms, 0, len(_unmarshalled.Keys))
+
+		for i, k := range _unmarshalled.Keys {
+			expr, err = parser.Parse(k)
+			if err != nil {
+				return err
+			}
+			keyTerms[i] = algebra.NewIndexKeyTerm(expr, false)
+		}
+	} else {
+		keyTerms = make(algebra.IndexKeyTerms, 0, len(_unmarshalled.IndexKeyTerms))
+
+		for i, term := range _unmarshalled.IndexKeyTerms {
+			expr, err = parser.Parse(term.Expr)
+			if err != nil {
+				return err
+			}
+			keyTerms[i] = algebra.NewIndexKeyTerm(expr, term.Desc)
+		}
+
+		if keyTerms.HasDescending() {
+			indexer, err1 := this.keyspace.Indexer(_unmarshalled.Using)
+			if err1 != nil {
+				return err1
+			}
+			if _, ok := indexer.(datastore.Indexer2); !ok {
+				return errors.NewIndexerDescCollationError()
+			}
 		}
 	}
 
@@ -137,6 +180,6 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 	}
 
 	this.node = algebra.NewCreateIndex(_unmarshalled.Index, ksref,
-		keys, partition, where, _unmarshalled.Using, with)
+		keyTerms, partition, where, _unmarshalled.Using, with)
 	return nil
 }

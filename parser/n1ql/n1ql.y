@@ -51,6 +51,8 @@ projection       *algebra.Projection
 order            *algebra.Order
 sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
+indexKeyTerm    *algebra.IndexKeyTerm
+indexKeyTerms    algebra.IndexKeyTerms
 
 keyspaceRef      *algebra.KeyspaceRef
 
@@ -380,8 +382,9 @@ tokOffset	 int
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
 %type <s>                rename
-%type <expr>             index_term index_expr index_where
-%type <exprs>            index_terms
+%type <expr>             index_term_expr index_expr index_where
+%type <indexKeyTerm>     index_term
+%type <indexKeyTerms>    index_terms
 %type <expr>             expr_input all_expr
 
 %type <inferenceType>    opt_infer_using
@@ -1855,7 +1858,7 @@ WITH expr
 index_terms:
 index_term
 {
-    $$ = expression.Expressions{$1}
+    $$ = algebra.IndexKeyTerms{$1}
 }
 |
 index_terms COMMA index_term
@@ -1865,6 +1868,12 @@ index_terms COMMA index_term
 ;
 
 index_term:
+index_term_expr opt_dir
+{
+   $$ = algebra.NewIndexKeyTerm($1, $2)
+}
+
+index_term_expr:
 index_expr
 |
 all index_expr

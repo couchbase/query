@@ -36,7 +36,7 @@ type CreateIndex struct {
 
 	name      string                 `json:"name"`
 	keyspace  *KeyspaceRef           `json:"keyspace"`
-	keys      expression.Expressions `json:"keys"`
+	keys      IndexKeyTerms          `json:"keys"`
 	partition expression.Expressions `json:"partition"`
 	where     expression.Expression  `json:"where"`
 	using     datastore.IndexType    `json:"using"`
@@ -47,7 +47,7 @@ type CreateIndex struct {
 The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
-func NewCreateIndex(name string, keyspace *KeyspaceRef, keys, partition expression.Expressions,
+func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, partition expression.Expressions,
 	where expression.Expression, using datastore.IndexType, with value.Value) *CreateIndex {
 	rv := &CreateIndex{
 		name:      name,
@@ -118,7 +118,7 @@ func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
 Return expr from the create index statement.
 */
 func (this *CreateIndex) Expressions() expression.Expressions {
-	exprs := this.keys
+	exprs := this.keys.Expressions()
 
 	if this.partition != nil {
 		exprs = append(exprs, this.partition...)
@@ -159,7 +159,7 @@ func (this *CreateIndex) Keyspace() *KeyspaceRef {
 /*
 Return keys from the create index statement.
 */
-func (this *CreateIndex) Keys() expression.Expressions {
+func (this *CreateIndex) Keys() IndexKeyTerms {
 	return this.keys
 }
 
@@ -196,10 +196,11 @@ func (this *CreateIndex) SeekKeys() expression.Expressions {
 }
 
 func (this *CreateIndex) RangeKeys() expression.Expressions {
+	exprs := this.keys.Expressions()
 	if this.partition != nil {
-		return this.keys[len(this.partition):]
+		return exprs[len(this.partition):]
 	} else {
-		return this.keys
+		return exprs
 	}
 }
 
@@ -223,4 +224,115 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(r)
+}
+
+/*
+It represents multiple IndexKey terms.
+Type IndexKeyTerms is a slice of IndexKeyTerm.
+*/
+
+type IndexKeyTerms []*IndexKeyTerm
+
+/*
+Represents the index key term in create index. Type
+IndexKeyTerm is a struct containing the expression and a bool
+value that decides the IndexKey collation (ASC or DESC).
+*/
+type IndexKeyTerm struct {
+	expr       expression.Expression `json:"expr"`
+	descending bool                  `json:"desc"`
+}
+
+/*
+The function NewIndexKeyTerm returns a pointer to the IndexKeyTerm
+struct that has its fields set to the input arguments.
+*/
+func NewIndexKeyTerm(expr expression.Expression, descending bool) *IndexKeyTerm {
+	return &IndexKeyTerm{
+		expr:       expr,
+		descending: descending,
+	}
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *IndexKeyTerm) String() string {
+	s := this.expr.String()
+
+	if this.descending {
+		s += " desc"
+	}
+
+	return s
+}
+
+/*
+Return the expression that is create index
+*/
+func (this *IndexKeyTerm) Expression() expression.Expression {
+	return this.expr
+}
+
+/*
+Return bool value representing ASC or DESC collation order.
+*/
+func (this *IndexKeyTerm) Descending() bool {
+	return this.descending
+}
+
+/*
+Return bool value representing ASC or DESC collation order.
+*/
+func (this IndexKeyTerms) HasDescending() bool {
+	for _, term := range this {
+		if term.Descending() {
+			return true
+		}
+	}
+	return false
+}
+
+/*
+Map Expressions for all IndexKey terms in the receiver.
+*/
+func (this IndexKeyTerms) MapExpressions(mapper expression.Mapper) (err error) {
+	for _, term := range this {
+		term.expr, err = mapper.Map(term.expr)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this IndexKeyTerms) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, len(this))
+
+	for i, term := range this {
+		exprs[i] = term.expr
+	}
+
+	return exprs
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this IndexKeyTerms) String() string {
+	s := ""
+
+	for i, term := range this {
+		if i > 0 {
+			s += ", "
+		}
+
+		s += term.String()
+	}
+
+	return s
 }

@@ -120,3 +120,10 @@ func NewAmbiguousMetaError() Error {
 	return &err{level: EXCEPTION, ICode: AMBIGUOUS_META, IKey: "plan.ambiguous_meta",
 		InternalMsg: fmt.Sprintf("META() in query with multiple FROM terms requires an argument."), InternalCaller: CallerN(1)}
 }
+
+const NOT_SUPPORTED_DESC_COLLATION = 4320
+
+func NewIndexerDescCollationError() Error {
+	return &err{level: EXCEPTION, ICode: NOT_SUPPORTED_DESC_COLLATION, IKey: "plan.not_supported_desc_collation",
+		InternalMsg: fmt.Sprintf("DESC option in the index keys is not supported by indexer."), InternalCaller: CallerN(1)}
+}
