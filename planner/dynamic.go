@@ -399,6 +399,27 @@ func (this *dynamic) VisitAnd(expr *expression.And) (interface{}, error) {
 	return expr, expr.MapChildren(this)
 }
 
+func (this *dynamic) VisitNot(expr *expression.Not) (interface{}, error) {
+	alias := expr.Operand().Alias()
+	if alias == "" {
+		return expr, nil
+	}
+
+	// operand IS NOT NULL
+	sat := expression.NewAnd(
+		expression.NewGE(
+			this.NewVariable(),
+			this.NewArray(alias, false),
+		),
+		expression.NewLT(
+			this.NewVariable(),
+			this.NewArray(expression.NewSuccessor(expression.NewConstant(alias))),
+		),
+	)
+	any := expression.NewAny(this.NewBindings(), sat)
+	return expression.NewAnd(expr, any), nil
+}
+
 func (this *dynamic) VisitOr(expr *expression.Or) (interface{}, error) {
 	return expr, expr.MapChildren(this)
 }
