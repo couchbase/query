@@ -55,6 +55,8 @@ func (this *DistinctScan) Copy() Operator {
 func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
@@ -151,6 +153,7 @@ func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *DistinctScan) Done() {
+	this.wait()
 	this.scan.Done()
 }
 

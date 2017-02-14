@@ -54,6 +54,8 @@ func (this *Parallel) Copy() Operator {
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
@@ -107,6 +109,7 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Parallel) Done() {
+	this.wait()
 	for c, child := range this.children {
 		child.Done()
 		this.children[c] = nil

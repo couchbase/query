@@ -55,6 +55,8 @@ func (this *ExceptAll) Copy() Operator {
 }
 
 func (this *ExceptAll) RunOnce(context *Context, parent value.Value) {
+	this.active()
+	defer this.inactive()
 	this.runConsumer(this, context, parent)
 }
 
@@ -115,6 +117,7 @@ func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 }
 
 func (this *ExceptAll) Done() {
+	this.wait()
 	this.first.Done()
 	this.second.Done()
 	this.first = nil

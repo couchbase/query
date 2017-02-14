@@ -52,6 +52,8 @@ func (this *IndexScan) Copy() Operator {
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_SCAN, d) }
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
@@ -106,6 +108,7 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *IndexScan) Done() {
+	this.wait()
 	for c, _ := range this.children {
 		// we happen to know that there's nothing to be done for the chilren spans
 		this.children[c] = nil
@@ -283,7 +286,4 @@ func (this *spanScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
-}
-
-func (this *spanScan) Done() {
 }

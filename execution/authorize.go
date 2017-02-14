@@ -53,6 +53,8 @@ func (this *Authorize) Copy() Operator {
 func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(AUTHORIZE, d) }
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
@@ -107,6 +109,7 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Authorize) Done() {
+	this.wait()
 	this.child.Done()
 	this.child = nil
 }

@@ -60,6 +60,8 @@ func (this *UnionScan) Copy() Operator {
 func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer close(this.itemChannel) // Broadcast that I have stopped
@@ -166,6 +168,7 @@ func (this *UnionScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *UnionScan) Done() {
+	this.wait()
 	for s, scan := range this.scans {
 		scan.Done()
 		this.scans[s] = nil

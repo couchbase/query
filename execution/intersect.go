@@ -55,6 +55,8 @@ func (this *IntersectAll) Copy() Operator {
 }
 
 func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
+	this.active()
+	defer this.inactive()
 	this.runConsumer(this, context, parent)
 }
 
@@ -119,6 +121,7 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 }
 
 func (this *IntersectAll) Done() {
+	this.wait()
 	this.first.Done()
 	this.second.Done()
 	this.first = nil

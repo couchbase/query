@@ -61,6 +61,8 @@ func (this *Merge) Copy() Operator {
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(MERGE, d) }
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
@@ -251,6 +253,7 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Merge) Done() {
+	this.wait()
 	if this.update != nil {
 		this.update.Done()
 		this.update = nil

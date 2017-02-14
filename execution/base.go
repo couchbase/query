@@ -54,6 +54,7 @@ type base struct {
 	servTime      time.Duration
 	inDocs        int64
 	outDocs       int64
+	wg            sync.WaitGroup
 	phaseSwitches int64
 	stopped       bool
 	bit           uint8
@@ -447,6 +448,18 @@ func (this *base) switchPhase(p timePhases) {
 	case _CHANTIME:
 		this.addChanTime(d)
 	}
+}
+
+func (this *base) active() {
+	this.wg.Add(1)
+}
+
+func (this *base) inactive() {
+	this.wg.Done()
+}
+
+func (this *base) wait() {
+	this.wg.Wait()
 }
 
 func (this *base) addExecTime(t time.Duration) {
