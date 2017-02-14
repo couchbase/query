@@ -831,24 +831,32 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 			var doc value.AnnotatedPair
 			doc.Name = k
 
-			Value := value.NewAnnotatedValue(value.NewValue(v.Body))
+			val := value.NewAnnotatedValue(value.NewValue(v.Body))
 
-			meta_flags := binary.BigEndian.Uint32(v.Extras[0:4])
+			flags := binary.BigEndian.Uint32(v.Extras[0:4])
+
+			expiration := uint32(0)
+			if len(v.Extras) >= 8 {
+				expiration = binary.BigEndian.Uint32(v.Extras[4:8])
+			}
+
 			meta_type := "json"
-			if Value.Type() == value.BINARY {
+			if val.Type() == value.BINARY {
 				meta_type = "base64"
 			}
-			Value.SetAttachment("meta", map[string]interface{}{
-				"id":    k,
-				"cas":   v.Cas,
-				"type":  meta_type,
-				"flags": uint32(meta_flags),
+
+			val.SetAttachment("meta", map[string]interface{}{
+				"id":         k,
+				"cas":        v.Cas,
+				"type":       meta_type,
+				"flags":      int64(flags),
+				"expiration": int64(expiration),
 			})
 
 			// Uncomment when needed
 			//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
 
-			doc.Value = Value
+			doc.Value = val
 			rv = append(rv, doc)
 			i++
 		}
