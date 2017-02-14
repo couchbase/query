@@ -144,5 +144,11 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[nodes.Name()] = nodes
 
+	applicableRoles, e := newApplicableRolesKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[applicableRoles.Name()] = applicableRoles
+
 	return nil
 }

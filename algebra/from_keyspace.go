@@ -86,7 +86,7 @@ func privilegesFromKeyspace(namespace, keyspace string) (*datastore.Privileges, 
 	privs := datastore.NewPrivileges()
 	fullKeyspace := namespace + ":" + keyspace
 	if namespace == "#system" {
-		if keyspace == "user_info" {
+		if keyspace == "user_info" || keyspace == "applicable_roles" {
 			privs.Add(fullKeyspace, datastore.PRIV_SECURITY_READ)
 		} else if keyspace == "keyspaces" || keyspace == "indexes" {
 			// Do nothing. These two tables handle security internally, by
