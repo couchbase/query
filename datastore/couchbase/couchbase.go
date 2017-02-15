@@ -797,7 +797,7 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 
 	for _, kv := range inserts {
 		key := kv.Name
-		val := kv.Value.Actual()
+		val := kv.Value.ActualForIndex()
 
 		//mv := kv.Value.GetAttachment("meta")
 
