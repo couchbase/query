@@ -375,7 +375,11 @@ func NewValue(val interface{}) Value {
 	case int64:
 		return intValue(val)
 	case float64:
-		return floatValue(val)
+		if IsInt(val) {
+			return intValue(int64(val))
+		} else {
+			return floatValue(val)
+		}
 	case string:
 		return stringValue(val)
 	case bool:

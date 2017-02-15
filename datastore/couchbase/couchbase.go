@@ -849,8 +849,8 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 				"id":         k,
 				"cas":        v.Cas,
 				"type":       meta_type,
-				"flags":      int64(flags),
-				"expiration": int64(expiration),
+				"flags":      flags,
+				"expiration": expiration,
 			})
 
 			// Uncomment when needed
