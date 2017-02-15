@@ -17,7 +17,6 @@ package value
 import (
 	"fmt"
 	"io"
-	"math"
 	"reflect"
 
 	json "github.com/couchbase/go_json"
@@ -376,11 +375,7 @@ func NewValue(val interface{}) Value {
 	case int64:
 		return intValue(val)
 	case float64:
-		if val == math.Trunc(val) {
-			return intValue(int64(val))
-		} else {
-			return floatValue(val)
-		}
+		return floatValue(val)
 	case string:
 		return stringValue(val)
 	case bool:
