@@ -217,23 +217,23 @@ func (this *RegexpLike) Regexp() *regexp.Regexp {
 
 ///////////////////////////////////////////////////
 //
-// RegexpPosition
+// RegexpPosition0 / RegexpPosition
 //
 ///////////////////////////////////////////////////
 
 /*
 This represents the String function REGEXP_POSITION(expr, pattern)
-It returns the first position of the regular expression pattern
+It returns the 0 based - first position of the regular expression pattern
 within the string, or -1.
 */
-type RegexpPosition struct {
+type RegexpPosition0 struct {
 	BinaryFunctionBase
 	re *regexp.Regexp
 }
 
-func NewRegexpPosition(first, second Expression) Function {
-	rv := &RegexpPosition{
-		*NewBinaryFunctionBase("regexp_position", first, second),
+func NewRegexpPosition0(first, second Expression) Function {
+	rv := &RegexpPosition0{
+		*NewBinaryFunctionBase("regexp_position0", first, second),
 		nil,
 	}
 
@@ -245,49 +245,81 @@ func NewRegexpPosition(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpPosition) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpPosition0) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *RegexpPosition) Type() value.Type { return value.NUMBER }
+func (this *RegexpPosition0) Type() value.Type { return value.NUMBER }
 
-func (this *RegexpPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *RegexpPosition0) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-func (this *RegexpPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
-	f := first.Actual().(string)
-	s := second.Actual().(string)
-
+func (this *RegexpPosition0) Apply(context Context, first, second value.Value) (value.Value, error) {
 	re := this.re
-	if re == nil {
-		var err error
-		re, err = regexp.Compile(s)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	loc := re.FindStringIndex(f)
-	if loc == nil {
-		return value.NewValue(-1), nil
-	}
-
-	return value.NewValue(loc[0]), nil
+	return regexpPositionApply(first, second, re, 0)
 }
 
 /*
 Factory method pattern.
 */
-func (this *RegexpPosition) Constructor() FunctionConstructor {
+func (this *RegexpPosition0) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewRegexpPosition(operands[0], operands[1])
+		return NewRegexpPosition0(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// RegexpPosition1
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the String function REGEXP_POSITION1(expr, pattern)
+It returns the 1 based - first position of the regular expression pattern
+within the string, or -1.
+*/
+type RegexpPosition1 struct {
+	BinaryFunctionBase
+	re *regexp.Regexp
+}
+
+func NewRegexpPosition1(first, second Expression) Function {
+	rv := &RegexpPosition1{
+		*NewBinaryFunctionBase("regexp_position1", first, second),
+		nil,
+	}
+
+	rv.re, _ = precompileRegexp(second.Value(), false)
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *RegexpPosition1) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RegexpPosition1) Type() value.Type { return value.NUMBER }
+
+func (this *RegexpPosition1) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *RegexpPosition1) Apply(context Context, first, second value.Value) (value.Value, error) {
+	re := this.re
+	return regexpPositionApply(first, second, re, 1)
+}
+
+/*
+Factory method pattern.
+*/
+func (this *RegexpPosition1) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewRegexpPosition1(operands[0], operands[1])
 	}
 }
 
@@ -426,4 +458,30 @@ func precompileRegexp(rexpr value.Value, full bool) (re *regexp.Regexp, err erro
 
 	re, err = regexp.Compile(s)
 	return
+}
+
+func regexpPositionApply(first, second value.Value, re *regexp.Regexp, startPos int) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	f := first.Actual().(string)
+	s := second.Actual().(string)
+
+	if re == nil {
+		var err error
+		re, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	loc := re.FindStringIndex(f)
+	if loc == nil {
+		return value.NewValue(-1), nil
+	}
+
+	return value.NewValue(loc[0] + startPos), nil
 }
