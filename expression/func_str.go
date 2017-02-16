@@ -787,7 +787,7 @@ func (this *Split) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// Substr
+// Substr0 / Substr
 //
 ///////////////////////////////////////////////////
 
@@ -798,13 +798,13 @@ or to the end of the string. The position is 0-based, i.e. the first
 position is 0. If position is negative, it is counted from the end
 of the string; -1 is the last position in the string.
 */
-type Substr struct {
+type Substr0 struct {
 	FunctionBase
 }
 
-func NewSubstr(operands ...Expression) Function {
-	rv := &Substr{
-		*NewFunctionBase("substr", operands...),
+func NewSubstr0(operands ...Expression) Function {
+	rv := &Substr0{
+		*NewFunctionBase("substr0", operands...),
 	}
 
 	rv.expr = rv
@@ -814,87 +814,99 @@ func NewSubstr(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Substr) Accept(visitor Visitor) (interface{}, error) {
+func (this *Substr0) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *Substr) Type() value.Type { return value.STRING }
+func (this *Substr0) Type() value.Type { return value.STRING }
 
-func (this *Substr) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Substr0) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-func (this *Substr) Apply(context Context, args ...value.Value) (value.Value, error) {
-	null := false
-
-	if args[0].Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if args[0].Type() != value.STRING {
-		null = true
-	}
-
-	for i := 1; i < len(args); i++ {
-		switch args[i].Type() {
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		case value.NUMBER:
-			vf := args[i].Actual().(float64)
-			if vf != math.Trunc(vf) {
-				null = true
-			}
-		default:
-			null = true
-		}
-	}
-
-	if null {
-		return value.NULL_VALUE, nil
-	}
-
-	str := args[0].Actual().(string)
-	pos := int(args[1].Actual().(float64))
-
-	if pos < 0 {
-		pos = len(str) + pos
-	}
-
-	if pos < 0 || pos >= len(str) {
-		return value.NULL_VALUE, nil
-	}
-
-	if len(args) == 2 {
-		return value.NewValue(str[pos:]), nil
-	}
-
-	length := int(args[2].Actual().(float64))
-	if length < 0 {
-		return value.NULL_VALUE, nil
-	}
-
-	if pos+length > len(str) {
-		length = len(str) - pos
-	}
-
-	return value.NewValue(str[pos : pos+length]), nil
+func (this *Substr0) Apply(context Context, args ...value.Value) (value.Value, error) {
+	return strSubstrApply(args, 0)
 }
 
 /*
 Minimum input arguments required for the SUBSTR function
 is 2.
 */
-func (this *Substr) MinArgs() int { return 2 }
+func (this *Substr0) MinArgs() int { return 2 }
 
 /*
 Maximum input arguments required for the SUBSTR function
 is 3.
 */
-func (this *Substr) MaxArgs() int { return 3 }
+func (this *Substr0) MaxArgs() int { return 3 }
 
 /*
 Factory method pattern.
 */
-func (this *Substr) Constructor() FunctionConstructor {
-	return NewSubstr
+func (this *Substr0) Constructor() FunctionConstructor {
+	return NewSubstr0
+}
+
+///////////////////////////////////////////////////
+//
+// Substr1
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the String function SUBSTR1(expr, position [, length ]).
+It returns a substring from the integer position of the given length,
+or to the end of the string. The position is 1-based, i.e. the first
+position is 0. If position is negative, it is counted from the end
+of the string; -1 is the last position in the string.
+*/
+type Substr1 struct {
+	FunctionBase
+}
+
+func NewSubstr1(operands ...Expression) Function {
+	rv := &Substr1{
+		*NewFunctionBase("substr1", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Substr1) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Substr1) Type() value.Type { return value.STRING }
+
+func (this *Substr1) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *Substr1) Apply(context Context, args ...value.Value) (value.Value, error) {
+	return strSubstrApply(args, 1)
+}
+
+/*
+Minimum input arguments required for the SUBSTR function
+is 2.
+*/
+func (this *Substr1) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments required for the SUBSTR function
+is 3.
+*/
+func (this *Substr1) MaxArgs() int { return 3 }
+
+/*
+Factory method pattern.
+*/
+func (this *Substr1) Constructor() FunctionConstructor {
+	return NewSubstr1
 }
 
 ///////////////////////////////////////////////////
@@ -1162,4 +1174,61 @@ func strPositionApply(first, second value.Value, startPos int) (value.Value, err
 
 	rv := strings.Index(first.Actual().(string), second.Actual().(string))
 	return value.NewValue(rv + startPos), nil
+}
+
+func strSubstrApply(args []value.Value, startPos int) (value.Value, error) {
+	null := false
+
+	if args[0].Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if args[0].Type() != value.STRING {
+		null = true
+	}
+
+	for i := 1; i < len(args); i++ {
+		switch args[i].Type() {
+		case value.MISSING:
+			return value.MISSING_VALUE, nil
+		case value.NUMBER:
+			vf := args[i].Actual().(float64)
+			if vf != math.Trunc(vf) {
+				null = true
+			}
+		default:
+			null = true
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	str := args[0].Actual().(string)
+	pos := int(args[1].Actual().(float64))
+
+	if pos < 0 {
+		pos = len(str) + pos
+	} else if pos > 0 && startPos > 0 {
+		pos = pos - startPos
+	}
+
+	if pos < 0 || pos >= len(str) {
+		return value.NULL_VALUE, nil
+	}
+
+	if len(args) == 2 {
+		return value.NewValue(str[pos:]), nil
+	}
+
+	length := int(args[2].Actual().(float64))
+	if length < 0 {
+		return value.NULL_VALUE, nil
+	}
+
+	if pos+length > len(str) {
+		length = len(str) - pos
+	}
+
+	return value.NewValue(str[pos : pos+length]), nil
+
 }
