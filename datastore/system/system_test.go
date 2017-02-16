@@ -24,8 +24,8 @@ func (ci *queryContextImpl) Credentials() datastore.Credentials {
 	return make(datastore.Credentials, 0)
 }
 
-func (ci *queryContextImpl) AuthenticatedUsers() datastore.AuthenticatedUsers {
-	return datastore.AuthenticatedUsers{"ivanivanov", "petrpetrov"}
+func (ci *queryContextImpl) AuthenticatedUsers() []string {
+	return []string{"ivanivanov", "petrpetrov"}
 }
 
 func TestSystem(t *testing.T) {

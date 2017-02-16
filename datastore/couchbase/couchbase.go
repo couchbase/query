@@ -226,6 +226,11 @@ func (s *store) Authorize(privileges *datastore.Privileges, credentials datastor
 		}
 	}
 
+	// No privileges to check? Done.
+	if privileges == nil {
+		return authenticatedUsers, nil
+	}
+
 	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
 	for _, pair := range privileges.List {

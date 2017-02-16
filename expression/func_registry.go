@@ -322,11 +322,12 @@ var _FUNCTIONS = map[string]Function{
 	"posinfif":      &PosInfIf{},
 
 	// Meta
-	"meta":        &Meta{},
-	"min_version": &MinVersion{},
-	"self":        &Self{},
-	"uuid":        &Uuid{},
-	"version":     &Version{},
+	"meta":          &Meta{},
+	"min_version":   &MinVersion{},
+	"self":          &Self{},
+	"uuid":          &Uuid{},
+	"version":       &Version{},
+	"current_users": &CurrentUsers{},
 
 	// Distributed
 	"node_name": &NodeName{},

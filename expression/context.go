@@ -21,4 +21,5 @@ returns the instant it time with a nanosecond precision.
 */
 type Context interface {
 	Now() time.Time
+	AuthenticatedUsers() []string
 }

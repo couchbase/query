@@ -42,3 +42,7 @@ value from the receiver.
 func (this *IndexContext) Now() time.Time {
 	return this.now
 }
+
+func (this *IndexContext) AuthenticatedUsers() []string {
+	return []string{"NEVER_USED"}
+}

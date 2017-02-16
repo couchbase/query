@@ -460,3 +460,57 @@ func (this *MinVersion) Constructor() FunctionConstructor {
 		return NewMinVersion()
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// CurrentUsers
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function CURRENT_USERS(). It
+returns the authenticated users of the query as an array
+of strings.
+*/
+type CurrentUsers struct {
+	NullaryFunctionBase
+}
+
+func NewCurrentUsers() Function {
+	rv := &CurrentUsers{
+		*NewNullaryFunctionBase("current_users"),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *CurrentUsers) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *CurrentUsers) Type() value.Type { return value.ARRAY }
+
+func (this *CurrentUsers) Evaluate(item value.Value, context Context) (value.Value, error) {
+	authUsers := context.AuthenticatedUsers()
+	arr := make([]interface{}, len(authUsers))
+	for i, user := range authUsers {
+		arr[i] = user
+	}
+	arrVal := value.NewValue(arr)
+	return arrVal, nil
+}
+
+func (this *CurrentUsers) Static() Expression {
+	return this
+}
+
+/*
+Factory method pattern.
+*/
+func (this *CurrentUsers) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return NewCurrentUsers() }
+}

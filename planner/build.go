@@ -36,9 +36,18 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 			return nil, er
 		}
 
-		if privs != nil && len(privs.List) > 0 {
-			op = plan.NewAuthorize(privs, op)
-		}
+		// Always insert an Authorize operator, even if no privileges need to
+		// be verified.
+		//
+		// We do this because the list of authenticated users is generated as
+		// part of authentication, and this list may be needed in the query
+		// (see the function CURRENT_USERS()).
+		//
+		// This should not impose a burden in production because every real
+		// query is against secured tables anyway, and would therefore
+		// have privileges that need verification, meaning the Authorize
+		// operator would have been present in any case.
+		op = plan.NewAuthorize(privs, op)
 
 		return plan.NewSequence(op, plan.NewStream()), nil
 	} else {

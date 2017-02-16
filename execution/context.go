@@ -217,7 +217,9 @@ func (this *Context) ScanVectorSource() timestamp.ScanVectorSource {
 	return this.scanVectorSource
 }
 
-func (this *Context) AuthenticatedUsers() datastore.AuthenticatedUsers {
+// Return []string rather than datastore.AuthenticatedUsers to avoid a circular dependency
+// in /expression
+func (this *Context) AuthenticatedUsers() []string {
 	return this.authenticatedUsers
 }
 

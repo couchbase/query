@@ -67,7 +67,7 @@ type Namespace interface {
 // A subset of execution.Context that is useful at the datastore level.
 type QueryContext interface {
 	Credentials() Credentials
-	AuthenticatedUsers() AuthenticatedUsers
+	AuthenticatedUsers() []string
 }
 
 type QueryContextImpl struct {
@@ -77,8 +77,8 @@ func (ci *QueryContextImpl) Credentials() Credentials {
 	return make(Credentials, 0)
 }
 
-func (ci *QueryContextImpl) AuthenticatedUsers() AuthenticatedUsers {
-	return make(AuthenticatedUsers, 0)
+func (ci *QueryContextImpl) AuthenticatedUsers() []string {
+	return make([]string, 0, 16)
 }
 
 var NULL_QUERY_CONTEXT = &QueryContextImpl{}
