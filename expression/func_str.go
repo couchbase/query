@@ -302,22 +302,22 @@ var _WHITESPACE = value.NewValue(" \t\n\f\r")
 
 ///////////////////////////////////////////////////
 //
-// Position
+// Position0
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the String function POSITION(expr, substr).
+This represents the String function POSITION0(expr, substr).
 It returns the first position of the substring within the
 string, or -1. The position is 0-based.
 */
-type Position struct {
+type Position0 struct {
 	BinaryFunctionBase
 }
 
-func NewPosition(first, second Expression) Function {
-	rv := &Position{
-		*NewBinaryFunctionBase("position", first, second),
+func NewPosition0(first, second Expression) Function {
+	rv := &Position0{
+		*NewBinaryFunctionBase("position0", first, second),
 	}
 
 	rv.expr = rv
@@ -327,33 +327,76 @@ func NewPosition(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Position) Accept(visitor Visitor) (interface{}, error) {
+func (this *Position0) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *Position) Type() value.Type { return value.NUMBER }
+func (this *Position0) Type() value.Type { return value.NUMBER }
 
-func (this *Position) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Position0) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-func (this *Position) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
-	rv := strings.Index(first.Actual().(string), second.Actual().(string))
-	return value.NewValue(rv), nil
+func (this *Position0) Apply(context Context, first, second value.Value) (value.Value, error) {
+	return strPositionApply(first, second, 0)
 }
 
 /*
 Factory method pattern.
 */
-func (this *Position) Constructor() FunctionConstructor {
+func (this *Position0) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewPosition(operands[0], operands[1])
+		return NewPosition0(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// Position1
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the String function POSITION0(expr, substr).
+It returns the first position of the substring within the
+string, or -1. The position is 1-based.
+*/
+type Position1 struct {
+	BinaryFunctionBase
+}
+
+func NewPosition1(first, second Expression) Function {
+	rv := &Position1{
+		*NewBinaryFunctionBase("position1", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Position1) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Position1) Type() value.Type { return value.NUMBER }
+
+func (this *Position1) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *Position1) Apply(context Context, first, second value.Value) (value.Value, error) {
+	return strPositionApply(first, second, 1)
+}
+
+/*
+Factory method pattern.
+*/
+func (this *Position1) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewPosition1(operands[0], operands[1])
 	}
 }
 
@@ -1108,4 +1151,15 @@ func (this *Upper) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewUpper(operands[0])
 	}
+}
+
+func strPositionApply(first, second value.Value, startPos int) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	rv := strings.Index(first.Actual().(string), second.Actual().(string))
+	return value.NewValue(rv + startPos), nil
 }
