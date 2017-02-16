@@ -25,9 +25,9 @@ type Unset struct {
 	plan *plan.Unset
 }
 
-func NewUnset(plan *plan.Unset) *Unset {
+func NewUnset(plan *plan.Unset, context *Context) *Unset {
 	rv := &Unset{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

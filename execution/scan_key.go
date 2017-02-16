@@ -23,9 +23,9 @@ type KeyScan struct {
 	plan *plan.KeyScan
 }
 
-func NewKeyScan(plan *plan.KeyScan) *KeyScan {
+func NewKeyScan(plan *plan.KeyScan, context *Context) *KeyScan {
 	rv := &KeyScan{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

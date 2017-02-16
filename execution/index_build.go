@@ -21,9 +21,9 @@ type BuildIndexes struct {
 	plan *plan.BuildIndexes
 }
 
-func NewBuildIndexes(plan *plan.BuildIndexes) *BuildIndexes {
+func NewBuildIndexes(plan *plan.BuildIndexes, context *Context) *BuildIndexes {
 	rv := &BuildIndexes{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

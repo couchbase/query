@@ -29,9 +29,9 @@ type Merge struct {
 	childChannel StopChannel
 }
 
-func NewMerge(plan *plan.Merge, update, delete, insert Operator) *Merge {
+func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
 	rv := &Merge{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		update:       update,
 		delete:       delete,
@@ -75,9 +75,9 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		go this.input.RunOnce(context, parent)
 
-		update, updateInput := this.wrapChild(this.update)
-		delete, deleteInput := this.wrapChild(this.delete)
-		insert, insertInput := this.wrapChild(this.insert)
+		update, updateInput := this.wrapChild(this.update, context)
+		delete, deleteInput := this.wrapChild(this.delete, context)
+		insert, insertInput := this.wrapChild(this.insert, context)
 
 		this.children = _MERGE_OPERATOR_POOL.Get()
 		inputs := _MERGE_CHANNEL_POOL.Get()
@@ -223,12 +223,12 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	return ok
 }
 
-func (this *Merge) wrapChild(op Operator) (Operator, *Channel) {
+func (this *Merge) wrapChild(op Operator, context *Context) (Operator, *Channel) {
 	if op == nil {
 		return nil, nil
 	}
 
-	ch := NewChannel()
+	ch := NewChannel(context)
 	op.SetInput(ch)
 	op.SetOutput(this.output)
 	op.SetParent(this)

@@ -23,9 +23,9 @@ type UnionAll struct {
 	childChannel StopChannel
 }
 
-func NewUnionAll(plan *plan.UnionAll, children ...Operator) *UnionAll {
+func NewUnionAll(plan *plan.UnionAll, context *Context, children ...Operator) *UnionAll {
 	rv := &UnionAll{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		children:     children,
 		childChannel: make(StopChannel, len(children)),

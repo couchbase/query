@@ -174,7 +174,8 @@ func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Erro
 		pretty = value.FALSE
 	}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil)
+	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, 0, 0, 0,
+		value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

@@ -21,9 +21,9 @@ type AlterIndex struct {
 	plan *plan.AlterIndex
 }
 
-func NewAlterIndex(plan *plan.AlterIndex) *AlterIndex {
+func NewAlterIndex(plan *plan.AlterIndex, context *Context) *AlterIndex {
 	rv := &AlterIndex{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

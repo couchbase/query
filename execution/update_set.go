@@ -25,9 +25,9 @@ type Set struct {
 	plan *plan.Set
 }
 
-func NewSet(plan *plan.Set) *Set {
+func NewSet(plan *plan.Set, context *Context) *Set {
 	rv := &Set{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

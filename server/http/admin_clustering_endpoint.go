@@ -404,7 +404,7 @@ var _SETTERS = map[string]setter{
 	},
 	_PIPELINECAP: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
-		s.SetPipelineCap(int(value))
+		s.SetPipelineCap(int64(value))
 	},
 	_PIPELINEBATCH: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
@@ -416,7 +416,7 @@ var _SETTERS = map[string]setter{
 	},
 	_SCANCAP: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
-		s.SetScanCap(int(value))
+		s.SetScanCap(int64(value))
 	},
 	_SERVICERS: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)

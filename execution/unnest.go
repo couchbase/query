@@ -22,9 +22,9 @@ type Unnest struct {
 	plan *plan.Unnest
 }
 
-func NewUnnest(plan *plan.Unnest) *Unnest {
+func NewUnnest(plan *plan.Unnest, context *Context) *Unnest {
 	rv := &Unnest{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

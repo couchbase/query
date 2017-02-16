@@ -25,9 +25,9 @@ type InitialGroup struct {
 	groups map[string]value.AnnotatedValue
 }
 
-func NewInitialGroup(plan *plan.InitialGroup) *InitialGroup {
+func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 	rv := &InitialGroup{
-		base:   newBase(),
+		base:   newBase(context),
 		plan:   plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}

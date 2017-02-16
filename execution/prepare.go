@@ -22,9 +22,9 @@ type Prepare struct {
 	prepared value.Value
 }
 
-func NewPrepare(plan *plan.Prepare, prepared value.Value) *Prepare {
+func NewPrepare(plan *plan.Prepare, context *Context, prepared value.Value) *Prepare {
 	rv := &Prepare{
-		base:     newBase(),
+		base:     newRedirectBase(),
 		plan:     plan,
 		prepared: prepared,
 	}

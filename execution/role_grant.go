@@ -23,9 +23,9 @@ type GrantRole struct {
 	plan *plan.GrantRole
 }
 
-func NewGrantRole(plan *plan.GrantRole) *GrantRole {
+func NewGrantRole(plan *plan.GrantRole, context *Context) *GrantRole {
 	rv := &GrantRole{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

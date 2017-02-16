@@ -22,9 +22,9 @@ type Filter struct {
 	plan *plan.Filter
 }
 
-func NewFilter(plan *plan.Filter) *Filter {
+func NewFilter(plan *plan.Filter, context *Context) *Filter {
 	rv := &Filter{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

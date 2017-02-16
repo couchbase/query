@@ -25,9 +25,9 @@ type IndexCountScan struct {
 	childChannel chan int64
 }
 
-func NewIndexCountScan(plan *plan.IndexCountScan) *IndexCountScan {
+func NewIndexCountScan(plan *plan.IndexCountScan, context *Context) *IndexCountScan {
 	rv := &IndexCountScan{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

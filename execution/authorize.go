@@ -25,9 +25,9 @@ type Authorize struct {
 	childChannel StopChannel
 }
 
-func NewAuthorize(plan *plan.Authorize, child Operator) *Authorize {
+func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Authorize {
 	rv := &Authorize{
-		base:         newBase(),
+		base:         newRedirectBase(),
 		plan:         plan,
 		child:        child,
 		childChannel: make(StopChannel, 1),

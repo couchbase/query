@@ -22,9 +22,9 @@ type Clone struct {
 	plan *plan.Clone
 }
 
-func NewClone(plan *plan.Clone) *Clone {
+func NewClone(plan *plan.Clone, context *Context) *Clone {
 	rv := &Clone{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

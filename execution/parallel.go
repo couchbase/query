@@ -26,9 +26,9 @@ type Parallel struct {
 	childChannel StopChannel
 }
 
-func NewParallel(plan *plan.Parallel, child Operator) *Parallel {
+func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Parallel {
 	rv := &Parallel{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		child:        child,
 		childChannel: make(StopChannel, runtime.NumCPU()),

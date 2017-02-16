@@ -23,9 +23,9 @@ type RevokeRole struct {
 	plan *plan.RevokeRole
 }
 
-func NewRevokeRole(plan *plan.RevokeRole) *RevokeRole {
+func NewRevokeRole(plan *plan.RevokeRole, context *Context) *RevokeRole {
 	rv := &RevokeRole{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

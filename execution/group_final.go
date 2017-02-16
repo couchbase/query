@@ -24,9 +24,9 @@ type FinalGroup struct {
 	groups map[string]value.AnnotatedValue
 }
 
-func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
+func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 	rv := &FinalGroup{
-		base:   newBase(),
+		base:   newBase(context),
 		plan:   plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}

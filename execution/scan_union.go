@@ -26,9 +26,9 @@ type UnionScan struct {
 	childChannel StopChannel
 }
 
-func NewUnionScan(plan *plan.UnionScan, scans []Operator) *UnionScan {
+func NewUnionScan(plan *plan.UnionScan, context *Context, scans []Operator) *UnionScan {
 	rv := &UnionScan{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
@@ -73,7 +73,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			this.keys = nil
 		}()
 
-		channel := NewChannel()
+		channel := NewChannel(context)
 		defer channel.Close()
 
 		for _, scan := range this.scans {

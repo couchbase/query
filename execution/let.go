@@ -22,9 +22,9 @@ type Let struct {
 	plan *plan.Let
 }
 
-func NewLet(plan *plan.Let) *Let {
+func NewLet(plan *plan.Let, context *Context) *Let {
 	rv := &Let{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

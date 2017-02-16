@@ -145,7 +145,46 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 			var e error
 			max_parallelism, e = strconv.Atoi(maxp)
 			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is not an integer"), "max parallelism")
+				err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is invalid"), "max parallelism")
+			}
+		}
+	}
+
+	var scan_cap int64
+	if err == nil {
+		var scap string
+		scap, err = httpArgs.getString(SCAN_CAP, "")
+		if err == nil && scap != "" {
+			var e error
+			scan_cap, e = strconv.ParseInt(scap, 10, 64)
+			if e != nil {
+				err = errors.NewServiceErrorBadValue(go_errors.New("scan_cap is invalid"), "scan cap")
+			}
+		}
+	}
+
+	var pipeline_cap int64
+	if err == nil {
+		var pcap string
+		pcap, err = httpArgs.getString(PIPELINE_CAP, "")
+		if err == nil && pcap != "" {
+			var e error
+			pipeline_cap, e = strconv.ParseInt(pcap, 10, 64)
+			if e != nil {
+				err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_cap is invalid"), "pipeline cap")
+			}
+		}
+	}
+
+	var pipeline_batch int
+	if err == nil {
+		var pbatch string
+		pbatch, err = httpArgs.getString(PIPELINE_BATCH, "")
+		if err == nil && pbatch != "" {
+			var e error
+			pipeline_batch, e = strconv.Atoi(pbatch)
+			if e != nil {
+				err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_batch is invalid"), "pipeline batch")
 			}
 		}
 	}
@@ -218,8 +257,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		controls, err = getControlsRequest(httpArgs)
 	}
 
-	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs, namespace,
-		max_parallelism, readonly, metrics, signature, pretty, consistency, client_id, creds)
+	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
+		namespace, max_parallelism, scan_cap, pipeline_cap, pipeline_batch,
+		readonly, metrics, signature, pretty, consistency, client_id, creds)
 
 	var prof server.Profile
 	if err == nil {
@@ -252,6 +292,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 const ( // Request argument names
 	MAX_PARALLELISM   = "max_parallelism"
+	SCAN_CAP          = "scan_cap"
+	PIPELINE_CAP      = "pipeline_cap"
+	PIPELINE_BATCH    = "pipeline_batch"
 	READONLY          = "readonly"
 	METRICS           = "metrics"
 	NAMESPACE         = "namespace"
@@ -287,6 +330,9 @@ var _PARAMETERS = []string{
 	SCAN_VECTOR,
 	SCAN_VECTORS,
 	MAX_PARALLELISM,
+	SCAN_CAP,
+	PIPELINE_CAP,
+	PIPELINE_BATCH,
 	READONLY,
 	METRICS,
 	NAMESPACE,

@@ -28,9 +28,9 @@ type DistinctScan struct {
 	childChannel StopChannel
 }
 
-func NewDistinctScan(plan *plan.DistinctScan, scan Operator) *DistinctScan {
+func NewDistinctScan(plan *plan.DistinctScan, context *Context, scan Operator) *DistinctScan {
 	rv := &DistinctScan{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		scan:         scan,
 		childChannel: make(StopChannel, 1),

@@ -28,13 +28,13 @@ type OrderLimit struct {
 	numProcessedRows uint64
 }
 
-func NewOrderLimit(plan *plan.Order) *OrderLimit {
+func NewOrderLimit(plan *plan.Order, context *Context) *OrderLimit {
 	var rv *OrderLimit
 	if plan.Offset() == nil {
 		rv = &OrderLimit{
-			Order:            *NewOrder(plan),
+			Order:            *NewOrder(plan, context),
 			offset:           nil,
-			limit:            NewLimit(plan.Limit()),
+			limit:            NewLimit(plan.Limit(), context),
 			numReturnedRows:  0,
 			fallbackNum:      plan.FallbackNum(),
 			ignoreInput:      false,
@@ -43,9 +43,9 @@ func NewOrderLimit(plan *plan.Order) *OrderLimit {
 		}
 	} else {
 		rv = &OrderLimit{
-			Order:            *NewOrder(plan),
-			offset:           NewOffset(plan.Offset()),
-			limit:            NewLimit(plan.Limit()),
+			Order:            *NewOrder(plan, context),
+			offset:           NewOffset(plan.Offset(), context),
+			limit:            NewLimit(plan.Limit(), context),
 			numReturnedRows:  0,
 			fallbackNum:      plan.FallbackNum(),
 			ignoreInput:      false,

@@ -24,9 +24,9 @@ type ValueScan struct {
 	plan *plan.ValueScan
 }
 
-func NewValueScan(plan *plan.ValueScan) *ValueScan {
+func NewValueScan(plan *plan.ValueScan, context *Context) *ValueScan {
 	rv := &ValueScan{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

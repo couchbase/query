@@ -24,9 +24,9 @@ type InferKeyspace struct {
 	plan *plan.InferKeyspace
 }
 
-func NewInferKeyspace(plan *plan.InferKeyspace) *InferKeyspace {
+func NewInferKeyspace(plan *plan.InferKeyspace, context *Context) *InferKeyspace {
 	rv := &InferKeyspace{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

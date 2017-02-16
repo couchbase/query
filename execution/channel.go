@@ -18,9 +18,9 @@ type Channel struct {
 	base
 }
 
-func NewChannel() *Channel {
+func NewChannel(context *Context) *Channel {
 	rv := &Channel{
-		base: newBase(),
+		base: newBase(context),
 	}
 
 	rv.output = rv

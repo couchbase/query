@@ -25,9 +25,9 @@ type SendDelete struct {
 	limit int64
 }
 
-func NewSendDelete(plan *plan.SendDelete) *SendDelete {
+func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 	rv := &SendDelete{
-		base:  newBase(),
+		base:  newBase(context),
 		plan:  plan,
 		limit: -1,
 	}
@@ -86,7 +86,7 @@ func (this *SendDelete) afterItems(context *Context) {
 }
 
 func (this *SendDelete) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.batch) == 0 {
 		return true

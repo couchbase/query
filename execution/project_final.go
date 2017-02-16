@@ -21,9 +21,9 @@ type FinalProject struct {
 	plan *plan.FinalProject
 }
 
-func NewFinalProject(plan *plan.FinalProject) *FinalProject {
+func NewFinalProject(plan *plan.FinalProject, context *Context) *FinalProject {
 	rv := &FinalProject{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

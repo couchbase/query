@@ -17,6 +17,7 @@ import (
 type StopChannel chan bool
 
 type Context interface {
+	GetScanCap() int64
 	Fatal(errors.Error)
 	Error(errors.Error)
 	Warning(errors.Error)

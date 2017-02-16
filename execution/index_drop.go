@@ -21,9 +21,9 @@ type DropIndex struct {
 	plan *plan.DropIndex
 }
 
-func NewDropIndex(plan *plan.DropIndex) *DropIndex {
+func NewDropIndex(plan *plan.DropIndex, context *Context) *DropIndex {
 	rv := &DropIndex{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

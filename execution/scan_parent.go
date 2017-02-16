@@ -21,9 +21,9 @@ type ParentScan struct {
 	plan *plan.ParentScan
 }
 
-func NewParentScan(plan *plan.ParentScan) *ParentScan {
+func NewParentScan(plan *plan.ParentScan, context *Context) *ParentScan {
 	rv := &ParentScan{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

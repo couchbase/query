@@ -21,9 +21,9 @@ type Discard struct {
 	plan *plan.Discard
 }
 
-func NewDiscard(plan *plan.Discard) *Discard {
+func NewDiscard(plan *plan.Discard, context *Context) *Discard {
 	rv := &Discard{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

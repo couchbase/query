@@ -23,9 +23,9 @@ type ExpressionScan struct {
 	plan *plan.ExpressionScan
 }
 
-func NewExpressionScan(plan *plan.ExpressionScan) *ExpressionScan {
+func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionScan {
 	rv := &ExpressionScan{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

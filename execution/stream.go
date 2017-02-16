@@ -21,7 +21,7 @@ type Stream struct {
 	plan *plan.Stream
 }
 
-func NewStream(plan *plan.Stream) *Stream {
+func NewStream(plan *plan.Stream, context *Context) *Stream {
 	rv := &Stream{
 		base: newRedirectBase(),
 		plan: plan,

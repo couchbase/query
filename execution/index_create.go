@@ -23,9 +23,9 @@ type CreateIndex struct {
 	plan *plan.CreateIndex
 }
 
-func NewCreateIndex(plan *plan.CreateIndex) *CreateIndex {
+func NewCreateIndex(plan *plan.CreateIndex, context *Context) *CreateIndex {
 	rv := &CreateIndex{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

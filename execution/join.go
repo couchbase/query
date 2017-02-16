@@ -22,9 +22,9 @@ type Join struct {
 	plan *plan.Join
 }
 
-func NewJoin(plan *plan.Join) *Join {
+func NewJoin(plan *plan.Join, context *Context) *Join {
 	rv := &Join{
-		joinBase: newJoinBase(),
+		joinBase: newJoinBase(context),
 		plan:     plan,
 	}
 
@@ -63,7 +63,7 @@ func (this *Join) afterItems(context *Context) {
 }
 
 func (this *Join) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.joinBatch) == 0 {
 		return true

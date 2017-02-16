@@ -21,9 +21,9 @@ type CreatePrimaryIndex struct {
 	plan *plan.CreatePrimaryIndex
 }
 
-func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) *CreatePrimaryIndex {
+func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex, context *Context) *CreatePrimaryIndex {
 	rv := &CreatePrimaryIndex{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

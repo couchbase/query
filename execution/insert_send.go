@@ -25,9 +25,9 @@ type SendInsert struct {
 	limit int64
 }
 
-func NewSendInsert(plan *plan.SendInsert) *SendInsert {
+func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
 	rv := &SendInsert{
-		base:  newBase(),
+		base:  newBase(context),
 		plan:  plan,
 		limit: -1,
 	}
@@ -86,7 +86,7 @@ func (this *SendInsert) afterItems(context *Context) {
 }
 
 func (this *SendInsert) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.batch) == 0 {
 		return true

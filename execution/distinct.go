@@ -26,9 +26,9 @@ type Distinct struct {
 
 const _DISTINCT_CAP = 1024
 
-func NewDistinct(plan *plan.Distinct, collect bool) *Distinct {
+func NewDistinct(plan *plan.Distinct, context *Context, collect bool) *Distinct {
 	rv := &Distinct{
-		base:    newBase(),
+		base:    newBase(context),
 		set:     value.NewSet(_DISTINCT_CAP, false),
 		plan:    plan,
 		collect: collect,

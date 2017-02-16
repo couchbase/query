@@ -22,9 +22,9 @@ type Nest struct {
 	plan *plan.Nest
 }
 
-func NewNest(plan *plan.Nest) *Nest {
+func NewNest(plan *plan.Nest, context *Context) *Nest {
 	rv := &Nest{
-		joinBase: newJoinBase(),
+		joinBase: newJoinBase(context),
 		plan:     plan,
 	}
 
@@ -63,7 +63,7 @@ func (this *Nest) afterItems(context *Context) {
 }
 
 func (this *Nest) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.joinBatch) == 0 {
 		return true

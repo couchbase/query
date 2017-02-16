@@ -28,9 +28,9 @@ type IntersectScan struct {
 	sent         int64
 }
 
-func NewIntersectScan(plan *plan.IntersectScan, scans []Operator) *IntersectScan {
+func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operator) *IntersectScan {
 	rv := &IntersectScan{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
@@ -84,7 +84,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			fullBits |= int64(0x01) << uint8(i)
 		}
 
-		channel := NewChannel()
+		channel := NewChannel(context)
 		defer channel.Close()
 
 		for _, scan := range this.scans {

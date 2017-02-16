@@ -23,9 +23,9 @@ type InitialProject struct {
 	plan *plan.InitialProject
 }
 
-func NewInitialProject(plan *plan.InitialProject) *InitialProject {
+func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProject {
 	rv := &InitialProject{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

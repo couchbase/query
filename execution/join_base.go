@@ -21,9 +21,9 @@ type joinBase struct {
 	joinKeyCount int
 }
 
-func newJoinBase() joinBase {
+func newJoinBase(context *Context) joinBase {
 	return joinBase{
-		base: newBase(),
+		base: newBase(context),
 	}
 }
 
@@ -33,11 +33,15 @@ func (this *joinBase) copy() joinBase {
 	}
 }
 
-func (this *joinBase) allocateBatch() {
-	this.joinBatch = getJoinBatchPool().Get()
+func (this *joinBase) allocateBatch(context *Context) {
+	if context.PipelineBatch() == 0 {
+		this.joinBatch = getJoinBatchPool().Get()
+	} else {
+		this.joinBatch = make(value.AnnotatedJoinPairs, 0, context.PipelineBatch())
+	}
 }
 
-func (this *joinBase) releaseBatch() {
+func (this *joinBase) releaseBatch(context *Context) {
 	getJoinBatchPool().Put(this.joinBatch)
 	this.joinBatch = nil
 	this.joinKeyCount = 0
@@ -51,7 +55,7 @@ func (this *joinBase) joinEnbatch(item value.AnnotatedJoinPair, b batcher, conte
 	}
 
 	if this.joinBatch == nil {
-		this.allocateBatch()
+		this.allocateBatch(context)
 	}
 
 	this.joinBatch = append(this.joinBatch, item)

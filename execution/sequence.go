@@ -23,9 +23,9 @@ type Sequence struct {
 	childChannel StopChannel
 }
 
-func NewSequence(plan *plan.Sequence, children ...Operator) *Sequence {
+func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *Sequence {
 	rv := &Sequence{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		children:     children,
 		childChannel: make(StopChannel, 1),

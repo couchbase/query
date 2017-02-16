@@ -21,9 +21,9 @@ type Alias struct {
 	plan *plan.Alias
 }
 
-func NewAlias(plan *plan.Alias) *Alias {
+func NewAlias(plan *plan.Alias, context *Context) *Alias {
 	rv := &Alias{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

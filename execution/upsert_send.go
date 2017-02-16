@@ -24,9 +24,9 @@ type SendUpsert struct {
 	plan *plan.SendUpsert
 }
 
-func NewSendUpsert(plan *plan.SendUpsert) *SendUpsert {
+func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
 	rv := &SendUpsert{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 
@@ -56,7 +56,7 @@ func (this *SendUpsert) afterItems(context *Context) {
 }
 
 func (this *SendUpsert) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.batch) == 0 {
 		return true

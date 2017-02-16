@@ -27,9 +27,9 @@ type IndexNest struct {
 	plan *plan.IndexNest
 }
 
-func NewIndexNest(plan *plan.IndexNest) *IndexNest {
+func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
 	rv := &IndexNest{
-		joinBase: newJoinBase(),
+		joinBase: newJoinBase(context),
 		plan:     plan,
 	}
 
@@ -137,7 +137,7 @@ func (this *IndexNest) afterItems(context *Context) {
 }
 
 func (this *IndexNest) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.joinBatch) == 0 {
 		return true

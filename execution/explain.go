@@ -22,9 +22,9 @@ type Explain struct {
 	plan plan.Operator
 }
 
-func NewExplain(plan plan.Operator) *Explain {
+func NewExplain(plan plan.Operator, context *Context) *Explain {
 	rv := &Explain{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

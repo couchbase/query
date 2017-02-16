@@ -28,9 +28,9 @@ type IndexJoin struct {
 	joinTime time.Duration
 }
 
-func NewIndexJoin(plan *plan.IndexJoin) *IndexJoin {
+func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 	rv := &IndexJoin{
-		joinBase: newJoinBase(),
+		joinBase: newJoinBase(context),
 		plan:     plan,
 	}
 
@@ -191,7 +191,7 @@ func (this *IndexJoin) afterItems(context *Context) {
 }
 
 func (this *IndexJoin) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.joinBatch) == 0 {
 		return true

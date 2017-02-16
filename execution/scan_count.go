@@ -22,9 +22,9 @@ type CountScan struct {
 	plan *plan.CountScan
 }
 
-func NewCountScan(plan *plan.CountScan) *CountScan {
+func NewCountScan(plan *plan.CountScan, context *Context) *CountScan {
 	rv := &CountScan{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

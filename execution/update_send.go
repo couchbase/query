@@ -27,9 +27,9 @@ type SendUpdate struct {
 	limit int64
 }
 
-func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
+func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
 	rv := &SendUpdate{
-		base:  newBase(),
+		base:  newBase(context),
 		plan:  plan,
 		limit: -1,
 	}
@@ -93,7 +93,7 @@ func (this *SendUpdate) afterItems(context *Context) {
 }
 
 func (this *SendUpdate) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 
 	if len(this.batch) == 0 {
 		return true

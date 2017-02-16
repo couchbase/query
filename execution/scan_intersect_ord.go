@@ -31,9 +31,9 @@ type OrderedIntersectScan struct {
 	fullCount    int64
 }
 
-func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, scans []Operator) *OrderedIntersectScan {
+func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, context *Context, scans []Operator) *OrderedIntersectScan {
 	rv := &OrderedIntersectScan{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
@@ -90,7 +90,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			fullBits |= int64(0x01) << uint8(i)
 		}
 
-		channel := NewChannel()
+		channel := NewChannel(context)
 		defer channel.Close()
 
 		for _, scan := range this.scans {

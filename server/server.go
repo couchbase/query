@@ -239,19 +239,19 @@ func (this *Server) SetCpuProfile(cpuprofile string) {
 	}
 }
 
-func (this *Server) ScanCap() int {
-	return int(datastore.GetScanCap())
+func (this *Server) ScanCap() int64 {
+	return datastore.GetScanCap()
 }
 
-func (this *Server) SetScanCap(scan_cap int) {
+func (this *Server) SetScanCap(scan_cap int64) {
 	datastore.SetScanCap(scan_cap)
 }
 
-func (this *Server) PipelineCap() int {
-	return int(execution.GetPipelineCap())
+func (this *Server) PipelineCap() int64 {
+	return execution.GetPipelineCap()
 }
 
-func (this *Server) SetPipelineCap(pipeline_cap int) {
+func (this *Server) SetPipelineCap(pipeline_cap int64) {
 	execution.SetPipelineCap(pipeline_cap)
 }
 
@@ -486,8 +486,9 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
-		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
-		request.Credentials(), request.ScanConsistency(), request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest())
+		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
+		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
+		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest())
 
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)

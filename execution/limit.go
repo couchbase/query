@@ -25,9 +25,9 @@ type Limit struct {
 	limit int64
 }
 
-func NewLimit(plan *plan.Limit) *Limit {
+func NewLimit(plan *plan.Limit, context *Context) *Limit {
 	rv := &Limit{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

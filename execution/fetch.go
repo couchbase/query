@@ -26,9 +26,9 @@ type Fetch struct {
 	fetchCount uint64
 }
 
-func NewFetch(plan *plan.Fetch) *Fetch {
+func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv := &Fetch{
-		base:      newBase(),
+		base:      newBase(context),
 		plan:      plan,
 		batchSize: PipelineBatchSize(),
 	}
@@ -70,7 +70,7 @@ func (this *Fetch) afterItems(context *Context) {
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
-	defer this.releaseBatch()
+	defer this.releaseBatch(context)
 	if this.batchSize < cap(this.output.ItemChannel()) {
 		defer func() {
 			this.batchSize = cap(this.output.ItemChannel())
@@ -164,9 +164,9 @@ type DummyFetch struct {
 	plan *plan.DummyFetch
 }
 
-func NewDummyFetch(plan *plan.DummyFetch) *DummyFetch {
+func NewDummyFetch(plan *plan.DummyFetch, context *Context) *DummyFetch {
 	rv := &DummyFetch{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

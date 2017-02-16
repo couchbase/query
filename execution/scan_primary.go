@@ -26,9 +26,9 @@ type PrimaryScan struct {
 	plan *plan.PrimaryScan
 }
 
-func NewPrimaryScan(plan *plan.PrimaryScan) *PrimaryScan {
+func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
 	rv := &PrimaryScan{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

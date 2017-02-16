@@ -113,6 +113,9 @@ type Context struct {
 	namespace          string
 	readonly           bool
 	maxParallelism     int
+	scanCap            int64
+	pipelineCap        int64
+	pipelineBatch      int
 	now                time.Time
 	namedArgs          map[string]value.Value
 	positionalArgs     value.Values
@@ -128,9 +131,11 @@ type Context struct {
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
-	namespace string, readonly bool, maxParallelism int, namedArgs map[string]value.Value,
-	positionalArgs value.Values, credentials datastore.Credentials,
-	consistency datastore.ScanConsistency, scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request) *Context {
+	namespace string, readonly bool, maxParallelism int, scanCap, pipelineCap int64,
+	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
+	credentials datastore.Credentials, consistency datastore.ScanConsistency,
+	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request) *Context {
+
 	rv := &Context{
 		requestId:        requestId,
 		datastore:        datastore,
@@ -138,6 +143,9 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		namespace:        namespace,
 		readonly:         readonly,
 		maxParallelism:   maxParallelism,
+		scanCap:          scanCap,
+		pipelineCap:      pipelineCap,
+		pipelineBatch:    pipelineBatch,
 		now:              time.Now(),
 		namedArgs:        namedArgs,
 		positionalArgs:   positionalArgs,
@@ -223,6 +231,54 @@ func (this *Context) AuthenticatedUsers() []string {
 	return this.authenticatedUsers
 }
 
+func (this *Context) GetScanCap() int64 {
+	if this.scanCap > 0 {
+		return this.scanCap
+	} else {
+		return datastore.GetScanCap()
+	}
+}
+
+func (this *Context) ScanCap() int64 {
+	return this.scanCap
+}
+
+func (this *Context) SetScanCap(scanCap int64) {
+	this.scanCap = scanCap
+}
+
+func (this *Context) GetPipelineCap() int64 {
+	if this.pipelineCap > 0 {
+		return this.pipelineCap
+	} else {
+		return GetPipelineCap()
+	}
+}
+
+func (this *Context) PipelineCap() int64 {
+	return this.pipelineCap
+}
+
+func (this *Context) SetPipelineCap(pipelineCap int64) {
+	this.pipelineCap = pipelineCap
+}
+
+func (this *Context) GetPipelineBatch() int {
+	if this.pipelineBatch > 0 {
+		return this.pipelineBatch
+	} else {
+		return PipelineBatchSize()
+	}
+}
+
+func (this *Context) PipelineBatch() int {
+	return this.pipelineBatch
+}
+
+func (this *Context) SetPipelineBatch(pipelineBatch int) {
+	this.pipelineBatch = pipelineBatch
+}
+
 func (this *Context) AddMutationCount(i uint64) {
 	this.output.AddMutationCount(i)
 }
@@ -299,8 +355,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	// Collect subquery results
 	// FIXME: this should handled by the planner
-	collect := NewCollect(plan.NewCollect())
-	sequence := NewSequence(plan.NewSequence(), pipeline, collect)
+	collect := NewCollect(plan.NewCollect(), this)
+	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
 	sequence.RunOnce(this, parent)
 
 	// Await completion

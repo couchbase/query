@@ -25,9 +25,9 @@ type Offset struct {
 	offset int64
 }
 
-func NewOffset(plan *plan.Offset) *Offset {
+func NewOffset(plan *plan.Offset, context *Context) *Offset {
 	rv := &Offset{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

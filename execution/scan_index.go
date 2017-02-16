@@ -28,9 +28,9 @@ type IndexScan struct {
 	childChannel StopChannel
 }
 
-func NewIndexScan(plan *plan.IndexScan) *IndexScan {
+func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
 	rv := &IndexScan{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

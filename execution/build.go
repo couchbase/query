@@ -63,11 +63,11 @@ func (this *builder) VisitPrimaryScan(plan *plan.PrimaryScan) (interface{}, erro
 		this.scannedIndexes[scannedIndex] = true
 	}
 
-	return NewPrimaryScan(plan), nil
+	return NewPrimaryScan(plan, this.context), nil
 }
 
 func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
-	return NewParentScan(plan), nil
+	return NewParentScan(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
@@ -78,7 +78,7 @@ func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
 		this.scannedIndexes[scannedIndex] = true
 	}
 
-	return NewIndexScan(plan), nil
+	return NewIndexScan(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}, error) {
@@ -89,27 +89,27 @@ func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}
 		this.scannedIndexes[scannedIndex] = true
 	}
 
-	return NewIndexCountScan(plan), nil
+	return NewIndexCountScan(plan, this.context), nil
 }
 
 func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
-	return NewKeyScan(plan), nil
+	return NewKeyScan(plan, this.context), nil
 }
 
 func (this *builder) VisitExpressionScan(plan *plan.ExpressionScan) (interface{}, error) {
-	return NewExpressionScan(plan), nil
+	return NewExpressionScan(plan, this.context), nil
 }
 
 func (this *builder) VisitValueScan(plan *plan.ValueScan) (interface{}, error) {
-	return NewValueScan(plan), nil
+	return NewValueScan(plan, this.context), nil
 }
 
 func (this *builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
-	return NewDummyScan(plan), nil
+	return NewDummyScan(plan, this.context), nil
 }
 
 func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
-	return NewCountScan(plan), nil
+	return NewCountScan(plan, this.context), nil
 }
 
 func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {
@@ -118,7 +118,7 @@ func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, er
 		return nil, err
 	}
 
-	return NewDistinctScan(plan, scan.(Operator)), nil
+	return NewDistinctScan(plan, this.context, scan.(Operator)), nil
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
@@ -133,7 +133,7 @@ func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewUnionScan(plan, scans), nil
+	return NewUnionScan(plan, this.context, scans), nil
 }
 
 func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
@@ -148,7 +148,7 @@ func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, 
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewIntersectScan(plan, scans), nil
+	return NewIntersectScan(plan, this.context, scans), nil
 }
 
 func (this *builder) VisitOrderedIntersectScan(plan *plan.OrderedIntersectScan) (interface{}, error) {
@@ -163,79 +163,79 @@ func (this *builder) VisitOrderedIntersectScan(plan *plan.OrderedIntersectScan) 
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewOrderedIntersectScan(plan, scans), nil
+	return NewOrderedIntersectScan(plan, this.context, scans), nil
 }
 
 // Fetch
 func (this *builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
-	return NewFetch(plan), nil
+	return NewFetch(plan, this.context), nil
 }
 
 // DummyFetch
 func (this *builder) VisitDummyFetch(plan *plan.DummyFetch) (interface{}, error) {
-	return NewDummyFetch(plan), nil
+	return NewDummyFetch(plan, this.context), nil
 }
 
 // Join
 func (this *builder) VisitJoin(plan *plan.Join) (interface{}, error) {
-	return NewJoin(plan), nil
+	return NewJoin(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexJoin(plan *plan.IndexJoin) (interface{}, error) {
-	return NewIndexJoin(plan), nil
+	return NewIndexJoin(plan, this.context), nil
 }
 
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
-	return NewNest(plan), nil
+	return NewNest(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexNest(plan *plan.IndexNest) (interface{}, error) {
-	return NewIndexNest(plan), nil
+	return NewIndexNest(plan, this.context), nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {
-	return NewUnnest(plan), nil
+	return NewUnnest(plan, this.context), nil
 }
 
 // Let + Letting
 func (this *builder) VisitLet(plan *plan.Let) (interface{}, error) {
-	return NewLet(plan), nil
+	return NewLet(plan, this.context), nil
 }
 
 // Filter
 func (this *builder) VisitFilter(plan *plan.Filter) (interface{}, error) {
-	return NewFilter(plan), nil
+	return NewFilter(plan, this.context), nil
 }
 
 // Group
 func (this *builder) VisitInitialGroup(plan *plan.InitialGroup) (interface{}, error) {
-	return NewInitialGroup(plan), nil
+	return NewInitialGroup(plan, this.context), nil
 }
 
 func (this *builder) VisitIntermediateGroup(plan *plan.IntermediateGroup) (interface{}, error) {
-	return NewIntermediateGroup(plan), nil
+	return NewIntermediateGroup(plan, this.context), nil
 }
 
 func (this *builder) VisitFinalGroup(plan *plan.FinalGroup) (interface{}, error) {
-	return NewFinalGroup(plan), nil
+	return NewFinalGroup(plan, this.context), nil
 }
 
 // Project
 func (this *builder) VisitInitialProject(plan *plan.InitialProject) (interface{}, error) {
-	return NewInitialProject(plan), nil
+	return NewInitialProject(plan, this.context), nil
 }
 
 func (this *builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, error) {
-	return NewFinalProject(plan), nil
+	return NewFinalProject(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (interface{}, error) {
-	return NewIndexCountProject(plan), nil
+	return NewIndexCountProject(plan, this.context), nil
 }
 
 // Distinct
 func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
-	return NewDistinct(plan, false), nil
+	return NewDistinct(plan, this.context, false), nil
 }
 
 // Set operators
@@ -251,7 +251,7 @@ func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 		children = append(children, c.(Operator))
 	}
 
-	return NewUnionAll(plan, children...), nil
+	return NewUnionAll(plan, this.context, children...), nil
 }
 
 func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, error) {
@@ -265,7 +265,7 @@ func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, er
 		return nil, e
 	}
 
-	return NewIntersectAll(plan, first.(Operator), second.(Operator)), nil
+	return NewIntersectAll(plan, this.context, first.(Operator), second.(Operator)), nil
 }
 
 func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
@@ -279,57 +279,57 @@ func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
 		return nil, e
 	}
 
-	return NewExceptAll(plan, first.(Operator), second.(Operator)), nil
+	return NewExceptAll(plan, this.context, first.(Operator), second.(Operator)), nil
 }
 
 // Order
 func (this *builder) VisitOrder(plan *plan.Order) (interface{}, error) {
 	if plan.LimitPushed() {
-		return NewOrderLimit(plan), nil
+		return NewOrderLimit(plan, this.context), nil
 	} else {
-		return NewOrder(plan), nil
+		return NewOrder(plan, this.context), nil
 	}
 }
 
 // Offset
 func (this *builder) VisitOffset(plan *plan.Offset) (interface{}, error) {
-	return NewOffset(plan), nil
+	return NewOffset(plan, this.context), nil
 }
 
 func (this *builder) VisitLimit(plan *plan.Limit) (interface{}, error) {
-	return NewLimit(plan), nil
+	return NewLimit(plan, this.context), nil
 }
 
 // Insert
 func (this *builder) VisitSendInsert(plan *plan.SendInsert) (interface{}, error) {
-	return NewSendInsert(plan), nil
+	return NewSendInsert(plan, this.context), nil
 }
 
 // Upsert
 func (this *builder) VisitSendUpsert(plan *plan.SendUpsert) (interface{}, error) {
-	return NewSendUpsert(plan), nil
+	return NewSendUpsert(plan, this.context), nil
 }
 
 // Delete
 func (this *builder) VisitSendDelete(plan *plan.SendDelete) (interface{}, error) {
-	return NewSendDelete(plan), nil
+	return NewSendDelete(plan, this.context), nil
 }
 
 // Update
 func (this *builder) VisitClone(plan *plan.Clone) (interface{}, error) {
-	return NewClone(plan), nil
+	return NewClone(plan, this.context), nil
 }
 
 func (this *builder) VisitSet(plan *plan.Set) (interface{}, error) {
-	return NewSet(plan), nil
+	return NewSet(plan, this.context), nil
 }
 
 func (this *builder) VisitUnset(plan *plan.Unset) (interface{}, error) {
-	return NewUnset(plan), nil
+	return NewUnset(plan, this.context), nil
 }
 
 func (this *builder) VisitSendUpdate(plan *plan.SendUpdate) (interface{}, error) {
-	return NewSendUpdate(plan), nil
+	return NewSendUpdate(plan, this.context), nil
 }
 
 // Merge
@@ -360,12 +360,12 @@ func (this *builder) VisitMerge(plan *plan.Merge) (interface{}, error) {
 		insert = op.(Operator)
 	}
 
-	return NewMerge(plan, update, delete, insert), nil
+	return NewMerge(plan, this.context, update, delete, insert), nil
 }
 
 // Alias
 func (this *builder) VisitAlias(plan *plan.Alias) (interface{}, error) {
-	return NewAlias(plan), nil
+	return NewAlias(plan, this.context), nil
 }
 
 // Authorize
@@ -375,7 +375,7 @@ func (this *builder) VisitAuthorize(plan *plan.Authorize) (interface{}, error) {
 		return nil, err
 	}
 
-	return NewAuthorize(plan, child.(Operator)), nil
+	return NewAuthorize(plan, this.context, child.(Operator)), nil
 }
 
 // Parallel
@@ -390,7 +390,7 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 	if maxParallelism == 1 {
 		return child, nil
 	} else {
-		return NewParallel(plan, child.(Operator)), nil
+		return NewParallel(plan, this.context, child.(Operator)), nil
 	}
 }
 
@@ -407,70 +407,70 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 		children = append(children, child.(Operator))
 	}
 
-	return NewSequence(plan, children...), nil
+	return NewSequence(plan, this.context, children...), nil
 }
 
 // Discard
 func (this *builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
-	return NewDiscard(plan), nil
+	return NewDiscard(plan, this.context), nil
 }
 
 // Stream
 func (this *builder) VisitStream(plan *plan.Stream) (interface{}, error) {
-	return NewStream(plan), nil
+	return NewStream(plan, this.context), nil
 }
 
 // Collect
 func (this *builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
-	return NewCollect(plan), nil
+	return NewCollect(plan, this.context), nil
 }
 
 // CreateIndex
 func (this *builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (interface{}, error) {
-	return NewCreatePrimaryIndex(plan), nil
+	return NewCreatePrimaryIndex(plan, this.context), nil
 }
 
 // GrantRole
 func (this *builder) VisitGrantRole(plan *plan.GrantRole) (interface{}, error) {
-	return NewGrantRole(plan), nil
+	return NewGrantRole(plan, this.context), nil
 }
 
 // RevokeRole
 func (this *builder) VisitRevokeRole(plan *plan.RevokeRole) (interface{}, error) {
-	return NewRevokeRole(plan), nil
+	return NewRevokeRole(plan, this.context), nil
 }
 
 // CreateIndex
 func (this *builder) VisitCreateIndex(plan *plan.CreateIndex) (interface{}, error) {
-	return NewCreateIndex(plan), nil
+	return NewCreateIndex(plan, this.context), nil
 }
 
 // DropIndex
 func (this *builder) VisitDropIndex(plan *plan.DropIndex) (interface{}, error) {
-	return NewDropIndex(plan), nil
+	return NewDropIndex(plan, this.context), nil
 }
 
 // AlterIndex
 func (this *builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error) {
-	return NewAlterIndex(plan), nil
+	return NewAlterIndex(plan, this.context), nil
 }
 
 // BuildIndexes
 func (this *builder) VisitBuildIndexes(plan *plan.BuildIndexes) (interface{}, error) {
-	return NewBuildIndexes(plan), nil
+	return NewBuildIndexes(plan, this.context), nil
 }
 
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
-	return NewPrepare(plan, plan.Prepared()), nil
+	return NewPrepare(plan, this.context, plan.Prepared()), nil
 }
 
 // Explain
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
-	return NewExplain(plan), nil
+	return NewExplain(plan, this.context), nil
 }
 
 // Infer
 func (this *builder) VisitInferKeyspace(plan *plan.InferKeyspace) (interface{}, error) {
-	return NewInferKeyspace(plan), nil
+	return NewInferKeyspace(plan, this.context), nil
 }

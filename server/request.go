@@ -54,6 +54,9 @@ type Request interface {
 	Timeout() time.Duration
 	SetTimer(*time.Timer)
 	MaxParallelism() int
+	ScanCap() int64
+	PipelineCap() int64
+	PipelineBatch() int
 	Readonly() value.Tristate
 	Metrics() value.Tristate
 	Signature() value.Tristate
@@ -154,6 +157,9 @@ type BaseRequest struct {
 	timeout        time.Duration
 	timer          *time.Timer
 	maxParallelism int
+	scanCap        int64
+	pipelineCap    int64
+	pipelineBatch  int
 	readonly       value.Tristate
 	signature      value.Tristate
 	metrics        value.Tristate
@@ -206,18 +212,22 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 	return &clientContextIDImpl{id: id}
 }
 
-func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
-	namespace string, maxParallelism int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
+func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
+	positionalArgs value.Values, namespace string, maxParallelism int, scanCap, pipelineCap int64,
+	pipelineBatch int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
 	client_id string, creds datastore.Credentials) *BaseRequest {
+
 	rv := &BaseRequest{
 		statement:      statement,
 		prepared:       prepared,
 		namedArgs:      namedArgs,
 		positionalArgs: positionalArgs,
 		namespace:      namespace,
-
 		timeout:        -1,
 		maxParallelism: maxParallelism,
+		scanCap:        scanCap,
+		pipelineCap:    pipelineCap,
+		pipelineBatch:  pipelineBatch,
 		readonly:       readonly,
 		signature:      signature,
 		metrics:        metrics,
@@ -290,6 +300,18 @@ func (this *BaseRequest) Timeout() time.Duration {
 
 func (this *BaseRequest) MaxParallelism() int {
 	return this.maxParallelism
+}
+
+func (this *BaseRequest) ScanCap() int64 {
+	return this.scanCap
+}
+
+func (this *BaseRequest) PipelineCap() int64 {
+	return this.pipelineCap
+}
+
+func (this *BaseRequest) PipelineBatch() int {
+	return this.pipelineBatch
 }
 
 func (this *BaseRequest) Readonly() value.Tristate {

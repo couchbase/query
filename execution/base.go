@@ -73,20 +73,25 @@ func init() {
 	_JOIN_BATCH_POOL.Store(j)
 }
 
-func SetPipelineCap(cap int) {
-	if cap < 1 {
-		cap = _ITEM_CAP
+func SetPipelineCap(pcap int64) {
+	if pcap < 1 {
+		pcap = _ITEM_CAP
 	}
-	atomic.StoreInt64(&pipelineCap, int64(cap))
+	atomic.StoreInt64(&pipelineCap, pcap)
 }
 
 func GetPipelineCap() int64 {
-	return atomic.LoadInt64(&pipelineCap)
+	pcap := atomic.LoadInt64(&pipelineCap)
+	if pcap > 0 {
+		return pcap
+	} else {
+		return _ITEM_CAP
+	}
 }
 
-func newBase() base {
+func newBase(context *Context) base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, GetPipelineCap()),
+		itemChannel: make(value.AnnotatedChannel, context.GetPipelineCap()),
 		stopChannel: make(StopChannel, 1),
 		phaseTimes:  func(t time.Duration) {},
 	}
@@ -96,7 +101,7 @@ func newBase() base {
 // allocate a minimal itemChannel.
 func newRedirectBase() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel),
+		itemChannel: make(value.AnnotatedChannel, 1),
 		stopChannel: make(StopChannel, 1),
 		phaseTimes:  func(t time.Duration) {},
 	}
@@ -152,7 +157,7 @@ func (this *base) SetBit(b uint8) {
 
 func (this *base) copy() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, GetPipelineCap()),
+		itemChannel: make(value.AnnotatedChannel, cap(this.itemChannel)),
 		stopChannel: make(StopChannel, 1),
 		input:       this.input,
 		output:      this.output,
@@ -298,11 +303,11 @@ func (this *base) notifyStop() {
 }
 
 type batcher interface {
-	allocateBatch()
+	allocateBatch(context *Context)
 	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool
 	enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool
 	flushBatch(context *Context) bool
-	releaseBatch()
+	releaseBatch(context *Context)
 }
 
 var _BATCH_SIZE = 64
@@ -333,11 +338,15 @@ func getJoinBatchPool() *value.AnnotatedJoinPairPool {
 	return _JOIN_BATCH_POOL.Load().(*value.AnnotatedJoinPairPool)
 }
 
-func (this *base) allocateBatch() {
-	this.batch = getBatchPool().Get()
+func (this *base) allocateBatch(context *Context) {
+	if context.PipelineBatch() == 0 {
+		this.batch = getBatchPool().Get()
+	} else {
+		this.batch = make(value.AnnotatedValues, 0, context.PipelineBatch())
+	}
 }
 
-func (this *base) releaseBatch() {
+func (this *base) releaseBatch(context *Context) {
 	getBatchPool().Put(this.batch)
 	this.batch = nil
 }
@@ -350,7 +359,7 @@ func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize in
 	}
 
 	if this.batch == nil {
-		this.allocateBatch()
+		this.allocateBatch(context)
 	}
 
 	this.batch = append(this.batch, item)

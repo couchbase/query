@@ -23,9 +23,9 @@ type IndexCountProject struct {
 	plan *plan.IndexCountProject
 }
 
-func NewIndexCountProject(plan *plan.IndexCountProject) *IndexCountProject {
+func NewIndexCountProject(plan *plan.IndexCountProject, context *Context) *IndexCountProject {
 	rv := &IndexCountProject{
-		base: newBase(),
+		base: newBase(context),
 		plan: plan,
 	}
 

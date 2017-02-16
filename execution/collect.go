@@ -25,9 +25,9 @@ type Collect struct {
 
 const _COLLECT_CAP = 64
 
-func NewCollect(plan *plan.Collect) *Collect {
+func NewCollect(plan *plan.Collect, context *Context) *Collect {
 	rv := &Collect{
-		base:   newBase(),
+		base:   newBase(context),
 		plan:   plan,
 		values: make([]interface{}, 0, _COLLECT_CAP),
 	}

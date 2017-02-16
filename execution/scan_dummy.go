@@ -22,9 +22,9 @@ type DummyScan struct {
 	plan *plan.DummyScan
 }
 
-func NewDummyScan(plan *plan.DummyScan) *DummyScan {
+func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
 	rv := &DummyScan{
-		base: newBase(),
+		base: newRedirectBase(),
 		plan: plan,
 	}
 

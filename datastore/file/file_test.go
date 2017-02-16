@@ -185,6 +185,10 @@ type testingContext struct {
 	t *testing.T
 }
 
+func (this *testingContext) GetScanCap() int64 {
+	return 16
+}
+
 func (this *testingContext) Error(err errors.Error) {
 	this.t.Logf("Scan error: %v", err)
 }

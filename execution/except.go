@@ -25,9 +25,9 @@ type ExceptAll struct {
 	set          *value.Set
 }
 
-func NewExceptAll(plan *plan.ExceptAll, first, second Operator) *ExceptAll {
+func NewExceptAll(plan *plan.ExceptAll, context *Context, first, second Operator) *ExceptAll {
 	rv := &ExceptAll{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		first:        first,
 		second:       second,
@@ -63,8 +63,8 @@ func (this *ExceptAll) RunOnce(context *Context, parent value.Value) {
 func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
 
 	// FIXME: this should be handled by the planner
-	distinct := NewDistinct(plan.NewDistinct(), true)
-	sequence := NewSequence(plan.NewSequence(), this.second, distinct)
+	distinct := NewDistinct(plan.NewDistinct(), context, true)
+	sequence := NewSequence(plan.NewSequence(), context, this.second, distinct)
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)
 

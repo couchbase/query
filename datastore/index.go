@@ -235,10 +235,10 @@ type IndexConnection struct {
 	primary      bool
 }
 
-const _ENTRY_CAP = 1024 // Default index scan request size
+const _ENTRY_CAP = 512 // Default index scan request size
 
 func NewIndexConnection(context Context) *IndexConnection {
-	size := GetScanCap()
+	size := context.GetScanCap()
 	if size <= 0 {
 		size = _ENTRY_CAP
 	}
@@ -252,12 +252,20 @@ func NewIndexConnection(context Context) *IndexConnection {
 
 var scanCap atomic.AlignedInt64
 
-func SetScanCap(scan_cap int) {
-	atomic.StoreInt64(&scanCap, int64(scan_cap))
+func SetScanCap(scap int64) {
+	if scap < 1 {
+		scap = _ENTRY_CAP
+	}
+	atomic.StoreInt64(&scanCap, scap)
 }
 
 func GetScanCap() int64 {
-	return atomic.LoadInt64(&scanCap)
+	scap := atomic.LoadInt64(&scanCap)
+	if scap > 0 {
+		return scap
+	} else {
+		return _ENTRY_CAP
+	}
 }
 
 func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, errors.Error) {
@@ -265,7 +273,7 @@ func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, err
 		return nil, errors.NewIndexScanSizeError(size)
 	}
 
-	maxSize := GetScanCap()
+	maxSize := int64(GetScanCap())
 	if (maxSize > 0) && (size > maxSize) {
 		size = maxSize
 	}

@@ -31,9 +31,9 @@ const _ORDER_CAP = 1024
 
 var _ORDER_POOL = value.NewAnnotatedPool(_ORDER_CAP)
 
-func NewOrder(plan *plan.Order) *Order {
+func NewOrder(plan *plan.Order, context *Context) *Order {
 	rv := &Order{
-		base:   newBase(),
+		base:   newBase(context),
 		plan:   plan,
 		values: _ORDER_POOL.Get(),
 	}

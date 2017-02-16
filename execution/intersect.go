@@ -25,9 +25,9 @@ type IntersectAll struct {
 	set          *value.Set
 }
 
-func NewIntersectAll(plan *plan.IntersectAll, first, second Operator) *IntersectAll {
+func NewIntersectAll(plan *plan.IntersectAll, context *Context, first, second Operator) *IntersectAll {
 	rv := &IntersectAll{
-		base:         newBase(),
+		base:         newBase(context),
 		plan:         plan,
 		first:        first,
 		second:       second,
@@ -63,8 +63,8 @@ func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {
 
 	// FIXME: should this be handled by the planner?
-	distinct := NewDistinct(plan.NewDistinct(), true)
-	sequence := NewSequence(plan.NewSequence(), this.second, distinct)
+	distinct := NewDistinct(plan.NewDistinct(), context, true)
+	sequence := NewSequence(plan.NewSequence(), context, this.second, distinct)
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)
 

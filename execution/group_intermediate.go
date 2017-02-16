@@ -25,9 +25,9 @@ type IntermediateGroup struct {
 	groups map[string]value.AnnotatedValue
 }
 
-func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
+func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *IntermediateGroup {
 	rv := &IntermediateGroup{
-		base:   newBase(),
+		base:   newBase(context),
 		plan:   plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
