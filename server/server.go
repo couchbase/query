@@ -239,6 +239,14 @@ func (this *Server) SetCpuProfile(cpuprofile string) {
 	}
 }
 
+func (this *Server) ScanCap() int {
+	return int(datastore.GetScanCap())
+}
+
+func (this *Server) SetScanCap(scan_cap int) {
+	datastore.SetScanCap(scan_cap)
+}
+
 func (this *Server) PipelineCap() int {
 	return int(execution.GetPipelineCap())
 }
@@ -247,12 +255,12 @@ func (this *Server) SetPipelineCap(pipeline_cap int) {
 	execution.SetPipelineCap(pipeline_cap)
 }
 
-func (this *Server) SetPipelineBatch(pipeline_batch int) {
-	execution.SetPipelineBatch(pipeline_batch)
-}
-
 func (this *Server) PipelineBatch() int {
 	return execution.PipelineBatchSize()
+}
+
+func (this *Server) SetPipelineBatch(pipeline_batch int) {
+	execution.SetPipelineBatch(pipeline_batch)
 }
 
 func (this *Server) Debug() bool {
@@ -296,14 +304,6 @@ func (this *Server) SetRequestSizeCap(requestSize int) {
 		requestSize = math.MaxInt32
 	}
 	atomic.StoreInt64(&this.requestSize, int64(requestSize))
-}
-
-func (this *Server) ScanCap() int {
-	return int(datastore.GetScanCap())
-}
-
-func (this *Server) SetScanCap(size int) {
-	datastore.SetScanCap(int64(size))
 }
 
 func (this *Server) Servicers() int {

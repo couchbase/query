@@ -47,7 +47,7 @@ var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var PRETTY = flag.Bool("pretty", true, "Pretty output")
 var REQUEST_CAP = flag.Int("request-cap", 1024, "Maximum number of queued requests per logical CPU")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
-var SCAN_CAP = flag.Int("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
+var SCAN_CAP = flag.Int("scan-cap", 1024, "Maximum buffer size for index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
 var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to disable")
@@ -63,7 +63,7 @@ var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, 
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
-var PIPELINE_CAP = flag.Int("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
+var PIPELINE_CAP = flag.Int("pipeline-cap", 1024, "Maximum number of items each execution operator can buffer")
 var PIPELINE_BATCH = flag.Int("pipeline-batch", 16, "Number of items execution operators can batch")
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 
@@ -195,6 +195,7 @@ func main() {
 	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)
 	server.SetMemProfile(*MEM_PROFILE)
+	server.SetScanCap(*SCAN_CAP)
 	server.SetPipelineCap(*PIPELINE_CAP)
 	server.SetPipelineBatch(*PIPELINE_BATCH)
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
@@ -210,8 +211,9 @@ func main() {
 		logging.Pair{"loglevel", logging.LogLevel().String()},
 		logging.Pair{"servicers", server.Servicers()},
 		logging.Pair{"plus-servicers", server.PlusServicers()},
+		logging.Pair{"scan-cap", server.ScanCap()},
 		logging.Pair{"pipeline-cap", server.PipelineCap()},
-		logging.Pair{"pipeline-batch", *PIPELINE_BATCH},
+		logging.Pair{"pipeline-batch", server.PipelineBatch()},
 		logging.Pair{"request-cap", *REQUEST_CAP},
 		logging.Pair{"request-size-cap", server.RequestSizeCap()},
 		logging.Pair{"timeout", server.Timeout()},
