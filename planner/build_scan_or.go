@@ -17,27 +17,41 @@ import (
 )
 
 func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, id expression.Expression,
-	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.SecondaryScan, int, error) {
+	pred *expression.Or, indexes []datastore.Index, primaryKey expression.Expressions,
+	formalizer *expression.Formalizer) (scan plan.SecondaryScan, sargLength int, err error) {
+
+	prevOrder := this.order
+	prevLimit := this.limit
+	prevOffset := this.offset
 
 	tryPushdowns := this.cover != nil || this.limit != nil
 
 	if tryPushdowns {
-		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
+		scan, sargLength, err = this.buildOrScanTryPushdowns(node, id, pred, indexes, primaryKey, formalizer)
 	} else {
-		return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
+		scan, sargLength, err = this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
 	}
+
+	if err == nil && scan == nil {
+		this.order = prevOrder
+		this.limit = prevLimit
+		this.offset = prevOffset
+	}
+
+	return
 }
 
 func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
-	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.SecondaryScan, int, error) {
+	pred *expression.Or, indexes []datastore.Index, primaryKey expression.Expressions,
+	formalizer *expression.Formalizer) (plan.SecondaryScan, int, error) {
 
 	coveringScans := this.coveringScans
 
-	scan, sargLength, err := this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
+	order := this.order
+	limit := this.limit
+	offset := this.offset
+
+	scan, sargLength, err := this.buildTermScan(node, id, pred, indexes, primaryKey, formalizer)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -51,28 +65,34 @@ func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expr
 		}
 	}
 
-	return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
+	this.order = order
+	this.limit = limit
+	this.offset = offset
+
+	return this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
 }
 
 func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
-	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.SecondaryScan, int, error) {
+	pred *expression.Or, indexes []datastore.Index, primaryKey expression.Expressions,
+	formalizer *expression.Formalizer) (plan.SecondaryScan, int, error) {
 
 	where := this.where
 	cover := this.cover
+
 	defer func() {
 		this.where = where
 		this.cover = cover
 	}()
 
 	this.cover = nil
-	this.resetCountMin()
+	this.resetCountMinMax()
 
 	if this.order != nil {
-		this.resetOrderLimit()
-		limit = nil
+		this.resetOrderLimitOffset()
 	}
+
+	limit := limitPlusOffset(this.limit, this.offset)
+	this.offset = nil
 
 	var buf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan
@@ -86,7 +106,8 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	for _, op := range pred.Operands() {
 		this.where = op
-		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, indexes, primaryKey, formalizer)
+		this.limit = limit
+		scan, termSargLength, err := this.buildTermScan(node, id, op, indexes, primaryKey, formalizer)
 		if scan == nil || err != nil {
 			return nil, 0, err
 		}
@@ -98,6 +119,6 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		}
 	}
 
-	rv := plan.NewUnionScan(limit, scans...)
+	rv := plan.NewUnionScan(limit, nil, scans...)
 	return rv.Streamline(), minSargLength, nil
 }

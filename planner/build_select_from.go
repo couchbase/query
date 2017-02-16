@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -24,10 +25,10 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 	if count {
 		this.maxParallelism = 1
-		this.resetOrderLimit()
+		this.resetOrderLimitOffset()
 	} else if node.From() != nil {
 		if group != nil {
-			this.resetOrderLimit()
+			this.resetOrderLimitOffset()
 		}
 
 		// Use FROM clause in index selection
@@ -41,7 +42,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		}
 	} else {
 		// No FROM clause
-		this.resetOrderLimit()
+		this.resetOrderLimitOffset()
 		scan := plan.NewDummyScan()
 		this.children = append(this.children, scan)
 		this.maxParallelism = 1
@@ -61,7 +62,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 	}
 
-	scan, err := this.selectScan(keyspace, node, this.limit)
+	scan, err := this.selectScan(keyspace, node)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +83,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		return nil, err
 	}
 
-	this.resetOrderLimit()
-	this.resetCountMin()
+	this.resetPushDowns()
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
@@ -96,8 +96,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 		return node.KeyspaceTerm().Accept(this)
 	}
 
-	this.resetOrderLimit()
-	this.resetCountMin()
+	this.resetPushDowns()
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
@@ -109,11 +108,11 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	this.resetCountMin()
+	this.resetCountMinMax()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
-		this.resetLimit()
+		this.resetLimitOffset()
 	} else {
-		this.resetOrderLimit()
+		this.resetOrderLimitOffset()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -144,11 +143,11 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
-	this.resetCountMin()
+	this.resetCountMinMax()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
-		this.resetLimit()
+		this.resetLimitOffset()
 	} else {
-		this.resetOrderLimit()
+		this.resetOrderLimitOffset()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -178,10 +177,10 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	this.resetCountMin()
+	this.resetCountMinMax()
 
-	if this.limit != nil && !node.Outer() {
-		this.limit = nil
+	if this.hasLimitOrOffset() && !node.Outer() {
+		this.resetLimitOffset()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -213,11 +212,12 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
-	this.resetCountMin()
+	this.resetCountMinMax()
 
-	if this.limit != nil && !node.Outer() {
-		this.limit = nil
+	if this.hasLimitOrOffset() && !node.Outer() {
+		this.resetLimitOffset()
 	}
+
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -246,8 +246,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); !ok || !term.IsKeyspace() {
-		this.resetCountMin()
-		this.resetOrderLimit()
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -319,16 +318,53 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	return true, nil
 }
 
-func (this *builder) resetOrderLimit() {
-	this.order = nil
-	this.limit = nil
+func (this *builder) resetOrderLimitOffset() {
+	this.resetOrder()
+	this.resetLimit()
+	this.resetOffset()
+}
+
+func (this *builder) resetLimitOffset() {
+	this.resetLimit()
+	this.resetOffset()
 }
 
 func (this *builder) resetLimit() {
 	this.limit = nil
 }
 
-func (this *builder) resetCountMin() {
+func (this *builder) resetOffset() {
+	this.offset = nil
+}
+
+func (this *builder) resetOrder() {
+	this.order = nil
+}
+
+func (this *builder) hasOrderOrLimitOrOffset() bool {
+	return this.order != nil || this.offset != nil || this.limit != nil
+}
+
+func (this *builder) hasLimitOrOffset() bool {
+	return this.offset != nil || this.limit != nil
+}
+
+func (this *builder) resetCountMinMax() {
 	this.countAgg = nil
+	this.countDistinctAgg = nil
 	this.minAgg = nil
+	this.maxAgg = nil
+}
+
+func (this *builder) resetPushDowns() {
+	this.resetOrderLimitOffset()
+	this.resetCountMinMax()
+}
+
+func limitPlusOffset(limit, offset expression.Expression) expression.Expression {
+	if offset != nil && limit != nil {
+		return expression.NewAdd(limit, offset)
+	} else {
+		return limit
+	}
 }

@@ -16,26 +16,35 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+func evalOne(expr expression.Expression, context *Context, parent value.Value) (v value.Value, empty bool, e error) {
+	if expr != nil {
+		v, e = expr.Evaluate(parent, context)
+	}
+
+	if e != nil {
+		return nil, false, e
+	}
+
+	if v != nil && (v.Type() == value.NULL || v.Type() == value.MISSING) && expr.Value() == nil {
+		return nil, true, e
+	}
+
+	return
+}
+
 func eval(cx expression.Expressions, context *Context, parent value.Value) (value.Values, bool, error) {
 	if cx == nil {
 		return nil, false, nil
 	}
 
-	cv := make(value.Values, len(cx))
 	var e error
+	var empty bool
+	cv := make(value.Values, len(cx))
+
 	for i, expr := range cx {
-		if expr == nil {
-			continue
-		}
-
-		cv[i], e = expr.Evaluate(parent, context)
-		if e != nil {
-			return nil, false, e
-		}
-
-		if cv[i] != nil && (cv[i].Type() == value.NULL || cv[i].Type() == value.MISSING) &&
-			expr.Value() == nil {
-			return nil, true, nil
+		cv[i], empty, e = evalOne(expr, context, parent)
+		if e != nil || empty {
+			return nil, empty, e
 		}
 	}
 
@@ -62,6 +71,17 @@ func getLimit(limit expression.Expression, covering bool, context *Context) int6
 	}
 
 	return rv
+}
+
+func evalLimitOffset(expr expression.Expression, parent value.Value, defval int64, covering bool, context *Context) (val int64) {
+	if expr != nil && (context.ScanConsistency() == datastore.UNBOUNDED || covering) {
+		val, e := expr.Evaluate(parent, context)
+		if e == nil && val.Type() == value.NUMBER {
+			return val.(value.NumberValue).Int64()
+		}
+	}
+
+	return defval
 }
 
 var _INDEX_SCAN_POOL = NewOperatorPool(16)

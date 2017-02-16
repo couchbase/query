@@ -20,30 +20,23 @@ func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
 		return _SELF_SPANS, nil
 	}
 
-	span := &plan.Span{}
+	var expr expression.Expression
 
 	if pred.First().EquivalentTo(this.key) {
-		span.Range.Low = expression.Expressions{pred.Second().Static()}
+		expr = pred.Second().Static()
 	} else if pred.Second().EquivalentTo(this.key) {
-		span.Range.Low = expression.Expressions{pred.First().Static()}
+		expr = pred.First().Static()
 	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil
 	} else {
 		return nil, nil
 	}
 
-	if span.Range.Low[0] == nil {
+	if expr == nil {
 		return _VALUED_SPANS, nil
 	}
 
-	if this.missingHigh {
-		span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
-		span.Range.Inclusion = datastore.LOW
-	} else {
-		span.Range.High = span.Range.Low
-		span.Range.Inclusion = datastore.BOTH
-	}
-
-	span.Exact = true
+	range2 := plan.NewRange2(expr, expr, datastore.BOTH)
+	span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 	return NewTermSpans(span), nil
 }

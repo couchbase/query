@@ -24,7 +24,18 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.children = make([]plan.Operator, 0, 8)
 	this.subChildren = make([]plan.Operator, 0, 8)
 
-	scan, err := this.selectScan(keyspace, term, limit)
+	prevLimit := this.limit
+	prevOffset := this.offset
+
+	defer func() {
+		this.offset = prevOffset
+		this.limit = prevLimit
+	}()
+
+	this.limit = limit
+	this.offset = nil
+
+	scan, err := this.selectScan(keyspace, term)
 	if err != nil {
 		return err
 	}

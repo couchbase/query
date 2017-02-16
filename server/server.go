@@ -263,6 +263,14 @@ func (this *Server) SetPipelineBatch(pipeline_batch int) {
 	execution.SetPipelineBatch(pipeline_batch)
 }
 
+func (this *Server) MaxIndexAPI() int {
+	return planner.GetMaxIndexAPI()
+}
+
+func (this *Server) SetMaxIndexAPI(apiVersion int) {
+	planner.SetMaxIndexAPI(apiVersion)
+}
+
 func (this *Server) Debug() bool {
 	return logging.LogLevel() == logging.DEBUG
 }

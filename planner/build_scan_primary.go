@@ -19,18 +19,23 @@ import (
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	limit expression.Expression, indexes []datastore.Index, force bool) (
+	indexes []datastore.Index, force, exact bool) (
 	scan *plan.PrimaryScan, err error) {
 	primary, err := buildPrimaryIndex(keyspace, indexes, force)
 	if primary == nil || err != nil {
 		return nil, err
 	}
 
+	var limit expression.Expression
+	if exact {
+		limit = limitPlusOffset(this.limit, this.offset)
+	}
+
 	return plan.NewPrimaryScan(primary, keyspace, node, limit), nil
 }
 
 func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id, limit expression.Expression, indexes []datastore.Index) (plan.Operator, error) {
+	id expression.Expression, indexes []datastore.Index) (plan.Operator, error) {
 	primary, err := buildPrimaryIndex(keyspace, indexes, false)
 	if err != nil {
 		return nil, err
@@ -41,7 +46,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
-	op, _, err := this.buildCoveringScan(secondaries, node, id, pred, limit)
+	op, _, err := this.buildCoveringScan(secondaries, node, id, pred)
 	return op, err
 }
 

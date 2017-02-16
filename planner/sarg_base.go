@@ -14,16 +14,7 @@ import (
 )
 
 type sarg struct {
-	key         expression.Expression
-	missingHigh bool
-}
-
-func (this *sarg) SetMissingHigh(v bool) {
-	this.missingHigh = v
-}
-
-func (this *sarg) MissingHigh() bool {
-	return this.missingHigh
+	key expression.Expression
 }
 
 // Arithmetic

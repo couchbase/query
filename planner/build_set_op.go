@@ -16,11 +16,11 @@ import (
 
 func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	// Inject DISTINCT into both terms
-	distinct := this.distinct
-	this.distinct = true
-	defer func() { this.distinct = distinct }()
+	setOpDistinct := this.setOpDistinct
+	this.setOpDistinct = true
+	defer func() { this.setOpDistinct = setOpDistinct }()
 
-	this.resetOrderLimit()
+	this.resetOrderLimitOffset()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -39,7 +39,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
-	this.resetOrderLimit()
+	this.resetOrderLimitOffset()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -58,11 +58,11 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 
 func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
 	// Inject DISTINCT into both terms
-	distinct := this.distinct
-	this.distinct = true
-	defer func() { this.distinct = distinct }()
+	setOpDistinct := this.setOpDistinct
+	this.setOpDistinct = true
+	defer func() { this.setOpDistinct = setOpDistinct }()
 
-	this.resetOrderLimit()
+	this.resetOrderLimitOffset()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -80,7 +80,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
-	this.resetOrderLimit()
+	this.resetOrderLimitOffset()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -89,9 +89,9 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	}
 
 	// Inject DISTINCT into second term
-	distinct := this.distinct
-	this.distinct = true
-	defer func() { this.distinct = distinct }()
+	setOpDistinct := this.setOpDistinct
+	this.setOpDistinct = true
+	defer func() { this.setOpDistinct = setOpDistinct }()
 
 	second, err := node.Second().Accept(this)
 	if err != nil {
@@ -104,11 +104,11 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 
 func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	// Inject DISTINCT into both terms
-	distinct := this.distinct
-	this.distinct = true
-	defer func() { this.distinct = distinct }()
+	setOpDistinct := this.setOpDistinct
+	this.setOpDistinct = true
+	defer func() { this.setOpDistinct = setOpDistinct }()
 
-	this.resetOrderLimit()
+	this.resetOrderLimitOffset()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -126,7 +126,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
-	this.resetOrderLimit()
+	this.resetOrderLimitOffset()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -135,9 +135,9 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	}
 
 	// Inject DISTINCT into second term
-	distinct := this.distinct
-	this.distinct = true
-	defer func() { this.distinct = distinct }()
+	setOpDistinct := this.setOpDistinct
+	this.setOpDistinct = true
+	defer func() { this.setOpDistinct = setOpDistinct }()
 
 	second, err := node.Second().Accept(this)
 	if err != nil {

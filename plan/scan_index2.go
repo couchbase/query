@@ -11,6 +11,7 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -19,97 +20,119 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type IndexScan struct {
+type IndexScan2 struct {
 	readonly
-	index        datastore.Index
+	index        datastore.Index2
 	term         *algebra.KeyspaceTerm
-	spans        Spans
+	spans        Spans2
+	reverse      bool
 	distinct     bool
+	ordered      bool
+	projection   *IndexProjection
+	offset       expression.Expression
 	limit        expression.Expression
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
 }
 
-func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm, spans Spans,
-	distinct bool, limit expression.Expression, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) *IndexScan {
-	return &IndexScan{
+func NewIndexScan2(index datastore.Index2, term *algebra.KeyspaceTerm, spans Spans2,
+	reverse, distinct, ordered bool, offset, limit expression.Expression,
+	projection *IndexProjection, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value) *IndexScan2 {
+	return &IndexScan2{
 		index:        index,
 		term:         term,
 		spans:        spans,
+		reverse:      reverse,
 		distinct:     distinct,
+		ordered:      ordered,
+		projection:   projection,
+		offset:       offset,
 		limit:        limit,
 		covers:       covers,
 		filterCovers: filterCovers,
 	}
 }
 
-func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitIndexScan(this)
+func (this *IndexScan2) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIndexScan2(this)
 }
 
-func (this *IndexScan) New() Operator {
-	return &IndexScan{}
+func (this *IndexScan2) New() Operator {
+	return &IndexScan2{}
 }
 
-func (this *IndexScan) Index() datastore.Index {
+func (this *IndexScan2) Index() datastore.Index2 {
 	return this.index
 }
 
-func (this *IndexScan) Term() *algebra.KeyspaceTerm {
+func (this *IndexScan2) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *IndexScan) Spans() Spans {
+func (this *IndexScan2) Spans() Spans2 {
 	return this.spans
 }
 
-func (this *IndexScan) SetSpans(spans Spans) {
+func (this *IndexScan2) SetSpans(spans Spans2) {
 	this.spans = spans
 }
 
-func (this *IndexScan) Distinct() bool {
+func (this *IndexScan2) Distinct() bool {
 	return this.distinct
 }
 
-func (this *IndexScan) Limit() expression.Expression {
+func (this *IndexScan2) Reverse() bool {
+	return this.reverse
+}
+
+func (this *IndexScan2) Ordered() bool {
+	return this.ordered
+}
+
+func (this *IndexScan2) Projection() *IndexProjection {
+	return this.projection
+}
+
+func (this *IndexScan2) Offset() expression.Expression {
+	return this.offset
+}
+
+func (this *IndexScan2) Limit() expression.Expression {
 	return this.limit
 }
 
-func (this *IndexScan) SetLimit(limit expression.Expression) {
+func (this *IndexScan2) SetLimit(limit expression.Expression) {
 	this.limit = limit
 }
 
-func (this *IndexScan) Offset() expression.Expression {
-	return nil
+func (this *IndexScan2) SetOffset(offset expression.Expression) {
+	this.offset = offset
 }
 
-func (this *IndexScan) SetOffset(offset expression.Expression) {
-}
-
-func (this *IndexScan) Covers() expression.Covers {
+func (this *IndexScan2) Covers() expression.Covers {
 	return this.covers
 }
 
-func (this *IndexScan) FilterCovers() map[*expression.Cover]value.Value {
+func (this *IndexScan2) FilterCovers() map[*expression.Cover]value.Value {
 	return this.filterCovers
 }
 
-func (this *IndexScan) Covering() bool {
+func (this *IndexScan2) Covering() bool {
 	return len(this.covers) > 0
 }
 
-func (this *IndexScan) String() string {
+func (this *IndexScan2) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
 }
 
-func (this *IndexScan) MarshalJSON() ([]byte, error) {
+func (this *IndexScan2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexScan"}
+func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+	r := map[string]interface{}{"#operator": "IndexScan2"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
 	r["namespace"] = this.term.Namespace()
@@ -117,8 +140,24 @@ func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]in
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
 
+	if this.reverse {
+		r["reverse"] = this.reverse
+	}
+
 	if this.distinct {
 		r["distinct"] = this.distinct
+	}
+
+	if this.ordered {
+		r["ordered"] = this.ordered
+	}
+
+	if this.projection != nil {
+		r["index_projection"] = this.projection
+	}
+
+	if this.offset != nil {
+		r["offset"] = expression.NewStringer().Visit(this.offset)
 	}
 
 	if this.limit != nil {
@@ -144,7 +183,7 @@ func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]in
 	return r
 }
 
-func (this *IndexScan) UnmarshalJSON(body []byte) error {
+func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_            string                     `json:"#operator"`
 		Index        string                     `json:"index"`
@@ -152,8 +191,12 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		Namespace    string                     `json:"namespace"`
 		Keyspace     string                     `json:"keyspace"`
 		Using        datastore.IndexType        `json:"using"`
-		Spans        Spans                      `json:"spans"`
+		Spans        Spans2                     `json:"spans"`
+		Reverse      bool                       `json:"reverse"`
 		Distinct     bool                       `json:"distinct"`
+		Ordered      bool                       `json:"ordered"`
+		Projection   *IndexProjection           `json:"index_projection"`
+		Offset       string                     `json:"offset"`
 		Limit        string                     `json:"limit"`
 		Covers       []string                   `json:"covers"`
 		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
@@ -171,7 +214,17 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, "", nil, nil)
 	this.spans = _unmarshalled.Spans
+	this.reverse = _unmarshalled.Reverse
 	this.distinct = _unmarshalled.Distinct
+	this.ordered = _unmarshalled.Ordered
+	this.projection = _unmarshalled.Projection
+
+	if _unmarshalled.Offset != "" {
+		this.offset, err = parser.Parse(_unmarshalled.Offset)
+		if err != nil {
+			return err
+		}
+	}
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)
@@ -210,6 +263,16 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.index, err = indexer.IndexById(_unmarshalled.IndexId)
-	return err
+	index, err := indexer.IndexById(_unmarshalled.IndexId)
+	if err != nil {
+		return err
+	}
+
+	index2, ok := index.(datastore.Index2)
+	if !ok {
+		return fmt.Errorf("Unable to find Index2 for %v", index.Name())
+	}
+	this.index = index2
+
+	return nil
 }

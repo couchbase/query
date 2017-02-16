@@ -20,14 +20,16 @@ import (
 // DistinctScan scans multiple indexes and distincts the results.
 type DistinctScan struct {
 	readonly
-	scan  SecondaryScan
-	limit expression.Expression
+	scan   SecondaryScan
+	limit  expression.Expression
+	offset expression.Expression
 }
 
-func NewDistinctScan(limit expression.Expression, scan SecondaryScan) *DistinctScan {
+func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan) *DistinctScan {
 	return &DistinctScan{
-		scan:  scan,
-		limit: limit,
+		scan:   scan,
+		limit:  limit,
+		offset: offset,
 	}
 }
 
@@ -59,8 +61,18 @@ func (this *DistinctScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *DistinctScan) Offset() expression.Expression {
+	return this.offset
+}
+
 func (this *DistinctScan) SetLimit(limit expression.Expression) {
 	this.limit = limit
+	this.scan.SetLimit(limit)
+}
+
+func (this *DistinctScan) SetOffset(offset expression.Expression) {
+	this.offset = offset
+	this.scan.SetOffset(offset)
 }
 
 func (this *DistinctScan) String() string {
@@ -80,6 +92,10 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.offset != nil {
+		r["offset"] = expression.NewStringer().Visit(this.offset)
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -88,9 +104,10 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string          `json:"#operator"`
-		Scan  json.RawMessage `json:"scan"`
-		Limit string          `json:"limit"`
+		_      string          `json:"#operator"`
+		Scan   json.RawMessage `json:"scan"`
+		Limit  string          `json:"limit"`
+		Offset string          `json:"offset"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -116,6 +133,13 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.Offset != "" {
+		this.offset, err = parser.Parse(_unmarshalled.Offset)
 		if err != nil {
 			return err
 		}

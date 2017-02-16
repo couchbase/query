@@ -83,7 +83,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		var item value.AnnotatedValue
-		limit := int(getLimit(this.plan.Limit(), this.plan.Covering(), context))
+		limit := evalLimitOffset(this.plan.Limit(), nil, int64(-1), this.plan.Covering(), context)
+		offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
 		n := len(this.scans)
 		ok := true
 
@@ -101,7 +102,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 				this.switchPhase(_EXECTIME)
 				if ok {
 					this.addInDocs(1)
-					ok = this.processKey(item, context, limit)
+					ok = this.processKey(item, context, limit, offset)
 				}
 			case <-this.childChannel:
 				n--
@@ -128,7 +129,7 @@ func (this *UnionScan) ChildChannel() StopChannel {
 }
 
 func (this *UnionScan) processKey(item value.AnnotatedValue,
-	context *Context, limit int) bool {
+	context *Context, limit, offset int64) bool {
 
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
@@ -150,11 +151,17 @@ func (this *UnionScan) processKey(item value.AnnotatedValue,
 		return true
 	}
 
-	if limit > 0 && len(this.keys) >= limit {
+	this.keys[key] = true
+
+	len := int64(len(this.keys))
+	if offset > 0 && len <= offset {
+		return true
+	}
+
+	if limit > 0 && len > (limit+offset) {
 		return false
 	}
 
-	this.keys[key] = true
 	item.SetBit(this.bit)
 	return this.sendItem(item)
 }

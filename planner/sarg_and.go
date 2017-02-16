@@ -20,14 +20,14 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 
 	// MB-21720. Handle array index keys differently.
 	if isArray, _ := this.key.IsArrayIndexKey(); isArray {
-		return this.visitAndArrayKey(pred, this.key, this.missingHigh)
+		return this.visitAndArrayKey(pred, this.key)
 	}
 
 	var spans, s SargSpans
 	exactSpans := true
 
 	for _, op := range pred.Operands() {
-		s, err = sargFor(op, this.key, this.missingHigh)
+		s, err = sargFor(op, this.key)
 		if err != nil {
 			return nil, err
 		}
@@ -63,8 +63,7 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 }
 
 // MB-21720. Handle array index keys differently.
-func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expression, missingHigh bool) (
-	SargSpans, error) {
+func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expression) (SargSpans, error) {
 
 	spans := make([]SargSpans, 0, len(pred.Operands()))
 	emptySpan := false
@@ -76,7 +75,7 @@ func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expressi
 	size := 1
 
 	for _, child := range pred.Operands() {
-		cspans, err := sargFor(child, key, missingHigh)
+		cspans, err := sargFor(child, key)
 		if err != nil {
 			return nil, err
 		}

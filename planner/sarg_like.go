@@ -17,9 +17,6 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-var _EMPTY_STRING = expression.Expressions{expression.EMPTY_STRING_EXPR}
-var _EMPTY_ARRAY = expression.Expressions{expression.EMPTY_ARRAY_EXPR}
-
 func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	prefix := ""
 	re := pred.Regexp()
@@ -49,42 +46,43 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 		return likeSpans(pred), nil
 	}
 
-	span := &plan.Span{}
-	span.Exact = false
-	span.Range.Low = expression.Expressions{expression.NewConstant(prefix)}
+	exact := false
+	range2 := &plan.Range2{}
+	range2.Low = expression.NewConstant(prefix)
 
 	last := len(prefix) - 1
 	if last >= 0 && prefix[last] < math.MaxUint8 {
 		bytes := []byte(prefix)
 		bytes[last]++
-		span.Range.High = expression.Expressions{expression.NewConstant(string(bytes))}
+		range2.High = expression.NewConstant(string(bytes))
 		if re.NumSubexp() == 1 && re.String()[len(prefix):] == "(.*)" {
-			span.Exact = true
+			exact = true
 		}
 	} else {
-		span.Range.High = _EMPTY_ARRAY
+		range2.High = expression.EMPTY_ARRAY_EXPR
 	}
 
-	span.Range.Inclusion = datastore.LOW
+	range2.Inclusion = datastore.LOW
+	span := plan.NewSpan2(nil, plan.Ranges2{range2}, exact)
 	return NewTermSpans(span), nil
 }
 
 func likeSpans(pred expression.LikeFunction) SargSpans {
-	span := &plan.Span{}
-	span.Exact = false
+	range2 := &plan.Range2{}
 
 	switch pred := pred.(type) {
 	case *expression.Like:
-		span.Range.Low = expression.Expressions{expression.NewLikePrefix(pred.Second())}
-		span.Range.High = expression.Expressions{expression.NewLikeStop(pred.Second())}
+		range2.Low = expression.NewLikePrefix(pred.Second())
+		range2.High = expression.NewLikeStop(pred.Second())
 	case *expression.RegexpLike:
-		span.Range.Low = expression.Expressions{expression.NewRegexpPrefix(pred.Second())}
-		span.Range.High = expression.Expressions{expression.NewRegexpStop(pred.Second())}
+		range2.Low = expression.NewRegexpPrefix(pred.Second())
+		range2.High = expression.NewRegexpStop(pred.Second())
 	default:
-		span.Range.Low = _EMPTY_STRING
-		span.Range.High = _EMPTY_ARRAY
+		range2.Low = expression.EMPTY_STRING_EXPR
+		range2.High = expression.EMPTY_ARRAY_EXPR
 	}
 
-	span.Range.Inclusion = datastore.LOW
+	range2.Inclusion = datastore.LOW
+	span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 	return NewTermSpans(span)
 }

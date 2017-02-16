@@ -45,7 +45,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		}
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
-		return sargFor(pred.Satisfies(), variable, this.missingHigh)
+		return sargFor(pred.Satisfies(), variable)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -62,5 +62,5 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
-	return sargFor(satisfies, array.ValueMapping(), this.missingHigh)
+	return sargFor(satisfies, array.ValueMapping())
 }

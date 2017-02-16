@@ -49,13 +49,6 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 			continue
 		}
 
-		// TODO: Remove for Spock API2
-		if rs == _FULL_SPANS || rs == _EXACT_FULL_SPANS {
-			ns = rs
-			exactSpan = false
-			continue
-		}
-
 		ns = ns.Copy()
 		ns = ns.Compose(rs)
 		ns = ns.Streamline()
@@ -69,9 +62,8 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 		return _EMPTY_SPANS, true, nil
 	}
 
-	exactSpan = exactSpan && ns.Exact()
-	if len(sargKeys) > 1 {
-		exactSpan = ns.SetExactForComposite(len(sargKeys)) && exactSpan
+	if ns.Exact() && !exactSpan {
+		ns.SetExact(exactSpan)
 	}
 
 	return ns, exactSpan, nil
@@ -97,8 +89,8 @@ func sargForOr(or *expression.Or, keys expression.Expressions, min, total int) (
 	return rv.Streamline(), exact, nil
 }
 
-func sargFor(pred, key expression.Expression, missingHigh bool) (SargSpans, error) {
-	s := &sarg{key, missingHigh}
+func sargFor(pred, key expression.Expression) (SargSpans, error) {
+	s := &sarg{key}
 
 	r, err := pred.Accept(s)
 	if err != nil || r == nil {
@@ -117,14 +109,13 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 	[]SargSpans, bool, error) {
 
 	n := len(sargKeys)
-	missingHigh := n < total
 
 	exactSpan := true
 	sargSpans := make([]SargSpans, n)
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		s := &sarg{sargKeys[i], missingHigh}
+		s := &sarg{sargKeys[i]}
 		r, err := pred.Accept(s)
 		if err != nil || r == nil {
 			return nil, false, err
@@ -146,11 +137,6 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 		}
 
 		exactSpan = exactSpan && rs.Exact()
-
-		// Notify prev key that this key is missing a high bound
-		if i > 0 {
-			missingHigh = rs.MissingHigh()
-		}
 	}
 
 	// Truncate sarg spans when they exceed the limit

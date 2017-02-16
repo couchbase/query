@@ -57,22 +57,16 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 	// Sort for EXPLAIN stability
 	sort.Sort(value.NewSorter(value.NewValue(array)))
 
-	spans := make(plan.Spans, 0, len(array))
+	spans := make(plan.Spans2, 0, len(array))
 	for _, val := range array {
 		if val == nil {
 			continue
 		}
 
-		span := &plan.Span{}
-		span.Range.Low = expression.Expressions{expression.NewConstant(val)}
-		if this.missingHigh {
-			span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
-			span.Range.Inclusion = datastore.LOW
-		} else {
-			span.Range.High = span.Range.Low
-			span.Range.Inclusion = datastore.BOTH
-		}
-		span.Exact = true
+		expr := expression.NewConstant(val)
+		range2 := plan.NewRange2(expr, expr, datastore.BOTH)
+		span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+		spans = append(spans, span)
 		spans = append(spans, span)
 	}
 

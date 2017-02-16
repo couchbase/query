@@ -327,6 +327,7 @@ const (
 	_PRETTY          = "pretty"
 	_PROFILE         = "profile"
 	_CONTROLS        = "controls"
+	_MAXINDEXAPI     = "max-index-api"
 )
 
 type checker func(interface{}) (bool, errors.Error)
@@ -373,6 +374,7 @@ var _CHECKERS = map[string]checker{
 	_PRETTY:          checkBool,
 	_PROFILE:         checkProfileAdmin,
 	_CONTROLS:        checkControlsAdmin,
+	_MAXINDEXAPI:     checkNumber,
 }
 
 type setter func(*server.Server, interface{})
@@ -440,6 +442,10 @@ var _SETTERS = map[string]setter{
 	},
 	_PROFILE:  setProfileAdmin,
 	_CONTROLS: setControlsAdmin,
+	_MAXINDEXAPI: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetMaxIndexAPI(int(value))
+	},
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -503,6 +509,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_CMPTHRESHOLD] = server.RequestsThreshold()
 	settings[_CMPLIMIT] = server.RequestsLimit()
 	settings[_PRETTY] = srvr.Pretty()
+	settings[_MAXINDEXAPI] = srvr.MaxIndexAPI()
 	settings = getProfileAdmin(settings, srvr)
 	settings = getControlsAdmin(settings, srvr)
 	return settings

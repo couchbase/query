@@ -47,4 +47,7 @@ type SecondaryScan interface {
 
 	Limit() expression.Expression
 	SetLimit(limit expression.Expression)
+
+	Offset() expression.Expression
+	SetOffset(offset expression.Expression)
 }

@@ -25,27 +25,34 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevWhere := this.where
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
+	prevCountDistinctAgg := this.countDistinctAgg
 	prevMinAgg := this.minAgg
+	prevMaxAgg := this.maxAgg
 	prevCoveringScans := this.coveringScans
 	prevCoveredUnnests := this.coveredUnnests
 	prevCountScan := this.countScan
+	prevProjection := this.projection
 
 	defer func() {
 		this.cover = prevCover
 		this.where = prevWhere
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
+		this.countDistinctAgg = prevCountDistinctAgg
 		this.minAgg = prevMinAgg
+		this.maxAgg = prevMaxAgg
 		this.coveringScans = prevCoveringScans
 		this.coveredUnnests = prevCoveredUnnests
 		this.countScan = prevCountScan
+		this.projection = prevProjection
 	}()
 
 	this.coveringScans = make([]plan.CoveringOperator, 0, 4)
 	this.coveredUnnests = nil
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
-	this.resetCountMin()
+	this.projection = nil
+	this.resetCountMinMax()
 
 	if this.cover == nil {
 		this.cover = node
@@ -122,11 +129,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			switch expr := term.Expression().(type) {
 			case *algebra.Count:
 				this.countAgg = expr
+			case *algebra.CountDistinct:
+				this.countDistinctAgg = expr
 			case *algebra.Min:
 				this.minAgg = expr
+			case *algebra.Max:
+				this.maxAgg = expr
 			default:
 				if expr.Value() == nil {
-					this.resetCountMin()
+					this.resetCountMinMax()
 					break loop
 				}
 			}
@@ -137,8 +148,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
 	// If SELECT DISTINCT, avoid pushing LIMIT down to index scan.
-	if this.limit != nil && node.Projection().Distinct() {
-		this.limit = nil
+	if this.hasLimitOrOffset() && node.Projection().Distinct() {
+		this.resetLimitOffset()
 	}
 
 	// Skip fixed values in ORDER BY
@@ -148,6 +159,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		if this.order == nil {
 			defer func() { this.order = order }()
 		}
+	}
+
+	if group == nil && node.Projection().Distinct() {
+		this.projection = node.Projection()
 	}
 
 	err = this.visitFrom(node, group)
@@ -173,8 +188,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.subChildren = append(this.subChildren, plan.NewInitialProject(projection))
 
 		// Initial DISTINCT (parallel)
-		if projection.Distinct() || this.distinct {
+		if projection.Distinct() || this.setOpDistinct {
 			this.subChildren = append(this.subChildren, plan.NewDistinct())
+		}
+
+		if this.order != nil {
+			this.delayProjection = false
 		}
 
 		if !this.delayProjection {
@@ -186,7 +205,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
 
 		// Final DISTINCT (serial)
-		if projection.Distinct() || this.distinct {
+		if projection.Distinct() || this.setOpDistinct {
 			this.children = append(this.children, plan.NewDistinct())
 		}
 	} else {

@@ -22,17 +22,17 @@ import (
 )
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	node *algebra.KeyspaceTerm, id, pred expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
 	if this.cover != nil {
-		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, limit)
+		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred)
 		if scan != nil || err != nil {
 			return scan, sargLength, err
 		}
 	}
 
-	this.resetCountMin()
+	this.resetCountMinMax()
 
 	indexes = minimalIndexes(indexes, true)
 
@@ -55,8 +55,21 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 		// No ordering index, disable ORDER and LIMIT pushdown
 		if orderIndex == nil {
-			this.resetOrderLimit()
-			limit = nil
+			this.resetOrderLimitOffset()
+		}
+	}
+
+	if this.hasLimitOrOffset() {
+		for _, entry := range indexes {
+			pushDown, err := this.checkPushDowns(entry, pred, node.Alias(), false)
+			if err != nil {
+				return nil, 0, err
+			}
+
+			if !pushDown {
+				this.resetLimitOffset()
+				break
+			}
 		}
 	}
 
@@ -71,24 +84,18 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	sargLength := 0
 	var scan plan.SecondaryScan
+	var indexProjection *plan.IndexProjection
+	if len(indexes) == 1 {
+		for _, entry := range indexes {
+			indexProjection = this.buildIndexProjection(entry, nil, nil, true)
+		}
+	} else {
+		indexProjection = this.buildIndexProjection(nil, nil, nil, true)
+	}
+
 	for index, entry := range indexes {
-		lim := limit
-		if len(indexes) > 2 || (orderIndex != nil && len(indexes) > 1) {
-			lim = nil
-		}
+		scan = entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, nil, nil)
 
-		if lim != nil {
-			pushDown, err := allowedPushDown(entry, pred, node.Alias())
-			if err != nil {
-				return nil, 0, err
-			}
-
-			if !pushDown {
-				lim = nil
-			}
-		}
-
-		scan = entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, lim, nil, nil)
 		if index == orderIndex {
 			scans[0] = scan
 		} else {
@@ -106,9 +113,9 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	} else if scans[0] == nil && len(scans) == 2 {
 		return scans[1], sargLength, nil
 	} else if scans[0] == nil {
-		return plan.NewIntersectScan(limit, scans[1:]...), sargLength, nil
+		return plan.NewIntersectScan(this.limit, scans[1:]...), sargLength, nil
 	} else {
-		scan = plan.NewOrderedIntersectScan(limit, scans...)
+		scan = plan.NewOrderedIntersectScan(this.limit, scans...)
 		this.orderScan = scan
 		return scan, sargLength, nil
 	}
@@ -273,6 +280,9 @@ func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expr
 		}
 
 		se.spans = spans
+		if exactSpans && !useIndex2API(se.index) {
+			exactSpans = spans.ExactSpan1(len(se.keys))
+		}
 		se.exactSpans = exactSpans
 	}
 
@@ -297,6 +307,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		filters = entry.cond.FilterCovers(filters)
 	}
 
+	indexKeys := getIndexKeys(entry)
 	i := 0
 outer:
 	for _, orderTerm := range this.order.Terms() {
@@ -314,16 +325,13 @@ outer:
 			return false
 		}
 
-		if orderTerm.Descending() {
-			return false
-		}
-
 		if isArray, _ := keys[i].IsArrayIndexKey(); isArray {
 			return false
 		}
 
 		for {
-			if orderTerm.Expression().EquivalentTo(keys[i]) {
+			if indexKeyIsDescCollation(i, indexKeys) == orderTerm.Descending() &&
+				orderTerm.Expression().EquivalentTo(keys[i]) {
 				// orderTerm matched with index key
 				i++
 				continue outer
@@ -354,22 +362,6 @@ func equalConditionFilter(filters map[string]value.Value, str string) bool {
 	return ok && v != nil
 }
 
-func allowedPushDown(entry *indexEntry, pred expression.Expression, alias string) (
-	bool, error) {
-
-	if !entry.exactSpans {
-		return false, nil
-	}
-
-	// check for non sargable key is in predicate
-	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred)
-	if err != nil {
-		return false, err
-	}
-
-	return pred.CoveredBy(alias, exprs), nil
-}
-
 func indexHasArrayIndexKey(index datastore.Index) bool {
 	for _, sk := range index.RangeKey() {
 		if isArray, _ := sk.IsArrayIndexKey(); isArray {
@@ -377,4 +369,8 @@ func indexHasArrayIndexKey(index datastore.Index) bool {
 		}
 	}
 	return false
+}
+
+func indexKeyIsDescCollation(keypos int, indexKeys datastore.IndexKeys) bool {
+	return len(indexKeys) > 0 && keypos < len(indexKeys) && indexKeys[keypos].Desc
 }

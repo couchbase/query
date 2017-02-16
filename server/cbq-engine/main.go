@@ -66,6 +66,7 @@ var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 var PIPELINE_CAP = flag.Int64("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
 var PIPELINE_BATCH = flag.Int("pipeline-batch", 16, "Number of items execution operators can batch")
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
+var MAX_INDEX_API = flag.Int("max-index-api", 2, "Max Index API")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -200,6 +201,7 @@ func main() {
 	server.SetPipelineBatch(*PIPELINE_BATCH)
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
+	server.SetMaxIndexAPI(*MAX_INDEX_API)
 
 	go server.Serve()
 	go server.PlusServe()
@@ -216,6 +218,7 @@ func main() {
 		logging.Pair{"pipeline-batch", server.PipelineBatch()},
 		logging.Pair{"request-cap", *REQUEST_CAP},
 		logging.Pair{"request-size-cap", server.RequestSizeCap()},
+		logging.Pair{"max-index-api", server.MaxIndexAPI()},
 		logging.Pair{"timeout", server.Timeout()},
 	)
 

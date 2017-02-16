@@ -34,20 +34,21 @@ func NewIntersectSpans(spans ...SargSpans) *IntersectSpans {
 }
 
 func (this *IntersectSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, distinct, overlap,
-	array bool, limit expression.Expression, covers expression.Covers,
+	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, ordered, overlap,
+	array bool, offset, limit expression.Expression, projection *plan.IndexProjection, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
-		return this.spans[0].CreateScan(index, term, distinct, overlap, array, limit, covers, filterCovers)
+		return this.spans[0].CreateScan(index, term, reverse, distinct, ordered, overlap, array, offset, limit, projection, covers, filterCovers)
 	}
 
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
 		// No LIMIT pushdown
-		scans[i] = s.CreateScan(index, term, distinct, false, true, nil, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, reverse, distinct, false, false, true, nil, nil, projection, covers, filterCovers)
 	}
 
+	limit = limitPlusOffset(limit, offset)
 	return plan.NewIntersectScan(limit, scans...)
 }
 
@@ -116,6 +117,14 @@ func (this *IntersectSpans) Streamline() SargSpans {
 
 func (this *IntersectSpans) CanUseIndexOrder() bool {
 	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder()
+}
+
+func (this *IntersectSpans) CanPushDownOffset(index datastore.Index, overlap, array bool) bool {
+	return len(this.spans) == 1 && this.spans[0].CanPushDownOffset(index, overlap, array)
+}
+
+func (this *IntersectSpans) CanHaveDuplicates(index datastore.Index, overlap, array bool) bool {
+	return len(this.spans) == 1 && this.spans[0].CanHaveDuplicates(index, overlap, array)
 }
 
 func (this *IntersectSpans) SkipsLeadingNulls() bool {

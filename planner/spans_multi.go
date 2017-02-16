@@ -53,29 +53,20 @@ func (this *multiSpansBase) Exact() bool {
 	return true
 }
 
+func (this *multiSpansBase) ExactSpan1(nkeys int) bool {
+	for _, s := range this.spans {
+		if !s.ExactSpan1(nkeys) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this *multiSpansBase) SetExact(exact bool) {
 	for _, s := range this.spans {
 		s.SetExact(exact)
 	}
-}
-
-func (this *multiSpansBase) SetExactForComposite(sargLength int) bool {
-	exact := true
-	for _, s := range this.spans {
-		exact = s.SetExactForComposite(sargLength) && exact
-	}
-
-	return exact
-}
-
-func (this *multiSpansBase) MissingHigh() bool {
-	for _, s := range this.spans {
-		if s.MissingHigh() {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (this *multiSpansBase) EquivalenceRangeAt(i int) (eq bool, expr expression.Expression) {

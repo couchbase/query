@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -72,7 +71,8 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		go this.scan.RunOnce(context, parent)
 
 		var item value.AnnotatedValue
-		limit := int(getLimit(this.plan.Limit(), this.plan.Covering(), context))
+		limit := evalLimitOffset(this.plan.Limit(), nil, int64(-1), this.plan.Covering(), context)
+		offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
 		n := 1
 		ok := true
 
@@ -90,7 +90,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 				this.switchPhase(_EXECTIME)
 				if ok {
 					this.addInDocs(1)
-					ok = this.processKey(item, context, limit)
+					ok = this.processKey(item, context, limit, offset)
 				}
 			case <-this.childChannel:
 				n--
@@ -113,7 +113,7 @@ func (this *DistinctScan) ChildChannel() StopChannel {
 }
 
 func (this *DistinctScan) processKey(item value.AnnotatedValue,
-	context *Context, limit int) bool {
+	context *Context, limit, offset int64) bool {
 
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
@@ -135,11 +135,17 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue,
 		return true
 	}
 
-	if limit > 0 && len(this.keys) >= limit {
+	this.keys[key] = true
+
+	len := int64(len(this.keys))
+	if offset > 0 && len <= offset {
+		return true
+	}
+
+	if limit > 0 && len > (limit+offset) {
 		return false
 	}
 
-	this.keys[key] = true
 	item.SetBit(this.bit)
 	return this.sendItem(item)
 }
@@ -155,20 +161,6 @@ func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 func (this *DistinctScan) Done() {
 	this.wait()
 	this.scan.Done()
-}
-
-func (this *DistinctScan) getLimit(context *Context) int64 {
-	limit := int64(-1)
-	if this.plan.Limit() != nil {
-		if context.ScanConsistency() == datastore.UNBOUNDED || this.plan.Covering() {
-			lv, err := this.plan.Limit().Evaluate(nil, context)
-			if err == nil && lv.Type() == value.NUMBER {
-				limit = lv.(value.NumberValue).Int64()
-			}
-		}
-	}
-
-	return limit
 }
 
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

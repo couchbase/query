@@ -10,23 +10,8 @@
 package planner
 
 import (
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
-
-var _NULL_EXPRS = expression.Expressions{expression.NULL_EXPR}
-
-var _NULL_SPANS SargSpans
-
-func init() {
-	span := &plan.Span{}
-	span.Range.Low = expression.Expressions{expression.NULL_EXPR}
-	span.Range.High = span.Range.Low
-	span.Range.Inclusion = datastore.BOTH
-	span.Exact = true
-	_NULL_SPANS = NewTermSpans(span)
-}
 
 func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
 	if SubsetOf(pred, this.key) {

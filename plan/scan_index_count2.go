@@ -20,89 +20,99 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type IndexCountScan struct {
+type IndexCountScan2 struct {
 	readonly
-	index        datastore.CountIndex
+	index        datastore.CountIndex2
 	term         *algebra.KeyspaceTerm
-	spans        Spans
+	spans        Spans2
+	distinct     bool
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
 }
 
-func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm, spans Spans,
-	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) *IndexCountScan {
-	return &IndexCountScan{
+func NewIndexCountScan2(index datastore.CountIndex2, term *algebra.KeyspaceTerm,
+	spans Spans2, distinct bool, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value) *IndexCountScan2 {
+	return &IndexCountScan2{
 		index:        index,
 		term:         term,
 		spans:        spans,
+		distinct:     distinct,
 		covers:       covers,
 		filterCovers: filterCovers,
 	}
 }
 
-func (this *IndexCountScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitIndexCountScan(this)
+func (this *IndexCountScan2) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIndexCountScan2(this)
 }
 
-func (this *IndexCountScan) New() Operator {
-	return &IndexCountScan{}
+func (this *IndexCountScan2) New() Operator {
+	return &IndexCountScan2{}
 }
 
-func (this *IndexCountScan) Index() datastore.CountIndex {
+func (this *IndexCountScan2) Index() datastore.CountIndex2 {
 	return this.index
 }
 
-func (this *IndexCountScan) Term() *algebra.KeyspaceTerm {
+func (this *IndexCountScan2) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *IndexCountScan) Spans() Spans {
+func (this *IndexCountScan2) Spans() Spans2 {
 	return this.spans
 }
 
-func (this *IndexCountScan) Covers() expression.Covers {
+func (this *IndexCountScan2) Distinct() bool {
+	return this.distinct
+}
+
+func (this *IndexCountScan2) Covers() expression.Covers {
 	return this.covers
 }
 
-func (this *IndexCountScan) FilterCovers() map[*expression.Cover]value.Value {
+func (this *IndexCountScan2) FilterCovers() map[*expression.Cover]value.Value {
 	return this.filterCovers
 }
 
-func (this *IndexCountScan) Covering() bool {
+func (this *IndexCountScan2) Covering() bool {
 	return len(this.covers) > 0
 }
 
-func (this *IndexCountScan) Limit() expression.Expression {
+func (this *IndexCountScan2) Limit() expression.Expression {
 	return nil
 }
 
-func (this *IndexCountScan) SetLimit(limit expression.Expression) {
+func (this *IndexCountScan2) SetLimit(limit expression.Expression) {
 }
 
-func (this *IndexCountScan) Offset() expression.Expression {
+func (this *IndexCountScan2) Offset() expression.Expression {
 	return nil
 }
 
-func (this *IndexCountScan) SetOffset(offset expression.Expression) {
+func (this *IndexCountScan2) SetOffset(offset expression.Expression) {
 }
 
-func (this *IndexCountScan) String() string {
+func (this *IndexCountScan2) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
 }
 
-func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
+func (this *IndexCountScan2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexCountScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexCountScan"}
+func (this *IndexCountScan2) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+	r := map[string]interface{}{"#operator": "IndexCountScan2"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
+	if this.distinct {
+		r["distinct"] = this.distinct
+	}
 
 	if len(this.covers) > 0 {
 		r["covers"] = this.covers
@@ -123,7 +133,7 @@ func (this *IndexCountScan) MarshalBase(f func(map[string]interface{})) map[stri
 	return r
 }
 
-func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
+func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_            string                     `json:"#operator"`
 		index        string                     `json:"index"`
@@ -131,7 +141,8 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		namespace    string                     `json:"namespace"`
 		keyspace     string                     `json:"keyspace"`
 		using        datastore.IndexType        `json:"using"`
-		spans        Spans                      `json:"spans"`
+		spans        Spans2                     `json:"spans"`
+		distinct     bool                       `json:"distinct"`
 		covers       []string                   `json:"covers"`
 		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
 	}
@@ -148,6 +159,7 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.namespace, _unmarshalled.keyspace, "", nil, nil)
 	this.spans = _unmarshalled.spans
+	this.distinct = _unmarshalled.distinct
 
 	if len(_unmarshalled.covers) > 0 {
 		this.covers = make(expression.Covers, len(_unmarshalled.covers))
@@ -183,11 +195,12 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
-	countIndex, ok := index.(datastore.CountIndex)
-	if !ok {
-		return errors.NewError(nil, "Unable to find Count() for index")
-	}
 
-	this.index = countIndex
+	countIndex2, ok := index.(datastore.CountIndex2)
+	if !ok {
+		return errors.NewError(nil, "Unable to find Count2() for index")
+	}
+	this.index = countIndex2
+
 	return nil
 }

@@ -81,6 +81,17 @@ func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
 	return NewIndexScan(plan, this.context), nil
 }
 
+func (this *builder) VisitIndexScan2(plan *plan.IndexScan2) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspaceTerm := plan.Term()
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
+	return NewIndexScan2(plan, this.context), nil
+}
+
 func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}, error) {
 	// Remember the bucket of the scanned index.
 	if this.scannedIndexes != nil {
@@ -90,6 +101,17 @@ func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}
 	}
 
 	return NewIndexCountScan(plan, this.context), nil
+}
+
+func (this *builder) VisitIndexCountScan2(plan *plan.IndexCountScan2) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspaceTerm := plan.Term()
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
+	return NewIndexCountScan2(plan, this.context), nil
 }
 
 func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {

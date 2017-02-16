@@ -16,26 +16,32 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, limit expression.Expression,
+func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
 	indexes map[datastore.Index]*indexEntry, unnestIndexes []datastore.Index,
 	arrayKeys map[datastore.Index]*expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, int, error) {
 
 	order := this.order
 	limitExpr := this.limit
+	offsetExpr := this.offset
 	countAgg := this.countAgg
+	countDistinctAgg := this.countDistinctAgg
 	minAgg := this.minAgg
+	maxAgg := this.maxAgg
 
 	cops := make(map[datastore.Index]plan.SecondaryScan, len(unnests))
 
 	for _, index := range unnestIndexes {
 		this.order = order
 		this.limit = limitExpr
+		this.offset = offsetExpr
 		this.countAgg = countAgg
+		this.countDistinctAgg = countDistinctAgg
 		this.minAgg = minAgg
+		this.maxAgg = maxAgg
 
 		entry := indexes[index]
-		cop, cun, err := this.buildOneCoveringUnnestScan(node, pred, limit, index, entry, arrayKeys[index], unnests)
+		cop, cun, err := this.buildOneCoveringUnnestScan(node, pred, index, entry, arrayKeys[index], unnests)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -53,8 +59,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, l
 	}
 
 	// No pushdowns
-	this.resetOrderLimit()
-	this.resetCountMin()
+	this.resetPushDowns()
 
 	// Find shortest covering scan
 	n := 0
@@ -78,7 +83,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, l
 	return nil, 0, nil
 }
 
-func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, limit expression.Expression,
+func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
 	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, map[*algebra.Unnest]bool, error) {
 
@@ -88,7 +93,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	}
 
 	// Sarg and populate spans
-	op, unnest, _, err := matchUnnest(node, pred, limit, unnests[0], index, entry, arrayKey, unnests)
+	op, unnest, _, err := this.matchUnnest(node, pred, unnests[0], index, entry, arrayKey, unnests)
 	if op == nil || err != nil {
 		return nil, nil, err
 	}
@@ -203,47 +208,34 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// Covering UNNEST index using ALL ARRAY key
 	array := len(coveredUnnests) > 0
-
+	duplicates := entry.spans.CanHaveDuplicates(index, pred.MayOverlapSpans(), array)
+	indexProjection := this.buildIndexProjection(entry, exprs, id, duplicates)
 	pushDown := entry.exactSpans
 	if pushDown {
-		if array && this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
-			if countIndex, ok := index.(datastore.CountIndex); ok {
-				if termSpans, ok := entry.spans.(*TermSpans); ok && (termSpans.Size() == 1 || !pred.MayOverlapSpans()) {
-					this.maxParallelism = 1
-					this.countScan = plan.NewIndexCountScan(countIndex, node, termSpans.Spans(), covers, filterCovers)
-					return this.countScan, coveredUnnests, nil
-				}
-			}
-		}
-
-		if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
-			this.maxParallelism = 1
-			limit = expression.ONE_EXPR
-			scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), true, limit, covers, filterCovers)
-			if scan != nil {
-				this.coveringScans = append(this.coveringScans, scan)
-			}
+		scan := this.buildCoveringPushdDownScan(index, node, entry, pred, indexProjection,
+			array, array, covers, filterCovers)
+		if scan != nil {
 			return scan, coveredUnnests, nil
 		}
 	}
 
-	this.resetCountMin()
-
-	if limit != nil && !pushDown {
-		limit = nil
-		this.limit = nil
-	}
-
-	if this.order != nil && (!array || !this.useIndexOrder(entry, entry.keys)) {
-		this.resetOrderLimit()
-		limit = nil
-	}
+	this.resetCountMinMax()
 
 	if this.order != nil {
-		this.maxParallelism = 1
+		if !array && this.useIndexOrder(entry, keys) {
+			this.maxParallelism = 1
+		} else {
+			this.resetOrderLimitOffset()
+		}
 	}
 
-	scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), array, limit, covers, filterCovers)
+	if this.hasLimitOrOffset() && (array || !pushDown) {
+		this.resetLimitOffset()
+	}
+
+	projDistinct := pushDown && canPushDownProjectionDistinct(this.projection, keys)
+
+	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, covers, filterCovers)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}

@@ -19,7 +19,7 @@ import (
 )
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	node *algebra.KeyspaceTerm, id, pred expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
 	if this.cover == nil {
@@ -133,53 +133,81 @@ outer:
 		covers = append(covers, expression.NewCover(key))
 	}
 
+	duplicates := entry.spans.CanHaveDuplicates(index, pred.MayOverlapSpans(), false)
+	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || duplicates)
 	arrayIndex := arrays[index]
-	pushDown, err := allowedPushDown(entry, pred, alias)
+	pushDown, err := this.checkPushDowns(entry, pred, alias, false)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	if !arrayIndex && pushDown && this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
-		if countIndex, ok := index.(datastore.CountIndex); ok {
-			if termSpans, ok := entry.spans.(*TermSpans); ok && (termSpans.Size() == 1 || !pred.MayOverlapSpans()) {
-				this.maxParallelism = 1
-				this.countScan = plan.NewIndexCountScan(countIndex, node, termSpans.Spans(), covers, filterCovers)
-				return this.countScan, sargLength, nil
-			}
-		}
-	}
-
-	if pushDown && this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
-		this.maxParallelism = 1
-		limit = expression.ONE_EXPR
-		scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+	if pushDown {
+		scan := this.buildCoveringPushdDownScan(index, node, entry, pred, indexProjection,
+			!arrayIndex, false, covers, filterCovers)
 		if scan != nil {
-			this.coveringScans = append(this.coveringScans, scan)
+			return scan, sargLength, nil
 		}
-		return scan, sargLength, nil
+
 	}
 
-	this.resetCountMin()
-
-	if limit != nil && !pushDown {
-		limit = nil
-		this.limit = nil
-	}
-
-	if this.order != nil && !this.useIndexOrder(entry, entry.keys) {
-		this.resetOrderLimit()
-		limit = nil
-	}
-
+	this.resetCountMinMax()
 	if this.order != nil {
-		this.maxParallelism = 1
+		if this.useIndexOrder(entry, keys) {
+			this.maxParallelism = 1
+		} else {
+			this.resetOrderLimitOffset()
+		}
 	}
 
-	scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+	if this.hasLimitOrOffset() && !pushDown {
+		this.resetLimitOffset()
+	}
+
+	projDistinct := pushDown && canPushDownProjectionDistinct(this.projection, keys)
+
+	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), false,
+		this.offset, this.limit, indexProjection, covers, filterCovers)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
 	return scan, sargLength, nil
+}
+
+func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *algebra.KeyspaceTerm, entry *indexEntry,
+	pred expression.Expression, indexProjection *plan.IndexProjection, countPush, array bool,
+	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
+
+	if countPush && (this.countAgg != nil || this.countDistinctAgg != nil) {
+		var op expression.Expression
+		var distinct bool
+
+		if this.countAgg != nil {
+			op = this.countAgg.Operand()
+		} else {
+			op = this.countDistinctAgg.Operand()
+			distinct = true
+		}
+
+		if canPushDownCount(op, entry, distinct) {
+			scan := this.buildIndexCountScan(node, entry, pred, distinct, covers, filterCovers)
+			if scan != nil {
+				this.countScan = scan
+				return scan
+			}
+		}
+	}
+
+	if (this.minAgg != nil && canPushDownMin(this.minAgg, entry)) ||
+		(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry)) {
+		this.maxParallelism = 1
+		limit := expression.ONE_EXPR
+		scan := entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), array, nil, limit, indexProjection, covers, filterCovers)
+		if scan != nil {
+			this.coveringScans = append(this.coveringScans, scan)
+		}
+		return scan
+	}
+	return nil
 }
 
 func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Value, error) {
@@ -201,15 +229,14 @@ func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Val
 	return rv, nil
 }
 
-func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
-	op := countAgg.Operand()
+func canPushDownCount(op expression.Expression, entry *indexEntry, distinct bool) bool {
 	if op == nil {
-		return true
+		return !distinct
 	}
 
 	val := op.Value()
 	if val != nil {
-		return val.Type() > value.NULL
+		return !distinct && val.Type() > value.NULL
 	}
 
 	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
@@ -221,11 +248,62 @@ func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
 
 func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
 	op := minAgg.Operand()
+	if op.Value() != nil {
+		return true
+	}
+
 	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
 		return false
 	}
 
+	indexKeys := getIndexKeys(entry)
+	if indexKeyIsDescCollation(0, indexKeys) {
+		return false
+	}
+
 	return entry.spans.CanUseIndexOrder() && entry.spans.SkipsLeadingNulls()
+}
+
+func canPushDownMax(maxAgg *algebra.Max, entry *indexEntry) bool {
+	op := maxAgg.Operand()
+	if op.Value() != nil {
+		return true
+	}
+
+	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
+		return false
+	}
+
+	indexKeys := getIndexKeys(entry)
+	if !indexKeyIsDescCollation(0, indexKeys) {
+		return false
+	}
+
+	return entry.spans.CanUseIndexOrder()
+}
+
+func canPushDownProjectionDistinct(projection *algebra.Projection, keys expression.Expressions) bool {
+	if projection == nil {
+		return false
+	}
+
+	for _, expr := range projection.Expressions() {
+		if expr.Value() == nil {
+			match := false
+			for _, key := range keys {
+				if expr.EquivalentTo(key) {
+					match = true
+					break
+				}
+			}
+
+			if !match {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred expression.Expression) (

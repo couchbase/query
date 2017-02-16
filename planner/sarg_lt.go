@@ -20,27 +20,26 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 		return _SELF_SPANS, nil
 	}
 
-	var exprs expression.Expressions
-	span := &plan.Span{}
+	var expr expression.Expression
+	range2 := &plan.Range2{}
 
 	if pred.First().EquivalentTo(this.key) {
-		exprs = expression.Expressions{pred.Second().Static()}
-		span.Range.High = exprs
-		span.Range.Low = _NULL_EXPRS
+		expr = pred.Second().Static()
+		range2.Low = expression.NULL_EXPR
+		range2.High = expr
 	} else if pred.Second().EquivalentTo(this.key) {
-		exprs = expression.Expressions{pred.First().Static()}
-		span.Range.Low = exprs
+		expr = pred.First().Static()
+		range2.Low = expr
 	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil
 	} else {
 		return nil, nil
 	}
 
-	if len(exprs) == 0 || exprs[0] == nil {
+	if expr == nil {
 		return _VALUED_SPANS, nil
 	}
-
-	span.Exact = true
-	span.Range.Inclusion = datastore.NEITHER
+	range2.Inclusion = datastore.NEITHER
+	span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 	return NewTermSpans(span), nil
 }

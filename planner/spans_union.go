@@ -34,20 +34,21 @@ func NewUnionSpans(spans ...SargSpans) *UnionSpans {
 }
 
 func (this *UnionSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, distinct, overlap,
-	array bool, limit expression.Expression, covers expression.Covers,
+	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, ordered, overlap,
+	array bool, offset, limit expression.Expression, projection *plan.IndexProjection, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
-		return this.spans[0].CreateScan(index, term, distinct, overlap, array, limit, covers, filterCovers)
+		return this.spans[0].CreateScan(index, term, reverse, distinct, ordered, overlap, array, offset, limit, projection, covers, filterCovers)
 	}
 
+	lim := limitPlusOffset(limit, offset)
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
-		scans[i] = s.CreateScan(index, term, distinct, overlap, array, limit, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, reverse, distinct, ordered, overlap, array, nil, lim, projection, covers, filterCovers)
 	}
 
-	return plan.NewUnionScan(limit, scans...)
+	return plan.NewUnionScan(limit, offset, scans...)
 }
 
 func (this *UnionSpans) Compose(prev SargSpans) SargSpans {
@@ -93,6 +94,7 @@ func (this *UnionSpans) Streamline() SargSpans {
 
 	var sps []SargSpans
 	for _, span := range this.spans {
+
 		span = span.Streamline()
 
 		switch span := span.(type) {
@@ -128,7 +130,7 @@ func (this *UnionSpans) Streamline() SargSpans {
 	case 1:
 		spans = append(spans, termSpans[0])
 	default:
-		terms := make(plan.Spans, 0, this.Size())
+		terms := make(plan.Spans2, 0, this.Size())
 		for _, t := range termSpans {
 			terms = append(terms, t.spans...)
 		}
@@ -151,6 +153,26 @@ func (this *UnionSpans) Streamline() SargSpans {
 
 func (this *UnionSpans) CanUseIndexOrder() bool {
 	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder()
+}
+
+func (this *UnionSpans) CanPushDownOffset(index datastore.Index, overlap, array bool) bool {
+	for _, span := range this.spans {
+		if !span.CanPushDownOffset(index, overlap, array) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (this *UnionSpans) CanHaveDuplicates(index datastore.Index, overlap, array bool) bool {
+	for _, span := range this.spans {
+		if !span.CanHaveDuplicates(index, overlap, array) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (this *UnionSpans) SkipsLeadingNulls() bool {

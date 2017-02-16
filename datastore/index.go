@@ -28,6 +28,13 @@ const (
 	SYSTEM  IndexType = "system"  // system keyspace indexes
 )
 
+const (
+	INDEX_API_1   = 1
+	INDEX_API_2   = 2
+	INDEX_API_MIN = INDEX_API_1
+	INDEX_API_MAX = INDEX_API_2
+)
+
 type Indexer interface {
 	KeyspaceId() string                                                                       // Id of the keyspace to which this indexer belongs
 	Name() IndexType                                                                          // Unique within a Keyspace.

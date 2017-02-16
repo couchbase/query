@@ -62,18 +62,8 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		} else {
 			static := second.Static()
 
-			span := &plan.Span{}
-			span.Range.Low = expression.Expressions{expression.NewArrayMin(static)}
-			if this.missingHigh {
-				span.Range.High = expression.Expressions{
-					expression.NewSuccessor(expression.NewArrayMax(static))}
-				span.Range.Inclusion = datastore.LOW
-			} else {
-				span.Range.High = expression.Expressions{expression.NewArrayMax(static)}
-				span.Range.Inclusion = datastore.BOTH
-			}
-
-			span.Exact = false
+			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH)
+			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 			return NewTermSpans(span), nil
 		}
 	}
@@ -82,7 +72,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		return _EMPTY_SPANS, nil
 	}
 
-	spans := make(plan.Spans, 0, len(array))
+	spans := make(plan.Spans2, 0, len(array))
 	for _, elem := range array {
 		static := elem.Static()
 		if static == nil {
@@ -94,17 +84,8 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			continue
 		}
 
-		span := &plan.Span{}
-		span.Range.Low = expression.Expressions{static}
-		if this.missingHigh {
-			span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
-			span.Range.Inclusion = datastore.LOW
-		} else {
-			span.Range.High = span.Range.Low
-			span.Range.Inclusion = datastore.BOTH
-		}
-
-		span.Exact = (val != nil)
+		range2 := plan.NewRange2(static, static, datastore.BOTH)
+		span := plan.NewSpan2(nil, plan.Ranges2{range2}, (val != nil))
 		spans = append(spans, span)
 	}
 

@@ -21,14 +21,16 @@ import (
 // UnionScan scans multiple indexes and unions the results.
 type UnionScan struct {
 	readonly
-	scans []SecondaryScan
-	limit expression.Expression
+	scans  []SecondaryScan
+	limit  expression.Expression
+	offset expression.Expression
 }
 
-func NewUnionScan(limit expression.Expression, scans ...SecondaryScan) *UnionScan {
+func NewUnionScan(limit, offset expression.Expression, scans ...SecondaryScan) *UnionScan {
 	return &UnionScan{
-		scans: scans,
-		limit: limit,
+		scans:  scans,
+		limit:  limit,
+		offset: offset,
 	}
 }
 
@@ -74,6 +76,10 @@ func (this *UnionScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *UnionScan) Offset() expression.Expression {
+	return this.offset
+}
+
 func (this *UnionScan) SetLimit(limit expression.Expression) {
 	this.limit = limit
 
@@ -81,6 +87,14 @@ func (this *UnionScan) SetLimit(limit expression.Expression) {
 		if scan.Limit() != nil {
 			scan.SetLimit(limit)
 		}
+	}
+}
+
+func (this *UnionScan) SetOffset(offset expression.Expression) {
+	this.offset = offset
+
+	for _, scan := range this.scans {
+		scan.SetOffset(offset)
 	}
 }
 
@@ -103,7 +117,7 @@ func (this *UnionScan) Streamline() SecondaryScan {
 	case len(this.scans):
 		return this
 	default:
-		return NewUnionScan(this.limit, scans...)
+		return NewUnionScan(this.limit, this.offset, scans...)
 	}
 }
 
@@ -124,6 +138,10 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.offset != nil {
+		r["offset"] = expression.NewStringer().Visit(this.offset)
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -132,9 +150,10 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string            `json:"#operator"`
-		Scans []json.RawMessage `json:"scans"`
-		Limit string            `json:"limit"`
+		_      string            `json:"#operator"`
+		Scans  []json.RawMessage `json:"scans"`
+		Limit  string            `json:"limit"`
+		Offset string            `json:"offset"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -164,6 +183,13 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.Offset != "" {
+		this.offset, err = parser.Parse(_unmarshalled.Offset)
 		if err != nil {
 			return err
 		}

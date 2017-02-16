@@ -241,15 +241,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		return
 	}
 
-	limit := int64(math.MaxInt64)
-	if this.plan.Limit() != nil {
-		if context.ScanConsistency() == datastore.UNBOUNDED || this.plan.Covers() != nil {
-			lv, err := this.plan.Limit().Evaluate(nil, context)
-			if err == nil && lv.Type() == value.NUMBER {
-				limit = lv.(value.NumberValue).Int64()
-			}
-		}
-	}
+	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, this.plan.Covering(), context)
 
 	keyspaceTerm := this.plan.Term()
 	scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())

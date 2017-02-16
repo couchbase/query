@@ -29,6 +29,7 @@ func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *Inte
 		if scan.Limit() != nil {
 			scan.SetLimit(nil)
 		}
+		scan.SetOffset(nil)
 	}
 
 	buf := make([]SecondaryScan, 0, 2*len(scans))
@@ -93,6 +94,13 @@ func (this *IntersectScan) Limit() expression.Expression {
 
 func (this *IntersectScan) SetLimit(limit expression.Expression) {
 	this.limit = limit
+}
+
+func (this *IntersectScan) Offset() expression.Expression {
+	return nil
+}
+
+func (this *IntersectScan) SetOffset(limit expression.Expression) {
 }
 
 func (this *IntersectScan) String() string {

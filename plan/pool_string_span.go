@@ -22,7 +22,7 @@ func NewStringSpanPool(size int) *StringSpanPool {
 	rv := &StringSpanPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make(map[string]*Span, size)
+				return make(map[string]*Span2, size)
 			},
 		},
 		size: size,
@@ -31,11 +31,11 @@ func NewStringSpanPool(size int) *StringSpanPool {
 	return rv
 }
 
-func (this *StringSpanPool) Get() map[string]*Span {
-	return this.pool.Get().(map[string]*Span)
+func (this *StringSpanPool) Get() map[string]*Span2 {
+	return this.pool.Get().(map[string]*Span2)
 }
 
-func (this *StringSpanPool) Put(s map[string]*Span) {
+func (this *StringSpanPool) Put(s map[string]*Span2) {
 	if s == nil || len(s) > this.size {
 		return
 	}
