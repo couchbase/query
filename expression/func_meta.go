@@ -514,3 +514,58 @@ Factory method pattern.
 func (this *CurrentUsers) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return NewCurrentUsers() }
 }
+
+///////////////////////////////////////////////////
+//
+// DoAdmin
+//
+///////////////////////////////////////////////////
+
+/*
+Do one of a number of administrative functions.
+*/
+type DoAdmin struct {
+	UnaryFunctionBase
+}
+
+func NewDoAdmin(operand Expression) Function {
+	rv := &DoAdmin{
+		*NewUnaryFunctionBase("do_admin", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *DoAdmin) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DoAdmin) Type() value.Type { return value.OBJECT }
+
+func (this *DoAdmin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *DoAdmin) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	retMap := make(map[string]interface{}, 5)
+	retMap["result"] = "success"
+	return value.NewValue(retMap), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *DoAdmin) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDoAdmin(operands[0])
+	}
+}
+
