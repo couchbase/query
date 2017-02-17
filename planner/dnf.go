@@ -124,6 +124,18 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	switch operand := expr.Operand().(type) {
 	case *expression.Not:
 		return operand.Operand(), nil
+	case *expression.IsNull:
+		return expression.NewIsNotNull(operand.Operand()), nil
+	case *expression.IsMissing:
+		return expression.NewIsNotMissing(operand.Operand()), nil
+	case *expression.IsValued:
+		return expression.NewIsNotValued(operand.Operand()), nil
+	case *expression.IsNotNull:
+		return expression.NewIsNull(operand.Operand()), nil
+	case *expression.IsNotMissing:
+		return expression.NewIsMissing(operand.Operand()), nil
+	case *expression.IsNotValued:
+		return expression.NewIsValued(operand.Operand()), nil
 	case *expression.And:
 		operands := make(expression.Expressions, len(operand.Operands()))
 		for i, op := range operand.Operands() {
