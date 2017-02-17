@@ -7,24 +7,19 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package expression
+package auth
 
-import (
-	"time"
+// These structures are generic representations of users and their roles.
+// Very similar structures exist in go-couchbase, but to keep open the
+// possibility of connecting to other back ends, the query engine
+// uses its own representation.
+type User struct {
+	Name  string
+	Id    string
+	Roles []Role
+}
 
-	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/errors"
-)
-
-/*
-It imports the time package that provides the functionality
-to measure and display the time. The type Context is an
-interface that has a method Now that returns the Time that
-returns the instant it time with a nanosecond precision.
-*/
-type Context interface {
-	Now() time.Time
-	AuthenticatedUsers() []string
-	GetUserInfoAll() ([]auth.User, errors.Error)
-	PutUserInfo(u *auth.User) errors.Error
+type Role struct {
+	Name     string
+	Keyspace string
 }

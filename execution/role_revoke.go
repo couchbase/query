@@ -12,7 +12,7 @@ package execution
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -60,18 +60,18 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 			context.Fatal(err)
 			return
 		}
-		userMap := make(map[string]*datastore.User, len(currentUsers))
+		userMap := make(map[string]*auth.User, len(currentUsers))
 		for i, u := range currentUsers {
 			userMap[u.Id] = &currentUsers[i]
 		}
 
 		// Create the set of deletable roles.
 		roleSpecs := this.plan.Node().Roles()
-		deleteRoleMap := make(map[datastore.Role]bool, len(roleSpecs))
+		deleteRoleMap := make(map[auth.Role]bool, len(roleSpecs))
 		for _, rs := range roleSpecs {
-			var role datastore.Role
+			var role auth.Role
 			role.Name = rs.Role
-			role.Bucket = rs.Bucket
+			role.Keyspace = rs.Bucket
 			deleteRoleMap[role] = true
 		}
 
@@ -92,7 +92,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 			}
 			// Create a new list of roles for the user: their current
 			// roles, minus the roles targeted for deletion.
-			newRoles := make([]datastore.Role, 0, len(user.Roles))
+			newRoles := make([]auth.Role, 0, len(user.Roles))
 			for _, role := range user.Roles {
 				if deleteRoleMap[role] {
 					continue

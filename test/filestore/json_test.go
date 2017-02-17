@@ -17,7 +17,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/dustin/go-jsonpointer"
 )
 
@@ -41,10 +41,10 @@ func TestSyntaxErr(t *testing.T) {
 func TestRoleStatements(t *testing.T) {
 	qc := start()
 
-	pete := datastore.User{Name: "Peter Peterson", Id: "pete",
-		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "customer"}}}
-	sam := datastore.User{Name: "Sam Samson", Id: "sam",
-		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "orders"}}}
+	pete := auth.User{Name: "Peter Peterson", Id: "pete",
+		Roles: []auth.Role{auth.Role{Name: "cluster_admin"}, auth.Role{Name: "bucket_admin", Keyspace: "customer"}}}
+	sam := auth.User{Name: "Sam Samson", Id: "sam",
+		Roles: []auth.Role{auth.Role{Name: "replication_admin"}, auth.Role{Name: "bucket_admin", Keyspace: "orders"}}}
 
 	ds := qc.dstore
 	ds.PutUserInfo(&pete)
@@ -63,24 +63,24 @@ func TestRoleStatements(t *testing.T) {
 		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
 	}
 
-	expectedAfterGrant := []datastore.User{
-		datastore.User{
+	expectedAfterGrant := []auth.User{
+		auth.User{
 			Name: "Peter Peterson",
 			Id:   "pete",
-			Roles: []datastore.Role{
-				datastore.Role{Name: "cluster_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "customer"},
-				datastore.Role{Name: "bucket_admin", Bucket: "product"},
+			Roles: []auth.Role{
+				auth.Role{Name: "cluster_admin"},
+				auth.Role{Name: "bucket_admin", Keyspace: "customer"},
+				auth.Role{Name: "bucket_admin", Keyspace: "product"},
 			},
 		},
-		datastore.User{
+		auth.User{
 			Name: "Sam Samson",
 			Id:   "sam",
-			Roles: []datastore.Role{
-				datastore.Role{Name: "replication_admin"},
-				datastore.Role{Name: "cluster_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "orders"},
-				datastore.Role{Name: "bucket_admin", Bucket: "product"},
+			Roles: []auth.Role{
+				auth.Role{Name: "replication_admin"},
+				auth.Role{Name: "cluster_admin"},
+				auth.Role{Name: "bucket_admin", Keyspace: "orders"},
+				auth.Role{Name: "bucket_admin", Keyspace: "product"},
 			},
 		},
 	}
@@ -99,34 +99,34 @@ func TestRoleStatements(t *testing.T) {
 		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
 	}
 
-	expectedAfterRevoke := []datastore.User{
-		datastore.User{
+	expectedAfterRevoke := []auth.User{
+		auth.User{
 			Name: "Peter Peterson",
 			Id:   "pete",
-			Roles: []datastore.Role{
-				datastore.Role{Name: "bucket_admin", Bucket: "customer"},
+			Roles: []auth.Role{
+				auth.Role{Name: "bucket_admin", Keyspace: "customer"},
 			},
 		},
-		datastore.User{
+		auth.User{
 			Name: "Sam Samson",
 			Id:   "sam",
-			Roles: []datastore.Role{
-				datastore.Role{Name: "replication_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "orders"},
+			Roles: []auth.Role{
+				auth.Role{Name: "replication_admin"},
+				auth.Role{Name: "bucket_admin", Keyspace: "orders"},
 			},
 		},
 	}
 	compareUserLists(&expectedAfterRevoke, &users, t)
 }
 
-func compareUserLists(expected *[]datastore.User, result *[]datastore.User, t *testing.T) {
+func compareUserLists(expected *[]auth.User, result *[]auth.User, t *testing.T) {
 	if len(*expected) != len(*result) {
 		t.Errorf("Expected length %d, got length %d", len(*expected), len(*result))
 	}
 
 	for _, expectedUser := range *expected {
 		foundUser := false
-		var matchResultUser datastore.User
+		var matchResultUser auth.User
 		for _, resultUser := range *result {
 			if resultUser.Id == expectedUser.Id {
 				foundUser = true
@@ -145,7 +145,7 @@ func compareUserLists(expected *[]datastore.User, result *[]datastore.User, t *t
 	}
 }
 
-func compareRoleLists(expected *[]datastore.Role, result *[]datastore.Role, t *testing.T) {
+func compareRoleLists(expected *[]auth.Role, result *[]auth.Role, t *testing.T) {
 	if len(*expected) != len(*result) {
 		t.Errorf("Mismatching length of role lists. Expected %v, got %v.", *expected, *result)
 		return

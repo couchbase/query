@@ -30,6 +30,7 @@ import (
 	cbauthi "github.com/couchbase/cbauth/cbauthimpl"
 	cb "github.com/couchbase/go-couchbase"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -309,33 +310,33 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return value.NewValue(data), nil
 }
 
-func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
+func (s *store) GetUserInfoAll() ([]auth.User, errors.Error) {
 	sourceUsers, err := s.client.GetUserInfoAll()
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err)
 	}
-	resultUsers := make([]datastore.User, len(sourceUsers))
+	resultUsers := make([]auth.User, len(sourceUsers))
 	for i, u := range sourceUsers {
 		resultUsers[i].Name = u.Name
 		resultUsers[i].Id = u.Id
-		roles := make([]datastore.Role, len(u.Roles))
+		roles := make([]auth.Role, len(u.Roles))
 		for j, r := range u.Roles {
 			roles[j].Name = r.Role
-			roles[j].Bucket = r.BucketName
+			roles[j].Keyspace = r.BucketName
 		}
 		resultUsers[i].Roles = roles
 	}
 	return resultUsers, nil
 }
 
-func (s *store) PutUserInfo(u *datastore.User) errors.Error {
+func (s *store) PutUserInfo(u *auth.User) errors.Error {
 	var outputUser cb.User
 	outputUser.Name = u.Name
 	outputUser.Id = u.Id
 	outputUser.Roles = make([]cb.Role, len(u.Roles))
 	for i, r := range u.Roles {
 		outputUser.Roles[i].Role = r.Name
-		outputUser.Roles[i].BucketName = r.Bucket
+		outputUser.Roles[i].BucketName = r.Keyspace
 	}
 	err := s.client.PutUserInfo(&outputUser)
 	if err != nil {
