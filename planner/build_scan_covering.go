@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -155,15 +156,15 @@ outer:
 		if this.useIndexOrder(entry, keys) {
 			this.maxParallelism = 1
 		} else {
-			this.resetOrderLimitOffset()
+			this.resetOrderOffsetLimit()
 		}
 	}
 
-	if this.hasLimitOrOffset() && !pushDown {
-		this.resetLimitOffset()
+	if this.hasOffsetOrLimit() && !pushDown {
+		this.resetOffsetLimit()
 	}
 
-	projDistinct := pushDown && canPushDownProjectionDistinct(this.projection, keys)
+	projDistinct := pushDown && canPushDownProjectionDistinct(index, this.projection, keys)
 
 	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), false,
 		this.offset, this.limit, indexProjection, covers, filterCovers)
@@ -177,6 +178,8 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 	pred expression.Expression, indexProjection *plan.IndexProjection, countPush, array bool,
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
+	countCosntantDistinctOperand := false
+
 	if countPush && (this.countAgg != nil || this.countDistinctAgg != nil) {
 		var op expression.Expression
 		var distinct bool
@@ -186,9 +189,12 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 		} else {
 			op = this.countDistinctAgg.Operand()
 			distinct = true
+			if op != nil && op.Value() != nil {
+				countCosntantDistinctOperand = true
+			}
 		}
 
-		if canPushDownCount(op, entry, distinct) {
+		if !countCosntantDistinctOperand && canPushDownCount(op, entry, distinct) {
 			scan := this.buildIndexCountScan(node, entry, pred, distinct, covers, filterCovers)
 			if scan != nil {
 				this.countScan = scan
@@ -197,7 +203,7 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 		}
 	}
 
-	if (this.minAgg != nil && canPushDownMin(this.minAgg, entry)) ||
+	if countCosntantDistinctOperand || (this.minAgg != nil && canPushDownMin(this.minAgg, entry)) ||
 		(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry)) {
 		this.maxParallelism = 1
 		limit := expression.ONE_EXPR
@@ -207,6 +213,7 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 		}
 		return scan
 	}
+
 	return nil
 }
 
@@ -282,22 +289,20 @@ func canPushDownMax(maxAgg *algebra.Max, entry *indexEntry) bool {
 	return entry.spans.CanUseIndexOrder()
 }
 
-func canPushDownProjectionDistinct(projection *algebra.Projection, keys expression.Expressions) bool {
-	if projection == nil {
+func canPushDownProjectionDistinct(index datastore.Index, projection *algebra.Projection, indexKeys expression.Expressions) bool {
+	if projection == nil || !useIndex2API(index) {
 		return false
+	}
+	hash := _STRING_BOOL_POOL.Get()
+	defer _STRING_BOOL_POOL.Put(hash)
+
+	for _, key := range indexKeys {
+		hash[key.String()] = true
 	}
 
 	for _, expr := range projection.Expressions() {
 		if expr.Value() == nil {
-			match := false
-			for _, key := range keys {
-				if expr.EquivalentTo(key) {
-					match = true
-					break
-				}
-			}
-
-			if !match {
+			if _, ok := hash[expr.String()]; !ok {
 				return false
 			}
 		}
@@ -358,3 +363,4 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred 
 var _ARRAY_POOL = datastore.NewIndexBoolPool(64)
 var _COVERING_POOL = datastore.NewIndexBoolPool(64)
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)
+var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

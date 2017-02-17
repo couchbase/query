@@ -59,7 +59,7 @@ func (this *TermSpans) CreateScan(
 			limit = nil
 			offset = nil
 		} else if exact || distScan {
-			limitOffset = limitPlusOffset(limit, offset)
+			limitOffset = offsetPlusLimit(offset, limit)
 		}
 
 		if distScan || (len(spans) > 1 && !exact) {

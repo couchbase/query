@@ -55,21 +55,30 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 		// No ordering index, disable ORDER and LIMIT pushdown
 		if orderIndex == nil {
-			this.resetOrderLimitOffset()
+			this.resetOrderOffsetLimit()
 		}
 	}
 
-	if this.hasLimitOrOffset() {
+	var limit expression.Expression
+
+	if this.hasOffsetOrLimit() {
+		pushDown := false
 		for _, entry := range indexes {
-			pushDown, err := this.checkPushDowns(entry, pred, node.Alias(), false)
+			pushDown, err = this.checkPushDowns(entry, pred, node.Alias(), false)
 			if err != nil {
 				return nil, 0, err
 			}
 
-			if !pushDown {
-				this.resetLimitOffset()
+			if pushDown {
 				break
 			}
+		}
+
+		if pushDown && len(indexes) > 1 {
+			limit = offsetPlusLimit(this.offset, this.limit)
+			this.resetOffsetLimit()
+		} else if !pushDown {
+			this.resetOffsetLimit()
 		}
 	}
 
@@ -113,9 +122,9 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	} else if scans[0] == nil && len(scans) == 2 {
 		return scans[1], sargLength, nil
 	} else if scans[0] == nil {
-		return plan.NewIntersectScan(this.limit, scans[1:]...), sargLength, nil
+		return plan.NewIntersectScan(limit, scans[1:]...), sargLength, nil
 	} else {
-		scan = plan.NewOrderedIntersectScan(this.limit, scans...)
+		scan = plan.NewOrderedIntersectScan(limit, scans...)
 		this.orderScan = scan
 		return scan, sargLength, nil
 	}

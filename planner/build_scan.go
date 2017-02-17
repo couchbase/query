@@ -21,7 +21,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 	keys := node.Keys()
 	if keys != nil {
-		this.resetOrderLimitOffset()
+		this.resetOrderOffsetLimit()
 		switch keys.(type) {
 		case *expression.ArrayConstruct, *algebra.NamedParameter, *algebra.PositionalParameter:
 			this.maxParallelism = 0
@@ -85,7 +85,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	}
 
 	if this.order != nil {
-		this.resetOrderLimitOffset()
+		this.resetOrderOffsetLimit()
 	}
 
 	primary, err = this.buildPrimaryScan(keyspace, node, hints, false, true)
@@ -293,7 +293,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		secondary = scans[0]
 	default:
 		this.resetOffset()
-		limit := limitPlusOffset(limitExpr, offsetExpr)
+		limit := offsetPlusLimit(offsetExpr, limitExpr)
 		if scans[0] == nil {
 			if len(scans) == 2 {
 				if secOffsetPushed || unnestOffsetPushed || dynamicOffsetPushed {

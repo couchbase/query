@@ -28,7 +28,8 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 
 	var limit expression.Expression
 	if exact {
-		limit = limitPlusOffset(this.limit, this.offset)
+		limit = offsetPlusLimit(this.offset, this.limit)
+		this.resetOffset()
 	}
 
 	return plan.NewPrimaryScan(primary, keyspace, node, limit), nil

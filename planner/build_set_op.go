@@ -20,7 +20,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	this.setOpDistinct = true
 	defer func() { this.setOpDistinct = setOpDistinct }()
 
-	this.resetOrderLimitOffset()
+	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -39,7 +39,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
-	this.resetOrderLimitOffset()
+	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -62,7 +62,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	this.setOpDistinct = true
 	defer func() { this.setOpDistinct = setOpDistinct }()
 
-	this.resetOrderLimitOffset()
+	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -80,7 +80,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
-	this.resetOrderLimitOffset()
+	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -108,7 +108,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	this.setOpDistinct = true
 	defer func() { this.setOpDistinct = setOpDistinct }()
 
-	this.resetOrderLimitOffset()
+	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
@@ -126,7 +126,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
-	this.resetOrderLimitOffset()
+	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)

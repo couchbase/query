@@ -116,8 +116,10 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 						}
 
 						// Matches planner.builder.buildCoveringScan()
-						av.SetCover(covers[len(covers)-1].Text(),
-							value.NewValue(entry.PrimaryKey))
+						if proj == nil || proj.PrimaryKey {
+							av.SetCover(covers[len(covers)-1].Text(),
+								value.NewValue(entry.PrimaryKey))
+						}
 
 						av.SetField(this.plan.Term().Alias(), av)
 					}
@@ -212,9 +214,7 @@ func evalSpan2(pspans plan.Spans2, context *Context) (datastore.Spans2, bool, er
 		}
 	}
 
-	if len(dspans) == 0 {
-		empty = true
-	}
+	empty = len(dspans) == 0
 
 	return dspans, empty, nil
 }

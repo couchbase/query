@@ -48,7 +48,7 @@ func (this *IntersectSpans) CreateScan(
 		scans[i] = s.CreateScan(index, term, reverse, distinct, false, false, true, nil, nil, projection, covers, filterCovers)
 	}
 
-	limit = limitPlusOffset(limit, offset)
+	limit = offsetPlusLimit(offset, limit)
 	return plan.NewIntersectScan(limit, scans...)
 }
 

@@ -145,7 +145,7 @@ func (this *builder) checkPushDowns(entry *indexEntry, pred expression.Expressio
 
 	if this.offset != nil {
 		if !useIndex2API(entry.index) || !entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(), array) {
-			this.limit = limitPlusOffset(this.limit, this.offset)
+			this.limit = offsetPlusLimit(this.offset, this.limit)
 			this.resetOffset()
 		}
 	}

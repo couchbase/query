@@ -88,11 +88,11 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	this.resetCountMinMax()
 
 	if this.order != nil {
-		this.resetOrderLimitOffset()
+		this.resetOrderOffsetLimit()
 	}
 
-	limit := limitPlusOffset(this.limit, this.offset)
-	this.offset = nil
+	limit := offsetPlusLimit(this.offset, this.limit)
+	this.resetOffset()
 
 	var buf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan

@@ -42,7 +42,7 @@ func (this *UnionSpans) CreateScan(
 		return this.spans[0].CreateScan(index, term, reverse, distinct, ordered, overlap, array, offset, limit, projection, covers, filterCovers)
 	}
 
-	lim := limitPlusOffset(limit, offset)
+	lim := offsetPlusLimit(offset, limit)
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
 		scans[i] = s.CreateScan(index, term, reverse, distinct, ordered, overlap, array, nil, lim, projection, covers, filterCovers)

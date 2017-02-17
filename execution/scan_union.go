@@ -153,12 +153,12 @@ func (this *UnionScan) processKey(item value.AnnotatedValue,
 
 	this.keys[key] = true
 
-	len := int64(len(this.keys))
-	if offset > 0 && len <= offset {
+	length := int64(len(this.keys))
+	if offset > 0 && length <= offset {
 		return true
 	}
 
-	if limit > 0 && len > (limit+offset) {
+	if limit > 0 && length > (limit+offset) {
 		return false
 	}
 

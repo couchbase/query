@@ -225,15 +225,15 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		if !array && this.useIndexOrder(entry, keys) {
 			this.maxParallelism = 1
 		} else {
-			this.resetOrderLimitOffset()
+			this.resetOrderOffsetLimit()
 		}
 	}
 
-	if this.hasLimitOrOffset() && (array || !pushDown) {
-		this.resetLimitOffset()
+	if this.hasOffsetOrLimit() && (array || !pushDown) {
+		this.resetOffsetLimit()
 	}
 
-	projDistinct := pushDown && canPushDownProjectionDistinct(this.projection, keys)
+	projDistinct := pushDown && canPushDownProjectionDistinct(index, this.projection, keys)
 
 	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, covers, filterCovers)
 	if scan != nil {

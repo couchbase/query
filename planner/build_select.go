@@ -38,12 +38,12 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	}()
 
 	stmtOrder := stmt.Order()
-	stmtOffset, err := newOffsetOrLimitExpr(stmt.Offset(), "OFFSET")
+	stmtOffset, err := newExpr(stmt.Offset(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	stmtLimit, err := newOffsetOrLimitExpr(stmt.Limit(), "LIMIT")
+	stmtLimit, err := newExpr(stmt.Limit(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	return plan.NewSequence(children...), nil
 }
 
-func newOffsetOrLimitExpr(expr expression.Expression, str string) (expression.Expression, error) {
+func newExpr(expr expression.Expression, offset bool) (expression.Expression, error) {
 	if expr == nil {
 		return expr, nil
 	}
@@ -110,21 +110,28 @@ func newOffsetOrLimitExpr(expr expression.Expression, str string) (expression.Ex
 		return expr, nil
 	}
 
-	actual := val.Actual()
+	actual := val.ActualForIndex()
 	switch actual := actual.(type) {
 	case float64:
 		if value.IsInt(actual) {
-			if str == "OFFSET" && int64(actual) <= 0 {
+			if offset && int64(actual) <= 0 {
 				return nil, nil
+			} else if !offset && int64(actual) < 0 {
+				return expression.NewConstant(0), nil
 			}
 			return expr, nil
 		}
 	case int64:
-		if str == "OFFSET" && int64(actual) <= 0 {
+		if offset && int64(actual) <= 0 {
 			return nil, nil
+		} else if !offset && int64(actual) < 0 {
+			return expression.NewConstant(0), nil
 		}
 		return expr, nil
 	}
 
-	return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid %v value %v.", str, actual))
+	if offset {
+		return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid OFFSET value %v", actual))
+	}
+	return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT value %v", actual))
 }

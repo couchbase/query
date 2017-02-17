@@ -129,8 +129,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			switch expr := term.Expression().(type) {
 			case *algebra.Count:
 				this.countAgg = expr
-			case *algebra.CountDistinct:
-				this.countDistinctAgg = expr
+				/*			case *algebra.CountDistinct:
+							this.countDistinctAgg = expr
+				*/
 			case *algebra.Min:
 				this.minAgg = expr
 			case *algebra.Max:
@@ -148,8 +149,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
 	// If SELECT DISTINCT, avoid pushing LIMIT down to index scan.
-	if this.hasLimitOrOffset() && node.Projection().Distinct() {
-		this.resetLimitOffset()
+	if this.hasOffsetOrLimit() && node.Projection().Distinct() {
+		this.resetOffsetLimit()
 	}
 
 	// Skip fixed values in ORDER BY
