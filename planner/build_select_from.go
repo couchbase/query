@@ -364,11 +364,11 @@ func (this *builder) resetPushDowns() {
 func offsetPlusLimit(offset, limit expression.Expression) expression.Expression {
 	if offset != nil && limit != nil {
 		if offset.Value() == nil {
-			offset = expression.NewGreatest(expression.NewConstant(0), offset)
+			offset = expression.NewGreatest(expression.ZERO_EXPR, offset)
 		}
 
 		if limit.Value() == nil {
-			limit = expression.NewGreatest(expression.NewConstant(0), limit)
+			limit = expression.NewGreatest(expression.ZERO_EXPR, limit)
 		}
 
 		return expression.NewAdd(limit, offset)

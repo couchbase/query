@@ -38,12 +38,12 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	}()
 
 	stmtOrder := stmt.Order()
-	stmtOffset, err := newExpr(stmt.Offset(), true)
+	stmtOffset, err := newOffsetLimitExpr(stmt.Offset(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	stmtLimit, err := newExpr(stmt.Limit(), false)
+	stmtLimit, err := newOffsetLimitExpr(stmt.Limit(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	return plan.NewSequence(children...), nil
 }
 
-func newExpr(expr expression.Expression, offset bool) (expression.Expression, error) {
+func newOffsetLimitExpr(expr expression.Expression, offset bool) (expression.Expression, error) {
 	if expr == nil {
 		return expr, nil
 	}

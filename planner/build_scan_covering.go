@@ -178,7 +178,7 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 	pred expression.Expression, indexProjection *plan.IndexProjection, countPush, array bool,
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
-	countCosntantDistinctOperand := false
+	countConstantDistinctOperand := false
 
 	if countPush && (this.countAgg != nil || this.countDistinctAgg != nil) {
 		var op expression.Expression
@@ -190,11 +190,11 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 			op = this.countDistinctAgg.Operand()
 			distinct = true
 			if op != nil && op.Value() != nil {
-				countCosntantDistinctOperand = true
+				countConstantDistinctOperand = true
 			}
 		}
 
-		if !countCosntantDistinctOperand && canPushDownCount(op, entry, distinct) {
+		if !countConstantDistinctOperand && canPushDownCount(op, entry, distinct) {
 			scan := this.buildIndexCountScan(node, entry, pred, distinct, covers, filterCovers)
 			if scan != nil {
 				this.countScan = scan
@@ -203,7 +203,7 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 		}
 	}
 
-	if countCosntantDistinctOperand || (this.minAgg != nil && canPushDownMin(this.minAgg, entry)) ||
+	if countConstantDistinctOperand || (this.minAgg != nil && canPushDownMin(this.minAgg, entry)) ||
 		(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry)) {
 		this.maxParallelism = 1
 		limit := expression.ONE_EXPR
