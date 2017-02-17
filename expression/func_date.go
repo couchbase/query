@@ -981,12 +981,12 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	// Keep incrementing start date by step for part, and add it to
 	// the array to be returned.
 	start := t1
-	end := t2.String()
+	end := timeToMillis(t2)
 
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && start.String() < end) ||
-		(step < 0.0 && start.String() > end) {
+	for (step > 0.0 && timeToMillis(start) < end) ||
+		(step < 0.0 && timeToMillis(start) > end) {
 		// Compute the new time
 		rv = append(rv, timeToStr(start, fmt1))
 		t, err := dateAdd(start, int(step), partStr)
@@ -1137,11 +1137,11 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 	// Keep incrementing start date by step for part, and add it to
 	// the array to be returned.
 	start := t1
-
+	end := timeToMillis(t2)
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && start.String() < t2.String()) ||
-		(step < 0.0 && start.String() > t2.String()) {
+	for (step > 0.0 && timeToMillis(start) < end) ||
+		(step < 0.0 && timeToMillis(start) > end) {
 		// Compute the new time
 		rv = append(rv, timeToMillis(start))
 		t, err := dateAdd(start, int(step), partStr)
