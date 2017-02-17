@@ -80,14 +80,20 @@ func TestConverter(t *testing.T) {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
-	s1 = NewJSConverter().Visit(expression.NewSubstr(constant("dfgabc"), constant(1), constant(4)))
-	s2 = "\"dfgabc\".substring(1,4)"
+	s1 = NewJSConverter().Visit(expression.NewSubstr0(constant("dfgabc"), constant(1), constant(4)))
+	s2 = "\"dfgabc\".substring(1,5)"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
-	s1 = NewJSConverter().Visit(expression.NewAdd(expression.NewContains(constant("dfgabc"), constant("abc")), expression.NewSubstr(constant("dfgabc"), constant(1), constant(4))))
-	s2 = "(\"dfgabc\".indexOf(\"abc\") + \"dfgabc\".substring(1,4))"
+	s1 = NewJSConverter().Visit(expression.NewSubstr1(constant("dfgabc"), constant(1), constant(4)))
+	s2 = "\"dfgabc\".substring(0,4)"
+	if s1 != s2 {
+		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
+	}
+
+	s1 = NewJSConverter().Visit(expression.NewAdd(expression.NewContains(constant("dfgabc"), constant("abc")), expression.NewSubstr0(constant("dfgabc"), constant(1), constant(4))))
+	s2 = "(\"dfgabc\".indexOf(\"abc\") + \"dfgabc\".substring(1,5))"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}

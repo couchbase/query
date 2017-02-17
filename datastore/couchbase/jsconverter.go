@@ -507,8 +507,10 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 	var nopush bool
 	var nobracket bool
 	var pushOperands bool
+	var skipOperands bool
 	var writeLater bool
 	var functionName string
+	var firstOp expression.Expression
 
 	switch strings.ToLower(expr.Name()) {
 	case "lower":
@@ -537,10 +539,36 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 		functionExpr.name = ".indexOf("
 		this.stack.Push(functionExpr)
 		pushOperands = true
-	case "substr":
+	case "substr", "substr0", "substr1":
 		functionExpr.name = ".substring("
 		this.stack.Push(functionExpr)
-		pushOperands = true
+		fname := strings.ToLower(expr.Name())
+		operands := expr.Operands()
+		for i, op := range operands {
+			if i == 0 {
+				firstOp = op
+				continue
+			} else {
+				if i == 1 && fname == "substr1" {
+					op = expression.NewSub(op, expression.ONE_EXPR)
+					val := op.Value()
+					if val != nil {
+						op = expression.NewConstant(val)
+					}
+				} else if i == 2 {
+					op = expression.NewAdd(operands[i-1], operands[i])
+					if fname == "substr1" {
+						op = expression.NewSub(op, expression.ONE_EXPR)
+					}
+					val := op.Value()
+					if val != nil {
+						op = expression.NewConstant(val)
+					}
+				}
+				functionExpr.operands.PushBack(op)
+			}
+		}
+		skipOperands = true
 	case "now_millis":
 		buf.WriteString("Date.now().toString()")
 	case "meta":
@@ -552,27 +580,27 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 		buf.WriteString("(")
 	}
 
-	var firstOp expression.Expression
+	if !skipOperands {
+		for i, op := range expr.Operands() {
+			if pushOperands == true {
 
-	for i, op := range expr.Operands() {
-		if pushOperands == true {
+				if i == 0 {
+					firstOp = op
+					continue
+				} else {
+					functionExpr.operands.PushBack(op)
+				}
 
-			if i == 0 {
-				firstOp = op
-				continue
 			} else {
-				functionExpr.operands.PushBack(op)
-			}
+				if i > 0 {
+					buf.WriteString(", ")
+				}
 
-		} else {
-			if i > 0 {
-				buf.WriteString(", ")
-			}
-
-			if op == nil {
-				buf.WriteString("*") // for count(*)
-			} else {
-				buf.WriteString(this.Visit(op))
+				if op == nil {
+					buf.WriteString("*") // for count(*)
+				} else {
+					buf.WriteString(this.Visit(op))
+				}
 			}
 		}
 	}
