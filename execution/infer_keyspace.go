@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -30,6 +29,7 @@ func NewInferKeyspace(plan *plan.InferKeyspace, context *Context) *InferKeyspace
 		plan: plan,
 	}
 
+	rv.execPhase = INFER
 	rv.output = rv
 	return rv
 }
@@ -46,7 +46,6 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		this.switchPhase(_EXECTIME)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INFER, d) }
 		defer func() { this.switchPhase(_NOTIME) }()
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped

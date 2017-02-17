@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -55,11 +54,10 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		this.active()
 		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_SCAN, d) }
+		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
-		context.AddPhaseOperator(INDEX_SCAN)
 
 		spans := this.plan.Spans()
 		n := len(spans)
@@ -149,12 +147,13 @@ func (this *spanScan) Copy() Operator {
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover() // Recover from any panic
 		this.switchPhase(_EXECTIME)
-		defer context.Recover()                      // Recover from any panic
+		this.addExecPhase(INDEX_SCAN, context)	     // we have already added the scan operator
+							     // in the primary scan
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_SCAN, d) }
 
 		conn := datastore.NewIndexConnection(context)
 		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped

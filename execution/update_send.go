@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -34,6 +33,7 @@ func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
 		limit: -1,
 	}
 
+	rv.execPhase = UPDATE
 	rv.output = rv
 	return rv
 }
@@ -47,7 +47,6 @@ func (this *SendUpdate) Copy() Operator {
 }
 
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(UPDATE, d) }
 	this.runConsumer(this, context, parent)
 }
 

@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -32,6 +31,7 @@ func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 		limit: -1,
 	}
 
+	rv.execPhase = DELETE
 	rv.output = rv
 	return rv
 }
@@ -45,7 +45,6 @@ func (this *SendDelete) Copy() Operator {
 }
 
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(DELETE, d) }
 	this.runConsumer(this, context, parent)
 }
 

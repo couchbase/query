@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -64,7 +63,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		this.active()
 		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(MERGE, d) }
+		this.setExecPhase(MERGE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped

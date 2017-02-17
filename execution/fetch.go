@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -33,6 +32,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 		batchSize: PipelineBatchSize(),
 	}
 
+	rv.execPhase = FETCH
 	rv.output = rv
 	return rv
 }
@@ -46,8 +46,6 @@ func (this *Fetch) Copy() Operator {
 }
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
-	context.AddPhaseOperator(FETCH)
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(FETCH, d) }
 	this.runConsumer(this, context, parent)
 }
 

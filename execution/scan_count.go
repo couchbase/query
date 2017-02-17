@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -44,7 +43,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		this.switchPhase(_EXECTIME)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(COUNT, d) }
+		this.setExecPhase(COUNT, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped

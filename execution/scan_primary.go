@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 	"math"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -47,8 +46,7 @@ func (this *PrimaryScan) Copy() Operator {
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
-		context.AddPhaseOperator(PRIMARY_SCAN)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(PRIMARY_SCAN, d) }
+		this.setExecPhase(PRIMARY_SCAN, context)
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
@@ -196,10 +194,8 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
 
 	index := this.plan.Index()
-	this.switchPhase(_SERVTIME)
 	index.ScanEntries(context.RequestId(), limit,
 		context.ScanConsistency(), scanVector, conn)
-	this.switchPhase(_EXECTIME)
 }
 
 func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, chunkSize int, indexEntry *datastore.IndexEntry) {
@@ -212,10 +208,8 @@ func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnec
 	}
 	keyspace := this.plan.Keyspace()
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
-	this.switchPhase(_SERVTIME)
 	this.plan.Index().Scan(context.RequestId(), ds, true, int64(chunkSize),
 		context.ScanConsistency(), scanVector, conn)
-	this.switchPhase(_EXECTIME)
 }
 
 func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexConnection {

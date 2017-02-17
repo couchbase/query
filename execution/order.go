@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -38,6 +37,7 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 		values: _ORDER_POOL.Get(),
 	}
 
+	rv.execPhase = SORT
 	rv.output = rv
 	return rv
 }
@@ -56,8 +56,6 @@ func (this *Order) Copy() Operator {
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(SORT, d) }
-	context.AddPhaseOperator(SORT)
 	this.runConsumer(this, context, parent)
 }
 

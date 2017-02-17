@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -32,6 +31,7 @@ func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
 		limit: -1,
 	}
 
+	rv.execPhase = INSERT
 	rv.output = rv
 	return rv
 }
@@ -45,7 +45,6 @@ func (this *SendInsert) Copy() Operator {
 }
 
 func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INSERT, d) }
 	this.runConsumer(this, context, parent)
 }
 

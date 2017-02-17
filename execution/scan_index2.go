@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 	"math"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -52,11 +51,10 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		this.switchPhase(_EXECTIME)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_SCAN, d) }
+		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
-		context.AddPhaseOperator(INDEX_SCAN)
 
 		conn := datastore.NewIndexConnection(context)
 		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped

@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"math"
 	"sync"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -33,6 +32,7 @@ func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
 		plan:     plan,
 	}
 
+	rv.execPhase = INDEX_NEST
 	rv.output = rv
 	return rv
 }
@@ -49,7 +49,6 @@ func (this *IndexNest) Copy() Operator {
 }
 
 func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_NEST, d) }
 	this.runConsumer(this, context, parent)
 }
 

@@ -359,6 +359,8 @@ func (this *BaseRequest) SetPrepared(prepared *plan.Prepared) {
 }
 
 func (this *BaseRequest) SetState(state State) {
+	this.Lock()
+	defer this.Unlock()
 
 	// Once we transition to TIMEOUT or CLOSE, we don't transition
 	// to STOPPED or COMPLETED to allow the request to close
@@ -368,9 +370,6 @@ func (this *BaseRequest) SetState(state State) {
 		(state == STOPPED || state == COMPLETED) {
 		return
 	}
-
-	this.Lock()
-	defer this.Unlock()
 	this.state = state
 }
 

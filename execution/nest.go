@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -28,6 +27,7 @@ func NewNest(plan *plan.Nest, context *Context) *Nest {
 		plan:     plan,
 	}
 
+	rv.execPhase = NEST
 	rv.output = rv
 	return rv
 }
@@ -44,7 +44,6 @@ func (this *Nest) Copy() Operator {
 }
 
 func (this *Nest) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(NEST, d) }
 	this.runConsumer(this, context, parent)
 }
 

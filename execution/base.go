@@ -48,6 +48,7 @@ type base struct {
 	batch         []value.AnnotatedValue
 	timePhase     timePhases
 	startTime     time.Time
+	execPhase     Phases
 	phaseTimes    func(time.Duration)
 	execTime      time.Duration
 	chanTime      time.Duration
@@ -93,6 +94,7 @@ func newBase(context *Context) base {
 	return base{
 		itemChannel: make(value.AnnotatedChannel, context.GetPipelineCap()),
 		stopChannel: make(StopChannel, 1),
+		execPhase:   PHASES,
 		phaseTimes:  func(t time.Duration) {},
 	}
 }
@@ -103,8 +105,20 @@ func newRedirectBase() base {
 	return base{
 		itemChannel: make(value.AnnotatedChannel, 1),
 		stopChannel: make(StopChannel, 1),
+		execPhase:   PHASES,
 		phaseTimes:  func(t time.Duration) {},
 	}
+}
+
+// accrues operators and phase times
+func (this *base) setExecPhase(phase Phases, context *Context) {
+	context.AddPhaseOperator(phase)
+	this.addExecPhase(phase, context)
+}
+
+// accrues phase times (useful where we don't want to count operators
+func (this *base) addExecPhase(phase Phases, context *Context) {
+	this.phaseTimes = func(t time.Duration) { context.AddPhaseTime(phase, t) }
 }
 
 func (this *base) ItemChannel() value.AnnotatedChannel {
@@ -162,6 +176,7 @@ func (this *base) copy() base {
 		input:       this.input,
 		output:      this.output,
 		parent:      this.parent,
+		execPhase:   this.execPhase,
 		phaseTimes:  this.phaseTimes,
 	}
 }
@@ -202,6 +217,9 @@ type consumer interface {
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		if this.execPhase != PHASES {
+			this.setExecPhase(this.execPhase, context)
+		}
 		this.switchPhase(_EXECTIME)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped

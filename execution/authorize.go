@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
@@ -56,7 +55,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.active()
 		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
-		this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(AUTHORIZE, d) }
+		this.setExecPhase(AUTHORIZE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped

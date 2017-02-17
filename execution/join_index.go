@@ -34,6 +34,7 @@ func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 		plan:     plan,
 	}
 
+	rv.execPhase = INDEX_JOIN
 	rv.output = rv
 	return rv
 }
@@ -50,7 +51,6 @@ func (this *IndexJoin) Copy() Operator {
 }
 
 func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(INDEX_JOIN, d) }
 	this.runConsumer(this, context, parent)
 }
 

@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -28,6 +27,7 @@ func NewJoin(plan *plan.Join, context *Context) *Join {
 		plan:     plan,
 	}
 
+	rv.execPhase = JOIN
 	rv.output = rv
 	return rv
 }
@@ -44,7 +44,6 @@ func (this *Join) Copy() Operator {
 }
 
 func (this *Join) RunOnce(context *Context, parent value.Value) {
-	this.phaseTimes = func(d time.Duration) { context.AddPhaseTime(JOIN, d) }
 	this.runConsumer(this, context, parent)
 }
 
