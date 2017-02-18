@@ -241,13 +241,14 @@ func (this *Pairs) Apply(context Context, arg value.Value) (value.Value, error) 
 	var bufcap int
 
 	actual := arg.Actual()
-	if arg.Type() == value.OBJECT {
+	switch arg.Type() {
+	case value.OBJECT:
 		bufcap = 2 * len(actual.(map[string]interface{}))
-	} else if arg.Type() == value.ARRAY {
+	case value.ARRAY:
 		bufcap = 2 * len(actual.([]interface{}))
-	} else if arg.Type() == value.MISSING {
+	case value.MISSING:
 		return value.MISSING_VALUE, nil
-	} else {
+	default:
 		return value.NULL_VALUE, nil
 	}
 
@@ -353,6 +354,8 @@ func traversePairs(actual interface{}, buffer []interface{}) []interface{} {
 		for n, v := range actual {
 			buffer = append(buffer, []interface{}{n, v})
 
+			v = value.NewValue(v).Actual()
+
 			switch v := v.(type) {
 			case []interface{}:
 				buffer = ensureBuffer(buffer, len(buffer)+len(v))
@@ -365,6 +368,7 @@ func traversePairs(actual interface{}, buffer []interface{}) []interface{} {
 		}
 	case []interface{}:
 		for _, v := range actual {
+			v = value.NewValue(v).Actual()
 			buffer = traversePairs(v, buffer)
 		}
 	}
