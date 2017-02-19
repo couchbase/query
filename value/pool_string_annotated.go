@@ -47,3 +47,7 @@ func (this *StringAnnotatedPool) Put(s map[string]AnnotatedValue) {
 
 	this.pool.Put(s)
 }
+
+func (this *StringAnnotatedPool) Size() int {
+	return this.size
+}

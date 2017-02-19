@@ -24,12 +24,10 @@ type Distinct struct {
 	collect bool
 }
 
-const _DISTINCT_CAP = 1024
-
 func NewDistinct(plan *plan.Distinct, context *Context, collect bool) *Distinct {
 	rv := &Distinct{
 		base:    newBase(context),
-		set:     value.NewSet(_DISTINCT_CAP, false),
+		set:     value.NewSet(int(context.GetPipelineCap()), false),
 		plan:    plan,
 		collect: collect,
 	}
@@ -46,7 +44,7 @@ func (this *Distinct) Copy() Operator {
 	return &Distinct{
 		base: this.base.copy(),
 		plan: this.plan,
-		set:  value.NewSet(_DISTINCT_CAP, false),
+		set:  value.NewSet(this.set.ObjectCap(), false),
 	}
 }
 

@@ -20,17 +20,18 @@ import (
 Set implements a hash set of Values.
 */
 type Set struct {
-	nills    bool
-	missings Value
-	nulls    Value
-	booleans map[bool]Value
-	floats   map[float64]Value
-	ints     map[int64]Value
-	strings  map[string]Value
-	arrays   map[string]Value
-	objects  map[string]Value
-	binaries map[string]Value
-	collect  bool
+	nills     bool
+	missings  Value
+	nulls     Value
+	booleans  map[bool]Value
+	floats    map[float64]Value
+	ints      map[int64]Value
+	strings   map[string]Value
+	arrays    map[string]Value
+	objects   map[string]Value
+	binaries  map[string]Value
+	collect   bool
+	objectCap int
 }
 
 var _MAP_CAP = 64
@@ -39,14 +40,15 @@ func NewSet(objectCap int, collect bool) *Set {
 	mapCap := util.MaxInt(objectCap, _MAP_CAP)
 
 	return &Set{
-		booleans: make(map[bool]Value, 2),
-		floats:   make(map[float64]Value, mapCap),
-		ints:     make(map[int64]Value, mapCap),
-		strings:  make(map[string]Value, mapCap),
-		arrays:   make(map[string]Value, _MAP_CAP),
-		objects:  make(map[string]Value, objectCap),
-		binaries: make(map[string]Value, _MAP_CAP),
-		collect:  collect,
+		booleans:  make(map[bool]Value, 2),
+		floats:    make(map[float64]Value, mapCap),
+		ints:      make(map[int64]Value, mapCap),
+		strings:   make(map[string]Value, mapCap),
+		arrays:    make(map[string]Value, _MAP_CAP),
+		objects:   make(map[string]Value, objectCap),
+		binaries:  make(map[string]Value, _MAP_CAP),
+		collect:   collect,
+		objectCap: objectCap,
 	}
 }
 
@@ -452,4 +454,8 @@ func (this *Set) Intersect(other *Set) {
 			this.Remove(v)
 		}
 	}
+}
+
+func (this *Set) ObjectCap() int {
+	return this.objectCap
 }

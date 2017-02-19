@@ -72,17 +72,28 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		this.values = _INDEX_VALUE_POOL.Get()
-		this.bits = _INDEX_BIT_POOL.Get()
-		this.queue = _QUEUE_POOL.Get()
 		defer func() {
-			_INDEX_VALUE_POOL.Put(this.values)
-			_INDEX_BIT_POOL.Put(this.bits)
-			_QUEUE_POOL.Put(this.queue)
 			this.values = nil
 			this.bits = nil
 			this.queue = nil
 		}()
+
+		pipelineCap := int(context.GetPipelineCap())
+		if pipelineCap <= _INDEX_VALUE_POOL.Size() {
+			this.values = _INDEX_VALUE_POOL.Get()
+			this.bits = _INDEX_BIT_POOL.Get()
+			this.queue = _QUEUE_POOL.Get()
+
+			defer func() {
+				_INDEX_VALUE_POOL.Put(this.values)
+				_INDEX_BIT_POOL.Put(this.bits)
+				_QUEUE_POOL.Put(this.queue)
+			}()
+		} else {
+			this.values = make(map[string]value.AnnotatedValue, pipelineCap)
+			this.bits = make(map[string]int64, pipelineCap)
+			this.queue = util.NewQueue(pipelineCap)
+		}
 
 		fullBits := int64(0)
 		for i, scan := range this.scans {

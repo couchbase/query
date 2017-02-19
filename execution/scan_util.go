@@ -85,6 +85,5 @@ func evalLimitOffset(expr expression.Expression, parent value.Value, defval int6
 }
 
 var _INDEX_SCAN_POOL = NewOperatorPool(16)
-var _INDEX_COUNT_POOL = util.NewStringIntPool(1024)
 var _INDEX_VALUE_POOL = value.NewStringAnnotatedPool(1024)
 var _INDEX_BIT_POOL = util.NewStringInt64Pool(1024)

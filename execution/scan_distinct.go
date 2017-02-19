@@ -61,11 +61,19 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		this.keys = _STRING_BOOL_POOL.Get()
 		defer func() {
-			_STRING_BOOL_POOL.Put(this.keys)
 			this.keys = nil
 		}()
+
+		pipelineCap := int(context.GetPipelineCap())
+		if pipelineCap <= _STRING_BOOL_POOL.Size() {
+			this.keys = _STRING_BOOL_POOL.Get()
+			defer func() {
+				_STRING_BOOL_POOL.Put(this.keys)
+			}()
+		} else {
+			this.keys = make(map[string]bool, pipelineCap)
+		}
 
 		this.scan.SetParent(this)
 		go this.scan.RunOnce(context, parent)

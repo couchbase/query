@@ -47,3 +47,7 @@ func (this *StringBoolPool) Put(s map[string]bool) {
 
 	this.pool.Put(s)
 }
+
+func (this *StringBoolPool) Size() int {
+	return this.size
+}
