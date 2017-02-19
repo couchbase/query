@@ -149,8 +149,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		this.switchPhase(_EXECTIME)
-		this.addExecPhase(INDEX_SCAN, context)	     // we have already added the scan operator
-							     // in the primary scan
+		this.addExecPhase(INDEX_SCAN, context)       // we have already added the scan operator in the primary scan
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped

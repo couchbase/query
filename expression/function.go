@@ -204,8 +204,7 @@ func (this *FunctionBase) Copy() Expression {
 	if len(operands) <= len(buf) {
 		copies = buf[0:len(operands)]
 	} else {
-		copies = _COPY_POOL.GetSized(len(operands))
-		defer _COPY_POOL.Put(copies)
+		copies = make(Expressions, len(operands))
 	}
 
 	for i, op := range operands {
@@ -238,7 +237,6 @@ Return the operands of the function.
 func (this *FunctionBase) Operands() Expressions { return this.operands }
 
 var _ARGS_POOL = value.NewValuePool(64)
-var _COPY_POOL = NewExpressionPool(64)
 
 /*
 A Nullary function doesnt have any input operands. Type

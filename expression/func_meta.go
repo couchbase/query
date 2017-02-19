@@ -568,4 +568,3 @@ func (this *DoAdmin) Constructor() FunctionConstructor {
 		return NewDoAdmin(operands[0])
 	}
 }
-

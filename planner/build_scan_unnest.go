@@ -89,8 +89,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	if 1+len(unnests) <= len(andBuf) {
 		andTerms = andBuf[0:0]
 	} else {
-		andTerms = _AND_POOL.Get()
-		defer _AND_POOL.Put(andTerms)
+		andTerms = make(expression.Expressions, 0, 1+len(unnests))
 	}
 
 	if pred != nil {
@@ -170,8 +169,6 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return plan.NewIntersectScan(nil, scans...), 1, nil
 	}
 }
-
-var _AND_POOL = expression.NewExpressionPool(256)
 
 type opEntry struct {
 	Op  plan.SecondaryScan
