@@ -27,6 +27,7 @@ func NewDNF(expr expression.Expression, like bool) *DNF {
 		expr: expr,
 		like: like,
 	}
+
 	rv.SetMapper(rv)
 	return rv
 }
@@ -265,8 +266,6 @@ func orLength(or *expression.Or) (length int, flatten, truth bool) {
 			}
 			length += l
 			flatten = true
-		case nil:
-			// Skip
 		default:
 			val := op.Value()
 			if val != nil {
@@ -295,8 +294,6 @@ func andLength(and *expression.And) (length int, flatten, truth bool) {
 			}
 			length += l
 			flatten = true
-		case nil:
-			// Skip
 		default:
 			val := op.Value()
 			if val != nil {
@@ -319,8 +316,6 @@ func orTerms(or *expression.Or, buffer expression.Expressions,
 		switch op := op.(type) {
 		case *expression.Or:
 			buffer = orTerms(op, buffer, terms)
-		case nil:
-			// Skip
 		default:
 			val := op.Value()
 			if val == nil || val.Truth() {
@@ -342,8 +337,6 @@ func andTerms(and *expression.And, buffer expression.Expressions,
 		switch op := op.(type) {
 		case *expression.And:
 			buffer = andTerms(op, buffer, terms)
-		case nil:
-			// Skip
 		default:
 			val := op.Value()
 			if val == nil || !val.Truth() {

@@ -288,8 +288,7 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	if 1+len(primaryUnnests) <= len(andBuf) {
 		andTerms = andBuf[0:0]
 	} else {
-		andTerms = _AND_POOL.Get()
-		defer _AND_POOL.Put(andTerms)
+		andTerms = make(expression.Expressions, 0, 1+len(primaryUnnests))
 	}
 
 	if this.where != nil {
