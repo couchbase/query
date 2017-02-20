@@ -108,7 +108,7 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 	case datastore.PRIV_READ:
 		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!read", bucket)
 	case datastore.PRIV_SYSTEM_READ:
-		permission = "cluster!read"
+		permission = "cluster.n1ql.meta!read"
 	case datastore.PRIV_SECURITY_READ:
 		permission = "cluster.security!read"
 	case datastore.PRIV_SECURITY_WRITE:
