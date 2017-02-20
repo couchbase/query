@@ -134,9 +134,9 @@ outer:
 		covers = append(covers, expression.NewCover(key))
 	}
 
-	duplicates := entry.spans.CanHaveDuplicates(index, pred.MayOverlapSpans(), false)
-	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || duplicates)
 	arrayIndex := arrays[index]
+	duplicates := entry.spans.CanHaveDuplicates(index, pred.MayOverlapSpans(), false)
+	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || arrayIndex || duplicates)
 	pushDown, err := this.checkPushDowns(entry, pred, alias, false)
 	if err != nil {
 		return nil, 0, err

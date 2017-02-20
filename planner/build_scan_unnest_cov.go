@@ -209,7 +209,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// Covering UNNEST index using ALL ARRAY key
 	array := len(coveredUnnests) > 0
 	duplicates := entry.spans.CanHaveDuplicates(index, pred.MayOverlapSpans(), array)
-	indexProjection := this.buildIndexProjection(entry, exprs, id, duplicates)
+	indexProjection := this.buildIndexProjection(entry, exprs, id, duplicates || array)
 	pushDown := entry.exactSpans
 	if pushDown {
 		scan := this.buildCoveringPushdDownScan(index, node, entry, pred, indexProjection,
