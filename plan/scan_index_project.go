@@ -40,10 +40,10 @@ func (this *IndexProjection) MarshalBase(f func(map[string]interface{})) map[str
 	r := make(map[string]interface{}, 2)
 
 	if len(this.EntryKeys) != 0 {
-		r["entrykeys"] = this.EntryKeys
+		r["entry_keys"] = this.EntryKeys
 	}
 	if this.PrimaryKey {
-		r["primarykey"] = this.PrimaryKey
+		r["primary_key"] = this.PrimaryKey
 	}
 
 	if f != nil {
@@ -54,8 +54,8 @@ func (this *IndexProjection) MarshalBase(f func(map[string]interface{})) map[str
 
 func (this *IndexProjection) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		EntryKeys  []int `json:"entrykeys"`
-		PrimaryKey bool  `json:"primarykey"`
+		EntryKeys  []int `json:"entry_keys"`
+		PrimaryKey bool  `json:"primary_key"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
