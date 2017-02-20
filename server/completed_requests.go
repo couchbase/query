@@ -20,6 +20,7 @@
 package server
 
 import (
+	"strings"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -50,6 +51,7 @@ type RequestLogEntry struct {
 	Timings         execution.Operator
 	NamedArgs       map[string]value.Value
 	PositionalArgs  value.Values
+	Users           string
 }
 
 const _CACHE_SIZE = 1 << 10
@@ -196,6 +198,17 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	if ctrl {
 		re.NamedArgs = request.NamedArgs()
 		re.PositionalArgs = request.PositionalArgs()
+	}
+
+	creds := request.Credentials()
+	if creds != nil {
+		userList := make([]string, 0, len(creds))
+		for userName := range creds {
+			if userName != "" {
+				userList = append(userList, userName)
+			}
+		}
+		re.Users = strings.Join(userList, ",")
 	}
 
 	requestLog.cache.Add(re, id)

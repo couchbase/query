@@ -142,6 +142,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 				if entry.NamedArgs != nil {
 					item.SetField("namedArgs", entry.NamedArgs)
 				}
+				if entry.Users != "" {
+					item.SetField("users", entry.Users)
+				}
 				meta := map[string]interface{}{
 					"id": key,
 				}
