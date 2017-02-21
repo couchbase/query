@@ -9,7 +9,9 @@
 
 package datastore
 
-import ()
+import (
+	"strings"
+)
 
 type Privilege int
 
@@ -91,6 +93,20 @@ func (this *Privileges) Add(target string, priv Privilege) {
 Type Credentials maps users to passwords.
 */
 type Credentials map[string]string
+
+func CredsString(creds Credentials) string {
+	if creds == nil || len(creds) == 0 {
+		return ""
+	}
+	credsList := make([]string, 0, len(creds))
+	for k := range creds {
+		if k == "" {
+			continue
+		}
+		credsList = append(credsList, k)
+	}
+	return strings.Join(credsList, ",")
+}
 
 /*
 Type AuthenticatedUsers is a list of users whose credentials checked out.

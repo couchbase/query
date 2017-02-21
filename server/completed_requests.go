@@ -20,9 +20,9 @@
 package server
 
 import (
-	"strings"
 	"time"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
@@ -200,16 +200,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		re.PositionalArgs = request.PositionalArgs()
 	}
 
-	creds := request.Credentials()
-	if creds != nil {
-		userList := make([]string, 0, len(creds))
-		for userName := range creds {
-			if userName != "" {
-				userList = append(userList, userName)
-			}
-		}
-		re.Users = strings.Join(userList, ",")
-	}
+	re.Users = datastore.CredsString(request.Credentials())
 
 	requestLog.cache.Add(re, id)
 }
