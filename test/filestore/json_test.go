@@ -297,7 +297,7 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 					// for now we only handle a single string
 					switch ignore.(type) {
 					case string:
-					delete(v, ignore.(string))
+						delete(v, ignore.(string))
 					}
 				}
 			}

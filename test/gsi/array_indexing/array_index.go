@@ -338,6 +338,21 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			return
 		}
 
+		// ignore certain parts of the results if we need to
+		ignore, ok := c["ignore"]
+		if ok {
+			for _, r := range resultsActual {
+				v, ok := r.(map[string]interface{})
+				if ok {
+
+					// for now we only handle a single string
+					switch ignore.(type) {
+					case string:
+						delete(v, ignore.(string))
+					}
+				}
+			}
+		}
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
