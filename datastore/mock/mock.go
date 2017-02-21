@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -106,11 +105,11 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return v, nil
 }
 
-func (s *store) GetUserInfoAll() ([]auth.User, errors.Error) {
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
 }
 
-func (s *store) PutUserInfo(u *auth.User) errors.Error {
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
 }
 

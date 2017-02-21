@@ -12,7 +12,6 @@ package system
 import (
 	"net/http"
 
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -102,11 +101,11 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return s.actualStore.UserInfo()
 }
 
-func (s *store) GetUserInfoAll() ([]auth.User, errors.Error) {
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
 }
 
-func (s *store) PutUserInfo(u *auth.User) errors.Error {
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
 }
 

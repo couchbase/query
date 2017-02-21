@@ -12,8 +12,8 @@ package execution
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -53,17 +53,62 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		planRoles := this.plan.Node().Roles()
-		roleList := make([]*auth.Role, len(planRoles))
-		for i, planRole := range planRoles {
-			roleList[i] = &auth.Role{Name: planRole.Role, Keyspace: planRole.Bucket}
-		}
-
-		err := expression.DoGrantRole(this.plan.Node().Users(), roleList, context)
-
+		// Get the current set of users (with their role information),
+		// and create a map of them by id.
+		currentUsers, err := context.datastore.GetUserInfoAll()
 		if err != nil {
-			context.Error(err)
+			context.Fatal(err)
+			return
 		}
+		userMap := make(map[string]*datastore.User, len(currentUsers))
+		for i, u := range currentUsers {
+			userMap[u.Id] = &currentUsers[i]
+		}
+
+		// Create the set of new roles, in a form suitable for output.
+		roleSpecs := this.plan.Node().Roles()
+		roleList := make([]datastore.Role, len(roleSpecs))
+		for i, rs := range roleSpecs {
+			roleList[i].Name = rs.Role
+			roleList[i].Bucket = rs.Bucket
+		}
+
+		// Since we only want to update each user once, even if the
+		// statement mentions the user multiple times, create a map
+		// of the input user ids.
+		updateUsers := this.plan.Node().Users()
+		updateUserIdMap := make(map[string]bool, len(updateUsers))
+		for _, u := range updateUsers {
+			updateUserIdMap[u] = true
+		}
+
+		for userId, _ := range updateUserIdMap {
+			user := userMap[userId]
+			if user == nil {
+				context.Error(errors.NewUserNotFoundError(userId))
+				continue
+			}
+			// Add to the user the roles they do not already have.
+			for _, newRole := range roleList {
+				alreadyHasRole := false
+				for _, existingRole := range user.Roles {
+					if newRole == existingRole {
+						alreadyHasRole = true
+						break
+					}
+				}
+				if alreadyHasRole {
+					continue
+				}
+				user.Roles = append(user.Roles, newRole)
+			}
+			// Update the user with their new roles on the backend.
+			err = context.datastore.PutUserInfo(user)
+			if err != nil {
+				context.Error(err)
+			}
+		}
+
 	})
 }
 

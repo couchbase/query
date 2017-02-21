@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -462,12 +461,4 @@ func (this *Context) Recover() {
 			this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 		}
 	}
-}
-
-func (this *Context) GetUserInfoAll() ([]auth.User, errors.Error) {
-	return this.datastore.GetUserInfoAll()
-}
-
-func (this *Context) PutUserInfo(u *auth.User) errors.Error {
-	return this.datastore.PutUserInfo(u)
 }

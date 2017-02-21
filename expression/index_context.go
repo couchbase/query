@@ -11,9 +11,6 @@ package expression
 
 import (
 	"time"
-
-	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/errors"
 )
 
 /*
@@ -48,12 +45,4 @@ func (this *IndexContext) Now() time.Time {
 
 func (this *IndexContext) AuthenticatedUsers() []string {
 	return []string{"NEVER_USED"}
-}
-
-func (this *IndexContext) GetUserInfoAll() ([]auth.User, errors.Error) {
-	return nil, errors.NewNotImplemented("GetUserInfoAll() should never be called in an index context.")
-}
-
-func (this *IndexContext) PutUserInfo(u *auth.User) errors.Error {
-	return errors.NewNotImplemented("PutUserInfo() should never be called in an index context.")
 }

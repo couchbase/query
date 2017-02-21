@@ -211,7 +211,7 @@ func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexCo
 			if numProduced >= limit {
 				return
 			}
-			key := makeAppRolesKey(user.Id, role.Name, role.Keyspace)
+			key := makeAppRolesKey(user.Id, role.Name, role.Bucket)
 			if compSpan == nil || compSpan.evaluate(key) {
 				entry := &datastore.IndexEntry{PrimaryKey: key}
 				conn.EntryChannel() <- entry

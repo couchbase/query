@@ -11,9 +11,6 @@ package expression
 
 import (
 	"time"
-
-	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/errors"
 )
 
 /*
@@ -25,6 +22,4 @@ returns the instant it time with a nanosecond precision.
 type Context interface {
 	Now() time.Time
 	AuthenticatedUsers() []string
-	GetUserInfoAll() ([]auth.User, errors.Error)
-	PutUserInfo(u *auth.User) errors.Error
 }

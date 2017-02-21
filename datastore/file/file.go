@@ -25,7 +25,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -40,7 +39,7 @@ type store struct {
 	namespaces     map[string]*namespace
 	namespaceNames []string
 
-	users map[string]*auth.User
+	users map[string]*datastore.User
 }
 
 func (s *store) Id() string {
@@ -95,15 +94,15 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return v, nil
 }
 
-func (s *store) GetUserInfoAll() ([]auth.User, errors.Error) {
-	ret := make([]auth.User, 0, len(s.users))
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
+	ret := make([]datastore.User, 0, len(s.users))
 	for _, v := range s.users {
 		ret = append(ret, *v)
 	}
 	return ret, nil
 }
 
-func (s *store) PutUserInfo(u *auth.User) errors.Error {
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	s.users[u.Id] = u
 	return nil
 }
@@ -115,7 +114,7 @@ func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 		return nil, errors.NewFileDatastoreError(er, "")
 	}
 
-	fs := &store{path: path, users: make(map[string]*auth.User, 4)}
+	fs := &store{path: path, users: make(map[string]*datastore.User, 4)}
 
 	e = fs.loadNamespaces()
 	if e != nil {
