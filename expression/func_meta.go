@@ -193,7 +193,7 @@ func (this *Meta) Indexable() bool {
 func (this *Meta) CoveredBy(keyspace string, exprs Expressions) bool {
 	if len(this.operands) > 0 {
 		alias := NewIdentifier(keyspace)
-		if !this.operands[0].CoveredBy(keyspace, Expressions{alias}) {
+		if !this.operands[0].DependsOn(alias) {
 			// Different keyspace, return true
 			return true
 		}
