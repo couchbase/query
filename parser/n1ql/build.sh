@@ -9,7 +9,7 @@ then
     mv n1ql.nn.tmp n1ql.nn.go
     go fmt n1ql.nn.go
 fi
-echo go tool yacc n1ql.y
-go tool yacc n1ql.y
+echo goyacc n1ql.y
+goyacc n1ql.y
 echo go build
 go build
