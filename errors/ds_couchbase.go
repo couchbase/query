@@ -16,7 +16,7 @@ const DS_AUTH_ERROR = 10000
 
 func NewDatastoreAuthorizationError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: DS_AUTH_ERROR, IKey: "datastore.couchbase.authorization_error", ICause: e,
-		InternalMsg: "Authorization Failed " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "User does not belong to a specified role. " + msg, InternalCaller: CallerN(1)}
 }
 
 // Datastore/couchbase error codes
@@ -168,4 +168,14 @@ func NewCbViewDefError(e error) Error {
 		InternalMsg: "Unable to store the view definition. Not all index target expressions are supported. " +
 			"Check whether the JavaScript of the view definition is valid. The map function has been output to query.log.",
 		InternalCaller: CallerN(1)}
+}
+
+func NewDatastoreNoUserSupplied() Error {
+	return &err{level: EXCEPTION, ICode: 13010, IKey: "datastore.couchbase.no_user",
+		InternalMsg: "No user supplied for query.", InternalCaller: CallerN(1)}
+}
+
+func NewDatastoreInvalidUsernamePassword() Error {
+	return &err{level: EXCEPTION, ICode: 13011, IKey: "datastore.couchbase.invalid_username_password",
+		InternalMsg: "Invalid username/password.", InternalCaller: CallerN(1)}
 }

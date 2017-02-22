@@ -227,8 +227,17 @@ func (s *store) Authorize(privileges *datastore.Privileges, credentials datastor
 	}
 
 	// No privileges to check? Done.
-	if privileges == nil {
+	if privileges == nil || len(privileges.List) == 0 {
 		return authenticatedUsers, nil
+	}
+
+	// No authenticated user, but credentials to check?
+	if len(credentialsList) == 0 {
+		if len(credentials) == 0 {
+			return nil, errors.NewDatastoreNoUserSupplied()
+		} else {
+			return nil, errors.NewDatastoreInvalidUsernamePassword()
+		}
 	}
 
 	// Check every requested privilege against the credentials list.
