@@ -30,6 +30,7 @@ const (
 	PRIV_QUERY_CREATE_INDEX Privilege = 12 // Ability to run CREATE INDEX statements.
 	PRIV_QUERY_ALTER_INDEX  Privilege = 13 // Ability to run ALTER INDEX statements.
 	PRIV_QUERY_DROP_INDEX   Privilege = 14 // Ability to run DROP INDEX statements.
+	PRIV_QUERY_LIST_INDEX   Privilege = 15 // Ability to list indexes of a keyspace.
 )
 
 func IsStatementTypePrivilege(priv Privilege) bool {

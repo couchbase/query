@@ -144,6 +144,8 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.drop_index!execute", bucket)
 		//logging.Errorf("JOHAN: no-op drop_index for now: granted")
 		return true, nil
+	case datastore.PRIV_QUERY_LIST_INDEX:
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.list_index!execute", bucket)
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}

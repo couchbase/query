@@ -53,7 +53,8 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(context.Credentials(), namespaceId, keyspaceId) {
+						if !canRead(context.Credentials(), namespaceId, keyspaceId) &&
+							!canListIndexes(context.Credentials(), namespaceId, keyspaceId) {
 							continue
 						}
 						keyspace, excp := namespace.KeyspaceById(keyspaceId)
@@ -109,7 +110,8 @@ func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]
 		namespaceId := ids[0]
 		keyspaceId := ids[1]
 		indexId := ids[2]
-		if !canRead(context.Credentials(), namespaceId, keyspaceId) {
+		if !canRead(context.Credentials(), namespaceId, keyspaceId) &&
+			!canListIndexes(context.Credentials(), namespaceId, keyspaceId) {
 			continue
 		}
 		pairs, err := b.fetchOne(key, namespaceId, keyspaceId, indexId)
@@ -299,7 +301,17 @@ func canRead(creds datastore.Credentials, namespace string, keyspace string) boo
 	privs := datastore.NewPrivileges()
 	privs.Add(namespace+":"+keyspace, datastore.PRIV_READ)
 	_, err := datastore.GetDatastore().Authorize(privs, creds, nil)
-	return err == nil
+	res := err == nil
+	return res
+}
+
+// Do the presented credentials authorize the user to list indexes of the namespace/keyspace bucket?
+func canListIndexes(creds datastore.Credentials, namespace string, keyspace string) bool {
+	privs := datastore.NewPrivileges()
+	privs.Add(namespace+":"+keyspace, datastore.PRIV_QUERY_LIST_INDEX)
+	_, err := datastore.GetDatastore().Authorize(privs, creds, nil)
+	res := err == nil
+	return res
 }
 
 func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
