@@ -51,7 +51,7 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(context.Credentials(), namespaceId, keyspaceId) {
+						if !canRead(context, namespaceId, keyspaceId) {
 							continue
 						}
 						// The list of keyspace ids can include memcached buckets.
@@ -90,7 +90,7 @@ func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext) 
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		ns, ks := splitId(k)
-		if !canRead(context.Credentials(), ns, ks) {
+		if !canRead(context, ns, ks) {
 			continue
 		}
 		item, e := b.fetchOne(ns, ks)

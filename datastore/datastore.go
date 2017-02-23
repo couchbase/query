@@ -68,6 +68,7 @@ type Namespace interface {
 type QueryContext interface {
 	Credentials() Credentials
 	AuthenticatedUsers() []string
+	OriginalHttpRequest() *http.Request
 }
 
 type QueryContextImpl struct {
@@ -79,6 +80,10 @@ func (ci *QueryContextImpl) Credentials() Credentials {
 
 func (ci *QueryContextImpl) AuthenticatedUsers() []string {
 	return make([]string, 0, 16)
+}
+
+func (ci *QueryContextImpl) OriginalHttpRequest() *http.Request {
+	return nil
 }
 
 var NULL_QUERY_CONTEXT = &QueryContextImpl{}

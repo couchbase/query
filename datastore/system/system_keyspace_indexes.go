@@ -53,8 +53,8 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(context.Credentials(), namespaceId, keyspaceId) &&
-							!canListIndexes(context.Credentials(), namespaceId, keyspaceId) {
+						if !canRead(context, namespaceId, keyspaceId) &&
+							!canListIndexes(context, namespaceId, keyspaceId) {
 							continue
 						}
 						keyspace, excp := namespace.KeyspaceById(keyspaceId)
@@ -110,8 +110,8 @@ func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]
 		namespaceId := ids[0]
 		keyspaceId := ids[1]
 		indexId := ids[2]
-		if !canRead(context.Credentials(), namespaceId, keyspaceId) &&
-			!canListIndexes(context.Credentials(), namespaceId, keyspaceId) {
+		if !canRead(context, namespaceId, keyspaceId) &&
+			!canListIndexes(context, namespaceId, keyspaceId) {
 			continue
 		}
 		pairs, err := b.fetchOne(key, namespaceId, keyspaceId, indexId)
@@ -297,19 +297,19 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 }
 
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
-func canRead(creds datastore.Credentials, namespace string, keyspace string) bool {
+func canRead(context datastore.QueryContext, namespace string, keyspace string) bool {
 	privs := datastore.NewPrivileges()
 	privs.Add(namespace+":"+keyspace, datastore.PRIV_READ)
-	_, err := datastore.GetDatastore().Authorize(privs, creds, nil)
+	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res
 }
 
 // Do the presented credentials authorize the user to list indexes of the namespace/keyspace bucket?
-func canListIndexes(creds datastore.Credentials, namespace string, keyspace string) bool {
+func canListIndexes(context datastore.QueryContext, namespace string, keyspace string) bool {
 	privs := datastore.NewPrivileges()
 	privs.Add(namespace+":"+keyspace, datastore.PRIV_QUERY_LIST_INDEX)
-	_, err := datastore.GetDatastore().Authorize(privs, creds, nil)
+	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res
 }
