@@ -204,8 +204,14 @@ type CountIndex2 interface {
 	CountIndex
 
 	// Perform a count on index
-	Count2(requestId string, spans Spans2, distinct bool,
-		cons ScanConsistency, vector timestamp.Vector) (
+	Count2(requestId string, spans Spans2, cons ScanConsistency, vector timestamp.Vector) (
+		int64, errors.Error)
+
+	// Can perform count distinct
+	CanCountDistinct() bool
+
+	// Perform a count distinct on index
+	CountDistinct(requestId string, spans Spans2, cons ScanConsistency, vector timestamp.Vector) (
 		int64, errors.Error)
 }
 

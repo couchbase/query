@@ -25,19 +25,16 @@ type IndexCountScan2 struct {
 	index        datastore.CountIndex2
 	term         *algebra.KeyspaceTerm
 	spans        Spans2
-	distinct     bool
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
 }
 
 func NewIndexCountScan2(index datastore.CountIndex2, term *algebra.KeyspaceTerm,
-	spans Spans2, distinct bool, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) *IndexCountScan2 {
+	spans Spans2, covers expression.Covers, filterCovers map[*expression.Cover]value.Value) *IndexCountScan2 {
 	return &IndexCountScan2{
 		index:        index,
 		term:         term,
 		spans:        spans,
-		distinct:     distinct,
 		covers:       covers,
 		filterCovers: filterCovers,
 	}
@@ -61,10 +58,6 @@ func (this *IndexCountScan2) Term() *algebra.KeyspaceTerm {
 
 func (this *IndexCountScan2) Spans() Spans2 {
 	return this.spans
-}
-
-func (this *IndexCountScan2) Distinct() bool {
-	return this.distinct
 }
 
 func (this *IndexCountScan2) Covers() expression.Covers {
@@ -110,9 +103,6 @@ func (this *IndexCountScan2) MarshalBase(f func(map[string]interface{})) map[str
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
-	if this.distinct {
-		r["distinct"] = this.distinct
-	}
 
 	if len(this.covers) > 0 {
 		r["covers"] = this.covers
@@ -142,7 +132,6 @@ func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 		keyspace     string                     `json:"keyspace"`
 		using        datastore.IndexType        `json:"using"`
 		spans        Spans2                     `json:"spans"`
-		distinct     bool                       `json:"distinct"`
 		covers       []string                   `json:"covers"`
 		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
 	}
@@ -159,7 +148,6 @@ func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.namespace, _unmarshalled.keyspace, "", nil, nil)
 	this.spans = _unmarshalled.spans
-	this.distinct = _unmarshalled.distinct
 
 	if len(_unmarshalled.covers) > 0 {
 		this.covers = make(expression.Covers, len(_unmarshalled.covers))

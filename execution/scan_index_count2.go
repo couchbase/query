@@ -56,7 +56,7 @@ func (this *IndexCountScan2) RunOnce(context *Context, parent value.Value) {
 		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
 		dspans, empty, err := evalSpan2(this.plan.Spans(), context)
 		if err == nil && !empty {
-			count, err = this.plan.Index().Count2(context.RequestId(), dspans, this.plan.Distinct(), context.ScanConsistency(), scanVector)
+			count, err = this.plan.Index().Count2(context.RequestId(), dspans, context.ScanConsistency(), scanVector)
 		}
 
 		if err != nil {

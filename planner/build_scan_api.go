@@ -109,13 +109,13 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 		return nil
 	}
 
-	if countIndex2, ok := countIndex.(datastore.CountIndex2); ok && useIndex2API(entry.index) {
-		this.maxParallelism = 1
-		return plan.NewIndexCountScan2(countIndex2, node, termSpans.Spans(), distinct, covers, filterCovers)
-	}
-
 	if distinct {
 		return nil
+	}
+
+	if countIndex2, ok := countIndex.(datastore.CountIndex2); ok && useIndex2API(entry.index) {
+		this.maxParallelism = 1
+		return plan.NewIndexCountScan2(countIndex2, node, termSpans.Spans(), covers, filterCovers)
 	}
 
 	spans, exact := ConvertSpans2ToSpan(termSpans.Spans(), len(entry.index.RangeKey()))
