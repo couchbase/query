@@ -272,6 +272,29 @@ func Start(site, pool, namespace string) *MockServer {
 	return mockServer
 }
 
+func dropResultsEntry(results []interface{}, entry interface{}) {
+	e := fmt.Sprintf("%v", entry)
+	for _, r := range results {
+		v, ok := r.(map[string]interface{})
+		if ok {
+			delete(v, e)
+		}
+	}
+}
+
+func addResultsEntry(newResults, results []interface{}, entry interface{}) {
+	e := fmt.Sprintf("%v", entry)
+	for i, r := range results {
+		v, ok := r.(map[string]interface{})
+		if ok {
+			newV, ok := newResults[i].(map[string]interface{})
+			if ok {
+				newV[e] = v[e]
+			}
+		}
+	}
+}
+
 func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
@@ -333,21 +356,54 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			return
 		}
 
-		// ignore certain parts of the results if we need to
+		// we handle scalars and array of scalars, ignore the rest
+		// filter only applied to first level fields
 		ignore, ok := c["ignore"]
 		if ok {
-			for _, r := range resultsActual {
-				v, ok := r.(map[string]interface{})
-				if ok {
-
-					// for now we only handle a single string
-					switch ignore.(type) {
-					case string:
-						delete(v, ignore.(string))
+			switch ignore.(type) {
+			case []interface{}:
+				for _, v := range ignore.([]interface{}) {
+					switch v.(type) {
+					case []interface{}:
+					case map[string]interface{}:
+					default:
+						dropResultsEntry(resultsActual, v)
 					}
 				}
+			case map[string]interface{}:
+			default:
+				dropResultsEntry(resultsActual, ignore)
 			}
 		}
+
+		// opposite of ignore - only select certain fields
+		// again, we handle scalars and the scalars in an array
+		accept, ok := c["accept"]
+		if ok {
+			newResults := make([]interface{}, len(resultsActual))
+			switch accept.(type) {
+			case []interface{}:
+				for i, _ := range resultsActual {
+					newResults[i] = make(map[string]interface{}, len(accept.([]interface{})))
+				}
+				for _, v := range accept.([]interface{}) {
+					switch v.(type) {
+					case []interface{}:
+					case map[string]interface{}:
+					default:
+						addResultsEntry(newResults, resultsActual, v)
+					}
+				}
+			case map[string]interface{}:
+			default:
+				for i, _ := range resultsActual {
+					newResults[i] = make(map[string]interface{}, 1)
+				}
+				addResultsEntry(newResults, resultsActual, accept)
+			}
+			resultsActual = newResults
+		}
+
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
