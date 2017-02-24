@@ -114,6 +114,17 @@ func (this *builder) VisitIndexCountScan2(plan *plan.IndexCountScan2) (interface
 	return NewIndexCountScan2(plan, this.context), nil
 }
 
+func (this *builder) VisitIndexCountDistinctScan2(plan *plan.IndexCountDistinctScan2) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspaceTerm := plan.Term()
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
+	return NewIndexCountDistinctScan2(plan, this.context), nil
+}
+
 func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
 	return NewKeyScan(plan, this.context), nil
 }

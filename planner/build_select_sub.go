@@ -129,9 +129,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			switch expr := term.Expression().(type) {
 			case *algebra.Count:
 				this.countAgg = expr
-				/*			case *algebra.CountDistinct:
-							this.countDistinctAgg = expr
-				*/
+			case *algebra.CountDistinct:
+				this.countDistinctAgg = expr
 			case *algebra.Min:
 				this.minAgg = expr
 			case *algebra.Max:

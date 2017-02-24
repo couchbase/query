@@ -21,6 +21,7 @@ type Visitor interface {
 	VisitCountScan(op *CountScan) (interface{}, error)
 	VisitIndexCountScan(op *IndexCountScan) (interface{}, error)
 	VisitIndexCountScan2(op *IndexCountScan2) (interface{}, error)
+	VisitIndexCountDistinctScan2(op *IndexCountDistinctScan2) (interface{}, error)
 	VisitDistinctScan(op *DistinctScan) (interface{}, error)
 	VisitUnionScan(op *UnionScan) (interface{}, error)
 	VisitIntersectScan(op *IntersectScan) (interface{}, error)
