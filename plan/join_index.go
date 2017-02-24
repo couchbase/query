@@ -145,11 +145,11 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		As    string `json:"as"`
 		For   string `json:"for"`
 		Scan  struct {
-			Index        string                     `json:"index"`
-			IndexId      string                     `json:"index_id"`
-			Using        datastore.IndexType        `json:"using"`
-			Covers       []string                   `json:"covers"`
-			FilterCovers map[string]json.RawMessage `json:"filter_covers"`
+			Index        string                 `json:"index"`
+			IndexId      string                 `json:"index_id"`
+			Using        datastore.IndexType    `json:"using"`
+			Covers       []string               `json:"covers"`
+			FilterCovers map[string]interface{} `json:"filter_covers"`
 		} `json:"scan"`
 	}
 
