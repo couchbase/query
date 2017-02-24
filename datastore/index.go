@@ -250,6 +250,7 @@ type IndexConnection struct {
 
 const _ENTRY_CAP = 512 // Default index scan request size
 
+// Context cannot be nil
 func NewIndexConnection(context Context) *IndexConnection {
 	size := context.GetScanCap()
 	if size <= 0 {
