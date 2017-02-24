@@ -125,15 +125,15 @@ func (this *IndexCountScan2) MarshalBase(f func(map[string]interface{})) map[str
 
 func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                     `json:"#operator"`
-		index        string                     `json:"index"`
-		indexId      string                     `json:"index_id"`
-		namespace    string                     `json:"namespace"`
-		keyspace     string                     `json:"keyspace"`
-		using        datastore.IndexType        `json:"using"`
-		spans        Spans2                     `json:"spans"`
-		covers       []string                   `json:"covers"`
-		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
+		_            string                 `json:"#operator"`
+		index        string                 `json:"index"`
+		indexId      string                 `json:"index_id"`
+		namespace    string                 `json:"namespace"`
+		keyspace     string                 `json:"keyspace"`
+		using        datastore.IndexType    `json:"using"`
+		spans        Spans2                 `json:"spans"`
+		covers       []string               `json:"covers"`
+		FilterCovers map[string]interface{} `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

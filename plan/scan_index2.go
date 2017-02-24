@@ -185,21 +185,21 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                     `json:"#operator"`
-		Index        string                     `json:"index"`
-		IndexId      string                     `json:"index_id"`
-		Namespace    string                     `json:"namespace"`
-		Keyspace     string                     `json:"keyspace"`
-		Using        datastore.IndexType        `json:"using"`
-		Spans        Spans2                     `json:"spans"`
-		Reverse      bool                       `json:"reverse"`
-		Distinct     bool                       `json:"distinct"`
-		Ordered      bool                       `json:"ordered"`
-		Projection   *IndexProjection           `json:"index_projection"`
-		Offset       string                     `json:"offset"`
-		Limit        string                     `json:"limit"`
-		Covers       []string                   `json:"covers"`
-		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
+		_            string                 `json:"#operator"`
+		Index        string                 `json:"index"`
+		IndexId      string                 `json:"index_id"`
+		Namespace    string                 `json:"namespace"`
+		Keyspace     string                 `json:"keyspace"`
+		Using        datastore.IndexType    `json:"using"`
+		Spans        Spans2                 `json:"spans"`
+		Reverse      bool                   `json:"reverse"`
+		Distinct     bool                   `json:"distinct"`
+		Ordered      bool                   `json:"ordered"`
+		Projection   *IndexProjection       `json:"index_projection"`
+		Offset       string                 `json:"offset"`
+		Limit        string                 `json:"limit"`
+		Covers       []string               `json:"covers"`
+		FilterCovers map[string]interface{} `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
