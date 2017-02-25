@@ -64,30 +64,6 @@ type Namespace interface {
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this namespace using the keyspace's name
 }
 
-// A subset of execution.Context that is useful at the datastore level.
-type QueryContext interface {
-	Credentials() Credentials
-	AuthenticatedUsers() []string
-	OriginalHttpRequest() *http.Request
-}
-
-type QueryContextImpl struct {
-}
-
-func (ci *QueryContextImpl) Credentials() Credentials {
-	return make(Credentials, 0)
-}
-
-func (ci *QueryContextImpl) AuthenticatedUsers() []string {
-	return make([]string, 0, 16)
-}
-
-func (ci *QueryContextImpl) OriginalHttpRequest() *http.Request {
-	return nil
-}
-
-var NULL_QUERY_CONTEXT = &QueryContextImpl{}
-
 // Keyspace is a map of key-value entries (typically key-document, but
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.

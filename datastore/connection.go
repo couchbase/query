@@ -16,13 +16,6 @@ import (
 
 type StopChannel chan bool
 
-type Context interface {
-	GetScanCap() int64
-	Fatal(errors.Error)
-	Error(errors.Error)
-	Warning(errors.Error)
-}
-
 type ValueConnection struct {
 	valueChannel value.ValueChannel // Closed by the generator when the scan is completed or aborted.
 	stopChannel  StopChannel        // Notifies generator  to stop generating. Never closed, just garbage-collected.
