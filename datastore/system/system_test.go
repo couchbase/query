@@ -10,6 +10,7 @@
 package system
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/couchbase/query/datastore"
@@ -26,6 +27,10 @@ func (ci *queryContextImpl) Credentials() datastore.Credentials {
 
 func (ci *queryContextImpl) AuthenticatedUsers() []string {
 	return []string{"ivanivanov", "petrpetrov"}
+}
+
+func (ci *queryContextImpl) OriginalHttpRequest() *http.Request {
+	return nil
 }
 
 func TestSystem(t *testing.T) {
