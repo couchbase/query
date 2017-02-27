@@ -66,30 +66,32 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 		}
 	}
 
-	primaryKey := indexProjection.PrimaryKey
-	allKeys := true
+	if entry != nil {
+		primaryKey := indexProjection.PrimaryKey
+		allKeys := true
 
-	if entry != nil && !entry.index.IsPrimary() {
-		for keyPos, indexKey := range entry.keys {
-			curKey := false
-			for _, expr := range exprs {
-				if expr.DependsOn(indexKey) {
-					if id != nil && id.EquivalentTo(indexKey) {
-						indexProjection.PrimaryKey = true
-						primaryKey = true
-					} else {
-						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+		if !entry.index.IsPrimary() {
+			for keyPos, indexKey := range entry.keys {
+				curKey := false
+				for _, expr := range exprs {
+					if expr.DependsOn(indexKey) {
+						if id != nil && id.EquivalentTo(indexKey) {
+							indexProjection.PrimaryKey = true
+							primaryKey = true
+						} else {
+							indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+						}
+						curKey = true
+						break
 					}
-					curKey = true
-					break
 				}
+				allKeys = allKeys && curKey
 			}
-			allKeys = allKeys && curKey
 		}
-	}
 
-	if allKeys && primaryKey {
-		indexProjection = nil
+		if allKeys && primaryKey {
+			indexProjection = nil
+		}
 	}
 
 	return indexProjection
