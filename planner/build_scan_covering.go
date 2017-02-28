@@ -164,7 +164,7 @@ outer:
 		this.resetOffsetLimit()
 	}
 
-	projDistinct := pushDown && canPushDownProjectionDistinct(index, this.projection, keys)
+	projDistinct := pushDown && canPushDownProjectionDistinct(index, this.projection, entry.keys)
 
 	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), false,
 		this.offset, this.limit, indexProjection, covers, filterCovers)

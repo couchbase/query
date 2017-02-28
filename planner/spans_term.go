@@ -45,7 +45,7 @@ func (this *TermSpans) CreateScan(
 		}
 
 		if distScan {
-			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, distinct || distScan, ordered, nil, nil, projection, covers, filterCovers)
+			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, false, ordered, nil, nil, projection, covers, filterCovers)
 			return plan.NewDistinctScan(limit, offset, scan)
 		} else {
 			return plan.NewIndexScan2(index2, term, this.spans, reverse, distinct, ordered, offset, limit, projection, covers, filterCovers)
