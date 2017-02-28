@@ -81,6 +81,7 @@ roles		 algebra.RoleSpecList
 tokOffset	 int
 }
 
+%token _ERROR_	// used by the scanner to flag errors
 %token ALL
 %token ALTER
 %token ANALYZE

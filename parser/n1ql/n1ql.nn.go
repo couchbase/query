@@ -31204,30 +31204,54 @@ OUTER0:
 		switch yylex.next(0) {
 		case 0:
 			{
-				lval.s, _ = UnmarshalDoubleQuoted(yylex.Text())
+				var e error
+
+				lval.s, e = UnmarshalDoubleQuoted(yylex.Text())
 				yylex.logToken(yylex.Text(), "STR - %s", lval.s)
+				if e != nil {
+					yylex.Error("invalid quoted string")
+					return _ERROR_
+				}
 				return STR
 			}
 		case 1:
 			{
-				lval.s, _ = UnmarshalSingleQuoted(yylex.Text())
+				var e error
+
+				lval.s, e = UnmarshalSingleQuoted(yylex.Text())
 				yylex.logToken(yylex.Text(), "STR - %s", lval.s)
+				if e != nil {
+					yylex.Error("invalid quoted string")
+					return _ERROR_
+				}
 				return STR
 			}
 		case 2:
 			{
 				// Case-insensitive identifier
+				var e error
+
 				text := yylex.Text()
 				text = text[0 : len(text)-1]
-				lval.s, _ = UnmarshalBackQuoted(text)
+				lval.s, e = UnmarshalBackQuoted(text)
 				yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
+				if e != nil {
+					yylex.Error("invalid case insensitive identifier")
+					return _ERROR_
+				}
 				return IDENT_ICASE
 			}
 		case 3:
 			{
 				// Escaped identifier
-				lval.s, _ = UnmarshalBackQuoted(yylex.Text())
+				var e error
+
+				lval.s, e = UnmarshalBackQuoted(yylex.Text())
 				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
+				if e != nil {
+					yylex.Error("invalid escaped identifier")
+					return _ERROR_
+				}
 				return IDENT
 			}
 		case 4:
