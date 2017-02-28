@@ -267,6 +267,10 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		}
 
 		if dynamic != nil {
+			if len(this.coveringScans) > 0 || this.countScan != nil {
+				return dynamic, dynamicSargLength, err
+			}
+
 			scans = append(scans, dynamic)
 			if sargLength < dynamicSargLength {
 				sargLength = dynamicSargLength
