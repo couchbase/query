@@ -211,7 +211,7 @@ func (this *Span2) MarshalJSON() ([]byte, error) {
 
 func (this *Span2) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{
-		"range": &this.Ranges,
+		"range": this.Ranges,
 	}
 
 	if this.Seek != nil && isNotNull(this.Seek) {
@@ -231,7 +231,7 @@ func (this *Span2) MarshalBase(f func(map[string]interface{})) map[string]interf
 func (this *Span2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Seek   []string          `json:"seek"`
-		Ranges []json.RawMessage `json:"rangs"`
+		Ranges []json.RawMessage `json:"range"`
 		Exact  bool              `json:"exact"`
 	}
 
