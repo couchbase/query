@@ -17,6 +17,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	json "github.com/couchbase/go_json"
@@ -195,8 +196,12 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
+	creds := datastore.Credentials{}
+	s := strings.Split(Auth_param, ":")
+	creds[s[0]] = s[1]
+
 	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", nil)
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", creds)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
