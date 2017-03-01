@@ -168,18 +168,27 @@ func TestSimpleSelect(t *testing.T) {
 	qc := start()
 
 	r, _, err := Run(qc, true, "select 1 + 1")
-	if err != nil || len(r) == 0 {
+	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
+	}
+	if len(r) == 0 {
+		t.Errorf("unexpected 0 length result")
 	}
 
 	r, _, err = Run(qc, true, "select * from system:keyspaces")
-	if err != nil || len(r) == 0 {
+	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
+	}
+	if len(r) == 0 {
+		t.Errorf("unexpected 0 length result")
 	}
 
 	r, _, err = Run(qc, true, "select * from default:orders")
-	if err != nil || len(r) == 0 {
+	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
+	}
+	if len(r) == 0 {
+		t.Errorf("unexpected 0 length result")
 	}
 
 	fileInfos, _ := ioutil.ReadDir("./json/default/orders")

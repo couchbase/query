@@ -69,18 +69,27 @@ func TestSimpleSelect(t *testing.T) {
 	qccs := start_cs()
 
 	r, _, err := Run(qc, "select 1 + 1", Namespace_FS)
-	if err != nil || len(r) == 0 {
+	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
+	if len(r) == 0 {
+		t.Errorf("unexpected 0 result length")
+	}
 
-	rcs, _, errcs := Run(qccs, "select * from system:keyspaces", Namespace_CBS)
-	if errcs != nil || len(rcs) == 0 {
-		t.Errorf("did not expect err %s", errcs.Error())
+	r, _, err = Run(qccs, "select * from system:keyspaces", Namespace_CBS)
+	if err != nil {
+		t.Errorf("did not expect err %s", err.Error())
+	}
+	if len(r) == 0 {
+		t.Errorf("unexpected 0 result length")
 	}
 
 	r, _, err = Run(qc, "select * from customer", Namespace_FS)
-	if err != nil || len(r) == 0 {
+	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
+	}
+	if len(r) == 0 {
+		t.Errorf("unexpected 0 result length")
 	}
 
 	fileInfos, _ := ioutil.ReadDir("../../data/sampledb/dimestore/customer")
