@@ -57,5 +57,13 @@
             }
         }
   ]
+},
+{
+	"statements": "select ISSTRING(DS_VERSION()) as hasversion",
+	"results": [
+        {
+            "hasversion": true
+        }
+  ]
 }
 ]

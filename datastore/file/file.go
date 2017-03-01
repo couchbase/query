@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -48,6 +49,17 @@ func (s *store) Id() string {
 
 func (s *store) URL() string {
 	return "file://" + s.path
+}
+
+func (s *store) Info() datastore.Info {
+	return &infoImpl{}
+}
+
+type infoImpl struct {
+}
+
+func (i *infoImpl) Version() string {
+	return util.VERSION
 }
 
 func (s *store) NamespaceIds() ([]string, errors.Error) {

@@ -54,6 +54,10 @@ func (s *store) URL() string {
 	return "mock:" + s.path
 }
 
+func (s *store) Info() datastore.Info {
+	return nil
+}
+
 func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }

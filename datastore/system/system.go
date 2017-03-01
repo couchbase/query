@@ -48,6 +48,10 @@ func (s *store) URL() string {
 	return s.actualStore.URL()
 }
 
+func (s *store) Info() datastore.Info {
+	return s.actualStore.Info()
+}
+
 func (s *store) NamespaceIds() ([]string, errors.Error) {
 	namespaceIds, err := s.actualStore.NamespaceIds()
 	if err != nil {

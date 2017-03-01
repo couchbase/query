@@ -37,6 +37,7 @@ const CHANNEL = "DATASTORE"
 type Datastore interface {
 	Id() string                                                                           // Id of this datastore
 	URL() string                                                                          // URL to this datastore
+	Info() Info                                                                           // Secondary information about this datastore
 	NamespaceIds() ([]string, errors.Error)                                               // Ids of the namespaces contained in this datastore
 	NamespaceNames() ([]string, errors.Error)                                             // Names of the namespaces contained in this datastore
 	NamespaceById(id string) (Namespace, errors.Error)                                    // Find a namespace in this datastore using the namespace's Id
@@ -48,6 +49,12 @@ type Datastore interface {
 	UserInfo() (value.Value, errors.Error)                                                // The users, and their roles. JSON data.
 	GetUserInfoAll() ([]User, errors.Error)                                               // Get information about all the users.
 	PutUserInfo(u *User) errors.Error                                                     // Set information for a specific user.
+}
+
+// Secondary information about this datastore. None of these methods
+// should change anything about the store. They are informational only.
+type Info interface {
+	Version() string
 }
 
 // Namespace represents a logical boundary that is within a datastore and above

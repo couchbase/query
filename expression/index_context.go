@@ -46,3 +46,7 @@ func (this *IndexContext) Now() time.Time {
 func (this *IndexContext) AuthenticatedUsers() []string {
 	return []string{"NEVER_USED"}
 }
+
+func (this *IndexContext) DatastoreVersion() string {
+	return "BOGUS_VERSION"
+}

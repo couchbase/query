@@ -177,6 +177,10 @@ func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
 }
 
+func (this *Context) DatastoreVersion() string {
+	return this.datastore.Info().Version()
+}
+
 func (this *Context) Systemstore() datastore.Datastore {
 	return this.systemstore
 }

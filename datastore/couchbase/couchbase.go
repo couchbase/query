@@ -72,6 +72,19 @@ func (s *store) URL() string {
 	return s.client.BaseURL.String()
 }
 
+func (s *store) Info() datastore.Info {
+	info := &infoImpl{version: s.client.Info.ImplementationVersion}
+	return info
+}
+
+type infoImpl struct {
+	version string
+}
+
+func (info *infoImpl) Version() string {
+	return info.version
+}
+
 func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }

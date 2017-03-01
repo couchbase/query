@@ -334,6 +334,7 @@ var _FUNCTIONS = map[string]Function{
 	"uuid":          &Uuid{},
 	"version":       &Version{},
 	"current_users": &CurrentUsers{},
+	"ds_version":    &DsVersion{},
 
 	// Distributed
 	"node_name": &NodeName{},

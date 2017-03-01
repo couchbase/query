@@ -514,3 +514,56 @@ Factory method pattern.
 func (this *CurrentUsers) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return NewCurrentUsers() }
 }
+
+///////////////////////////////////////////////////
+//
+// DsVersion
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Meta function DS_VERSION(). It returns
+the current version of the server, a string like "4.7.0-1544-enterprise".
+*/
+type DsVersion struct {
+	NullaryFunctionBase
+}
+
+func NewDsVersion() Function {
+	rv := &DsVersion{
+		*NewNullaryFunctionBase("ds_version"),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *DsVersion) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DsVersion) Type() value.Type { return value.STRING }
+
+/*
+Return the current server version, wrapped in a value.
+*/
+func (this *DsVersion) Evaluate(item value.Value, context Context) (value.Value, error) {
+	version := context.DatastoreVersion()
+	return value.NewValue(version), nil
+}
+
+func (this *DsVersion) Indexable() bool {
+	return false
+}
+
+/*
+Factory method pattern.
+*/
+func (this *DsVersion) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDsVersion()
+	}
+}
