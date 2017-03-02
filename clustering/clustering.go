@@ -62,6 +62,7 @@ type ConfigurationStore interface {
 	ClusterByName(name string) (Cluster, errors.Error)     // Find a Cluster in this ConfigurationStore using the Cluster's name
 	ConfigurationManager() ConfigurationManager            // Get a ConfigurationManager for this ConfigurationStore
 	Authorize(map[string]string, []Privilege) errors.Error // Do authorization returning an error if unsuccessful
+	WhoAmI() (string, errors.Error)                        // The Id of the local node, if clustered
 }
 
 // Cluster is a named collection of Query Nodes. It is basically a single-level namespace for one or more Query Nodes.

@@ -20,15 +20,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/util"
 )
 
 // http implementation of SystemRemoteAccess
@@ -314,29 +311,10 @@ func (this *systemRemoteHttp) WhoAmI() string {
 			return ""
 		}
 
-		// first search by IP
-		localIp, _ := util.ExternalIP()
-		if len(localIp) != 0 {
-			if searchName(this.configStore, localIp) {
-				this.localNode = localIp
-				return localIp
-			}
-
-			// reverse lookup and search by name
-			localNames, _ := net.LookupAddr(localIp)
-			for _, localName := range localNames {
-				if searchName(this.configStore, localName) {
-					this.localNode = localName
-					return localName
-				}
-			}
-		}
-
-		// all else failing, search by hostname
-		localName, _ := os.Hostname()
-		if searchName(this.configStore, localName) {
-			this.localNode = localName
-			return localName
+		localNode, _ := this.configStore.WhoAmI()
+		if localNode != "" {
+			this.localNode = localNode
+			return localNode
 		}
 
 		// This is consistent with the /admin/config endpoint:
@@ -348,30 +326,6 @@ func (this *systemRemoteHttp) WhoAmI() string {
 		return ""
 	}
 	return this.localNode
-}
-
-// helper that checks if a given name is a known cluster node
-func searchName(configStore clustering.ConfigurationStore, name string) bool {
-	cm := configStore.ConfigurationManager()
-	clusters, err := cm.GetClusters()
-	if err != nil {
-		return false
-	}
-
-	for _, c := range clusters {
-		clm := c.ClusterManager()
-		queryNodes, err := clm.GetQueryNodes()
-		if err != nil {
-			return false
-		}
-
-		for _, queryNode := range queryNodes {
-			if queryNode.Name() == name {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (this *systemRemoteHttp) GetNodeNames() []string {

@@ -145,6 +145,10 @@ func (z *zkConfigStore) Authorize(map[string]string, []clustering.Privilege) err
 	return nil
 }
 
+func (z *zkConfigStore) WhoAmI() (string, errors.Error) {
+	return "", nil
+}
+
 // zkCluster implements clustering.Cluster
 type zkCluster struct {
 	configStore    clustering.ConfigurationStore `json:"-"`

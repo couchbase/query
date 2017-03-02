@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -68,7 +69,7 @@ func (this *cbConfigStore) URL() string {
 
 func (this *cbConfigStore) ClusterNames() ([]string, errors.Error) {
 	clusterIds := []string{}
-	for _, pool := range this.cbConn.Info.Pools {
+	for _, pool := range this.getPools() {
 		clusterIds = append(clusterIds, pool.Name)
 	}
 	return clusterIds, nil
@@ -89,6 +90,11 @@ func (this *cbConfigStore) ClusterByName(name string) (clustering.Cluster, error
 
 func (this *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
 	return this
+}
+
+// Helper method to retrieve all pools
+func (this *cbConfigStore) getPools() []couchbase.RestPool {
+	return this.cbConn.Info.Pools
 }
 
 // Helper method to retrieve Couchbase services data (/pools/default/nodeServices)
@@ -177,6 +183,69 @@ func (this *cbConfigStore) Authorize(credentials map[string]string, privileges [
 		}
 	}
 	return errors.NewAdminAuthError(nil, "unrecognized authorization request")
+}
+
+const n1qlService = "n1ql"
+
+func (this *cbConfigStore) WhoAmI() (string, errors.Error) {
+
+	// this will exhaust all possibilities in the hope of
+	// finding a good name and only return an error
+	// if we could not find a name at all
+	var err errors.Error
+
+	localIp, _ := util.ExternalIP()
+	localName, _ := os.Hostname()
+	for _, p := range this.getPools() {
+		pool, newErr := this.cbConn.GetPool(p.Name)
+		if newErr != nil {
+			if err == nil {
+				err = errors.NewAdminGetClusterError(newErr, p.Name)
+			}
+			continue
+		}
+
+		for _, node := range pool.Nodes {
+			isN1ql := false
+			for _, s := range node.Services {
+				if s == n1qlService {
+					isN1ql = true
+					break
+				}
+			}
+			if !isN1ql {
+				continue
+			}
+			theName := nodeName(node)
+
+			// Is it the IP?
+			if len(localIp) != 0 {
+				if localIp == theName {
+					return theName, nil
+				}
+
+				// Is it the domain name?
+				domainNames, _ := net.LookupAddr(localIp)
+				for _, domainName := range domainNames {
+					if domainName == theName {
+						return theName, nil
+					}
+				}
+			}
+
+			// Is it the hostname?
+			if localName == theName {
+				return theName, nil
+			}
+
+			// No, it's localhost!
+			if node.ThisNode && len(localIp) > 0 &&
+				(theName == "" || theName == "localhost" || theName == "127.0.0.1") {
+				return localIp, nil
+			}
+		}
+	}
+	return "", err
 }
 
 // Type services associates a protocol with a port number
@@ -295,8 +364,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		if nodeServices.ThisNode {
 			for _, node := range pool.Nodes {
 				if node.ThisNode {
-					tokens := strings.Split(node.Hostname, ":")
-					hostname = tokens[0]
+					hostname = nodeName(node)
 					break
 				}
 			}
@@ -331,6 +399,11 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	this.queryNodes = queryNodes
 	this.poolSrvRev = poolServices.Rev
 	return this.queryNodeNames, nil
+}
+
+func nodeName(node couchbase.Node) string {
+	tokens := strings.Split(node.Hostname, ":")
+	return tokens[0]
 }
 
 func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
