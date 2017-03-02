@@ -109,7 +109,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					continue
 				}
 
-				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS)
+				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS, "")
 				if opErr != nil {
 					if warnFn != nil {
 						warnFn(errors.NewSystemRemoteWarning(opErr, "scan", endpoint))
@@ -149,7 +149,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS)
+			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS, "")
 			if opErr != nil {
 				if warnFn != nil {
 					warnFn(errors.NewSystemRemoteWarning(opErr, "scan", endpoint))
@@ -174,7 +174,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 
 // get a specified remote document from a remote node
 func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint string, command string,
-	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds) {
+	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
 	var body []byte
 	var doc map[string]interface{}
 
@@ -186,7 +186,7 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		return
 	}
 
-	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, creds)
+	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, creds, authToken)
 	if opErr != nil {
 		if warnFn != nil {
 			warnFn(errors.NewSystemRemoteWarning(opErr, "fetch", endpoint))
@@ -228,7 +228,7 @@ func credsAsJSON(creds distributed.Creds) string {
 }
 
 // helper for the REST op
-func doRemoteOp(node clustering.QueryNode, endpoint string, command string, creds distributed.Creds) ([]byte, error) {
+func doRemoteOp(node clustering.QueryNode, endpoint string, command string, creds distributed.Creds, authToken string) ([]byte, error) {
 	var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10} //MaxIdleConnsPerHost}
 	var HTTPClient = &http.Client{Transport: HTTPTransport}
 
@@ -243,6 +243,10 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, cred
 	}
 	request, _ := http.NewRequest(command, fullEndpoint, nil)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	if authToken != "" {
+		request.Header.Add("ns-server-ui", "yes")
+		request.Header.Add("ns-server-auth-token", authToken)
+	}
 	if numCredentials == 1 {
 		for k, v := range creds {
 			request.SetBasicAuth(k, v)

@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
@@ -124,4 +125,21 @@ func greaterOrEqual(bottom, key string) bool {
 
 func noop(val, key string) bool {
 	return true
+}
+
+// Return the credentials presented in the context.
+// The second parameter is the ns-server-auth-token value, from the original request,
+// if one is present, else the empty string.
+func credsFromContext(context datastore.QueryContext) (distributed.Creds, string) {
+	credentials := context.Credentials()
+	creds := make(distributed.Creds, len(credentials))
+	for k, v := range credentials {
+		creds[k] = v
+	}
+	authToken := ""
+	req := context.OriginalHttpRequest()
+	if req != nil && req.Header.Get("ns-server-ui") == "yes" {
+		authToken = req.Header.Get("ns-server-auth-token")
+	}
+	return creds, authToken
 }

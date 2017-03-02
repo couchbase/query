@@ -65,20 +65,11 @@ func (b *preparedsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func credsFromContext(context datastore.QueryContext) distributed.Creds {
-	credentials := context.Credentials()
-	creds := make(distributed.Creds, len(credentials))
-	for k, v := range credentials {
-		creds[k] = v
-	}
-	return creds
-}
-
 func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
-	creds := credsFromContext(context)
+	creds, authToken := credsFromContext(context)
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
@@ -106,7 +97,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext)
 
 				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
-				}, creds)
+				}, creds, authToken)
 		} else {
 
 			// local entry
@@ -161,7 +152,7 @@ func (b *preparedsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.E
 func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	var err errors.Error
 
-	creds := credsFromContext(context)
+	creds, authToken := credsFromContext(context)
 	for i, name := range deletes {
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
@@ -175,7 +166,7 @@ func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryCont
 				// FIXME Delete() doesn't do warnings
 				func(warn errors.Error) {
 				},
-				creds)
+				creds, authToken)
 
 			// local entry
 		} else {

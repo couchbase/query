@@ -22,7 +22,7 @@ type SystemRemoteAccess interface {
 		warnFn func(warn errors.Error)) // collect cluster keys for a keyspace from a set of remote nodes
 	GetRemoteDoc(node string, key string, endpoint string, command string,
 		docFn func(doc map[string]interface{}),
-		warnFn func(warn errors.Error), creds Creds) // collect a document for a keyspace from a remote node
+		warnFn func(warn errors.Error), creds Creds, authToken string) // collect a document for a keyspace from a remote node
 	WhoAmI() string         // local node name, if known
 	GetNodeNames() []string // all the node names
 }

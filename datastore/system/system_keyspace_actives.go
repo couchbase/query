@@ -70,7 +70,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, context datastore.QueryCon
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
-	creds := credsFromContext(context)
+	creds, authToken := credsFromContext(context)
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
@@ -100,7 +100,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, context datastore.QueryCon
 				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
 				},
-				creds)
+				creds, authToken)
 		} else {
 			var item value.AnnotatedValue
 
@@ -211,7 +211,7 @@ func (b *activeRequestsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, err
 func (b *activeRequestsKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 	var done bool
 
-	creds := credsFromContext(context)
+	creds, authToken := credsFromContext(context)
 	for i, name := range deletes {
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
@@ -225,7 +225,7 @@ func (b *activeRequestsKeyspace) Delete(deletes []string, context datastore.Quer
 				// FIXME Delete() doesn't do warnings
 				func(warn errors.Error) {
 				},
-				creds)
+				creds, authToken)
 			done = true
 
 			// local entry
