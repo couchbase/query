@@ -215,6 +215,18 @@ type CountIndex2 interface {
 		int64, errors.Error)
 }
 
+type StreamingDistinctIndex interface {
+	Index2
+
+	// Perform a streaming distinct scan on this index.  The
+	// results must be distinct across all the returned
+	// keys. secondaryKeys specifies the projection. secondaryKeys
+	// is a leading subset of the index keys.
+	ScanStreamingDistinct(requestId string, spans Spans2, reverse, ordered bool,
+		secondaryKeys int, offset, limit int64, cons ScanConsistency,
+		vector timestamp.Vector, conn *IndexConnection)
+}
+
 ////////////////////////////////////////////////////////////////////////
 //
 // End of Index API2.
