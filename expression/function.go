@@ -12,8 +12,11 @@ package expression
 import (
 	"math"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+const RANGE_LIMIT = math.MaxInt16 // Maximum range/repeat value
 
 /*
 Type Function is an interface that inherits from Expression.
@@ -132,7 +135,14 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 
 func (this *FunctionBase) Eval(applied Applied, item value.Value, context Context) (
 	result value.Value, err error) {
-	args := make(value.Values, len(this.operands))
+	var buf [8]value.Value
+	var args []value.Value
+	if len(this.operands) <= len(buf) {
+		args = buf[0:len(this.operands)]
+	} else {
+		args = _ARGS_POOL.GetSized(len(this.operands))
+		defer _ARGS_POOL.Put(args)
+	}
 
 	for i, op := range this.operands {
 		args[i], err = op.Evaluate(item, context)
@@ -189,7 +199,14 @@ func (this *FunctionBase) Copy() Expression {
 		return function.Constructor()()
 	}
 
-	copies := make(Expressions, len(operands))
+	var buf [8]Expression
+	var copies Expressions
+	if len(operands) <= len(buf) {
+		copies = buf[0:len(operands)]
+	} else {
+		copies = make(Expressions, len(operands))
+	}
+
 	for i, op := range operands {
 		if op != nil {
 			copies[i] = op.Copy()
@@ -218,6 +235,8 @@ func (this *FunctionBase) Volatile() bool { return this.volatile }
 Return the operands of the function.
 */
 func (this *FunctionBase) Operands() Expressions { return this.operands }
+
+var _ARGS_POOL = value.NewValuePool(64)
 
 /*
 A Nullary function doesnt have any input operands. Type
@@ -366,9 +385,7 @@ function. Return Apply's return value.
 */
 func (this *BinaryFunctionBase) BinaryEval(applied BinaryApplied, item value.Value, context Context) (
 	result value.Value, err error) {
-	// TODO: Use arrays instead of slices
-	args := make(value.Values, len(this.operands))
-
+	var args [2]value.Value
 	for i, op := range this.operands {
 		args[i], err = op.Evaluate(item, context)
 		if err != nil {
@@ -466,9 +483,7 @@ func NewTernaryFunctionBase(name string, first, second, third Expression) *Terna
 
 func (this *TernaryFunctionBase) TernaryEval(applied TernaryApplied, item value.Value, context Context) (
 	result value.Value, err error) {
-	// TODO: Use arrays instead of slices
-	args := make(value.Values, len(this.operands))
-
+	var args [3]value.Value
 	for i, op := range this.operands {
 		args[i], err = op.Evaluate(item, context)
 		if err != nil {
@@ -548,7 +563,14 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	found := make([]bool, len(this.operands))
+	var buf [8]bool
+	var found []bool
+	if len(this.operands) <= len(buf) {
+		found = buf[0:len(this.operands)]
+	} else {
+		found = _FOUND_POOL.GetSized(len(this.operands))
+		defer _FOUND_POOL.Put(found)
+	}
 
 	for _, first := range this.operands {
 		for j, second := range that.Operands() {
@@ -569,7 +591,7 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 }
 
 /*
-Minimum input arguments required is 3.
+Minimum input arguments required is 2.
 */
 func (this *CommutativeFunctionBase) MinArgs() int { return 2 }
 
@@ -579,6 +601,8 @@ MaxInt16  = 1<<15 - 1. This is defined using the
 math package.
 */
 func (this *CommutativeFunctionBase) MaxArgs() int { return math.MaxInt16 }
+
+var _FOUND_POOL = util.NewBoolPool(64)
 
 /*
 Used to define Apply methods for general functions. The

@@ -64,7 +64,7 @@ func (this *Binding) Descend() bool {
 }
 
 func (this *Binding) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]interface{}, 4)
 	if this.nameVariable != "" {
 		r["name_var"] = this.nameVariable
 	}
@@ -102,9 +102,8 @@ func (this Bindings) SubsetOf(other Bindings) bool {
 
 	for i, b := range this {
 		o := other[i]
-		if b.variable != o.variable ||
-			(b.descend && !o.descend) ||
-			b.nameVariable != o.nameVariable ||
+		if (b.descend && !o.descend) ||
+			(b.nameVariable != "" && o.nameVariable == "") ||
 			!b.expr.EquivalentTo(o.expr) {
 			return false
 		}
@@ -164,6 +163,16 @@ func (this Bindings) Identifiers() Expressions {
 	}
 
 	return exprs
+}
+
+func (this Bindings) Mappings() map[string]Expression {
+	mappings := make(map[string]Expression, len(this))
+
+	for _, b := range this {
+		mappings[b.variable] = b.expr
+	}
+
+	return mappings
 }
 
 func (this Bindings) Copy() Bindings {

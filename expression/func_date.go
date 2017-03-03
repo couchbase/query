@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -61,7 +62,7 @@ order to convert it to milliseconds, divide it by
 */
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := time.Now().UnixNano()
-	return value.NewValue(float64(nanos) / (1000000.0)), nil
+	return value.NewValue(float64(nanos) / 1000000.0), nil
 }
 
 func (this *ClockMillis) Static() Expression {
@@ -387,7 +388,7 @@ func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (va
 	pa := part.Actual().(string)
 	t, err := dateAdd(millisToTime(da), int(na), pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
@@ -461,7 +462,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 	pa := part.Actual().(string)
 	t, err = dateAdd(t, int(na), pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToStr(t, fmt)), nil
@@ -525,10 +526,10 @@ func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Valu
 	pa := part.Actual().(string)
 	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(diff)), nil
+	return value.NewValue(diff), nil
 }
 
 /*
@@ -600,10 +601,10 @@ func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) 
 	pa := part.Actual().(string)
 	diff, err := dateDiff(t1, t2, pa)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(diff)), nil
+	return value.NewValue(diff), nil
 }
 
 /*
@@ -687,10 +688,10 @@ func (this *DateFormatStr) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function DATE_PART_MILLIS(expr, part).
-It returns the date part as an integer. The date expr is a
-number representing UNIX milliseconds, and part is one of the
-date part strings.
+This represents the Date function DATE_PART_MILLIS(expr, part, [ tz ]).
+It returns the date part as an integer. The date expr is a number
+representing UNIX milliseconds, and part is one of the date part
+strings.
 */
 type DatePartMillis struct {
 	FunctionBase
@@ -764,10 +765,10 @@ func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.V
 
 	rv, err := datePart(timeVal, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(rv)), nil
+	return value.NewValue(rv), nil
 }
 
 /*
@@ -794,10 +795,9 @@ func (this *DatePartMillis) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function DATE_PART_STR(expr, part).
-It returns the date part as an integer. The date expr is a
-string in a supported format, and part is one of the supported
-date part strings.
+This represents the Date function DATE_PART_STR(expr, part).  It
+returns the date part as an integer. The date expr is a string in a
+supported format, and part is one of the supported date part strings.
 */
 type DatePartStr struct {
 	BinaryFunctionBase
@@ -833,18 +833,18 @@ func (this *DatePartStr) Apply(context Context, first, second value.Value) (valu
 	}
 
 	str := first.Actual().(string)
-	part := second.Actual().(string)
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
+	part := second.Actual().(string)
 	rv, err := datePart(t, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(float64(rv)), nil
+	return value.NewValue(rv), nil
 }
 
 /*
@@ -926,13 +926,8 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 
 	// Convert end date to time format.
 	da2 := endDate.Actual().(string)
-	t2, fmt2, err := strToTimeFormat(da2)
+	t2, _, err := strToTimeFormat(da2)
 	if err != nil {
-		return value.NULL_VALUE, nil
-	}
-
-	// The dates need to be the same format, if not, return null.
-	if fmt1 != fmt2 {
 		return value.NULL_VALUE, nil
 	}
 
@@ -945,25 +940,12 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 	}
 
 	// If the two dates are the same, return an empty array.
-	if t1.String() == t2.String() {
+	if t1.Equal(t2) {
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
-	// Date Part
-	partStr := part.Actual().(string)
-
-	//Define capacity of the slice using dateDiff
-	val, err := dateDiff(t1, t2, partStr)
-	if val < 0 {
-		val = -val
-	}
-	if err != nil {
-		return value.NULL_VALUE, nil
-	}
-	rv := make([]interface{}, 0, val)
-
 	// If the start date is after the end date
-	if t1.String() > t2.String() {
+	if t1.After(t2) {
 
 		// And the increment is positive return empty array. If
 		// the increment is negative, so populate the array with
@@ -978,20 +960,38 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 		}
 	}
 
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	capacity, err := dateDiff(t1, t2, partStr)
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+	if capacity < 0 {
+		capacity = -capacity
+	}
+	if capacity > RANGE_LIMIT {
+		return nil, errors.NewRangeError("DATE_RANGE_STR()")
+	}
+
+	rv := make([]interface{}, 0, capacity)
+
 	// Max date value is end date/ t2.
 	// Keep incrementing start date by step for part, and add it to
 	// the array to be returned.
 	start := t1
+	end := timeToMillis(t2)
 
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && start.String() < t2.String()) ||
-		(step < 0.0 && start.String() > t2.String()) {
+	for (step > 0.0 && timeToMillis(start) < end) ||
+		(step < 0.0 && timeToMillis(start) > end) {
 		// Compute the new time
 		rv = append(rv, timeToStr(start, fmt1))
 		t, err := dateAdd(start, int(step), partStr)
 		if err != nil {
-			return value.NULL_VALUE, nil
+			return value.NULL_VALUE, err
 		}
 
 		start = t
@@ -1100,21 +1100,6 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
-	// Date Part
-	partStr := part.Actual().(string)
-
-	//Define capacity of the slice using dateDiff
-	val, err := dateDiff(t1, t2, partStr)
-	if err != nil {
-		return value.NULL_VALUE, nil
-	}
-
-	if val < 0 {
-		val = -val
-	}
-
-	rv := make([]interface{}, 0, val)
-
 	// If the start date is after the end date
 	if t1.String() > t2.String() {
 
@@ -1131,20 +1116,37 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 		}
 	}
 
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	capacity, err := dateDiff(t1, t2, partStr)
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+	if capacity < 0 {
+		capacity = -capacity
+	}
+	if capacity > RANGE_LIMIT {
+		return nil, errors.NewRangeError("DATE_RANGE_MILLIS()")
+	}
+
+	rv := make([]interface{}, 0, capacity)
+
 	// Max date value is end date/ t2.
 	// Keep incrementing start date by step for part, and add it to
 	// the array to be returned.
 	start := t1
-
+	end := timeToMillis(t2)
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && start.String() < t2.String()) ||
-		(step < 0.0 && start.String() > t2.String()) {
+	for (step > 0.0 && timeToMillis(start) < end) ||
+		(step < 0.0 && timeToMillis(start) > end) {
 		// Compute the new time
-		rv = append(rv, float64(timeToMillis(start)))
+		rv = append(rv, timeToMillis(start))
 		t, err := dateAdd(start, int(step), partStr)
 		if err != nil {
-			return value.NULL_VALUE, nil
+			return value.NULL_VALUE, err
 		}
 
 		start = t
@@ -1222,7 +1224,7 @@ func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (
 	var err error
 	t, err = dateTrunc(t, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
@@ -1290,7 +1292,7 @@ func (this *DateTruncStr) Apply(context Context, first, second value.Value) (val
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return value.NULL_VALUE, err
 	}
 
 	return value.NewValue(timeToStr(t, str)), nil
@@ -1577,7 +1579,7 @@ func (this *NowMillis) Type() value.Type { return value.NUMBER }
 
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := context.Now().UnixNano()
-	return value.NewValue(float64(nanos) / (1000000.0)), nil
+	return value.NewValue(float64(nanos) / 1000000.0), nil
 }
 
 func (this *NowMillis) Static() Expression {
@@ -2168,6 +2170,179 @@ func (this *StrToDuration) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// WeekdayMillis
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function WEEKDAY_MILLIS(expr, [ tz ]).  It
+returns the English name of the weekday as a string. The date expr is
+a number representing UNIX milliseconds.
+*/
+type WeekdayMillis struct {
+	FunctionBase
+}
+
+func NewWeekdayMillis(operands ...Expression) Function {
+	rv := &WeekdayMillis{
+		*NewFunctionBase("weekday_millis", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *WeekdayMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *WeekdayMillis) Type() value.Type { return value.STRING }
+
+func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *WeekdayMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	first := args[0]
+
+	// Initialize timezone to nil to avoid processing if not specified.
+	timeZone := _NIL_VALUE
+
+	// Check if time zone is set
+	if len(args) > 1 {
+		timeZone = args[1]
+	}
+
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	millis := first.Actual().(float64)
+
+	// Convert the input millis to *Time
+	timeVal := millisToTime(millis)
+
+	if timeZone != _NIL_VALUE {
+		// Process the timezone component as it isnt nil
+		if timeZone.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+		if timeZone.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		// Get the timezone and the *Location.
+		tz := timeZone.Actual().(string)
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+		// Use the timezone to get corresponding time component.
+		timeVal = timeVal.In(loc)
+	}
+
+	dow, err := datePart(timeVal, "day_of_week")
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+
+	rv := time.Weekday(dow).String()
+	return value.NewValue(rv), nil
+}
+
+/*
+Minimum input arguments required.
+*/
+func (this *WeekdayMillis) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *WeekdayMillis) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *WeekdayMillis) Constructor() FunctionConstructor {
+	return NewWeekdayMillis
+}
+
+///////////////////////////////////////////////////
+//
+// WeekdayStr
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function WEEKDAY_STR(expr).  It returns the
+English name of the weekday as a string. The date expr is a string in
+a supported format.
+*/
+type WeekdayStr struct {
+	UnaryFunctionBase
+}
+
+func NewWeekdayStr(first Expression) Function {
+	rv := &WeekdayStr{
+		*NewUnaryFunctionBase("weekday_str", first),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *WeekdayStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *WeekdayStr) Type() value.Type { return value.STRING }
+
+func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *WeekdayStr) Apply(context Context, first value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := first.Actual().(string)
+	t, err := strToTime(str)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	dow, err := datePart(t, "day_of_week")
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+
+	rv := time.Weekday(dow).String()
+	return value.NewValue(rv), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *WeekdayStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewWeekdayStr(operands[0])
+	}
+}
+
 /*
 Parse the input string using the defined formats for Date
 and return the time value it represents, and error. The
@@ -2218,15 +2393,15 @@ Convert input milliseconds to time format by multiplying
 with 10^6 and using the Unix method from the time package.
 */
 func millisToTime(millis float64) time.Time {
-	return time.Unix(int64(millis)/1000, int64(math.Mod(millis, 1000)*1000000.0))
+	return time.Unix(int64(millis/1000), int64(math.Mod(millis, 1000)*1000000.0))
 }
 
 /*
 Convert input time to milliseconds from nanoseconds returned
-by UnixNano(). Cast it to float64 number and return it.
+by UnixNano().
 */
 func timeToMillis(t time.Time) float64 {
-	return float64((t.Unix()*1000.0 + int64(t.Round(time.Millisecond).Nanosecond())/1000000.0))
+	return float64(t.Unix()*1000) + float64(t.Round(time.Millisecond).Nanosecond())/1000000
 }
 
 /*
@@ -2437,18 +2612,15 @@ format. In the event t2 is greater than t1, and the result returns
 a negative value, return a negative result.
 */
 func dateDiff(t1, t2 time.Time, part string) (int64, error) {
-	var diff *date
-	if t1.String() >= t2.String() {
-		diff = diffDates(t1, t2)
-		return diffPart(t1, t2, diff, part)
-	} else {
-		diff = diffDates(t2, t1)
-		result, e := diffPart(t1, t2, diff, part)
-		if result != 0 {
-			return -result, e
-		}
-		return result, e
+	sign := 1
+	if t1.String() < t2.String() {
+		t1, t2 = t2, t1
+		sign = -1
 	}
+
+	diff := diffDates(t1, t2)
+	d, err := diffPart(t1, t2, diff, part)
+	return d * int64(sign), err
 }
 
 func GetQuarter(t time.Time) int {
@@ -2572,7 +2744,7 @@ func setDate(d *date, t time.Time) {
 	d.year = t.Year()
 	d.doy = t.YearDay()
 	d.hour, d.minute, d.second = t.Clock()
-	d.millisecond = round(float64(t.Nanosecond()) / 1000000.0)
+	d.millisecond = t.Nanosecond() / 1000000
 }
 
 /*

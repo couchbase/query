@@ -190,6 +190,24 @@ func (this *Meta) Indexable() bool {
 	return true
 }
 
+func (this *Meta) CoveredBy(keyspace string, exprs Expressions) bool {
+	if len(this.operands) > 0 {
+		alias := NewIdentifier(keyspace)
+		if !this.operands[0].DependsOn(alias) {
+			// Different keyspace, return true
+			return true
+		}
+	}
+
+	for _, expr := range exprs {
+		if this.EquivalentTo(expr) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (this *Meta) MinArgs() int { return 0 }
 
 func (this *Meta) MaxArgs() int { return 1 }

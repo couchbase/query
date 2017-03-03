@@ -13,20 +13,24 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type IntersectScan struct {
 	base
+	plan         *plan.IntersectScan
 	scans        []Operator
-	counts       map[string]int
 	values       map[string]value.AnnotatedValue
+	bits         map[string]int64
 	childChannel StopChannel
+	sent         int64
 }
 
-func NewIntersectScan(scans []Operator) *IntersectScan {
+func NewIntersectScan(plan *plan.IntersectScan, scans []Operator) *IntersectScan {
 	rv := &IntersectScan{
 		base:         newBase(),
+		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
@@ -48,6 +52,7 @@ func (this *IntersectScan) Copy() Operator {
 
 	return &IntersectScan{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
@@ -58,17 +63,21 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+
+		this.values = _INDEX_VALUE_POOL.Get()
+		this.bits = _INDEX_BIT_POOL.Get()
 		defer func() {
-			_INDEX_SCAN_POOL.Put(this.scans)
-			this.scans = nil
-			_INDEX_COUNT_POOL.Put(this.counts)
-			this.counts = nil
 			_INDEX_VALUE_POOL.Put(this.values)
+			_INDEX_BIT_POOL.Put(this.bits)
 			this.values = nil
+			this.bits = nil
 		}()
 
-		this.counts = _INDEX_COUNT_POOL.Get()
-		this.values = _INDEX_VALUE_POOL.Get()
+		fullBits := int64(0)
+		for i, scan := range this.scans {
+			scan.SetBit(uint8(i))
+			fullBits |= int64(0x01) << uint8(i)
+		}
 
 		channel := NewChannel()
 		defer channel.Close()
@@ -80,7 +89,11 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		var item value.AnnotatedValue
+		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
 		n := len(this.scans)
+		nscans := len(this.scans)
+		childBit := 0
+		childBits := int64(0)
 		stopped := false
 		ok := true
 
@@ -94,40 +107,45 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			select {
+			case childBit = <-this.childChannel:
+				if n == nscans {
+					notifyChildren(this.scans...)
+					childBits |= int64(0x01) << uint(childBit)
+				}
+				n--
+			default:
+			}
+
+			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context)
+					ok = this.processKey(item, context, fullBits, limit)
 				}
-			case <-this.childChannel:
-				if n == len(this.scans) {
-					this.notifyScans()
+			case childBit = <-this.childChannel:
+				if n == nscans {
+					notifyChildren(this.scans...)
+					childBits |= int64(0x01) << uint(childBit)
 				}
 				n--
 			case <-this.stopChannel:
 				stopped = true
 				break loop
 			default:
-				if n < len(this.scans) {
+				if n == 0 || n < nscans {
 					break loop
 				}
 			}
 		}
 
-		if n == len(this.scans) {
-			this.notifyScans()
-		}
-
 		// Await children
+		notifyChildren(this.scans...)
 		for ; n > 0; n-- {
 			<-this.childChannel
 		}
 
-		if !stopped {
-			this.sendItems()
+		if !stopped && ok && childBits != 0 && (limit <= 0 || this.sent < limit) {
+			this.sendItems(childBits)
 		}
-
-		this.values = nil
-		this.counts = nil
 	})
 }
 
@@ -135,7 +153,9 @@ func (this *IntersectScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Context) bool {
+func (this *IntersectScan) processKey(item value.AnnotatedValue,
+	context *Context, fullBits, limit int64) bool {
+
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
@@ -152,34 +172,41 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 		return false
 	}
 
-	count := this.counts[key]
-	this.counts[key] = count + 1
-
-	if count+1 == len(this.scans) {
-		delete(this.values, key)
-		return this.sendItem(item)
-	}
-
-	if count == 0 {
+	bits := this.bits[key]
+	if bits == 0 {
 		this.values[key] = item
 	}
 
+	bits |= int64(0x01) << item.Bit()
+
+	if (bits&fullBits)^fullBits == 0 {
+		delete(this.values, key)
+		delete(this.bits, key)
+
+		if limit > 0 {
+			this.sent++
+		}
+
+		item.SetBit(this.bit)
+		return this.sendItem(item) && (limit <= 0 || this.sent < limit)
+	}
+
+	this.bits[key] = bits
 	return true
 }
 
-func (this *IntersectScan) sendItems() {
-	for _, av := range this.values {
-		if !this.sendItem(av) {
-			return
-		}
+func (this *IntersectScan) sendItems(childBits int64) {
+	if childBits == 0 {
+		return
 	}
-}
 
-func (this *IntersectScan) notifyScans() {
-	for _, s := range this.scans {
-		select {
-		case s.StopChannel() <- false:
-		default:
+	for key, bits := range this.bits {
+		if (bits&childBits)^childBits == 0 {
+			item := this.values[key]
+			item.SetBit(this.bit)
+			if !this.sendItem(item) {
+				return
+			}
 		}
 	}
 }

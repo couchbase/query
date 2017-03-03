@@ -392,12 +392,10 @@ func readAndExec(liner *liner.State) (int, string) {
 		// Populate the final string to execute
 		final_input = strings.TrimSpace(final_input)
 
-		if final_input == ";" {
-			continue
+		// Print the query along with printing the results, only if -q isnt specified.
+		if !command.QUIET {
+			io.WriteString(command.W, final_input+"\n")
 		}
-
-		// Print the query along with printing the results
-		io.WriteString(command.W, final_input+"\n")
 
 		//Remove the ; before sending the query to execute
 		final_input = strings.TrimSuffix(final_input, ";")

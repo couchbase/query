@@ -11,17 +11,23 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 // DistinctScan scans multiple indexes and distincts the results.
 type DistinctScan struct {
 	readonly
-	scan Operator
+	scan  SecondaryScan
+	limit expression.Expression
 }
 
-func NewDistinctScan(scan Operator) *DistinctScan {
+func NewDistinctScan(limit expression.Expression, scan SecondaryScan) *DistinctScan {
 	return &DistinctScan{
-		scan: scan,
+		scan:  scan,
+		limit: limit,
 	}
 }
 
@@ -33,21 +39,54 @@ func (this *DistinctScan) New() Operator {
 	return &DistinctScan{}
 }
 
-func (this *DistinctScan) Scan() Operator {
+func (this *DistinctScan) Covers() expression.Covers {
+	return this.scan.Covers()
+}
+
+func (this *DistinctScan) FilterCovers() map[*expression.Cover]value.Value {
+	return this.scan.FilterCovers()
+}
+
+func (this *DistinctScan) Covering() bool {
+	return this.scan.Covering()
+}
+
+func (this *DistinctScan) Scan() SecondaryScan {
 	return this.scan
+}
+
+func (this *DistinctScan) Limit() expression.Expression {
+	return this.limit
+}
+
+func (this *DistinctScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
+}
+
+func (this *DistinctScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "DistinctScan"}
 	r["scan"] = this.scan
+
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
+	}
+
 	return json.Marshal(r)
+
 }
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string          `json:"#operator"`
-		Scan json.RawMessage `json:"scan"`
+		_     string          `json:"#operator"`
+		Scan  json.RawMessage `json:"scan"`
+		Limit string          `json:"limit"`
 	}
+
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
@@ -62,6 +101,19 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.scan, err = MakeOperator(scan_type.Operator, _unmarshalled.Scan)
-	return err
+	scan_op, err := MakeOperator(scan_type.Operator, _unmarshalled.Scan)
+	if err != nil {
+		return err
+	}
+
+	this.scan = scan_op.(SecondaryScan)
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -312,6 +312,14 @@ func (this floatValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this floatValue) ContainsToken(token, options Value) bool {
+	return this.EquivalentTo(token)
+}
+
+func (this floatValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return matcher(float64(this))
+}
+
 func (this floatValue) unwrap() Value {
 	return this
 }
@@ -370,4 +378,8 @@ func (this floatValue) Neg() NumberValue {
 
 func (this floatValue) Sub(n NumberValue) NumberValue {
 	return floatValue(float64(this) - n.Actual().(float64))
+}
+
+func (this floatValue) Int64() int64 {
+	return int64(this)
 }

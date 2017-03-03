@@ -43,6 +43,12 @@ func (this *Range) Copy() *Range {
 	}
 }
 
+func (this *Range) EquivalentTo(other *Range) bool {
+	return this.Inclusion == other.Inclusion &&
+		expression.Equivalents(this.Low, other.Low) &&
+		expression.Equivalents(this.High, other.High)
+}
+
 func (this *Range) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{
 		"Inclusion": this.Inclusion,
@@ -111,6 +117,12 @@ func (this *Span) Copy() *Span {
 	}
 }
 
+func (this *Span) EquivalentTo(other *Span) bool {
+	return this.Exact == other.Exact &&
+		expression.Equivalents(this.Seek, other.Seek) &&
+		this.Range.EquivalentTo(&other.Range)
+}
+
 func (this *Span) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{
 		"Range": &this.Range,
@@ -120,6 +132,10 @@ func (this *Span) MarshalJSON() ([]byte, error) {
 		r["Seek"] = this.Seek
 	}
 
+	if this.Exact {
+		r["Exact"] = this.Exact
+	}
+
 	return json.Marshal(r)
 }
 
@@ -127,6 +143,7 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Seek  []string
 		Range *Range
+		Exact bool
 	}
 
 	_unmarshalled.Range = &this.Range
@@ -145,6 +162,8 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 			}
 		}
 	}
+
+	this.Exact = _unmarshalled.Exact
 
 	return nil
 }

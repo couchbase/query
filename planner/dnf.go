@@ -19,12 +19,15 @@ type DNF struct {
 	expression.MapperBase
 	expr         expression.Expression
 	dnfTermCount int
+	like         bool
 }
 
-func NewDNF(expr expression.Expression) *DNF {
+func NewDNF(expr expression.Expression, like bool) *DNF {
 	rv := &DNF{
 		expr: expr,
+		like: like,
 	}
+
 	rv.SetMapper(rv)
 	return rv
 }
@@ -122,6 +125,18 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	switch operand := expr.Operand().(type) {
 	case *expression.Not:
 		return operand.Operand(), nil
+	case *expression.IsNull:
+		return expression.NewIsNotNull(operand.Operand()), nil
+	case *expression.IsMissing:
+		return expression.NewIsNotMissing(operand.Operand()), nil
+	case *expression.IsValued:
+		return expression.NewIsNotValued(operand.Operand()), nil
+	case *expression.IsNotNull:
+		return expression.NewIsNull(operand.Operand()), nil
+	case *expression.IsNotMissing:
+		return expression.NewIsMissing(operand.Operand()), nil
+	case *expression.IsNotValued:
+		return expression.NewIsValued(operand.Operand()), nil
 	case *expression.And:
 		operands := make(expression.Expressions, len(operand.Operands()))
 		for i, op := range operand.Operands() {
@@ -138,6 +153,14 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 
 		and := expression.NewAnd(operands...)
 		return this.VisitAnd(and)
+	case *expression.In:
+		second := operand.Second()
+		if acons, ok := second.(*expression.ArrayConstruct); ok &&
+			len(acons.Operands()) <= _FULL_SPAN_FANOUT {
+			return this.visitNotIn(operand.First(), acons)
+		}
+
+		return expr, nil
 	case *expression.Eq:
 		exp = expression.NewOr(expression.NewLT(operand.First(), operand.Second()),
 			expression.NewLT(operand.Second(), operand.First()))
@@ -189,6 +212,19 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 	}
 
 	return exp, nil
+}
+
+func (this *DNF) visitNotIn(first expression.Expression, second *expression.ArrayConstruct) (
+	interface{}, error) {
+
+	neqs := make([]expression.Expression, 0, len(second.Operands()))
+	for _, s := range second.Operands() {
+		neq := expression.NewNE(first, s)
+		neqs = append(neqs, neq)
+	}
+
+	and := expression.NewAnd(neqs...)
+	return this.VisitAnd(and)
 }
 
 func flattenOr(or *expression.Or) (*expression.Or, bool) {
@@ -409,8 +445,8 @@ func dnfComplexity(expr *expression.And, max int) int {
 
 func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	err := expr.MapChildren(this)
-	if err != nil {
-		return nil, err
+	if err != nil || !this.like {
+		return expr, err
 	}
 
 	re := expr.Regexp()

@@ -19,19 +19,38 @@ import (
 )
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	plan.SecondaryScan, int, error) {
+
 	if this.cover == nil {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
-	arrayIndexCount := 0
+
+	arrays := _ARRAY_POOL.Get()
+	defer _ARRAY_POOL.Put(arrays)
+
 	covering := _COVERING_POOL.Get()
 	defer _COVERING_POOL.Put(covering)
 
+	// Remember filter covers
+	fc := make(map[datastore.Index]map[*expression.Cover]value.Value, len(indexes))
+
 outer:
 	for index, entry := range indexes {
+		hasArrayKey := indexHasArrayIndexKey(index)
+		if hasArrayKey && (len(arrays) < len(covering)) {
+			continue
+		}
+
+		// Sarg to set spans
+		_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		keys := entry.keys
 
 		// Matches execution.spanScan.RunOnce()
@@ -39,46 +58,57 @@ outer:
 			keys = append(keys, id)
 		}
 
-		// Include covering expression from index WHERE clause
-		coveringExprs, _, err := indexKeyExpressions(entry, keys)
+		// Include filter covers
+		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
-		// Use the first available covering index
+		// Skip non-covering index
 		for _, expr := range exprs {
 			if !expr.CoveredBy(alias, coveringExprs) {
 				continue outer
 			}
 		}
 
-		if indexHasArrayIndexKey(index) {
-			arrayIndexCount++
+		if hasArrayKey {
+			arrays[index] = true
 		}
 
-		covering = append(covering, index)
+		covering[index] = true
+		fc[index] = filterCovers
 	}
 
 	// No covering index available
 	if len(covering) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	// Avoid array indexes if possible
-	if arrayIndexCount > 0 && arrayIndexCount < len(covering) {
-		for i, c := range covering {
-			if indexHasArrayIndexKey(c) {
-				covering[i] = nil
-			}
+	if len(arrays) < len(covering) {
+		for a, _ := range arrays {
+			delete(covering, a)
 		}
 	}
 
-	// Use shortest covering index
-	index := covering[0]
-	for _, c := range covering[1:] {
-		if c == nil {
-			continue
-		} else if index == nil {
+	// Keep indexes with max sumKeys
+	sumKeys := 0
+	for c, _ := range covering {
+		if max := indexes[c].sumKeys; max > sumKeys {
+			sumKeys = max
+		}
+	}
+
+	for c, _ := range covering {
+		if indexes[c].sumKeys < sumKeys {
+			delete(covering, c)
+		}
+	}
+
+	// Use shortest remaining index
+	var index datastore.Index
+	for c, _ := range covering {
+		if index == nil {
 			index = c
 		} else if len(c.RangeKey()) < len(index.RangeKey()) {
 			index = c
@@ -86,6 +116,7 @@ outer:
 	}
 
 	entry := indexes[index]
+	sargLength := len(entry.sargKeys)
 	keys := entry.keys
 
 	// Matches execution.spanScan.RunOnce()
@@ -93,56 +124,49 @@ outer:
 		keys = append(keys, id)
 	}
 
-	// Only sarg a single covering index
-	_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
-	if err != nil {
-		return nil, err
-	}
-
 	// Include covering expression from index WHERE clause
-	_, filterCovers, err := indexKeyExpressions(entry, keys)
-	if err != nil {
-		return nil, err
-	}
+	filterCovers := fc[index]
 
+	// Include covering expression from index keys
 	covers := make(expression.Covers, 0, len(keys))
 	for _, key := range keys {
 		covers = append(covers, expression.NewCover(key))
 	}
 
-	arrayIndex := indexHasArrayIndexKey(index)
-
-	var pushDown bool
-	pushDown, err = allowedPushDown(entry, pred, alias)
+	arrayIndex := arrays[index]
+	pushDown, err := allowedPushDown(entry, pred, alias)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	if !arrayIndex && pushDown {
-		if this.countAgg != nil && !pred.MayOverlapSpans() && canPushDownCount(this.countAgg, entry) {
-			countIndex, ok := index.(datastore.CountIndex)
-			if ok {
+	if !arrayIndex && pushDown && this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
+		if countIndex, ok := index.(datastore.CountIndex); ok {
+			if termSpans, ok := entry.spans.(*TermSpans); ok && (termSpans.Size() == 1 || !pred.MayOverlapSpans()) {
 				this.maxParallelism = 1
-				this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
-				return this.countScan, nil
+				this.countScan = plan.NewIndexCountScan(countIndex, node, termSpans.Spans(), covers, filterCovers)
+				return this.countScan, sargLength, nil
 			}
 		}
-
-		if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
-			this.maxParallelism = 1
-			limit = expression.ONE_EXPR
-			scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-			this.coveringScans = append(this.coveringScans, scan)
-			return scan, nil
-		}
 	}
 
-	if limit != nil && (arrayIndex || !pushDown) {
+	if pushDown && this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
+		this.maxParallelism = 1
+		limit = expression.ONE_EXPR
+		scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+		if scan != nil {
+			this.coveringScans = append(this.coveringScans, scan)
+		}
+		return scan, sargLength, nil
+	}
+
+	this.resetCountMin()
+
+	if limit != nil && !pushDown {
 		limit = nil
 		this.limit = nil
 	}
 
-	if this.order != nil && !this.useIndexOrder(entry, keys) {
+	if this.order != nil && !this.useIndexOrder(entry, entry.keys) {
 		this.resetOrderLimit()
 		limit = nil
 	}
@@ -151,19 +175,15 @@ outer:
 		this.maxParallelism = 1
 	}
 
-	scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-	this.coveringScans = append(this.coveringScans, scan)
-
-	if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
-		// Use DistinctScan to de-dup array index scans, multiple spans
-		return plan.NewDistinctScan(scan), nil
+	scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+	if scan != nil {
+		this.coveringScans = append(this.coveringScans, scan)
 	}
-
-	return scan, nil
+	return scan, sargLength, nil
 }
 
 func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Value, error) {
-	if fc == nil {
+	if len(fc) == 0 {
 		return nil, nil
 	}
 
@@ -196,17 +216,7 @@ func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
 		return false
 	}
 
-	for _, span := range entry.spans {
-		if len(span.Range.Low) == 0 {
-			return false
-		}
-
-		low := span.Range.Low[0]
-		if low.Type() < value.NULL || (low.Type() == value.NULL && (span.Range.Inclusion&datastore.LOW) != 0) {
-			return false
-		}
-	}
-	return true
+	return entry.spans.SkipsLeadingNulls()
 }
 
 func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
@@ -215,41 +225,58 @@ func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
 		return false
 	}
 
-	if len(entry.spans) != 1 {
-		return false
-	}
-
-	span := entry.spans[0].Range
-	if len(span.Low) == 0 {
-		return false
-	}
-
-	low := span.Low[0]
-	return low != nil &&
-		(low.Type() > value.NULL ||
-			(low.Type() >= value.NULL && (span.Inclusion&datastore.LOW) == 0))
+	return entry.spans.CanUseIndexOrder() && entry.spans.SkipsLeadingNulls()
 }
 
-func indexKeyExpressions(entry *indexEntry, keys expression.Expressions) (expression.Expressions, map[*expression.Cover]value.Value, error) {
+func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred expression.Expression) (
+	expression.Expressions, map[*expression.Cover]value.Value, error) {
+
 	var filterCovers map[*expression.Cover]value.Value
 	exprs := keys
 	if entry.cond != nil {
 		var err error
-		fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		fc := _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(fc)
+		fc = entry.cond.FilterCovers(fc)
 		fc = entry.origCond.FilterCovers(fc)
-
 		filterCovers, err = mapFilterCovers(fc)
 		if err != nil {
 			return nil, nil, err
 		}
+	}
 
+	// Allow array indexes to cover ANY predicates
+	if pred != nil && entry.exactSpans && indexHasArrayIndexKey(entry.index) {
+		covers, err := CoversFor(pred, keys)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(covers) > 0 {
+			if len(filterCovers) == 0 {
+				filterCovers = covers
+			} else {
+				for c, v := range covers {
+					if _, ok := filterCovers[c]; !ok {
+						filterCovers[c] = v
+					}
+				}
+			}
+		}
+	}
+
+	if len(filterCovers) > 0 {
 		exprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
 		copy(exprs, keys)
+
 		for c, _ := range filterCovers {
 			exprs = append(exprs, c.Covered())
 		}
 	}
+
 	return exprs, filterCovers, nil
 }
 
-var _COVERING_POOL = datastore.NewIndexPool(256)
+var _ARRAY_POOL = datastore.NewIndexBoolPool(64)
+var _COVERING_POOL = datastore.NewIndexBoolPool(64)
+var _FILTER_COVERS_POOL = value.NewStringValuePool(32)

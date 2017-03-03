@@ -11,6 +11,7 @@ package command
 
 import (
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/couchbase/godbc/n1ql"
@@ -111,6 +112,15 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 				}
 				BATCH = "off"
 
+			}
+
+			if vble == "quiet" {
+				err_code, err_str = PushValue_Helper(false, PreDefSV, "quiet", strconv.FormatBool(false))
+				if err_code != 0 {
+					return err_code, err_str
+
+				}
+				QUIET = false
 			}
 
 			//Print the path to histfile

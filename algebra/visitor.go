@@ -62,6 +62,7 @@ type NodeVisitor interface {
 	VisitSelectTerm(node *SelectTerm) (interface{}, error)
 	VisitSubselect(node *Subselect) (interface{}, error)
 	VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error)
+	VisitExpressionTerm(node *ExpressionTerm) (interface{}, error)
 	VisitSubqueryTerm(node *SubqueryTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitIndexJoin(node *IndexJoin) (interface{}, error)

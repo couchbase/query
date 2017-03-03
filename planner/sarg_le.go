@@ -15,51 +15,42 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-type sargLE struct {
-	sargBase
-}
-
-func newSargLE(pred *expression.LE) *sargLE {
-	rv := &sargLE{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		var exprs expression.Expressions
-		span := &plan.Span{}
-
-		if pred.First().EquivalentTo(expr2) {
-			if rv.MissingHigh() {
-				hs := pred.Second().Static()
-				if hs != nil {
-					exprs = expression.Expressions{expression.NewSuccessor(hs)}
-					span.Range.Inclusion = datastore.NEITHER
-				}
-			} else {
-				exprs = expression.Expressions{pred.Second().Static()}
-				span.Range.Inclusion = datastore.HIGH
-			}
-
-			span.Range.High = exprs
-			span.Range.Low = _NULL_EXPRS
-		} else if pred.Second().EquivalentTo(expr2) {
-			exprs = expression.Expressions{pred.First().Static()}
-			span.Range.Low = exprs
-			span.Range.Inclusion = datastore.LOW
-		} else if pred.DependsOn(expr2) {
-			return _VALUED_SPANS, nil
-		} else {
-			return nil, nil
-		}
-
-		if len(exprs) == 0 || exprs[0] == nil {
-			return _VALUED_SPANS, nil
-		}
-
-		span.Exact = true
-		return plan.Spans{span}, nil
+func (this *sarg) VisitLE(pred *expression.LE) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	var exprs expression.Expressions
+	span := &plan.Span{}
+
+	if pred.First().EquivalentTo(this.key) {
+		if this.missingHigh {
+			hs := pred.Second().Static()
+			if hs != nil {
+				exprs = expression.Expressions{expression.NewSuccessor(hs)}
+				span.Range.Inclusion = datastore.NEITHER
+			}
+		} else {
+			exprs = expression.Expressions{pred.Second().Static()}
+			span.Range.Inclusion = datastore.HIGH
+		}
+
+		span.Range.High = exprs
+		span.Range.Low = _NULL_EXPRS
+	} else if pred.Second().EquivalentTo(this.key) {
+		exprs = expression.Expressions{pred.First().Static()}
+		span.Range.Low = exprs
+		span.Range.Inclusion = datastore.LOW
+	} else if pred.DependsOn(this.key) {
+		return _VALUED_SPANS, nil
+	} else {
+		return nil, nil
+	}
+
+	if len(exprs) == 0 || exprs[0] == nil {
+		return _VALUED_SPANS, nil
+	}
+
+	span.Exact = true
+	return NewTermSpans(span), nil
 }

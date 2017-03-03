@@ -37,11 +37,12 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	}
 
 	keys := expression.Expressions{id}
-	entry := &indexEntry{keys, keys, nil, nil, _EXACT_VALUED_SPANS, true}
+	entry := &indexEntry{primary, keys, keys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true}
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
-	return this.buildCoveringScan(secondaries, node, id, pred, limit)
+	op, _, err := this.buildCoveringScan(secondaries, node, id, pred, limit)
+	return op, err
 }
 
 func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, force bool) (

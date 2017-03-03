@@ -19,6 +19,7 @@ import (
 
 func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	limit expression.Expression) (op plan.Operator, err error) {
+
 	keys := node.Keys()
 	if keys != nil {
 		this.resetOrderLimit()
@@ -48,6 +49,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, limit expression.Expression) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
 	var hints []datastore.Index
 	if len(node.Indexes()) > 0 {
 		hints = _HINT_POOL.Get()
@@ -74,7 +76,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		expression.NewMeta(expression.NewIdentifier(node.Alias())),
 		expression.NewFieldName("id", false))
 
-	// Handle covering primary scan
+	// First handle covering primary scan
 	if this.cover != nil && pred == nil && !isSystem {
 		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hints)
 		if scan != nil || err != nil {
@@ -98,17 +100,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	id, pred, limit expression.Expression, hints []datastore.Index) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
 	// Handle constant FALSE predicate
 	cpred := pred.Value()
 	if cpred != nil && !cpred.Truth() {
 		return _EMPTY_PLAN, nil, nil
-	}
-
-	pred = pred.Copy()
-	dnf := NewDNF(pred)
-	pred, err = dnf.Map(pred)
-	if err != nil {
-		return
 	}
 
 	primaryKey := expression.Expressions{id}
@@ -137,59 +133,175 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
-	sargables, entries, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
-	if er != nil {
-		return nil, nil, er
+	// Consider pattern matching indexes
+	pred, err = PatternFor(pred, indexes, formalizer)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	minimals := minimalIndexes(sargables, false)
-
-	// Try secondary scan
-	if len(minimals) > 0 {
-		secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
-			return secondary, nil, err
+	// Prefer OR scan
+	if or, ok := pred.(*expression.Or); ok {
+		scan, _, err := this.buildOrScan(node, id, or, limit, indexes, primaryKey, formalizer)
+		if scan != nil || err != nil {
+			return scan, nil, err
 		}
 	}
 
-	// Try UNNEST scan
-	if this.from != nil {
-		unnest, err := this.buildUnnestScan(node, this.from, pred, entries)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if unnest != nil {
-			this.resetCountMin()
-
-			if secondary == nil || len(this.coveringScans) > 0 {
-				return unnest, nil, err
-			} else {
-				return plan.NewIntersectScan(secondary, unnest), nil, err
-			}
-		}
-	}
-
-	if secondary != nil {
+	// Prefer secondary scan
+	secondary, _, err = this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
+	if secondary != nil || err != nil {
 		return secondary, nil, err
 	}
 
+	// No secondary scan, try primary scan
 	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, force)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	// PrimaryScan with predicates -- disable pushdown
+	// Primary scan with predicates -- disable pushdown
 	if primary != nil {
 		this.resetCountMin()
 		this.resetOrderLimit()
 	}
 
-	return nil, primary, err
+	return nil, primary, nil
 }
 
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) ([]datastore.Index, error) {
+func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
+	limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	secondary plan.SecondaryScan, sargLength int, err error) {
+
+	var scanbuf [4]plan.SecondaryScan
+	scans := scanbuf[0:1]
+
+	dnfPred := pred.Copy()
+	dnf := NewDNF(dnfPred, true)
+	dnfPred, err = dnf.Map(dnfPred)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	sargables, all, arrays, err := sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	minimals := minimalIndexes(sargables, false)
+
+	order := this.order
+	limitExpr := this.limit
+	countAgg := this.countAgg
+	minAgg := this.minAgg
+	defer func() {
+		if this.orderScan != nil {
+			this.order = order
+		}
+	}()
+
+	// Try secondary scan
+	if len(minimals) > 0 {
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, limit)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if secondary != nil {
+			if len(this.coveringScans) > 0 || this.countScan != nil {
+				return secondary, sargLength, nil
+			}
+
+			if secondary == this.orderScan {
+				scans[0] = secondary
+			} else {
+				scans = append(scans, secondary)
+			}
+		}
+	}
+
+	// Try UNNEST scan
+	if this.from != nil {
+		// Try pushdowns
+		this.order = order
+		this.limit = limitExpr
+		this.countAgg = countAgg
+		this.minAgg = minAgg
+
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, dnfPred, limit, all)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if unnest != nil {
+			if len(this.coveringScans) > 0 || this.countScan != nil {
+				return unnest, unnestSargLength, err
+			}
+
+			scans = append(scans, unnest)
+			if sargLength < unnestSargLength {
+				sargLength = unnestSargLength
+			}
+		}
+
+		this.resetOrderLimit()
+		this.resetCountMin()
+	}
+
+	// Try dynamic scan
+	if len(arrays) > 0 {
+		// Try pushdowns
+		this.limit = limitExpr
+
+		dynamicPred := pred.Copy()
+		dnf := NewDNF(dynamicPred, false)
+		dynamicPred, err = dnf.Map(dynamicPred)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		dynamic, dynamicSargLength, err :=
+			this.buildDynamicScan(node, id, dynamicPred, limit, arrays, primaryKey, formalizer)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if dynamic != nil {
+			scans = append(scans, dynamic)
+			if sargLength < dynamicSargLength {
+				sargLength = dynamicSargLength
+			}
+		}
+	}
+
+	switch len(scans) {
+	case 0:
+		secondary = nil
+	case 1:
+		secondary = scans[0]
+	default:
+		if scans[0] == nil {
+			if len(scans) == 2 {
+				secondary = scans[1]
+			} else {
+				secondary = plan.NewIntersectScan(limit, scans[1:]...)
+			}
+		} else {
+			if ordered, ok := scans[0].(*plan.OrderedIntersectScan); ok {
+				scans = append(ordered.Scans(), scans[1:]...)
+			}
+
+			secondary = plan.NewOrderedIntersectScan(limit, scans...)
+		}
+	}
+
+	// Return secondary scan, if any
+	return secondary, sargLength, nil
+}
+
+func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) (
+	[]datastore.Index, error) {
+
 	for _, hint := range hints {
 		indexer, err := keyspace.Indexer(hint.Using())
 		if err != nil {
@@ -222,7 +334,9 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 	return indexes, nil
 }
 
-func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) ([]datastore.Index, error) {
+func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) (
+	[]datastore.Index, error) {
+
 	indexers, err := keyspace.Indexers()
 	if err != nil {
 		return nil, err

@@ -36,7 +36,7 @@ func (this *ChannelPool) Get() []*Channel {
 }
 
 func (this *ChannelPool) Put(s []*Channel) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

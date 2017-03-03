@@ -23,7 +23,7 @@ func Build(plan plan.Operator, context *Context) (Operator, error) {
 	var m map[scannedIndex]bool
 	if context.ScanVectorSource().Type() == timestamp.ONE_VECTOR {
 		// Collect scanned indexes.
-		m = make(map[scannedIndex]bool)
+		m = make(map[scannedIndex]bool, 8)
 	}
 	builder := &builder{context, m}
 	x, err := plan.Accept(builder)
@@ -32,7 +32,7 @@ func Build(plan plan.Operator, context *Context) (Operator, error) {
 		return nil, err
 	}
 
-	if builder.scannedIndexes != nil && len(builder.scannedIndexes) > 1 {
+	if len(builder.scannedIndexes) > 1 {
 		scannedIndexArr := make([]string, len(builder.scannedIndexes))
 		for si := range builder.scannedIndexes {
 			scannedIndexArr = append(scannedIndexArr, fmt.Sprintf("%s:%s", si.namespace, si.keyspace))
@@ -96,6 +96,10 @@ func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
 	return NewKeyScan(plan), nil
 }
 
+func (this *builder) VisitExpressionScan(plan *plan.ExpressionScan) (interface{}, error) {
+	return NewExpressionScan(plan), nil
+}
+
 func (this *builder) VisitValueScan(plan *plan.ValueScan) (interface{}, error) {
 	return NewValueScan(plan), nil
 }
@@ -108,19 +112,13 @@ func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 	return NewCountScan(plan), nil
 }
 
-func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
-	scans := _INDEX_SCAN_POOL.Get()
-
-	for _, p := range plan.Scans() {
-		s, e := p.Accept(this)
-		if e != nil {
-			return nil, e
-		}
-
-		scans = append(scans, s.(Operator))
+func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {
+	scan, err := plan.Scan().Accept(this)
+	if err != nil {
+		return nil, err
 	}
 
-	return NewIntersectScan(scans), nil
+	return NewDistinctScan(plan, scan.(Operator)), nil
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
@@ -135,16 +133,37 @@ func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewUnionScan(scans), nil
+	return NewUnionScan(plan, scans), nil
 }
 
-func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {
-	scan, err := plan.Scan().Accept(this)
-	if err != nil {
-		return nil, err
+func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
+	scans := _INDEX_SCAN_POOL.Get()
+
+	for _, p := range plan.Scans() {
+		s, e := p.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+
+		scans = append(scans, s.(Operator))
 	}
 
-	return NewDistinctScan(scan.(Operator)), nil
+	return NewIntersectScan(plan, scans), nil
+}
+
+func (this *builder) VisitOrderedIntersectScan(plan *plan.OrderedIntersectScan) (interface{}, error) {
+	scans := _INDEX_SCAN_POOL.Get()
+
+	for _, p := range plan.Scans() {
+		s, e := p.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+
+		scans = append(scans, s.(Operator))
+	}
+
+	return NewOrderedIntersectScan(plan, scans), nil
 }
 
 // Fetch

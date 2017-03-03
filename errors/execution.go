@@ -42,6 +42,11 @@ func NewInvalidValueError(msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewRangeError(termType string) Error {
+	return &err{level: EXCEPTION, ICode: 5035, IKey: "execution.range_error",
+		InternalMsg: fmt.Sprintf("Out of range evaluating %s.", termType), InternalCaller: CallerN(1)}
+}
+
 func NewDuplicateFinalGroupError() Error {
 	return &err{level: EXCEPTION, ICode: 5040, IKey: "execution.duplicate_final_group",
 		InternalMsg: "Duplicate Final Group.", InternalCaller: CallerN(1)}

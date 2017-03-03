@@ -339,6 +339,16 @@ type Value interface {
 	Tokens(set *Set, options Value) *Set
 
 	/*
+	   Token search.
+	*/
+	ContainsToken(token, options Value) bool
+
+	/*
+	   Token search.
+	*/
+	ContainsMatchingToken(matcher MatchFunc, options Value) bool
+
+	/*
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value
@@ -402,6 +412,11 @@ func NewValue(val interface{}) Value {
 		panic(fmt.Sprintf("Cannot create value for type %T.", val))
 	}
 }
+
+/*
+For token search.
+*/
+type MatchFunc func(token interface{}) bool
 
 /*
 Create a new Value from a slice of bytes. The type is inferred from

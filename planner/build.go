@@ -58,24 +58,30 @@ type builder struct {
 	where           expression.Expression // Used for index selection
 	order           *algebra.Order        // Used to collect aggregates from ORDER BY, and for ORDER pushdown
 	limit           expression.Expression // Used for LIMIT pushdown
+	offset          expression.Expression // Used for OFFSET pushdown
 	countAgg        *algebra.Count        // Used for COUNT() pushdown to IndexCountScan
 	minAgg          *algebra.Min          // Used for MIN() pushdown to IndexScan
 	distinct        bool
 	children        []plan.Operator
 	subChildren     []plan.Operator
 	cover           expression.HasExpressions
-	coveringScans   []plan.Operator
+	coveringScans   []plan.CoveringOperator
+	coveredUnnests  map[*algebra.Unnest]bool
 	countScan       *plan.IndexCountScan
+	skipDynamic     bool
+	orderScan       plan.SecondaryScan
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
-	return &builder{
+	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
 		namespace:       namespace,
 		subquery:        subquery,
 		delayProjection: false,
 	}
+
+	return rv
 }
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {

@@ -13,26 +13,17 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type sargableOr struct {
-	predicate
-}
-
-func newSargableOr(pred *expression.Or) *sargableOr {
-	rv := &sargableOr{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if SubsetOf(pred, expr2) {
-			return true, nil
-		}
-
-		exprs := expression.Expressions{expr2}
-		for _, child := range pred.Operands() {
-			if SargableFor(child, exprs) == 0 {
-				return false, nil
-			}
-		}
-
+func (this *sargable) VisitOr(pred *expression.Or) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
 		return true, nil
 	}
 
-	return rv
+	keys := expression.Expressions{this.key}
+	for _, child := range pred.Operands() {
+		if min, _ := SargableFor(child, keys); min <= 0 {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

@@ -13,17 +13,8 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type sargableIn struct {
-	predicate
-}
-
-func newSargableIn(pred *expression.In) *sargableIn {
-	rv := &sargableIn{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return SubsetOf(pred.First(), expr2) ||
-				defaultSargable(pred, expr2),
-			nil
-	}
-
-	return rv
+func (this *sargable) VisitIn(pred *expression.In) (interface{}, error) {
+	return SubsetOf(pred.First(), this.key) ||
+			this.defaultSargable(pred),
+		nil
 }

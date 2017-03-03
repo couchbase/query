@@ -216,6 +216,14 @@ func (this missingValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this missingValue) ContainsToken(token, options Value) bool {
+	return false
+}
+
+func (this missingValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return false
+}
+
 func (this missingValue) unwrap() Value {
 	return this
 }

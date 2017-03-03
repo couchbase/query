@@ -14,6 +14,10 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 type Operators []Operator
@@ -25,4 +29,20 @@ type Operator interface {
 	Accept(visitor Visitor) (interface{}, error) // Visitor pattern
 	Readonly() bool                              // Used to determine read-only compliance
 	New() Operator                               // Dynamic constructor; used for unmarshaling
+}
+
+type CoveringOperator interface {
+	Operator
+
+	Covers() expression.Covers
+	FilterCovers() map[*expression.Cover]value.Value
+	Covering() bool
+}
+
+type SecondaryScan interface {
+	CoveringOperator
+	fmt.Stringer
+
+	Limit() expression.Expression
+	SetLimit(limit expression.Expression)
 }

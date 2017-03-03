@@ -12,21 +12,25 @@ package execution
 import (
 	"fmt"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type DistinctScan struct {
 	base
+	plan         *plan.DistinctScan
 	scan         Operator
 	keys         map[string]bool
 	childChannel StopChannel
 }
 
-func NewDistinctScan(scan Operator) *DistinctScan {
+func NewDistinctScan(plan *plan.DistinctScan, scan Operator) *DistinctScan {
 	rv := &DistinctScan{
 		base:         newBase(),
+		plan:         plan,
 		scan:         scan,
 		childChannel: make(StopChannel, 1),
 	}
@@ -42,6 +46,7 @@ func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
 func (this *DistinctScan) Copy() Operator {
 	return &DistinctScan{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		scan:         this.scan.Copy(),
 		childChannel: make(StopChannel, 1),
 	}
@@ -63,6 +68,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		go this.scan.RunOnce(context, parent)
 
 		var item value.AnnotatedValue
+		limit := int(getLimit(this.plan.Limit(), this.plan.Covering(), context))
 		n := 1
 		ok := true
 
@@ -77,7 +83,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 			select {
 			case item, ok = <-this.scan.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context)
+					ok = this.processKey(item, context, limit)
 				}
 			case <-this.childChannel:
 				n--
@@ -98,7 +104,9 @@ func (this *DistinctScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *DistinctScan) processKey(item value.AnnotatedValue, context *Context) bool {
+func (this *DistinctScan) processKey(item value.AnnotatedValue,
+	context *Context, limit int) bool {
+
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
@@ -119,8 +127,27 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue, context *Context
 		return true
 	}
 
+	if limit > 0 && len(this.keys) >= limit {
+		return false
+	}
+
 	this.keys[key] = true
+	item.SetBit(this.bit)
 	return this.sendItem(item)
+}
+
+func (this *DistinctScan) getLimit(context *Context) int64 {
+	limit := int64(-1)
+	if this.plan.Limit() != nil {
+		if context.ScanConsistency() == datastore.UNBOUNDED || this.plan.Covering() {
+			lv, err := this.plan.Limit().Evaluate(nil, context)
+			if err == nil && lv.Type() == value.NUMBER {
+				limit = lv.(value.NumberValue).Int64()
+			}
+		}
+	}
+
+	return limit
 }
 
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

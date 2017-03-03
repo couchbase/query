@@ -28,6 +28,7 @@ func NewArrayConstruct(operands ...Expression) Function {
 	}
 
 	rv.expr = rv
+	rv.Value() // Initialize value
 	return rv
 }
 
@@ -41,15 +42,19 @@ func (this *ArrayConstruct) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayConstruct) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if this.value != nil && *this.value != nil {
+		return *this.value, nil
+	}
+
 	return this.Eval(this, item, context)
 }
 
 func (this *ArrayConstruct) PropagatesMissing() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ArrayConstruct) PropagatesNull() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.Value, error) {

@@ -11,30 +11,27 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
-type sargValued struct {
-	sargBase
-}
-
-func newSargValued(pred expression.UnaryFunction) *sargValued {
-	rv := &sargValued{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		if pred.Operand().EquivalentTo(expr2) {
-			return _EXACT_VALUED_SPANS, nil
-		}
-
-		if pred.Operand().DependsOn(expr2) {
-			return _VALUED_SPANS, nil
-		}
-
-		return nil, nil
+func (this *sarg) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	if pred.Operand().EquivalentTo(this.key) {
+		return _EXACT_VALUED_SPANS, nil
+	}
+
+	var spans SargSpans
+	if pred.Operand().PropagatesNull() {
+		spans = _VALUED_SPANS
+	} else if pred.Operand().PropagatesMissing() {
+		spans = _FULL_SPANS
+	}
+
+	if spans != nil && pred.Operand().DependsOn(this.key) {
+		return spans, nil
+	}
+
+	return nil, nil
 }

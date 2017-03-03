@@ -11,17 +11,41 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 // IntersectScan scans multiple indexes and intersects the results.
 type IntersectScan struct {
 	readonly
-	scans []Operator
+	scans []SecondaryScan
+	limit expression.Expression
 }
 
-func NewIntersectScan(scans ...Operator) *IntersectScan {
+func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *IntersectScan {
+	for _, scan := range scans {
+		if scan.Limit() != nil {
+			scan.SetLimit(nil)
+		}
+	}
+
+	buf := make([]SecondaryScan, 0, 2*len(scans))
+	scans = flattenIntersectScans(scans, buf)
+
+	n := len(scans)
+	if n > 64 {
+		return NewIntersectScan(
+			limit,
+			NewIntersectScan(nil, scans[0:n/2]...),
+			NewIntersectScan(nil, scans[n/2:]...),
+		)
+	}
+
 	return &IntersectScan{
 		scans: scans,
+		limit: limit,
 	}
 }
 
@@ -33,13 +57,57 @@ func (this *IntersectScan) New() Operator {
 	return &IntersectScan{}
 }
 
-func (this *IntersectScan) Scans() []Operator {
+func (this *IntersectScan) Covers() expression.Covers {
+	if this.Covering() {
+		return this.scans[0].Covers()
+	} else {
+		return nil
+	}
+}
+
+func (this *IntersectScan) FilterCovers() map[*expression.Cover]value.Value {
+	if this.Covering() {
+		return this.scans[0].FilterCovers()
+	} else {
+		return nil
+	}
+}
+
+func (this *IntersectScan) Covering() bool {
+	for _, scan := range this.scans {
+		if !scan.Covering() {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (this *IntersectScan) Scans() []SecondaryScan {
 	return this.scans
+}
+
+func (this *IntersectScan) Limit() expression.Expression {
+	return this.limit
+}
+
+func (this *IntersectScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
+}
+
+func (this *IntersectScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "IntersectScan"}
 	r["scans"] = this.scans
+
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
+	}
+
 	return json.Marshal(r)
 }
 
@@ -47,6 +115,7 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string            `json:"#operator"`
 		Scans []json.RawMessage `json:"scans"`
+		Limit string            `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -54,7 +123,7 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.scans = make([]Operator, 0, len(_unmarshalled.Scans))
+	this.scans = make([]SecondaryScan, 0, len(_unmarshalled.Scans))
 
 	for _, raw_scan := range _unmarshalled.Scans {
 		var scan_type struct {
@@ -71,8 +140,28 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 			return err
 		}
 
-		this.scans = append(this.scans, scan_op)
+		this.scans = append(this.scans, scan_op.(SecondaryScan))
 	}
 
-	return err
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func flattenIntersectScans(scans, buf []SecondaryScan) []SecondaryScan {
+	for _, scan := range scans {
+		switch scan := scan.(type) {
+		case *IntersectScan:
+			buf = flattenIntersectScans(scan.scans, buf)
+		default:
+			buf = append(buf, scan)
+		}
+	}
+
+	return buf
 }

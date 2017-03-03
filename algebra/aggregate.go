@@ -118,6 +118,20 @@ func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 }
 
 /*
+Not constant.
+*/
+func (this *AggregateBase) Value() value.Value {
+	return nil
+}
+
+/*
+Not static.
+*/
+func (this *AggregateBase) Static() expression.Expression {
+	return nil
+}
+
+/*
 Not indexable.
 */
 func (this *AggregateBase) Indexable() bool {

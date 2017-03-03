@@ -1,9 +1,9 @@
 [
 	{
 	"statements": "prepare test from select name, statement, uses from system:prepareds",
+	"ignore": "encoded_plan",
 	"results": [
         {
-            "encoded_plan": "H4sIAAAJbogA/5ySQWvjMBCF/4pRLrtgFvbq214WegvkWEos7JdEqSypM+OSNKS/vSMnsUlaCs3Nenrz/M2MDgahiS3aZfI2mMqY0gTbQb8ELHqKCWQlkqkOZjYdzAIvvdZCLe/NxvmWoPWP16Z/vWwiubfsGkx3pczJdZb2i0YJS+NCi52qs3SSVXrGnpNtMnUiJEto+dzIRZ/xngWdqj27sFalxcr2XsyxvP7bf0iz+VnobcTckvUefuzqrrYfghNn/ZziFk1eBYEVeCmgjgc3dikbf9UjYP2nzoD174Hpy3sWq8wI8p2pZ3C+f/o0HRcmJL3ODp2Pe3Uea/DQ6Gkq1TS16u/xNmchBNsNPzDs1sFKT8jV59e35ZiXPcJOUka7nLRYsJNpRUV+tcWKYlcwvDIWOa8sxpyyyPVnxy3n8SMAAP//3FLCCA8DAAA=",
             "name": "test",
             "operator": {
                 "#operator": "Sequence",

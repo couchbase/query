@@ -91,9 +91,30 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	return nil, nil
 }
 
-func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
+func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
+	if node.IsKeyspace() {
+		return node.KeyspaceTerm().Accept(this)
+	}
+
 	this.resetOrderLimit()
 	this.resetCountMin()
+
+	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
+	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
+
+	scan := plan.NewExpressionScan(node.ExpressionTerm(), node.Alias())
+	this.children = append(this.children, scan)
+
+	return nil, nil
+}
+
+func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
+	this.resetCountMin()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+		this.resetLimit()
+	} else {
+		this.resetOrderLimit()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -123,8 +144,12 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
-	this.resetOrderLimit()
 	this.resetCountMin()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+		this.resetLimit()
+	} else {
+		this.resetOrderLimit()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -220,12 +245,19 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	this.resetOrderLimit()
-	this.resetCountMin()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); !ok || !term.IsKeyspace() {
+		this.resetCountMin()
+		this.resetOrderLimit()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
+	}
+
+	_, found := this.coveredUnnests[node]
+	if found {
+		return nil, nil
 	}
 
 	unnest := plan.NewUnnest(node)
@@ -243,8 +275,21 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		return false, nil
 	}
 
-	from, ok := node.From().(*algebra.KeyspaceTerm)
-	if !ok || from.Keys() != nil {
+	var from *algebra.KeyspaceTerm
+	switch other := node.From().(type) {
+	case *algebra.KeyspaceTerm:
+		from = other
+	case *algebra.ExpressionTerm:
+		if other.IsKeyspace() {
+			from = other.KeyspaceTerm()
+		} else {
+			return false, nil
+		}
+	default:
+		return false, nil
+	}
+
+	if from == nil || from.Keys() != nil {
 		return false, nil
 	}
 
@@ -276,6 +321,10 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 
 func (this *builder) resetOrderLimit() {
 	this.order = nil
+	this.limit = nil
+}
+
+func (this *builder) resetLimit() {
 	this.limit = nil
 }
 

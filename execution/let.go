@@ -43,11 +43,7 @@ func (this *Let) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
-	n := len(this.plan.Bindings())
-	cv := value.NewScopeValue(make(map[string]interface{}, n), item)
-	lv := value.NewAnnotatedValue(cv)
-	lv.SetAnnotations(item)
-
+	lv := item.Copy().(value.AnnotatedValue)
 	for _, b := range this.plan.Bindings() {
 		v, e := b.Expression().Evaluate(item, context)
 		if e != nil {

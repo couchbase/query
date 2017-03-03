@@ -273,14 +273,14 @@
     },
 
  {
-        "statements": "SELECT UPPER(type) || \" \" || LOWER(title) || \" \" || RTRIM(details.title, ' ') || \" \" || LTRIM(details.format, ' ' ) AS STR FROM default:catalog ORDER BY str",
+        "statements": "SELECT UPPER(type) || \" \" || LOWER(title) || \" \" || RTRIM(details.title, ' ') || \" \" || LTRIM(details.format, ' ' ) AS STR FROM default:catalog ORDER BY STR",
         "results": [
       {},
         {
-            "STR": "MOVIES\u0026TV zero dark thirty ZERO DARK THIRTY DVD"
+            "STR": "MOVIES\u0026TV sherlock: series 1 SHERLOCK: SERIES 1 Box Set"
         },
         {
-            "STR": "MOVIES\u0026TV sherlock: series 1 SHERLOCK: SERIES 1 Box Set"
+            "STR": "MOVIES\u0026TV zero dark thirty ZERO DARK THIRTY DVD"
         }
  ]
 },
@@ -323,7 +323,7 @@
     ]
     },
  {
-      "statements":"select name from default:contacts where LENGTH(contacts.name) < 5",
+      "statements":"select name from default:contacts where LENGTH(contacts.name) < 5 order by name",
       "results": [
         {
             "name": "dave"
@@ -407,7 +407,7 @@
     ]
     },
     {
-       "statements":"select UPPER(contacts.name) as name, TITLE(contacts.type) as type from default:contacts where LENGTH(contacts.name) < 5",
+       "statements":"select UPPER(contacts.name) as name, TITLE(contacts.type) as type from default:contacts where LENGTH(contacts.name) < 5 order by name",
        "results": [
         {
             "name": "DAVE",
@@ -554,5 +554,10 @@
             "$1": "World!"
         }
     ]
+    },
+    {
+        "statements": "SELECT REPEAT('0', 10000000000)",
+        "results": [
+        ]
     }
 ]

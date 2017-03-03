@@ -13,39 +13,40 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type sargableAny struct {
-	predicate
-}
-
-func newSargableAny(pred *expression.Any) *sargableAny {
-	rv := &sargableAny{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if defaultSargable(pred, expr2) {
-			return true, nil
-		}
-
-		all, ok := expr2.(*expression.All)
-		if !ok {
-			return false, nil
-		}
-
-		array, ok := all.Array().(*expression.Array)
-		if !ok {
-			return false, nil
-		}
-
-		if !pred.Bindings().SubsetOf(array.Bindings()) {
-			return false, nil
-		}
-
-		if array.When() != nil &&
-			!SubsetOf(pred.Satisfies(), array.When()) {
-			return false, nil
-		}
-
-		mappings := expression.Expressions{array.ValueMapping()}
-		return SargableFor(pred.Satisfies(), mappings) > 0, nil
+func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
+	if this.defaultSargable(pred) {
+		return true, nil
 	}
 
-	return rv
+	all, ok := this.key.(*expression.All)
+	if !ok {
+		return false, nil
+	}
+
+	array, ok := all.Array().(*expression.Array)
+	if !ok {
+		bindings := pred.Bindings()
+		return len(bindings) == 1 &&
+				!bindings[0].Descend() &&
+				bindings[0].Expression().EquivalentTo(all.Array()),
+			nil
+	}
+
+	if !pred.Bindings().SubsetOf(array.Bindings()) {
+		return false, nil
+	}
+
+	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
+	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	if err != nil {
+		return nil, err
+	}
+
+	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
+		return false, nil
+	}
+
+	mappings := expression.Expressions{array.ValueMapping()}
+	min, _ := SargableFor(satisfies, mappings)
+	return min > 0, nil
 }

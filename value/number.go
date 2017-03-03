@@ -18,4 +18,5 @@ type NumberValue interface {
 	Mult(n NumberValue) NumberValue
 	Neg() NumberValue
 	Sub(n NumberValue) NumberValue
+	Int64() int64
 }

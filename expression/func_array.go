@@ -13,6 +13,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -1355,7 +1356,12 @@ func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
-	rv := make([]interface{}, 0, int(math.Abs(end-start)/math.Abs(step)))
+	capacity := int(math.Abs(end-start) / math.Abs(step))
+	if capacity > RANGE_LIMIT {
+		return nil, errors.NewRangeError("ARRAY_RANGE()")
+	}
+
+	rv := make([]interface{}, 0, capacity)
 	for v := start; (step > 0.0 && v < end) || (step < 0.0 && v > end); v += step {
 		rv = append(rv, v)
 	}
@@ -1523,6 +1529,10 @@ func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (valu
 	}
 
 	n := int(sf)
+	if n > RANGE_LIMIT {
+		return nil, errors.NewRangeError("ARRAY_REPEAT()")
+	}
+
 	ra := make([]interface{}, n)
 	for i := 0; i < n; i++ {
 		ra[i] = first
@@ -1809,7 +1819,15 @@ func (this *ArrayStar) Apply(context Context, arg value.Value) (value.Value, err
 	}
 
 	// Wrap the elements in Values
-	dup := make([]value.Value, len(actual))
+	var dupBuf [256]value.Value
+	var dup []value.Value
+	if len(actual) <= len(dupBuf) {
+		dup = dupBuf[0:len(actual)]
+	} else {
+		dup = _DUP_POOL.GetSized(len(actual))
+		defer _DUP_POOL.Put(dup)
+	}
+
 	for i, a := range actual {
 		dup[i] = value.NewValue(a)
 	}
@@ -1835,6 +1853,8 @@ func (this *ArrayStar) Apply(context Context, arg value.Value) (value.Value, err
 
 	return value.NewValue(pairs), nil
 }
+
+var _DUP_POOL = value.NewValuePool(1024)
 
 /*
 Factory method pattern.

@@ -570,5 +570,41 @@
             ]
         }
     ] 
- }
+ },
+    {
+        "statements": "SELECT ARRAY i FOR i:j IN [ 10, 20, 30 ] END",
+        "results": [
+        {
+            "$1": [
+	        0,
+	        1,
+	        2
+	    ]
+        }
+        ]
+    },
+    {
+        "statements": "SELECT ARRAY j FOR i:j IN {'a':1, 'b':2, 'c':3} END",
+        "results": [
+        {
+            "$1": [
+	        1,
+	        2,
+	        3
+	    ]
+        }
+        ]
+    },
+    {
+        "statements": "SELECT OBJECT UPPER(i) : j*10 FOR i:j IN {'a':1, 'b':2, 'c':3} END",
+        "results": [
+        {
+            "$1": {
+	        "A": 10,
+	        "B": 20,
+	        "C": 30
+	    }
+        }
+        ]
+    }
 ]

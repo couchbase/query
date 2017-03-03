@@ -20,12 +20,13 @@ import (
 
 func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	node *algebra.IndexJoin) (op *plan.IndexJoin, err error) {
-	index, covers, fliterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
+
+	index, covers, filterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
 	if err != nil {
 		return nil, err
 	}
 
-	scan := plan.NewIndexJoin(keyspace, node, index, covers, fliterCovers)
+	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers)
 	if covers != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -34,6 +35,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 
 func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 	node *algebra.IndexNest) (op *plan.IndexNest, err error) {
+
 	index, _, _, err := this.buildJoinScan(keyspace, node.Right(), "nest")
 	if err != nil {
 		return nil, err
@@ -44,6 +46,7 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (
 	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+
 	indexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(indexes)
 	indexes, err := allIndexes(keyspace, nil, indexes)
@@ -53,7 +56,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	var pred expression.Expression
 	pred = expression.NewIsNotNull(node.Keys().Copy())
-	dnf := NewDNF(pred)
+	dnf := NewDNF(pred, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {
 		return nil, nil, nil, err
@@ -62,7 +65,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	subset := pred
 	if this.where != nil {
 		subset = expression.NewAnd(subset, this.where.Copy())
-		dnf = NewDNF(subset)
+		dnf = NewDNF(subset, true)
 		subset, err = dnf.Map(subset)
 		if err != nil {
 			return nil, nil, nil, err
@@ -76,7 +79,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
-	sargables, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
+	sargables, _, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -90,7 +93,9 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 }
 
 func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, op string) (datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+	node *algebra.KeyspaceTerm, op string) (
+	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+
 	if this.cover != nil && op == "join" {
 		alias := node.Alias()
 		id := expression.NewField(
@@ -111,7 +116,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			}
 
 			// Include covering expression from index WHERE clause
-			coveringExprs, filterCovers, err := indexKeyExpressions(entry, keys)
+			coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, nil)
 			if err != nil {
 				return nil, nil, nil, err
 			}

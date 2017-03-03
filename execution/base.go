@@ -33,6 +33,7 @@ type base struct {
 	duration    time.Duration
 	chanTime    time.Duration
 	stopped     bool
+	bit         uint8
 }
 
 const _ITEM_CAP = 512
@@ -113,6 +114,14 @@ func (this *base) Parent() Parent {
 
 func (this *base) SetParent(parent Parent) {
 	this.parent = parent
+}
+
+func (this *base) Bit() uint8 {
+	return this.bit
+}
+
+func (this *base) SetBit(b uint8) {
+	this.bit = b
 }
 
 func (this *base) copy() base {
@@ -231,7 +240,7 @@ func (this *base) notifyParent() {
 	parent := this.parent
 	if parent != nil {
 		// Block on parent
-		parent.ChildChannel() <- false
+		parent.ChildChannel() <- int(this.bit)
 		this.parent = nil
 	}
 }
@@ -241,7 +250,7 @@ func (this *base) notifyStop() {
 	stop := this.stop
 	if stop != nil {
 		select {
-		case stop.StopChannel() <- false:
+		case stop.StopChannel() <- 0:
 		default:
 			// Already notified.
 		}
@@ -351,6 +360,7 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 	actuals := kv.Actual()
 	switch actuals.(type) {
 	case []interface{}:
+		// Do nothing
 	case nil:
 		actuals = []interface{}(nil)
 	default:

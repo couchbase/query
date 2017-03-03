@@ -239,6 +239,14 @@ func (this boolValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this boolValue) ContainsToken(token, options Value) bool {
+	return this.EquivalentTo(token)
+}
+
+func (this boolValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return matcher(bool(this))
+}
+
 func (this boolValue) unwrap() Value {
 	return this
 }

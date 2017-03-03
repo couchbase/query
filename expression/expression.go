@@ -216,7 +216,7 @@ func (this Expressions) EquivalentTo(other Expressions) bool {
 	}
 
 	for i, expr := range this {
-		if !expr.EquivalentTo(other[i]) {
+		if !Equivalent(expr, other[i]) {
 			return false
 		}
 	}
@@ -243,4 +243,18 @@ func CopyExpressions(exprs Expressions) Expressions {
 func Equivalent(expr1, expr2 Expression) bool {
 	return (expr1 == nil && expr2 == nil) ||
 		(expr1 != nil && expr2 != nil && expr1.EquivalentTo(expr2))
+}
+
+func Equivalents(exprs1, exprs2 Expressions) bool {
+	if len(exprs1) != len(exprs2) {
+		return false
+	}
+
+	for i, expr1 := range exprs1 {
+		if !Equivalent(expr1, exprs2[i]) {
+			return false
+		}
+	}
+
+	return true
 }

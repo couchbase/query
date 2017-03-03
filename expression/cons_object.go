@@ -33,6 +33,7 @@ func NewObjectConstruct(mapping map[Expression]Expression) Expression {
 	}
 
 	rv.expr = rv
+	rv.Value() // Initialize value
 	return rv
 }
 
@@ -46,6 +47,10 @@ func (this *ObjectConstruct) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectConstruct) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if this.value != nil && *this.value != nil {
+		return *this.value, nil
+	}
+
 	m := make(map[string]interface{}, len(this.mapping))
 
 	for name, val := range this.mapping {
@@ -74,11 +79,11 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 }
 
 func (this *ObjectConstruct) PropagatesMissing() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ObjectConstruct) PropagatesNull() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
@@ -105,10 +110,6 @@ func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	return true
 }
 
-/*
-Range over the bindings and append each value to a slice of
-expressions. Return this slice.
-*/
 func (this *ObjectConstruct) Children() Expressions {
 	rv := make(Expressions, 0, 2*len(this.mapping))
 	for name, value := range this.mapping {
@@ -118,10 +119,6 @@ func (this *ObjectConstruct) Children() Expressions {
 	return rv
 }
 
-/*
-Range over the bindings and map the expressions to another expression.
-Reset the expression to be the new expression at its corresponding key.
-*/
 func (this *ObjectConstruct) MapChildren(mapper Mapper) (err error) {
 	mapped := make(map[Expression]Expression, len(this.mapping))
 
@@ -161,4 +158,8 @@ func (this *ObjectConstruct) Copy() Expression {
 	}
 
 	return NewObjectConstruct(copies)
+}
+
+func (this *ObjectConstruct) Mapping() map[Expression]Expression {
+	return this.mapping
 }

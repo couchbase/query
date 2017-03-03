@@ -49,6 +49,21 @@ func notifyConn(stopchannel datastore.StopChannel) {
 	}
 }
 
+func getLimit(limit expression.Expression, covering bool, context *Context) int64 {
+	rv := int64(-1)
+	if limit != nil {
+		if context.ScanConsistency() == datastore.UNBOUNDED || covering {
+			lv, err := limit.Evaluate(nil, context)
+			if err == nil && lv.Type() == value.NUMBER {
+				rv = lv.(value.NumberValue).Int64()
+			}
+		}
+	}
+
+	return rv
+}
+
 var _INDEX_SCAN_POOL = NewOperatorPool(16)
 var _INDEX_COUNT_POOL = util.NewStringIntPool(1024)
 var _INDEX_VALUE_POOL = value.NewStringAnnotatedPool(1024)
+var _INDEX_BIT_POOL = util.NewStringInt64Pool(1024)

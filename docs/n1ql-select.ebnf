@@ -24,7 +24,7 @@ alias ::= identifier
  *  from clause
  */
 from-clause ::= 'FROM' from-term
-from-term ::= from-keyspace ('AS'? alias)? use-clause? | '(' select ')' 'AS'? alias | from-term join-clause | from-term nest-clause | from-term unnest-clause
+from-term ::= from-keyspace ('AS'? alias)? use-clause? | '(' select ')' 'AS'? alias | expr ('AS' alias)? | from-term join-clause | from-term nest-clause | from-term unnest-clause
 from-keyspace ::= (namespace ':')? keyspace
 namespace ::= identifier
 keyspace ::= identifier

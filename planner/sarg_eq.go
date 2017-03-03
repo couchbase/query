@@ -15,44 +15,35 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-type sargEq struct {
-	sargBase
-}
-
-func newSargEq(pred *expression.Eq) *sargEq {
-	rv := &sargEq{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		span := &plan.Span{}
-
-		if pred.First().EquivalentTo(expr2) {
-			span.Range.Low = expression.Expressions{pred.Second().Static()}
-		} else if pred.Second().EquivalentTo(expr2) {
-			span.Range.Low = expression.Expressions{pred.First().Static()}
-		} else if pred.DependsOn(expr2) {
-			return _VALUED_SPANS, nil
-		} else {
-			return nil, nil
-		}
-
-		if span.Range.Low[0] == nil {
-			return _VALUED_SPANS, nil
-		}
-
-		if rv.MissingHigh() {
-			span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
-			span.Range.Inclusion = datastore.LOW
-		} else {
-			span.Range.High = span.Range.Low
-			span.Range.Inclusion = datastore.BOTH
-		}
-
-		span.Exact = true
-		return plan.Spans{span}, nil
+func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	span := &plan.Span{}
+
+	if pred.First().EquivalentTo(this.key) {
+		span.Range.Low = expression.Expressions{pred.Second().Static()}
+	} else if pred.Second().EquivalentTo(this.key) {
+		span.Range.Low = expression.Expressions{pred.First().Static()}
+	} else if pred.DependsOn(this.key) {
+		return _VALUED_SPANS, nil
+	} else {
+		return nil, nil
+	}
+
+	if span.Range.Low[0] == nil {
+		return _VALUED_SPANS, nil
+	}
+
+	if this.missingHigh {
+		span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
+		span.Range.Inclusion = datastore.LOW
+	} else {
+		span.Range.High = span.Range.Low
+		span.Range.Inclusion = datastore.BOTH
+	}
+
+	span.Exact = true
+	return NewTermSpans(span), nil
 }

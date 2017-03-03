@@ -12,6 +12,7 @@ package http
 import (
 	"encoding/base64"
 	"encoding/json"
+	go_errors "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -52,7 +53,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	e := req.ParseForm()
 	if e != nil {
-		err = errors.NewServiceErrorBadValue(e, "request form")
+		err = errors.NewServiceErrorBadValue(go_errors.New("unable to parse form"), "request form")
 	}
 
 	if err != nil && req.Method != "GET" && req.Method != "POST" {
@@ -140,7 +141,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 			var e error
 			max_parallelism, e = strconv.Atoi(maxp)
 			if e != nil {
-				err = errors.NewServiceErrorBadValue(e, "max parallelism")
+				err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is not an integer"), "max parallelism")
 			}
 		}
 	}
@@ -460,7 +461,7 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 			encoded_creds := strings.Split(auth, " ")[1]
 			decoded_creds, err := base64.StdEncoding.DecodeString(encoded_creds)
 			if err != nil {
-				return nil, errors.NewServiceErrorBadValue(err, CREDS)
+				return nil, errors.NewServiceErrorBadValue(go_errors.New("credentials not base64-encoded"), CREDS)
 			}
 			// Authorization header is in format "user:pass"
 			// per http://tools.ietf.org/html/rfc1945#section-10.2
@@ -608,7 +609,7 @@ func (this *urlArgs) getStatement() (string, errors.Error) {
 	if statement == "" && this.req.Method == "POST" {
 		bytes, err := ioutil.ReadAll(this.req.Body)
 		if err != nil {
-			return "", errors.NewServiceErrorBadValue(err, STATEMENT)
+			return "", errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), STATEMENT)
 		}
 
 		statement = string(bytes)
@@ -662,7 +663,7 @@ func (this *urlArgs) getPositionalArgs() (value.Values, errors.Error) {
 	}
 	e := decoder.Decode(&args)
 	if e != nil {
-		return positionalArgs, errors.NewServiceErrorBadValue(e, ARGS)
+		return positionalArgs, errors.NewServiceErrorBadValue(go_errors.New("unable to parse args parameter as array"), ARGS)
 	}
 
 	positionalArgs = make([]value.Value, len(args))
@@ -742,7 +743,7 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	}
 	e := decoder.Decode(&target)
 	if e != nil {
-		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
+		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse scan vector"), SCAN_VECTOR)
 	}
 
 	return getScanVectorFromJSON(target)
@@ -762,7 +763,7 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 	}
 	e := decoder.Decode(&target)
 	if e != nil {
-		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTORS)
+		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse scan vectors"), SCAN_VECTORS)
 	}
 
 	return getScanVectorsFromJSON(target)
@@ -799,7 +800,7 @@ func (this *urlArgs) getTristate(f string) (value.Tristate, errors.Error) {
 	}
 	bool_value, e := strconv.ParseBool(value_field)
 	if e != nil {
-		return tristate_value, errors.NewServiceErrorBadValue(e, f)
+		return tristate_value, errors.NewServiceErrorBadValue(go_errors.New("unable to parse tristate as a boolean"), f)
 	}
 	tristate_value = value.ToTristate(bool_value)
 	return tristate_value, nil
@@ -816,7 +817,7 @@ func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 		}
 		e := decoder.Decode(&creds_data)
 		if e != nil {
-			err = errors.NewServiceErrorBadValue(e, CREDS)
+			err = errors.NewServiceErrorBadValue(go_errors.New("unable to parse creds"), CREDS)
 		}
 	}
 	return creds_data, err
@@ -869,7 +870,7 @@ func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 	}
 	err := decoder.Decode(&p.args)
 	if err != nil {
-		return nil, errors.NewServiceErrorBadValue(err, "JSON request body")
+		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse JSON"), "JSON request body")
 	}
 	for arg, _ := range p.args {
 		if !isValidParameter(arg) {
@@ -1221,7 +1222,7 @@ func makeSparseVector(args map[string]interface{}) (*scanVectorEntries, errors.E
 	for key, arg := range args {
 		index, err := strconv.Atoi(key)
 		if err != nil {
-			return nil, errors.NewServiceErrorBadValue(err, SCAN_VECTOR)
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("Key value is not integer: "+key), SCAN_VECTOR)
 		}
 		array, ok := arg.([]interface{})
 		if !ok {
@@ -1340,7 +1341,7 @@ func newDuration(s string) (duration time.Duration, err errors.Error) {
 	if err == nil {
 		d, e := time.ParseDuration(s)
 		if e != nil {
-			err = errors.NewServiceErrorBadValue(e, "duration")
+			err = errors.NewServiceErrorBadValue(go_errors.New("Unable to parse duration: "+s), "duration")
 		} else {
 			duration = d
 		}

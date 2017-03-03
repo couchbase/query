@@ -13,26 +13,29 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetAny struct {
-	subsetDefault
-	any *expression.Any
+func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
+	switch expr2 := this.expr2.(type) {
+	case *expression.Any:
+		return this.visitCollectionPredicate(expr, expr2)
+	case *expression.AnyEvery:
+		return this.visitCollectionPredicate(expr, expr2)
+	default:
+		return this.visitDefault(expr)
+	}
 }
 
-func newSubsetAny(any *expression.Any) *subsetAny {
-	rv := &subsetAny{
-		subsetDefault: *newSubsetDefault(any),
-		any:           any,
+func (this *subset) visitCollectionPredicate(expr, expr2 expression.CollectionPredicate) (
+	interface{}, error) {
+
+	if !expr.Bindings().SubsetOf(expr2.Bindings()) {
+		return false, nil
 	}
 
-	return rv
-}
+	renamer := expression.NewRenamer(expr.Bindings(), expr2.Bindings())
+	satisfies, err := renamer.Map(expr.Satisfies().Copy())
+	if err != nil {
+		return nil, err
+	}
 
-func (this *subsetAny) VisitAny(expr *expression.Any) (interface{}, error) {
-	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
-		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
-}
-
-func (this *subsetAny) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
-	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
-		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
+	return SubsetOf(satisfies, expr2.Satisfies()), nil
 }

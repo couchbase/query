@@ -156,6 +156,72 @@ func (this *LikeStop) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// LikeSuffix
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the pattern matching function LIKE_SUFFIX(expr).
+*/
+type LikeSuffix struct {
+	UnaryFunctionBase
+}
+
+func NewLikeSuffix(operand Expression) Function {
+	rv := &LikeSuffix{
+		*NewUnaryFunctionBase("like_suffix", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *LikeSuffix) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *LikeSuffix) Type() value.Type { return value.STRING }
+
+func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *LikeSuffix) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	for s := arg.Actual().(string); s != ""; s = s[1:] {
+		_, part, err := likeCompile(s)
+		if err != nil {
+			return value.NULL_VALUE, err
+		}
+
+		prefix, _ := part.LiteralPrefix()
+		if prefix != "" {
+			return value.NewValue(s), nil
+		}
+	}
+
+	return value.EMPTY_STRING_VALUE, nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *LikeSuffix) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewLikeSuffix(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // RegexpPrefix
 //
 ///////////////////////////////////////////////////
@@ -282,5 +348,71 @@ Factory method pattern.
 func (this *RegexpStop) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewRegexpStop(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// RegexpSuffix
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the pattern matching function REGEXP_SUFFIX(expr).
+*/
+type RegexpSuffix struct {
+	UnaryFunctionBase
+}
+
+func NewRegexpSuffix(operand Expression) Function {
+	rv := &RegexpSuffix{
+		*NewUnaryFunctionBase("regexp_suffix", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *RegexpSuffix) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RegexpSuffix) Type() value.Type { return value.STRING }
+
+func (this *RegexpSuffix) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *RegexpSuffix) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	for s := arg.Actual().(string); s != ""; s = s[1:] {
+		part, err := regexp.Compile(s)
+		if err != nil {
+			return value.NULL_VALUE, err
+		}
+
+		prefix, _ := part.LiteralPrefix()
+		if prefix != "" {
+			return value.NewValue(s), nil
+		}
+	}
+
+	return value.EMPTY_STRING_VALUE, nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *RegexpSuffix) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewRegexpSuffix(operands[0])
 	}
 }

@@ -78,8 +78,10 @@ var _FUNCTIONS = map[string]Function{
 	"lt":             &LT{},
 	"like_prefix":    &LikePrefix{},
 	"like_stop":      &LikeStop{},
+	"like_suffix":    &LikeSuffix{},
 	"regexp_prefix":  &RegexpPrefix{},
 	"regexp_stop":    &RegexpStop{},
+	"regexp_suffix":  &RegexpSuffix{},
 
 	// Concat
 	"concat": &Concat{},
@@ -98,9 +100,9 @@ var _FUNCTIONS = map[string]Function{
 	"slice":   &Slice{},
 
 	// Date
+	"clock_local":         &ClockStr{},
 	"clock_millis":        &ClockMillis{},
 	"clock_str":           &ClockStr{},
-	"clock_local":         &ClockStr{},
 	"clock_tz":            &ClockTZ{},
 	"clock_utc":           &ClockUTC{},
 	"date_add_millis":     &DateAddMillis{},
@@ -110,8 +112,8 @@ var _FUNCTIONS = map[string]Function{
 	"date_format_str":     &DateFormatStr{},
 	"date_part_millis":    &DatePartMillis{},
 	"date_part_str":       &DatePartStr{},
-	"date_range_str":      &DateRangeStr{},
 	"date_range_millis":   &DateRangeMillis{},
+	"date_range_str":      &DateRangeStr{},
 	"date_trunc_millis":   &DateTruncMillis{},
 	"date_trunc_str":      &DateTruncStr{},
 	"duration_to_str":     &DurationToStr{},
@@ -131,15 +133,31 @@ var _FUNCTIONS = map[string]Function{
 	"str_to_tz":           &StrToZoneName{},
 	"str_to_utc":          &StrToUTC{},
 	"str_to_zone_name":    &StrToZoneName{},
+	"weekday_millis":      &WeekdayMillis{},
+	"weekday_str":         &WeekdayStr{},
 
 	// String
-	"contains":        &Contains{},
-	"initcap":         &Title{},
-	"length":          &Length{},
-	"lower":           &Lower{},
-	"ltrim":           &LTrim{},
-	"position":        &Position{},
-	"pos":             &Position{},
+	"contains": &Contains{},
+	"initcap":  &Title{},
+	"length":   &Length{},
+	"lower":    &Lower{},
+	"ltrim":    &LTrim{},
+	"position": &Position{},
+	"pos":      &Position{},
+	"repeat":   &Repeat{},
+	"replace":  &Replace{},
+	"reverse":  &Reverse{},
+	"rtrim":    &RTrim{},
+	"split":    &Split{},
+	"substr":   &Substr{},
+	"suffixes": &Suffixes{},
+	"title":    &Title{},
+	"trim":     &Trim{},
+	"upper":    &Upper{},
+
+	// Regular expressions
+	"contains_regex":  &RegexpContains{},
+	"contains_regexp": &RegexpContains{},
 	"regex_contains":  &RegexpContains{},
 	"regex_like":      &RegexpLike{},
 	"regex_position":  &RegexpPosition{},
@@ -150,16 +168,6 @@ var _FUNCTIONS = map[string]Function{
 	"regexp_position": &RegexpPosition{},
 	"regexp_pos":      &RegexpPosition{},
 	"regexp_replace":  &RegexpReplace{},
-	"repeat":          &Repeat{},
-	"replace":         &Replace{},
-	"reverse":         &Reverse{},
-	"rtrim":           &RTrim{},
-	"split":           &Split{},
-	"substr":          &Substr{},
-	"suffixes":        &Suffixes{},
-	"title":           &Title{},
-	"trim":            &Trim{},
-	"upper":           &Upper{},
 
 	// Numeric
 	"abs":     &Abs{},
@@ -242,6 +250,8 @@ var _FUNCTIONS = map[string]Function{
 	"object_pairs":        &ObjectPairs{},
 	"object_put":          &ObjectPut{},
 	"object_remove":       &ObjectRemove{},
+	"object_rename":       &ObjectRename{},
+	"object_replace":      &ObjectReplace{},
 	"object_unwrap":       &ObjectUnwrap{},
 	"object_values":       &ObjectValues{},
 
@@ -251,8 +261,8 @@ var _FUNCTIONS = map[string]Function{
 	"encoded_size": &EncodedSize{},
 	"json_decode":  &JSONDecode{},
 	"json_encode":  &JSONEncode{},
+	"pairs":        &Pairs{},
 	"poly_length":  &PolyLength{},
-	"tokens":       &Tokens{},
 
 	// Base64
 	"base64":        &Base64Encode{},
@@ -265,6 +275,14 @@ var _FUNCTIONS = map[string]Function{
 	"greatest":  &Greatest{},
 	"least":     &Least{},
 	"successor": &Successor{},
+
+	// Token
+	"contains_token":        &ContainsToken{},
+	"contains_token_like":   &ContainsTokenLike{},
+	"contains_token_regex":  &ContainsTokenRegexp{},
+	"contains_token_regexp": &ContainsTokenRegexp{},
+	"has_token":             &ContainsToken{},
+	"tokens":                &Tokens{},
 
 	// Conditional for unknowns
 	"if_missing":         &IfMissing{},

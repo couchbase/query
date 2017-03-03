@@ -36,7 +36,7 @@ func (this *StringBoolPool) Get() map[string]bool {
 }
 
 func (this *StringBoolPool) Put(s map[string]bool) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

@@ -10,13 +10,18 @@
 package planner
 
 import (
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
-func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (
-	plan.Spans, bool, error) {
+func SargFor(pred expression.Expression, keys expression.Expressions, min, total int) (
+	SargSpans, bool, error) {
+
+	// Optimize top-level OR predicate
+	if or, ok := pred.(*expression.Or); ok {
+		return sargForOr(or, keys, min, total)
+	}
+
+	sargKeys := keys[0:min]
 
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
@@ -26,139 +31,82 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 	}
 
 	n := len(sargSpans)
-	var ns plan.Spans
+	var ns SargSpans
 
-	// Sarg compositive indexes right to left
-keys:
+	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
 		rs := sargSpans[i]
-		if len(rs) == 0 {
+
+		// Reset
+		if rs == nil || rs.Size() == 0 {
 			ns = nil
 			continue
 		}
 
+		// Start
 		if ns == nil {
-			// First iteration
 			ns = rs
 			continue
 		}
 
-		// Cross product of prev and next spans
-		sp := make(plan.Spans, 0, len(rs)*len(ns))
-
-		for _, prev := range rs {
-			// Full span subsumes others
-			if prev == _FULL_SPANS[0] || prev == _EXACT_FULL_SPANS[0] ||
-				(len(prev.Range.Low) == 0 && len(prev.Range.High) == 0) {
-				exactSpan = false
-				sp = append(sp, prev)
-				ns = sp
-				continue keys
-			}
+		// TODO: Remove for Spock API2
+		if rs == _FULL_SPANS || rs == _EXACT_FULL_SPANS {
+			ns = rs
+			exactSpan = false
+			continue
 		}
 
-	prevs:
-		for _, prev := range rs {
-			for _, next := range ns {
-				// Full span subsumes others
-				if next == _FULL_SPANS[0] || next == _EXACT_FULL_SPANS[0] ||
-					(len(next.Range.Low) == 0 && len(next.Range.High) == 0) {
-					exactSpan = false
-					sp = append(sp, prev)
-					continue prevs
-				}
-			}
+		ns = ns.Copy()
+		ns = ns.Compose(rs)
+		ns = ns.Streamline()
 
-			pn := make(plan.Spans, 0, len(ns))
-			for _, next := range ns {
-				add := false
-				pre := prev.Copy()
-
-				if len(pre.Range.Low) > 0 && len(next.Range.Low) > 0 {
-					pre.Range.Low = append(pre.Range.Low, next.Range.Low...)
-
-					pre.Range.Inclusion = (datastore.LOW & pre.Range.Inclusion & next.Range.Inclusion) |
-						(datastore.HIGH & pre.Range.Inclusion)
-					add = true
-				} else if len(next.Range.Low) > 0 {
-					exactSpan = false
-				}
-
-				if len(pre.Range.High) > 0 && len(next.Range.High) > 0 {
-					pre.Range.High = append(pre.Range.High, next.Range.High...)
-					pre.Range.Inclusion = (datastore.HIGH & pre.Range.Inclusion & next.Range.Inclusion) |
-						(datastore.LOW & pre.Range.Inclusion)
-					add = true
-				} else if len(next.Range.High) > 0 {
-					// f1 >=3 and f2 = 2 become span of {[3, 2] [] 1}, high of f2 is missing
-					exactSpan = false
-				}
-
-				if add {
-					pn = append(pn, pre)
-				} else {
-					exactSpan = false
-					break
-				}
-			}
-
-			if len(pn) == len(ns) {
-				sp = append(sp, pn...)
-			} else {
-				exactSpan = false
-				sp = append(sp, prev)
-			}
+		if ns == _EMPTY_SPANS {
+			return _EMPTY_SPANS, true, nil
 		}
-
-		ns = sp
 	}
 
-	if len(ns) == 0 {
+	if ns == nil || ns.Size() == 0 {
 		return _EMPTY_SPANS, true, nil
 	}
 
-	if exactSpan && len(sargKeys) > 1 {
-		exactSpan = exactSpansForCompositeKeys(ns, sargKeys)
+	exactSpan = exactSpan && ns.Exact()
+	if len(sargKeys) > 1 {
+		exactSpan = ns.SetExactForComposite(len(sargKeys)) && exactSpan
 	}
 
 	return ns, exactSpan, nil
 }
 
-func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) bool {
+func sargForOr(or *expression.Or, keys expression.Expressions, min, total int) (
+	SargSpans, bool, error) {
 
-	for _, prev := range ns {
-		// Except last key all leading keys needs to be EQ
-		for i := 0; i < len(sargKeys)-1; i++ {
-			if !equalRangeKey(i, prev.Range.Low, prev.Range.High) {
-				return false
-			}
+	exact := true
+	spans := make([]SargSpans, len(or.Operands()))
+	for i, c := range or.Operands() {
+		min, _ = SargableFor(c, keys) // Variable length sarging
+		s, ex, err := SargFor(c, keys, min, total)
+		if err != nil {
+			return nil, false, err
 		}
+
+		spans[i] = s
+		exact = exact && ex
 	}
-	return true
+
+	var rv SargSpans = NewUnionSpans(spans...)
+	return rv.Streamline(), exact, nil
 }
 
-func sargFor(pred, expr expression.Expression, missingHigh bool) (plan.Spans, error) {
-	s := newSarg(pred)
-	s.SetMissingHigh(missingHigh)
+func sargFor(pred, key expression.Expression, missingHigh bool) (SargSpans, error) {
+	s := &sarg{key, missingHigh}
 
-	r, err := expr.Accept(s)
+	r, err := pred.Accept(s)
 	if err != nil || r == nil {
 		return nil, err
 	}
 
-	rs := r.(plan.Spans)
+	rs := r.(SargSpans)
 	return rs, nil
-}
-
-func newSarg(pred expression.Expression) sarg {
-	s, _ := pred.Accept(_SARG_FACTORY)
-	return s.(sarg)
-}
-
-type sarg interface {
-	expression.Visitor
-	SetMissingHigh(bool)
-	MissingHigh() bool
 }
 
 /*
@@ -166,127 +114,62 @@ Get sarg spans for index sarg keys. The sarg spans are truncated when
 they exceed the limit.
 */
 func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, total int) (
-	[]plan.Spans, bool, error) {
+	[]SargSpans, bool, error) {
 
 	n := len(sargKeys)
-	s := newSarg(pred)
-	s.SetMissingHigh(n < total)
+	missingHigh := n < total
 
 	exactSpan := true
-	sargSpans := make([]plan.Spans, n)
+	sargSpans := make([]SargSpans, n)
 
-	// Sarg compositive indexes right to left
+	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		r, err := sargKeys[i].Accept(s)
+		s := &sarg{sargKeys[i], missingHigh}
+		r, err := pred.Accept(s)
 		if err != nil || r == nil {
 			return nil, false, err
 		}
 
-		rs := r.(plan.Spans)
-		rs = deDupDiscardEmptySpans(rs)
+		rs := r.(SargSpans)
+		rs = rs.Streamline()
 
 		sargSpans[i] = rs
 
-		if len(rs) == 0 {
+		if rs.Size() == 0 {
 			exactSpan = false
 			continue
 		}
 
 		// If one key span is EMPTY then whole index span can be EMPTY
-		if rs[0] == _EMPTY_SPANS[0] {
-			return []plan.Spans{_EMPTY_SPANS}, true, nil
+		if rs == _EMPTY_SPANS {
+			return []SargSpans{_EMPTY_SPANS}, true, nil
 		}
 
-		if exactSpan {
-			for _, prev := range rs {
-				if !prev.Exact {
-					exactSpan = false
-					break
-				}
-			}
-		}
+		exactSpan = exactSpan && rs.Exact()
 
 		// Notify prev key that this key is missing a high bound
 		if i > 0 {
-			s.SetMissingHigh(false)
-			for _, prev := range rs {
-				if len(prev.Range.High) == 0 {
-					s.SetMissingHigh(true)
-					break
-				}
-			}
+			missingHigh = rs.MissingHigh()
 		}
 	}
 
 	// Truncate sarg spans when they exceed the limit
-	nspans := 1
+	size := 1
 	i := 0
 	for _, spans := range sargSpans {
-		if len(spans) == 0 ||
-			(nspans > 1 && nspans*len(spans) > _FULL_SPAN_FANOUT) {
+		sz := spans.Size()
+
+		if sz == 0 ||
+			(sz > 1 && size > 1 && sz*size > _FULL_SPAN_FANOUT) {
 			exactSpan = false
 			break
 		}
 
-		nspans *= len(spans)
+		size *= sz
 		i++
 	}
 
 	return sargSpans[0:i], exactSpan, nil
 }
 
-func deDupDiscardEmptySpans(cspans plan.Spans) plan.Spans {
-	switch len(cspans) {
-	case 0:
-		return cspans
-	case 1:
-		if isEmptySpan(cspans[0]) {
-			return _EMPTY_SPANS
-		}
-		return cspans
-	default:
-		hash := _STRING_SPAN_POOL.Get()
-		defer _STRING_SPAN_POOL.Put(hash)
-		spans := make(plan.Spans, 0, len(cspans))
-		for _, cspan := range cspans {
-			str := cspan.String()
-			if _, found := hash[str]; !found && !isEmptySpan(cspan) {
-				hash[str] = cspan
-				spans = append(spans, cspan)
-			}
-		}
-		n := len(spans)
-		if n == 0 {
-			return _EMPTY_SPANS
-		}
-		return spans[0:n]
-	}
-}
-
-func equalRangeKey(keyIndex int, low, high expression.Expressions) bool {
-	if keyIndex >= len(low) || keyIndex >= len(high) {
-		return false
-	}
-
-	if low[keyIndex] == high[keyIndex] {
-		return true
-	}
-
-	if low[keyIndex] == nil || high[keyIndex] == nil {
-		return false
-	}
-
-	var highExp expression.Expression
-	switch hs := high[keyIndex].(type) {
-	case *expression.Successor:
-		highExp = hs.Operand()
-	default:
-		highExp = high[keyIndex]
-	}
-
-	return highExp.EquivalentTo(low[keyIndex])
-}
-
 const _FULL_SPAN_FANOUT = 8192
-
-var _STRING_SPAN_POOL = plan.NewStringSpanPool(1024)

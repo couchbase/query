@@ -11,53 +11,56 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
-type sargAnyEvery struct {
-	sargDefault
-}
-
-func newSargAnyEvery(pred *expression.AnyEvery) *sargAnyEvery {
-	var spans plan.Spans
+func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
+	var spans SargSpans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
 	} else if pred.PropagatesMissing() {
 		spans = _FULL_SPANS
 	}
 
-	rv := &sargAnyEvery{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		sp := spans
-		if !pred.DependsOn(expr2) {
-			sp = nil
-		}
-
-		all, ok := expr2.(*expression.All)
-		if !ok {
-			return sp, nil
-		}
-
-		array, ok := all.Array().(*expression.Array)
-		if !ok {
-			return sp, nil
-		}
-
-		if !pred.Bindings().SubsetOf(array.Bindings()) {
-			return sp, nil
-		}
-
-		if array.When() != nil &&
-			!SubsetOf(pred.Satisfies(), array.When()) {
-			return sp, nil
-		}
-
-		return sargFor(pred.Satisfies(), array.ValueMapping(), rv.MissingHigh())
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	sp := spans
+	if !pred.DependsOn(this.key) {
+		sp = nil
+	}
+
+	all, ok := this.key.(*expression.All)
+	if !ok {
+		return sp, nil
+	}
+
+	array, ok := all.Array().(*expression.Array)
+	if !ok {
+		bindings := pred.Bindings()
+		if len(bindings) != 1 ||
+			bindings[0].Descend() ||
+			!bindings[0].Expression().EquivalentTo(all.Array()) {
+			return sp, nil
+		}
+
+		variable := expression.NewIdentifier(bindings[0].Variable())
+		return sargFor(pred.Satisfies(), variable, this.missingHigh)
+	}
+
+	if !pred.Bindings().SubsetOf(array.Bindings()) {
+		return sp, nil
+	}
+
+	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
+	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	if err != nil {
+		return nil, err
+	}
+
+	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
+		return sp, nil
+	}
+
+	return sargFor(satisfies, array.ValueMapping(), this.missingHigh)
 }

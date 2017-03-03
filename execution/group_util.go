@@ -11,11 +11,14 @@ package execution
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 func groupKey(item value.Value, keys expression.Expressions, context *Context) (string, error) {
-	kvs := make(map[string]interface{}, len(keys))
+	kvs := _GROUP_KEY_POOL.GetCapped(len(keys))
+	defer _GROUP_KEY_POOL.Put(kvs)
+
 	for i, key := range keys {
 		k, e := key.Evaluate(item, context)
 		if e != nil {
@@ -30,3 +33,5 @@ func groupKey(item value.Value, keys expression.Expressions, context *Context) (
 	bytes, _ := value.NewValue(kvs).MarshalJSON()
 	return string(bytes), nil
 }
+
+var _GROUP_KEY_POOL = util.NewStringInterfacePool(16)

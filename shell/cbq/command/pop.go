@@ -12,6 +12,7 @@ package command
 import (
 	"encoding/json"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/couchbase/godbc/n1ql"
@@ -190,6 +191,28 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 				if err_code != 0 {
 					return err_code, err_str
 				}
+			} else if vble == "quiet" {
+				st_val, ok := PreDefSV["quiet"]
+				if ok {
+					newval, err_code, err_str := st_val.Top()
+					if err_code != 0 {
+						return err_code, err_str
+					}
+					nval = ValToStr(newval)
+					nval = handleStrings(nval)
+				} else {
+					err_code, err_str := PushValue_Helper(false, PreDefSV, "quiet", strconv.FormatBool(false))
+					if err_code != 0 {
+						return err_code, err_str
+
+					}
+					nval = strconv.FormatBool(false)
+				}
+
+				// Set QUIET boolean value from nval string.
+				// Dont need to worry about error handling here as we make sure we push correct values
+				// into the stack.
+				QUIET, _ = strconv.ParseBool(nval)
 			}
 
 		}

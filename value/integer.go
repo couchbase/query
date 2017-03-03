@@ -244,6 +244,14 @@ func (this intValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 
+func (this intValue) ContainsToken(token, options Value) bool {
+	return this.EquivalentTo(token)
+}
+
+func (this intValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return matcher(int64(this))
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }
@@ -337,6 +345,10 @@ func (this intValue) Sub(n NumberValue) NumberValue {
 	}
 
 	return floatValue(float64(this) - n.Actual().(float64))
+}
+
+func (this intValue) Int64() int64 {
+	return int64(this)
 }
 
 func IsInt(x float64) bool {

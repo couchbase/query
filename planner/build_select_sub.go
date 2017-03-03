@@ -22,22 +22,27 @@ import (
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	prevCover := this.cover
+	prevWhere := this.where
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
 	prevMinAgg := this.minAgg
 	prevCoveringScans := this.coveringScans
+	prevCoveredUnnests := this.coveredUnnests
 	prevCountScan := this.countScan
 
 	defer func() {
 		this.cover = prevCover
+		this.where = prevWhere
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
 		this.minAgg = prevMinAgg
 		this.coveringScans = prevCoveringScans
+		this.coveredUnnests = prevCoveredUnnests
 		this.countScan = prevCountScan
 	}()
 
-	this.coveringScans = make([]plan.Operator, 0, 2)
+	this.coveringScans = make([]plan.CoveringOperator, 0, 4)
+	this.coveredUnnests = nil
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
 	this.resetCountMin()
@@ -46,13 +51,29 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.cover = node
 	}
 
+	// Inline LET expressions for index selection
+	if node.Let() != nil && node.Where() != nil {
+		var err error
+		inliner := expression.NewInliner(node.Let().Mappings())
+		this.where, err = inliner.Map(node.Where().Copy())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		this.where = node.Where()
+	}
+
+	// Infer WHERE clause from UNNEST
+	if node.From() != nil {
+		this.inferUnnestPredicates(node.From())
+	}
+
 	aggs, err := allAggregates(node, this.order)
 	if err != nil {
 		return nil, err
 	}
 
-	this.where = node.Where()
-
+	// Infer WHERE clause from aggregates
 	group := node.Group()
 	if group == nil && len(aggs) > 0 {
 		group = algebra.NewGroup(nil, nil, nil)
@@ -64,7 +85,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		groupKeys := group.By()
 		letting := group.Letting()
 		if letting != nil {
-			groupKeys = append(groupKeys, letting.Identifiers()...)
+			identifiers := letting.Identifiers()
+			groupKeys = append(groupKeys, identifiers...)
 		}
 
 		proj := node.Projection().Terms()
@@ -93,7 +115,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
+	// Identify aggregates for index pushdown
 	if len(aggs) == 1 && group.By() == nil {
+	loop:
 		for _, term := range node.Projection().Terms() {
 			switch expr := term.Expression().(type) {
 			case *algebra.Count:
@@ -103,7 +127,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			default:
 				if expr.Value() == nil {
 					this.resetCountMin()
-					break
+					break loop
 				}
 			}
 		}
@@ -115,6 +139,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	// If SELECT DISTINCT, avoid pushing LIMIT down to index scan.
 	if this.limit != nil && node.Projection().Distinct() {
 		this.limit = nil
+	}
+
+	// Skip fixed values in ORDER BY
+	if this.order != nil && this.where != nil {
+		order := this.order
+		this.order = skipFixedOrderTerms(this.order, this.where)
+		if this.order == nil {
+			defer func() { this.order = order }()
+		}
 	}
 
 	err = this.visitFrom(node, group)
@@ -130,13 +163,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	if this.countScan == nil {
-		if node.Let() != nil {
-			this.subChildren = append(this.subChildren, plan.NewLet(node.Let()))
-		}
-
-		if node.Where() != nil {
-			this.subChildren = append(this.subChildren, plan.NewFilter(node.Where()))
-		}
+		this.addLetAndPredicate(node.Let(), node.Where())
 
 		if group != nil {
 			this.visitGroup(group, aggs)
@@ -170,6 +197,33 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	return plan.NewSequence(this.children...), nil
 }
 
+func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {
+	if let != nil && pred != nil {
+	outer:
+		for {
+			identifiers := let.Identifiers()
+			for _, id := range identifiers {
+				if pred.DependsOn(id) {
+					break outer
+				}
+			}
+
+			// Predicate does NOT depend on LET
+			this.subChildren = append(this.subChildren, plan.NewFilter(pred))
+			this.subChildren = append(this.subChildren, plan.NewLet(let))
+			return
+		}
+	}
+
+	if let != nil {
+		this.subChildren = append(this.subChildren, plan.NewLet(let))
+	}
+
+	if pred != nil {
+		this.subChildren = append(this.subChildren, plan.NewFilter(pred))
+	}
+}
+
 func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Aggregate) {
 	aggn := make(sort.StringSlice, 0, len(aggs))
 	for n, _ := range aggs {
@@ -188,28 +242,12 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
 	this.subChildren = make([]plan.Operator, 0, 8)
 
-	letting := group.Letting()
-	if letting != nil {
-		this.subChildren = append(this.subChildren, plan.NewLet(letting))
-	}
-
-	having := group.Having()
-	if having != nil {
-		this.subChildren = append(this.subChildren, plan.NewFilter(having))
-	}
+	this.addLetAndPredicate(group.Letting(), group.Having())
 }
 
 func (this *builder) coverExpressions() error {
-	var coverer *expression.Coverer
-	for _, o := range this.coveringScans {
-
-		if op, ok := o.(*plan.IndexScan); ok {
-			coverer = expression.NewCoverer(op.Covers(), op.FilterCovers())
-		} else if op, ok := o.(*plan.IndexJoin); ok {
-			coverer = expression.NewCoverer(op.Covers(), op.FilterCovers())
-		} else {
-			continue
-		}
+	for _, op := range this.coveringScans {
+		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 
 		err := this.cover.MapExpressions(coverer)
 		if err != nil {
@@ -223,7 +261,45 @@ func (this *builder) coverExpressions() error {
 			}
 		}
 	}
+
 	return nil
+}
+
+func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
+	// Enumerate INNER UNNESTs
+	unnests := _UNNEST_POOL.Get()
+	defer _UNNEST_POOL.Put(unnests)
+	unnests = collectInnerUnnests(from, unnests)
+	if len(unnests) == 0 {
+		return
+	}
+
+	// Enumerate primary UNNESTs
+	primaryUnnests := _UNNEST_POOL.Get()
+	defer _UNNEST_POOL.Put(primaryUnnests)
+	primaryUnnests = collectPrimaryUnnests(from, unnests, primaryUnnests)
+	if len(primaryUnnests) == 0 {
+		return
+	}
+
+	// INNER UNNESTs cannot be MISSING, so add to WHERE clause
+	var andBuf [16]expression.Expression
+	var andTerms []expression.Expression
+	if 1+len(primaryUnnests) <= len(andBuf) {
+		andTerms = andBuf[0:0]
+	} else {
+		andTerms = make(expression.Expressions, 0, 1+len(primaryUnnests))
+	}
+
+	if this.where != nil {
+		andTerms = append(andTerms, this.where)
+	}
+
+	for _, unnest := range primaryUnnests {
+		andTerms = append(andTerms, expression.NewIsArray(unnest.Expression()))
+	}
+
+	this.where = expression.NewAnd(andTerms...)
 }
 
 func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]algebra.Aggregate, error) {
@@ -369,4 +445,32 @@ func constrainGroupTerm(expr expression.Expression, groupKeys expression.Express
 	}
 
 	return nil
+}
+
+func skipFixedOrderTerms(order *algebra.Order, pred expression.Expression) *algebra.Order {
+	filterCovers := _FILTER_COVERS_POOL.Get()
+	defer _FILTER_COVERS_POOL.Put(filterCovers)
+
+	filterCovers = pred.FilterCovers(filterCovers)
+	if len(filterCovers) == 0 {
+		return order
+	}
+
+	sortTerms := make(algebra.SortTerms, 0, len(order.Terms()))
+	for _, term := range order.Terms() {
+		expr := term.Expression()
+		if expr.Static() != nil {
+			continue
+		}
+
+		if val, ok := filterCovers[expr.String()]; !ok || val == nil {
+			sortTerms = append(sortTerms, term)
+		}
+	}
+
+	if len(sortTerms) == 0 {
+		return nil
+	} else {
+		return algebra.NewOrder(sortTerms)
+	}
 }

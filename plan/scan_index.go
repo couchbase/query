@@ -64,12 +64,20 @@ func (this *IndexScan) Spans() Spans {
 	return this.spans
 }
 
+func (this *IndexScan) SetSpans(spans Spans) {
+	this.spans = spans
+}
+
 func (this *IndexScan) Distinct() bool {
 	return this.distinct
 }
 
 func (this *IndexScan) Limit() expression.Expression {
 	return this.limit
+}
+
+func (this *IndexScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
 }
 
 func (this *IndexScan) Covers() expression.Covers {
@@ -82,6 +90,11 @@ func (this *IndexScan) FilterCovers() map[*expression.Cover]value.Value {
 
 func (this *IndexScan) Covering() bool {
 	return len(this.covers) > 0
+}
+
+func (this *IndexScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
@@ -123,17 +136,17 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                     `json:"#operator"`
-		Index        string                     `json:"index"`
-		IndexId      string                     `json:"index_id"`
-		Namespace    string                     `json:"namespace"`
-		Keyspace     string                     `json:"keyspace"`
-		Using        datastore.IndexType        `json:"using"`
-		Spans        Spans                      `json:"spans"`
-		Distinct     bool                       `json:"distinct"`
-		Limit        string                     `json:"limit"`
-		Covers       []string                   `json:"covers"`
-		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
+		_            string                 `json:"#operator"`
+		Index        string                 `json:"index"`
+		IndexId      string                 `json:"index_id"`
+		Namespace    string                 `json:"namespace"`
+		Keyspace     string                 `json:"keyspace"`
+		Using        datastore.IndexType    `json:"using"`
+		Spans        Spans                  `json:"spans"`
+		Distinct     bool                   `json:"distinct"`
+		Limit        string                 `json:"limit"`
+		Covers       []string               `json:"covers"`
+		FilterCovers map[string]interface{} `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

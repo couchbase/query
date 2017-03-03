@@ -93,6 +93,11 @@ func NewNoIndexJoinError(alias, op string) Error {
 		InternalMsg: fmt.Sprintf("No index available for join term %s", alias), InternalCaller: CallerN(1)}
 }
 
+func NewUseKeysError(termType string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: 4110, IKey: iKey,
+		InternalMsg: fmt.Sprintf("%s term should not have USE KEYS", termType), InternalCaller: CallerN(1)}
+}
+
 const NOT_GROUP_KEY_OR_AGG = 4210
 
 func NewNotGroupKeyOrAggError(expr string) Error {

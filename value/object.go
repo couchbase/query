@@ -35,8 +35,16 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, 256))
 	buf.WriteString("{")
 
-	names := _NAME_POOL.GetSized(len(this))
-	defer _NAME_POOL.Put(names)
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(this) <= len(nameBuf) {
+		names = nameBuf[0:len(this)]
+	} else {
+		names = _NAME_POOL.GetCapped(len(this))
+		defer _NAME_POOL.Put(names)
+		names = names[0:len(this)]
+	}
+
 	names = sortedNames(this, names)
 
 	for i, n := range names {
@@ -79,8 +87,16 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string) (err error
 		return
 	}
 
-	names := _NAME_POOL.GetSized(len(this))
-	defer _NAME_POOL.Put(names)
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(this) <= len(nameBuf) {
+		names = nameBuf[0:len(this)]
+	} else {
+		names = _NAME_POOL.GetCapped(len(this))
+		defer _NAME_POOL.Put(names)
+		names = names[0:len(this)]
+	}
+
 	names = sortedNames(this, names)
 
 	newPrefix := prefix + indent
@@ -272,8 +288,16 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this objectValue) Descendants(buffer []interface{}) []interface{} {
-	names := _NAME_POOL.GetSized(len(this))
-	defer _NAME_POOL.Put(names)
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(this) <= len(nameBuf) {
+		names = nameBuf[0:len(this)]
+	} else {
+		names = _NAME_POOL.GetCapped(len(this))
+		defer _NAME_POOL.Put(names)
+		names = names[0:len(this)]
+	}
+
 	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
@@ -296,12 +320,26 @@ func (this objectValue) Fields() map[string]interface{} {
 }
 
 func (this objectValue) FieldNames(buffer []string) []string {
+	if cap(buffer) < len(this) {
+		buffer = make([]string, len(this))
+	} else {
+		buffer = buffer[0:len(this)]
+	}
+
 	return sortedNames(this, buffer)
 }
 
 func (this objectValue) DescendantPairs(buffer []util.IPair) []util.IPair {
-	names := _NAME_POOL.GetSized(len(this))
-	defer _NAME_POOL.Put(names)
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(this) <= len(nameBuf) {
+		names = nameBuf[0:len(this)]
+	} else {
+		names = _NAME_POOL.GetCapped(len(this))
+		defer _NAME_POOL.Put(names)
+		names = names[0:len(this)]
+	}
+
 	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
@@ -329,8 +367,16 @@ func (this objectValue) Successor() Value {
 
 	s := copyMap(this, self)
 
-	names := _NAME_POOL.GetSized(len(this))
-	defer _NAME_POOL.Put(names)
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(this) <= len(nameBuf) {
+		names = nameBuf[0:len(this)]
+	} else {
+		names = _NAME_POOL.GetCapped(len(this))
+		defer _NAME_POOL.Put(names)
+		names = names[0:len(this)]
+	}
+
 	names = sortedNames(this, names)
 
 	n := names[len(names)-1]
@@ -357,6 +403,46 @@ func (this objectValue) Tokens(set *Set, options Value) *Set {
 	}
 
 	return set
+}
+
+func (this objectValue) ContainsToken(token, options Value) bool {
+	names := token.Type() == STRING
+	if names {
+		if n, ok := options.Field("names"); ok && n.Type() == BOOLEAN {
+			names = n.Truth()
+		}
+	}
+
+	for n, v := range this {
+		if names && NewValue(n).ContainsToken(token, options) {
+			return true
+		}
+
+		if NewValue(v).ContainsToken(token, options) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (this objectValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	names := true
+	if n, ok := options.Field("names"); ok && n.Type() == BOOLEAN {
+		names = n.Truth()
+	}
+
+	for n, v := range this {
+		if names && NewValue(n).ContainsMatchingToken(matcher, options) {
+			return true
+		}
+
+		if NewValue(v).ContainsMatchingToken(matcher, options) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (this objectValue) unwrap() Value {
@@ -429,8 +515,16 @@ func objectCollate(obj1, obj2 map[string]interface{}) int {
 	// if not, proceed to do name by name comparision
 	combined := combineNames(obj1, obj2)
 
-	allNames := _NAME_POOL.GetSized(len(combined))
-	defer _NAME_POOL.Put(allNames)
+	var nameBuf [_NAME_CAP]string
+	var allNames []string
+	if len(combined) <= len(nameBuf) {
+		allNames = nameBuf[0:len(combined)]
+	} else {
+		allNames = _NAME_POOL.GetCapped(len(combined))
+		defer _NAME_POOL.Put(allNames)
+		allNames = allNames[0:len(combined)]
+	}
+
 	allNames = sortedNames(combined, allNames)
 
 	// now compare the values associated with each name
@@ -468,8 +562,16 @@ func objectCompare(obj1, obj2 map[string]interface{}) Value {
 	// if not, proceed to do name by name comparision
 	combined := combineNames(obj1, obj2)
 
-	allNames := _NAME_POOL.GetSized(len(combined))
-	defer _NAME_POOL.Put(allNames)
+	var nameBuf [_NAME_CAP]string
+	var allNames []string
+	if len(combined) <= len(nameBuf) {
+		allNames = nameBuf[0:len(combined)]
+	} else {
+		allNames = _NAME_POOL.GetCapped(len(combined))
+		defer _NAME_POOL.Put(allNames)
+		allNames = allNames[0:len(combined)]
+	}
+
 	allNames = sortedNames(combined, allNames)
 
 	// now compare the values associated with each name
@@ -550,4 +652,6 @@ func writeJsonNewline(w io.Writer, prefix string) (err error) {
 	return
 }
 
-var _NAME_POOL = util.NewStringPool(64)
+const _NAME_CAP = 16
+
+var _NAME_POOL = util.NewStringPool(256)

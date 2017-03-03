@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
@@ -53,7 +54,9 @@ func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {
-	distinct := NewDistinct(nil, true)
+
+	// FIXME: should this be handled by the planner?
+	distinct := NewDistinct(plan.NewDistinct(), true)
 	sequence := NewSequence(this.second, distinct)
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)

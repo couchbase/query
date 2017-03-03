@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-10-18
+* Modified: 2017-02-10
 
 ## Introduction
 
@@ -1591,9 +1591,10 @@ integer whose unit is _part_.
 __DATE\_FORMAT\_STR(expr, fmt)__ - date formatting. See
 __CLOCK\_STR()__ for supported formats. Since Couchbase 4.6.
 
-__DATE\_PART\_MILLIS(expr, part)__ - date part as an integer. The date
-expr is a number representing UNIX milliseconds, and part is one of
-the following date part strings.
+__DATE\_PART\_MILLIS(expr, part [, tz ])__ - date part as an
+integer. The date expr is a number representing UNIX milliseconds, and
+part is one of the following date part strings. _tz_ is an optional
+time zone name.
 
 * __"millenium"__
 * __"century"__
@@ -1619,6 +1620,10 @@ the following date part strings.
 __DATE\_PART\_STR(expr, part)__ - date part as an integer. The date
 expr is a string in a supported format, and part is one of the
 supported date part strings.
+
+__DATE\_RANGE\_MILLIS(start, end, part [, step ])__ - similar to
+__ARRAY\_RANGE__, but for dates in UNIX milliseconds. Since Couchbase
+4.6.
 
 __DATE\_RANGE\_STR(start, end, part [, step ])__ - similar to
 __ARRAY\_RANGE__, but for date strings. Since Couchbase 4.6.
@@ -1673,10 +1678,20 @@ __STR\_TO\_UTC(expr)__ - converts the ISO 8601 timestamp to UTC.
 
 __STR\_TO\_ZONE\_NAME(expr, tz_name)__ - synonym for __STR\_TO\_TZ__.
 
+__WEEKDAY\_MILLIS(expr [, tz ])__ - English name of the weekday as a
+string. The date expr is a number representing UNIX milliseconds. _tz_
+is an optional time zone name. Since Couchbase 4.6.1.
+
+__WEEKDAY\_STR(expr)__ - English name of the weekday as a string. The
+date expr is a string in a supported format. Since Couchbase 4.6.1.
+
 ### String functions
 
 __CONTAINS(expr, substr)__ - true if the string contains the
 substring.
+
+__CONTAINS\_REGEXP(expr, pattern)__ - synonym for
+__REGEXP\_CONTAINS__. Since Couchbase 5.0.
 
 __INITCAP(expr), TITLE(expr)__ - converts the string so that the first
 letter of each word is uppercase and every other letter is lowercase.
@@ -1804,6 +1819,8 @@ is negative). _digits_ is 0 if not given.
 
 ### Array functions
 
+__ARRAY\_ADD(expr, value, ...)__ - synonym for __ARRAY\_PUT__.
+
 __ARRAY\_APPEND(expr, value, ...)__ - new array with _values_
 appended.
 
@@ -1905,7 +1922,15 @@ value pairs of the object, in N1QL collation order of the names.
 __OBJECT\_PUT(expr, name, value)__ - object with name-value pair added
 or updated.
 
-__OBJECT\_REMOVE(expr, name, value)__ - object with name-value pair removed.
+__OBJECT\_REMOVE(expr, name, value)__ - object with name-value pair
+removed.
+
+__OBJECT\_RENAME(expr, old_name, new_name)__ - object with _old\_name_
+renamed to _new\_name_. Since Couchbase 4.6.1.
+
+__OBJECT\_REPLACE(expr, old_value, new_value)__ - object with all
+occurrences of _old\_value_ replaced by _new\_value_. Since Couchbase
+4.6.1.
 
 __OBJECT\_UNWRAP(expr)__ - if the object contains exactly one
 name-value pair, return the pair's value, else NULL.
@@ -1926,6 +1951,11 @@ encoding of the value. The exact size is
 implementation-dependent. Always returns an integer, and never MISSING
 or NULL; returns 0 for MISSING.
 
+__PAIRS(expr)__ - array of all name-value pairs within _expr_. Each
+result pair is itself an array [ _name_, _value_ ]. If _value_ is an
+array, _name_ is additionally paired with each element of the _value_
+array.
+
 __POLY\_LENGTH(expr)__ - length of the value after evaluating the
 expression.  The exact meaning of length depends on the type of the
 value:
@@ -1937,16 +1967,37 @@ value:
 * object - the number of name/value pairs in the object
 * any other value - NULL
 
+### Token functions
+
+__CONTAINS\_TOKEN(expr, token [, options ])__ - true if _expr_
+contains _token_. See __TOKENS__ for a description of N1QL
+tokenization and _options_. Since Couchbase 4.6.
+
+__CONTAINS\_TOKEN\_LIKE(expr, pattern [, options ])__ - true if _expr_
+contains a token that matches _pattern_ using LIKE pattern
+matching. See __TOKENS__ for a description of N1QL tokenization and
+_options_. Since Couchbase 5.0.
+
+__CONTAINS\_TOKEN\_REGEXP(expr, pattern [, options ])__ - true if
+_expr_ contains a token that matches _pattern_ using REGEXP pattern
+matching. See __TOKENS__ for a description of N1QL tokenization and
+_options_. Since Couchbase 5.0.
+
 __TOKENS(expr [, options ])__ - array of tokens from the input
 expression. Together with array indexing, provides efficient token
 search.  Numbers, booleans, and nulls tokenize as themselves. Strings
-are further tokenized into words. Arrays and objects have their
-contents further tokenized. _options_ is an optional JSON object to
-control tokenization. It can specify _"names", "case",_ and
-_"specials"._ _"names"_ is a boolean for including object
-names. _"case"_ is either "lower" or "upper", and specifies case
-folding. _"specials"_ is a boolean and specifies preservation of
-special strings such as email addresses and URLs. Since Couchbase 4.6.
+are further tokenized into words (unless _split_ is false). Arrays and
+objects have their contents further tokenized. _options_ is an
+optional JSON object to control tokenization. Within _options_:
+
+* _names_ is a boolean to include object names (true)
+* _case_ is either "lower" or "upper" for case folding
+* _specials_ is a boolean to include strings with special characters,
+such as email addresses and URLs (false)
+* _split_ is a boolean to split string values into words (true)
+* _trim_ is a boolean to trim unsplit string values (true)
+
+Since Couchbase 4.6.
 
 ### Comparison functions
 
@@ -2007,6 +2058,13 @@ __SELF()__ - current top-level element in N1QL pipeline.
 __UUID()__ - a version 4 Universally Unique Identifier(UUID).
 
 __VERSION__ - N1QL version of this server.
+
+
+### Unnest functions
+
+__UNNEST\_POSITION(expr)__ - integer position assigned to successive
+UNNEST elements.
+
 
 ### Type checking functions
 
@@ -2741,6 +2799,12 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Remove support for paths in FROM clause
 * 2016-10-18 - Functions
     * Upate list of functions
+* 2017-02-09 - FROM expression
+    * Support expressions as FROM terms
+* 2017-02-10 - TOKEN functions
+    * Add CONTAINS\_TOKEN()
+    * Add CONTAINS\_TOKEN\_LIKE()
+    * Add CONTAINS\_TOKEN\_REGEXP()
 
 ### Open issues
 

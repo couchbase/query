@@ -50,7 +50,7 @@ func (this *InterfacesPool) GetSized(length int) [][]interface{} {
 }
 
 func (this *InterfacesPool) Put(s [][]interface{}) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

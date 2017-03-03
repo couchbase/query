@@ -17,23 +17,26 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 type IndexCountScan struct {
 	readonly
-	index  datastore.CountIndex
-	term   *algebra.KeyspaceTerm
-	spans  Spans
-	covers expression.Covers
+	index        datastore.CountIndex
+	term         *algebra.KeyspaceTerm
+	spans        Spans
+	covers       expression.Covers
+	filterCovers map[*expression.Cover]value.Value
 }
 
-func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm,
-	spans Spans, covers expression.Covers) *IndexCountScan {
+func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm, spans Spans,
+	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) *IndexCountScan {
 	return &IndexCountScan{
-		index:  index,
-		term:   term,
-		spans:  spans,
-		covers: covers,
+		index:        index,
+		term:         term,
+		spans:        spans,
+		covers:       covers,
+		filterCovers: filterCovers,
 	}
 }
 
@@ -61,8 +64,24 @@ func (this *IndexCountScan) Covers() expression.Covers {
 	return this.covers
 }
 
+func (this *IndexCountScan) FilterCovers() map[*expression.Cover]value.Value {
+	return this.filterCovers
+}
+
 func (this *IndexCountScan) Covering() bool {
 	return len(this.covers) > 0
+}
+
+func (this *IndexCountScan) Limit() expression.Expression {
+	return nil
+}
+
+func (this *IndexCountScan) SetLimit(limit expression.Expression) {
+}
+
+func (this *IndexCountScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
@@ -78,8 +97,13 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 		r["covers"] = this.covers
 	}
 
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if len(this.filterCovers) > 0 {
+		fc := make(map[string]value.Value, len(this.filterCovers))
+		for c, v := range this.filterCovers {
+			fc[c.String()] = v
+		}
+
+		r["filter_covers"] = fc
 	}
 
 	return json.Marshal(r)
@@ -87,14 +111,15 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string              `json:"#operator"`
-		index     string              `json:"index"`
-		indexId   string              `json:"index_id"`
-		namespace string              `json:"namespace"`
-		keyspace  string              `json:"keyspace"`
-		using     datastore.IndexType `json:"using"`
-		spans     Spans               `json:"spans"`
-		covers    []string            `json:"covers"`
+		_            string                 `json:"#operator"`
+		index        string                 `json:"index"`
+		indexId      string                 `json:"index_id"`
+		namespace    string                 `json:"namespace"`
+		keyspace     string                 `json:"keyspace"`
+		using        datastore.IndexType    `json:"using"`
+		spans        Spans                  `json:"spans"`
+		covers       []string               `json:"covers"`
+		FilterCovers map[string]interface{} `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -110,7 +135,7 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.namespace, _unmarshalled.keyspace, "", nil, nil)
 	this.spans = _unmarshalled.spans
 
-	if _unmarshalled.covers != nil {
+	if len(_unmarshalled.covers) > 0 {
 		this.covers = make(expression.Covers, len(_unmarshalled.covers))
 		for i, c := range _unmarshalled.covers {
 			expr, err := parser.Parse(c)
@@ -119,6 +144,19 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 			}
 
 			this.covers[i] = expression.NewCover(expr)
+		}
+	}
+
+	if len(_unmarshalled.FilterCovers) > 0 {
+		this.filterCovers = make(map[*expression.Cover]value.Value, len(_unmarshalled.FilterCovers))
+		for k, v := range _unmarshalled.FilterCovers {
+			expr, err := parser.Parse(k)
+			if err != nil {
+				return err
+			}
+
+			c := expression.NewCover(expr)
+			this.filterCovers[c] = value.NewValue(v)
 		}
 	}
 
