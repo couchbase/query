@@ -81,32 +81,31 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 	//This block handles N1QL statements
 	// If connected to a query service then noQueryService == false.
-	if noQueryService == true {
+	if noQueryService {
 		//Not connected to a query service
 		return errors.NO_CONNECTION, ""
 	} else {
-		/* Try opening a connection to the endpoint. If successful, ping.
-		   If successful execute the n1ql command. Else try to connect
-		   again.
-		*/
-		dBn1ql, err := n1ql.OpenExtended(serverFlag)
-		if err != nil {
-			return errors.DRIVER_OPEN, err.Error()
+		// Check for batch mode.
+		if command.BATCH == "on" && !batch_run {
+			// This means we need to save the batched statements.
+			// Set line to be the set of queries input in batch mode.
+			// line = some buffer
+			line = line + ";"
+			_, err := stringBuffer.WriteString(line)
+			if err != nil {
+				return errors.STRING_WRITE, err.Error()
+			}
 		} else {
-			//Successfully logged into the server
-
-			// Check if executing in batch mode for Asterix db.
-			if command.BATCH == "on" && batch_run == false {
-				// This means we need to save the batched statements.
-				// Set line to be the set of queries input in batch mode.
-				// line = some buffer
-				line = line + ";"
-				_, err = stringBuffer.WriteString(line)
-				if err != nil {
-					return errors.STRING_WRITE, err.Error()
-				}
+			/* Try opening a connection to the endpoint. If successful, ping.
+			   If successful execute the n1ql command. Else try to connect
+			   again.
+			*/
+			dBn1ql, err := n1ql.OpenExtended(serverFlag)
+			if err != nil {
+				return errors.DRIVER_OPEN, err.Error()
 			} else {
-				if batch_run == true {
+				// Check if the statement needs to be executed.
+				if batch_run {
 					batch_run = false
 				}
 				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)
@@ -114,7 +113,6 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 					return err_code, err_str
 				}
 			}
-
 		}
 
 	}
