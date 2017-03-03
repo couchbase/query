@@ -107,7 +107,7 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 	}
 
 	termSpans, ok := entry.spans.(*TermSpans)
-	if !ok || termSpans.Size() != 1 || pred.MayOverlapSpans() {
+	if !ok || (termSpans.Size() > 1 && pred.MayOverlapSpans()) {
 		return nil
 	}
 
