@@ -29,12 +29,14 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevLimit := this.limit
 	prevOffset := this.offset
 	prevProjection := this.delayProjection
+	prevRequirePrimaryKey := this.requirePrimaryKey
 	defer func() {
 		this.cover = prevCover
 		this.order = prevOrder
 		this.limit = prevLimit
 		this.offset = prevOffset
 		this.delayProjection = prevProjection
+		this.requirePrimaryKey = prevRequirePrimaryKey
 	}()
 
 	stmtOrder := stmt.Order()
@@ -50,6 +52,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	this.cover = nil
 	this.delayProjection = false
+	this.requirePrimaryKey = false
 	this.offset = stmtOffset
 	this.limit = stmtLimit
 	this.order = stmtOrder

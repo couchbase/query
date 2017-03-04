@@ -56,32 +56,33 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 }
 
 type builder struct {
-	datastore        datastore.Datastore
-	systemstore      datastore.Datastore
-	namespace        string
-	subquery         bool
-	correlated       bool
-	maxParallelism   int
-	delayProjection  bool                   // Used to allow ORDER BY non-projected expressions
-	from             algebra.FromTerm       // Used for index selection
-	where            expression.Expression  // Used for index selection
-	order            *algebra.Order         // Used to collect aggregates from ORDER BY, and for ORDER pushdown
-	limit            expression.Expression  // Used for LIMIT pushdown
-	offset           expression.Expression  // Used for OFFSET pushdown
-	countAgg         *algebra.Count         // Used for COUNT() pushdown to IndexCountScan
-	countDistinctAgg *algebra.CountDistinct // Used for COUNT(Distinct expr) pushdown to IndexCountScan2
-	minAgg           *algebra.Min           // Used for MIN() pushdown to IndexScan
-	maxAgg           *algebra.Max           // Used for MAX() pushdown to IndexScan
-	projection       *algebra.Projection    // Used for projection Distinct pushdown to IndexScan
-	setOpDistinct    bool                   // Used for SETOP Distinct to apply DISTINCT on projection
-	children         []plan.Operator
-	subChildren      []plan.Operator
-	cover            expression.HasExpressions
-	coveringScans    []plan.CoveringOperator
-	coveredUnnests   map[*algebra.Unnest]bool
-	countScan        plan.CoveringOperator
-	skipDynamic      bool
-	orderScan        plan.SecondaryScan
+	datastore         datastore.Datastore
+	systemstore       datastore.Datastore
+	namespace         string
+	subquery          bool
+	correlated        bool
+	maxParallelism    int
+	delayProjection   bool                   // Used to allow ORDER BY non-projected expressions
+	from              algebra.FromTerm       // Used for index selection
+	where             expression.Expression  // Used for index selection
+	order             *algebra.Order         // Used to collect aggregates from ORDER BY, and for ORDER pushdown
+	limit             expression.Expression  // Used for LIMIT pushdown
+	offset            expression.Expression  // Used for OFFSET pushdown
+	countAgg          *algebra.Count         // Used for COUNT() pushdown to IndexCountScan
+	countDistinctAgg  *algebra.CountDistinct // Used for COUNT(Distinct expr) pushdown to IndexCountScan2
+	minAgg            *algebra.Min           // Used for MIN() pushdown to IndexScan
+	maxAgg            *algebra.Max           // Used for MAX() pushdown to IndexScan
+	projection        *algebra.Projection    // Used for projection Distinct pushdown to IndexScan
+	setOpDistinct     bool                   // Used for SETOP Distinct to apply DISTINCT on projection
+	children          []plan.Operator
+	subChildren       []plan.Operator
+	cover             expression.HasExpressions
+	coveringScans     []plan.CoveringOperator
+	coveredUnnests    map[*algebra.Unnest]bool
+	countScan         plan.CoveringOperator
+	skipDynamic       bool
+	requirePrimaryKey bool
+	orderScan         plan.SecondaryScan
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
