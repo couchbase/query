@@ -84,7 +84,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	minSargLength := 0
 
-	for _, op := range pred.Operands() {
+	orTerms, truth := flattenOr(pred)
+	if orTerms == nil || truth {
+		return nil, minSargLength, nil
+	}
+
+	for _, op := range orTerms.Operands() {
 		this.where = op
 		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, indexes, primaryKey, formalizer)
 		if scan == nil || err != nil {
