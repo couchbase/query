@@ -10,7 +10,6 @@
 package system
 
 import (
-	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -39,25 +38,14 @@ func (b *nodeKeyspace) Name() string {
 	return b.name
 }
 
-// TODO scan all node types
 func (b *nodeKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	var count int64 = 0
-	cm := _CONFIGSTORE.ConfigurationManager()
-	clusters, err := cm.GetClusters()
-	if err != nil {
-		return count, err
+	var err errors.Error
+
+	topology, errs := b.namespace.store.actualStore.Info().Topology()
+	if errs != nil {
+		err = errs[0]
 	}
-
-	for _, c := range clusters {
-		queryNodes, err := c.QueryNodeNames()
-		if err != nil {
-			return count, err
-		}
-
-		count += int64(len(queryNodes))
-
-	}
-	return count, nil
+	return int64(len(topology)), err
 }
 
 func (b *nodeKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -68,59 +56,36 @@ func (b *nodeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.si}, nil
 }
 
-// TODO do all node types
-// TODO go-couchbase should also have a proper node map
 func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
+	info := b.namespace.store.actualStore.Info()
 
-	cm := _CONFIGSTORE.ConfigurationManager()
-	clusters, err := cm.GetClusters()
-	if err != nil {
-		return rv, appendError(errs, err)
-	}
+	for _, k := range keys {
 
-	for _, c := range clusters {
-		clm := c.ClusterManager()
-		queryNodes, err := clm.GetQueryNodes()
-		if err != nil {
-			errs = appendError(errs, err)
+		nodeServices, errList := info.Services(k)
+
+		if nodeServices != nil {
+			item := value.NewAnnotatedValue(nodeServices)
+			item.SetAttachment("meta", map[string]interface{}{
+				"id": k,
+			})
+
+			rv = append(rv, value.AnnotatedPair{
+				Name:  k,
+				Value: item,
+			})
 			continue
-		}
-
-	loop:
-		for _, queryNode := range queryNodes {
-			var k string
-
-			for _, k = range keys {
-
-				if makeKey(c, queryNode.Name()) == k {
-					item := value.NewAnnotatedValue(map[string]interface{}{
-
-						// TODO fields by type
-						"name":     k,
-						"endpoint": queryNode.QueryEndpoint(),
-					})
-					item.SetAttachment("meta", map[string]interface{}{
-						"id": k,
-					})
-
-					rv = append(rv, value.AnnotatedPair{
-						Name:  k,
-						Value: item,
-					})
-					continue loop
-				}
+		} else if errList != nil {
+			for _, err := range errList {
+				errs = appendError(errs, err)
 			}
+		} else {
 			errs = appendError(errs, errors.NewSystemDatastoreError(nil, "Key Not Found "+k))
 		}
 	}
 
 	return rv, errs
-}
-
-func makeKey(c clustering.Cluster, n string) string {
-	return c.Name() + "." + n
 }
 
 func appendError(errs []errors.Error, err errors.Error) []errors.Error {
@@ -214,36 +179,51 @@ func (pi *nodeIndex) Drop(requestId string) errors.Error {
 
 func (pi *nodeIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.ScanEntries(requestId, limit, cons, vector, conn)
+	if span == nil {
+		pi.ScanEntries(requestId, limit, cons, vector, conn)
+	} else {
+		var numProduced int64 = 0
+
+		defer close(conn.EntryChannel())
+		spanEvaluator, err := compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+		info := pi.keyspace.namespace.store.actualStore.Info()
+		topology, errs := info.Topology()
+		for _, key := range topology {
+			if spanEvaluator.evaluate(key) {
+				entry := datastore.IndexEntry{PrimaryKey: key}
+				conn.EntryChannel() <- &entry
+				numProduced++
+				if limit > 0 && numProduced >= limit {
+					break
+				}
+			}
+		}
+		for _, err = range errs {
+			conn.Error(err)
+		}
+	}
 }
 
 func (pi *nodeIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	var numProduced int64 = 0
+
 	defer close(conn.EntryChannel())
-
-	// TODO - stub configstore should return no entries
-	cm := _CONFIGSTORE.ConfigurationManager()
-	clusters, err := cm.GetClusters()
-
-	// TODO no error management in scans?
-	if err != nil {
-		return
-	}
-
-	for _, c := range clusters {
-		queryNodes, err := c.QueryNodeNames()
-
-		// TODO ditto
-		if err != nil {
-			continue
+	info := pi.keyspace.namespace.store.actualStore.Info()
+	topology, errs := info.Topology()
+	for _, key := range topology {
+		entry := datastore.IndexEntry{PrimaryKey: key}
+		conn.EntryChannel() <- &entry
+		numProduced++
+		if limit > 0 && numProduced >= limit {
+			break
 		}
-
-		// TODO all node types
-		for _, queryNode := range queryNodes {
-			entry := datastore.IndexEntry{PrimaryKey: makeKey(c, queryNode)}
-			conn.EntryChannel() <- &entry
-		}
-
 	}
-
+	for _, err := range errs {
+		conn.Error(err)
+	}
 }

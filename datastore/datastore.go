@@ -55,6 +55,8 @@ type Datastore interface {
 // should change anything about the store. They are informational only.
 type Info interface {
 	Version() string
+	Topology() ([]string, []errors.Error)
+	Services(node string) (map[string]interface{}, []errors.Error)
 }
 
 // Namespace represents a logical boundary that is within a datastore and above

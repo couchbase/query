@@ -62,6 +62,14 @@ func (i *infoImpl) Version() string {
 	return util.VERSION
 }
 
+func (info *infoImpl) Topology() ([]string, []errors.Error) {
+	return []string{}, nil
+}
+
+func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Error) {
+	return map[string]interface{}{}, nil
+}
+
 func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }

@@ -12,7 +12,6 @@ package system
 import (
 	"net/http"
 
-	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -132,12 +131,6 @@ func (s *store) loadNamespace() errors.Error {
 
 	s.systemDatastoreNamespace = p
 	return nil
-}
-
-var _CONFIGSTORE clustering.ConfigurationStore
-
-func SetConfigStore(configStore clustering.ConfigurationStore) {
-	_CONFIGSTORE = configStore
 }
 
 type systemIndexer struct {

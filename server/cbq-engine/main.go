@@ -189,7 +189,6 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-	system.SetConfigStore(configstore)
 
 	datastore_package.SetSystemstore(server.Systemstore())
 

@@ -179,3 +179,8 @@ func NewDatastoreInvalidUsernamePassword() Error {
 	return &err{level: EXCEPTION, ICode: 13011, IKey: "datastore.couchbase.invalid_username_password",
 		InternalMsg: "Invalid username/password.", InternalCaller: CallerN(1)}
 }
+
+func NewDatastoreClusterError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13012, IKey: "datastore.couchbase.cluster_error", ICause: e,
+		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}
+}

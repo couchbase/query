@@ -35,10 +35,26 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 var REQUIRE_CBAUTH bool // Connection to authorization system must succeed.
+
+// cbPoolMap and cbPoolServices implement a local cache of the datastore's topology
+type cbPoolMap struct {
+	sync.RWMutex
+	poolServices map[string]cbPoolServices
+}
+
+type cbPoolServices struct {
+	name         string
+	rev          int
+	nodeServices map[string]interface{}
+}
+
+var _POOLMAP cbPoolMap
+
 func init() {
 	val, err := strconv.ParseBool(os.Getenv("REQUIRE_CBAUTH"))
 	if err != nil {
@@ -49,6 +65,7 @@ func init() {
 
 	// start the fetch workers for servicing the BulkGet operations
 	cb.InitBulkGet()
+	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
 }
 
 const (
@@ -73,16 +90,141 @@ func (s *store) URL() string {
 }
 
 func (s *store) Info() datastore.Info {
-	info := &infoImpl{version: s.client.Info.ImplementationVersion}
+	info := &infoImpl{client: &s.client}
 	return info
 }
 
 type infoImpl struct {
-	version string
+	client *cb.Client
 }
 
 func (info *infoImpl) Version() string {
-	return info.version
+	return info.client.Info.ImplementationVersion
+}
+
+func hostName(n string) string {
+	tokens := strings.Split(n, ":")
+	if tokens[0] != "127.0.0.1" && tokens[0] != "localhost" {
+		return n
+	}
+	ip, _ := util.ExternalIP()
+	return ip + ":" + tokens[1]
+}
+
+func (info *infoImpl) Topology() ([]string, []errors.Error) {
+	var nodes []string
+	var errs []errors.Error
+
+	for _, p := range info.client.Info.Pools {
+		pool, err := info.client.GetPool(p.Name)
+
+		if err == nil {
+			for _, node := range pool.Nodes {
+				nodes = append(nodes, hostName(node.Hostname))
+			}
+		} else {
+			errs = append(errs, errors.NewDatastoreClusterError(err, p.Name))
+		}
+	}
+	return nodes, errs
+}
+
+func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Error) {
+	var errs []errors.Error
+
+	isReadLock := true
+	_POOLMAP.RLock()
+	defer func() {
+		if isReadLock {
+			_POOLMAP.RUnlock()
+		} else {
+			_POOLMAP.Unlock()
+		}
+	}()
+
+	// scan the pools
+	for _, p := range info.client.Info.Pools {
+		pool, err := info.client.GetPool(p.Name)
+		poolServices, pErr := info.client.GetPoolServices(p.Name)
+
+		if err == nil && pErr == nil {
+			var found bool = false
+			var services cbPoolServices
+
+			services, ok := _POOLMAP.poolServices[p.Name]
+			found = ok && (services.rev == poolServices.Rev)
+
+			// missing the information, rebuild
+			if !found {
+
+				// promote the lock
+				if isReadLock {
+					_POOLMAP.RUnlock()
+					_POOLMAP.Lock()
+					isReadLock = false
+
+					// now that we have promoted the lock, did we get beaten by somebody else to it?
+					services, ok = _POOLMAP.poolServices[p.Name]
+					found = ok && (services.rev == poolServices.Rev)
+					if found {
+						continue
+					}
+				}
+
+				newPoolServices := cbPoolServices{name: p.Name, rev: poolServices.Rev}
+				nodeServices := make(map[string]interface{}, len(pool.Nodes))
+
+				// go through all the nodes in the pool
+				for _, n := range pool.Nodes {
+					var servicesCopy []interface{}
+
+					newServices := make(map[string]interface{}, 3)
+					newServices["name"] = hostName(n.Hostname)
+					for _, s := range n.Services {
+						servicesCopy = append(servicesCopy, s)
+					}
+					newServices["services"] = servicesCopy
+
+					// go through all bucket independet services in the pool
+					for _, ns := range poolServices.NodesExt {
+
+						// if we can positively match nodeServices and node, add ports
+						if n.Hostname == ns.Hostname ||
+							(ns.Hostname == "" && ns.ThisNode && n.ThisNode) {
+							ports := make(map[string]interface{}, len(ns.Services))
+
+							// only add the ports for those services that are advertised
+							for _, s := range n.Services {
+								for pn, p := range ns.Services {
+									if strings.Index(pn, s) == 0 {
+										ports[pn] = p
+									}
+								}
+							}
+							newServices["ports"] = ports
+							break
+						}
+					}
+					nodeServices[hostName(n.Hostname)] = newServices
+				}
+				newPoolServices.nodeServices = nodeServices
+				_POOLMAP.poolServices[p.Name] = newPoolServices
+				services = newPoolServices
+			}
+			nodeServices, ok := services.nodeServices[node]
+			if ok {
+				return nodeServices.(map[string]interface{}), errs
+			}
+		} else {
+			if err != nil {
+				errs = append(errs, errors.NewDatastoreClusterError(err, p.Name))
+			}
+			if pErr != nil {
+				errs = append(errs, errors.NewDatastoreClusterError(pErr, p.Name))
+			}
+		}
+	}
+	return map[string]interface{}{}, errs
 }
 
 func (s *store) NamespaceIds() ([]string, errors.Error) {
