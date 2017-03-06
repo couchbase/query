@@ -191,20 +191,22 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 	rows, err := dBn1ql.QueryRaw(line)
 
 	if rows != nil {
-		// We have output. That is what we want. We can ignore the error, even if there is one.
+		// We have output. That is what we want.
 
 		_, werr := io.Copy(w, rows)
 
 		// For any captured write error
 		if werr != nil {
 			return errors.WRITER_OUTPUT, werr.Error()
+		} else if err != nil {
+			// Return error from godbc if there is one. This is for N1QL errors.
+			return errors.DRIVER_QUERY, ""
 		}
-
 		return 0, ""
 	}
 
 	if err != nil {
-		return errors.DRIVER_QUERY, err.Error()
+		return errors.DRIVER_QUERY, ""
 	}
 
 	// No output, and no error. Strange, but keep going.

@@ -10,7 +10,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -237,14 +236,12 @@ func HandleInteractiveMode(prompt string) {
 				/* Error handling for Shell errors and errors recieved from
 				   godbc/n1ql.
 				*/
+
 				if err_code != 0 {
 					s_err := command.HandleError(err_code, err_string)
-					if err_code == errors.DRIVER_QUERY {
-						//Dont print the error code for query errors.
-						tmpstr := fmt.Sprintln(command.GetfgRed(), s_err, command.Getreset())
-						io.WriteString(command.W, tmpstr+"\n")
-
-					} else {
+					if err_code != errors.DRIVER_QUERY {
+						// Dont print the error for query errors since we want to print the result.
+						// Print all other errors
 						command.PrintError(s_err)
 					}
 
