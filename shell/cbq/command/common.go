@@ -699,6 +699,11 @@ func ParseURL(serverFlag string) (string, int, string) {
 	if err != nil {
 		return "", errors.INVALID_URL, err.Error()
 	}
+
+	if parsedURL.Host == "" {
+		return "", errors.INVALID_URL, INVALIDHOST
+	}
+
 	// We now have a valid URL. Check if we have a port
 	_, portNo, err := net.SplitHostPort(parsedURL.Host)
 
@@ -725,7 +730,6 @@ func ParseURL(serverFlag string) (string, int, string) {
 			} else if strings.ToLower(parsedURL.Scheme) == "https" {
 				parsedURL.Host = net.JoinHostPort(parsedURL.Host, "18091")
 			}
-
 		}
 	} else {
 		// Cannot give port with couchbase:// couchbases://
