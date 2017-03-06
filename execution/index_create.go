@@ -63,7 +63,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 		}
 
 		if indexer2, ok := indexer.(datastore.Indexer2); ok {
-			rangeKey := make(datastore.IndexKeys, 0, len(node.Keys()))
+			rangeKey := make(datastore.IndexKeys, len(node.Keys()))
 			for i, term := range node.Keys() {
 				rangeKey[i] = &datastore.IndexKey{Expr: term.Expression(), Desc: term.Descending()}
 			}
