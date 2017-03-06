@@ -53,9 +53,6 @@
     {
         "statements":"SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE ANY r IN reviewList SATISFIES r = 'review8565' AND r = 'review6183' END AND test_id = \"arrayIndex\"  GROUP BY categories ORDER BY categories, ROUND(SUM(unitPrice), 2) LIMIT 3",
         "results": [
-        {
-            "totprice": null
-        }
     ]
     },
     {

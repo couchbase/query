@@ -103,7 +103,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 	}
 
 	// Mo matching inputs, so send default values
-	if len(this.groups) == 0 {
+	if len(this.plan.Keys()) == 0 && len(this.groups) == 0 {
 		av := value.NewAnnotatedValue(nil)
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		av.SetAttachment("aggregates", aggregates)
