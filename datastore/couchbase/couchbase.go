@@ -343,8 +343,6 @@ func (s *store) Authorize(privileges *datastore.Privileges, credentials datastor
 	if credentials == nil {
 		credentials = make(datastore.Credentials)
 	}
-	// Add default authorization -- the privileges every user has.
-	credentials[""] = ""
 
 	authenticatedUsers := make(datastore.AuthenticatedUsers, 0, len(credentials))
 
