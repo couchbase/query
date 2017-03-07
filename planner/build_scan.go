@@ -197,6 +197,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}()
 	var secOffsetPushed, unnestOffsetPushed, dynamicOffsetPushed bool
+	var limitPushed bool
 
 	// Try secondary scan
 	if len(minimals) > 0 {
@@ -217,6 +218,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 			}
 
 			secOffsetPushed = this.offset != nil
+			limitPushed = limitPushed || this.limit != nil
 		}
 	}
 
@@ -247,6 +249,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 			}
 
 			unnestOffsetPushed = this.offset != nil
+			limitPushed = limitPushed || this.limit != nil
 		}
 
 		this.resetPushDowns()
@@ -281,6 +284,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 				sargLength = dynamicSargLength
 			}
 			dynamicOffsetPushed = this.offset != nil
+			limitPushed = limitPushed || this.limit != nil
 		}
 	}
 
@@ -297,7 +301,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		secondary = scans[0]
 	default:
 		this.resetOffset()
-		limit := offsetPlusLimit(offsetExpr, limitExpr)
+		var limit expression.Expression
+
+		if limitPushed {
+			limit = offsetPlusLimit(offsetExpr, limitExpr)
+		}
+
 		if scans[0] == nil {
 			if len(scans) == 2 {
 				if secOffsetPushed || unnestOffsetPushed || dynamicOffsetPushed {
