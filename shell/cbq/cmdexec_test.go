@@ -69,6 +69,7 @@ func execn1ql(line string, t *testing.T) bool {
 	command.SetWriter(w)
 
 	dBn1ql, err := n1ql.OpenExtended(Server)
+	n1ql.SetUsernamePassword("Administrator", "password")
 	if err != nil {
 		// If the test cannot connect to a server
 		// don't execute the TestExecN1QLStmt method.
