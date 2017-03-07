@@ -25,6 +25,23 @@ import (
 //
 ///////////////////////////////////////////////////
 
+// To look at values for headers see https://sourceforge.net/p/curl/bugs/385/
+// For a full list see :
+// https://github.com/curl/curl/blob/6b7616690e5370c21e3a760321af6bf4edbabfb6/include/curl/curl.h
+
+// Protocol constants
+const (
+	_CURLPROTO_HTTP  = 1 << 0 /* HTTP Protocol */
+	_CURLPROTO_HTTPS = 1 << 1 /* HTTPS Protocol */
+
+)
+
+// Authentication constants
+const (
+	_CURLAUTH_BASIC = 1 << 0 /* Basic (default)*/
+	_CURLAUTH_ANY   = ^(0)   /* all types set */
+)
+
 /*
 This represents the curl function CURL(method, url, options).
 It returns result of the curl operation on the url based on
@@ -177,6 +194,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 	// Set MAX_REDIRS to 0 as an added precaution to disable redirection.
 	this.myCurl.Setopt(curl.OPT_MAXREDIRS, 0)
 
+	// Set what protocols are allowed.
+	this.myCurl.Setopt(curl.OPT_PROTOCOLS, _CURLPROTO_HTTP|_CURLPROTO_HTTPS)
+
 	// When we dont have options, but only have the Method and URL.
 	if len(options) == 0 {
 		if curl_method == "GET" {
@@ -299,8 +319,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 					}
 				}
 				if value.NewValue(val).Actual().(bool) == true {
-					var CURLAUTH_BASIC = (1 << 0) /* Basic (default) */
-					this.myCurl.Setopt(curl.OPT_HTTPAUTH, CURLAUTH_BASIC)
+					this.myCurl.Setopt(curl.OPT_HTTPAUTH, _CURLAUTH_BASIC)
 				}
 			/*
 				anyauth: curl to figure out authentication method by itself, and use the most secure one.
@@ -315,8 +334,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 					}
 				}
 				if value.NewValue(val).Actual().(bool) == true {
-					var CURLAUTH_ANY = ^(0) /* all types set */
-					this.myCurl.Setopt(curl.OPT_HTTPAUTH, CURLAUTH_ANY)
+					this.myCurl.Setopt(curl.OPT_HTTPAUTH, _CURLAUTH_ANY)
 				}
 			/*
 				insecure: Allow connections to SSL sites without certs (H). It has to be a boolean,
