@@ -198,7 +198,7 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	creds[s[0]] = s[1]
 
 	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", creds)
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", creds, "", "")
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

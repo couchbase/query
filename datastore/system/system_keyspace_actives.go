@@ -149,6 +149,14 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, context datastore.QueryCon
 				if credsString != "" {
 					item.SetField("users", credsString)
 				}
+				remoteAddr := request.RemoteAddr()
+				if remoteAddr != "" {
+					item.SetField("remoteAddr", remoteAddr)
+				}
+				userAgent := request.UserAgent()
+				if userAgent != "" {
+					item.SetField("userAgent", userAgent)
+				}
 
 				var ctrl bool
 				ctr := request.Controls()

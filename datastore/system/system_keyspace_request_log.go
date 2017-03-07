@@ -145,6 +145,12 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 				if entry.Users != "" {
 					item.SetField("users", entry.Users)
 				}
+				if entry.RemoteAddr != "" {
+					item.SetField("remoteAddr", entry.RemoteAddr)
+				}
+				if entry.UserAgent != "" {
+					item.SetField("userAgent", entry.UserAgent)
+				}
 				meta := map[string]interface{}{
 					"id": key,
 				}

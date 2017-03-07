@@ -52,6 +52,8 @@ type RequestLogEntry struct {
 	NamedArgs       map[string]value.Value
 	PositionalArgs  value.Values
 	Users           string
+	RemoteAddr      string
+	UserAgent       string
 }
 
 const _CACHE_SIZE = 1 << 10
@@ -201,6 +203,11 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	}
 
 	re.Users = datastore.CredsString(request.Credentials())
+	re.RemoteAddr = request.RemoteAddr()
+	userAgent := request.UserAgent()
+	if userAgent != "" {
+		re.UserAgent = userAgent
+	}
 
 	requestLog.cache.Add(re, id)
 }

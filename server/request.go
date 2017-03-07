@@ -78,6 +78,8 @@ type Request interface {
 	State() State
 	Halted() bool
 	Credentials() datastore.Credentials
+	RemoteAddr() string
+	UserAgent() string
 	SetTimings(o execution.Operator)
 	GetTimings() execution.Operator
 	OriginalHttpRequest() *http.Request
@@ -166,6 +168,8 @@ type BaseRequest struct {
 	pretty         value.Tristate
 	consistency    ScanConfiguration
 	credentials    datastore.Credentials
+	remoteAddr     string
+	userAgent      string
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
@@ -215,7 +219,7 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
 	positionalArgs value.Values, namespace string, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
-	client_id string, creds datastore.Credentials) *BaseRequest {
+	client_id string, creds datastore.Credentials, remoteAddr string, userAgent string) *BaseRequest {
 
 	rv := &BaseRequest{
 		statement:      statement,
@@ -234,6 +238,8 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		pretty:         pretty,
 		consistency:    consistency,
 		credentials:    creds,
+		remoteAddr:     remoteAddr,
+		userAgent:      userAgent,
 		requestTime:    time.Now(),
 		serviceTime:    time.Now(),
 		state:          RUNNING,
@@ -390,6 +396,14 @@ func (this *BaseRequest) Halted() bool {
 
 func (this *BaseRequest) Credentials() datastore.Credentials {
 	return this.credentials
+}
+
+func (this *BaseRequest) RemoteAddr() string {
+	return this.remoteAddr
+}
+
+func (this *BaseRequest) UserAgent() string {
+	return this.userAgent
 }
 
 func (this *BaseRequest) CloseNotify() chan bool {

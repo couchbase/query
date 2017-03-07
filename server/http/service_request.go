@@ -259,7 +259,8 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
 		namespace, max_parallelism, scan_cap, pipeline_cap, pipeline_batch,
-		readonly, metrics, signature, pretty, consistency, client_id, creds)
+		readonly, metrics, signature, pretty, consistency, client_id, creds,
+		req.RemoteAddr, req.UserAgent())
 
 	var prof server.Profile
 	if err == nil {

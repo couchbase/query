@@ -358,6 +358,14 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if credsString != "" {
 			reqMap["users"] = credsString
 		}
+		remoteAddr := request.RemoteAddr()
+		if remoteAddr != "" {
+			reqMap["remoteAddr"] = remoteAddr
+		}
+		userAgent := request.UserAgent()
+		if userAgent != "" {
+			reqMap["userAgent"] = userAgent
+		}
 	})
 	return reqMap
 }
@@ -492,6 +500,12 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		}
 		if request.Users != "" {
 			reqMap["users"] = request.Users
+		}
+		if request.RemoteAddr != "" {
+			reqMap["remoteAddr"] = request.RemoteAddr
+		}
+		if request.UserAgent != "" {
+			reqMap["userAgent"] = request.UserAgent
 		}
 	})
 	return reqMap
