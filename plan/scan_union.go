@@ -26,6 +26,13 @@ type UnionScan struct {
 }
 
 func NewUnionScan(limit expression.Expression, scans ...SecondaryScan) *UnionScan {
+	for _, scan := range scans {
+		if scan.Limit() == nil {
+			limit = nil
+			break
+		}
+	}
+
 	return &UnionScan{
 		scans: scans,
 		limit: limit,
@@ -103,7 +110,9 @@ func (this *UnionScan) Streamline() SecondaryScan {
 	case len(this.scans):
 		return this
 	default:
-		return NewUnionScan(this.limit, scans...)
+		scan := NewUnionScan(this.limit, scans...)
+		this.limit = scan.Limit()
+		return scan
 	}
 }
 

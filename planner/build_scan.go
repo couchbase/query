@@ -200,6 +200,8 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		}
 	}()
 
+	var limitPushed bool
+
 	// Try secondary scan
 	if len(minimals) > 0 {
 		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, limit)
@@ -217,6 +219,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 			} else {
 				scans = append(scans, secondary)
 			}
+			limitPushed = limitPushed || this.limit != nil
 		}
 	}
 
@@ -242,6 +245,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 			if sargLength < unnestSargLength {
 				sargLength = unnestSargLength
 			}
+			limitPushed = limitPushed || this.limit != nil
 		}
 
 		this.resetOrderLimit()
@@ -275,6 +279,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 			if sargLength < dynamicSargLength {
 				sargLength = dynamicSargLength
 			}
+			limitPushed = limitPushed || this.limit != nil
 		}
 	}
 
@@ -284,6 +289,10 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	case 1:
 		secondary = scans[0]
 	default:
+		if !limitPushed {
+			limit = nil
+		}
+
 		if scans[0] == nil {
 			if len(scans) == 2 {
 				secondary = scans[1]
