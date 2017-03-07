@@ -174,6 +174,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 		}
 	}
 
+	// Set MAX_REDIRS to 0 as an added precaution to disable redirection.
+	this.myCurl.Setopt(curl.OPT_MAXREDIRS, 0)
+
 	// When we dont have options, but only have the Method and URL.
 	if len(options) == 0 {
 		if curl_method == "GET" {
@@ -339,14 +342,10 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 					return nil, fmt.Errorf(" Incorrect type for keepalive-time option in CURL ")
 				}
 				this.curlKeepAlive(value.NewValue(val).Actual().(float64))
-			/*
-				max-redirs: Maximum number of redirects allowed (H)
-			*/
-			case "max-redirs":
-				if value.NewValue(val).Type() != value.NUMBER {
-					return nil, fmt.Errorf(" Incorrect type for max-redirs option in CURL ")
-				}
-				this.curlMaxRedirs(value.NewValue(val).Actual().(float64))
+
+			default:
+				return nil, fmt.Errorf(" CURL option does not exist ")
+
 			}
 
 		}
@@ -436,11 +435,6 @@ func (this *Curl) curlConnectTimeout(val float64) {
 func (this *Curl) curlMaxTime(val float64) {
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_TIMEOUT, val)
-}
-
-func (this *Curl) curlMaxRedirs(val float64) {
-	myCurl := this.myCurl
-	myCurl.Setopt(curl.OPT_MAXREDIRS, val)
 }
 
 func (this *Curl) curlKeepAlive(val float64) {
