@@ -117,6 +117,10 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext)
 						time.Duration(entry.Uses)).String()
 					itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
 						time.Duration(entry.Uses)).String()
+					itemMap["minElapsedTime"] = time.Duration(entry.MinRequestTime).String()
+					itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
+					itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
+					itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
 				}
 				item := value.NewAnnotatedValue(itemMap)
 				bytes, _ := json.Marshal(entry.Prepared.Operator)

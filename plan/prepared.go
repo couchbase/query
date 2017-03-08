@@ -16,11 +16,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"sync"
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -127,11 +129,15 @@ type preparedCache struct {
 }
 
 type CacheEntry struct {
-	Prepared    *Prepared
-	LastUse     time.Time
-	Uses        int32
-	ServiceTime atomic.AlignedUint64
-	RequestTime atomic.AlignedUint64
+	Prepared       *Prepared
+	LastUse        time.Time
+	Uses           int32
+	ServiceTime    atomic.AlignedUint64
+	RequestTime    atomic.AlignedUint64
+	MinServiceTime atomic.AlignedUint64
+	MinRequestTime atomic.AlignedUint64
+	MaxServiceTime atomic.AlignedUint64
+	MaxRequestTime atomic.AlignedUint64
 	// FIXME add moving averages, latency
 	// This requires the use of metrics
 }
@@ -171,7 +177,9 @@ func (this *preparedCache) add(prepared *Prepared, process func(*CacheEntry) boo
 	// build one if missing
 	if !ok {
 		ce = &CacheEntry{
-			Prepared: prepared,
+			Prepared:       prepared,
+			MinServiceTime: math.MaxUint64,
+			MinRequestTime: math.MaxUint64,
 		}
 	}
 	if process != nil {
@@ -362,7 +370,15 @@ func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Dur
 	ce := cache.prepareds[name]
 	if ce != nil {
 		atomic.AddUint64(&ce.ServiceTime, uint64(serviceTime))
+		util.TestAndSetUint64(&ce.MinServiceTime, uint64(serviceTime),
+			func(old, new uint64) bool { return old > new }, 0)
+		util.TestAndSetUint64(&ce.MaxServiceTime, uint64(serviceTime),
+			func(old, new uint64) bool { return old < new }, 0)
 		atomic.AddUint64(&ce.RequestTime, uint64(requestTime))
+		util.TestAndSetUint64(&ce.MinRequestTime, uint64(requestTime),
+			func(old, new uint64) bool { return old > new }, 0)
+		util.TestAndSetUint64(&ce.MaxRequestTime, uint64(requestTime),
+			func(old, new uint64) bool { return old < new }, 0)
 	}
 }
 

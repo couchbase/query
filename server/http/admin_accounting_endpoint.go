@@ -244,7 +244,29 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, err
 		}
-		return plan.GetPrepared(value.NewValue(name))
+
+		var itemMap map[string]interface{}
+
+		plan.PreparedDo(name, func(entry *plan.CacheEntry) {
+			itemMap = map[string]interface{}{
+				"name":         name,
+				"uses":         entry.Uses,
+				"statement":    entry.Prepared.Text(),
+				"encoded_plan": entry.Prepared.EncodedPlan(),
+			}
+			if entry.Uses > 0 {
+				itemMap["lastUse"] = entry.LastUse.String()
+				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
+					time.Duration(entry.Uses)).String()
+				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
+					time.Duration(entry.Uses)).String()
+				itemMap["minElapsedTime"] = time.Duration(entry.MinRequestTime).String()
+				itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
+				itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
+				itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+			}
+		})
+		return itemMap, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
