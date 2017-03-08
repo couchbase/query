@@ -47,11 +47,42 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (
 	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
 
-	indexes := _INDEX_POOL.Get()
-	defer _INDEX_POOL.Put(indexes)
-	indexes, err := allIndexes(keyspace, nil, indexes)
+	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
+	allindexes := _INDEX_POOL.Get()
+	defer _INDEX_POOL.Put(allindexes)
+	allindexes, err := allIndexes(keyspace, nil, allindexes)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	onkey := node.Keys()
+	indexes := _INDEX_POOL.Get()
+	defer _INDEX_POOL.Put(indexes)
+	for _, index := range allindexes {
+		keys := index.RangeKey()
+		if len(keys) == 0 {
+			continue
+		}
+
+		key, err := formalizer.Map(keys[0])
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		dnf := NewDNF(key, true)
+		key, err = dnf.Map(key)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if onkey.EquivalentTo(key) && !indexHasArrayIndexKey(index) {
+			indexes = append(indexes, index)
+		}
+
+	}
+
+	if len(indexes) == 0 {
+		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
 
 	var pred expression.Expression
@@ -72,7 +103,6 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		}
 	}
 
-	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 	primaryKey := expression.Expressions{
 		expression.NewField(
 			expression.NewMeta(expression.NewConstant(node.Alias())),
@@ -106,10 +136,6 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 
 	outer:
 		for index, entry := range secondaries {
-			if indexHasArrayIndexKey(index) {
-				continue
-			}
-
 			keys := entry.keys
 			if !index.IsPrimary() {
 				keys = append(keys, id)
@@ -137,10 +163,9 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 	}
 
 	secondaries = minimalIndexes(secondaries, true)
+
 	for index, _ := range secondaries {
-		if !indexHasArrayIndexKey(index) {
-			return index, nil, nil, nil
-		}
+		return index, nil, nil, nil
 	}
 
 	return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
