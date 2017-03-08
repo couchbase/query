@@ -255,8 +255,6 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privilege) (bool, error) {
 	var permission string
 	switch requested {
-	case datastore.PRIV_DDL:
-		permission = fmt.Sprintf("cluster.bucket[%s].views!write", bucket)
 	case datastore.PRIV_WRITE:
 		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!write", bucket)
 	case datastore.PRIV_READ:
@@ -276,15 +274,15 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 	case datastore.PRIV_QUERY_DELETE:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
 	case datastore.PRIV_QUERY_BUILD_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.build_index!execute", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!build", bucket)
 	case datastore.PRIV_QUERY_CREATE_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.create_index!execute", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!create", bucket)
 	case datastore.PRIV_QUERY_ALTER_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.alter_index!execute", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!alter", bucket)
 	case datastore.PRIV_QUERY_DROP_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.drop_index!execute", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!drop", bucket)
 	case datastore.PRIV_QUERY_LIST_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.list_index!execute", bucket)
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!list", bucket)
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}

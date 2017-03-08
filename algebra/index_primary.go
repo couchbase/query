@@ -95,7 +95,7 @@ Returns all required privileges.
 */
 func (this *CreatePrimaryIndex) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_DDL)
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_QUERY_CREATE_INDEX)
 	return privs, nil
 }
 

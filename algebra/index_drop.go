@@ -89,7 +89,6 @@ Returns all required privileges.
 func (this *DropIndex) Privileges() (*datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, datastore.PRIV_DDL)
 	privs.Add(fullName, datastore.PRIV_QUERY_DROP_INDEX)
 	return privs, nil
 }
