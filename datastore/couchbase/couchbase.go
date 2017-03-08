@@ -268,37 +268,21 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 	case datastore.PRIV_SECURITY_WRITE:
 		permission = "cluster.security!write"
 	case datastore.PRIV_QUERY_SELECT:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
-		//logging.Errorf("JOHAN: no-op query_insert for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
 	case datastore.PRIV_QUERY_UPDATE:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.update!execute", bucket)
-		//logging.Errorf("JOHAN: no-op query_insert for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.update!execute", bucket)
 	case datastore.PRIV_QUERY_INSERT:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.insert!execute", bucket)
-		//logging.Errorf("JOHAN: no-op query_insert for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.insert!execute", bucket)
 	case datastore.PRIV_QUERY_DELETE:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
-		//logging.Errorf("JOHAN: no-op query_delete for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
 	case datastore.PRIV_QUERY_BUILD_INDEX:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.build_index!execute", bucket)
-		//logging.Errorf("JOHAN: no-op build_index for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.build_index!execute", bucket)
 	case datastore.PRIV_QUERY_CREATE_INDEX:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.create_index!execute", bucket)
-		//logging.Errorf("JOHAN: no-op create_index for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.create_index!execute", bucket)
 	case datastore.PRIV_QUERY_ALTER_INDEX:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.alter_index!execute", bucket)
-		//logging.Errorf("JOHAN: no-op alter_index for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.alter_index!execute", bucket)
 	case datastore.PRIV_QUERY_DROP_INDEX:
-		//permission = fmt.Sprintf("cluster.bucket[%s].n1ql.drop_index!execute", bucket)
-		//logging.Errorf("JOHAN: no-op drop_index for now: granted")
-		return true, nil
+		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.drop_index!execute", bucket)
 	case datastore.PRIV_QUERY_LIST_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.list_index!execute", bucket)
 	default:
