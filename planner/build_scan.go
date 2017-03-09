@@ -358,6 +358,10 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 			continue
 		}
 
+		if !useIndex2API(index) && indexHasDesc(index) {
+			continue
+		}
+
 		indexes = append(indexes, index)
 	}
 
@@ -399,6 +403,10 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) (
 			}
 
 			if er != nil || state != datastore.ONLINE {
+				continue
+			}
+
+			if !useIndex2API(idx) && indexHasDesc(idx) {
 				continue
 			}
 

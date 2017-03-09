@@ -45,6 +45,18 @@ func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {
 	return
 }
 
+func indexHasDesc(index datastore.Index) bool {
+	if index2, ok := index.(datastore.Index2); ok {
+		for _, key := range index2.RangeKey2() {
+			if key.Desc {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Expressions, id expression.Expression,
 	primary bool) *plan.IndexProjection {
 
