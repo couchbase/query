@@ -146,6 +146,7 @@ func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
 type User struct {
 	Name  string
 	Id    string
+	Type  string
 	Roles []Role
 }
 
