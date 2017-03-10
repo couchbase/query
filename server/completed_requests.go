@@ -20,6 +20,7 @@
 package server
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -132,7 +133,7 @@ func RequestsForeach(f func(string, *RequestLogEntry)) {
 }
 
 func LogRequest(request_time time.Duration, service_time time.Duration,
-	result_count int, result_size int, error_count int,
+	result_count int, result_size int, error_count int, req *http.Request,
 	request *BaseRequest, server *Server) {
 
 	// negative threshold means log nothing
@@ -202,7 +203,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		re.PositionalArgs = request.PositionalArgs()
 	}
 
-	re.Users = datastore.CredsString(request.Credentials())
+	re.Users = datastore.CredsString(request.Credentials(), req)
 	re.RemoteAddr = request.RemoteAddr()
 	userAgent := request.UserAgent()
 	if userAgent != "" {

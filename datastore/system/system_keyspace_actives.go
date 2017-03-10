@@ -145,7 +145,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, context datastore.QueryCon
 				if prof != server.ProfOff {
 					item.SetField("phaseTimes", request.Output().FmtPhaseTimes())
 				}
-				credsString := datastore.CredsString(request.Credentials())
+				credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
 				if credsString != "" {
 					item.SetField("users", credsString)
 				}

@@ -376,7 +376,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 				}
 			}
 		}
-		credsString := datastore.CredsString(request.Credentials())
+		credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
 		if credsString != "" {
 			reqMap["users"] = credsString
 		}
@@ -432,7 +432,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["state"] = request.State()
 		requests[i]["scanConsistency"] = request.ScanConsistency()
 
-		credsString := datastore.CredsString(request.Credentials())
+		credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
 		if credsString != "" {
 			requests[i]["users"] = credsString
 		}

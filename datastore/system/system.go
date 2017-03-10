@@ -88,6 +88,10 @@ func (s *store) Authorize(*datastore.Privileges, datastore.Credentials, *http.Re
 	return nil, nil
 }
 
+func (s *store) CredsString(req *http.Request) string {
+	return ""
+}
+
 func (s *store) SetLogLevel(level logging.Level) {
 	// No-op. Uses query engine logger.
 }

@@ -184,7 +184,7 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 }
 
 func (this *MockServer) doStats(request *MockQuery) {
-	request.CompleteRequest(0, 0, request.resultCount, 0, 0, this.server)
+	request.CompleteRequest(0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
 /*

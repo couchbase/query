@@ -10,6 +10,7 @@
 package datastore
 
 import (
+	"net/http"
 	"strings"
 )
 
@@ -94,16 +95,26 @@ Type Credentials maps users to passwords.
 */
 type Credentials map[string]string
 
-func CredsString(creds Credentials) string {
-	if creds == nil || len(creds) == 0 {
-		return ""
+func CredsString(creds Credentials, req *http.Request) string {
+	credsLen := 1
+	if creds != nil {
+		credsLen += len(creds)
 	}
-	credsList := make([]string, 0, len(creds))
-	for k := range creds {
-		if k == "" {
-			continue
+	credsList := make([]string, 0, credsLen)
+	if credsLen > 1 {
+		for k := range creds {
+			if k == "" {
+				continue
+			}
+			credsList = append(credsList, k)
 		}
-		credsList = append(credsList, k)
+	}
+	ds := GetDatastore()
+	if ds != nil {
+		reqName := ds.CredsString(req)
+		if reqName != "" {
+			credsList = append(credsList, reqName)
+		}
 	}
 	return strings.Join(credsList, ",")
 }

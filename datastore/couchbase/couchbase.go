@@ -421,6 +421,16 @@ func (s *store) Authorize(privileges *datastore.Privileges, credentials datastor
 	return authenticatedUsers, nil
 }
 
+func (s *store) CredsString(req *http.Request) string {
+	if req != nil && cbauthi.IsAuthTokenPresent(req) {
+		creds, err := cbauth.AuthWebCreds(req)
+		if err == nil {
+			return creds.Name()
+		}
+	}
+	return ""
+}
+
 func (s *store) SetLogLevel(level logging.Level) {
 	for _, n := range s.namespaceCache {
 		defer n.lock.Unlock()

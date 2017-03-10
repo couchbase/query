@@ -211,7 +211,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 		string(request.ScanConsistency()))
 
 	request.CompleteRequest(request_time, service_time, request.resultCount,
-		request.resultSize, request.errorCount, srvr)
+		request.resultSize, request.errorCount, request.req, srvr)
 }
 
 func ServicePrefix() string {

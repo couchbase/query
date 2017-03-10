@@ -607,14 +607,14 @@ func (this *BaseRequest) Close() {
 // this logs the request if needed and takes any other action required to
 // put this request to rest
 func (this *BaseRequest) CompleteRequest(requestTime time.Duration, serviceTime time.Duration,
-	resultCount int, resultSize int, errorCount int, server *Server) {
+	resultCount int, resultSize int, errorCount int, req *http.Request, server *Server) {
 
 	if this.timer != nil {
 		this.timer.Stop()
 		this.timer = nil
 	}
 	LogRequest(requestTime, serviceTime, resultCount,
-		resultSize, errorCount, this, server)
+		resultSize, errorCount, req, this, server)
 
 	// Request Profiling - signal that request has completed and
 	// resources can be pooled / released as necessary
