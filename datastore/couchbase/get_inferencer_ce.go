@@ -32,7 +32,7 @@ func (di *NopInferencer) Name() datastore.InferenceType {
 }
 
 func (di *NopInferencer) InferKeyspace(ks datastore.Keyspace, with value.Value, conn *datastore.ValueConnection) {
-	conn.Error(errors.NewOtherNotImplementedError(nil, "INFER"))
+	conn.Error(errors.NewOtherNotImplementedError(nil, "INFER. This is an Enterprise only feature."))
 	close(conn.ValueChannel())
 }
 
