@@ -166,6 +166,14 @@ func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *DistinctScan) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*DistinctScan)
+	this.scan.accrueTimes(copy.scan)
+}
+
 func (this *DistinctScan) Done() {
 	this.wait()
 	this.scan.Done()

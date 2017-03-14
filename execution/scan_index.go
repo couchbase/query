@@ -105,6 +105,14 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *IndexScan) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*IndexScan)
+	childrenAccrueTimes(this.children, copy.children)
+}
+
 func (this *IndexScan) Done() {
 	this.wait()
 	for c, _ := range this.children {

@@ -104,6 +104,14 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *UnionAll) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*UnionAll)
+	childrenAccrueTimes(this.children, copy.children)
+}
+
 func (this *UnionAll) Done() {
 	this.wait()
 	for c, child := range this.children {

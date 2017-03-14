@@ -99,13 +99,43 @@ func (this *Parallel) runChild(child Operator, context *Context, parent value.Va
 }
 
 func (this *Parallel) MarshalJSON() ([]byte, error) {
+	var outChild Operator
+
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 
-		// TODO this only marshals times for the first child
-		r["~child"] = this.child
+		childCount := len(this.children)
+		r["copies"] = childCount
+
+		// when we have multuple copies, we create a temporary child
+		// for the purpose of adding up all of the times (remember, the
+		// actual query might be running and we are accessing the times
+		// via system:active_requests)
+		if childCount > 1 {
+			outChild = this.child.Copy()
+			for _, c := range this.children {
+				outChild.accrueTimes(c)
+			}
+			r["~child"] = outChild
+		} else {
+			r["~child"] = this.child
+		}
 	})
-	return json.Marshal(r)
+	val, err := json.Marshal(r)
+
+	// free up resources of temporary child
+	if outChild != nil {
+		outChild.Done()
+	}
+	return val, err
+}
+
+func (this *Parallel) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*Parallel)
+	childrenAccrueTimes(this.children, copy.children)
 }
 
 func (this *Parallel) Done() {

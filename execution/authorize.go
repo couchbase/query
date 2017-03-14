@@ -107,6 +107,14 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Authorize) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*Authorize)
+	this.child.accrueTimes(copy.child)
+}
+
 func (this *Authorize) Done() {
 	this.wait()
 	this.child.Done()

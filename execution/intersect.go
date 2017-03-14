@@ -120,6 +120,15 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *IntersectAll) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*IntersectAll)
+	this.first.accrueTimes(copy.first)
+	this.second.accrueTimes(copy.second)
+}
+
 func (this *IntersectAll) Done() {
 	this.wait()
 	this.first.Done()

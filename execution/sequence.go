@@ -112,6 +112,14 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Sequence) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*Sequence)
+	childrenAccrueTimes(this.children, copy.children)
+}
+
 func (this *Sequence) Done() {
 	this.wait()
 	for c, child := range this.children {

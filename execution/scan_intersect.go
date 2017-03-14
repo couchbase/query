@@ -238,6 +238,14 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *IntersectScan) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*IntersectScan)
+	childrenAccrueTimes(this.scans, copy.scans)
+}
+
 func (this *IntersectScan) Done() {
 	this.wait()
 	for s, scan := range this.scans {

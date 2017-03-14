@@ -42,6 +42,11 @@ type Operator interface {
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
 	Done()                                        // frees and pools resources
+
+	// local infrastructure to add up times of children of the parallel operator
+	accrueTimes(o Operator)
+	time() *base
+	accrueTime(b *base)
 }
 
 type Parent interface {

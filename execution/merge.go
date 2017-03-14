@@ -251,6 +251,22 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Merge) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*Merge)
+	if this.update != nil {
+		this.insert.accrueTimes(copy.insert)
+	}
+	if this.delete != nil {
+		this.update.accrueTimes(copy.update)
+	}
+	if this.insert != nil {
+		this.insert.accrueTimes(copy.insert)
+	}
+}
+
 func (this *Merge) Done() {
 	this.wait()
 	if this.update != nil {

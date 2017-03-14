@@ -182,6 +182,14 @@ func (this *UnionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *UnionScan) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*UnionScan)
+	childrenAccrueTimes(this.scans, copy.scans)
+}
+
 func (this *UnionScan) Done() {
 	this.wait()
 	for s, scan := range this.scans {

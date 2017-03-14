@@ -116,6 +116,15 @@ func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *ExceptAll) accrueTimes(o Operator) {
+	if baseAccrueTimes(this, o) {
+		return
+	}
+	copy, _ := o.(*ExceptAll)
+	this.first.accrueTimes(copy.first)
+	this.second.accrueTimes(copy.second)
+}
+
 func (this *ExceptAll) Done() {
 	this.wait()
 	this.first.Done()

@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	go_atomic "sync/atomic"
 	"time"
@@ -18,6 +19,7 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -553,6 +555,54 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	if len(stats) > 0 {
 		r["#stats"] = stats
 	}
+}
+
+// the following functions are used to sum execution
+// times of children of the parallel operator
+// 1- tot up times
+func (this *base) accrueTime(copy *base) {
+	this.inDocs += copy.inDocs
+	this.outDocs += copy.outDocs
+	this.phaseSwitches += copy.phaseSwitches
+	this.execTime += copy.execTime
+	this.chanTime += copy.chanTime
+	this.servTime += copy.servTime
+}
+
+// 2- descend children: default for childless operators
+func (this *base) accrueTimes(copy Operator) {
+	this.accrueTime(copy.time())
+}
+
+// 3- times to be copied
+func (this *base) time() *base {
+	return this
+}
+
+// 4- check and add operator times
+func baseAccrueTimes(o1, o2 Operator) bool {
+	t1 := reflect.TypeOf(o1)
+	t2 := reflect.TypeOf(o2)
+	if t1 != t2 {
+		logging.Stackf(logging.INFO, "mismatching operators detected: found %v, expecting %v", t2, t1)
+		return true
+	}
+	o1.accrueTime(o2.time())
+	return false
+}
+
+// 5- check and add children
+func childrenAccrueTimes(o1, o2 []Operator) bool {
+	l1 := len(o1)
+	l2 := len(o2)
+	if l1 != l2 {
+		logging.Stackf(logging.INFO, "mismatching operator lengths detected: found %v, expecting %v", l2, l1)
+		return true
+	}
+	for i, c := range o1 {
+		c.accrueTimes(o2[i])
+	}
+	return false
 }
 
 // execution destructor is empty by default
