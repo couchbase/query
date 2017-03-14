@@ -131,6 +131,14 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return nil
 }
 
+func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
+	return []datastore.Role{
+		datastore.Role{Name: "cluster_admin"},
+		datastore.Role{Name: "replication_admin"},
+		datastore.Role{Name: "bucket_admin", Bucket: "*"},
+	}, nil
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)

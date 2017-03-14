@@ -133,3 +133,23 @@ func NewUserNotFoundError(u string) Error {
 	return &err{level: EXCEPTION, ICode: 5210, IKey: "execution.user_not_found",
 		InternalMsg: fmt.Sprintf("Unable to find user %s.", u), InternalCaller: CallerN(1)}
 }
+
+func NewRoleRequiresKeyspaceError(role string) Error {
+	return &err{level: EXCEPTION, ICode: 5220, IKey: "execution.role_requires_keyspace",
+		InternalMsg: fmt.Sprintf("Role %s requires a keyspace.", role), InternalCaller: CallerN(1)}
+}
+
+func NewRoleTakesNoKeyspaceError(role string) Error {
+	return &err{level: EXCEPTION, ICode: 5230, IKey: "execution.role_takes_no_keyspace",
+		InternalMsg: fmt.Sprintf("Role %s does not take a keyspace.", role), InternalCaller: CallerN(1)}
+}
+
+func NewNoSuchKeyspaceError(bucket string) Error {
+	return &err{level: EXCEPTION, ICode: 5240, IKey: "execution.no_such_keyspace",
+		InternalMsg: fmt.Sprintf("Keyspace %s is not valid.", bucket), InternalCaller: CallerN(1)}
+}
+
+func NewRoleNotFoundError(role string) Error {
+	return &err{level: EXCEPTION, ICode: 5250, IKey: "execution.role_not_found",
+		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}
+}

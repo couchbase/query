@@ -184,3 +184,8 @@ func NewDatastoreClusterError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13012, IKey: "datastore.couchbase.cluster_error", ICause: e,
 		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}
 }
+
+func NewDatastoreUnableToRetrieveRoles(e error) Error {
+	return &err{level: EXCEPTION, ICode: 13013, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
+		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
+}

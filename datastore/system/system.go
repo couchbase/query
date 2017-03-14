@@ -116,6 +116,10 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
 }
 
+func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
+}
+
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
 	s := &store{actualStore: actualStore}
 

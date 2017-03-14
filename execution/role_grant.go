@@ -41,6 +41,56 @@ func (this *GrantRole) Copy() Operator {
 	return &GrantRole{this.base.copy(), this.plan}
 }
 
+func validateRoles(candidateRoles, allRoles []datastore.Role, keyspaces map[string]bool) errors.Error {
+	for _, candidate := range candidateRoles {
+		foundMatch := false
+		for _, permittedRole := range allRoles {
+			if candidate.Name == permittedRole.Name {
+				if candidate.Bucket == "" {
+					if permittedRole.Bucket == "*" {
+						return errors.NewRoleRequiresKeyspaceError(candidate.Name)
+					}
+				} else {
+					if permittedRole.Bucket != "*" {
+						return errors.NewRoleTakesNoKeyspaceError(candidate.Name)
+					}
+					if candidate.Bucket != "*" && !keyspaces[candidate.Bucket] {
+						return errors.NewNoSuchKeyspaceError(candidate.Bucket)
+					}
+				}
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			return errors.NewRoleNotFoundError(candidate.Name)
+		}
+	}
+	return nil
+}
+
+func getAllKeyspaces(store datastore.Datastore) (map[string]bool, errors.Error) {
+	keyspaces := make(map[string]bool, 16)
+	namespaceIds, err := store.NamespaceIds()
+	if err != nil {
+		return nil, err
+	}
+	for _, namespaceId := range namespaceIds {
+		namespace, err := store.NamespaceById(namespaceId)
+		if err != nil {
+			return nil, err
+		}
+		keyspaceIds, err := namespace.KeyspaceIds()
+		if err != nil {
+			return nil, err
+		}
+		for _, keyspaceId := range keyspaceIds {
+			keyspaces[keyspaceId] = true
+		}
+	}
+	return keyspaces, nil
+}
+
 func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
@@ -71,6 +121,24 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 		for i, rs := range roleSpecs {
 			roleList[i].Name = rs.Role
 			roleList[i].Bucket = rs.Bucket
+		}
+
+		// Get the list of all valid roles, and verify that the roles to be
+		// granted are proper.
+		validRoles, err := context.datastore.GetRolesAll()
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
+		validKeyspaces, err := getAllKeyspaces(context.datastore)
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
+		err = validateRoles(roleList, validRoles, validKeyspaces)
+		if err != nil {
+			context.Fatal(err)
+			return
 		}
 
 		// Since we only want to update each user once, even if the

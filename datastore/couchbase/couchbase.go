@@ -502,6 +502,19 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return nil
 }
 
+func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
+	roleDescList, err := s.client.GetRolesAll()
+	if err != nil {
+		return nil, errors.NewDatastoreUnableToRetrieveRoles(err)
+	}
+	roles := make([]datastore.Role, len(roleDescList))
+	for i, rd := range roleDescList {
+		roles[i].Name = rd.Role
+		roles[i].Bucket = rd.BucketName
+	}
+	return roles, nil
+}
+
 func initCbAuth(url string) (*cb.Client, error) {
 
 	transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)

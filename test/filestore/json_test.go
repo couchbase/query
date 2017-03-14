@@ -42,15 +42,15 @@ func TestRoleStatements(t *testing.T) {
 	qc := start()
 
 	pete := datastore.User{Name: "Peter Peterson", Id: "pete",
-		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "customer"}}}
+		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "contacts"}}}
 	sam := datastore.User{Name: "Sam Samson", Id: "sam",
-		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "orders"}}}
+		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "products"}}}
 
 	ds := qc.dstore
 	ds.PutUserInfo(&pete)
 	ds.PutUserInfo(&sam)
 
-	r, _, err := Run(qc, true, "GRANT ROLE cluster_admin, bucket_admin(product) TO pete, sam")
+	r, _, err := Run(qc, true, "GRANT ROLE cluster_admin, bucket_admin(products) TO pete, sam")
 	if err != nil {
 		t.Fatalf("Unable to run GRANT ROLE: %s", err.Error())
 	}
@@ -69,8 +69,8 @@ func TestRoleStatements(t *testing.T) {
 			Id:   "pete",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "customer"},
-				datastore.Role{Name: "bucket_admin", Bucket: "product"},
+				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
+				datastore.Role{Name: "bucket_admin", Bucket: "products"},
 			},
 		},
 		datastore.User{
@@ -79,14 +79,13 @@ func TestRoleStatements(t *testing.T) {
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
 				datastore.Role{Name: "cluster_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "orders"},
-				datastore.Role{Name: "bucket_admin", Bucket: "product"},
+				datastore.Role{Name: "bucket_admin", Bucket: "products"},
 			},
 		},
 	}
 	compareUserLists(&expectedAfterGrant, &users, t)
 
-	r, _, err = Run(qc, true, "REVOKE ROLE cluster_admin, bucket_admin(product) FROM pete, sam")
+	r, _, err = Run(qc, true, "REVOKE ROLE cluster_admin, bucket_admin(products) FROM pete, sam")
 	if err != nil {
 		t.Fatalf("Unable to run REVOKE ROLE: %s", err.Error())
 	}
@@ -104,7 +103,7 @@ func TestRoleStatements(t *testing.T) {
 			Name: "Peter Peterson",
 			Id:   "pete",
 			Roles: []datastore.Role{
-				datastore.Role{Name: "bucket_admin", Bucket: "customer"},
+				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
 			},
 		},
 		datastore.User{
@@ -112,7 +111,6 @@ func TestRoleStatements(t *testing.T) {
 			Id:   "sam",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "orders"},
 			},
 		},
 	}

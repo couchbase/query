@@ -68,11 +68,31 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		// Create the set of deletable roles.
 		roleSpecs := this.plan.Node().Roles()
 		deleteRoleMap := make(map[datastore.Role]bool, len(roleSpecs))
-		for _, rs := range roleSpecs {
+		roleList := make([]datastore.Role, len(roleSpecs))
+		for i, rs := range roleSpecs {
 			var role datastore.Role
 			role.Name = rs.Role
 			role.Bucket = rs.Bucket
 			deleteRoleMap[role] = true
+			roleList[i] = role
+		}
+
+		// Get the list of all valid roles, and verify that the roles to be
+		// deleted are proper.
+		validRoles, err := context.datastore.GetRolesAll()
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
+		validKeyspaces, err := getAllKeyspaces(context.datastore)
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
+		err = validateRoles(roleList, validRoles, validKeyspaces)
+		if err != nil {
+			context.Fatal(err)
+			return
 		}
 
 		// Since we only want to update each user once, even if the

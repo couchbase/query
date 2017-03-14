@@ -50,6 +50,7 @@ type Datastore interface {
 	UserInfo() (value.Value, errors.Error)                                                // The users, and their roles. JSON data.
 	GetUserInfoAll() ([]User, errors.Error)                                               // Get information about all the users.
 	PutUserInfo(u *User) errors.Error                                                     // Set information for a specific user.
+	GetRolesAll() ([]Role, errors.Error)                                                  // Get all roles that exist in the system.
 }
 
 // Secondary information about this datastore. None of these methods

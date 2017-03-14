@@ -121,6 +121,10 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
 }
 
+func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store
