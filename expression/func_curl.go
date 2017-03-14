@@ -291,7 +291,10 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				if value.NewValue(val).Type() != value.NUMBER {
 					return nil, fmt.Errorf(" Incorrect type for connect-timeout option in CURL ")
 				}
-				this.curlConnectTimeout(value.NewValue(val).Actual().(float64))
+
+				connTime := value.NewValue(val).Actual().(float64)
+
+				this.curlConnectTimeout(int64(connTime))
 			/*
 				max-time: Maximum time allowed for the transfer in seconds
 			*/
@@ -299,7 +302,10 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				if value.NewValue(val).Type() != value.NUMBER {
 					return nil, fmt.Errorf(" Incorrect type for max-time option in CURL ")
 				}
-				this.curlMaxTime(value.NewValue(val).Actual().(float64))
+
+				maxTime := value.NewValue(val).Actual().(float64)
+
+				this.curlMaxTime(int64(maxTime))
 			/*
 				user: Server user and password separated by a :. By default if a
 				password is not specified, then use an empty password.
@@ -359,7 +365,10 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				if value.NewValue(val).Type() != value.NUMBER {
 					return nil, fmt.Errorf(" Incorrect type for keepalive-time option in CURL ")
 				}
-				this.curlKeepAlive(value.NewValue(val).Actual().(float64))
+
+				kATime := value.NewValue(val).Actual().(float64)
+
+				this.curlKeepAlive(int64(kATime))
 
 			default:
 				return nil, fmt.Errorf(" CURL option does not exist ")
@@ -444,20 +453,20 @@ func (this *Curl) curlAuth(val string) {
 	}
 }
 
-func (this *Curl) curlConnectTimeout(val float64) {
+func (this *Curl) curlConnectTimeout(val int64) {
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_CONNECTTIMEOUT, val)
 
 }
 
-func (this *Curl) curlMaxTime(val float64) {
+func (this *Curl) curlMaxTime(val int64) {
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_TIMEOUT, val)
 }
 
-func (this *Curl) curlKeepAlive(val float64) {
+func (this *Curl) curlKeepAlive(val int64) {
 	myCurl := this.myCurl
-	myCurl.Setopt(curl.OPT_TCP_KEEPALIVE, 1.0)
+	myCurl.Setopt(curl.OPT_TCP_KEEPALIVE, 1)
 	myCurl.Setopt(curl.OPT_TCP_KEEPIDLE, val)
 	myCurl.Setopt(curl.OPT_TCP_KEEPINTVL, val)
 }
