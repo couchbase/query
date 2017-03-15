@@ -194,9 +194,9 @@ type Index2 interface {
 
 	RangeKey2() IndexKeys // Range keys
 
-	// Perform a scan on this index. Distinct and limit are hints.
-	Scan2(requestId string, spans Spans2, reverse, distinct, ordered bool,
-		projection *IndexProjection, offset, limit int64,
+	// Perform a scan on this index. distinctAfterProjection and limit are hints.
+	Scan2(requestId string, spans Spans2, reverse, distinctAfterProjection,
+		ordered bool, projection *IndexProjection, offset, limit int64,
 		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
 }
 
