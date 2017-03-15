@@ -413,7 +413,11 @@ func (s *store) Authorize(privileges *datastore.Privileges, credentials datastor
 		}
 
 		if !thisBucketAuthorized {
-			return nil, errors.NewDatastoreAuthorizationError(rememberedError, "Keyspace "+keyspace)
+			msg := ""
+			if keyspace != "" {
+				msg = fmt.Sprintf(" Keyspace %s.", keyspace)
+			}
+			return nil, errors.NewDatastoreAuthorizationError(rememberedError, msg)
 		}
 	}
 
