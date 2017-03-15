@@ -430,7 +430,7 @@ var _SETTERS = map[string]setter{
 	},
 	_CMPTHRESHOLD: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
-		server.RequestsSetThreshold(int(value))
+		_ = server.RequestsUpdateQualifier("threshold", int(value))
 	},
 	_CMPLIMIT: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
@@ -506,7 +506,8 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_TIMEOUT] = srvr.Timeout()
 	settings[_KEEPALIVELENGTH] = srvr.KeepAlive()
 	settings[_LOGLEVEL] = srvr.LogLevel()
-	settings[_CMPTHRESHOLD] = server.RequestsThreshold()
+	threshold, _ := server.RequestsGetQualifier("threshold")
+	settings[_CMPTHRESHOLD] = threshold
 	settings[_CMPLIMIT] = server.RequestsLimit()
 	settings[_PRETTY] = srvr.Pretty()
 	settings[_MAXINDEXAPI] = srvr.MaxIndexAPI()

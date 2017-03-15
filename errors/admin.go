@@ -112,3 +112,39 @@ func NewAdminCredsError(creds string, e error) Error {
 	return &err{level: EXCEPTION, ICode: ADMIN_CREDS_ERROR, IKey: "admin.accounting.bad_creds", ICause: e,
 		InternalMsg: "Not a proper creds JSON array of user/pass structures: " + creds, InternalCaller: CallerN(1)}
 }
+
+// completed requests qualifier settings
+func NewCompletedQualifierExists(what string) Error {
+	return &err{level: EXCEPTION, ICode: 2160, IKey: "admin.accounting.completed",
+		InternalMsg: "Completed requests qualifier already set: " + what, InternalCaller: CallerN(1)}
+}
+
+func NewCompletedQualifierUnknown(what string) Error {
+	return &err{level: EXCEPTION, ICode: 2170, IKey: "admin.accounting.completed",
+		InternalMsg: "Completed requests qualifier unknown: " + what, InternalCaller: CallerN(1)}
+}
+
+func NewCompletedQualifierNotFound(what string, cond interface{}) Error {
+	var condString string
+
+	if cond != nil {
+		condString = fmt.Sprintf(" %v", cond)
+	}
+	return &err{level: EXCEPTION, ICode: 2180, IKey: "admin.accounting.completed",
+		InternalMsg: "Completed requests qualifier unknown: " + what + condString, InternalCaller: CallerN(1)}
+}
+
+func NewCompletedQualifierNotUnique(what string) Error {
+	return &err{level: EXCEPTION, ICode: 2170, IKey: "admin.accounting.completed",
+		InternalMsg: "Completed requests qualifier can only be deployed once: " + what, InternalCaller: CallerN(1)}
+}
+
+func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
+	var condString string
+
+	if cond != nil {
+		condString = fmt.Sprintf(" %v", cond)
+	}
+	return &err{level: EXCEPTION, ICode: 2180, IKey: "admin.accounting.completed",
+		InternalMsg: "Completed requests qualifier " + what + " cannot accept argument " + condString, InternalCaller: CallerN(1)}
+}

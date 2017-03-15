@@ -9,7 +9,6 @@
 
 /*
  Completed_requests provides a way to track completed requests that satisfy certain conditions
- (Currently - they last more than a certain threshold).
  The log itself is written in such a way to be of little burden to the operation of the engine.
  As an example - scanning the log is done acquiring and releasing the relevant mutex for each
  entry in the log.
@@ -21,6 +20,7 @@ package server
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -57,25 +57,40 @@ type RequestLogEntry struct {
 	UserAgent       string
 }
 
-const _CACHE_SIZE = 1 << 10
-const _CACHES = 4
+type qualifier interface {
+	name() string
+	unique() bool
+	condition() interface{}
+	isCondition(c interface{}) bool
+	evaluate(request *BaseRequest) bool
+}
 
 type RequestLog struct {
-	threshold time.Duration
+	sync.RWMutex
+	qualifiers []qualifier
 
 	cache *util.GenCache
 }
 
 var requestLog = &RequestLog{}
 
+// init completed requests
+
 func RequestsInit(threshold int, limit int) {
+	requestLog.Lock()
+	defer requestLog.Unlock()
 
-	requestLog.threshold = time.Duration(threshold)
-
-	// TODO: add further logging filters (users, buckets, etc)
+	// initial completed_request setup is that it only tracks
+	// requests exceeding a time threshold
+	q, err := newTimeThreshold(threshold)
+	if err == nil {
+		requestLog.qualifiers = []qualifier{q}
+	}
 
 	requestLog.cache = util.NewGenCache(limit)
 }
+
+// configure completed requests
 
 func RequestsLimit() int {
 	return requestLog.cache.Limit()
@@ -85,13 +100,98 @@ func RequestsSetLimit(limit int) {
 	requestLog.cache.SetLimit(limit)
 }
 
-func RequestsThreshold() int {
-	return int(requestLog.threshold)
+func RequestsAddQualifier(name string, condition interface{}) errors.Error {
+	var q qualifier
+	var err errors.Error
+
+	requestLog.Lock()
+	defer requestLog.Unlock()
+	for _, q := range requestLog.qualifiers {
+		if q.name() == name && q.unique() {
+			return errors.NewCompletedQualifierExists(name)
+		}
+	}
+	switch name {
+	case "threshold":
+		q, err = newTimeThreshold(condition)
+	default:
+		return errors.NewCompletedQualifierUnknown(name)
+	}
+	if q != nil {
+		requestLog.qualifiers = append(requestLog.qualifiers, q)
+	}
+	return err
 }
 
-func RequestsSetThreshold(threshold int) {
-	requestLog.threshold = time.Duration(threshold)
+func RequestsUpdateQualifier(name string, condition interface{}) errors.Error {
+	var q qualifier
+	var err errors.Error
+
+	requestLog.Lock()
+	defer requestLog.Unlock()
+	for i, q := range requestLog.qualifiers {
+		if q.name() == name {
+			if !q.unique() {
+				return errors.NewCompletedQualifierNotUnique(name)
+			}
+			requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
+		}
+	}
+	switch name {
+	case "threshold":
+		q, err = newTimeThreshold(condition)
+	default:
+		return errors.NewCompletedQualifierUnknown(name)
+	}
+	if q != nil {
+		requestLog.qualifiers = append(requestLog.qualifiers, q)
+	}
+	return err
 }
+
+func RequestsRemoveQualifier(name string, condition interface{}) errors.Error {
+	requestLog.Lock()
+	defer requestLog.Unlock()
+	for i, q := range requestLog.qualifiers {
+		if q.name() == name && (q.unique() || q.isCondition(condition)) {
+			requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
+			return nil
+		}
+	}
+	return errors.NewCompletedQualifierNotFound(name, condition)
+}
+
+func RequestsGetQualifier(name string) (interface{}, errors.Error) {
+	requestLog.RLock()
+	defer requestLog.RUnlock()
+	for _, q := range requestLog.qualifiers {
+		if q.name() == name {
+			if q.unique() {
+				return q.condition(), nil
+			}
+			return nil, errors.NewCompletedQualifierNotUnique(name)
+		}
+	}
+	return nil, errors.NewCompletedQualifierNotFound(name, nil)
+}
+
+func RequestsGetQualifiers() (qualifiers []struct {
+	name      string
+	condition interface{}
+}) {
+	requestLog.RLock()
+	defer requestLog.RUnlock()
+	for _, q := range requestLog.qualifiers {
+		theQual := struct {
+			name      string
+			condition interface{}
+		}{q.name(), q.condition()}
+		qualifiers = append(qualifiers, theQual)
+	}
+	return
+}
+
+// completed requests operations
 
 func RequestEntry(id string) *RequestLogEntry {
 	return requestLog.cache.Get(id, nil).(*RequestLogEntry)
@@ -136,12 +236,25 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int, error_count int, req *http.Request,
 	request *BaseRequest, server *Server) {
 
-	// negative threshold means log nothing
-	// zero threshold means log everything (no threshold)
-	// zero limit means log nothing (handled here to avoid time wasting in cache)
 	// negative limit means no upper bound (handled in cache)
-	if requestLog.threshold < 0 || requestLog.cache.Limit() == 0 ||
-		(requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold) {
+	// zero limit means log nothing (handled here to avoid time wasting in cache)
+	if requestLog.cache.Limit() == 0 {
+		return
+	}
+	requestLog.RLock()
+	defer requestLog.RUnlock()
+
+	// apply all the qualifiers until one is satisfied
+	doLog := false
+	for _, q := range requestLog.qualifiers {
+		doLog = q.evaluate(request)
+		if doLog {
+			break
+		}
+	}
+
+	// request does not qualify
+	if !doLog {
 		return
 	}
 
@@ -211,4 +324,51 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	}
 
 	requestLog.cache.Add(re, id)
+}
+
+// request qualifiers
+
+// 1- threshold
+type timeThreshold struct {
+	threshold time.Duration
+}
+
+func newTimeThreshold(c interface{}) (*timeThreshold, errors.Error) {
+	switch c.(type) {
+	case int:
+		return &timeThreshold{threshold: time.Duration(c.(int))}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("threshold", c)
+}
+
+func (this *timeThreshold) name() string {
+	return "threshold"
+}
+
+func (this *timeThreshold) unique() bool {
+	return true
+}
+
+func (this *timeThreshold) condition() interface{} {
+	return this.threshold
+}
+
+func (this *timeThreshold) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return time.Duration(c.(int)) == this.threshold
+	}
+	return false
+}
+
+func (this *timeThreshold) evaluate(request *BaseRequest) bool {
+
+	// negative threshold means log nothing
+	// zero threshold means log everything (no threshold)
+	if this.threshold < 0 ||
+		(this.threshold >= 0 &&
+			time.Since(request.ServiceTime()) < time.Millisecond*this.threshold) {
+		return false
+	}
+	return true
 }
