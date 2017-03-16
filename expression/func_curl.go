@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	curl "github.com/andelf/go-curl"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -197,6 +198,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 	// Set what protocols are allowed.
 	this.myCurl.Setopt(curl.OPT_PROTOCOLS, _CURLPROTO_HTTP|_CURLPROTO_HTTPS)
 
+	// Prepare a header []string - slist1 as per libcurl.
+	header := []string{}
+
 	// When we dont have options, but only have the Method and URL.
 	if len(options) == 0 {
 		if curl_method == "GET" {
@@ -261,16 +265,50 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				header: Pass custom header to server (H). It has to be a string,
 				otherwise we error out.
 			*/
-			case "header":
-				if value.NewValue(val).Type() != value.STRING {
+			case "headers":
+				/*
+					Libcurl code to handle multiple headers using the --header and -H options.
+
+					  struct curl_slist *slist1;
+					  slist1 = NULL;
+					  slist1 = curl_slist_append(slist1, "X-N1QL-User-Agent: couchbase/n1ql/1.7.0");
+					  slist1 = curl_slist_append(slist1, "User-Agent: ikandaswamy");
+				*/
+				// Get the value
+				headerVal := value.NewValue(val).Actual()
+
+				switch headerVal.(type) {
+
+				case []interface{}:
+					//Do nothing
+				case string:
+					headerVal = []interface{}{headerVal}
+
+				default:
 					if show_error == true {
-						return nil, fmt.Errorf(" Incorrect type for header option in CURL ")
+						return nil, fmt.Errorf(" Incorrect type for header option " + value.NewValue(val).String() + " in CURL. Header option should be a string value or an array of strings.  ")
 					} else {
 						return nil, nil
 					}
-
 				}
-				this.curlHeader(value.NewValue(val).Actual().(string))
+
+				// We have an array of interfaces that represent different fields in the Header.
+				// Add all the headers to a []string to pass to OPT_HTTPHEADER
+				for _, hval := range headerVal.([]interface{}) {
+
+					newHval := value.NewValue(hval)
+					if newHval.Type() != value.STRING {
+						if show_error == true {
+							return nil, fmt.Errorf(" Incorrect type for header option " + newHval.String() + " in CURL. Header option should be a string value or an array of strings.  ")
+						} else {
+							return nil, nil
+						}
+
+					}
+					head := newHval.String()
+					header = append(header, head[1:len(head)-1])
+				}
+
 			/*
 				silent: Do not output anything. It has to be a boolean, otherwise
 				we error out.
@@ -371,13 +409,16 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				this.curlKeepAlive(int64(kATime))
 
 			default:
-				return nil, fmt.Errorf(" CURL option does not exist ")
+				return nil, fmt.Errorf(" CURL option %v is not supported.", k)
 
 			}
 
 		}
 
 	}
+
+	// Set the header, so that the entire []string are passed in.
+	this.curlHeader(header)
 
 	var b bytes.Buffer
 
@@ -433,9 +474,19 @@ func (this *Curl) simplePost(url string, data string) {
 	myCurl.Setopt(curl.OPT_POSTFIELDS, data)
 }
 
-func (this *Curl) curlHeader(header string) {
+func (this *Curl) curlHeader(header []string) {
+
+	/*
+		Libcurl code to handle multiple headers using the --header and -H options.
+		 slist1 = curl_slist_append(slist1, "X-N1QL-Header: n1ql-1.7.0");
+		 curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, slist1);
+	*/
+
+	// Set the Custom N1QL Header first.
+	// This will allow localhost endpoints to recognize the query service.
+	header = append(header, "X-N1QL-User-Agent: couchbase/n1ql/"+util.VERSION)
 	myCurl := this.myCurl
-	myCurl.Setopt(curl.OPT_HTTPHEADER, []string{header})
+	myCurl.Setopt(curl.OPT_HTTPHEADER, header)
 }
 
 func (this *Curl) curlAuth(val string) {
