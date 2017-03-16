@@ -193,9 +193,21 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 	}
 
 	// Set MAX_REDIRS to 0 as an added precaution to disable redirection.
+	/*
+		Libcurl code to set MAX_REDIRS
+		curl_easy_setopt(hnd, CURLOPT_MAXREDIRS, 50L);
+	*/
 	this.myCurl.Setopt(curl.OPT_MAXREDIRS, 0)
 
 	// Set what protocols are allowed.
+	/*
+		CURL.H  CURLPROTO_ defines are for the CURLOPT_*PROTOCOLS options
+		#define CURLPROTO_HTTP   (1<<0)
+		#define CURLPROTO_HTTPS  (1<<1)
+
+		Libcurl code to set what protocols are allowed.
+		curl_easy_setopt(curl, CURLOPT_PROTOCOLS,CURLPROTO_HTTP | CURLPROTO_HTTPS);
+	*/
 	this.myCurl.Setopt(curl.OPT_PROTOCOLS, _CURLPROTO_HTTP|_CURLPROTO_HTTPS)
 
 	// Prepare a header []string - slist1 as per libcurl.
@@ -212,6 +224,10 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 	} else {
 		// We have options that have been set.
 		// It is important to set the url here.
+		/*
+			Libcurl code to set the url
+			curl_easy_setopt(hnd, CURLOPT_URL, "https://api.github.com/users/ikandaswamy/repos");
+		*/
 		this.myCurl.Setopt(curl.OPT_URL, url)
 
 		for k, val := range options {
@@ -326,6 +342,13 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				connect-timeout: Maximum time allowed for connection in seconds
 			*/
 			case "connect-timeout":
+				/*
+					Libcurl code to set connect-timeout is
+					curl_easy_setopt(hnd, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
+
+					To save fractions of the decimal value, libcurl uses the _MS suffix to convert
+					to milliseconds.
+				*/
 				if value.NewValue(val).Type() != value.NUMBER {
 					return nil, fmt.Errorf(" Incorrect type for connect-timeout option in CURL ")
 				}
@@ -337,6 +360,13 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				max-time: Maximum time allowed for the transfer in seconds
 			*/
 			case "max-time":
+				/*
+					Libcurl code to set max-time is
+					curl_easy_setopt(hnd, CURLOPT_TIMEOUT_MS, 1000L);
+
+					To save fractions of the decimal value, libcurl uses the _MS suffix to convert
+					to milliseconds.
+				*/
 				if value.NewValue(val).Type() != value.NUMBER {
 					return nil, fmt.Errorf(" Incorrect type for max-time option in CURL ")
 				}
@@ -355,6 +385,12 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				we error out.
 			*/
 			case "basic":
+				/*
+					Libcurl code to set --basic
+					#define CURLAUTH_BASIC (1<<0) /* Basic (default)
+					curl_easy_setopt(hnd, CURLOPT_HTTPAUTH, (long)CURLAUTH_BASIC);
+				*/
+
 				if value.NewValue(val).Type() != value.BOOLEAN {
 					if show_error == true {
 						return nil, fmt.Errorf(" Incorrect type for basic option in CURL ")
@@ -370,6 +406,11 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				It has to be a boolean, otherwise we error out.
 			*/
 			case "anyauth":
+				/*
+					Libcurl code to set --anyauth
+					#define CURLAUTH_ANY ~0
+					curl_easy_setopt(hnd, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
+				*/
 				if value.NewValue(val).Type() != value.BOOLEAN {
 					if show_error == true {
 						return nil, fmt.Errorf(" Incorrect type for anyauth option in CURL ")
@@ -385,6 +426,15 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				otherwise we error out.
 			*/
 			case "insecure":
+				/*
+					Set the value to 1 for strict certificate check please
+					curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+
+					If you want to connect to a site who isn't using a certificate that is
+					signed by one of the certs in the CA bundle you have, you can skip the
+					verification of the server's certificate. This makes the connection
+					A LOT LESS SECURE.
+				*/
 				if value.NewValue(val).Type() != value.BOOLEAN {
 					if show_error == true {
 						return nil, fmt.Errorf(" Incorrect type for insecure option in CURL ")
@@ -397,9 +447,17 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 					this.myCurl.Setopt(curl.OPT_SSL_VERIFYPEER, insecure)
 				}
 			/*
-				keepalive-time: TODO.
+				keepalive-time: Wait SECONDS between keepalive probes for low level TCP connectivity.
+				(Does not affect HTTP level keep-alive)
+
 			*/
 			case "keepalive-time":
+				/*
+					Libcurl code to set keepalive-time
+					curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+					curl_easy_setopt(hnd, CURLOPT_TCP_KEEPIDLE, 1L);
+					curl_easy_setopt(hnd, CURLOPT_TCP_KEEPINTVL, 1L);
+				*/
 				if value.NewValue(val).Type() != value.NUMBER {
 					return nil, fmt.Errorf(" Incorrect type for keepalive-time option in CURL ")
 				}
@@ -416,6 +474,39 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 		}
 
 	}
+
+	/*
+		Libcurl code to write data to chunk of memory
+		1. Send all data to this function
+		 curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, writeToBufferFunc);
+
+		2. Pass the chunk to the callback function
+		 curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&b);
+
+		3. Define callback function - getinmemory.c example (https://curl.haxx.se/libcurl/c/getinmemory.html)
+				static size_t
+				WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+				{
+		  			size_t realsize = size * nmemb;
+		  			struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+		  			mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+		  			if(mem->memory == NULL) {
+		    			// out of memory!
+		    			printf("not enough memory (realloc returned NULL)\n");
+		    			return 0;
+		  			}
+
+		 			memcpy(&(mem->memory[mem->size]), contents, realsize);
+		 	 		mem->size += realsize;
+		  			mem->memory[mem->size] = 0;
+
+		  			return realsize;
+				}
+
+		We use the bytes.Buffer package Write method. go-curl fixes the input and output format
+		of the callback function to be func(buf []byte, userdata interface{}) bool {}
+	*/
 
 	// Set the header, so that the entire []string are passed in.
 	this.curlHeader(header)
@@ -442,8 +533,8 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 		}
 	}
 
+	// The return type can either be and ARRAY or an OBJECT
 	if b.Len() != 0 {
-		// The return type can either be and ARRAY or an OBJECT
 		var dat interface{}
 
 		if err := json.Unmarshal(b.Bytes(), &dat); err != nil {
@@ -490,6 +581,10 @@ func (this *Curl) curlHeader(header []string) {
 }
 
 func (this *Curl) curlAuth(val string) {
+	/*
+		Libcurl code to set username password
+		curl_easy_setopt(hnd, CURLOPT_USERPWD, "Administrator:password");
+	*/
 	myCurl := this.myCurl
 	if val == "" {
 		myCurl.Setopt(curl.OPT_USERPWD, "")
@@ -505,17 +600,37 @@ func (this *Curl) curlAuth(val string) {
 }
 
 func (this *Curl) curlConnectTimeout(val int64) {
+	/*
+		Libcurl code to set connect-timeout is
+		curl_easy_setopt(hnd, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
+
+		To save fractions of the decimal value, libcurl uses the _MS suffix to convert
+		to milliseconds.
+	*/
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_CONNECTTIMEOUT, val)
 
 }
 
 func (this *Curl) curlMaxTime(val int64) {
+	/*
+		Libcurl code to set max-time is
+		curl_easy_setopt(hnd, CURLOPT_TTIMEOUT_MS, 1000L);
+
+		To save fractions of the decimal value, libcurl uses the _MS suffix to convert
+		to milliseconds.
+	*/
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_TIMEOUT, val)
 }
 
 func (this *Curl) curlKeepAlive(val int64) {
+	/*
+		Libcurl code to set keepalive-time
+		curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+		curl_easy_setopt(hnd, CURLOPT_TCP_KEEPIDLE, 1L);
+		curl_easy_setopt(hnd, CURLOPT_TCP_KEEPINTVL, 1L);
+	*/
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_TCP_KEEPALIVE, 1)
 	myCurl.Setopt(curl.OPT_TCP_KEEPIDLE, val)
