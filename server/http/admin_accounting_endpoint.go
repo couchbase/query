@@ -294,7 +294,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		if err != nil {
 			return nil, err
 		}
-		reqMap := activeRequestWorkHorse(endpoint, requestId, false)
+		reqMap := activeRequestWorkHorse(endpoint, requestId, (req.Method == "POST"))
 
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
@@ -460,7 +460,7 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 		if err != nil {
 			return nil, err
 		}
-		reqMap := completedRequestWorkHorse(requestId, false)
+		reqMap := completedRequestWorkHorse(requestId, (req.Method == "POST"))
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
 		err := verifyCredentialsFromRequest("completed_requests", req)

@@ -509,6 +509,7 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	}
 
+	operator.SetRoot()
 	request.SetTimings(operator)
 	request.Output().AddPhaseTime(execution.INSTANTIATE, time.Since(build))
 

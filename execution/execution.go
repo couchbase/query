@@ -39,6 +39,7 @@ type Operator interface {
 	SetParent(parent Parent)                      // Can be set
 	Bit() uint8                                   // Child bit
 	SetBit(b uint8)                               // Child bit
+	SetRoot()                                     // Let the root operator know that it is, in fact, root
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
 	Done()                                        // frees and pools resources

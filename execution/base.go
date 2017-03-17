@@ -17,9 +17,11 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -60,6 +62,7 @@ type base struct {
 	wg            sync.WaitGroup
 	phaseSwitches int64
 	stopped       bool
+	isRoot        bool
 	bit           uint8
 }
 
@@ -118,7 +121,7 @@ func (this *base) setExecPhase(phase Phases, context *Context) {
 	this.addExecPhase(phase, context)
 }
 
-// accrues phase times (useful where we don't want to count operators
+// accrues phase times (useful where we don't want to count operators)
 func (this *base) addExecPhase(phase Phases, context *Context) {
 	this.phaseTimes = func(t time.Duration) { context.AddPhaseTime(phase, t) }
 }
@@ -169,6 +172,10 @@ func (this *base) Bit() uint8 {
 
 func (this *base) SetBit(b uint8) {
 	this.bit = b
+}
+
+func (this *base) SetRoot() {
+	this.isRoot = true
 }
 
 func (this *base) copy() base {
@@ -554,6 +561,15 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	// chosen to follow "#operator" in the subdocument
 	if len(stats) > 0 {
 		r["#stats"] = stats
+	}
+
+	// chosen to go at the end of the plan
+	if this.isRoot {
+		var versions []interface{}
+
+		versions = append(versions, util.VERSION)
+		versions = append(versions, datastore.GetDatastore().Info().Version())
+		r["~versions"] = versions
 	}
 }
 
