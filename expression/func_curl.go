@@ -237,28 +237,28 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				show_error: Do not output the errors with the CURL function
 				in case this is set. This is handled in the beginning.
 			*/
-			case "show-error":
+			case "show-error", "--show-error", "S", "-S":
 				break
 			/*
 				get: Send the -d data with a HTTP GET (H)
 				Since we set the curl method as the first argument, it is
 				important to note that providing this option does nothing.
 			*/
-			case "get":
+			case "get", "--get", "G", "-G":
 				break
 			/*
 			   request: Specify request method to use. Since we set
 			   the curl method as the first argument, it is important
 			   to note that providing this option does nothing.
 			*/
-			case "request":
+			case "request", "--request", "X", "-X":
 				break
 			/*
 				data: HTTP POST data (H). However in some cases in CURL
 				this can be issued with a GET as well. In these cases, the
 				data is appended to the URL followed by a ?.
 			*/
-			case "data":
+			case "data", "--data", "d", "-d":
 
 				dataVal := value.NewValue(val).Actual()
 				stringData := ""
@@ -298,7 +298,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				header: Pass custom header to server (H). It has to be a string,
 				otherwise we error out.
 			*/
-			case "headers":
+			case "headers", "header", "--header", "--headers", "H", "-H":
 				/*
 					Libcurl code to handle multiple headers using the --header and -H options.
 
@@ -346,7 +346,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				silent: Do not output anything. It has to be a boolean, otherwise
 				we error out.
 			*/
-			case "silent":
+			case "silent", "--silent", "s", "-s":
 				if value.NewValue(val).Type() != value.BOOLEAN {
 					if show_error == true {
 						return nil, fmt.Errorf(" Incorrect type for silent option in CURL ")
@@ -358,7 +358,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 			/*
 				connect-timeout: Maximum time allowed for connection in seconds
 			*/
-			case "connect-timeout":
+			case "connect-timeout", "--connect-timeout":
 				/*
 					Libcurl code to set connect-timeout is
 					curl_easy_setopt(hnd, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
@@ -376,7 +376,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 			/*
 				max-time: Maximum time allowed for the transfer in seconds
 			*/
-			case "max-time":
+			case "max-time", "--max-time", "m", "-m":
 				/*
 					Libcurl code to set max-time is
 					curl_easy_setopt(hnd, CURLOPT_TIMEOUT_MS, 1000L);
@@ -395,13 +395,13 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				user: Server user and password separated by a :. By default if a
 				password is not specified, then use an empty password.
 			*/
-			case "user":
+			case "user", "--user", "-u", "u":
 				this.curlAuth(value.NewValue(val).String())
 			/*
 				basic: Use HTTP Basic Authentication. It has to be a boolean, otherwise
 				we error out.
 			*/
-			case "basic":
+			case "basic", "--basic":
 				/*
 					Libcurl code to set --basic
 					#define CURLAUTH_BASIC (1<<0) /* Basic (default)
@@ -422,7 +422,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				anyauth: curl to figure out authentication method by itself, and use the most secure one.
 				It has to be a boolean, otherwise we error out.
 			*/
-			case "anyauth":
+			case "anyauth", "--anyauth":
 				/*
 					Libcurl code to set --anyauth
 					#define CURLAUTH_ANY ~0
@@ -442,7 +442,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				insecure: Allow connections to SSL sites without certs (H). It has to be a boolean,
 				otherwise we error out.
 			*/
-			case "insecure":
+			case "insecure", "--insecure", "k", "-k":
 				/*
 					Set the value to 1 for strict certificate check please
 					curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
@@ -468,7 +468,7 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				(Does not affect HTTP level keep-alive)
 
 			*/
-			case "keepalive-time":
+			case "keepalive-time", "--keepalive-time":
 				/*
 					Libcurl code to set keepalive-time
 					curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
