@@ -259,17 +259,34 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				data is appended to the URL followed by a ?.
 			*/
 			case "data":
+
+				dataVal := value.NewValue(val).Actual()
 				stringData := ""
 
-				if value.NewValue(val).Type() == value.OBJECT {
-					bytval, _ := value.NewValue(val).MarshalJSON()
-					stringData = string(bytval)
+				switch dataVal.(type) {
+				case []interface{}:
+				case string:
+					dataVal = []interface{}{dataVal}
+				default:
+					if show_error == true {
+						return nil, fmt.Errorf(" Incorrect type for data option in CURL.It needs to be a string. ")
+					} else {
+						return nil, nil
+					}
+				}
 
-				} else if value.NewValue(val).Type() == value.STRING {
-					stringData = value.NewValue(val).Actual().(string)
+				for _, data := range dataVal.([]interface{}) {
+					newDval := value.NewValue(data)
+					if newDval.Type() != value.STRING {
+						if show_error == true {
+							return nil, fmt.Errorf(" Incorrect type for data option. ")
+						} else {
+							return nil, nil
+						}
+					}
 
-				} else {
-					stringData = value.NewValue(val).String()
+					dataT := newDval.String()
+					stringData = stringData + "&" + dataT[1:len(dataT)-1]
 				}
 
 				if curl_method == "GET" {
