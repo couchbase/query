@@ -314,6 +314,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		filters = _FILTER_COVERS_POOL.Get()
 		defer _FILTER_COVERS_POOL.Put(filters)
 		filters = entry.cond.FilterCovers(filters)
+		filters = entry.origCond.FilterCovers(filters)
 	}
 
 	indexKeys := getIndexKeys(entry)

@@ -71,11 +71,21 @@ func (this *covers) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, e
 // Collection
 
 func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
+
 	for _, k := range this.keys {
 		if all, ok := k.(*expression.All); ok {
 			if min, _ := SargableFor(expr, expression.Expressions{all}); min > 0 {
+
+				dnf := NewDNF(expr, true)
+				expr2, err := dnf.Map(expr)
+				if err != nil {
+					return nil, err
+				}
+
 				return map[*expression.Cover]value.Value{
-					expression.NewCover(expr): value.TRUE_VALUE}, nil
+					expression.NewCover(expr):  value.TRUE_VALUE,
+					expression.NewCover(expr2): value.TRUE_VALUE,
+				}, nil
 			}
 		}
 	}
