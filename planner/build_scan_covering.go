@@ -27,7 +27,19 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	}
 
 	alias := node.Alias()
-	exprs := this.cover.Expressions()
+
+	// Apply DNF
+	cexprs := this.cover.Expressions()
+	exprs := make(expression.Expressions, len(cexprs))
+	var err error
+	for i, cexpr := range cexprs {
+		expr := cexpr.Copy()
+		dnf := NewDNF(expr, true)
+		exprs[i], err = dnf.Map(expr)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
 
 	arrays := _ARRAY_POOL.Get()
 	defer _ARRAY_POOL.Put(arrays)
