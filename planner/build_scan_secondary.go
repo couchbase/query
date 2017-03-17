@@ -22,11 +22,11 @@ import (
 )
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred expression.Expression) (
+	node *algebra.KeyspaceTerm, id, pred, origPred expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
 	if this.cover != nil {
-		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred)
+		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, origPred)
 		if scan != nil || err != nil {
 			return scan, sargLength, err
 		}

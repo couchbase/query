@@ -128,12 +128,6 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
-	// Consider pattern matching indexes
-	pred, err = PatternFor(pred, indexes, formalizer)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// Prefer OR scan
 	if or, ok := pred.(*expression.Or); ok {
 		scan, _, err := this.buildOrScan(node, id, or, indexes, primaryKey, formalizer)
@@ -170,6 +164,14 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	var scanbuf [4]plan.SecondaryScan
 	scans := scanbuf[0:1]
 
+	origPred := pred
+
+	// Consider pattern matching indexes
+	pred, err = PatternFor(pred, indexes, formalizer)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	dnfPred := pred.Copy()
 	dnf := NewDNF(dnfPred, true)
 	dnfPred, err = dnf.Map(dnfPred)
@@ -201,7 +203,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	// Try secondary scan
 	if len(minimals) > 0 {
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred)
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, origPred)
 		if err != nil {
 			return nil, 0, err
 		}

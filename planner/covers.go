@@ -16,7 +16,7 @@ import (
 
 // Return the filterCovers for a query predicate and index keys. This
 // allows array indexes to cover ANY predicates.
-func CoversFor(pred expression.Expression, keys expression.Expressions) (
+func CoversFor(pred, origPred expression.Expression, keys expression.Expressions) (
 	map[*expression.Cover]value.Value, error) {
 
 	cov := &covers{keys}
@@ -25,7 +25,21 @@ func CoversFor(pred expression.Expression, keys expression.Expressions) (
 		return nil, err
 	}
 
-	return rv.(map[*expression.Cover]value.Value), nil
+	fc := rv.(map[*expression.Cover]value.Value)
+
+	if origPred != nil {
+		rv, err = origPred.Accept(cov)
+		if err != nil {
+			return nil, err
+		}
+
+		ofc := rv.(map[*expression.Cover]value.Value)
+		for c, v := range ofc {
+			fc[c] = v
+		}
+	}
+
+	return fc, nil
 }
 
 type covers struct {
@@ -75,16 +89,8 @@ func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 	for _, k := range this.keys {
 		if all, ok := k.(*expression.All); ok {
 			if min, _ := SargableFor(expr, expression.Expressions{all}); min > 0 {
-
-				dnf := NewDNF(expr, true)
-				expr2, err := dnf.Map(expr)
-				if err != nil {
-					return nil, err
-				}
-
 				return map[*expression.Cover]value.Value{
-					expression.NewCover(expr):  value.TRUE_VALUE,
-					expression.NewCover(expr2): value.TRUE_VALUE,
+					expression.NewCover(expr): value.TRUE_VALUE,
 				}, nil
 			}
 		}
@@ -203,7 +209,7 @@ func (this *covers) VisitAnd(expr *expression.And) (interface{}, error) {
 	var fc map[*expression.Cover]value.Value
 
 	for _, op := range expr.Operands() {
-		oc, err := CoversFor(op, this.keys)
+		oc, err := CoversFor(op, nil, this.keys)
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +235,7 @@ func (this *covers) VisitOr(expr *expression.Or) (interface{}, error) {
 	var fc map[*expression.Cover]value.Value
 
 	for _, op := range expr.Operands() {
-		oc, err := CoversFor(op, this.keys)
+		oc, err := CoversFor(op, nil, this.keys)
 		if err != nil {
 			return nil, err
 		}

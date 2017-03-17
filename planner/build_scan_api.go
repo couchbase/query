@@ -153,7 +153,7 @@ func (this *builder) checkPushDowns(entry *indexEntry, pred expression.Expressio
 	}
 
 	// check for non sargable key is in predicate
-	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred)
+	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred, nil)
 	if err != nil {
 		return false, err
 	}
