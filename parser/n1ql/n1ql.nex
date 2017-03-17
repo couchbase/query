@@ -324,12 +324,24 @@
 		    return NEXT_PARAM
 		  }
 
-/./		  {
+/ /		  {
+			yylex.curOffset++
+		  }
+
+/\t/		  {
 			yylex.curOffset++
 		  }
 
 /\n/		  {
 			yylex.curOffset++
+		  }
+
+/./		  {
+			/* this we don't know what it is: we'll let
+			   the parser handle it (and most probably throw a syntax error
+			 */
+			yylex.logToken(yylex.Text(), "UNKNOWN token")
+			return int([]byte(yylex.Text())[0])
 		  }
 
 //

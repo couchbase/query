@@ -31111,12 +31111,38 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
 
-	// .
+	//
 	{[]bool{false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
-			return 1
+			switch r {
+			case 32:
+				return 1
+			}
+			return -1
 		},
 		func(r rune) int {
+			switch r {
+			case 32:
+				return -1
+			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
+
+	// \t
+	{[]bool{false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 9:
+				return 1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 9:
+				return -1
+			}
 			return -1
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
@@ -31135,6 +31161,16 @@ var dfas = []dfa{
 			case 10:
 				return -1
 			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
+
+	// .
+	{[]bool{false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			return 1
+		},
+		func(r rune) int {
 			return -1
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
@@ -32313,6 +32349,18 @@ OUTER0:
 		case 212:
 			{
 				yylex.curOffset++
+			}
+		case 213:
+			{
+				yylex.curOffset++
+			}
+		case 214:
+			{
+				/* this we don't know what it is: we'll let
+				   the parser handle it (and most probably throw a syntax error
+				*/
+				yylex.logToken(yylex.Text(), "UNKNOWN token")
+				return int([]byte(yylex.Text())[0])
 			}
 		default:
 			break OUTER0
