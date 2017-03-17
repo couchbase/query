@@ -22,11 +22,11 @@ import (
 )
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	node *algebra.KeyspaceTerm, id, pred, origPred, limit expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
 	if this.cover != nil {
-		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, limit)
+		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, origPred, limit)
 		if scan != nil || err != nil {
 			return scan, sargLength, err
 		}
@@ -357,7 +357,7 @@ func allowedPushDown(entry *indexEntry, pred expression.Expression, alias string
 	}
 
 	// check for non sargable key is in predicate
-	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred)
+	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred, nil)
 	if err != nil {
 		return false, err
 	}

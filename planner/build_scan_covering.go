@@ -19,7 +19,7 @@ import (
 )
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	node *algebra.KeyspaceTerm, id, pred, origPred, limit expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
 	if this.cover == nil {
@@ -27,19 +27,7 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	}
 
 	alias := node.Alias()
-
-	// Apply DNF
-	cexprs := this.cover.Expressions()
-	exprs := make(expression.Expressions, len(cexprs))
-	var err error
-	for i, cexpr := range cexprs {
-		expr := cexpr.Copy()
-		dnf := NewDNF(expr, true)
-		exprs[i], err = dnf.Map(expr)
-		if err != nil {
-			return nil, 0, err
-		}
-	}
+	exprs := this.cover.Expressions()
 
 	arrays := _ARRAY_POOL.Get()
 	defer _ARRAY_POOL.Put(arrays)
@@ -71,7 +59,7 @@ outer:
 		}
 
 		// Include filter covers
-		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred)
+		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, origPred)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -240,7 +228,7 @@ func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
 	return entry.spans.CanUseIndexOrder() && entry.spans.SkipsLeadingNulls()
 }
 
-func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred expression.Expression) (
+func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred, origPred expression.Expression) (
 	expression.Expressions, map[*expression.Cover]value.Value, error) {
 
 	var filterCovers map[*expression.Cover]value.Value
@@ -259,7 +247,7 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred 
 
 	// Allow array indexes to cover ANY predicates
 	if pred != nil && entry.exactSpans && indexHasArrayIndexKey(entry.index) {
-		covers, err := CoversFor(pred, keys)
+		covers, err := CoversFor(pred, origPred, keys)
 		if err != nil {
 			return nil, nil, err
 		}
