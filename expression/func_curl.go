@@ -43,6 +43,11 @@ const (
 	_CURLAUTH_ANY   = ^(0)   /* all types set */
 )
 
+// N1QL User-Agent value
+const (
+	_N1QL_USER_AGENT = "X-N1QL-User-Agent: couchbase/n1ql/" + util.VERSION
+)
+
 /*
 This represents the curl function CURL(method, url, options).
 It returns result of the curl operation on the url based on
@@ -212,6 +217,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 
 	// Prepare a header []string - slist1 as per libcurl.
 	header := []string{}
+
+	// Set curl User-Agent by default.
+	this.curlUserAgent(_N1QL_USER_AGENT)
 
 	// When we dont have options, but only have the Method and URL.
 	if len(options) == 0 {
@@ -483,6 +491,20 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 
 				this.curlKeepAlive(int64(kATime))
 
+			/*
+				user-agent: Value for the User-Agent to send to the server.
+			*/
+			case "user-agent", "--user-agent", "A", "-A":
+				/*
+					Libcurl code to set user-agent
+					curl_easy_setopt(hnd, CURLOPT_USERAGENT, "curl/7.43.0");
+				*/
+				if value.NewValue(val).Type() != value.STRING {
+					return nil, fmt.Errorf(" Incorrect type for user-agent option in CURL. user-agent should be a string. ")
+				}
+				userAgent := value.NewValue(val).Actual().(string)
+				this.curlUserAgent(userAgent)
+
 			default:
 				return nil, fmt.Errorf(" CURL option %v is not supported.", k)
 
@@ -592,9 +614,18 @@ func (this *Curl) curlHeader(header []string) {
 
 	// Set the Custom N1QL Header first.
 	// This will allow localhost endpoints to recognize the query service.
-	header = append(header, "X-N1QL-User-Agent: couchbase/n1ql/"+util.VERSION)
+	header = append(header, _N1QL_USER_AGENT)
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_HTTPHEADER, header)
+}
+
+func (this *Curl) curlUserAgent(userAgent string) {
+	/*
+		Libcurl code to set user-agent
+		curl_easy_setopt(hnd, CURLOPT_USERAGENT, "curl/7.43.0");
+	*/
+	myCurl := this.myCurl
+	myCurl.Setopt(curl.OPT_USERAGENT, userAgent)
 }
 
 func (this *Curl) curlAuth(val string) {
