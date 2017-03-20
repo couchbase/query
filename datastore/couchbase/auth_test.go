@@ -67,6 +67,8 @@ func (a authUser) IsAllowed(permission string) (bool, error) {
 
 type testCase struct {
 	purpose       string
+	authSource    authSource
+	privs         *datastore.Privileges
 	creds         datastore.Credentials
 	shouldSucceed bool
 }
@@ -93,14 +95,17 @@ func TestSimpleSelect(t *testing.T) {
 	}
 
 	cases := []testCase{
-		testCase{purpose: "No Credentials", creds: datastore.Credentials{}, shouldSucceed: false},
-		testCase{purpose: "Insufficient Credentials", creds: datastore.Credentials{"nancy": "pwnancy"}, shouldSucceed: false},
-		testCase{purpose: "Wrong password", creds: datastore.Credentials{"bob": "badpassword"}, shouldSucceed: false},
-		testCase{purpose: "Works", creds: datastore.Credentials{"bob": "pwbob"}, shouldSucceed: true},
+		testCase{purpose: "No Credentials", authSource: as, privs: privs, creds: datastore.Credentials{}},
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: datastore.Credentials{"nancy": "pwnancy"}},
+		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: datastore.Credentials{"bob": "badpassword"}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: datastore.Credentials{"bob": "pwbob"}, shouldSucceed: true},
 	}
+	runCases(t, cases)
+}
 
+func runCases(t *testing.T, cases []testCase) {
 	for _, c := range cases {
-		_, err := cbAuthorize(as, privs, c.creds, nil)
+		_, err := cbAuthorize(c.authSource, c.privs, c.creds, nil)
 		if c.shouldSucceed {
 			if err != nil {
 				t.Fatalf("Case %s should succeed, but it failed with error %v.", c.purpose, err)
@@ -111,4 +116,62 @@ func TestSimpleSelect(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestDefaultCredentials(t *testing.T) {
+	privs := datastore.NewPrivileges()
+	privs.Add("testbucket", datastore.PRIV_READ)
+	privs.Add("testbucket", datastore.PRIV_QUERY_SELECT)
+
+	asNoDefault := &authSourceImpl{
+		users: []authUser{
+			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
+		},
+	}
+
+	asWrongPerms := &authSourceImpl{
+		users: []authUser{
+			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
+			authUser{id: "testbucket", password: "",
+				permissions: map[string]bool{
+					"cluster.bucket[wrong].data.docs!read":      true,
+					"cluster.bucket[wrong].n1ql.select!execute": true,
+				},
+			},
+		},
+	}
+
+	asWrongPassword := &authSourceImpl{
+		users: []authUser{
+			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
+			authUser{id: "testbucket", password: "wrong",
+				permissions: map[string]bool{
+					"cluster.bucket[testbucket].data.docs!read":      true,
+					"cluster.bucket[testbucket].n1ql.select!execute": true,
+				},
+			},
+		},
+	}
+
+	asWorks := &authSourceImpl{
+		users: []authUser{
+			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
+			authUser{id: "testbucket", password: "",
+				permissions: map[string]bool{
+					"cluster.bucket[testbucket].data.docs!read":      true,
+					"cluster.bucket[testbucket].n1ql.select!execute": true,
+				},
+			},
+		},
+	}
+
+	loginCreds := datastore.Credentials{"bob": "pwbob"}
+
+	cases := []testCase{
+		testCase{purpose: "No Default User", authSource: asNoDefault, privs: privs, creds: loginCreds},
+		testCase{purpose: "Default User Has Wrong Permissions", authSource: asWrongPerms, privs: privs, creds: loginCreds},
+		testCase{purpose: "Default User Has Unexpected Password", authSource: asWrongPassword, privs: privs, creds: loginCreds},
+		testCase{purpose: "Works", authSource: asWorks, privs: privs, creds: loginCreds, shouldSucceed: true},
+	}
+	runCases(t, cases)
 }

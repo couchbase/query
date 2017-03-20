@@ -71,6 +71,80 @@ type authSource interface {
 	authWebCreds(req *http.Request) (cbauth.Creds, error)
 }
 
+// Try to get privsSought privileges from the availableCredentials credentials.
+// Return the privileges that were not granted.
+func authAgainstCreds(as authSource, privsSought []datastore.PrivilegePair, availableCredentials []cbauth.Creds) ([]datastore.PrivilegePair, error) {
+	deniedPrivs := make([]datastore.PrivilegePair, 0, len(privsSought))
+	for _, pair := range privsSought {
+		keyspace := pair.Target
+		privilege := pair.Priv
+		if strings.Contains(keyspace, ":") {
+			q := strings.Split(keyspace, ":")
+			keyspace = q[1]
+		}
+
+		thisPrivGranted := false
+
+		if keyspace == "nodes" && privilege == datastore.PRIV_SYSTEM_READ && as.adminIsOpen() {
+			// The system:nodes table follows the underlying ns_server API.
+			// If all tables have passwords, the API requires credentials.
+			// But if any don't, the API is open to read.
+			continue
+		}
+
+		// Check requested privilege against the list of credentials.
+		for _, creds := range availableCredentials {
+			authResult, err := doAuthByCreds(creds, keyspace, privilege)
+
+			if err != nil {
+				return nil, err
+			}
+
+			// Auth succeeded
+			if authResult == true {
+				thisPrivGranted = true
+				break
+			}
+		}
+
+		// This privilege can not be granted by these credentials.
+		if !thisPrivGranted {
+			deniedPrivs = append(deniedPrivs, pair)
+		}
+	}
+	return deniedPrivs, nil
+}
+
+// Determine the set of keyspaces referenced in the list of privileges, and derive
+// credentials for them with empty passwords. This corresponds to the case of access users that were
+// created for passwordless buckets at upgrate time.
+func deriveDefaultCredentials(as authSource, privs []datastore.PrivilegePair) ([]cbauth.Creds, datastore.AuthenticatedUsers) {
+	keyspaces := make(map[string]bool, len(privs))
+	for _, pair := range privs {
+		keyspace := pair.Target
+		if keyspace == "" {
+			continue
+		}
+		if strings.Contains(keyspace, ":") {
+			q := strings.Split(keyspace, ":")
+			keyspace = q[1]
+		}
+		keyspaces[keyspace] = true
+	}
+
+	creds := make([]cbauth.Creds, 0, len(keyspaces))
+	authUsers := make(datastore.AuthenticatedUsers, 0, len(keyspaces))
+	password := ""
+	for username := range keyspaces {
+		user, err := as.auth(username, password)
+		if err == nil {
+			creds = append(creds, user)
+			authUsers = append(authUsers, username)
+		}
+	}
+	return creds, authUsers
+}
+
 func cbAuthorize(s authSource, privileges *datastore.Privileges, credentials datastore.Credentials,
 	req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
 	if credentials == nil {
@@ -117,59 +191,37 @@ func cbAuthorize(s authSource, privileges *datastore.Privileges, credentials dat
 		return authenticatedUsers, nil
 	}
 
-	// No authenticated user, but credentials to check?
-	if len(credentialsList) == 0 {
-		if len(credentials) == 0 {
-			return nil, errors.NewDatastoreNoUserSupplied()
-		} else {
-			return nil, errors.NewDatastoreInvalidUsernamePassword()
-		}
-	}
-
 	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
-	for _, pair := range privileges.List {
-		keyspace := pair.Target
-		privilege := pair.Priv
-		if strings.Contains(keyspace, ":") {
-			q := strings.Split(keyspace, ":")
-			keyspace = q[1]
-		}
+	remainingPrivileges, err := authAgainstCreds(s, privileges.List, credentialsList)
 
-		logging.Debugf("Authenticating for keyspace %s", keyspace)
-
-		thisBucketAuthorized := false
-		var rememberedError error
-
-		if keyspace == "nodes" && privilege == datastore.PRIV_SYSTEM_READ && s.adminIsOpen() {
-			// The system:nodes table follows the underlying ns_server API.
-			// If all tables have passwords, the API requires credentials.
-			// But if any don't, the API is open to read.
-			continue
-		}
-
-		// Check requested privilege against the list of credentials.
-		for _, creds := range credentialsList {
-			authResult, err := doAuthByCreds(creds, keyspace, privilege)
-
-			// Auth succeeded
-			if authResult == true {
-				thisBucketAuthorized = true
-				break
-			} else if err != nil {
-				rememberedError = err
-			}
-		}
-
-		if !thisBucketAuthorized {
-			msg := ""
-			if keyspace != "" {
-				msg = fmt.Sprintf(" Keyspace %s.", keyspace)
-			}
-			return nil, errors.NewDatastoreAuthorizationError(rememberedError, msg)
-		}
+	if err != nil {
+		return nil, errors.NewDatastoreAuthorizationError(err, "")
 	}
 
-	// If we got this far, every bucket is authorized. Success!
-	return authenticatedUsers, nil
+	if len(remainingPrivileges) == 0 {
+		// Everything is authorized. Success!
+		return authenticatedUsers, nil
+	}
+
+	// Derive possible default credentials from remaining privileges.
+	defaultCredentials, defaultUsers := deriveDefaultCredentials(s, remainingPrivileges)
+	authenticatedUsers = append(authenticatedUsers, defaultUsers...)
+	deniedPrivileges, err := authAgainstCreds(s, remainingPrivileges, defaultCredentials)
+
+	if err != nil {
+		return nil, errors.NewDatastoreAuthorizationError(err, "")
+	}
+
+	if len(deniedPrivileges) == 0 {
+		// Authorized using defaults.
+		return authenticatedUsers, nil
+	}
+
+	deniedKeyspace := deniedPrivileges[0].Target
+	msg := ""
+	if deniedKeyspace != "" {
+		msg = fmt.Sprintf(" Keyspace %s.", deniedKeyspace)
+	}
+	return nil, errors.NewDatastoreAuthorizationError(nil, msg)
 }
