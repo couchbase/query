@@ -424,6 +424,13 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 			password is not specified, then use an empty password.
 		*/
 		case "user", "--user", "-u", "u":
+			/*
+				Libcurl code to set user
+				curl_easy_setopt(hnd, CURLOPT_USERPWD, "Administrator:password");
+			*/
+			if value.NewValue(val).Type() != value.STRING {
+				return nil, fmt.Errorf(" Incorrect type for user option in CURL. It should be a string. ")
+			}
 			this.curlAuth(value.NewValue(val).String())
 		/*
 			basic: Use HTTP Basic Authentication. It has to be a boolean, otherwise
@@ -624,7 +631,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 
 func (this *Curl) simpleGet(url string) {
 	myCurl := this.myCurl
-	this.myCurl.Setopt(curl.OPT_URL, url)
+	myCurl.Setopt(curl.OPT_URL, url)
 	myCurl.Setopt(curl.OPT_HTTPGET, 1)
 }
 
