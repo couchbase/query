@@ -173,6 +173,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 	getMethod := false
 	dataOp := false
 	stringData := ""
+	encodedData := false
 
 	// For silent mode
 	silent := false
@@ -286,8 +287,11 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 			this can be issued with a GET as well. In these cases, the
 			data is appended to the URL followed by a ?.
 		*/
-		case "data", "--data", "d", "-d":
+		case "data", "--data", "d", "-d", "data-urlencode", "--data-urlencode":
 
+			if k == "data-urlencode" || k == "--data-urlencode" {
+				encodedData = true
+			}
 			dataVal := value.NewValue(val).Actual()
 
 			switch dataVal.(type) {
@@ -313,6 +317,12 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 				}
 
 				dataT := newDval.Actual().(string)
+
+				// If the option is data-urlencode then encode the data first.
+				if encodedData {
+					dataT = this.myCurl.Escape(dataT)
+				}
+
 				if stringData == "" {
 					stringData = dataT
 				} else {
