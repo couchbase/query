@@ -1,6 +1,6 @@
 [
 	{
-	"statements": "select * from system:user_info",
+	"statements": "select * from system:user_info where id = foo",
 	"results": [
 	]
 	}

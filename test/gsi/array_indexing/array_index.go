@@ -32,7 +32,6 @@ import (
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -184,6 +183,15 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
+var _ALL_USERS = datastore.Credentials{
+        "customerowner":  "customerpass",
+        "ordersowner":    "orderspass",
+        "productowner":   "productpass",
+        "purchaseowner":  "purchasepass",
+        "reviewowner":    "reviewpass",
+        "shellTestowner": "shellTestpass",
+}
+
 /*
 This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
@@ -193,12 +201,8 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
-	creds := datastore.Credentials{}
-	s := strings.Split(Auth_param, ":")
-	creds[s[0]] = s[1]
-
 	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", creds, "", "")
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

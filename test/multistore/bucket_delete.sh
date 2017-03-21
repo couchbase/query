@@ -18,4 +18,14 @@ done
 echo rm -rf data/
 rm -rf data/
 
+echo Delete Users
+
+
+UserSite=http://localhost:8091/settings/rbac/users/builtin/
+for i in "${bucket[@]}"
+do
+Id=${i}owner
+echo curl -X DELETE -u $Auth $UserSite$Id
+curl -X DELETE -u $Auth $UserSite$Id
+done
 
