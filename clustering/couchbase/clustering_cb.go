@@ -1,3 +1,12 @@
+//  Copyright (c) 2014 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
 package clustering_cb
 
 import (
@@ -34,8 +43,12 @@ const _PREFIX = "couchbase:"
 
 // cbConfigStore implements clustering.ConfigurationStore
 type cbConfigStore struct {
-	adminUrl string
-	cbConn   *couchbase.Client
+	sync.RWMutex
+	adminUrl   string
+	noNICCheck bool
+	iface      *util.NetworkInterface
+	whoAmI     string
+	cbConn     *couchbase.Client
 }
 
 // create a cbConfigStore given the path to a couchbase instance
@@ -48,8 +61,9 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 		return nil, errors.NewAdminConnectionError(err, path)
 	}
 	return &cbConfigStore{
-		adminUrl: path,
-		cbConn:   &c,
+		adminUrl:   path,
+		noNICCheck: false,
+		cbConn:     &c,
 	}, nil
 }
 
@@ -189,12 +203,27 @@ const n1qlService = "n1ql"
 
 func (this *cbConfigStore) WhoAmI() (string, errors.Error) {
 
+	// if things haven't changed, go for it
+	this.RLock()
+	if this.noNICCheck || (this.iface != nil && this.iface.Up()) {
+		defer this.RUnlock()
+		return this.whoAmI, nil
+	}
+
+	// if not, we have to work out thinsg from first principles
+	// we need to promote the lock: this could all be wasted
+	// effort (somebody may have already done this as we were
+	// waiting), but we don't care
+	this.RUnlock()
+	this.Lock()
+	defer this.Unlock()
+
 	// this will exhaust all possibilities in the hope of
 	// finding a good name and only return an error
 	// if we could not find a name at all
 	var err errors.Error
 
-	localIp, _ := util.ExternalIP()
+	ifaces, _ := util.ExternalNICs()
 	localName, _ := os.Hostname()
 	for _, p := range this.getPools() {
 		pool, newErr := this.cbConn.GetPool(p.Name)
@@ -219,32 +248,81 @@ func (this *cbConfigStore) WhoAmI() (string, errors.Error) {
 			theName := nodeName(node)
 
 			// Is it the IP?
-			if len(localIp) != 0 {
-				if localIp == theName {
-					return theName, nil
-				}
+			if len(ifaces) != 0 {
+				for _, iface := range ifaces {
+					localIP := iface.IP()
+					if localIP == theName {
+						this.whoAmI = theName
+						this.iface = iface
+						this.noNICCheck = false
+						return this.whoAmI, nil
+					}
 
-				// Is it the domain name?
-				domainNames, _ := net.LookupAddr(localIp)
-				for _, domainName := range domainNames {
-					if domainName == theName {
-						return theName, nil
+					// Is it the domain name?
+					domainNames, _ := net.LookupAddr(localIP)
+					for _, domainName := range domainNames {
+						if domainName == theName {
+							this.whoAmI = theName
+							this.noNICCheck = false
+							this.iface = iface
+							return this.whoAmI, nil
+						}
 					}
 				}
 			}
 
 			// Is it the hostname?
 			if localName == theName {
-				return theName, nil
+				this.whoAmI = theName
+				this.noNICCheck = true
+				this.iface = nil
+				return this.whoAmI, nil
 			}
 
 			// No, it's localhost!
-			if node.ThisNode && len(localIp) > 0 &&
+			if node.ThisNode &&
 				(theName == "" || theName == "localhost" || theName == "127.0.0.1") {
-				return localIp, nil
+
+				// if we have an address, all good
+				if len(ifaces) != 0 {
+					for _, iface := range ifaces {
+						if iface.Up() {
+							this.whoAmI = iface.IP()
+							this.iface = iface
+							this.noNICCheck = false
+							return this.whoAmI, nil
+						}
+					}
+				}
+
+				// if we don't have an address, we lost all interfaces?!
+				// in that case - we get as close to localhost as we can
+				// this node may not be able to see other nodes in the
+				// cluster, but at least it will be able to identify itself
+				// properly (even though this is probably the least of its
+				// problems)
+				if theName != "" {
+					this.whoAmI = theName
+				} else {
+					this.whoAmI = "127.0.0.1"
+				}
+
+				// we shouldn't be in this state, so we won't cache anything
+				// this may very well have performance implications, but then
+				// the NICs are down: probably there's a lot that isn't working
+				this.iface = nil
+				this.noNICCheck = false
+				return this.whoAmI, nil
 			}
 		}
 	}
+
+	// We haven't found ourselves in there.
+	// It could be we are not part of a cluster.
+	// It could be ns_server is not yet listing us
+	// Either way, we can't cache anything.
+	this.iface = nil
+	this.noNICCheck = false
 	return "", err
 }
 

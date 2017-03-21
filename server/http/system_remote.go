@@ -28,18 +28,22 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
+type clusterState int
+
+const (
+	unset clusterState = iota
+	standAlone
+	clustered
+)
+
 // http implementation of SystemRemoteAccess
 type systemRemoteHttp struct {
-	localNode   string
+	state       clusterState
 	configStore clustering.ConfigurationStore
 }
 
-// flags that we've evaluated WhoAmI, and couldn't establish it
-const _UNSET = "_"
-
 func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) distributed.SystemRemoteAccess {
 	return &systemRemoteHttp{
-		localNode:   "",
 		configStore: cfgStore,
 	}
 }
@@ -294,38 +298,32 @@ func getQueryNode(configStore clustering.ConfigurationStore, node string, op str
 // returns the local node identity, as known to the cluster
 func (this *systemRemoteHttp) WhoAmI() string {
 
-	// There is a reason why we defer determining our own node name
-	// to when we actually need it: when the configStore is created
-	// at start up time, it may be empty, and we need to give the
-	// cluster manager time to populate it, or we will think we are
-	// not part of a cluster!
-
-	// This probably ought to be protected by a latch,
-	// however, should two requests work it out in parallel, this
-	// will just result in temporarily wasted memory.
-	if len(this.localNode) == 0 {
+	// when clustered operations begin, we'll determine
+	// if we are part of a cluster.
+	// if yes, we'll refresh our node name from clustering
+	// at every call, if not, we turn off clustering for good
+	if this.state == unset {
 
 		// not part of a cluster if there isn't a configStore
 		if this.configStore == nil {
-			this.localNode = _UNSET
+			this.state = standAlone
 			return ""
 		}
 
-		localNode, _ := this.configStore.WhoAmI()
-		if localNode != "" {
-			this.localNode = localNode
-			return localNode
+		// not part of a cluster if we can't work out our own name
+		localNode, err := this.configStore.WhoAmI()
+		if localNode == "" || err != nil {
+			this.state = standAlone
+			return ""
 		}
 
-		// This is consistent with the /admin/config endpoint:
-		// even if we did work out a likely node name, we are not
-		// part of a cluster if we don't find ourselves in it.
-		this.localNode = _UNSET
-		return ""
-	} else if this.localNode == _UNSET {
+		this.state = clustered
+		return localNode
+	} else if this.state == standAlone {
 		return ""
 	}
-	return this.localNode
+	localNode, _ := this.configStore.WhoAmI()
+	return localNode
 }
 
 func (this *systemRemoteHttp) GetNodeNames() []string {

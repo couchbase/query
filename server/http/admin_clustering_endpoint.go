@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +21,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -138,26 +136,23 @@ func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 
 var localConfig struct {
 	sync.Mutex
+	name     string
 	myConfig clustering.QueryNode
 }
 
 func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
-	if localConfig.myConfig != nil {
-		return localConfig.myConfig, nil
-	}
+	var self clustering.QueryNode
+
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
 	}
-	var self clustering.QueryNode
-	ip, er := util.ExternalIP()
+	name, er := cfgStore.WhoAmI()
 	if er != nil {
 		return nil, errors.NewAdminGetNodeError(er, "localhost")
 	}
-
-	name, er := os.Hostname()
-	if er != nil {
-		return nil, errors.NewAdminGetNodeError(er, "localhost")
+	if localConfig.myConfig != nil && name == localConfig.name {
+		return localConfig.myConfig, nil
 	}
 
 	cm := cfgStore.ConfigurationManager()
@@ -174,7 +169,7 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 		}
 
 		for _, qryNode := range queryNodes {
-			if qryNode.Name() == ip || qryNode.Name() == name {
+			if qryNode.Name() == name {
 				self = qryNode
 				break
 			}
@@ -183,6 +178,7 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 	localConfig.Lock()
 	defer localConfig.Unlock()
 	localConfig.myConfig = self
+	localConfig.name = name
 	return localConfig.myConfig, nil
 }
 
