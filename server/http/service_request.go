@@ -257,10 +257,15 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		controls, err = getControlsRequest(httpArgs)
 	}
 
+	userAgent := req.UserAgent()
+	cbUserAgent := req.Header.Get("CB-User-Agent")
+	if cbUserAgent != "" {
+		userAgent = userAgent + " (" + cbUserAgent + ")"
+	}
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
 		namespace, max_parallelism, scan_cap, pipeline_cap, pipeline_batch,
 		readonly, metrics, signature, pretty, consistency, client_id, creds,
-		req.RemoteAddr, req.UserAgent())
+		req.RemoteAddr, userAgent)
 
 	var prof server.Profile
 	if err == nil {
