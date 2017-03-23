@@ -184,12 +184,12 @@ func (this *MockServer) doStats(request *MockQuery) {
 }
 
 var _ALL_USERS = datastore.Credentials{
-        "customerowner":  "customerpass",
-        "ordersowner":    "orderspass",
-        "productowner":   "productpass",
-        "purchaseowner":  "purchasepass",
-        "reviewowner":    "reviewpass",
-        "shellTestowner": "shellTestpass",
+	"customerowner":  "customerpass",
+	"ordersowner":    "orderspass",
+	"productowner":   "productpass",
+	"purchaseowner":  "purchasepass",
+	"reviewowner":    "reviewpass",
+	"shellTestowner": "shellTestpass",
 }
 
 /*
