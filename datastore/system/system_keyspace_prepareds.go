@@ -79,10 +79,8 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext)
 				"prepareds", "POST",
 				func(doc map[string]interface{}) {
 
-					plan := doc["operator"]
-					doc["statement"] = doc["text"]
-					delete(doc, "operator")
-					delete(doc, "text")
+					plan := doc["plan"]
+					delete(doc, "plan")
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", map[string]interface{}{

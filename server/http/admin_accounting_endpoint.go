@@ -254,6 +254,9 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 				"statement":    entry.Prepared.Text(),
 				"encoded_plan": entry.Prepared.EncodedPlan(),
 			}
+			if req.Method == "POST" {
+				itemMap["plan"] = entry.Prepared.Operator
+			}
 			if entry.Uses > 0 {
 				itemMap["lastUse"] = entry.LastUse.String()
 				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
