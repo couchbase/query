@@ -62,6 +62,7 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 		// Run all the commands in the buffer in 1 go.
 
 		batch_run = true
+
 		err_code, err_str := dispatch_command(stringBuffer.String(), w, interactive, liner)
 		if err_code != 0 {
 			return err_code, err_str
@@ -104,10 +105,18 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 			if err != nil {
 				return errors.DRIVER_OPEN, err.Error()
 			} else {
+
 				// Check if the statement needs to be executed.
 				if batch_run {
 					batch_run = false
 				}
+
+				if line == "" {
+					// In batch mode, if we try execute without any input,
+					// then dont execute anything.
+					return 0, ""
+				}
+
 				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)
 				if err_code != 0 {
 					return err_code, err_str

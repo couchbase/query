@@ -67,8 +67,14 @@ func handleIPModeFlag(liner **liner.State) {
 				command.PrintError(s_err)
 			}
 		}
-
 		errCode, errStr := dispatch_command(input_command, command.W, false, *liner)
+		// If the previous run didnt error out and we are in batch mode, execute the statements.
+		if errCode == 0 {
+			if command.BATCH == "on" && !batch_run {
+				errCode, errStr = dispatch_command("\\", command.W, false, *liner)
+			}
+		}
+
 		if errCode != 0 {
 			s_err := command.HandleError(errCode, errStr)
 			command.PrintError(s_err)
@@ -76,6 +82,7 @@ func handleIPModeFlag(liner **liner.State) {
 			os.Clearenv()
 			os.Exit(1)
 		}
+
 		(*liner).Close()
 		os.Clearenv()
 		os.Exit(0)
