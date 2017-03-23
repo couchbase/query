@@ -12,6 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -60,10 +61,10 @@ func (this *BuildIndexes) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *BuildIndexes) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
+func (this *BuildIndexes) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, datastore.PRIV_QUERY_BUILD_INDEX)
+	privs.Add(fullName, auth.PRIV_QUERY_BUILD_INDEX)
 	return privs, nil
 }
 

@@ -25,6 +25,7 @@ package datastore
 import (
 	"net/http"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
@@ -35,22 +36,22 @@ const CHANNEL = "DATASTORE"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {
-	Id() string                                                                           // Id of this datastore
-	URL() string                                                                          // URL to this datastore
-	Info() Info                                                                           // Secondary information about this datastore
-	NamespaceIds() ([]string, errors.Error)                                               // Ids of the namespaces contained in this datastore
-	NamespaceNames() ([]string, errors.Error)                                             // Names of the namespaces contained in this datastore
-	NamespaceById(id string) (Namespace, errors.Error)                                    // Find a namespace in this datastore using the namespace's Id
-	NamespaceByName(name string) (Namespace, errors.Error)                                // Find a namespace in this datastore using the namespace's name
-	Authorize(*Privileges, Credentials, *http.Request) (AuthenticatedUsers, errors.Error) // Perform authorization and return nil if successful
-	CredsString(*http.Request) string                                                     // return name from credentials in http request
-	SetLogLevel(level logging.Level)                                                      // Set log level of in-process indexers
-	Inferencer(name InferenceType) (Inferencer, errors.Error)                             // Schema inference provider by name, e.g. INF_DEFAULT
-	Inferencers() ([]Inferencer, errors.Error)                                            // List of schema inference providers
-	UserInfo() (value.Value, errors.Error)                                                // The users, and their roles. JSON data.
-	GetUserInfoAll() ([]User, errors.Error)                                               // Get information about all the users.
-	PutUserInfo(u *User) errors.Error                                                     // Set information for a specific user.
-	GetRolesAll() ([]Role, errors.Error)                                                  // Get all roles that exist in the system.
+	Id() string                                                                                          // Id of this datastore
+	URL() string                                                                                         // URL to this datastore
+	Info() Info                                                                                          // Secondary information about this datastore
+	NamespaceIds() ([]string, errors.Error)                                                              // Ids of the namespaces contained in this datastore
+	NamespaceNames() ([]string, errors.Error)                                                            // Names of the namespaces contained in this datastore
+	NamespaceById(id string) (Namespace, errors.Error)                                                   // Find a namespace in this datastore using the namespace's Id
+	NamespaceByName(name string) (Namespace, errors.Error)                                               // Find a namespace in this datastore using the namespace's name
+	Authorize(*auth.Privileges, auth.Credentials, *http.Request) (auth.AuthenticatedUsers, errors.Error) // Perform authorization and return nil if successful
+	CredsString(*http.Request) string                                                                    // return name from credentials in http request
+	SetLogLevel(level logging.Level)                                                                     // Set log level of in-process indexers
+	Inferencer(name InferenceType) (Inferencer, errors.Error)                                            // Schema inference provider by name, e.g. INF_DEFAULT
+	Inferencers() ([]Inferencer, errors.Error)                                                           // List of schema inference providers
+	UserInfo() (value.Value, errors.Error)                                                               // The users, and their roles. JSON data.
+	GetUserInfoAll() ([]User, errors.Error)                                                              // Get information about all the users.
+	PutUserInfo(u *User) errors.Error                                                                    // Set information for a specific user.
+	GetRolesAll() ([]Role, errors.Error)                                                                 // Get all roles that exist in the system.
 }
 
 // Secondary information about this datastore. None of these methods

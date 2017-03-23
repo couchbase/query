@@ -16,6 +16,7 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -77,7 +78,7 @@ type Request interface {
 	SortCount() uint64
 	State() State
 	Halted() bool
-	Credentials() datastore.Credentials
+	Credentials() auth.Credentials
 	RemoteAddr() string
 	UserAgent() string
 	SetTimings(o execution.Operator)
@@ -167,7 +168,7 @@ type BaseRequest struct {
 	metrics        value.Tristate
 	pretty         value.Tristate
 	consistency    ScanConfiguration
-	credentials    datastore.Credentials
+	credentials    auth.Credentials
 	remoteAddr     string
 	userAgent      string
 	requestTime    time.Time
@@ -219,7 +220,7 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
 	positionalArgs value.Values, namespace string, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
-	client_id string, creds datastore.Credentials, remoteAddr string, userAgent string) *BaseRequest {
+	client_id string, creds auth.Credentials, remoteAddr string, userAgent string) *BaseRequest {
 
 	rv := &BaseRequest{
 		statement:      statement,
@@ -394,7 +395,7 @@ func (this *BaseRequest) Halted() bool {
 	return this.state != RUNNING
 }
 
-func (this *BaseRequest) Credentials() datastore.Credentials {
+func (this *BaseRequest) Credentials() auth.Credentials {
 	return this.credentials
 }
 

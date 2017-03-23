@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -92,7 +92,7 @@ func (this *Execute) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Execute) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *Execute) Privileges() (*auth.Privileges, errors.Error) {
 	return nil, nil
 }
 

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -188,8 +189,8 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 // from basic authorizatio, and from a "creds" value, which encodes
 // in JSON an array of username/password pairs, like this:
 //   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
-func getCredentialsFromRequest(req *http.Request) (datastore.Credentials, errors.Error) {
-	creds := make(datastore.Credentials)
+func getCredentialsFromRequest(req *http.Request) (auth.Credentials, errors.Error) {
+	creds := make(auth.Credentials)
 	user, pass, ok := req.BasicAuth()
 	if ok {
 		creds[user] = pass
@@ -219,8 +220,8 @@ func verifyCredentialsFromRequest(api string, req *http.Request) errors.Error {
 	if err != nil {
 		return err
 	}
-	privs := datastore.NewPrivileges()
-	privs.Add("system:"+api, datastore.PRIV_SYSTEM_READ)
+	privs := auth.NewPrivileges()
+	privs.Add("system:"+api, auth.PRIV_SYSTEM_READ)
 	_, err = datastore.GetDatastore().Authorize(privs, creds, req)
 	return err
 }

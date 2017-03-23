@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -185,8 +185,8 @@ func (this *Subselect) ResultTerms() ResultTerms {
 /*
 Returns all required privileges.
 */
-func (this *Subselect) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
+func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
 
 	if this.from != nil {
 		fprivs, err := this.from.Privileges()

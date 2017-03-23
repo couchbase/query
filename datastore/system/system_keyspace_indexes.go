@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -298,8 +299,8 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
 func canRead(context datastore.QueryContext, namespace string, keyspace string) bool {
-	privs := datastore.NewPrivileges()
-	privs.Add(namespace+":"+keyspace, datastore.PRIV_READ)
+	privs := auth.NewPrivileges()
+	privs.Add(namespace+":"+keyspace, auth.PRIV_READ)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res
@@ -307,8 +308,8 @@ func canRead(context datastore.QueryContext, namespace string, keyspace string) 
 
 // Do the presented credentials authorize the user to list indexes of the namespace/keyspace bucket?
 func canListIndexes(context datastore.QueryContext, namespace string, keyspace string) bool {
-	privs := datastore.NewPrivileges()
-	privs.Add(namespace+":"+keyspace, datastore.PRIV_QUERY_LIST_INDEX)
+	privs := auth.NewPrivileges()
+	privs.Add(namespace+":"+keyspace, auth.PRIV_QUERY_LIST_INDEX)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res

@@ -12,7 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -78,26 +78,26 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *KeyspaceTerm) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
 	return privilegesFromKeyspace(this.namespace, this.keyspace)
 }
 
-func privilegesFromKeyspace(namespace, keyspace string) (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
+func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
 	fullKeyspace := namespace + ":" + keyspace
 	if namespace == "#system" {
 		if keyspace == "user_info" || keyspace == "applicable_roles" {
-			privs.Add(fullKeyspace, datastore.PRIV_SECURITY_READ)
+			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ)
 		} else if keyspace == "keyspaces" || keyspace == "indexes" {
 			// Do nothing. These two tables handle security internally, by
 			// filtering the results.
 		} else if keyspace == "datastores" || keyspace == "namespaces" || keyspace == "dual" {
 			// Do nothing. These three tables are open to all.
 		} else {
-			privs.Add(fullKeyspace, datastore.PRIV_SYSTEM_READ)
+			privs.Add(fullKeyspace, auth.PRIV_SYSTEM_READ)
 		}
 	} else {
-		privs.Add(fullKeyspace, datastore.PRIV_READ)
+		privs.Add(fullKeyspace, auth.PRIV_READ)
 	}
 	return privs, nil
 }

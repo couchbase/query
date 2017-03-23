@@ -12,6 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -61,7 +62,7 @@ func (this *InferKeyspace) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *InferKeyspace) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *InferKeyspace) Privileges() (*auth.Privileges, errors.Error) {
 	privs, err := privilegesFromKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
 	if err != nil {
 		return privs, err
@@ -69,10 +70,10 @@ func (this *InferKeyspace) Privileges() (*datastore.Privileges, errors.Error) {
 
 	// The user must have SELECT permission for every bucket that is read
 	// from in an INFER statement.
-	selectPrivs := datastore.NewPrivileges()
+	selectPrivs := auth.NewPrivileges()
 	for _, pair := range privs.List {
-		if pair.Priv == datastore.PRIV_READ {
-			selectPrivs.Add(pair.Target, datastore.PRIV_QUERY_SELECT)
+		if pair.Priv == auth.PRIV_READ {
+			selectPrivs.Add(pair.Target, auth.PRIV_QUERY_SELECT)
 		}
 	}
 	privs.AddAll(selectPrivs)

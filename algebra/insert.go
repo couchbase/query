@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -170,19 +170,19 @@ func (this *Insert) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Insert) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
+func (this *Insert) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, datastore.PRIV_WRITE)
-	privs.Add(fullKeyspace, datastore.PRIV_QUERY_INSERT)
+	privs.Add(fullKeyspace, auth.PRIV_WRITE)
+	privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT)
 
 	if this.query != nil {
 		qp, err := this.query.Privileges()
 		if err != nil {
 			return nil, err
 		}
-		qp.ForEach(func(pair datastore.PrivilegePair) {
-			if !datastore.IsStatementTypePrivilege(pair.Priv) {
+		qp.ForEach(func(pair auth.PrivilegePair) {
+			if !auth.IsStatementTypePrivilege(pair.Priv) {
 				privs.AddPair(pair)
 			}
 		})

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/mock"
 	"github.com/couchbase/query/distributed"
@@ -21,10 +22,10 @@ import (
 
 type queryContextImpl struct {
 	req   *http.Request
-	creds datastore.Credentials
+	creds auth.Credentials
 }
 
-func (ci *queryContextImpl) Credentials() datastore.Credentials {
+func (ci *queryContextImpl) Credentials() auth.Credentials {
 	return ci.creds
 }
 
@@ -266,7 +267,7 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 	}
 }
 
-func doTestCredsFromContext(t *testing.T, request *http.Request, credentials datastore.Credentials,
+func doTestCredsFromContext(t *testing.T, request *http.Request, credentials auth.Credentials,
 	expectedCreds distributed.Creds, expectedAuthToken string) {
 	context := &queryContextImpl{req: request, creds: credentials}
 
@@ -289,7 +290,7 @@ func TestCredsFromContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create http request: %v", err)
 	}
-	credentials := datastore.Credentials{"user1": "pw1", "user2": "pw2"}
+	credentials := auth.Credentials{"user1": "pw1", "user2": "pw2"}
 	expectedCreds := distributed.Creds{"user1": "pw1", "user2": "pw2"}
 
 	// No auth token.

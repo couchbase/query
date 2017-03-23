@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -51,7 +51,7 @@ func (this *SubqueryTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *SubqueryTerm) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *SubqueryTerm) Privileges() (*auth.Privileges, errors.Error) {
 	return this.subquery.Privileges()
 }
 

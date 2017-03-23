@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -126,7 +126,7 @@ func (this *Select) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Select) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *Select) Privileges() (*auth.Privileges, errors.Error) {
 	privs, err := this.subresult.Privileges()
 	if err != nil {
 		return nil, err
@@ -155,10 +155,10 @@ func (this *Select) Privileges() (*datastore.Privileges, errors.Error) {
 
 	// The user must have SELECT permission for every bucket that is read
 	// from in a SELECT statement.
-	selectPrivs := datastore.NewPrivileges()
+	selectPrivs := auth.NewPrivileges()
 	for _, pair := range privs.List {
-		if pair.Priv == datastore.PRIV_READ {
-			selectPrivs.Add(pair.Target, datastore.PRIV_QUERY_SELECT)
+		if pair.Priv == auth.PRIV_READ {
+			selectPrivs.Add(pair.Target, auth.PRIV_QUERY_SELECT)
 		}
 	}
 	privs.AddAll(selectPrivs)
@@ -328,7 +328,7 @@ type Subresult interface {
 	/*
 	   Returns all required privileges.
 	*/
-	Privileges() (*datastore.Privileges, errors.Error)
+	Privileges() (*auth.Privileges, errors.Error)
 
 	/*
 	   Representation as a N1QL string.

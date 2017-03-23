@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -119,21 +120,21 @@ type Context struct {
 	now                time.Time
 	namedArgs          map[string]value.Value
 	positionalArgs     value.Values
-	credentials        datastore.Credentials
+	credentials        auth.Credentials
 	consistency        datastore.ScanConsistency
 	scanVectorSource   timestamp.ScanVectorSource
 	output             Output
 	subplans           *subqueryMap
 	subresults         *subqueryMap
 	httpRequest        *http.Request
-	authenticatedUsers datastore.AuthenticatedUsers
+	authenticatedUsers auth.AuthenticatedUsers
 	mutex              sync.RWMutex
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	namespace string, readonly bool, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
-	credentials datastore.Credentials, consistency datastore.ScanConsistency,
+	credentials auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request) *Context {
 
 	rv := &Context{
@@ -217,7 +218,7 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 	}
 }
 
-func (this *Context) Credentials() datastore.Credentials {
+func (this *Context) Credentials() auth.Credentials {
 	return this.credentials
 }
 

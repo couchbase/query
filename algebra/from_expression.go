@@ -11,7 +11,7 @@ package algebra
 
 import (
 	"encoding/json"
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -68,11 +68,11 @@ func (this *ExpressionTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *ExpressionTerm) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *ExpressionTerm) Privileges() (*auth.Privileges, errors.Error) {
 	if this.isKeyspace {
 		return this.keyspaceTerm.Privileges()
 	}
-	return datastore.NewPrivileges(), nil
+	return auth.NewPrivileges(), nil
 }
 
 /*

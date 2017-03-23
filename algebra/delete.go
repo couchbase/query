@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -135,11 +135,11 @@ func (this *Delete) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Delete) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
+func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, datastore.PRIV_WRITE)
-	privs.Add(fullKeyspace, datastore.PRIV_QUERY_DELETE)
+	privs.Add(fullKeyspace, auth.PRIV_WRITE)
+	privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE)
 
 	subprivs, err := subqueryPrivileges(this.Expressions())
 	if err != nil {

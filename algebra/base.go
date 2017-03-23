@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -22,13 +22,13 @@ type statementBase struct {
 /*
 Returns all required privileges.
 */
-func subqueryPrivileges(exprs expression.Expressions) (*datastore.Privileges, errors.Error) {
+func subqueryPrivileges(exprs expression.Expressions) (*auth.Privileges, errors.Error) {
 	subqueries, err := expression.ListSubqueries(exprs, false)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
 
-	privileges := datastore.NewPrivileges()
+	privileges := auth.NewPrivileges()
 	for _, s := range subqueries {
 		sub := s.(*Subquery)
 		sp, e := sub.Select().Privileges()

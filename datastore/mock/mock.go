@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -79,7 +80,7 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(*datastore.Privileges, datastore.Credentials, *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(*auth.Privileges, auth.Credentials, *http.Request) (auth.AuthenticatedUsers, errors.Error) {
 	return nil, nil
 }
 

@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -37,7 +37,7 @@ type FromTerm interface {
 	/*
 	   Returns all required privileges.
 	*/
-	Privileges() (*datastore.Privileges, errors.Error)
+	Privileges() (*auth.Privileges, errors.Error)
 
 	/*
 	   Representation as a N1QL string.

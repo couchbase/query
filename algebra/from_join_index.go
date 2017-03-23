@@ -12,7 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -58,7 +58,7 @@ func (this *IndexJoin) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *IndexJoin) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *IndexJoin) Privileges() (*auth.Privileges, errors.Error) {
 	privs, err := this.left.Privileges()
 	if err != nil {
 		return nil, err

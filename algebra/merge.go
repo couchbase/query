@@ -12,7 +12,7 @@ package algebra
 import (
 	"fmt"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -138,9 +138,9 @@ func (this *Merge) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *Merge) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_WRITE)
+func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), auth.PRIV_WRITE)
 
 	sp, err := this.source.Privileges()
 	if err != nil {
@@ -347,7 +347,7 @@ func (this *MergeSource) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *MergeSource) Privileges() (*datastore.Privileges, errors.Error) {
+func (this *MergeSource) Privileges() (*auth.Privileges, errors.Error) {
 	if this.from != nil {
 		return this.from.Privileges()
 	}

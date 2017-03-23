@@ -15,42 +15,44 @@ import (
 	"strings"
 
 	"github.com/couchbase/cbauth"
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 )
 
-func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privilege) (bool, error) {
+func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) (bool, error) {
 	var permission string
 	switch requested {
-	case datastore.PRIV_WRITE:
+	case auth.PRIV_WRITE:
 		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!write", bucket)
-	case datastore.PRIV_READ:
+	case auth.PRIV_READ:
 		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!read", bucket)
-	case datastore.PRIV_SYSTEM_READ:
+	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
-	case datastore.PRIV_SECURITY_READ:
+	case auth.PRIV_SECURITY_READ:
 		permission = "cluster.security!read"
-	case datastore.PRIV_SECURITY_WRITE:
+	case auth.PRIV_SECURITY_WRITE:
 		permission = "cluster.security!write"
-	case datastore.PRIV_QUERY_SELECT:
+	case auth.PRIV_QUERY_SELECT:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
-	case datastore.PRIV_QUERY_UPDATE:
+	case auth.PRIV_QUERY_UPDATE:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.update!execute", bucket)
-	case datastore.PRIV_QUERY_INSERT:
+	case auth.PRIV_QUERY_INSERT:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.insert!execute", bucket)
-	case datastore.PRIV_QUERY_DELETE:
+	case auth.PRIV_QUERY_DELETE:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
-	case datastore.PRIV_QUERY_BUILD_INDEX:
+	case auth.PRIV_QUERY_BUILD_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!build", bucket)
-	case datastore.PRIV_QUERY_CREATE_INDEX:
+	case auth.PRIV_QUERY_CREATE_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!create", bucket)
-	case datastore.PRIV_QUERY_ALTER_INDEX:
+	case auth.PRIV_QUERY_ALTER_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!alter", bucket)
-	case datastore.PRIV_QUERY_DROP_INDEX:
+	case auth.PRIV_QUERY_DROP_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!drop", bucket)
-	case datastore.PRIV_QUERY_LIST_INDEX:
+	case auth.PRIV_QUERY_LIST_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!list", bucket)
+	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
+		permission = "cluster.admin.security.external_access!execute"
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}
@@ -73,8 +75,8 @@ type authSource interface {
 
 // Try to get privsSought privileges from the availableCredentials credentials.
 // Return the privileges that were not granted.
-func authAgainstCreds(as authSource, privsSought []datastore.PrivilegePair, availableCredentials []cbauth.Creds) ([]datastore.PrivilegePair, error) {
-	deniedPrivs := make([]datastore.PrivilegePair, 0, len(privsSought))
+func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
+	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
 	for _, pair := range privsSought {
 		keyspace := pair.Target
 		privilege := pair.Priv
@@ -85,7 +87,7 @@ func authAgainstCreds(as authSource, privsSought []datastore.PrivilegePair, avai
 
 		thisPrivGranted := false
 
-		if keyspace == "nodes" && privilege == datastore.PRIV_SYSTEM_READ && as.adminIsOpen() {
+		if keyspace == "nodes" && privilege == auth.PRIV_SYSTEM_READ && as.adminIsOpen() {
 			// The system:nodes table follows the underlying ns_server API.
 			// If all tables have passwords, the API requires credentials.
 			// But if any don't, the API is open to read.
@@ -118,7 +120,7 @@ func authAgainstCreds(as authSource, privsSought []datastore.PrivilegePair, avai
 // Determine the set of keyspaces referenced in the list of privileges, and derive
 // credentials for them with empty passwords. This corresponds to the case of access users that were
 // created for passwordless buckets at upgrate time.
-func deriveDefaultCredentials(as authSource, privs []datastore.PrivilegePair) ([]cbauth.Creds, datastore.AuthenticatedUsers) {
+func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbauth.Creds, auth.AuthenticatedUsers) {
 	keyspaces := make(map[string]bool, len(privs))
 	for _, pair := range privs {
 		keyspace := pair.Target
@@ -133,7 +135,7 @@ func deriveDefaultCredentials(as authSource, privs []datastore.PrivilegePair) ([
 	}
 
 	creds := make([]cbauth.Creds, 0, len(keyspaces))
-	authUsers := make(datastore.AuthenticatedUsers, 0, len(keyspaces))
+	authUsers := make(auth.AuthenticatedUsers, 0, len(keyspaces))
 	password := ""
 	for username := range keyspaces {
 		user, err := as.auth(username, password)
@@ -145,13 +147,13 @@ func deriveDefaultCredentials(as authSource, privs []datastore.PrivilegePair) ([
 	return creds, authUsers
 }
 
-func cbAuthorize(s authSource, privileges *datastore.Privileges, credentials datastore.Credentials,
-	req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Credentials,
+	req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
 	if credentials == nil {
-		credentials = make(datastore.Credentials)
+		credentials = make(auth.Credentials)
 	}
 
-	authenticatedUsers := make(datastore.AuthenticatedUsers, 0, len(credentials))
+	authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials))
 
 	// Build the credentials list.
 	credentialsList := make([]cbauth.Creds, 0, 2)

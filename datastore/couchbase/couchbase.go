@@ -30,6 +30,7 @@ import (
 	cbauthi "github.com/couchbase/cbauth/cbauthimpl"
 	cb "github.com/couchbase/go-couchbase"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -278,7 +279,7 @@ func (s *store) authWebCreds(req *http.Request) (cbauth.Creds, error) {
 	return cbauth.AuthWebCreds(req)
 }
 
-func (s *store) Authorize(privileges *datastore.Privileges, credentials datastore.Credentials, req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(privileges *auth.Privileges, credentials auth.Credentials, req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server

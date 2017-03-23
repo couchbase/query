@@ -12,16 +12,16 @@ package plan
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 )
 
 type Authorize struct {
 	readonly
-	privs *datastore.Privileges `json:"privileges"`
-	child Operator              `json:"~child"`
+	privs *auth.Privileges `json:"privileges"`
+	child Operator         `json:"~child"`
 }
 
-func NewAuthorize(privs *datastore.Privileges, child Operator) *Authorize {
+func NewAuthorize(privs *auth.Privileges, child Operator) *Authorize {
 	return &Authorize{
 		privs: privs,
 		child: child,
@@ -36,7 +36,7 @@ func (this *Authorize) New() Operator {
 	return &Authorize{}
 }
 
-func (this *Authorize) Privileges() *datastore.Privileges {
+func (this *Authorize) Privileges() *auth.Privileges {
 	return this.privs
 }
 
@@ -65,9 +65,9 @@ func (this *Authorize) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *Authorize) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string                `json:"#operator"`
-		Privs *datastore.Privileges `json:"privileges"`
-		Child json.RawMessage       `json:"~child"`
+		_     string           `json:"#operator"`
+		Privs *auth.Privileges `json:"privileges"`
+		Child json.RawMessage  `json:"~child"`
 	}
 	var child_type struct {
 		Operator string `json:"#operator"`

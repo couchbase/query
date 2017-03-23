@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -242,7 +243,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		consistency, err = getScanConfiguration(httpArgs)
 	}
 
-	var creds datastore.Credentials
+	var creds auth.Credentials
 	if err == nil {
 		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
 	}
@@ -502,7 +503,7 @@ func getReadonly(a httpRequestArgs, isGet bool) (value.Tristate, errors.Error) {
 	return readonly, err
 }
 
-func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, errors.Error) {
+func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors.Error) {
 	// Cred_data retrieves credentials from either the URL parameters or from the body of the JSON request.
 	cred_data, err := a.getCredentials()
 	if err != nil {
@@ -512,11 +513,11 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 	// Credentials can come from the cred_data, from the Basic authorization field
 	// in  the request, both, or neither. If from both, the credentials are combined.
 	// If neither, this function should return nil, nil.
-	var creds datastore.Credentials = nil
+	var creds auth.Credentials = nil
 
 	if len(cred_data) > 0 {
 		// Credentials are in request parameters:
-		creds = datastore.Credentials{}
+		creds = auth.Credentials{}
 		for _, cred := range cred_data {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
@@ -530,9 +531,9 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 
 	if len(auths) > 0 {
 		// Credentials are in http header:
-		auth := auths[0]
-		if strings.HasPrefix(auth, "Basic ") {
-			encoded_creds := strings.Split(auth, " ")[1]
+		curAuth := auths[0]
+		if strings.HasPrefix(curAuth, "Basic ") {
+			encoded_creds := strings.Split(curAuth, " ")[1]
 			decoded_creds, err := base64.StdEncoding.DecodeString(encoded_creds)
 			if err != nil {
 				return nil, errors.NewServiceErrorBadValue(go_errors.New("credentials not base64-encoded"), CREDS)
@@ -541,7 +542,7 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 			// per http://tools.ietf.org/html/rfc1945#section-10.2
 			u_details := strings.Split(string(decoded_creds), ":")
 			if creds == nil {
-				creds = datastore.Credentials{}
+				creds = auth.Credentials{}
 			}
 			switch len(u_details) {
 			case 2:

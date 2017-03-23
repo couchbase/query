@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
+	"github.com/couchbase/query/auth"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
@@ -183,7 +184,7 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
-var _ALL_USERS = datastore.Credentials{
+var _ALL_USERS = auth.Credentials{
 	"customerowner":  "customerpass",
 	"ordersowner":    "orderspass",
 	"productowner":   "productpass",

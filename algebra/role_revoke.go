@@ -12,7 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -80,15 +80,15 @@ func (this *RevokeRole) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *RevokeRole) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
+func (this *RevokeRole) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
 	// Currently our privileges always attach to buckets. In this case,
 	// the data being updated isn't a bucket, it's system security data,
 	// so the code is leaving the bucket name blank.
 	// This works because no bucket name is needed for this type of authorization.
 	// If we absolutely had to provide a table name, it would make sense to use system:user_info,
 	// because that's the virtual table where the data can be accessed.
-	privs.Add("", datastore.PRIV_SECURITY_WRITE)
+	privs.Add("", auth.PRIV_SECURITY_WRITE)
 	return privs, nil
 }
 

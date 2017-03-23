@@ -12,6 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -93,9 +94,9 @@ func (this *CreatePrimaryIndex) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *CreatePrimaryIndex) Privileges() (*datastore.Privileges, errors.Error) {
-	privs := datastore.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), datastore.PRIV_QUERY_CREATE_INDEX)
+func (this *CreatePrimaryIndex) Privileges() (*auth.Privileges, errors.Error) {
+	privs := auth.NewPrivileges()
+	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), auth.PRIV_QUERY_CREATE_INDEX)
 	return privs, nil
 }
 

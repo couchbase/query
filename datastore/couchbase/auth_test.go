@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/couchbase/cbauth"
-	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 )
 
 type authSourceImpl struct {
@@ -68,15 +68,15 @@ func (a authUser) IsAllowed(permission string) (bool, error) {
 type testCase struct {
 	purpose       string
 	authSource    authSource
-	privs         *datastore.Privileges
-	creds         datastore.Credentials
+	privs         *auth.Privileges
+	creds         auth.Credentials
 	shouldSucceed bool
 }
 
 func TestSimpleSelect(t *testing.T) {
-	privs := datastore.NewPrivileges()
-	privs.Add("testbucket", datastore.PRIV_READ)
-	privs.Add("testbucket", datastore.PRIV_QUERY_SELECT)
+	privs := auth.NewPrivileges()
+	privs.Add("testbucket", auth.PRIV_READ)
+	privs.Add("testbucket", auth.PRIV_QUERY_SELECT)
 
 	as := &authSourceImpl{
 		users: []authUser{
@@ -95,10 +95,10 @@ func TestSimpleSelect(t *testing.T) {
 	}
 
 	cases := []testCase{
-		testCase{purpose: "No Credentials", authSource: as, privs: privs, creds: datastore.Credentials{}},
-		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: datastore.Credentials{"nancy": "pwnancy"}},
-		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: datastore.Credentials{"bob": "badpassword"}},
-		testCase{purpose: "Works", authSource: as, privs: privs, creds: datastore.Credentials{"bob": "pwbob"}, shouldSucceed: true},
+		testCase{purpose: "No Credentials", authSource: as, privs: privs, creds: auth.Credentials{}},
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: auth.Credentials{"nancy": "pwnancy"}},
+		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: auth.Credentials{"bob": "badpassword"}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: auth.Credentials{"bob": "pwbob"}, shouldSucceed: true},
 	}
 	runCases(t, cases)
 }
@@ -119,9 +119,9 @@ func runCases(t *testing.T, cases []testCase) {
 }
 
 func TestDefaultCredentials(t *testing.T) {
-	privs := datastore.NewPrivileges()
-	privs.Add("testbucket", datastore.PRIV_READ)
-	privs.Add("testbucket", datastore.PRIV_QUERY_SELECT)
+	privs := auth.NewPrivileges()
+	privs.Add("testbucket", auth.PRIV_READ)
+	privs.Add("testbucket", auth.PRIV_QUERY_SELECT)
 
 	asNoDefault := &authSourceImpl{
 		users: []authUser{
@@ -165,7 +165,7 @@ func TestDefaultCredentials(t *testing.T) {
 		},
 	}
 
-	loginCreds := datastore.Credentials{"bob": "pwbob"}
+	loginCreds := auth.Credentials{"bob": "pwbob"}
 
 	cases := []testCase{
 		testCase{purpose: "No Default User", authSource: asNoDefault, privs: privs, creds: loginCreds},
