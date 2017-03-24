@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/couchbase/cbauth"
 	cbauthi "github.com/couchbase/cbauth/cbauthimpl"
@@ -305,7 +306,10 @@ func (s *store) SetLogLevel(level logging.Level) {
 		defer n.lock.Unlock()
 		n.lock.Lock()
 		for _, k := range n.keyspaceCache {
-			indexers, _ := k.Indexers()
+			if k.cbKeyspace == nil {
+				continue
+			}
+			indexers, _ := k.cbKeyspace.Indexers()
 			if len(indexers) > 0 {
 				for _, idxr := range indexers {
 					idxr.SetLogLevel(level)
@@ -530,7 +534,7 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 		store:         s,
 		name:          name,
 		cbNamespace:   cbpool,
-		keyspaceCache: make(map[string]datastore.Keyspace),
+		keyspaceCache: make(map[string]*keyspaceEntry),
 	}
 
 	return &rv, nil
@@ -541,10 +545,24 @@ type namespace struct {
 	store         *store
 	name          string
 	cbNamespace   cb.Pool
-	keyspaceCache map[string]datastore.Keyspace
-	lock          sync.Mutex   // lock to guard the keyspaceCache
+	keyspaceCache map[string]*keyspaceEntry
+	lock          sync.RWMutex // lock to guard the keyspaceCache
 	nslock        sync.RWMutex // lock for this structure
 }
+
+type keyspaceEntry struct {
+	sync.Mutex
+	cbKeyspace datastore.Keyspace
+	errCount   int
+	errTime    time.Time
+	lastUse    time.Time
+}
+
+const (
+	_MIN_ERR_INTERVAL   time.Duration = 5 * time.Second
+	_THROTTLING_TIMEOUT time.Duration = 10 * time.Millisecond
+	_CLEANUP_INTERVAL   time.Duration = time.Hour
+)
 
 func (p *namespace) DatastoreId() string {
 	return p.store.Id()
@@ -571,20 +589,87 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.Error) {
+func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
+	var err errors.Error
 
-	b, ok := p.keyspaceCache[name]
-	if !ok {
-		var err errors.Error
-		b, err = newKeyspace(p, name)
-		if err != nil {
-			return nil, err
-		}
-		p.lock.Lock()
-		defer p.lock.Unlock()
-		p.keyspaceCache[name] = b
+	// make sure that no one is deleting the keyspace as we check
+	p.lock.RLock()
+	entry, ok := p.keyspaceCache[name]
+	p.lock.RUnlock()
+	if ok && entry.cbKeyspace != nil {
+		return entry.cbKeyspace, nil
 	}
-	return b, nil
+
+	// MB-19601 we haven't found the keyspace, so we have to load it,
+	// however, there might be a flood of other requests coming in, all
+	// wanting to do use the same keyspace and all needing to load it.
+	// In the previous implementation all requests would first create
+	// and refresh the keyspace, refreshing the indexes, etc
+	// In YCSB enviroments this resulted in thousends of requests
+	// flooding ns_server with buckets and ddocs load at the same time.
+	// What we want instead is for one request to do the work, and all the
+	// others waiting and benefiting from that work.
+	// This is the exact scenario for using Shared Optimistic Locks, but,
+	// sadly, they are patented by IBM, so clearly it's no go for us.
+	// What we do is create the keyspace entry, and record that we are priming
+	// it by locking that entry.
+	// Everyone else will have to wait on the lock, and once they get it,
+	// they can check on the keyspace again - if all is fine, just continue
+	// if not try and load again.
+	// Shared Optimistic Locks by stealth, although not as efficient (there
+	// might be sequencing of would be loaders on the keyspace lock after
+	// the initial keyspace loading has been done).
+	// If we fail, again! then there's something wrong with the keyspace,
+	// which means that retrying over and over again, we'll be loading ns_server
+	// so what we do is throttle the reloads and log errors, so that the
+	// powers that be are alerted that there's some resource issue.
+	// Finally, since we are having to use two locks rather than one, make sure
+	// that the locking sequence is predictable.
+	// keyspace lock is always locked outside of the keyspace cache lock.
+
+	// 1) create the entry if necessary, record time of loading attempt
+	p.lock.Lock()
+	entry, ok = p.keyspaceCache[name]
+	if !ok {
+		entry = &keyspaceEntry{}
+		p.keyspaceCache[name] = entry
+	}
+	entry.lastUse = time.Now()
+	p.lock.Unlock()
+
+	// 2) serialize the loading by locking the entry
+	entry.Lock()
+	defer entry.Unlock()
+
+	// 3) check if somebody has done the job for us in the interim
+	if entry.cbKeyspace != nil {
+		return entry.cbKeyspace, nil
+	}
+
+	// 4) if previous loads resulted in errors, throttle requests
+	if entry.errCount > 0 && time.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
+		time.Sleep(_THROTTLING_TIMEOUT)
+	}
+
+	// 5) try the loading
+	k, err := newKeyspace(p, name)
+	if err != nil {
+
+		// We try not to flood the log with errors
+		if entry.errCount == 0 {
+			entry.errTime = time.Now()
+		} else if time.Since(entry.errTime) > _MIN_ERR_INTERVAL {
+			entry.errTime = time.Now()
+		}
+		entry.errCount++
+		return nil, err
+	}
+	entry.errCount = 0
+
+	// this is the only place where entry.cbKeyspace is set
+	// it is never unset - so it's safe to test cbKeyspace != nil
+	entry.cbKeyspace = k
+	return k, nil
 }
 
 // compare the list of node addresses
@@ -659,22 +744,28 @@ func (p *namespace) refresh(changed bool) {
 	defer p.lock.Unlock()
 	for name, ks := range p.keyspaceCache {
 		logging.Debugf(" Checking keyspace %s", name)
+		if ks.cbKeyspace == nil {
+			if time.Since(ks.lastUse) > _CLEANUP_INTERVAL {
+				delete(p.keyspaceCache, name)
+			}
+			continue
+		}
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
 			changed = true
-			ks.(*keyspace).deleted = true
+			ks.cbKeyspace.(*keyspace).deleted = true
 			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
 
-		} else if ks.(*keyspace).cbbucket.UUID != newbucket.UUID {
+		} else if ks.cbKeyspace.(*keyspace).cbbucket.UUID != newbucket.UUID {
 
-			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.(*keyspace).cbbucket.UUID, newbucket.UUID)
+			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.(*keyspace).cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
-			ks.(*keyspace).cbbucket = newbucket
+			ks.cbKeyspace.(*keyspace).cbbucket = newbucket
 		}
 		// Not deleted. Check if GSI indexer is available
-		if ks.(*keyspace).gsiIndexer == nil {
-			ks.(*keyspace).refreshIndexer(p.store.URL(), p.Name())
+		if ks.cbKeyspace.(*keyspace).gsiIndexer == nil {
+			ks.cbKeyspace.(*keyspace).refreshIndexer(p.store.URL(), p.Name())
 		}
 	}
 
@@ -771,9 +862,9 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	defer p.lock.Unlock()
 
 	ks, ok := p.keyspaceCache[name]
-	if ok {
+	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
-		ks.(*keyspace).deleted = true
+		ks.cbKeyspace.(*keyspace).deleted = true
 		delete(p.keyspaceCache, name)
 
 	} else {
