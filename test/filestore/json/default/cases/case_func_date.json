@@ -652,28 +652,22 @@
     ]
    },
    {
-    "statements":"select date_range_millis(1480752000000, 1449129600000, 'month', -1)",
+    "statements":"select date_range_millis(1477382400000, 1461571200000, 'month', -1)",
     "results": [
         {
             "$1": [
-                1480752000000,
-                1478156400000,
-                1475478000000,
-                1472886000000,
-                1470207600000,
-                1467529200000,
-                1464937200000,
-                1462258800000,
-                1459666800000,
-                1456992000000,
-                1454486400000,
-                1451808000000
+                1477382400000,
+                1474790400000,
+                1472112000000,
+                1469433600000,
+                1466841600000,
+                1464163200000
             ]
         }
     ]
    },
    {
-     "statements":"select str_to_millis('2016-12-03'), str_to_millis('2015-12-03')",
+     "statements":"select str_to_millis('2016-12-03T08:00:00Z'), str_to_millis('2015-12-03T08:00:00Z')",
      "results": [
         {
             "$1": 1480752000000,
@@ -727,7 +721,7 @@
     ]
     },
     {
-      "statements":"select date_range_millis(str_to_millis('9990-01-01'), str_to_millis('9999-12-31'), 'year')",
+      "statements":"select date_range_millis(str_to_millis('9990-01-01T08:00:00Z'), str_to_millis('9999-12-31T08:00:00Z'), 'year')",
       "results": [
         {
             "$1": [
