@@ -59,8 +59,8 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 			return nil, err
 		}
 
-		if n.Type() == value.MISSING {
-			return n, nil
+		if n.Type() == value.MISSING || n.Type() == value.NULL {
+			continue
 		} else if n.Type() != value.STRING {
 			return value.NULL_VALUE, nil
 		}
