@@ -72,7 +72,7 @@ func (this *ExpressionTerm) Privileges() (*auth.Privileges, errors.Error) {
 	if this.isKeyspace {
 		return this.keyspaceTerm.Privileges()
 	}
-	return auth.NewPrivileges(), nil
+	return this.fromExpr.Privileges(), nil
 }
 
 /*

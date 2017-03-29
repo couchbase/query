@@ -187,7 +187,7 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
-var _ALL_USERS = auth.Credentials{
+var AUTH_USERS = auth.Credentials{
 	"customerowner":  "customerpass",
 	"ordersowner":    "orderspass",
 	"productowner":   "productpass",
@@ -206,7 +206,7 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
 	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", AUTH_USERS, "", "")
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

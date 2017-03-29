@@ -63,7 +63,6 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) 
 	}
 
 	return true, nil
-
 }
 
 type authSource interface {
@@ -149,6 +148,7 @@ func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbau
 
 func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Credentials,
 	req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
+
 	if credentials == nil {
 		credentials = make(auth.Credentials)
 	}

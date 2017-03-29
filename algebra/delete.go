@@ -141,11 +141,15 @@ func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 	privs.Add(fullKeyspace, auth.PRIV_WRITE)
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE)
 
-	subprivs, err := subqueryPrivileges(this.Expressions())
+	exprs := this.Expressions()
+	for _, expr := range exprs {
+		privs.AddAll(expr.Privileges())
+	}
+
+	subprivs, err := subqueryPrivileges(exprs)
 	if err != nil {
 		return nil, err
 	}
-
 	privs.AddAll(subprivs)
 	return privs, nil
 }

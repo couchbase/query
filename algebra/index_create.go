@@ -139,6 +139,10 @@ func (this *CreateIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
 	privs.Add(fullName, auth.PRIV_QUERY_CREATE_INDEX)
+
+	for _, expr := range this.Expressions() {
+		privs.AddAll(expr.Privileges())
+	}
 	return privs, nil
 }
 

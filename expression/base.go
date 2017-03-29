@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/value"
 )
 
@@ -311,4 +312,36 @@ func (this *ExpressionBase) SurvivesGrouping(groupKeys Expressions, allowed *val
 	}
 
 	return true, nil
+}
+
+func (this *ExpressionBase) Privileges() *auth.Privileges {
+	// By default, the privileges required for an expression are the union
+	// of the privilges required for the children of the expression.
+	children := this.expr.Children()
+	if len(children) == 0 {
+		return auth.NewPrivileges()
+	} else if len(children) == 1 {
+		return children[0].Privileges()
+	}
+
+	// We want to be careful here to avoid unnecessary allocation of auth.Privileges records.
+	privilegeList := make([]*auth.Privileges, len(children))
+	for i, child := range children {
+		privilegeList[i] = child.Privileges()
+	}
+
+	totalPrivileges := 0
+	for _, privs := range privilegeList {
+		totalPrivileges += privs.Num()
+	}
+
+	if totalPrivileges == 0 {
+		return privilegeList[0] // will be empty
+	}
+
+	unionPrivileges := auth.NewPrivileges()
+	for _, privs := range privilegeList {
+		unionPrivileges.AddAll(privs)
+	}
+	return unionPrivileges
 }

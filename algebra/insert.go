@@ -188,12 +188,17 @@ func (this *Insert) Privileges() (*auth.Privileges, errors.Error) {
 		})
 	}
 
-	subprivs, err := subqueryPrivileges(this.Expressions())
+	exprs := this.Expressions()
+	subprivs, err := subqueryPrivileges(exprs)
 	if err != nil {
 		return nil, err
 	}
-
 	privs.AddAll(subprivs)
+
+	for _, expr := range exprs {
+		privs.AddAll(expr.Privileges())
+	}
+
 	return privs, nil
 }
 

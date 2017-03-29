@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/value"
 )
 
@@ -175,6 +176,12 @@ type Expression interface {
 	   ordering term in an aggregation query.
 	*/
 	SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (bool, Expression)
+
+	/*
+	  Returns the privileges required to execute a statement containing this expression.
+	  Returns a non-nil pointer to a Privileges structure.
+	*/
+	Privileges() *auth.Privileges
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

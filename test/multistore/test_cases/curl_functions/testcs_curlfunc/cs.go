@@ -9,11 +9,18 @@
 package testcs_curlfunc
 
 import (
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	js "github.com/couchbase/query/test/multistore"
 )
 
 func Start_test() *js.MockServer {
+	// We need custom credentials in this case, because the CURL function requires
+	// special permission. The right permission to use in this case would be
+	// the query_external_access role, but that hasn't been implemented yet. Hence
+	// the use of Administrator.
+	js.AUTH_USERS = auth.Credentials{"Administrator": "password"}
+
 	return js.Start(js.Site_CBS, js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
 }
 

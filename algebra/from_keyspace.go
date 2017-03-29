@@ -79,7 +79,14 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
-	return privilegesFromKeyspace(this.namespace, this.keyspace)
+	privs, err := privilegesFromKeyspace(this.namespace, this.keyspace)
+	if err != nil {
+		return privs, err
+	}
+	if this.keys != nil {
+		privs.AddAll(this.keys.Privileges())
+	}
+	return privs, nil
 }
 
 func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, errors.Error) {

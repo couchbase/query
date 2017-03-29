@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	curl "github.com/andelf/go-curl"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -80,6 +81,18 @@ func (this *Curl) Type() value.Type { return value.OBJECT }
 
 func (this *Curl) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *Curl) Privileges() *auth.Privileges {
+	unionPrivileges := auth.NewPrivileges()
+	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS)
+
+	children := this.Children()
+	for _, child := range children {
+		unionPrivileges.AddAll(child.Privileges())
+	}
+
+	return unionPrivileges
 }
 
 func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, error) {

@@ -156,12 +156,17 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	privs.Add(fullKeyspace, auth.PRIV_WRITE)
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE)
 
-	subprivs, err := subqueryPrivileges(this.Expressions())
+	exprs := this.Expressions()
+	subprivs, err := subqueryPrivileges(exprs)
 	if err != nil {
 		return nil, err
 	}
-
 	privs.AddAll(subprivs)
+
+	for _, expr := range exprs {
+		privs.AddAll(expr.Privileges())
+	}
+
 	return privs, nil
 }
 

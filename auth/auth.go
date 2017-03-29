@@ -53,6 +53,10 @@ func NewPrivileges() *Privileges {
 	return &Privileges{List: make([]PrivilegePair, 0, 16)}
 }
 
+func (this *Privileges) Num() int {
+	return len(this.List)
+}
+
 func (this *Privileges) AddAll(other *Privileges) {
 	if other == nil {
 		return

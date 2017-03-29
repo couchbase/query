@@ -62,7 +62,12 @@ func (this *Unnest) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *Unnest) Privileges() (*auth.Privileges, errors.Error) {
-	return this.left.Privileges()
+	lPrivs, err := this.left.Privileges()
+	if err != nil {
+		return lPrivs, err
+	}
+	lPrivs.AddAll(this.expr.Privileges())
+	return lPrivs, nil
 }
 
 /*
