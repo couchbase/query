@@ -91,8 +91,8 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 							primaryKey = true
 						} else {
 							indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+							curKey = true
 						}
-						curKey = true
 						break
 					}
 				}
