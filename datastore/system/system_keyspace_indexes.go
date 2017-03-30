@@ -339,7 +339,9 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 									err = indexer.Refresh()
 									if err != nil {
 										logging.Errorf("Refreshing indexes failed %v", err)
-										conn.Error(errors.NewSystemDatastoreError(err, ""))
+
+										// MB-23555, don't throw errors, or the scan will be terminated
+										conn.Warning(errors.NewSystemDatastoreError(err, ""))
 										// don't return here but continue processing, because other keyspaces may still be responsive. MB-15834
 										continue
 									}
