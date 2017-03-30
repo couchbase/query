@@ -554,20 +554,34 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 
 		// In order to allow monitoring to track prepared statement executed through
 		// N1QL "EXECUTE", set request.prepared - because, as of yet, it isn't!
-		//
-		// HACK ALERT - request does not currently track the request type
-		// and even if it did, and prepared.(*plan.Prepared) is set, it
-		// does not carry a name or text.
-		// This should probably done in build.go and / or build_execute.go,
-		// but for now this will do.
-		exec, ok := stmt.(*algebra.Execute)
-		if ok && exec.Prepared() != nil {
-			prep, _ := plan.TrackPrepared(exec.Prepared())
-			request.SetPrepared(prep)
+		switch stmt.Type() {
+		case "EXECUTE":
+			exec, _ := stmt.(*algebra.Execute)
+			if exec.Prepared() != nil {
+				prep, _ := plan.TrackPrepared(exec.Prepared())
+				request.SetPrepared(prep)
+
+				// when executing prepared statements, we set the type to that
+				// of the prepared statement
+				request.SetType(prep.Type())
+			}
+		default:
+
+			// set the type for all statements bar prepare
+			// (doing otherwise would have accounting track prepares
+			// as if they were executions)
+			_, ok := stmt.(*algebra.Prepare)
+			if !ok {
+				request.SetType(stmt.Type())
+			}
 		}
 
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		request.Output().AddPhaseTime(execution.PARSE, prep.Sub(parse))
+	} else {
+
+		// ditto
+		request.SetType(prepared.Type())
 	}
 
 	if logging.LogLevel() >= logging.DEBUG {

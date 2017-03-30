@@ -100,6 +100,13 @@ func (this *Insert) Signature() value.Value {
 }
 
 /*
+It's an insert
+*/
+func (this *Insert) Type() string {
+	return "INSERT"
+}
+
+/*
 Applies mapper to all the expressions in the insert statement.
 */
 func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {

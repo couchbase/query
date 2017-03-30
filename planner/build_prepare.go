@@ -38,6 +38,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	}
 
 	pl.SetText(stmt.Text())
+	pl.SetType(stmt.Type())
 
 	json_bytes, err := pl.MarshalJSON()
 	if err != nil {

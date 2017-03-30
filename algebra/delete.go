@@ -76,6 +76,13 @@ func (this *Delete) Signature() value.Value {
 }
 
 /*
+It's a delete
+*/
+func (this *Delete) Type() string {
+	return "DELETE"
+}
+
+/*
 Applies mapper to all the expressions in the delete statement.
 */
 func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {

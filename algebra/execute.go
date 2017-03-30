@@ -69,6 +69,13 @@ func (this *Execute) Signature() value.Value {
 }
 
 /*
+It's an execute
+*/
+func (this *Execute) Type() string {
+	return "EXECUTE"
+}
+
+/*
 Returns nil.
 */
 func (this *Execute) Formalize() error {

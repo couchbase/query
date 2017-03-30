@@ -107,3 +107,10 @@ Return the prepared statement text.
 func (this *Prepare) Text() string {
 	return this.text
 }
+
+/*
+It's whatever the statement is
+*/
+func (this *Prepare) Type() string {
+	return this.stmt.Type()
+}

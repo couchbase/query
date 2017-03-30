@@ -199,15 +199,11 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	request_time := time.Since(request.RequestTime())
 	acctstore := this.server.AccountingStore()
 	prepared := request.Prepared() != nil
-	preparedText := ""
-	if prepared {
-		preparedText = request.Prepared().Text()
-	}
 
 	plan.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
-		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
-		prepared, preparedText, (request.State() != server.COMPLETED),
+		request.resultSize, request.errorCount, request.warningCount, request.Type(),
+		prepared, (request.State() != server.COMPLETED),
 		string(request.ScanConsistency()))
 
 	request.CompleteRequest(request_time, service_time, request.resultCount,

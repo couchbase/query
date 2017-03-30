@@ -41,3 +41,10 @@ func subqueryPrivileges(exprs expression.Expressions) (*auth.Privileges, errors.
 
 	return privileges, nil
 }
+
+/*
+	unclassified
+*/
+func (this *statementBase) Type() string {
+	return ""
+}

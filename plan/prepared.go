@@ -32,6 +32,7 @@ type Prepared struct {
 	name         string
 	encoded_plan string
 	text         string
+	reqType      string
 }
 
 func NewPrepared(operator Operator, signature value.Value) *Prepared {
@@ -66,6 +67,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 		Name        string          `json:"name"`
 		EncodedPlan string          `json:"encoded_plan"`
 		Text        string          `json:"text"`
+		ReqType     string          `json:"reqType"`
 	}
 
 	var op_type struct {
@@ -86,6 +88,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	this.name = _unmarshalled.Name
 	this.encoded_plan = _unmarshalled.EncodedPlan
 	this.text = _unmarshalled.Text
+	this.reqType = _unmarshalled.ReqType
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -109,6 +112,14 @@ func (this *Prepared) Text() string {
 
 func (this *Prepared) SetText(text string) {
 	this.text = text
+}
+
+func (this *Prepared) Type() string {
+	return this.reqType
+}
+
+func (this *Prepared) SetType(reqType string) {
+	this.reqType = reqType
 }
 
 func (this *Prepared) EncodedPlan() string {

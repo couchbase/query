@@ -69,6 +69,13 @@ func (this *Update) Signature() value.Value {
 }
 
 /*
+It's an Update
+*/
+func (this *Update) Type() string {
+	return "UPDATE"
+}
+
+/*
 Applies mapper to all the expressions in the UPDATE statement.
 */
 func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {

@@ -67,6 +67,13 @@ func (this *Select) Signature() value.Value {
 }
 
 /*
+It's a select
+*/
+func (this *Select) Type() string {
+	return "SELECT"
+}
+
+/*
 This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */

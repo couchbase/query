@@ -257,7 +257,7 @@ func RecordMetrics(acctstore AccountingStore,
 	request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
 	error_count int, warn_count int, stmt string, prepared bool,
-	preparedText string, cancelled bool, scanConsistency string) {
+	cancelled bool, scanConsistency string) {
 
 	ms := acctstore.MetricRegistry()
 	ms.Counter(REQUESTS).Inc(1)
@@ -307,38 +307,23 @@ func RecordMetrics(acctstore AccountingStore,
 
 	// record the type of request if 0 errors
 	if error_count == 0 {
-		if t := requestType(stmt, prepared, preparedText); t != UNKNOWN {
+		if t := requestType(stmt, prepared); t != UNKNOWN {
 			ms.Counter(t).Inc(1)
 		}
 	}
 }
 
-func requestType(stmt string, prepared bool, preparedText string) string {
-	var tokens []string
+func requestType(stmt string, prepared bool) string {
 
-	// FIXME - this is a proper hack! should be using algebra.Statement
-	// or something similar to determine the statement type!
-	if prepared && preparedText != "" {
-		// Second or fourth token determines type of statement
-		tokens = strings.Split(strings.TrimSpace(preparedText), " ")[1:]
-	} else {
-		if stmt != "" {
-			// First token determines type of statement
-			tokens = strings.Split(strings.TrimSpace(stmt), " ")[0:1]
-		}
-	}
-
-	for _, token := range tokens {
-		switch strings.ToLower(token) {
-		case "select":
-			return SELECTS
-		case "update":
-			return UPDATES
-		case "insert":
-			return INSERTS
-		case "delete":
-			return DELETES
-		}
+	switch strings.ToLower(stmt) {
+	case "select":
+		return SELECTS
+	case "update":
+		return UPDATES
+	case "insert":
+		return INSERTS
+	case "delete":
+		return DELETES
 	}
 	return UNKNOWN
 }

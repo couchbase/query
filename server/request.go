@@ -49,6 +49,8 @@ type Request interface {
 	Statement() string
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
+	Type() string
+	SetType(string)
 	NamedArgs() map[string]value.Value
 	PositionalArgs() value.Values
 	Namespace() string
@@ -154,6 +156,7 @@ type BaseRequest struct {
 	client_id      *clientContextIDImpl
 	statement      string
 	prepared       *plan.Prepared
+	reqType        string
 	namedArgs      map[string]value.Value
 	positionalArgs value.Values
 	namespace      string
@@ -289,6 +292,10 @@ func (this *BaseRequest) Prepared() *plan.Prepared {
 	return this.prepared
 }
 
+func (this *BaseRequest) Type() string {
+	return this.reqType
+}
+
 func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
 }
@@ -363,6 +370,12 @@ func (this *BaseRequest) SetPrepared(prepared *plan.Prepared) {
 	this.Lock()
 	defer this.Unlock()
 	this.prepared = prepared
+}
+
+func (this *BaseRequest) SetType(reqType string) {
+	this.Lock()
+	defer this.Unlock()
+	this.reqType = reqType
 }
 
 func (this *BaseRequest) SetState(state State) {

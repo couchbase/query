@@ -55,6 +55,11 @@ type Statement interface {
 		Returns all required privileges.
 	*/
 	Privileges() (*auth.Privileges, errors.Error)
+
+	/*
+		Returns the statement type, for accounting and other purposes
+	*/
+	Type() string
 }
 
 /*
