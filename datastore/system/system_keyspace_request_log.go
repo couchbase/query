@@ -320,13 +320,20 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 		if spanEvaluator.isEquals() {
 			if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
 				server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
-					indexEntry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
+					indexEntry := datastore.IndexEntry{
+						PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id),
+						EntryKey:   value.Values{value.NewValue(distributed.RemoteAccess().WhoAmI())},
+					}
 					conn.EntryChannel() <- &indexEntry
 				})
 			} else {
 				nodes := []string{spanEvaluator.key()}
-				distributed.RemoteAccess().GetRemoteKeys(nodes, "completedctive_requests", func(id string) {
-					indexEntry := datastore.IndexEntry{PrimaryKey: id}
+				distributed.RemoteAccess().GetRemoteKeys(nodes, "completed_requests", func(id string) {
+					n, _ := distributed.RemoteAccess().SplitKey(id)
+					indexEntry := datastore.IndexEntry{
+						PrimaryKey: id,
+						EntryKey:   value.Values{value.NewValue(n)},
+					}
 					conn.EntryChannel() <- &indexEntry
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
@@ -337,9 +344,12 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 			eligibleNodes := []string{}
 			for _, node := range nodes {
 				if spanEvaluator.evaluate(node) {
-					if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
+					if node == distributed.RemoteAccess().WhoAmI() {
 						server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
-							indexEntry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
+							indexEntry := datastore.IndexEntry{
+								PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id),
+								EntryKey:   value.Values{value.NewValue(distributed.RemoteAccess().WhoAmI())},
+							}
 							conn.EntryChannel() <- &indexEntry
 						})
 					} else {
@@ -349,7 +359,11 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 			}
 			if len(eligibleNodes) > 0 {
 				distributed.RemoteAccess().GetRemoteKeys(eligibleNodes, "completed_requests", func(id string) {
-					indexEntry := datastore.IndexEntry{PrimaryKey: id}
+					n, _ := distributed.RemoteAccess().SplitKey(id)
+					indexEntry := datastore.IndexEntry{
+						PrimaryKey: id,
+						EntryKey:   value.Values{value.NewValue(n)},
+					}
 					conn.EntryChannel() <- &indexEntry
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
