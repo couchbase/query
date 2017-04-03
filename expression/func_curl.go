@@ -13,6 +13,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	curl "github.com/andelf/go-curl"
@@ -555,6 +558,44 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 			userAgent := value.NewValue(val).Actual().(string)
 			this.curlUserAgent(userAgent)
 
+		case "cacert":
+			/*
+				Cert is stored PEM coded in file.
+				curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
+				curl_easy_setopt(hnd, CURLOPT_CAINFO, "ca.pem");
+			*/
+			// All the certificates are stored withing the ..var/lib/couchbase/n1qlcerts
+			// Find the os
+			subdir := filepath.FromSlash("/../var/lib/couchbase/n1qlcerts/")
+
+			certDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+			if err != nil {
+				return nil, fmt.Errorf(" n1qlcerts directory does not exist under .../var/lib/couchbase/  ")
+			}
+
+			// nsserver uses the inbox folder within var/lib/couchbase to read certificates from.
+			certDir = certDir + subdir
+			// dir. Paths are not allowed.
+			if value.NewValue(val).Type() != value.STRING {
+				return nil, fmt.Errorf(" Incorrect type for cacert option in CURL. It should be a string. ")
+			}
+			certName := value.NewValue(val).Actual().(string)
+
+			// Make sure this file is not a path.
+			// use path.Split and check 1st and 2nd args
+
+			dir, file := path.Split(certName)
+			if dir != "" || file == "" {
+				return nil, fmt.Errorf(" Cacert should only contain the certificate name. Paths are invalid. ")
+			}
+
+			// Also make sure the extension is .pem
+			if path.Ext(file) != ".pem" {
+				return nil, fmt.Errorf(" Cacert should only contain the certificate name that refers to a valid pem file. ")
+			}
+
+			this.curlCacert(certDir + file)
+
 		default:
 			return nil, fmt.Errorf(" CURL option %v is not supported.", k)
 
@@ -743,6 +784,17 @@ func (this *Curl) curlKeepAlive(val int64) {
 	myCurl.Setopt(curl.OPT_TCP_KEEPALIVE, 1)
 	myCurl.Setopt(curl.OPT_TCP_KEEPIDLE, val)
 	myCurl.Setopt(curl.OPT_TCP_KEEPINTVL, val)
+}
+
+func (this *Curl) curlCacert(fileName string) {
+	/*
+		Cert is stored PEM coded in file.
+		curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
+		curl_easy_setopt(hnd, CURLOPT_CAINFO, "ca.pem");
+	*/
+	myCurl := this.myCurl
+	myCurl.Setopt(curl.OPT_SSLCERTTYPE, "PEM")
+	myCurl.Setopt(curl.OPT_CAINFO, fileName)
 }
 
 /* Other auth values
