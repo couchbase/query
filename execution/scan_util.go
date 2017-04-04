@@ -60,21 +60,11 @@ func notifyConn(stopchannel datastore.StopChannel) {
 }
 
 func getLimit(limit expression.Expression, covering bool, context *Context) int64 {
-	rv := int64(-1)
-	if limit != nil {
-		if context.ScanConsistency() == datastore.UNBOUNDED || covering {
-			lv, err := limit.Evaluate(nil, context)
-			if err == nil && lv.Type() == value.NUMBER {
-				rv = lv.(value.NumberValue).Int64()
-			}
-		}
-	}
-
-	return rv
+	return evalLimitOffset(limit, nil, int64(-1), covering, context)
 }
 
 func evalLimitOffset(expr expression.Expression, parent value.Value, defval int64, covering bool, context *Context) (val int64) {
-	if expr != nil && (context.ScanConsistency() == datastore.UNBOUNDED || covering) {
+	if expr != nil {
 		val, e := expr.Evaluate(parent, context)
 		if e == nil && val.Type() == value.NUMBER {
 			return val.(value.NumberValue).Int64()
