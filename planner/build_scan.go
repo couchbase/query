@@ -158,7 +158,14 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
 	// Prefer OR scan
-	if or, ok := pred.(*expression.Or); ok {
+	dnfPred := pred.Copy()
+	dnf := NewDNF(dnfPred, true)
+	dnfPred, err = dnf.Map(dnfPred)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if or, ok := dnfPred.(*expression.Or); ok {
 		scan, _, err := this.buildOrScan(node, id, or, limit, indexes, primaryKey, formalizer)
 		if scan != nil || err != nil {
 			return scan, nil, err
