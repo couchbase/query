@@ -29,7 +29,7 @@ func CoversFor(pred, origPred expression.Expression, keys expression.Expressions
 
 	if origPred != nil {
 		rv, err = origPred.Accept(cov)
-		if err != nil {
+		if rv == nil || err != nil {
 			return nil, err
 		}
 
