@@ -73,6 +73,33 @@ type testCase struct {
 	shouldSucceed bool
 }
 
+func TestGrantRole(t *testing.T) {
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_SECURITY_WRITE)
+
+	as := &authSourceImpl{
+		users: []authUser{
+			authUser{id: "bob", password: "pwbob",
+				permissions: map[string]bool{
+					"cluster.admin!write":                            true,
+					"cluster.bucket[testbucket].n1ql.select!execute": true,
+				},
+			},
+			authUser{id: "nancy", password: "pwnancy",
+				permissions: map[string]bool{
+					"cluster.bucket[testbucket].data.docs!read": true,
+				},
+			},
+		},
+	}
+
+	cases := []testCase{
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: auth.Credentials{"nancy": "pwnancy"}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: auth.Credentials{"bob": "pwbob"}, shouldSucceed: true},
+	}
+	runCases(t, cases)
+}
+
 func TestSimpleSelect(t *testing.T) {
 	privs := auth.NewPrivileges()
 	privs.Add("testbucket", auth.PRIV_READ)

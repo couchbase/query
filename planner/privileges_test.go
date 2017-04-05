@@ -86,6 +86,11 @@ func TestStatementPrivileges(t *testing.T) {
 				auth.PrivilegePair{Target: ":default", Priv: auth.PRIV_WRITE},
 				auth.PrivilegePair{Target: ":default", Priv: auth.PRIV_QUERY_UPDATE},
 			}}},
+		testCase{id: "Grant Role",
+			text: "grant role data_reader(foo) to don",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "", Priv: auth.PRIV_SECURITY_WRITE},
+			}}},
 	}
 
 	for _, testCase := range testCases {

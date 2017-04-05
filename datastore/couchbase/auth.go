@@ -30,9 +30,9 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) 
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
-		permission = "cluster.security!read"
+		permission = "cluster.admin!read"
 	case auth.PRIV_SECURITY_WRITE:
-		permission = "cluster.security!write"
+		permission = "cluster.admin!write"
 	case auth.PRIV_QUERY_SELECT:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
 	case auth.PRIV_QUERY_UPDATE:
