@@ -52,7 +52,7 @@ func privilegeString(bucket string, requested auth.Privilege) (string, error) {
 	case auth.PRIV_QUERY_LIST_INDEX:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!list", bucket)
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
-		permission = "cluster.admin.security.external_access!execute"
+		permission = "cluster.n1ql.curl!execute"
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}
