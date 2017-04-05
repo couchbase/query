@@ -177,10 +177,19 @@ func HandleInteractiveMode(prompt string) {
 	handleIPModeFlag(&liner)
 
 	// End handling the options
+
+	isTrunc := false
 	for {
 		line, err := liner.Prompt(fullPrompt)
 		if err != nil {
 			break
+		}
+
+		// Save previous length.
+		lineLen := len(line)
+
+		if lineLen == 4096 && !isTrunc {
+			isTrunc = true
 		}
 
 		line = strings.TrimSpace(line)
@@ -220,8 +229,14 @@ func HandleInteractiveMode(prompt string) {
 		/* If the current line ends with a QRY_EOL, join all query lines,
 		   trim off trailing QRY_EOL characters, and submit the query string.
 		*/
+		space := " "
+		if isTrunc && lineLen < 4096 {
+			space = ""
+			isTrunc = false
+		}
+
 		if strings.HasSuffix(line, QRY_EOL) {
-			inputString := strings.Join(inputLine, " ")
+			inputString := strings.Join(inputLine, space)
 			for strings.HasSuffix(inputString, QRY_EOL) {
 				inputString = strings.TrimSuffix(inputString, QRY_EOL)
 			}
