@@ -13,8 +13,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +22,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -105,7 +104,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 			Certificates: []tls.Certificate{tlsCert},
 			ClientAuth:   tls.NoClientCert,
 			MinVersion:   minTlsVersion,
-			CipherSuites: cipherSuites(),
+			CipherSuites: util.CipherSuites(),
 		}
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
@@ -295,50 +294,4 @@ func (this *httpOptions) Controls() bool {
 
 func (this *httpOptions) Profile() server.Profile {
 	return this.server.Profile()
-}
-
-func cipherSuites() []uint16 {
-	ciphers := [][]uint16{
-		{},
-		{tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
-		{tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
-		{tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256}}
-
-	var index int
-	// COUCHBASE_SSL_CIPHER_LIST= MEDIUM, HIGH
-	// DEFAULT or Invalid variable : HIGH
-	ciperEnv := os.Getenv("COUCHBASE_SSL_CIPHER_LIST")
-	envVals := strings.Split(ciperEnv, ",")
-
-	for _, val := range envVals {
-		val = strings.TrimSpace(val)
-		if strings.EqualFold(val, "HIGH") {
-			index |= int(0x1)
-		} else if strings.EqualFold(val, "MEDIUM") {
-			index |= int(0x2)
-		} else {
-			index = 0x1
-			break
-		}
-	}
-
-	if index == 0 {
-		index = 0x1
-	}
-
-	return ciphers[index]
 }

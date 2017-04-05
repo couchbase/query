@@ -11,6 +11,7 @@ package expression
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -651,6 +652,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 
 	// Set the header, so that the entire []string are passed in.
 	this.curlHeader(header)
+	this.curlCiphers()
 
 	var b bytes.Buffer
 
@@ -795,6 +797,46 @@ func (this *Curl) curlCacert(fileName string) {
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_SSLCERTTYPE, "PEM")
 	myCurl.Setopt(curl.OPT_CAINFO, fileName)
+}
+
+func (this *Curl) curlCiphers() {
+
+	// For the mapping for nss http://unix.stackexchange.com/questions/208437/how-to-convert-ssl-ciphers-to-curl-format
+	// For the mapping for openssl (default) - https://wiki.openssl.org/index.php/Manual:Ciphers(1)
+	// Each cipher is encoded as a string in curl.
+	// The following map gives the mapping from the standard id to the curl specific string representing
+	// that cipher.
+	ciphersMapping := map[uint16]string{
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA:            "AES128-SHA",
+		tls.TLS_RSA_WITH_AES_256_CBC_SHA:            "AES256-SHA",
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:    "ECDHE-ECDSA-AES256-SHA",
+		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:      "ECDHE-RSA-AES256-SHA",
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:   "ECDHE-RSA-AES128-GCM-SHA256",
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256: "ECDHE-ECDSA-AES128-GCM-SHA256",
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:    "ECDHE-ECDSA-AES128-SHA",
+		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:      "ECDHE-RSA-AES128-SHA",
+	}
+
+	// Get the Ciphers supported by couchbase based on the level set
+	cbCiphers := util.CipherSuites()
+
+	// Create a comma separated list of the ciphers that need to be used.
+	finalCipherList := ""
+	for _, cipherId := range cbCiphers {
+		if finalCipherList == "" {
+			finalCipherList = ciphersMapping[cipherId]
+		} else {
+			finalCipherList = finalCipherList + "," + ciphersMapping[cipherId]
+		}
+	}
+
+	/*
+		Libcurl code to set the ssl ciphers to be used during connection.
+		curl_easy_setopt(hnd, CURLOPT_SSL_CIPHER_LIST, "rsa_aes_128_sha,rsa_aes_256_sha");
+	*/
+
+	myCurl := this.myCurl
+	myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, finalCipherList)
 }
 
 /* Other auth values
