@@ -20,7 +20,7 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) (bool, error) {
+func privilegeString(bucket string, requested auth.Privilege) (string, error) {
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
@@ -54,9 +54,16 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) 
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
 		permission = "cluster.admin.security.external_access!execute"
 	default:
-		return false, fmt.Errorf("Invalid Privileges")
+		return "", fmt.Errorf("Invalid Privileges")
 	}
+	return permission, nil
+}
 
+func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) (bool, error) {
+	permission, err := privilegeString(bucket, requested)
+	if err != nil {
+		return false, err
+	}
 	authResult, err := creds.IsAllowed(permission)
 	if err != nil || authResult == false {
 		return false, err
@@ -72,17 +79,22 @@ type authSource interface {
 	authWebCreds(req *http.Request) (cbauth.Creds, error)
 }
 
+func keyspaceFromPrivPair(pair auth.PrivilegePair) string {
+	keyspace := pair.Target
+	if strings.Contains(keyspace, ":") {
+		q := strings.Split(keyspace, ":")
+		keyspace = q[1]
+	}
+	return keyspace
+}
+
 // Try to get privsSought privileges from the availableCredentials credentials.
 // Return the privileges that were not granted.
 func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
 	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
 	for _, pair := range privsSought {
-		keyspace := pair.Target
+		keyspace := keyspaceFromPrivPair(pair)
 		privilege := pair.Priv
-		if strings.Contains(keyspace, ":") {
-			q := strings.Split(keyspace, ":")
-			keyspace = q[1]
-		}
 
 		thisPrivGranted := false
 
@@ -198,7 +210,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 	remainingPrivileges, err := authAgainstCreds(s, privileges.List, credentialsList)
 
 	if err != nil {
-		return nil, errors.NewDatastoreAuthorizationError(err, "")
+		return nil, errors.NewDatastoreAuthorizationError(err)
 	}
 
 	if len(remainingPrivileges) == 0 {
@@ -212,7 +224,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 	deniedPrivileges, err := authAgainstCreds(s, remainingPrivileges, defaultCredentials)
 
 	if err != nil {
-		return nil, errors.NewDatastoreAuthorizationError(err, "")
+		return nil, errors.NewDatastoreAuthorizationError(err)
 	}
 
 	if len(deniedPrivileges) == 0 {
@@ -220,10 +232,45 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 		return authenticatedUsers, nil
 	}
 
-	deniedKeyspace := deniedPrivileges[0].Target
-	msg := ""
-	if deniedKeyspace != "" {
-		msg = fmt.Sprintf(" Keyspace %s.", deniedKeyspace)
+	msg := messageForDeniedPrivilege(deniedPrivileges[0])
+	return nil, errors.NewDatastoreInsufficientCredentials(msg)
+}
+
+func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
+	keyspace := keyspaceFromPrivPair(pair)
+	privilege, err := privilegeString(keyspace, pair.Priv)
+	if err != nil {
+		return fmt.Sprintf("User does not have credentials to access unknown privilege %+v.", pair)
 	}
-	return nil, errors.NewDatastoreAuthorizationError(nil, msg)
+
+	role := ""
+	switch pair.Priv {
+	case auth.PRIV_READ:
+		role = fmt.Sprintf("Data Reader[%s]", keyspace)
+	case auth.PRIV_WRITE:
+		role = fmt.Sprintf("Data Reader Writer [%s]", keyspace)
+	case auth.PRIV_SYSTEM_READ:
+		role = "Query System Catalog"
+	case auth.PRIV_SECURITY_READ:
+		role = "Admin or Read Only Admin"
+	case auth.PRIV_SECURITY_WRITE:
+		role = "Admin"
+	case auth.PRIV_QUERY_SELECT:
+		role = fmt.Sprintf("Query Select [%s]", keyspace)
+	case auth.PRIV_QUERY_UPDATE:
+		role = fmt.Sprintf("Query Update [%s]", keyspace)
+	case auth.PRIV_QUERY_INSERT:
+		role = fmt.Sprintf("Query Insert [%s]", keyspace)
+	case auth.PRIV_QUERY_DELETE:
+		role = fmt.Sprintf("Query Delete [%s]", keyspace)
+	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
+		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:
+		role = fmt.Sprintf("Query Manage Index [%s]", keyspace)
+	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
+		role = "Query External Access"
+	default:
+		role = "Admin"
+	}
+
+	return fmt.Sprintf("User does not have credentials to access privilege %s. Add role %s to allow the query to run.", privilege, role)
 }

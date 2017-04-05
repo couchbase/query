@@ -14,9 +14,9 @@ import ()
 // Couchbase authorization error
 const DS_AUTH_ERROR = 10000
 
-func NewDatastoreAuthorizationError(e error, msg string) Error {
+func NewDatastoreAuthorizationError(e error) Error {
 	return &err{level: EXCEPTION, ICode: DS_AUTH_ERROR, IKey: "datastore.couchbase.authorization_error", ICause: e,
-		InternalMsg: "User does not belong to a specified role." + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Unable to authorize user.", InternalCaller: CallerN(1)}
 }
 
 // Datastore/couchbase error codes
@@ -188,4 +188,9 @@ func NewDatastoreClusterError(e error, msg string) Error {
 func NewDatastoreUnableToRetrieveRoles(e error) Error {
 	return &err{level: EXCEPTION, ICode: 13013, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
 		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
+}
+
+func NewDatastoreInsufficientCredentials(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13014, IKey: "datastore.couchbase.insufficient_credentiasl",
+		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
