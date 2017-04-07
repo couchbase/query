@@ -300,7 +300,7 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
 func canRead(context datastore.QueryContext, namespace string, keyspace string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(namespace+":"+keyspace, auth.PRIV_READ)
+	privs.Add(namespace+":"+keyspace, auth.PRIV_QUERY_SELECT)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res

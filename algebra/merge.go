@@ -140,13 +140,20 @@ Returns all required privileges.
 */
 func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
-	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), auth.PRIV_WRITE)
+	fullKeyspace := this.keyspace.FullName()
+	if this.returning != nil {
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+	}
 
 	sp, err := this.source.Privileges()
 	if err != nil {
 		return nil, err
 	}
 	privs.AddAll(sp)
+
+	if this.actions != nil {
+		this.actions.AddPrivilegesFor(privs, fullKeyspace)
+	}
 
 	exprs := this.Expressions()
 	subprivs, err := subqueryPrivileges(exprs)
@@ -485,6 +492,25 @@ func (this *MergeActions) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Determine the privileges requires for the merge actions,
+and add them to 'privs' (which will not be nil).
+The keyspace being acted on is passed down as 'keyspace'.
+*/
+func (this *MergeActions) AddPrivilegesFor(privs *auth.Privileges, keyspace string) {
+	if this.update != nil {
+		privs.Add(keyspace, auth.PRIV_QUERY_UPDATE)
+	}
+
+	if this.delete != nil {
+		privs.Add(keyspace, auth.PRIV_QUERY_DELETE)
+	}
+
+	if this.insert != nil {
+		privs.Add(keyspace, auth.PRIV_QUERY_INSERT)
+	}
 }
 
 /*

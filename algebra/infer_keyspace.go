@@ -68,16 +68,6 @@ func (this *InferKeyspace) Privileges() (*auth.Privileges, errors.Error) {
 		return privs, err
 	}
 
-	// The user must have SELECT permission for every bucket that is read
-	// from in an INFER statement.
-	selectPrivs := auth.NewPrivileges()
-	for _, pair := range privs.List {
-		if pair.Priv == auth.PRIV_READ {
-			selectPrivs.Add(pair.Target, auth.PRIV_QUERY_SELECT)
-		}
-	}
-	privs.AddAll(selectPrivs)
-
 	return privs, nil
 }
 

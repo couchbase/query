@@ -160,8 +160,10 @@ Returns all required privileges.
 func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, auth.PRIV_WRITE)
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE)
+	if this.returning != nil {
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+	}
 
 	exprs := this.Expressions()
 	subprivs, err := subqueryPrivileges(exprs)

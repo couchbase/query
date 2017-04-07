@@ -163,16 +163,6 @@ func (this *Select) Privileges() (*auth.Privileges, errors.Error) {
 		privs.AddAll(expr.Privileges())
 	}
 
-	// The user must have SELECT permission for every bucket that is read
-	// from in a SELECT statement.
-	selectPrivs := auth.NewPrivileges()
-	for _, pair := range privs.List {
-		if pair.Priv == auth.PRIV_READ {
-			selectPrivs.Add(pair.Target, auth.PRIV_QUERY_SELECT)
-		}
-	}
-	privs.AddAll(selectPrivs)
-
 	return privs, nil
 }
 

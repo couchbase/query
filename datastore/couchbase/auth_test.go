@@ -102,14 +102,12 @@ func TestGrantRole(t *testing.T) {
 
 func TestSimpleSelect(t *testing.T) {
 	privs := auth.NewPrivileges()
-	privs.Add("testbucket", auth.PRIV_READ)
 	privs.Add("testbucket", auth.PRIV_QUERY_SELECT)
 
 	as := &authSourceImpl{
 		users: []authUser{
 			authUser{id: "bob", password: "pwbob",
 				permissions: map[string]bool{
-					"cluster.bucket[testbucket].data.docs!read":      true,
 					"cluster.bucket[testbucket].n1ql.select!execute": true,
 				},
 			},
@@ -147,7 +145,6 @@ func runCases(t *testing.T, cases []testCase) {
 
 func TestDefaultCredentials(t *testing.T) {
 	privs := auth.NewPrivileges()
-	privs.Add("testbucket", auth.PRIV_READ)
 	privs.Add("testbucket", auth.PRIV_QUERY_SELECT)
 
 	asNoDefault := &authSourceImpl{

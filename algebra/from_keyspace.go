@@ -104,7 +104,7 @@ func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, error
 			privs.Add(fullKeyspace, auth.PRIV_SYSTEM_READ)
 		}
 	} else {
-		privs.Add(fullKeyspace, auth.PRIV_READ)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
 	}
 	return privs, nil
 }

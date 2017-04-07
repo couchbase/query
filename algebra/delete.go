@@ -145,8 +145,10 @@ Returns all required privileges.
 func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, auth.PRIV_WRITE)
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE)
+	if this.returning != nil {
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+	}
 
 	exprs := this.Expressions()
 	for _, expr := range exprs {

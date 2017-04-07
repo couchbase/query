@@ -180,19 +180,17 @@ Returns all required privileges.
 func (this *Insert) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, auth.PRIV_WRITE)
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT)
+	if this.returning != nil {
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+	}
 
 	if this.query != nil {
 		qp, err := this.query.Privileges()
 		if err != nil {
 			return nil, err
 		}
-		qp.ForEach(func(pair auth.PrivilegePair) {
-			if !auth.IsStatementTypePrivilege(pair.Priv) {
-				privs.AddPair(pair)
-			}
-		})
+		privs.AddAll(qp)
 	}
 
 	exprs := this.Expressions()
