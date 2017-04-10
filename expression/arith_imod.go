@@ -49,7 +49,7 @@ func (this *IMod) Apply(context Context, first, second value.Value) (value.Value
 	}
 
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
-		return first.(value.NumberValue).IMod(second.(value.NumberValue)), nil
+		return value.AsNumberValue(first).IMod(value.AsNumberValue(second)), nil
 	} else {
 		return value.NULL_VALUE, nil
 	}

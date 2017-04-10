@@ -54,7 +54,7 @@ func (this *Add) Apply(context Context, args ...value.Value) (value.Value, error
 
 	for _, arg := range args {
 		if !null && arg.Type() == value.NUMBER {
-			sum = sum.Add(arg.(value.NumberValue))
+			sum = sum.Add(value.AsNumberValue(arg))
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else {

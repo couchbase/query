@@ -50,7 +50,7 @@ null.
 */
 func (this *Neg) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.NUMBER {
-		return arg.(value.NumberValue).Neg(), nil
+		return value.AsNumberValue(arg).Neg(), nil
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else {

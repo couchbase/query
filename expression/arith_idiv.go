@@ -49,7 +49,7 @@ func (this *IDiv) Apply(context Context, first, second value.Value) (value.Value
 	}
 
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
-		return first.(value.NumberValue).IDiv(second.(value.NumberValue)), nil
+		return value.AsNumberValue(first).IDiv(value.AsNumberValue(second)), nil
 	} else {
 		return value.NULL_VALUE, nil
 	}

@@ -9,6 +9,10 @@
 
 package value
 
+import (
+	"fmt"
+)
+
 type NumberValue interface {
 	Value
 
@@ -19,4 +23,15 @@ type NumberValue interface {
 	Neg() NumberValue
 	Sub(n NumberValue) NumberValue
 	Int64() int64
+}
+
+func AsNumberValue(v Value) NumberValue {
+	switch v := v.(type) {
+	case NumberValue:
+		return v
+	case AnnotatedValue:
+		return AsNumberValue(v.GetValue())
+	default:
+		panic(fmt.Sprintf("Invalid NumberValue %v", v))
+	}
 }

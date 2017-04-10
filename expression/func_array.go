@@ -150,9 +150,8 @@ func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, erro
 	aa := arg.Actual().([]interface{})
 	for _, a := range aa {
 		v := value.NewValue(a)
-		switch v := v.(type) {
-		case value.NumberValue:
-			sum = sum.Add(v)
+		if v.Type() == value.NUMBER {
+			sum = sum.Add(value.AsNumberValue(v))
 			count++
 		}
 	}
@@ -1920,9 +1919,8 @@ func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, erro
 	aa := arg.Actual().([]interface{})
 	for _, a := range aa {
 		v := value.NewValue(a)
-		switch v := v.(type) {
-		case value.NumberValue:
-			sum = sum.Add(v)
+		if v.Type() == value.NUMBER {
+			sum = sum.Add(value.AsNumberValue(v))
 		}
 	}
 

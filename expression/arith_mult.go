@@ -54,7 +54,7 @@ func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, erro
 
 	for _, arg := range args {
 		if !null && arg.Type() == value.NUMBER {
-			prod = prod.Mult(arg.(value.NumberValue))
+			prod = prod.Mult(value.AsNumberValue(arg))
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else {

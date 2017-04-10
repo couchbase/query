@@ -52,7 +52,7 @@ a null value.
 */
 func (this *Sub) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
-		return first.(value.NumberValue).Sub(second.(value.NumberValue)), nil
+		return value.AsNumberValue(first).Sub(value.AsNumberValue(second)), nil
 	} else if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else {
