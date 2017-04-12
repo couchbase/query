@@ -60,6 +60,11 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 	}
 
+	if limit != nil && len(indexes) > 1 {
+		limit = nil
+		this.limit = nil
+	}
+
 	// Ordering scan, if any, will go into scans[0]
 	var scanBuf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan
