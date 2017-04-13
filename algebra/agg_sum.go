@@ -122,11 +122,11 @@ func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (va
 		return part, nil
 	}
 
-	switch part := part.(type) {
-	case value.NumberValue:
-		switch cumulative := cumulative.(type) {
-		case value.NumberValue:
-			return cumulative.Add(part), nil
+	switch {
+	case part.Type() == value.NUMBER:
+		switch {
+		case cumulative.Type() == value.NUMBER:
+			return value.AsNumberValue(cumulative).Add(value.AsNumberValue(part)), nil
 		default:
 			return nil, fmt.Errorf("Invalid SUM %v of type %T.", cumulative.Actual(), cumulative.Actual())
 		}

@@ -151,7 +151,7 @@ func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (va
 			psum.Actual(), pcount.Actual(), csum.Actual(), ccount.Actual())
 	}
 
-	cumulative.SetField("sum", csum.(value.NumberValue).Add(psum.(value.NumberValue)))
-	cumulative.SetField("count", ccount.(value.NumberValue).Add(pcount.(value.NumberValue)))
+	cumulative.SetField("sum", value.AsNumberValue(csum).Add(value.AsNumberValue(psum)))
+	cumulative.SetField("count", value.AsNumberValue(ccount).Add(value.AsNumberValue(pcount)))
 	return cumulative, nil
 }
