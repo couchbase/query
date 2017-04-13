@@ -133,6 +133,8 @@ func main() {
 		)
 	}
 
+	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR)
+
 	// ditto for distributed access for monitoring
 	prof, ctrl, err := monitoringInit(configstore)
 	if err != nil {

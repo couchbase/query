@@ -54,6 +54,10 @@ func (z *zkConfigStore) URL() string {
 	return "zookeeper:" + z.url
 }
 
+func (z *zkConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
+	return nil
+}
+
 func (z *zkConfigStore) ClusterNames() ([]string, errors.Error) {
 	clusterIds := []string{}
 	nodes, _, err := z.conn.Children("/")
@@ -147,6 +151,10 @@ func (z *zkConfigStore) Authorize(map[string]string, []clustering.Privilege) err
 
 func (z *zkConfigStore) WhoAmI() (string, errors.Error) {
 	return "", nil
+}
+
+func (z *zkConfigStore) State() (clustering.Mode, errors.Error) {
+	return clustering.STARTING, nil
 }
 
 // zkCluster implements clustering.Cluster

@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -29,7 +28,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server/http"
-	"github.com/couchbase/query/util"
 )
 
 const _PREFIX = "couchbase:"
@@ -44,11 +42,14 @@ const _PREFIX = "couchbase:"
 // cbConfigStore implements clustering.ConfigurationStore
 type cbConfigStore struct {
 	sync.RWMutex
-	adminUrl   string
-	noNICCheck bool
-	iface      *util.NetworkInterface
-	whoAmI     string
-	cbConn     *couchbase.Client
+	adminUrl     string
+	ourPorts     map[string]int
+	noMoreChecks bool
+	poolName     string
+	poolSrvRev   int
+	whoAmI       string
+	state        clustering.Mode
+	cbConn       *couchbase.Client
 }
 
 // create a cbConfigStore given the path to a couchbase instance
@@ -61,9 +62,11 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 		return nil, errors.NewAdminConnectionError(err, path)
 	}
 	return &cbConfigStore{
-		adminUrl:   path,
-		noNICCheck: false,
-		cbConn:     &c,
+		adminUrl:     path,
+		ourPorts:     map[string]int{},
+		noMoreChecks: false,
+		poolSrvRev:   -999,
+		cbConn:       &c,
 	}, nil
 }
 
@@ -79,6 +82,36 @@ func (this *cbConfigStore) Id() string {
 
 func (this *cbConfigStore) URL() string {
 	return this.adminUrl
+}
+
+func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
+	if httpAddr != "" {
+		port := hostPort(httpAddr)
+		if port != "" {
+			portNum, err := strconv.Atoi(port)
+			if err == nil && portNum > 0 {
+				this.ourPorts[_HTTP] = portNum
+			} else {
+				return errors.NewAdminBadServicePort(port)
+			}
+		} else {
+			return errors.NewAdminBadServicePort("<no port>")
+		}
+	}
+	if httpsAddr != "" {
+		port := hostPort(httpsAddr)
+		if port != "" {
+			portNum, err := strconv.Atoi(port)
+			if err == nil && portNum > 0 {
+				this.ourPorts[_HTTPS] = portNum
+			} else {
+				return errors.NewAdminBadServicePort(port)
+			}
+		} else {
+			return errors.NewAdminBadServicePort("<no port>")
+		}
+	}
+	return nil
 }
 
 func (this *cbConfigStore) ClusterNames() ([]string, errors.Error) {
@@ -202,128 +235,216 @@ func (this *cbConfigStore) Authorize(credentials map[string]string, privileges [
 const n1qlService = "n1ql"
 
 func (this *cbConfigStore) WhoAmI() (string, errors.Error) {
-
-	// if things haven't changed, go for it
-	this.RLock()
-	if this.noNICCheck || (this.iface != nil && this.iface.Up()) {
-		defer this.RUnlock()
-		return this.whoAmI, nil
+	name, state, err := this.doNameState()
+	if err != nil {
+		return "", err
 	}
+	if state != clustering.STANDALONE {
+		return name, nil
+	}
+	return "", nil
+}
 
-	// if not, we have to work out thinsg from first principles
-	// we need to promote the lock: this could all be wasted
-	// effort (somebody may have already done this as we were
-	// waiting), but we don't care
-	this.RUnlock()
-	this.Lock()
-	defer this.Unlock()
+func (this *cbConfigStore) State() (clustering.Mode, errors.Error) {
+	_, state, err := this.doNameState()
+	if err != nil {
+		return "", err
+	}
+	return state, nil
+}
+
+func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error) {
+
+	// once things get to a certain state, no changes are possible
+	// hence we can skip the tests and we don't even require a lock
+	if this.noMoreChecks {
+		return this.whoAmI, this.state, nil
+	}
 
 	// this will exhaust all possibilities in the hope of
 	// finding a good name and only return an error
 	// if we could not find a name at all
 	var err errors.Error
 
-	ifaces, _ := util.ExternalNICs()
-	localName, _ := os.Hostname()
+	this.RLock()
+
+	// have we been here before?
+	if this.poolName != "" {
+		pool, poolServices, newErr := this.getPoolServices(this.poolName)
+		if err != nil {
+			err = errors.NewAdminConnectionError(newErr, this.poolName)
+		} else {
+
+			// If pool services rev matches the cluster's rev, nothing has changed
+			if poolServices.Rev == this.poolSrvRev {
+				defer this.RUnlock()
+				return this.whoAmI, this.state, nil
+			}
+
+			// check that things are still valid
+			whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
+			if newErr == nil && state != "" {
+
+				// promote the lock for the update
+				// (this may be wasteful, but we have no other choice)
+				this.RUnlock()
+				this.Lock()
+				defer this.Unlock()
+
+				// we got here first, update
+				if poolServices.Rev > this.poolSrvRev {
+					this.whoAmI = whoAmI
+					this.state = state
+
+					// no more changes will happen if we are clustered and have a FQDN
+					// (name will not fall back to 127.0.0.1), or we are standalone
+					this.noMoreChecks = (state == clustering.STANDALONE ||
+						(state == clustering.CLUSTERED && hostName(whoAmI) != "127.0.0.1"))
+
+				}
+				return this.whoAmI, this.state, nil
+			}
+		}
+	}
+
+	// Either things went badly wrong, or we are here for the first time
+	// We have to work out things from first principles, which requires
+	// promoting the lock
+	// Somebody might have done the work while we were waiting, if so
+	// we will take advantage of that
+	this.RUnlock()
+	this.Lock()
+	defer this.Unlock()
+
+	if this.noMoreChecks {
+		return this.whoAmI, this.state, nil
+	}
+
+	if this.poolName != "" {
+		pool, poolServices, newErr := this.getPoolServices(this.poolName)
+
+		if poolServices.Rev == this.poolSrvRev {
+			return this.whoAmI, this.state, nil
+		}
+
+		whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
+		if newErr == nil && state != "" {
+			this.whoAmI = whoAmI
+			this.state = state
+			this.noMoreChecks = (state == clustering.STANDALONE ||
+				(state == clustering.CLUSTERED && hostName(whoAmI) != "127.0.0.1"))
+			return this.whoAmI, this.state, nil
+		} else if err == nil {
+			err = newErr
+		}
+	}
+
+	// nope - start from scratch
+	this.whoAmI = ""
+	this.state = ""
+	this.poolName = ""
+	this.noMoreChecks = false
+
+	// same process, but scan all pools now
 	for _, p := range this.getPools() {
-		pool, newErr := this.cbConn.GetPool(p.Name)
+		pool, poolServices, newErr := this.getPoolServices(p.Name)
+		if err != nil && newErr != nil {
+			err = newErr
+		}
+		whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
 		if newErr != nil {
 			if err == nil {
-				err = errors.NewAdminGetClusterError(newErr, p.Name)
+				err = newErr
 			}
 			continue
 		}
 
-		for _, node := range pool.Nodes {
-			isN1ql := false
-			for _, s := range node.Services {
-				if s == n1qlService {
-					isN1ql = true
-					break
-				}
-			}
-			if !isN1ql {
-				continue
-			}
-			theName := nodeName(node)
-
-			// Is it the IP?
-			if len(ifaces) != 0 {
-				for _, iface := range ifaces {
-					localIP := iface.IP()
-					if localIP == theName {
-						this.whoAmI = theName
-						this.iface = iface
-						this.noNICCheck = false
-						return this.whoAmI, nil
-					}
-
-					// Is it the domain name?
-					domainNames, _ := net.LookupAddr(localIP)
-					for _, domainName := range domainNames {
-						if domainName == theName {
-							this.whoAmI = theName
-							this.noNICCheck = false
-							this.iface = iface
-							return this.whoAmI, nil
-						}
-					}
-				}
-			}
-
-			// Is it the hostname?
-			if localName == theName {
-				this.whoAmI = theName
-				this.noNICCheck = true
-				this.iface = nil
-				return this.whoAmI, nil
-			}
-
-			// No, it's localhost!
-			if node.ThisNode &&
-				(theName == "" || theName == "localhost" || theName == "127.0.0.1") {
-
-				// if we have an address, all good
-				if len(ifaces) != 0 {
-					for _, iface := range ifaces {
-						if iface.Up() {
-							this.whoAmI = iface.IP()
-							this.iface = iface
-							this.noNICCheck = false
-							return this.whoAmI, nil
-						}
-					}
-				}
-
-				// if we don't have an address, we lost all interfaces?!
-				// in that case - we get as close to localhost as we can
-				// this node may not be able to see other nodes in the
-				// cluster, but at least it will be able to identify itself
-				// properly (even though this is probably the least of its
-				// problems)
-				if theName != "" {
-					this.whoAmI = theName
-				} else {
-					this.whoAmI = "127.0.0.1"
-				}
-
-				// we shouldn't be in this state, so we won't cache anything
-				// this may very well have performance implications, but then
-				// the NICs are down: probably there's a lot that isn't working
-				this.iface = nil
-				this.noNICCheck = false
-				return this.whoAmI, nil
-			}
+		// not in this pool
+		if state == "" {
+			continue
 		}
+
+		this.poolName = p.Name
+		this.whoAmI = whoAmI
+		this.state = state
+		this.noMoreChecks = (state == clustering.STANDALONE ||
+			(state == clustering.CLUSTERED && hostName(whoAmI) != "127.0.0.1"))
+		return this.whoAmI, this.state, nil
 	}
 
 	// We haven't found ourselves in there.
 	// It could be we are not part of a cluster.
 	// It could be ns_server is not yet listing us
 	// Either way, we can't cache anything.
-	this.iface = nil
-	this.noNICCheck = false
-	return "", err
+	return "", clustering.STARTING, err
+}
+
+func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices *couchbase.PoolServices) (string, clustering.Mode, errors.Error) {
+	for _, node := range poolServices.NodesExt {
+
+		// the assumption is that a n1ql node is started by the local mgmt service
+		// so we only have to have a look at ThisNode
+		if !node.ThisNode {
+			continue
+		}
+
+		// In the node services endpoint, nodes will either have a fully-qualified
+		// domain name or the hostname will not be provided indicating that the
+		// hostname is 127.0.0.1
+		hostname := node.Hostname
+		if hostname == "" {
+			hostname = "127.0.0.1"
+		}
+
+		mgmtPort := node.Services["mgmt"]
+		if mgmtPort == 0 {
+
+			// shouldn't happen, there should always be a mgmt port on each node
+			// we should return an error
+			msg := fmt.Sprintf("NodeServices does not report mgmt endpoint for "+
+				"this node: %v", node)
+			return "", "", errors.NewAdminGetNodeError(nil, msg)
+		}
+
+		// now that we have identified the node, is n1ql actually running?
+		found := 0
+		for serv, proto := range n1qlProtocols {
+			port, ok := node.Services[serv]
+			ourPort, ook := this.ourPorts[proto]
+
+			// ports matching, good
+			// port not listed, skip
+			// we are not listening or ports mismatching, standalone
+			if ok {
+				if ook && port == ourPort {
+					found++
+				} else {
+					return "", clustering.STANDALONE, nil
+				}
+			}
+		}
+
+		// we found no n1ql service port - is n1ql provisioned in this node?
+		if found == 0 {
+			for _, node := range pool.Nodes {
+				for _, s := range node.Services {
+
+					// yes, but clearly, not yet advertised
+					// place ourselves in a holding pattern
+					if s == n1qlService {
+						return "", clustering.STARTING, nil
+					}
+				}
+			}
+		}
+
+		// We don't assume that there is precisely one query node per host.
+		// Query nodes are unique per mgmt endpoint, so we add the mgmt
+		// port to the whoami string to uniquely identify the query node.
+		whoAmI := hostname + ":" + strconv.Itoa(mgmtPort)
+		return whoAmI, clustering.CLUSTERED, nil
+	}
+	return "", "", nil
 }
 
 // Type services associates a protocol with a port number
@@ -404,15 +525,16 @@ func (this *cbCluster) Name() string {
 
 func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	queryNodeNames := []string{}
+
 	// Get a handle of the go-couchbase connection:
-	cbConn, ok := this.configStore.(*cbConfigStore)
+	configStore, ok := this.configStore.(*cbConfigStore)
 	if !ok {
 		return nil, errors.NewAdminConnectionError(nil, this.ConfigurationStoreId())
 	}
 
-	pool, poolServices, err := cbConn.getPoolServices(this.ClusterName)
+	poolServices, err := configStore.cbConn.GetPoolServices(this.ClusterName)
 	if err != nil {
-		return queryNodeNames, err
+		return queryNodeNames, errors.NewAdminConnectionError(err, this.ConfigurationStoreId())
 	}
 
 	// If pool services rev matches the cluster's rev, return cluster's query node names:
@@ -439,49 +561,52 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		}
 
 		hostname := nodeServices.Hostname
-		if nodeServices.ThisNode {
-			for _, node := range pool.Nodes {
-				if node.ThisNode {
-					hostname = nodeName(node)
-					break
-				}
-			}
-		}
-		// if nodes have non localhost ip address as the node name, all fine
-		// if named localhost, then things get a bit hairy.
-		// when queried from a remote machine, hosts named localhost will return
-		// an actual ip address.
-		// if the cluster has more than one node, you get an actual ip address
-		// even from the local node.
-		// single node and queried locally, they may return a blank name or localhost
-		// thing is, clustering code is hardwired to regard 127.0.0.1 as not part of
-		// a cluster, so we have to fix things by hand.
-		if hostname == "" || hostname == "localhost" || hostname == "127.0.0.1" {
-			localIp, _ := util.ExternalIP()
-			if localIp != "" {
-				hostname = localIp
-			} else {
 
-				// didn't work out, fix it for blank name
-				hostname = "127.0.0.1"
-			}
+		// nodeServices.Hostname is either a fully-qualified domain name or
+		// the empty string - which indicates 127.0.0.1
+		if hostname == "" {
+			hostname = "127.0.0.1"
 		}
 
-		queryNodeNames = append(queryNodeNames, hostname)
-		queryNodes[hostname] = queryServices
+		mgmtPort := nodeServices.Services["mgmt"]
+		if mgmtPort == 0 {
+
+			// shouldn't happen; all nodes should have a mgmt port
+			// should probably log a warning and this node gets ignored
+			// TODO: log warning (when signature has warnings)
+			continue
+		}
+
+		// Query nodes are unique per mgmt endpoint - which means they are unique
+		// per Couchbase Server node instance - so we give query nodes an ID
+		// which reflects that. Note that in particular query nodes are not
+		// guaranteed to be unique per host.
+		nodeId := hostname + ":" + strconv.Itoa(mgmtPort)
+
+		queryNodeNames = append(queryNodeNames, nodeId)
+		queryNodes[nodeId] = queryServices
 	}
 
 	this.Lock()
 	defer this.Unlock()
 	this.queryNodeNames = queryNodeNames
 	this.queryNodes = queryNodes
+
 	this.poolSrvRev = poolServices.Rev
 	return this.queryNodeNames, nil
 }
 
-func nodeName(node couchbase.Node) string {
-	tokens := strings.Split(node.Hostname, ":")
+func hostName(node string) string {
+	tokens := strings.Split(node, ":")
 	return tokens[0]
+}
+
+func hostPort(node string) string {
+	tokens := strings.Split(node, ":")
+	if len(tokens) == 2 {
+		return tokens[1]
+	}
+	return ""
 }
 
 func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
@@ -505,14 +630,21 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 		QueryNodeName: qryNodeName,
 	}
 
+	// We find the host based on query name
+	queryHost := qryNodeName
+	hostPort := strings.Split(qryNodeName, ":")
+	if len(hostPort) > 0 {
+		queryHost = hostPort[0]
+	}
+
 	for protocol, port := range this.queryNodes[qryNodeName] {
 		switch protocol {
 		case _HTTP:
-			qryNode.Query = makeURL(protocol, qryNodeName, port, http.ServicePrefix())
-			qryNode.Admin = makeURL(protocol, qryNodeName, port, http.AdminPrefix())
+			qryNode.Query = makeURL(protocol, queryHost, port, http.ServicePrefix())
+			qryNode.Admin = makeURL(protocol, queryHost, port, http.AdminPrefix())
 		case _HTTPS:
-			qryNode.QuerySSL = makeURL(protocol, qryNodeName, port, http.ServicePrefix())
-			qryNode.AdminSSL = makeURL(protocol, qryNodeName, port, http.AdminPrefix())
+			qryNode.QuerySSL = makeURL(protocol, queryHost, port, http.ServicePrefix())
+			qryNode.AdminSSL = makeURL(protocol, queryHost, port, http.AdminPrefix())
 		}
 	}
 

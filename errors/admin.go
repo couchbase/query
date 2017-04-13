@@ -135,7 +135,7 @@ func NewCompletedQualifierNotFound(what string, cond interface{}) Error {
 }
 
 func NewCompletedQualifierNotUnique(what string) Error {
-	return &err{level: EXCEPTION, ICode: 2170, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: 2190, IKey: "admin.accounting.completed",
 		InternalMsg: "Completed requests qualifier can only be deployed once: " + what, InternalCaller: CallerN(1)}
 }
 
@@ -145,6 +145,11 @@ func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
 	if cond != nil {
 		condString = fmt.Sprintf(" %v", cond)
 	}
-	return &err{level: EXCEPTION, ICode: 2180, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: 2200, IKey: "admin.accounting.completed",
 		InternalMsg: "Completed requests qualifier " + what + " cannot accept argument " + condString, InternalCaller: CallerN(1)}
+}
+
+func NewAdminBadServicePort(port string) Error {
+	return &err{level: EXCEPTION, ICode: 2210, IKey: "admin.clustering.bad_port",
+		InternalMsg: "Invalid service port: " + port, InternalCaller: CallerN(1)}
 }

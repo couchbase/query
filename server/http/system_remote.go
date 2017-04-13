@@ -23,22 +23,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 )
 
-type clusterState int
-
-const (
-	unset clusterState = iota
-	standAlone
-	clustered
-)
-
 // http implementation of SystemRemoteAccess
 type systemRemoteHttp struct {
-	state       clusterState
+	state       clustering.Mode
 	configStore clustering.ConfigurationStore
 }
 
@@ -75,8 +68,11 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 	keyFn func(id string), warnFn func(warn errors.Error)) {
 	var keys []string
 
+	// now that the local node name can change, use a consistent one across the scan
+	whoAmI := this.WhoAmI()
+
 	// not part of a cluster, no keys can be gathered
-	if len(this.WhoAmI()) == 0 {
+	if len(whoAmI) == 0 {
 		return
 	}
 
@@ -106,7 +102,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				node := queryNode.Name()
 
 				// skip ourselves, we will be processed locally
-				if node == this.WhoAmI() {
+				if node == whoAmI {
 					continue
 				}
 
@@ -138,7 +134,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 		for _, node := range nodes {
 
 			// skip ourselves, it will be processed locally
-			if node == this.WhoAmI() {
+			if node == whoAmI {
 				continue
 			}
 
@@ -242,19 +238,18 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, cred
 	if numCredentials > 1 {
 		fullEndpoint += "?creds=" + credsAsJSON(creds)
 	}
+	authenticator := cbauth.Default
+
+	// Here, I'm leveraging the fact that the node name is the host:port of the mgmt
+	// endpoint associated with the node. This is the same hostport pair that allows us
+	// to access the admin creds for that node.
+	u, p, _ := authenticator.GetHTTPServiceAuth(node.Name())
 	request, _ := http.NewRequest(command, fullEndpoint, nil)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	if authToken != "" {
-		request.Header.Add("ns-server-ui", "yes")
-		request.Header.Add("ns-server-auth-token", authToken)
-	}
-	if numCredentials == 1 {
-		for k, v := range creds {
-			request.SetBasicAuth(k, v)
-		}
-	}
+	request.SetBasicAuth(u, p)
 
 	resp, err := HTTPClient.Do(request)
+
 	if err != nil {
 		return nil, err
 	}
@@ -302,26 +297,36 @@ func (this *systemRemoteHttp) WhoAmI() string {
 	// if we are part of a cluster.
 	// if yes, we'll refresh our node name from clustering
 	// at every call, if not, we turn off clustering for good
-	if this.state == unset {
+	if this.state == "" {
 
 		// not part of a cluster if there isn't a configStore
 		if this.configStore == nil {
-			this.state = standAlone
+			this.state = clustering.STANDALONE
+			return ""
+		}
+
+		state, err := this.configStore.State()
+		if err != nil {
+			this.state = clustering.STANDALONE
+			return ""
+		}
+		this.state = state
+
+		if this.state == clustering.STANDALONE {
 			return ""
 		}
 
 		// not part of a cluster if we can't work out our own name
 		localNode, err := this.configStore.WhoAmI()
-		if localNode == "" || err != nil {
-			this.state = standAlone
+		if err != nil {
+			this.state = clustering.STANDALONE
 			return ""
 		}
-
-		this.state = clustered
 		return localNode
-	} else if this.state == standAlone {
+	} else if this.state == clustering.STANDALONE {
 		return ""
 	}
+
 	localNode, _ := this.configStore.WhoAmI()
 	return localNode
 }

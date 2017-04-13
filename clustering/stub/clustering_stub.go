@@ -62,6 +62,10 @@ func (ConfigurationStoreStub) URL() string {
 	return CONFIGURATION_STORE_STUB_URL
 }
 
+func (ConfigurationStoreStub) SetOptions(httpAddr, httpsAddr string) errors.Error {
+	return nil
+}
+
 func (ConfigurationStoreStub) ClusterNames() ([]string, errors.Error) {
 	return []string{ClusterStub{}.Name()}, nil
 }
@@ -88,6 +92,10 @@ func (ConfigurationStoreStub) Authorize(map[string]string, []clustering.Privileg
 
 func (ConfigurationStoreStub) WhoAmI() (string, errors.Error) {
 	return "", nil
+}
+
+func (ConfigurationStoreStub) State() (clustering.Mode, errors.Error) {
+	return clustering.STANDALONE, nil
 }
 
 // ClusterStub is a stub implementation of clustering.Cluster

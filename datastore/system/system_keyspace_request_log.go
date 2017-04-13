@@ -69,11 +69,14 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	creds, authToken := credsFromContext(context)
+
+	// now that the node name can change in flight, use a consistent one across fetches
+	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
 
 		// remote entry
-		if len(node) != 0 && node != distributed.RemoteAccess().WhoAmI() {
+		if len(node) != 0 && node != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"completed_requests", "POST",
 				func(doc map[string]interface{}) {
@@ -188,11 +191,14 @@ func (b *requestLogKeyspace) Delete(deletes []string, context datastore.QueryCon
 	var err errors.Error
 
 	creds, authToken := credsFromContext(context)
+
+	// now that the node name can change in flight, use a consistent one across deletes
+	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for i, name := range deletes {
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 		// remote entry
-		if len(node) != 0 && node != distributed.RemoteAccess().WhoAmI() {
+		if len(node) != 0 && node != whoAmI {
 
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"completed_requests", "DELETE",
@@ -233,21 +239,19 @@ func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 	b.indexer = newSystemIndexer(b, primary)
 
 	// add a secondary index on `node`
-	if distributed.RemoteAccess().WhoAmI() != "" {
-		expr, err := parser.Parse(`node`)
+	expr, err := parser.Parse(`node`)
 
-		if err == nil {
-			key := expression.Expressions{expr}
-			nodes := &requestLogIndex{
-				name:     "#nodes",
-				keyspace: b,
-				primary:  false,
-				idxKey:   key,
-			}
-			b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
-		} else {
-			return nil, errors.NewSystemDatastoreError(err, "")
+	if err == nil {
+		key := expression.Expressions{expr}
+		nodes := &requestLogIndex{
+			name:     "#nodes",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
 		}
+		b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
 	}
 
 	return b, nil
@@ -293,7 +297,11 @@ func (pi *requestLogIndex) IsPrimary() bool {
 }
 
 func (pi *requestLogIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
-	return datastore.ONLINE, "", nil
+	if pi.primary || distributed.RemoteAccess().WhoAmI() != "" {
+		return datastore.ONLINE, "", nil
+	} else {
+		return datastore.OFFLINE, "", nil
+	}
 }
 
 func (pi *requestLogIndex) Statistics(requestId string, span *datastore.Span) (
@@ -318,11 +326,14 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 			return
 		}
 		if spanEvaluator.isEquals() {
+
+			// now that the node name can change in flight, use a consistent one across the scan
+			whoAmI := distributed.RemoteAccess().WhoAmI()
 			if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
 				server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
 					indexEntry := datastore.IndexEntry{
-						PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id),
-						EntryKey:   value.Values{value.NewValue(distributed.RemoteAccess().WhoAmI())},
+						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
+						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
 					conn.EntryChannel() <- &indexEntry
 				})
@@ -340,14 +351,17 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 				})
 			}
 		} else {
+
+			// now that the node name can change in flight, use a consistent one across the scan
+			whoAmI := distributed.RemoteAccess().WhoAmI()
 			nodes := distributed.RemoteAccess().GetNodeNames()
 			eligibleNodes := []string{}
 			for _, node := range nodes {
 				if spanEvaluator.evaluate(node) {
-					if node == distributed.RemoteAccess().WhoAmI() {
+					if node == whoAmI {
 						server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
 							indexEntry := datastore.IndexEntry{
-								PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id),
+								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
 								EntryKey:   value.Values{value.NewValue(distributed.RemoteAccess().WhoAmI())},
 							}
 							conn.EntryChannel() <- &indexEntry
@@ -376,8 +390,11 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
+
+	// now that the node name can change in flight, use a consistent one across the scan
+	whoAmI := distributed.RemoteAccess().WhoAmI()
 	server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
-		indexEntry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), id)}
+		indexEntry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id)}
 		conn.EntryChannel() <- &indexEntry
 	})
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "completed_requests", func(id string) {
