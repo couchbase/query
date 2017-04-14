@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -41,9 +42,19 @@ func (b *keyspaceKeyspace) Name() string {
 	return b.name
 }
 
+func canAccessSystemTables(context datastore.QueryContext) bool {
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_SYSTEM_READ)
+	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
+	res := err == nil
+	return res
+
+}
+
 func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	count := int64(0)
 	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
+	canAccessAll := canAccessSystemTables(context)
 	if excp == nil {
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.namespace.store.actualStore.NamespaceById(namespaceId)
@@ -51,7 +62,7 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(context, namespaceId, keyspaceId) {
+						if !canAccessAll && !canRead(context, namespaceId, keyspaceId) {
 							continue
 						}
 						// The list of keyspace ids can include memcached buckets.
@@ -88,9 +99,10 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
+	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
 		ns, ks := splitId(k)
-		if !canRead(context, ns, ks) {
+		if !canAccessAll && !canRead(context, ns, ks) {
 			continue
 		}
 		item, e := b.fetchOne(ns, ks)
