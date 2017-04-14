@@ -89,6 +89,10 @@ func (this *fold) VisitOr(expr *expression.Or) (interface{}, error) {
 
 outer:
 	for i, lhs := range operands[0 : len(operands)-1] {
+		if lhs == nil {
+			continue
+		}
+
 		for j := i + 1; j < len(operands); j++ {
 			rhs := operands[j]
 			if rhs == nil {
