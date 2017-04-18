@@ -153,3 +153,14 @@ func NewRoleNotFoundError(role string) Error {
 	return &err{level: EXCEPTION, ICode: 5250, IKey: "execution.role_not_found",
 		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}
 }
+
+func NewRoleAlreadyPresent(user string, role string, bucket string) Error {
+	var msg string
+	if bucket == "" {
+		msg = fmt.Sprintf("User %s already has role %s.", user, role)
+	} else {
+		msg = fmt.Sprintf("User %s already has role %s(%s).", user, role, bucket)
+	}
+	return &err{level: WARNING, ICode: 5260, IKey: "execution.role_already_present",
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}

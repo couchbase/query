@@ -166,6 +166,7 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 					}
 				}
 				if alreadyHasRole {
+					context.Warning(errors.NewRoleAlreadyPresent(userId, newRole.Name, newRole.Bucket))
 					continue
 				}
 				user.Roles = append(user.Roles, newRole)
