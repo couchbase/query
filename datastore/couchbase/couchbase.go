@@ -37,7 +37,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -106,11 +105,10 @@ func (info *infoImpl) Version() string {
 
 func hostName(n string) string {
 	tokens := strings.Split(n, ":")
-	if tokens[0] != "127.0.0.1" && tokens[0] != "localhost" {
+	if tokens[0] != "" {
 		return n
 	}
-	ip, _ := util.ExternalIP()
-	return ip + ":" + tokens[1]
+	return "127.0.0.1:" + tokens[1]
 }
 
 func (info *infoImpl) Topology() ([]string, []errors.Error) {
