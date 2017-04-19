@@ -449,19 +449,22 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 		return expr, err
 	}
 
+	var prefix string
+	var complete bool
+
 	re := expr.Regexp()
-	if re == nil {
-		return expr, nil
+	if re != nil {
+		prefix, complete = re.LiteralPrefix()
+		if complete {
+			eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
+			return eq, nil
+		}
 	}
 
-	prefix, complete := re.LiteralPrefix()
-	if complete {
-		eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
-		return eq, nil
-	}
-
-	if prefix == "" {
-		return expr, nil
+	if re == nil || prefix == "" {
+		ge := expression.NewGE(expr.First(), expression.NewLikePrefix(expr.Second()))
+		lt := expression.NewLT(expr.First(), expression.NewLikeStop(expr.Second()))
+		return expression.NewAnd(ge, lt), nil
 	}
 
 	last := len(prefix) - 1
