@@ -114,7 +114,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 					"resultCount":     entry.ResultCount,
 					"resultSize":      entry.ResultSize,
 					"errorCount":      entry.ErrorCount,
-					"time":            entry.Time.String(),
+					"requestTime":     entry.Time.String(),
 					"scanConsistency": entry.ScanConsistency,
 				})
 				if node != "" {

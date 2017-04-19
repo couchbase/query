@@ -332,7 +332,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 			reqMap["preparedName"] = p.Name()
 			reqMap["preparedText"] = p.Text()
 		}
-		reqMap["requestTime"] = request.RequestTime()
+		reqMap["requestTime"] = request.RequestTime().String()
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State()
@@ -430,7 +430,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 			requests[i]["preparedName"] = p.Name()
 			requests[i]["preparedStatement"] = p.Text()
 		}
-		requests[i]["requestTime"] = request.RequestTime()
+		requests[i]["requestTime"] = request.RequestTime().String()
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
@@ -498,7 +498,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 			reqMap["preparedName"] = request.PreparedName
 			reqMap["preparedText"] = request.PreparedText
 		}
-		reqMap["requestTime"] = request.Time
+		reqMap["requestTime"] = request.Time.String()
 		reqMap["elapsedTime"] = request.ElapsedTime.String()
 		reqMap["serviceTime"] = request.ServiceTime.String()
 		reqMap["resultCount"] = request.ResultCount
@@ -567,7 +567,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 			requests[i]["preparedName"] = request.PreparedName
 			requests[i]["preparedText"] = request.PreparedText
 		}
-		requests[i]["requestTime"] = request.Time
+		requests[i]["requestTime"] = request.Time.String()
 		requests[i]["elapsedTime"] = request.ElapsedTime.String()
 		requests[i]["serviceTime"] = request.ServiceTime.String()
 		requests[i]["resultCount"] = request.ResultCount
