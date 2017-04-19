@@ -110,6 +110,18 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 				context.Error(errors.NewUserNotFoundError(userId))
 				continue
 			}
+			// Check whether this user has all the roles we are trying to delete
+			// from them. Issue warning about any roles they do not have.
+		eachDeleteRole:
+			for deleteRole := range deleteRoleMap {
+				for _, curRole := range user.Roles {
+					if curRole == deleteRole {
+						continue eachDeleteRole
+					}
+				}
+				context.Warning(errors.NewRoleNotPresent(userId, deleteRole.Name, deleteRole.Bucket))
+			}
+
 			// Create a new list of roles for the user: their current
 			// roles, minus the roles targeted for deletion.
 			newRoles := make([]datastore.Role, 0, len(user.Roles))

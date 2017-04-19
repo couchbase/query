@@ -164,3 +164,14 @@ func NewRoleAlreadyPresent(user string, role string, bucket string) Error {
 	return &err{level: WARNING, ICode: 5260, IKey: "execution.role_already_present",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
+
+func NewRoleNotPresent(user string, role string, bucket string) Error {
+	var msg string
+	if bucket == "" {
+		msg = fmt.Sprintf("User %s did not have role %s.", user, role)
+	} else {
+		msg = fmt.Sprintf("User %s did not have role %s(%s).", user, role, bucket)
+	}
+	return &err{level: WARNING, ICode: 5270, IKey: "execution.role_not_present",
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
