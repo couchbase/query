@@ -143,7 +143,7 @@ outer:
 	}
 
 	if pushDown {
-		scan := this.buildCoveringPushdDownScan(index, node, entry, pred, indexProjection,
+		scan := this.buildCoveringPushdDownScan(index, node, entry, entry.sargKeys, pred, indexProjection,
 			!arrayIndex, false, covers, filterCovers)
 		if scan != nil {
 			return scan, sargLength, nil
@@ -175,7 +175,7 @@ outer:
 }
 
 func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *algebra.KeyspaceTerm, entry *indexEntry,
-	pred expression.Expression, indexProjection *plan.IndexProjection, countPush, array bool,
+	keys expression.Expressions, pred expression.Expression, indexProjection *plan.IndexProjection, countPush, array bool,
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	countConstantDistinctOperand := false
@@ -194,7 +194,7 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 			}
 		}
 
-		if !countConstantDistinctOperand && canPushDownCount(op, entry, distinct) {
+		if !countConstantDistinctOperand && canPushDownCount(op, entry, keys, distinct) {
 			scan := this.buildIndexCountScan(node, entry, pred, distinct, covers, filterCovers)
 			if scan != nil {
 				this.countScan = scan
@@ -203,8 +203,8 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 		}
 	}
 
-	if countConstantDistinctOperand || (this.minAgg != nil && canPushDownMin(this.minAgg, entry)) ||
-		(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry)) {
+	if countConstantDistinctOperand || (this.minAgg != nil && canPushDownMin(this.minAgg, entry, keys)) ||
+		(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, keys)) {
 		this.maxParallelism = 1
 		limit := expression.ONE_EXPR
 		scan := entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), array, nil, limit, indexProjection, covers, filterCovers)
@@ -236,7 +236,7 @@ func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Val
 	return rv, nil
 }
 
-func canPushDownCount(op expression.Expression, entry *indexEntry, distinct bool) bool {
+func canPushDownCount(op expression.Expression, entry *indexEntry, keys expression.Expressions, distinct bool) bool {
 	if op == nil {
 		return !distinct
 	}
@@ -246,20 +246,20 @@ func canPushDownCount(op expression.Expression, entry *indexEntry, distinct bool
 		return !distinct && val.Type() > value.NULL
 	}
 
-	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
+	if len(keys) == 0 || !op.EquivalentTo(keys[0]) {
 		return false
 	}
 
 	return entry.spans.SkipsLeadingNulls()
 }
 
-func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
+func canPushDownMin(minAgg *algebra.Min, entry *indexEntry, keys expression.Expressions) bool {
 	op := minAgg.Operand()
 	if op.Value() != nil {
 		return true
 	}
 
-	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
+	if len(keys) == 0 || !op.EquivalentTo(keys[0]) {
 		return false
 	}
 
@@ -271,13 +271,13 @@ func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
 	return entry.spans.CanUseIndexOrder() && entry.spans.SkipsLeadingNulls()
 }
 
-func canPushDownMax(maxAgg *algebra.Max, entry *indexEntry) bool {
+func canPushDownMax(maxAgg *algebra.Max, entry *indexEntry, keys expression.Expressions) bool {
 	op := maxAgg.Operand()
 	if op.Value() != nil {
 		return true
 	}
 
-	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
+	if len(keys) == 0 || !op.EquivalentTo(keys[0]) {
 		return false
 	}
 

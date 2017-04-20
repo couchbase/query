@@ -105,16 +105,16 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	entry = entry.Copy()
 	sargKey := expression.NewIdentifier(unnest.Alias())
 	entry.sargKeys = expression.Expressions{sargKey}
-	min := false
-	if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
-		min = true
-	}
+	allDistinct := false
 
-	// Covering expressions from index keys
-	for i, key := range entry.keys {
-		if i == 0 {
-			entry.keys[i] = unrollArrayKeys(key, min, unnest)
+	if len(entry.keys) > 0 {
+		unrollKeys := expression.Expressions{unrollArrayKeys(entry.keys[0], true, unnest)}
+		if (this.minAgg != nil && canPushDownMin(this.minAgg, entry, unrollKeys)) ||
+			(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, unrollKeys)) ||
+			this.countDistinctAgg != nil {
+			allDistinct = true
 		}
+		entry.keys[0] = unrollArrayKeys(entry.keys[0], allDistinct, unnest)
 	}
 
 	// Include META().id in covering expressions
@@ -127,7 +127,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// Include filter covers from array key
 	var expr expression.Expression
-	bindings := coveredUnnestBindings(arrayKey, min, unnest)
+	bindings := coveredUnnestBindings(arrayKey, allDistinct, unnest)
 	for _, bexpr := range bindings {
 		expr = expression.NewIsArray(bexpr)
 		fc = expr.FilterCovers(fc)
@@ -212,7 +212,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	indexProjection := this.buildIndexProjection(entry, exprs, id, duplicates || array)
 	pushDown := entry.exactSpans
 	if pushDown {
-		scan := this.buildCoveringPushdDownScan(index, node, entry, pred, indexProjection,
+		scan := this.buildCoveringPushdDownScan(index, node, entry, keys[0:len(entry.sargKeys)], pred, indexProjection,
 			array, array, covers, filterCovers)
 		if scan != nil {
 			return scan, coveredUnnests, nil
@@ -222,14 +222,14 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	this.resetCountMinMax()
 
 	if this.order != nil {
-		if !array && this.useIndexOrder(entry, keys) {
+		if array && this.useIndexOrder(entry, keys) {
 			this.maxParallelism = 1
 		} else {
 			this.resetOrderOffsetLimit()
 		}
 	}
 
-	if this.hasOffsetOrLimit() && (array || !pushDown) {
+	if this.hasOffsetOrLimit() && (!array || !pushDown) {
 		this.resetOffsetLimit()
 	}
 
@@ -244,8 +244,8 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 var _EMPTY_COVERED_EXPRS = make(map[expression.Expression]bool, 0)
 
-func unrollArrayKeys(expr expression.Expression, min bool, unnest *algebra.Unnest) expression.Expression {
-	for all, ok := expr.(*expression.All); ok && (min || !all.Distinct()); all, ok = expr.(*expression.All) {
+func unrollArrayKeys(expr expression.Expression, allDistinct bool, unnest *algebra.Unnest) expression.Expression {
+	for all, ok := expr.(*expression.All); ok && (allDistinct || !all.Distinct()); all, ok = expr.(*expression.All) {
 		if array, ok := all.Array().(*expression.Array); ok &&
 			len(array.Bindings()) == 1 && !array.Bindings()[0].Descend() {
 			expr = array.ValueMapping()
@@ -261,10 +261,10 @@ func unrollArrayKeys(expr expression.Expression, min bool, unnest *algebra.Unnes
 	return expr
 }
 
-func coveredUnnestBindings(key expression.Expression, min bool, unnest *algebra.Unnest) map[string]expression.Expression {
+func coveredUnnestBindings(key expression.Expression, allDistinct bool, unnest *algebra.Unnest) map[string]expression.Expression {
 	bindings := make(map[string]expression.Expression, 8)
 
-	for all, ok := key.(*expression.All); ok && (min || !all.Distinct()); all, ok = key.(*expression.All) {
+	for all, ok := key.(*expression.All); ok && (allDistinct || !all.Distinct()); all, ok = key.(*expression.All) {
 		if array, ok := all.Array().(*expression.Array); ok &&
 			len(array.Bindings()) == 1 && !array.Bindings()[0].Descend() {
 			binding := array.Bindings()[0]
