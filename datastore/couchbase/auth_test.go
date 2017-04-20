@@ -58,6 +58,10 @@ func (a authUser) Name() string {
 }
 
 func (a authUser) Source() string {
+	return a.Domain()
+}
+
+func (a authUser) Domain() string {
 	return "internal"
 }
 
