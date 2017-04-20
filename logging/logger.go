@@ -19,6 +19,7 @@ type Level int
 
 const (
 	NONE    = Level(iota) // Disable all logging
+	FATAL                 // System is in severe error state and has to terminate
 	SEVERE                // System is in severe error state and cannot recover reliably
 	ERROR                 // System is in error state but can recover and continue reliably
 	WARN                  // System approaching error state, or is in a correct but undesirable state
@@ -40,6 +41,7 @@ var _LEVEL_NAMES = []string{
 	WARN:    "WARN",
 	ERROR:   "ERROR",
 	SEVERE:  "SEVERE",
+	FATAL:   "FATAL",
 	NONE:    "NONE",
 }
 
@@ -51,6 +53,7 @@ var _LEVEL_MAP = map[string]Level{
 	"warn":    WARN,
 	"error":   ERROR,
 	"severe":  SEVERE,
+	"fatal":   FATAL,
 	"none":    NONE,
 }
 
@@ -107,6 +110,8 @@ type Logger interface {
 
 	Severep(msg string, kv ...Pair)
 
+	Fatalp(msg string, kv ...Pair)
+
 	/*
 		These APIs write the fields in the given kv Map in addition to standard logger keys.
 	*/
@@ -125,6 +130,8 @@ type Logger interface {
 	Errorm(msg string, kv Map)
 
 	Severem(msg string, kv Map)
+
+	Fatalm(msg string, kv Map)
 
 	/*
 
@@ -147,6 +154,8 @@ type Logger interface {
 	Errorf(fmt string, args ...interface{})
 
 	Severef(fmt string, args ...interface{})
+
+	Fatalf(fmt string, args ...interface{})
 
 	/*
 		These APIs control the logging level
@@ -260,6 +269,15 @@ func Severep(msg string, kv ...Pair) {
 	logger.Severep(msg, kv...)
 }
 
+func Fatalp(msg string, kv ...Pair) {
+	if skipLogging(FATAL) {
+		return
+	}
+	loggerMutex.Lock()
+	defer loggerMutex.Unlock()
+	logger.Fatalp(msg, kv...)
+}
+
 func Logm(level Level, msg string, kv Map) {
 	if skipLogging(level) {
 		return
@@ -332,6 +350,15 @@ func Severem(msg string, kv Map) {
 	logger.Severem(msg, kv)
 }
 
+func Fatalm(msg string, kv Map) {
+	if skipLogging(FATAL) {
+		return
+	}
+	loggerMutex.Lock()
+	defer loggerMutex.Unlock()
+	logger.Fatalm(msg, kv)
+}
+
 func Logf(level Level, fmt string, args ...interface{}) {
 	if skipLogging(level) {
 		return
@@ -402,6 +429,15 @@ func Severef(fmt string, args ...interface{}) {
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Severef(fmt, args...)
+}
+
+func Fatalf(fmt string, args ...interface{}) {
+	if skipLogging(FATAL) {
+		return
+	}
+	loggerMutex.Lock()
+	defer loggerMutex.Unlock()
+	logger.Fatalf(fmt, args...)
 }
 
 func SetLevel(level Level) {

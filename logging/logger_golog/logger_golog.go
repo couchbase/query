@@ -90,7 +90,11 @@ func (gl *goLogger) Errorp(msg string, kv ...logging.Pair) {
 }
 
 func (gl *goLogger) Severep(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.ERROR, msg, kv...)
+	gl.Logp(logging.SEVERE, msg, kv...)
+}
+
+func (gl *goLogger) Fatalp(msg string, kv ...logging.Pair) {
+	gl.Logp(logging.FATAL, msg, kv...)
 }
 
 func (gl *goLogger) Logm(level logging.Level, msg string, kv logging.Map) {
@@ -140,6 +144,10 @@ func (gl *goLogger) Severem(msg string, kv logging.Map) {
 	gl.Logm(logging.SEVERE, msg, kv)
 }
 
+func (gl *goLogger) Fatalm(msg string, kv logging.Map) {
+	gl.Logm(logging.FATAL, msg, kv)
+}
+
 func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}) {
 	if gl.logger == nil {
 		return
@@ -183,6 +191,10 @@ func (gl *goLogger) Errorf(format string, args ...interface{}) {
 
 func (gl *goLogger) Severef(format string, args ...interface{}) {
 	gl.Logf(logging.SEVERE, format, args...)
+}
+
+func (gl *goLogger) Fatalf(format string, args ...interface{}) {
+	gl.Logf(logging.FATAL, format, args...)
 }
 
 func (gl *goLogger) Level() logging.Level {
