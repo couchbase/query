@@ -345,7 +345,7 @@ func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 	for i, u := range sourceUsers {
 		resultUsers[i].Name = u.Name
 		resultUsers[i].Id = u.Id
-		resultUsers[i].Type = u.Type
+		resultUsers[i].Domain = u.Domain
 		roles := make([]datastore.Role, len(u.Roles))
 		for j, r := range u.Roles {
 			roles[j].Name = r.Role
@@ -361,7 +361,7 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	outputUser.Name = u.Name
 	outputUser.Id = u.Id
 	outputUser.Roles = make([]cb.Role, len(u.Roles))
-	outputUser.Type = u.Type
+	outputUser.Domain = u.Domain
 	for i, r := range u.Roles {
 		outputUser.Roles[i].Role = r.Name
 		outputUser.Roles[i].BucketName = r.Bucket

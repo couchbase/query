@@ -32,7 +32,7 @@ mkdir data/dimestore/purchase
 
 echo Creating Users
 
-UsersSite=http://localhost:8091/settings/rbac/users/builtin/
+UsersSite=http://localhost:8091/settings/rbac/users/local/
 for i in "${bucket[@]}"
 do
 
@@ -40,6 +40,6 @@ Id=${i}owner
 Name=OwnerOf${i}
 Password=${i}pass
 
-echo curl -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_sasl[${i}] -d password=$Password -u $Auth
-curl -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_sasl[${i}] -d password=$Password -u $Auth
+echo curl -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_full_access[${i}] -d password=$Password -u $Auth
+curl -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_full_access[${i}] -d password=$Password -u $Auth
 done

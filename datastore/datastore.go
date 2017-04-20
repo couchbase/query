@@ -147,10 +147,10 @@ func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
 // possibility of connecting to other back ends, the query engine
 // uses its own representation.
 type User struct {
-	Name  string
-	Id    string
-	Type  string
-	Roles []Role
+	Name   string
+	Id     string
+	Domain string
+	Roles  []Role
 }
 
 type Role struct {
