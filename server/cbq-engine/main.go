@@ -247,7 +247,7 @@ func main() {
 	signalCatcher(server, endpoint)
 }
 
-// signalCatcher blocks until a signal is recieved and then takes appropriate action
+// signalCatcher blocks until a signal is received and then takes appropriate action
 func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
 	sig_chan := make(chan os.Signal, 4)
 	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
