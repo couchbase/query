@@ -21,7 +21,7 @@ rm -rf data/
 echo Delete Users
 
 
-UserSite=http://localhost:8091/settings/rbac/users/builtin/
+UserSite=http://localhost:8091/settings/rbac/users/local/
 for i in "${bucket[@]}"
 do
 Id=${i}owner
