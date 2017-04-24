@@ -93,14 +93,15 @@ func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, error
 	privs := auth.NewPrivileges()
 	fullKeyspace := namespace + ":" + keyspace
 	if namespace == "#system" {
-		if keyspace == "user_info" || keyspace == "applicable_roles" {
+		switch keyspace {
+		case "user_info", "applicable_roles":
 			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ)
-		} else if keyspace == "keyspaces" || keyspace == "indexes" {
-			// Do nothing. These two tables handle security internally, by
+		case "keyspaces", "indexes", "my_user_info":
+			// Do nothing. These tables handle security internally, by
 			// filtering the results.
-		} else if keyspace == "datastores" || keyspace == "namespaces" || keyspace == "dual" {
+		case "datastores", "namespaces", "dual":
 			// Do nothing. These three tables are open to all.
-		} else {
+		default:
 			privs.Add(fullKeyspace, auth.PRIV_SYSTEM_READ)
 		}
 	} else {
