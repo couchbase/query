@@ -51,8 +51,7 @@ func (b *preparedsKeyspace) Count(context datastore.QueryContext) (int64, errors
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "prepareds", func(id string) {
 		count++
 	}, func(warn errors.Error) {
-
-		// FIXME Count does not handle warnings
+		context.Warning(warn)
 	})
 	return int64(plan.CountPrepareds() + count), nil
 }
@@ -95,9 +94,8 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext)
 						Value: remoteValue,
 					})
 				},
-
-				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
+					context.Warning(warn)
 				}, creds, authToken)
 		} else {
 
@@ -168,11 +166,9 @@ func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryCont
 		if len(node) != 0 && node != whoAmI {
 
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
-				"prepareds", "DELETE",
-				nil,
-
-				// FIXME Delete() doesn't do warnings
+				"prepareds", "DELETE", nil,
 				func(warn errors.Error) {
+					context.Warning(warn)
 				},
 				creds, authToken)
 

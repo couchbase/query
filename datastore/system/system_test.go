@@ -23,6 +23,7 @@ import (
 type queryContextImpl struct {
 	req   *http.Request
 	creds auth.Credentials
+	t     *testing.T
 }
 
 func (ci *queryContextImpl) Credentials() auth.Credentials {
@@ -35,6 +36,10 @@ func (ci *queryContextImpl) AuthenticatedUsers() []string {
 
 func (ci *queryContextImpl) OriginalHttpRequest() *http.Request {
 	return ci.req
+}
+
+func (ci *queryContextImpl) Warning(warn errors.Error) {
+	ci.t.Logf("datastore warning: %v", warn)
 }
 
 func TestSystem(t *testing.T) {
@@ -111,9 +116,9 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Expect count of 2 for the my_user_info keyspace
-	mui_c, err := mui.Count(&queryContextImpl{})
+	mui_c, err := mui.Count(&queryContextImpl{t: t})
 	if err != nil || mui_c != 2 {
-		t.Fatalf("faied to get expect my_user_info keyspace count %v", err)
+		t.Fatalf("failed to get expect my_user_info keyspace count %v", err)
 	}
 
 	// Expect count of 10 for the indexes keyspace (all the primary indexes)
@@ -269,7 +274,7 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 
 func doTestCredsFromContext(t *testing.T, request *http.Request, credentials auth.Credentials,
 	expectedCreds distributed.Creds, expectedAuthToken string) {
-	context := &queryContextImpl{req: request, creds: credentials}
+	context := &queryContextImpl{req: request, creds: credentials, t: t}
 
 	creds, authToken := credsFromContext(context)
 	if len(expectedCreds) != len(creds) {

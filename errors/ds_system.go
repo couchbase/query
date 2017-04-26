@@ -60,7 +60,7 @@ func NewSystemStmtNotFoundError(e error, msg string) Error {
 }
 
 func NewSystemRemoteWarning(e error, op string, ks string) Error {
-	return &err{level: EXCEPTION, ICode: 11008, IKey: "datastore.system.remote_warning", ICause: e,
+	return &err{level: WARNING, ICode: 11008, IKey: "datastore.system.remote_warning", ICause: e,
 		InternalMsg: "System datastore : " + op + " on " + ks + " failed", InternalCaller: CallerN(1)}
 }
 

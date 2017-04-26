@@ -45,6 +45,7 @@ type Error interface {
 	Cause() error
 	Level() int
 	IsFatal() bool
+	IsWarning() bool
 }
 
 type ErrorChannel chan Error
@@ -122,10 +123,11 @@ func (e *err) Level() int {
 }
 
 func (e *err) IsFatal() bool {
-	if e.level == EXCEPTION {
-		return true
-	}
-	return false
+	return e.level == EXCEPTION
+}
+
+func (e *err) IsWarning() bool {
+	return e.level == WARNING
 }
 
 func (e *err) Code() int32 {

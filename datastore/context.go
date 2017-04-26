@@ -48,6 +48,7 @@ type QueryContext interface {
 	Credentials() auth.Credentials
 	AuthenticatedUsers() []string
 	OriginalHttpRequest() *http.Request
+	Warning(errors.Error)
 }
 
 type queryContextImpl struct {
@@ -63,4 +64,7 @@ func (ci *queryContextImpl) AuthenticatedUsers() []string {
 
 func (ci *queryContextImpl) OriginalHttpRequest() *http.Request {
 	return nil
+}
+
+func (ci *queryContextImpl) Warning(err errors.Error) {
 }

@@ -51,8 +51,7 @@ func (b *activeRequestsKeyspace) Count(context datastore.QueryContext) (int64, e
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "active_requests", func(id string) {
 		count++
 	}, func(warn errors.Error) {
-
-		// FIXME Count does not handle warnings
+		context.Warning(warn)
 	})
 	c, err := server.ActiveRequestsCount()
 	return int64(c + count), err
@@ -100,8 +99,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, context datastore.QueryCon
 					})
 				},
 
-				// FIXME Fetch() does not handle warnings
 				func(warn errors.Error) {
+					context.Warning(warn)
 				},
 				creds, authToken)
 		} else {
@@ -233,11 +232,9 @@ func (b *activeRequestsKeyspace) Delete(deletes []string, context datastore.Quer
 		if len(node) != 0 && node != whoAmI {
 
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
-				"active_requests", "DELETE",
-				nil,
-
-				// FIXME Delete() doesn't do warnings
+				"active_requests", "DELETE", nil,
 				func(warn errors.Error) {
+					context.Warning(warn)
 				},
 				creds, authToken)
 			done = true
