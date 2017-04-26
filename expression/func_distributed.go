@@ -34,7 +34,11 @@ func NewNodeName() Function {
 		*NewNullaryFunctionBase("node_name"),
 	}
 
-	rv.volatile = true
+	// technically there's the possibility that names change
+	// for nodes that start their lives as "127.0.0.1:8091"
+	// but that's a once in a lifetime event, and is going
+	// to happen pre production work, so...
+	rv.volatile = false
 	rv.expr = rv
 	return rv
 }
@@ -46,7 +50,9 @@ func (this *NodeName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *NodeName) Type() value.Type { return value.STRING }
+func (this *NodeName) Type() value.Type {
+	return value.STRING
+}
 
 /*
 Wrap the local node name in a value and return it.
@@ -55,6 +61,13 @@ the service is not part of a cluster
 */
 func (this *NodeName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return value.NewValue(distributed.RemoteAccess().WhoAmI()), nil
+}
+
+/*
+static value (for pushdowns)
+*/
+func (this *NodeName) Static() Expression {
+	return this.expr.(Function)
 }
 
 /*

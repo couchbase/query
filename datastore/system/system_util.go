@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,10 +23,14 @@ type compiledSpan struct {
 	high     string
 	evalLow  func(val, key string) bool
 	evalHigh func(val, key string) bool
+
+	// golang does not allow to compare functional pointers to functions...
+	equality bool
 }
 
 func compileSpan(span *datastore.Span) (*compiledSpan, errors.Error) {
 	var err errors.Error
+	var isLowValued, isHighValued bool
 
 	// currently system indexes are either primary or on a single field
 	if len(span.Seek) > 1 || len(span.Range.Low) > 1 || len(span.Range.High) > 1 {
@@ -46,20 +49,21 @@ func compileSpan(span *datastore.Span) (*compiledSpan, errors.Error) {
 		spanEvaluator.high = spanEvaluator.low
 		spanEvaluator.evalLow = equals
 		spanEvaluator.evalHigh = noop
+		spanEvaluator.equality = true
 	} else {
-		spanEvaluator.low, spanEvaluator.evalLow, err = compileRange(span.Range.Low, span.Range.Inclusion, datastore.LOW)
+		spanEvaluator.low, spanEvaluator.evalLow, isLowValued, err = compileRange(span.Range.Low, span.Range.Inclusion, datastore.LOW)
 		if err != nil {
 			return nil, err
 		}
-		spanEvaluator.high, spanEvaluator.evalHigh, err = compileRange(span.Range.High, span.Range.Inclusion, datastore.HIGH)
+		spanEvaluator.high, spanEvaluator.evalHigh, isHighValued, err = compileRange(span.Range.High, span.Range.Inclusion, datastore.HIGH)
 		if err != nil {
 			return nil, err
 		}
-		if spanEvaluator.high == spanEvaluator.low {
+		if spanEvaluator.high == spanEvaluator.low && isLowValued && isHighValued {
 			spanEvaluator.evalLow = equals
 			spanEvaluator.evalHigh = noop
+			spanEvaluator.equality = true
 		}
-		logging.Infof("should be a span %v", spanEvaluator)
 	}
 	return spanEvaluator, nil
 }
@@ -69,36 +73,44 @@ func (this *compiledSpan) evaluate(key string) bool {
 }
 
 func (this *compiledSpan) isEquals() bool {
-	return this.low == this.high
+	return this.equality
 }
 
 func (this *compiledSpan) key() string {
 	return this.low
 }
 
-func compileRange(in value.Values, incl, side datastore.Inclusion) (string, func(string, string) bool, errors.Error) {
+func compileRange(in value.Values, incl, side datastore.Inclusion) (string, func(string, string) bool, bool, errors.Error) {
 	if len(in) == 0 {
-		return "", noop, nil
+		return "", noop, false, nil
 	}
 	val := in[0].Actual()
-	switch t := val.(type) {
-	case string:
+	t := in[0].Type()
+	switch t {
+	case value.STRING:
+	case value.NULL:
+
+		// > null is a noop, < null should never occur and it's an error
+		if side == datastore.LOW {
+			return "", noop, false, nil
+		}
+		fallthrough
 	default:
-		return "", nil, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", t, val))
+		return "", nil, false, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", val, t.String()))
 	}
 	retVal := val.(string)
 	op := (incl & side) > 0
 	if side == datastore.HIGH {
 		if op {
-			return retVal, lessOrEqual, nil
+			return retVal, lessOrEqual, true, nil
 		} else {
-			return retVal, less, nil
+			return retVal, less, true, nil
 		}
 	} else {
 		if op {
-			return retVal, greaterOrEqual, nil
+			return retVal, greaterOrEqual, true, nil
 		} else {
-			return retVal, greater, nil
+			return retVal, greater, true, nil
 		}
 	}
 }
