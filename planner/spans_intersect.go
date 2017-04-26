@@ -45,7 +45,7 @@ func (this *IntersectSpans) CreateScan(
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
 		// No LIMIT pushdown
-		scans[i] = s.CreateScan(index, term, reverse, distinct, false, false, true, nil, nil, projection, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, reverse, distinct, false, false, array, nil, nil, projection, covers, filterCovers)
 	}
 
 	limit = offsetPlusLimit(offset, limit)
