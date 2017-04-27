@@ -1897,7 +1897,7 @@ index_expr:
 expr
 {
     exp := $1
-    if !exp.Indexable() || exp.Value() != nil {
+    if exp != nil && (!exp.Indexable() || exp.Value() != nil) {
         yylex.Error(fmt.Sprintf("Expression not indexable: %s", exp.String()))
     }
 
