@@ -9,7 +9,9 @@
 
 package errors
 
-import ()
+import (
+	"fmt"
+)
 
 // System datastore error codes
 
@@ -72,4 +74,10 @@ func NewSystemUnableToRetrieveError(e error) Error {
 func NewSystemUnableToUpdateError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 11010, IKey: "datastore.system.unable_to_update", ICause: e,
 		InternalMsg: "System datastore : unable to update user information in server", InternalCaller: CallerN(1)}
+}
+
+func NewSystemFilteredRowsWarning(keyspace string) Error {
+	return &err{level: WARNING, ICode: 11011, IKey: "datastore.system.filtered_keyspaces", onceOnly: true,
+		InternalMsg: fmt.Sprintf("One or more documents were excluded from the %s bucket because of insufficient user permissions.", keyspace),
+		InternalCaller: CallerN(1)}
 }

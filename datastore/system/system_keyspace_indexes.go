@@ -54,10 +54,8 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canRead(context, namespaceId, keyspaceId) &&
-							!canListIndexes(context, namespaceId, keyspaceId) {
-							continue
-						}
+						excludeResults := !canRead(context, namespaceId, keyspaceId) &&
+							!canListIndexes(context, namespaceId, keyspaceId)
 						keyspace, excp := namespace.KeyspaceById(keyspaceId)
 						if excp == nil {
 							indexers, excp := keyspace.Indexers()
@@ -70,7 +68,11 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 
 									indexIds, excp := indexer.IndexIds()
 									if excp == nil {
-										count += int64(len(indexIds))
+										if excludeResults {
+											context.Warning(errors.NewSystemFilteredRowsWarning("system:indexes"))
+										} else {
+											count += int64(len(indexIds))
+										}
 									} else {
 										return 0, errors.NewSystemDatastoreError(excp, "")
 									}
@@ -113,6 +115,7 @@ func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]
 		indexId := ids[2]
 		if !canRead(context, namespaceId, keyspaceId) &&
 			!canListIndexes(context, namespaceId, keyspaceId) {
+			context.Warning(errors.NewSystemFilteredRowsWarning("system:indexes"))
 			continue
 		}
 		pairs, err := b.fetchOne(key, namespaceId, keyspaceId, indexId)

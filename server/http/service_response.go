@@ -347,11 +347,16 @@ loop:
 func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 	var err errors.Error
 	ok := true
+	alreadySeen := make(map[string]bool)
 loop:
 	for ok {
 		select {
 		case err, ok = <-this.Warnings():
 			if ok {
+				if err.OnceOnly() && alreadySeen[err.Error()] {
+					// do nothing for this warning
+					continue loop
+				}
 				if this.warningCount == 0 {
 					this.writeString(",\n")
 					this.writeString(prefix)
@@ -359,6 +364,7 @@ loop:
 				}
 				ok = this.writeError(err, this.warningCount, prefix, indent)
 				this.warningCount++
+				alreadySeen[err.Error()] = true
 			}
 		default:
 			break loop

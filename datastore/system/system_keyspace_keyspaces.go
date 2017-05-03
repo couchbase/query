@@ -62,9 +62,8 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
 					for _, keyspaceId := range keyspaceIds {
-						if !canAccessAll && !canRead(context, namespaceId, keyspaceId) {
-							continue
-						}
+						excludeResult := !canAccessAll && !canRead(context, namespaceId, keyspaceId)
+
 						// The list of keyspace ids can include memcached buckets.
 						// We do not want to include them in the count of
 						// of queryable buckets. Attempting to retrieve the keyspace
@@ -73,7 +72,11 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 						// See MB-19364 for more info.
 						_, err := namespace.KeyspaceByName(keyspaceId)
 						if err == nil {
-							count++
+							if excludeResult {
+								context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+							} else {
+								count++
+							}
 						}
 					}
 				} else {
@@ -103,6 +106,7 @@ func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext) 
 	for _, k := range keys {
 		ns, ks := splitId(k)
 		if !canAccessAll && !canRead(context, ns, ks) {
+			context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 			continue
 		}
 		item, e := b.fetchOne(ns, ks)

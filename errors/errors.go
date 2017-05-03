@@ -46,6 +46,7 @@ type Error interface {
 	Level() int
 	IsFatal() bool
 	IsWarning() bool
+	OnceOnly() bool
 }
 
 type ErrorChannel chan Error
@@ -87,6 +88,7 @@ type err struct {
 	InternalMsg    string
 	InternalCaller string
 	level          int
+	onceOnly       bool
 }
 
 func (e *err) Error() string {
@@ -140,6 +142,10 @@ func (e *err) TranslationKey() string {
 
 func (e *err) Cause() error {
 	return e.ICause
+}
+
+func (e *err) OnceOnly() bool {
+	return e.onceOnly
 }
 
 func NewParseError(e error, msg string) Error {
