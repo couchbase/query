@@ -52,7 +52,11 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 
 func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DropIndex"}
-	r["node"] = this.node
+	r["namespace"] = this.node.Keyspace().Namespace()
+	r["keyspace"] = this.node.Keyspace().Keyspace()
+	r["using"] = this.node.Using()
+	r["name"] = this.node.Name()
+	r["index_id"] = this.index.Id()
 	if f != nil {
 		f(r)
 	}
@@ -61,10 +65,37 @@ func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *DropIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string             `json:"#operator"`
-		Node *algebra.DropIndex `json:"node"`
+		_         string              `json:"#operator"`
+		Namespace string              `json:"namespace"`
+		Keyspace  string              `json:"keyspace"`
+		Using     datastore.IndexType `json:"using"`
+		Name      string              `json:"name"`
+		IndexId	  string	      `json:"index_id"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Build this.node.
+	ksref := algebra.NewKeyspaceRef(_unmarshalled.Namespace, _unmarshalled.Keyspace, "") // Parameters: namespace, keyspace, as.
+	this.node = algebra.NewDropIndex(ksref, _unmarshalled.Name, _unmarshalled.Using)
+
+	// Build this.index.
+	keyspace, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Keyspace)
+	if err != nil {
+		return err
+	}
+	indexer, err := keyspace.Indexer(_unmarshalled.Using)
+	if err != nil {
+		return err
+	}
+	index, err := indexer.IndexById(_unmarshalled.IndexId)
+	if err != nil {
+		return err
+	}
+	this.index = index
+
+	return nil
 }
