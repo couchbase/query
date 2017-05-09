@@ -70,7 +70,7 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 		Keyspace  string              `json:"keyspace"`
 		Using     datastore.IndexType `json:"using"`
 		Name      string              `json:"name"`
-		IndexId	  string	      `json:"index_id"`
+		IndexId   string              `json:"index_id"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
