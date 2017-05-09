@@ -175,6 +175,14 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	return exp, exp.MapChildren(this)
 }
 
+/*
+Don't transform subqueries
+*/
+
+func (this *DNF) VisitSubquery(expr expression.Subquery) (interface{}, error) {
+	return expr, nil
+}
+
 var _EMPTY_OBJECT_EXPR = expression.NewConstant(map[string]interface{}{})
 
 func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
