@@ -337,7 +337,16 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 
 				// If the option is data-urlencode then encode the data first.
 				if encodedData {
-					dataT = this.myCurl.Escape(dataT)
+					// When we encode strings, = should not be encoded.
+					// The curl.Escape() method for go behaves different to the libcurl method.
+					// q=select 1 should be q=select%201 and not q%3Dselect%201
+					// Hence split the string, encode and then rejoin.
+					stringComponent := strings.Split(dataT, "=")
+					for i, _ := range stringComponent {
+						stringComponent[i] = this.myCurl.Escape(stringComponent[i])
+					}
+
+					dataT = strings.Join(stringComponent, "=")
 				}
 
 				if stringData == "" {
