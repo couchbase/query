@@ -73,7 +73,7 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 		defer countDocs()
 
 		for ok {
-			this.switchPhase(_CHANTIME) // could be _SERVTIME
+			this.switchPhase(_SERVTIME)
 			select {
 			case <-this.stopChannel:
 				return
