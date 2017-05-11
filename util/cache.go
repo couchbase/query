@@ -68,7 +68,6 @@ func NewGenCache(l int) *GenCache {
 func (this *GenCache) Add(entry interface{}, id string) {
 	cacheNum := HashString(id, _CACHES)
 	this.locks[cacheNum].Lock()
-	defer this.locks[cacheNum].Unlock()
 
 	elem, ok := this.maps[cacheNum][id]
 	if ok {
@@ -77,17 +76,27 @@ func (this *GenCache) Add(entry interface{}, id string) {
 		// Move to the front
 		this.ditch(elem, cacheNum)
 		this.insert(elem, cacheNum)
+		this.locks[cacheNum].Unlock()
+
 	} else {
+		ditchOther := false
 
 		// In order not to have to acquire a different lock
-		// we ditch the LRU entry from this hash node:
+		// we try to ditch the LRU entry from this hash node:
 		// it makes the list a bit lopsided at the lower end
 		// but it buys us performance
 		elem = this.listTail[cacheNum]
-		if this.limit > 0 && int(this.curSize) >= this.limit && elem != nil {
+		if this.limit > 0 && int(this.curSize) >= this.limit {
+			if elem != nil {
+				delete(this.maps[cacheNum], elem.ID)
+				this.ditch(elem, cacheNum)
+			} else {
 
-			delete(this.maps[cacheNum], elem.ID)
-			this.ditch(elem, cacheNum)
+				// if we had nothing locally, we'll drop
+				// an entry from another bucket once we
+				// have unlocked this one
+				ditchOther = true
+			}
 		} else {
 			atomic.AddInt32(&this.curSize, 1)
 		}
@@ -97,6 +106,42 @@ func (this *GenCache) Add(entry interface{}, id string) {
 		}
 		this.insert(elem, cacheNum)
 		this.maps[cacheNum][id] = elem
+		this.locks[cacheNum].Unlock()
+
+		// we needed to limit the cache, but our bucket was empty,
+		// so we need to find a sacrificial victim somewhere else
+		// we choose the one with the highest number of entries
+		// for efficiency, we are a bit liberal with locks
+		if ditchOther {
+			count := 0
+			newCacheNum := -1
+
+			for c := 0; c < _CACHES; c++ {
+				l := len(this.maps[c])
+				if l > count {
+					count = l
+					newCacheNum = c
+				}
+			}
+
+			if newCacheNum != -1 {
+				this.locks[newCacheNum].Lock()
+				elem = this.listTail[newCacheNum]
+				if elem != nil {
+					delete(this.maps[newCacheNum], elem.ID)
+					this.ditch(elem, newCacheNum)
+					ditchOther = false
+				}
+				this.locks[newCacheNum].Unlock()
+			}
+
+			// after all this, we still didn't find another victim
+			// (not even ourselves!), so we need to adjust the count,
+			// as it's off by 1
+			if ditchOther {
+				atomic.AddInt32(&this.curSize, 1)
+			}
+		}
 	}
 }
 
