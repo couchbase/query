@@ -108,15 +108,25 @@ func handleScriptFlag(liner **liner.State) {
 				}
 			}
 
-			err_code, err_str := dispatch_command(scriptFlag[i], command.W, false, *liner)
-			if err_code != 0 {
+			if !command.QUIET {
 				_, werr := io.WriteString(command.W, "\n "+scriptFlag[i]+"\n")
 				if werr != nil {
 					s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
 					command.PrintError(s_err)
 				}
+			}
+
+			err_code, err_str := dispatch_command(scriptFlag[i], command.W, false, *liner)
+
+			if err_code != 0 {
 				s_err := command.HandleError(err_code, err_str)
 				command.PrintError(s_err)
+
+				if *errorExitFlag {
+					(*liner).Close()
+					os.Clearenv()
+					os.Exit(1)
+				}
 			}
 		}
 
