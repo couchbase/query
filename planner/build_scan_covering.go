@@ -108,11 +108,12 @@ outer:
 
 	// Use shortest remaining index
 	var index datastore.Index
+	minLen := 0
 	for c, _ := range covering {
-		if index == nil {
+		cLen := len(c.RangeKey())
+		if index == nil || cLen < minLen || (cLen == minLen && c.Condition() != nil) {
 			index = c
-		} else if len(c.RangeKey()) < len(index.RangeKey()) {
-			index = c
+			minLen = cLen
 		}
 	}
 
