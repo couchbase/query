@@ -53,6 +53,12 @@ const (
 	_N1QL_USER_AGENT = "couchbase/n1ql/" + util.VERSION
 )
 
+// Max request size from server (cant import because of cyclic dependency)
+const (
+	MIN_RESPONSE_SIZE = 20 * (1 << 20)
+	MAX_RESPONSE_SIZE = 64 * (1 << 20)
+)
+
 /*
 This represents the curl function CURL(method, url, options).
 It returns result of the curl operation on the url based on
@@ -185,6 +191,10 @@ func (this *Curl) Constructor() FunctionConstructor {
 
 func (this *Curl) handleCurl(url string, options map[string]interface{}) (interface{}, error) {
 	// Handle different cases
+
+	// For result-cap and request size
+	responseSize := setResponseSize(MIN_RESPONSE_SIZE)
+	sizeError := false
 
 	// For data method
 	getMethod := false
@@ -606,6 +616,19 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 
 			this.curlCacert(certDir + file)
 
+		case "result-cap":
+			// In order to restrict size of response use curlopt-range.
+			// Min allowed = 20MB  20971520
+			// Max allowed = request-size-cap default 67 108 864
+
+			if value.NewValue(val).Type() != value.NUMBER {
+				return nil, fmt.Errorf(" Incorrect type for result-cap option in CURL ")
+			}
+
+			maxSize := value.NewValue(val).Actual().(float64)
+
+			responseSize = setResponseSize(int64(maxSize))
+
 		default:
 			return nil, fmt.Errorf(" CURL option %v is not supported.", k)
 
@@ -668,7 +691,16 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 	// Callback function to save data instead of redirecting it into stdout.
 	writeToBufferFunc := func(buf []byte, userdata interface{}) bool {
 		if silent == false {
-			b.Write([]byte(buf))
+
+			// Check length of buffer b. If it is greater than
+			if int64(b.Len()) > responseSize {
+				// No more writing we are all done
+				// If this interrupts the stream of data then we throw not a JSON endpoint error.
+				sizeError = true
+				return true
+			} else {
+				b.Write([]byte(buf))
+			}
 		}
 		return true
 	}
@@ -683,6 +715,10 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 		} else {
 			return nil, nil
 		}
+	}
+
+	if sizeError {
+		return nil, fmt.Errorf("Response Size has been exceeded. The max response capacity is %v", responseSize)
 	}
 
 	// The return type can either be and ARRAY or an OBJECT
@@ -846,6 +882,40 @@ func (this *Curl) curlCiphers() {
 
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, finalCipherList)
+}
+
+func setResponseSize(maxSize int64) (finalValue int64) {
+	/*
+			 get the first 200 bytes
+			 curl_easy_setopt(curl, CURLOPT_RANGE, "0-199")
+
+			 The unfortunate part is that for HTTP, CURLOPT_RANGE is not always enforced.
+			 In this case we want to be able to still restrict the amount of data written
+			 to the buffer.
+
+			 For now we shall not use this. In the future, if the option becomes enforced
+			 for HTTP then it can be used.
+
+			 finalRange := "0-" + fmt.Sprintf("%s", MIN_REQUEST_SIZE)
+		     finalRange = "0-" + fmt.Sprintf("%s", MAX_REQUEST_SIZE)
+		     finalRange = "0-" + fmt.Sprintf("%s", maxSize)
+
+		     myCurl := this.myCurl
+		     myCurl.Setopt(curl.OPT_RANGE, finalRange)
+	*/
+	// Max Value = 64MB
+	// Min Value = 20MB
+
+	finalValue = MIN_RESPONSE_SIZE
+
+	if maxSize > MAX_RESPONSE_SIZE {
+		finalValue = MAX_RESPONSE_SIZE
+	} else if (maxSize <= MAX_RESPONSE_SIZE) && (maxSize >= MIN_RESPONSE_SIZE) {
+		finalValue = maxSize
+	}
+
+	return
+
 }
 
 /* Other auth values
