@@ -10,7 +10,7 @@ then
     go build
     cd $BACK
     $GOPATH/src/$NEX/nex n1ql.nex
-    awk '/NEX_END_OF_LEXER_STRUCT/ { print "curOffset int"; }
+    awk '/NEX_END_OF_LEXER_STRUCT/ { print "curOffset int\nreportError func(what string)" }
 	 { print }' n1ql.nn.go > n1ql.nn.tmp
     mv n1ql.nn.tmp n1ql.nn.go
     go fmt n1ql.nn.go

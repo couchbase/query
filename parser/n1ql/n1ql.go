@@ -26,6 +26,7 @@ func ParseStatement(input string) (algebra.Statement, error) {
 	lex.parsingStmt = true
 	lex.text = input
 	lex.nex.ResetOffset()
+	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
@@ -47,6 +48,7 @@ func ParseExpression(input string) (expression.Expression, error) {
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
 	lex.nex.ResetOffset()
+	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
@@ -76,13 +78,14 @@ func doParse(lex *lexer) {
 }
 
 type lexer struct {
-	nex         *Lexer
-	posParam    int
-	errs        []string
-	stmt        algebra.Statement
-	expr        expression.Expression
-	parsingStmt bool
-	text        string
+	nex              *Lexer
+	posParam         int
+	errs             []string
+	stmt             algebra.Statement
+	expr             expression.Expression
+	parsingStmt      bool
+	lastScannerError string
+	text             string
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -101,6 +104,10 @@ func (this *lexer) Remainder(offset int) string {
 }
 
 func (this *lexer) Error(s string) {
+	if this.lastScannerError != "" {
+		s = s + ": " + this.lastScannerError
+		this.lastScannerError = ""
+	}
 	if len(this.nex.stack) > 0 {
 		s = s + " - at " + this.nex.Text()
 	} else {
@@ -108,6 +115,10 @@ func (this *lexer) Error(s string) {
 	}
 
 	this.errs = append(this.errs, s)
+}
+
+func (this *lexer) ScannerError(s string) {
+	this.lastScannerError = s
 }
 
 func (this *lexer) setStatement(stmt algebra.Statement) {

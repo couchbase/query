@@ -34,7 +34,8 @@ type Lexer struct {
 
 	// The following line makes it easy for scripts to insert fields in the
 	// generated code.
-	curOffset int
+	curOffset   int
+	reportError func(what string)
 	// [NEX_END_OF_LEXER_STRUCT]
 }
 
@@ -31245,7 +31246,7 @@ OUTER0:
 				lval.s, e = UnmarshalDoubleQuoted(yylex.Text())
 				yylex.logToken(yylex.Text(), "STR - %s", lval.s)
 				if e != nil {
-					yylex.Error("invalid quoted string")
+					yylex.reportError("invalid quoted string")
 					return _ERROR_
 				}
 				return STR
@@ -31257,7 +31258,7 @@ OUTER0:
 				lval.s, e = UnmarshalSingleQuoted(yylex.Text())
 				yylex.logToken(yylex.Text(), "STR - %s", lval.s)
 				if e != nil {
-					yylex.Error("invalid quoted string")
+					yylex.reportError("invalid quoted string")
 					return _ERROR_
 				}
 				return STR
@@ -31272,7 +31273,7 @@ OUTER0:
 				lval.s, e = UnmarshalBackQuoted(text)
 				yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
 				if e != nil {
-					yylex.Error("invalid case insensitive identifier")
+					yylex.reportError("invalid case insensitive identifier")
 					return _ERROR_
 				}
 				return IDENT_ICASE
@@ -31285,7 +31286,7 @@ OUTER0:
 				lval.s, e = UnmarshalBackQuoted(yylex.Text())
 				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 				if e != nil {
-					yylex.Error("invalid escaped identifier")
+					yylex.reportError("invalid escaped identifier")
 					return _ERROR_
 				}
 				return IDENT
@@ -32378,4 +32379,8 @@ func (yylex *Lexer) logToken(text string, format string, v ...interface{}) {
 
 func (yylex *Lexer) ResetOffset() {
 	yylex.curOffset = 0
+}
+
+func (yylex *Lexer) ReportError(reportError func(what string)) {
+	yylex.reportError = reportError
 }
