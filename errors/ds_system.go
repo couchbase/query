@@ -81,3 +81,9 @@ func NewSystemFilteredRowsWarning(keyspace string) Error {
 		InternalMsg:    fmt.Sprintf("One or more documents were excluded from the %s bucket because of insufficient user permissions.", keyspace),
 		InternalCaller: CallerN(1)}
 }
+
+func NewSystemMalformedKeyError(key string, keyspace string) Error {
+	return &err{level: EXCEPTION, ICode: 11012, IKey: "datastore.system.malformed_key",
+		InternalMsg:    fmt.Sprintf("System datastore : key %q is not of the correct format for keyspace %s", key, keyspace),
+		InternalCaller: CallerN(1)}
+}

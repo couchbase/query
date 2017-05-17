@@ -110,6 +110,10 @@ func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]
 
 	for _, key := range keys {
 		ids := strings.SplitN(key, "/", 3)
+		if len(ids) < 3 {
+			errs = append(errs, errors.NewSystemMalformedKeyError(key, "system:indexes"))
+			continue
+		}
 		namespaceId := ids[0]
 		keyspaceId := ids[1]
 		indexId := ids[2]
