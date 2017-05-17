@@ -100,12 +100,7 @@ func (cache *userInfoCache) fetch(keys []string, idApproverFunc func(string) boo
 			continue
 		}
 		val := cache.curValue[k]
-
 		if val == nil {
-			if errs == nil {
-				errs = make([]errors.Error, 0, 1)
-			}
-			errs = append(errs, errors.NewNoValueForKey(k))
 			continue
 		}
 
