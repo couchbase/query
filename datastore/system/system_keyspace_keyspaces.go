@@ -104,7 +104,11 @@ func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext) 
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
-		ns, ks := splitId(k)
+		err, ns, ks := splitId(k)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 		if !canAccessAll && !canRead(context, ns, ks) {
 			context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 			continue
@@ -112,9 +116,6 @@ func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext) 
 		item, e := b.fetchOne(ns, ks)
 
 		if e != nil {
-			if errs == nil {
-				errs = make([]errors.Error, 0, 1)
-			}
 			errs = append(errs, e)
 			continue
 		}
@@ -239,9 +240,12 @@ func makeId(n, k string) string {
 	return fmt.Sprintf("%s/%s", n, k)
 }
 
-func splitId(id string) (string, string) {
+func splitId(id string) (errors.Error, string, string) {
 	ids := strings.SplitN(id, "/", 2)
-	return ids[0], ids[1]
+	if len(ids) != 2 {
+		return errors.NewSystemMalformedKeyError(id, "system:keyspaces"), "", ""
+	}
+	return nil, ids[0], ids[1]
 }
 
 func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
