@@ -63,9 +63,14 @@ func (b *applicableRolesKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 }
 
 func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+	var errs []errors.Error
 	pairs := make([]value.AnnotatedPair, len(keys))
 	for i, key := range keys {
-		grantee, role, bucketName := splitAppRolesKey(key)
+		err, grantee, role, bucketName := splitAppRolesKey(key)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 		valMap := make(map[string]interface{}, 3)
 		valMap["grantee"] = grantee
 		valMap["role"] = role
@@ -82,7 +87,7 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryCo
 			Value: item,
 		}
 	}
-	return pairs, nil
+	return pairs, errs
 }
 
 func (b *applicableRolesKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
@@ -190,8 +195,12 @@ func makeAppRolesKey(id, roleName, bucket string) string {
 	return fmt.Sprintf("%s/%s/%s", id, roleName, bucket)
 }
 
-func splitAppRolesKey(key string) (id, roleName, bucketName string) {
+func splitAppRolesKey(key string) (err errors.Error, id, roleName, bucketName string) {
 	fields := strings.Split(key, "/")
+	if len(fields) != 3 {
+		err = errors.NewSystemMalformedKeyError(key, "system:applicable_roles")
+		return
+	}
 	id = fields[0]
 	roleName = fields[1]
 	bucketName = fields[2]
