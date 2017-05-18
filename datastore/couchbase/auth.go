@@ -197,6 +197,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 			logging.Debugf("Token auth error: %v", err)
 		} else {
 			credentialsList = append(credentialsList, creds)
+			authenticatedUsers = append(authenticatedUsers, creds.Name())
 		}
 	}
 
