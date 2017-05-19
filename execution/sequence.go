@@ -12,6 +12,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -64,11 +65,16 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
+		n := len(this.children)
+		if n == 0 {
+			err := errors.NewPlanInternalError("Sequence has no children")
+			context.Error(err)
+			return
+		}
+
 		first_child := this.children[0]
 		first_child.SetInput(this.input)
 		first_child.SetStop(this.stop)
-
-		n := len(this.children)
 
 		// Define all Inputs and Outputs
 		for i := 0; i < n-1; i++ {

@@ -127,3 +127,10 @@ func NewIndexerDescCollationError() Error {
 	return &err{level: EXCEPTION, ICode: NOT_SUPPORTED_DESC_COLLATION, IKey: "plan.not_supported_desc_collation",
 		InternalMsg: fmt.Sprintf("DESC option in the index keys is not supported by indexer."), InternalCaller: CallerN(1)}
 }
+
+const PLAN_INTERNAL_ERROR = 4321
+
+func NewPlanInternalError(what string) Error {
+	return &err{level: EXCEPTION, ICode: PLAN_INTERNAL_ERROR, IKey: "plan.internal_error",
+		InternalMsg: fmt.Sprintf("Plan error: %v", what), InternalCaller: CallerN(1)}
+}
