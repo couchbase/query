@@ -954,6 +954,9 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 	if err != nil {
 		// Ignore "Not found" keys
 		if !isNotFoundError(err) {
+			if cb.IsReadTimeOutError(err) {
+				logging.Errorf(err.Error())
+			}
 			return nil, []errors.Error{errors.NewCbBulkGetError(err, "")}
 		}
 	}
