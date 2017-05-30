@@ -153,7 +153,7 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 	for j, entry := range entries {
 		var joined value.AnnotatedValue
 		if j < len(entries)-1 {
-			joined = item.Copy().(value.AnnotatedValue)
+			joined = item.CopyWithCovers().(value.AnnotatedValue)
 		} else {
 			joined = item
 		}

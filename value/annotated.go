@@ -34,6 +34,7 @@ from covering indexes.
 */
 type AnnotatedValue interface {
 	Value
+	CopyWithCovers() Value
 	GetValue() Value
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
@@ -104,6 +105,15 @@ func (this *annotatedValue) CopyForUpdate() Value {
 		Value:       this.Value.CopyForUpdate(),
 		attachments: copyMap(this.attachments, self),
 		covers:      this.covers,
+		bit:         this.bit,
+	}
+}
+
+func (this *annotatedValue) CopyWithCovers() Value {
+	return &annotatedValue{
+		Value:       this.Value.Copy(),
+		attachments: copyMap(this.attachments, self),
+		covers:      this.covers.Copy(),
 		bit:         this.bit,
 	}
 }
