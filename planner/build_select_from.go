@@ -144,6 +144,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+	this.requirePrimaryKey = true
 	this.resetCountMinMax()
 	this.resetProjection()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
@@ -215,6 +216,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+	this.requirePrimaryKey = true
 	this.resetCountMinMax()
 	this.resetProjection()
 
