@@ -21,7 +21,6 @@ type myUserInfoKeyspace struct {
 	namespace *namespace
 	name      string
 	indexer   datastore.Indexer
-	cache     *userInfoCache
 }
 
 func (b *myUserInfoKeyspace) Release() {
@@ -49,8 +48,24 @@ func (b *myUserInfoKeyspace) Count(context datastore.QueryContext) (int64, error
 		}
 		return false
 	}
-	v, err := b.cache.getNumUsers(approverFunc)
-	return int64(v), err
+
+	sliceOfUsers, err := getUserInfoList(b.namespace.store)
+	if err != nil {
+		return 0, err
+	}
+	userMap, err := userInfoListToMap(sliceOfUsers)
+	if err != nil {
+		return 0, err
+	}
+
+	var total int64
+	for k := range userMap {
+		if approverFunc(k) {
+			total++
+		}
+	}
+
+	return total, nil
 }
 
 func (b *myUserInfoKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -71,8 +86,39 @@ func (b *myUserInfoKeyspace) Fetch(keys []string, context datastore.QueryContext
 		}
 		return false
 	}
-	vals, errs := b.cache.fetch(keys, approverFunc)
-	return vals, errs
+
+	sliceOfUsers, err := getUserInfoList(b.namespace.store)
+	if err != nil {
+		return nil, []errors.Error{err}
+	}
+	newMap, err := userInfoListToMap(sliceOfUsers)
+	if err != nil {
+		return nil, []errors.Error{err}
+	}
+
+	var errs []errors.Error
+	rv := make([]value.AnnotatedPair, 0, len(keys))
+	for _, k := range keys {
+		if !approverFunc(k) {
+			continue
+		}
+		val := newMap[k]
+		if val == nil {
+			continue
+		}
+
+		item := value.NewAnnotatedValue(val)
+		item.SetAttachment("meta", map[string]interface{}{
+			"id": k,
+		})
+
+		rv = append(rv, value.AnnotatedPair{
+			Name:  k,
+			Value: item,
+		})
+	}
+
+	return rv, errs
 }
 
 func (b *myUserInfoKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
@@ -98,8 +144,6 @@ func newMyUserInfoKeyspace(p *namespace) (*myUserInfoKeyspace, errors.Error) {
 
 	primary := &myUserInfoIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
-
-	b.cache = newUserInfoCache(p.store)
 
 	return b, nil
 }
@@ -156,12 +200,33 @@ func (pi *myUserInfoIndex) Drop(requestId string) errors.Error {
 
 func (pi *myUserInfoIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
+
 	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
 func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
+	sliceOfUsers, err := getUserInfoList(pi.keyspace.namespace.store)
+	if err != nil {
+		conn.Fatal(err)
+		return
+	}
+	mapOfUsers, err := userInfoListToMap(sliceOfUsers)
+	if err != nil {
+		conn.Fatal(err)
+		return
+	}
 
-	pi.keyspace.cache.scanEntries(limit, conn.EntryChannel())
+	var numProduced int64
+	for k, _ := range mapOfUsers {
+		if limit > 0 && numProduced > limit {
+			break
+		}
+
+		entry := &datastore.IndexEntry{PrimaryKey: k}
+		conn.EntryChannel() <- entry
+		numProduced++
+	}
+
 }
