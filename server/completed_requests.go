@@ -323,7 +323,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		re.UserAgent = userAgent
 	}
 
-	requestLog.cache.Add(re, id)
+	requestLog.cache.Add(re, id, nil)
 }
 
 // request qualifiers

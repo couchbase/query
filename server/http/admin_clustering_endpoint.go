@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
 )
@@ -320,6 +321,7 @@ const (
 	_TIMEOUT         = "timeout"
 	_CMPTHRESHOLD    = "completed-threshold"
 	_CMPLIMIT        = "completed-limit"
+	_PRPLIMIT        = "prepared-limit"
 	_PRETTY          = "pretty"
 	_PROFILE         = "profile"
 	_CONTROLS        = "controls"
@@ -336,6 +338,14 @@ func checkBool(val interface{}) (bool, errors.Error) {
 func checkNumber(val interface{}) (bool, errors.Error) {
 	_, ok := val.(float64)
 	return ok, nil
+}
+
+func checkPositiveInteger(val interface{}) (bool, errors.Error) {
+	v, ok := val.(float64)
+
+	// we are getting floats here - val doesn't cast to ints
+	// and we want a cache, however small
+	return ok && (v > 1), nil
 }
 
 func checkString(val interface{}) (bool, errors.Error) {
@@ -367,6 +377,7 @@ var _CHECKERS = map[string]checker{
 	_TIMEOUT:         checkNumber,
 	_CMPTHRESHOLD:    checkNumber,
 	_CMPLIMIT:        checkNumber,
+	_PRPLIMIT:        checkPositiveInteger,
 	_PRETTY:          checkBool,
 	_PROFILE:         checkProfileAdmin,
 	_CONTROLS:        checkControlsAdmin,
@@ -431,6 +442,10 @@ var _SETTERS = map[string]setter{
 	_CMPLIMIT: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
 		server.RequestsSetLimit(int(value))
+	},
+	_PRPLIMIT: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		plan.PreparedsSetLimit(int(value))
 	},
 	_PRETTY: func(s *server.Server, o interface{}) {
 		value, _ := o.(bool)
@@ -505,6 +520,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	threshold, _ := server.RequestsGetQualifier("threshold")
 	settings[_CMPTHRESHOLD] = threshold
 	settings[_CMPLIMIT] = server.RequestsLimit()
+	settings[_PRPLIMIT] = plan.PreparedsLimit()
 	settings[_PRETTY] = srvr.Pretty()
 	settings[_MAXINDEXAPI] = srvr.MaxIndexAPI()
 	settings = getProfileAdmin(settings, srvr)

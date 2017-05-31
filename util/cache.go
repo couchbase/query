@@ -15,6 +15,12 @@ access.
 The ForEach method is not meant to provide a snapshot of the current state of affairs
 but rather an almost accurate picture: deletes and inserts are allowed as the scan
 takes place.
+
+Since the cache will be maintained by LRU purging, and certain types of access to the cache
+will move elements at the top of the bucket, we do maintain two lists: LRU (for cleaning)
+and scan (for access): a single list for both operations proved to be inadequate in avoiding
+skipping whole swathes of entries or reporting an element twice, caused by entries moving
+about in the bucket as the scan occurs.
 */
 package util
 
@@ -25,10 +31,22 @@ import (
 )
 
 type genSubList struct {
+	next *genElem // next points to head (list), goes in the direction of head (element)
+	prev *genElem // prev points to tail (list), goes in the direction of tail (element)
+}
+
+type listType int
+
+const (
+	_LRU listType = iota
+	_SCAN
+	_LISTTYPES // Sizer
+)
+
+type genElem struct {
 	ID       string
-	next     *genSubList
-	prev     *genSubList
-	refcount int
+	lists    [_LISTTYPES]genSubList
+	refcount int32
 	deleted  bool
 	contents interface{}
 }
@@ -36,19 +54,29 @@ type genSubList struct {
 const _CACHE_SIZE = 1 << 10
 const _CACHES = 4
 
+type Operation int
+
+const (
+	IGNORE Operation = iota
+	AMEND
+	REPLACE
+)
+
 type GenCache struct {
 
 	// one lock per cache bucket to aid concurrency
 	locks [_CACHES]sync.RWMutex
 
-	// doubly linked lists for scans
-	listHead [_CACHES]*genSubList
-	listTail [_CACHES]*genSubList
+	// this shows intent to lock exclusively
+	lockers [_CACHES]int32
+
+	// doubly linked lists for scans and ejections
+	lists [_CACHES][_LISTTYPES]genSubList
 
 	// maps for direct access
-	maps [_CACHES]map[string]*genSubList
+	maps [_CACHES]map[string]*genElem
 
-	// max size, for MRU lists
+	// max size, for LRU lists
 	limit   int
 	curSize int32
 }
@@ -59,23 +87,37 @@ func NewGenCache(l int) *GenCache {
 	}
 
 	for b := 0; b < _CACHES; b++ {
-		rv.maps[b] = make(map[string]*genSubList, _CACHE_SIZE)
+		rv.maps[b] = make(map[string]*genElem, _CACHE_SIZE)
 	}
 	return rv
 }
 
-// Add (or update, if ID found) entry, and size control if MRU list
-func (this *GenCache) Add(entry interface{}, id string) {
+// Add (or update, if ID found) entry, eject old entry if we are controlling sie
+func (this *GenCache) Add(entry interface{}, id string, process func(interface{}) Operation) {
 	cacheNum := HashString(id, _CACHES)
-	this.locks[cacheNum].Lock()
+	this.lock(cacheNum)
 
 	elem, ok := this.maps[cacheNum][id]
 	if ok {
-		elem.contents = entry
+		op := REPLACE
+
+		// If the element has been found, process the existing entry,
+		// determine any conflict, and skip if required
+		// The process function may alter the entry contents as
+		// required rather than switching it to the new entry
+		if process != nil {
+			if op = process(elem.contents); op == IGNORE {
+				return
+			}
+		}
 
 		// Move to the front
-		this.ditch(elem, cacheNum)
-		this.insert(elem, cacheNum)
+		this.promote(elem, cacheNum)
+
+		if op == REPLACE {
+			elem.contents = entry
+		}
+
 		this.locks[cacheNum].Unlock()
 
 	} else {
@@ -85,11 +127,10 @@ func (this *GenCache) Add(entry interface{}, id string) {
 		// we try to ditch the LRU entry from this hash node:
 		// it makes the list a bit lopsided at the lower end
 		// but it buys us performance
-		elem = this.listTail[cacheNum]
+		elem = this.lists[cacheNum][_LRU].prev
 		if this.limit > 0 && int(this.curSize) >= this.limit {
 			if elem != nil {
-				delete(this.maps[cacheNum], elem.ID)
-				this.ditch(elem, cacheNum)
+				this.remove(elem, cacheNum)
 			} else {
 
 				// if we had nothing locally, we'll drop
@@ -100,11 +141,11 @@ func (this *GenCache) Add(entry interface{}, id string) {
 		} else {
 			atomic.AddInt32(&this.curSize, 1)
 		}
-		elem = &genSubList{
+		elem = &genElem{
 			contents: entry,
 			ID:       id,
 		}
-		this.insert(elem, cacheNum)
+		this.add(elem, cacheNum)
 		this.maps[cacheNum][id] = elem
 		this.locks[cacheNum].Unlock()
 
@@ -125,11 +166,10 @@ func (this *GenCache) Add(entry interface{}, id string) {
 			}
 
 			if newCacheNum != -1 {
-				this.locks[newCacheNum].Lock()
-				elem = this.listTail[newCacheNum]
+				this.lock(newCacheNum)
+				elem = this.lists[newCacheNum][_LRU].prev
 				if elem != nil {
-					delete(this.maps[newCacheNum], elem.ID)
-					this.ditch(elem, newCacheNum)
+					this.remove(elem, newCacheNum)
 					ditchOther = false
 				}
 				this.locks[newCacheNum].Unlock()
@@ -148,7 +188,7 @@ func (this *GenCache) Add(entry interface{}, id string) {
 // Remove entry
 func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
 	cacheNum := HashString(id, _CACHES)
-	this.locks[cacheNum].Lock()
+	this.lock(cacheNum)
 	defer this.locks[cacheNum].Unlock()
 
 	elem, ok := this.maps[cacheNum][id]
@@ -156,8 +196,7 @@ func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
 		if cleanup != nil {
 			cleanup(elem.contents)
 		}
-		delete(this.maps[cacheNum], id)
-		this.ditch(elem, cacheNum)
+		this.remove(elem, cacheNum)
 		atomic.AddInt32(&this.curSize, -1)
 		return true
 	}
@@ -173,6 +212,27 @@ func (this *GenCache) Get(id string, process func(interface{})) interface{} {
 	if !ok {
 		return nil
 	} else {
+		if process != nil {
+			process(elem.contents)
+		}
+		return elem.contents
+	}
+}
+
+// Returns an element's contents by id and places it at the top of the bucket
+// Also useful to manipulate an element with an exclusive lock
+func (this *GenCache) Use(id string, process func(interface{})) interface{} {
+	cacheNum := HashString(id, _CACHES)
+	this.lock(cacheNum)
+	defer this.locks[cacheNum].Unlock()
+	elem, ok := this.maps[cacheNum][id]
+	if !ok {
+		return nil
+	} else {
+
+		// Move to the front
+		this.promote(elem, cacheNum)
+
 		if process != nil {
 			process(elem.contents)
 		}
@@ -203,11 +263,10 @@ func (this *GenCache) SetLimit(limit int) {
 	// reign in entries a bit
 	c := 0
 	for this.limit > 0 && int(this.curSize) > this.limit {
-		this.locks[c].Lock()
-		elem := this.listTail[c]
+		this.lock(c)
+		elem := this.lists[c][_LRU].prev
 		if elem != nil {
-			delete(this.maps[c], elem.ID)
-			this.ditch(elem, c)
+			this.remove(elem, c)
 			atomic.AddInt32(&this.curSize, -1)
 		}
 		this.locks[c].Unlock()
@@ -221,10 +280,11 @@ func (this *GenCache) Names() []string {
 
 	// we have emergency extra space not to have to append
 	// if we can avoid it
-	sz := _CACHES + int(this.curSize)
-	n := make([]string, sz)
+	l := int(this.curSize)
+	sz := _CACHES + l
+	n := make([]string, l, sz)
 	this.ForEach(func(id string, entry interface{}) {
-		if i < sz {
+		if i < l {
 			n[i] = id
 		} else {
 			n = append(n, id)
@@ -239,106 +299,145 @@ func (this *GenCache) Names() []string {
 // but rather a a low cost, almost accurate view
 func (this *GenCache) ForEach(f func(string, interface{})) {
 	for b := 0; b < _CACHES; b++ {
-		needDecr := false
+		sharedLock := true
 		this.locks[b].RLock()
-		elem := this.listTail[b]
-		if elem == nil {
+		nextElem := this.lists[b][_SCAN].prev
+		if nextElem == nil {
 			this.locks[b].RUnlock()
 			continue
 		}
+
+		// mark tail element as in use, so that they don't disappear mid scan
+		atomic.AddInt32(&nextElem.refcount, 1)
 		for {
+			elem := nextElem
+			nextElem = elem.lists[_SCAN].next
 
-			// if the current element had been marked as in use
-			// release it
-			if needDecr {
-				elem.refcount--
-				needDecr = false
-			}
-
-			// and if somebody had deleted it in the interim
-			// skip it
+			// somebody had deleted the element  in the interim, so skip it
 			if elem.deleted {
-				oldElem := elem
-				elem = elem.next
 
 				// and if no longer referenced, get rid of it for real
-				if oldElem.refcount == 0 {
+				if elem.refcount == 1 {
 
-					// a bit naughty, but since we own the lock
-					// and refcount is 0, it will be deleted
-					this.ditch(oldElem, b)
+					// promote the lock
+					this.locks[b].Unlock()
+					sharedLock = false
+					this.lock(b)
+
+					// if we are still the only referencer, remove
+					if elem.refcount == 1 {
+						this.lists[b][_SCAN].ditch(elem, _SCAN)
+					}
 				}
 
 				// if not, do what's required
 			} else {
 				f(elem.ID, elem.contents)
-				elem = elem.next
 			}
 
-			// now mark that this element will be scanned so
-			// that it doesn't get removed from the list and
-			// we get lost mid scan...
-			if elem != nil {
-				elem.refcount++
-				needDecr = true
+			// release current element
+			atomic.AddInt32(&elem.refcount, -1)
+
+			// mark next element as in use so that it doesn't get removed from
+			// the list and we get lost mid scan...
+			if nextElem != nil {
+				atomic.AddInt32(&nextElem.refcount, 1)
 			} else {
 
-				// No need to go through the unlock / relock
-				// if we are done
-				this.locks[b].RUnlock()
+				// No need to go through the unlock / relock if we are done
+				if sharedLock {
+					this.locks[b].RUnlock()
+				} else {
+					this.locks[b].Unlock()
+				}
 				break
 			}
 
-			// it would be nice golang locks showed waiters
-			// (by catergory, even), so that we could avoid
-			// releasing the lock if no writer is waiting
-			this.locks[b].RUnlock()
+			// if we don't have waiters, we can just continue
+			if sharedLock {
+				if this.lockers[b] == 0 {
+					continue
+				}
+				this.locks[b].RUnlock()
+			} else {
+				this.locks[b].Unlock()
+			}
+
+			// restart the scan
 			this.locks[b].RLock()
+			sharedLock = true
 		}
 	}
 }
 
-func (this *GenCache) insert(elem *genSubList, cacheNum int) {
-	elem.next = nil
-	if this.listHead[cacheNum] == nil {
-		this.listHead[cacheNum] = elem
-		this.listTail[cacheNum] = elem
-		elem.prev = nil
+func (this *GenCache) lock(cacheNum int) {
+	atomic.AddInt32(&this.lockers[cacheNum], 1)
+	this.locks[cacheNum].Lock()
+	atomic.AddInt32(&this.lockers[cacheNum], -1)
+}
+
+// in all of the following methods, the bucket is expected to be already exclusively locked
+func (this *GenCache) add(elem *genElem, cacheNum int) {
+	this.lists[cacheNum][_LRU].insert(elem, _LRU)
+	this.lists[cacheNum][_SCAN].insert(elem, _SCAN)
+}
+
+func (this *GenCache) promote(elem *genElem, cacheNum int) {
+	this.lists[cacheNum][_LRU].ditch(elem, _LRU)
+	this.lists[cacheNum][_LRU].insert(elem, _LRU)
+}
+
+func (this *GenCache) remove(elem *genElem, cacheNum int) {
+	delete(this.maps[cacheNum], elem.ID)
+	this.lists[cacheNum][_LRU].ditch(elem, _LRU)
+	if elem.refcount > 0 {
+		elem.deleted = true
 	} else {
-		elem.prev = this.listHead[cacheNum]
-		elem.prev.next = elem
-		this.listHead[cacheNum] = elem
+		this.lists[cacheNum][_SCAN].ditch(elem, _SCAN)
+	}
+}
+
+func (this *genSubList) insert(elem *genElem, list listType) {
+	elem.lists[list].next = nil
+	if this.next == nil {
+		this.next = elem
+		this.prev = elem
+		elem.lists[list].prev = nil
+	} else {
+		elem.lists[list].prev = this.next
+		elem.lists[list].prev.lists[list].next = elem
+		this.next = elem
 	}
 
 }
 
-func (this *GenCache) ditch(elem *genSubList, cacheNum int) {
+func (this *genSubList) ditch(elem *genElem, list listType) {
 
 	// corner cases: head
-	if elem == this.listHead[cacheNum] {
-		this.listHead[cacheNum] = elem.prev
+	if elem == this.next {
+		this.next = elem.lists[list].prev
 
 		// ...and tail
-		if elem == this.listTail[cacheNum] {
-			this.listTail[cacheNum] = elem.next
+		if elem == this.prev {
+			this.prev = elem.lists[list].next
 		} else {
-			elem.prev.next = nil
+			elem.lists[list].prev.lists[list].next = nil
 		}
 
 		// tail
-	} else if elem == this.listTail[cacheNum] {
-		this.listTail[cacheNum] = elem.next
-		elem.next.prev = nil
+	} else if elem == this.prev {
+		this.prev = elem.lists[list].next
+		elem.lists[list].next.lists[list].prev = nil
 
 		// middle
 	} else {
-		elem.prev.next = elem
-		elem.next.prev = elem
+		prev := elem.lists[list].prev
+		next := elem.lists[list].next
+		prev.lists[list].next = next
+		next.lists[list].prev = prev
 	}
 
 	// help the GC
-	elem.next = nil
-	elem.prev = nil
-
-	// pity we can't nil contents...
+	elem.lists[list].next = nil
+	elem.lists[list].prev = nil
 }

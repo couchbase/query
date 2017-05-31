@@ -283,7 +283,31 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		if err != nil {
 			return nil, err
 		}
-		return plan.SnapshotPrepared(), nil
+
+		numPrepareds := plan.CountPrepareds()
+		data := make([]map[string]interface{}, numPrepareds)
+		i := 0
+
+		snapshot := func(name string, d *plan.CacheEntry) {
+
+			// FIXME quick hack to avoid overruns
+			if i >= numPrepareds {
+				return
+			}
+			data[i] = map[string]interface{}{}
+			data[i]["name"] = d.Prepared.Name()
+			data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
+			data[i]["statement"] = d.Prepared.Text()
+			data[i]["uses"] = d.Uses
+			if d.Uses > 0 {
+				data[i]["lastUse"] = d.LastUse.String()
+			}
+			i++
+		}
+
+		plan.PreparedsForeach(snapshot)
+		return data, nil
+
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
