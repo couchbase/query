@@ -88,7 +88,7 @@ func TestStatementPrivileges(t *testing.T) {
 		// ROLE statements
 		//
 		testCase{id: "Grant Role",
-			text: "grant role data_reader(foo) to don",
+			text: "grant data_reader on foo to don",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "", Priv: auth.PRIV_SECURITY_WRITE},
 			}}},

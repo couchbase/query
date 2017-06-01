@@ -50,9 +50,9 @@ func TestRoleStatements(t *testing.T) {
 	ds.PutUserInfo(&pete)
 	ds.PutUserInfo(&sam)
 
-	r, _, err := Run(qc, true, "GRANT ROLE cluster_admin, bucket_admin(products) TO pete, sam")
+	r, _, err := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam")
 	if err != nil {
-		t.Fatalf("Unable to run GRANT ROLE: %s", err.Error())
+		t.Fatalf("Unable to run GRANT: %s", err.Error())
 	}
 	if len(r) != 0 {
 		t.Fatalf("Expected no return, got %v", r)
@@ -78,16 +78,15 @@ func TestRoleStatements(t *testing.T) {
 			Id:   "sam",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
-				datastore.Role{Name: "cluster_admin"},
 				datastore.Role{Name: "bucket_admin", Bucket: "products"},
 			},
 		},
 	}
 	compareUserLists(&expectedAfterGrant, &users, t)
 
-	r, _, err = Run(qc, true, "REVOKE ROLE cluster_admin, bucket_admin(products) FROM pete, sam")
+	r, _, err = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam")
 	if err != nil {
-		t.Fatalf("Unable to run REVOKE ROLE: %s", err.Error())
+		t.Fatalf("Unable to run REVOKE: %s", err.Error())
 	}
 	if len(r) != 0 {
 		t.Fatalf("Expected no return, got %v", r)
@@ -95,7 +94,7 @@ func TestRoleStatements(t *testing.T) {
 
 	users, err = ds.GetUserInfoAll()
 	if err != nil {
-		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
+		t.Fatalf("Could not get user info after running REVOKE: %s", err.Error())
 	}
 
 	expectedAfterRevoke := []datastore.User{
@@ -103,6 +102,7 @@ func TestRoleStatements(t *testing.T) {
 			Name: "Peter Peterson",
 			Id:   "pete",
 			Roles: []datastore.Role{
+				datastore.Role{Name: "cluster_admin"},
 				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
 			},
 		},

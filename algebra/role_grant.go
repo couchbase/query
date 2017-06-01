@@ -18,27 +18,23 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type RoleSpec struct {
-	Role   string
-	Bucket string
-}
-type RoleSpecList []RoleSpec
-
 type GrantRole struct {
 	statementBase
 
-	roles RoleSpecList `json:"roles"`
-	users []string     `json:"users"`
+	roles     []string `json:"roles"`
+	keyspaces []string `json:"keyspaces"`
+	users     []string `json:"users"`
 }
 
 /*
 The function NewGrantRole returns a pointer to the
 GrantRole struct with the input argument values as fields.
 */
-func NewGrantRole(roles RoleSpecList, users []string) *GrantRole {
+func NewGrantRole(roles []string, keyspaces []string, users []string) *GrantRole {
 	rv := &GrantRole{
-		roles: roles,
-		users: users,
+		roles:     roles,
+		keyspaces: keyspaces,
+		users:     users,
 	}
 
 	rv.stmt = rv
@@ -108,8 +104,15 @@ func (this *GrantRole) Users() []string {
 /*
 Returns the list of roles being assigned.
 */
-func (this *GrantRole) Roles() RoleSpecList {
+func (this *GrantRole) Roles() []string {
 	return this.roles
+}
+
+/*
+Returns the list of keyspaces that qualify the roles being assigned.
+*/
+func (this *GrantRole) Keyspaces() []string {
+	return this.keyspaces
 }
 
 /*
@@ -118,6 +121,7 @@ Marshals input receiver into byte array.
 func (this *GrantRole) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "grantRole"}
 	r["users"] = this.users
+	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles
 
 	return json.Marshal(r)

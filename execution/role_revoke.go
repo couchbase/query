@@ -66,15 +66,10 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Create the set of deletable roles.
-		roleSpecs := this.plan.Node().Roles()
-		deleteRoleMap := make(map[datastore.Role]bool, len(roleSpecs))
-		roleList := make([]datastore.Role, len(roleSpecs))
-		for i, rs := range roleSpecs {
-			var role datastore.Role
-			role.Name = rs.Role
-			role.Bucket = rs.Bucket
+		roleList := getRoles(this.plan.Node())
+		deleteRoleMap := make(map[datastore.Role]bool, len(roleList))
+		for _, role := range roleList {
 			deleteRoleMap[role] = true
-			roleList[i] = role
 		}
 
 		// Get the list of all valid roles, and verify that the roles to be

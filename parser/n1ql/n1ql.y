@@ -74,9 +74,6 @@ indexType        datastore.IndexType
 inferenceType    datastore.InferenceType
 val              value.Value
 
-role		 algebra.RoleSpec
-roles		 algebra.RoleSpecList
-
 // token offset into the statement
 tokOffset	 int
 }
@@ -392,8 +389,8 @@ tokOffset	 int
 %type <val>              infer_with opt_infer_with
 
 %type <ss>               user_list
-%type <role>		 role_spec
-%type <roles>            role_list
+%type <ss>               keyspace_list
+%type <ss>               role_list
 
 %start input
 
@@ -1700,33 +1697,38 @@ expr opt_where
  *************************************************/
 
 grant_role:
-GRANT ROLE role_list TO user_list
+GRANT role_list TO user_list
 {
-	$$ = algebra.NewGrantRole($3, $5)
+	$$ = algebra.NewGrantRole($2, nil, $4)
+}
+|
+GRANT role_list ON keyspace_list TO user_list
+{
+	$$ = algebra.NewGrantRole($2, $4, $6)
 }
 ;
 
 role_list:
-role_spec
+IDENT
 {
-	$$ = algebra.RoleSpecList{ $1 }
+	$$ = []string{ $1 }
 }
 |
-role_list COMMA role_spec
+role_list COMMA IDENT
 {
 	$$ = append($1, $3)
 }
 ;
 
-role_spec:
+keyspace_list:
 IDENT
 {
-	$$ = algebra.RoleSpec{ Role: $1 }
+	$$ = []string{ $1 }
 }
 |
-IDENT LPAREN IDENT RPAREN
+keyspace_list COMMA IDENT
 {
-	$$ = algebra.RoleSpec{ Role: $1, Bucket: $3 }
+	$$ = append($1, $3)
 }
 ;
 
@@ -1749,12 +1751,16 @@ user_list COMMA IDENT
  *************************************************/
 
 revoke_role:
-REVOKE ROLE role_list FROM user_list
+REVOKE role_list FROM user_list
 {
-	$$ = algebra.NewRevokeRole($3, $5)
+	$$ = algebra.NewRevokeRole($2, nil, $4)
+}
+|
+REVOKE role_list ON keyspace_list FROM user_list
+{
+	$$ = algebra.NewRevokeRole($2, $4, $6)
 }
 ;
-
 
 /*************************************************
  *

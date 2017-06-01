@@ -91,6 +91,32 @@ func getAllKeyspaces(store datastore.Datastore) (map[string]bool, errors.Error) 
 	return keyspaces, nil
 }
 
+type roleSource interface {
+	Roles() []string
+	Keyspaces() []string
+}
+
+func getRoles(node roleSource) []datastore.Role {
+	rolesList := node.Roles()
+	keyspaceList := node.Keyspaces()
+
+	if len(keyspaceList) == 0 {
+		ret := make([]datastore.Role, len(rolesList))
+		for i, v := range rolesList {
+			ret[i].Name = v
+		}
+		return ret
+	} else {
+		ret := make([]datastore.Role, 0, len(rolesList)*len(keyspaceList))
+		for _, role := range rolesList {
+			for _, ks := range keyspaceList {
+				ret = append(ret, datastore.Role{Name: role, Bucket: ks})
+			}
+		}
+		return ret
+	}
+}
+
 func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
@@ -116,12 +142,7 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Create the set of new roles, in a form suitable for output.
-		roleSpecs := this.plan.Node().Roles()
-		roleList := make([]datastore.Role, len(roleSpecs))
-		for i, rs := range roleSpecs {
-			roleList[i].Name = rs.Role
-			roleList[i].Bucket = rs.Bucket
-		}
+		roleList := getRoles(this.plan.Node())
 
 		// Get the list of all valid roles, and verify that the roles to be
 		// granted are proper.

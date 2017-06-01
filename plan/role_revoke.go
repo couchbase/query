@@ -46,6 +46,7 @@ func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 func (this *RevokeRole) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "RevokeRole"}
 	r["roles"] = this.node.Roles()
+	r["keyspaces"] = this.node.Keyspaces()
 	r["users"] = this.node.Users()
 	if f != nil {
 		f(r)
@@ -55,11 +56,17 @@ func (this *RevokeRole) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *RevokeRole) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string               `json:"#operator"`
-		Roles algebra.RoleSpecList `json:"keyspace"`
-		Users []string             `json:"namespace"`
+		_         string   `json:"#operator"`
+		Roles     []string `json:"roles"`
+		Keyspaces []string `json:"keyspaces"`
+		Users     []string `json:"users"`
 	}
 
-	this.node = algebra.NewRevokeRole(_unmarshalled.Roles, _unmarshalled.Users)
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.node = algebra.NewRevokeRole(_unmarshalled.Roles, _unmarshalled.Keyspaces, _unmarshalled.Users)
 	return nil
 }

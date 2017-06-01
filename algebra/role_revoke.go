@@ -21,18 +21,20 @@ import (
 type RevokeRole struct {
 	statementBase
 
-	roles RoleSpecList `json:"roles"`
-	users []string     `json:"users"`
+	roles     []string `json:"roles"`
+	keyspaces []string `json:"keyspaces"`
+	users     []string `json:"users"`
 }
 
 /*
 The function NewRevokeRole returns a pointer to the
 RevokeRole struct with the input argument values as fields.
 */
-func NewRevokeRole(roles RoleSpecList, users []string) *RevokeRole {
+func NewRevokeRole(roles []string, keyspaces []string, users []string) *RevokeRole {
 	rv := &RevokeRole{
-		roles: roles,
-		users: users,
+		roles:     roles,
+		keyspaces: keyspaces,
+		users:     users,
 	}
 
 	rv.stmt = rv
@@ -102,8 +104,15 @@ func (this *RevokeRole) Users() []string {
 /*
 Returns the list of roles being assigned.
 */
-func (this *RevokeRole) Roles() RoleSpecList {
+func (this *RevokeRole) Roles() []string {
 	return this.roles
+}
+
+/*
+Returns the list of keyspaces that qualify the roles being assigned.
+*/
+func (this *RevokeRole) Keyspaces() []string {
+	return this.keyspaces
 }
 
 /*
@@ -112,6 +121,7 @@ Marshals input receiver into byte array.
 func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "revokeRole"}
 	r["users"] = this.users
+	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles
 
 	return json.Marshal(r)
