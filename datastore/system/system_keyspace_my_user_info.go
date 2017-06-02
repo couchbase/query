@@ -225,7 +225,7 @@ func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datas
 		}
 
 		entry := datastore.IndexEntry{PrimaryKey: k}
-		if sendSystemKey(conn, &entry) {
+		if !sendSystemKey(conn, &entry) {
 			return
 		}
 		numProduced++

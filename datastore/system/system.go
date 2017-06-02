@@ -233,13 +233,13 @@ func (si *systemIndexer) SetLogLevel(level logging.Level) {
 func sendSystemKey(conn *datastore.IndexConnection, entry *datastore.IndexEntry) bool {
 	select {
 	case <-conn.StopChannel():
-		return true
+		return false
 	default:
 	}
 	select {
 	case conn.EntryChannel() <- entry:
-		return false
-	case <-conn.StopChannel():
 		return true
+	case <-conn.StopChannel():
+		return false
 	}
 }

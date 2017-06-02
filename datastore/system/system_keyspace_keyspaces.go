@@ -286,7 +286,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 							id := makeId(namespaceId, keyspaceId)
 							if spanEvaluator.evaluate(id) {
 								entry := datastore.IndexEntry{PrimaryKey: id}
-								if sendSystemKey(conn, &entry) {
+								if !sendSystemKey(conn, &entry) {
 									return
 								}
 								numProduced++
@@ -329,7 +329,7 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 						}
 						id := makeId(namespaceId, keyspaceId)
 						entry := datastore.IndexEntry{PrimaryKey: id}
-						if sendSystemKey(conn, &entry) {
+						if !sendSystemKey(conn, &entry) {
 							return
 						}
 						numProduced++

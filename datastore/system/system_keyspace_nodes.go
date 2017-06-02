@@ -195,7 +195,7 @@ func (pi *nodeIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 		for _, key := range topology {
 			if spanEvaluator.evaluate(key) {
 				entry := datastore.IndexEntry{PrimaryKey: key}
-				if sendSystemKey(conn, &entry) {
+				if !sendSystemKey(conn, &entry) {
 					return
 				}
 				numProduced++
@@ -219,7 +219,7 @@ func (pi *nodeIndex) ScanEntries(requestId string, limit int64, cons datastore.S
 	topology, errs := info.Topology()
 	for _, key := range topology {
 		entry := datastore.IndexEntry{PrimaryKey: key}
-		if sendSystemKey(conn, &entry) {
+		if !sendSystemKey(conn, &entry) {
 			return
 		}
 		numProduced++

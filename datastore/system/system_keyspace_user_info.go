@@ -232,7 +232,7 @@ func (pi *userInfoIndex) ScanEntries(requestId string, limit int64, cons datasto
 		}
 
 		entry := datastore.IndexEntry{PrimaryKey: k}
-		if sendSystemKey(conn, &entry) {
+		if !sendSystemKey(conn, &entry) {
 			return
 		}
 		numProduced++

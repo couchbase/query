@@ -299,7 +299,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
-					if sendSystemKey(conn, &indexEntry) {
+					if !sendSystemKey(conn, &indexEntry) {
 						return
 					}
 				}
@@ -332,7 +332,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 								EntryKey:   value.Values{value.NewValue(whoAmI)},
 							}
-							if sendSystemKey(conn, &indexEntry) {
+							if !sendSystemKey(conn, &indexEntry) {
 								return
 							}
 						}
@@ -366,7 +366,7 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, name := range names {
 		entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
-		if sendSystemKey(conn, &entry) {
+		if !sendSystemKey(conn, &entry) {
 			return
 		}
 	}
