@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -73,7 +74,7 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryCo
 		}
 		valMap := make(map[string]interface{}, 3)
 		valMap["grantee"] = grantee
-		valMap["role"] = role
+		valMap["role"] = auth.RoleToAlias(role)
 		if bucketName != "" {
 			valMap["bucket_name"] = bucketName
 		}

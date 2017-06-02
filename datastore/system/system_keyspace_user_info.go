@@ -12,6 +12,7 @@ package system
 import (
 	"fmt"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -195,6 +196,7 @@ func userInfoListToMap(sliceOfUsers []interface{}) (map[string]value.Value, erro
 		if !ok {
 			return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_info at position %d: %v", i, u))
 		}
+		auth.ConvertRolesToAliases(userAsMap)
 		id, present := userAsMap["id"]
 		if !present {
 			return nil, errors.NewInvalidValueError(fmt.Sprintf("Could not find id in user_info data at position %d: %v", i, u))

@@ -391,6 +391,7 @@ tokOffset	 int
 %type <ss>               user_list
 %type <ss>               keyspace_list
 %type <ss>               role_list
+%type <s>                role_name
 
 %start input
 
@@ -1709,14 +1710,41 @@ GRANT role_list ON keyspace_list TO user_list
 ;
 
 role_list:
-IDENT
+role_name
 {
 	$$ = []string{ $1 }
 }
 |
-role_list COMMA IDENT
+role_list COMMA role_name
 {
 	$$ = append($1, $3)
+}
+;
+
+role_name:
+IDENT
+{
+	$$ = $1
+}
+|
+SELECT
+{
+	$$ = "select"
+}
+|
+INSERT
+{
+	$$ = "insert"
+}
+|
+UPDATE
+{
+	$$ = "update"
+}
+|
+DELETE
+{
+	$$ = "delete"
 }
 ;
 
