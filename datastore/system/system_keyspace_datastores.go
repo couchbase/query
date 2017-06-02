@@ -180,7 +180,7 @@ func (pi *storeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 			conn.Error(err)
 		} else if spanEvaluator.evaluate(pi.keyspace.namespace.store.actualStore.Id()) {
 			entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
-			conn.EntryChannel() <- &entry
+			sendSystemKey(conn, &entry)
 		}
 		close(conn.EntryChannel())
 	}
@@ -191,5 +191,5 @@ func (pi *storeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 	defer close(conn.EntryChannel())
 
 	entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
-	conn.EntryChannel() <- &entry
+	sendSystemKey(conn, &entry)
 }

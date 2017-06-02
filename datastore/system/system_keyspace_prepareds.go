@@ -299,7 +299,9 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					if sendSystemKey(conn, &indexEntry) {
+						return
+					}
 				}
 			} else {
 				nodes := []string{spanEvaluator.key()}
@@ -309,7 +311,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 						PrimaryKey: id,
 						EntryKey:   value.Values{value.NewValue(n)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
 				})
@@ -330,7 +332,9 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 								EntryKey:   value.Values{value.NewValue(whoAmI)},
 							}
-							conn.EntryChannel() <- &indexEntry
+							if sendSystemKey(conn, &indexEntry) {
+								return
+							}
 						}
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
@@ -344,7 +348,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 						PrimaryKey: id,
 						EntryKey:   value.Values{value.NewValue(n)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
 				})
@@ -362,11 +366,13 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, name := range names {
 		entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
-		conn.EntryChannel() <- &entry
+		if sendSystemKey(conn, &entry) {
+			return
+		}
 	}
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "prepareds", func(id string) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &indexEntry
+		sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
 	})

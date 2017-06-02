@@ -224,8 +224,10 @@ func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datas
 			break
 		}
 
-		entry := &datastore.IndexEntry{PrimaryKey: k}
-		conn.EntryChannel() <- entry
+		entry := datastore.IndexEntry{PrimaryKey: k}
+		if sendSystemKey(conn, &entry) {
+			return
+		}
 		numProduced++
 	}
 

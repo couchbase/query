@@ -196,7 +196,9 @@ func (pi *namespaceIndex) Scan(requestId string, span *datastore.Span, distinct 
 				for _, namespaceId := range namespaceIds {
 					if spanEvaluator.evaluate(namespaceId) {
 						entry := datastore.IndexEntry{PrimaryKey: namespaceId}
-						conn.EntryChannel() <- &entry
+						if sendSystemKey(conn, &entry) {
+							return
+						}
 						numProduced++
 						if limit > 0 && numProduced >= limit {
 							break loop
@@ -220,7 +222,9 @@ func (pi *namespaceIndex) ScanEntries(requestId string, limit int64, cons datast
 			}
 
 			entry := datastore.IndexEntry{PrimaryKey: namespaceId}
-			conn.EntryChannel() <- &entry
+			if sendSystemKey(conn, &entry) {
+				return
+			}
 		}
 	}
 }

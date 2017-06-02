@@ -331,7 +331,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				})
 			} else {
 				nodes := []string{spanEvaluator.key()}
@@ -341,7 +341,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 						PrimaryKey: id,
 						EntryKey:   value.Values{value.NewValue(n)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
 				})
@@ -360,7 +360,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
 								EntryKey:   value.Values{value.NewValue(distributed.RemoteAccess().WhoAmI())},
 							}
-							conn.EntryChannel() <- &indexEntry
+							sendSystemKey(conn, &indexEntry)
 						})
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
@@ -374,7 +374,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 						PrimaryKey: id,
 						EntryKey:   value.Values{value.NewValue(n)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
 				})
@@ -391,11 +391,11 @@ func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datas
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id)}
-		conn.EntryChannel() <- &indexEntry
+		sendSystemKey(conn, &indexEntry)
 	})
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "completed_requests", func(id string) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &indexEntry
+		sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
 	})

@@ -229,3 +229,17 @@ func (si *systemIndexer) Refresh() errors.Error {
 func (si *systemIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
 }
+
+func sendSystemKey(conn *datastore.IndexConnection, entry *datastore.IndexEntry) bool {
+	select {
+	case <-conn.StopChannel():
+		return true
+	default:
+	}
+	select {
+	case conn.EntryChannel() <- entry:
+		return false
+	case <-conn.StopChannel():
+		return true
+	}
+}

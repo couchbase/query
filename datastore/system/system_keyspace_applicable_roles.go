@@ -223,8 +223,10 @@ func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexCo
 			}
 			key := makeAppRolesKey(user.Id, role.Name, role.Bucket)
 			if compSpan == nil || compSpan.evaluate(key) {
-				entry := &datastore.IndexEntry{PrimaryKey: key}
-				conn.EntryChannel() <- entry
+				entry := datastore.IndexEntry{PrimaryKey: key}
+				if sendSystemKey(conn, &entry) {
+					return
+				}
 				numProduced++
 			}
 		}

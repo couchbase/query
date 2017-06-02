@@ -286,7 +286,9 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 							id := makeId(namespaceId, keyspaceId)
 							if spanEvaluator.evaluate(id) {
 								entry := datastore.IndexEntry{PrimaryKey: id}
-								conn.EntryChannel() <- &entry
+								if sendSystemKey(conn, &entry) {
+									return
+								}
 								numProduced++
 								if limit > 0 && numProduced >= limit {
 									break loop
@@ -327,7 +329,9 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 						}
 						id := makeId(namespaceId, keyspaceId)
 						entry := datastore.IndexEntry{PrimaryKey: id}
-						conn.EntryChannel() <- &entry
+						if sendSystemKey(conn, &entry) {
+							return
+						}
 						numProduced++
 						if limit > 0 && numProduced >= limit {
 							break loop

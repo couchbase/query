@@ -371,6 +371,8 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 
 	for k, _ := range keys {
 		entry := datastore.IndexEntry{PrimaryKey: k}
-		conn.EntryChannel() <- &entry
+		if sendSystemKey(conn, &entry) {
+			return
+		}
 	}
 }

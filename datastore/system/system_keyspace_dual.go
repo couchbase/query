@@ -171,5 +171,5 @@ func (pi *dualIndex) ScanEntries(requestId string, limit int64, cons datastore.S
 	defer close(conn.EntryChannel())
 
 	entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
-	conn.EntryChannel() <- &entry
+	sendSystemKey(conn, &entry)
 }

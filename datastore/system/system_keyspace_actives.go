@@ -365,7 +365,7 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				})
 			} else {
 				nodes := []string{spanEvaluator.key()}
@@ -375,7 +375,7 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 						PrimaryKey: id,
 						EntryKey:   value.Values{value.NewValue(n)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
 				})
@@ -394,7 +394,7 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
 								EntryKey:   value.Values{value.NewValue(whoAmI)},
 							}
-							conn.EntryChannel() <- &indexEntry
+							sendSystemKey(conn, &indexEntry)
 						})
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
@@ -408,7 +408,7 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 						PrimaryKey: id,
 						EntryKey:   value.Values{value.NewValue(n)},
 					}
-					conn.EntryChannel() <- &indexEntry
+					sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
 				})
@@ -425,12 +425,12 @@ func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons d
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	server.ActiveRequestsForEach(func(id string, request server.Request) {
 		entry := datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id)}
-		conn.EntryChannel() <- &entry
+		sendSystemKey(conn, &entry)
 	})
 
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "active_requests", func(id string) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &indexEntry
+		sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
 	})
