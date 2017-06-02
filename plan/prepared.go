@@ -170,23 +170,25 @@ func PreparedsSetLimit(limit int) {
 }
 
 func (this *preparedCache) get(name value.Value, track bool) *Prepared {
-	var rv *CacheEntry
+	var cv interface{}
 
 	if name.Type() != value.STRING || !name.Truth() {
 		return nil
 	}
 
+	n := name.Actual().(string)
 	if track {
 		process := func(entry interface{}) {
 			ce := entry.(*CacheEntry)
 			atomic.AddInt32(&ce.Uses, 1)
 			ce.LastUse = time.Now()
 		}
-		rv = prepareds.cache.Use(name.Actual().(string), process).(*CacheEntry)
+		cv = prepareds.cache.Use(n, process)
 	} else {
-		rv = prepareds.cache.Get(name.Actual().(string), nil).(*CacheEntry)
+		cv = prepareds.cache.Get(n, nil)
 	}
-	if rv != nil {
+	rv, ok := cv.(*CacheEntry)
+	if ok {
 		return rv.Prepared
 	}
 	return nil

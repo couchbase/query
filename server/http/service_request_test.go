@@ -63,6 +63,7 @@ func init() {
 		os.Exit(1)
 	}
 	logging.SetLogger(logger)
+	plan.PreparedsInit(1024)
 	test_server = newTestServer()
 }
 
