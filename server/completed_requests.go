@@ -225,11 +225,11 @@ func RequestsCount() int {
 	return requestLog.cache.Size()
 }
 
-func RequestsForeach(f func(string, *RequestLogEntry)) {
-	dummyF := func(id string, r interface{}) {
-		f(id, r.(*RequestLogEntry))
+func RequestsForeach(nonBlocking func(string, *RequestLogEntry) bool, blocking func() bool) {
+	dummyF := func(id string, r interface{}) bool {
+		return nonBlocking(id, r.(*RequestLogEntry))
 	}
-	requestLog.cache.ForEach(dummyF)
+	requestLog.cache.ForEach(dummyF, blocking)
 }
 
 func LogRequest(request_time time.Duration, service_time time.Duration,

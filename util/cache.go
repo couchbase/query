@@ -283,21 +283,32 @@ func (this *GenCache) Names() []string {
 	l := int(this.curSize)
 	sz := _CACHES + l
 	n := make([]string, l, sz)
-	this.ForEach(func(id string, entry interface{}) {
+	this.ForEach(func(id string, entry interface{}) bool {
 		if i < l {
 			n[i] = id
 		} else {
 			n = append(n, id)
 		}
 		i++
-	})
+		return true
+	}, nil)
 	return n
 }
 
 // Scan the list
+//
 // As noted in the starting comments, this is not a consistent snapshot
 // but rather a a low cost, almost accurate view
-func (this *GenCache) ForEach(f func(string, interface{})) {
+//
+// For each element, we cater for actions with the bucket locked (must be non blocking)
+// and blocking actions with the bucket available
+// Since, for blocking operations, the entry is not guaranteed to exist, any data needed by them
+// must be set up in the non blocking part
+// both functions should return false if processing needs to stop
+func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
+	blocking func() bool) {
+	cont := true
+
 	for b := 0; b < _CACHES; b++ {
 		sharedLock := true
 		this.locks[b].RLock()
@@ -312,6 +323,12 @@ func (this *GenCache) ForEach(f func(string, interface{})) {
 		for {
 			elem := nextElem
 			nextElem = elem.lists[_SCAN].next
+
+			// mark next element as in use so that it doesn't get removed from
+			// the list and we get lost mid scan...
+			if nextElem != nil {
+				atomic.AddInt32(&nextElem.refcount, 1)
+			}
 
 			// somebody had deleted the element  in the interim, so skip it
 			if elem.deleted {
@@ -330,37 +347,42 @@ func (this *GenCache) ForEach(f func(string, interface{})) {
 					}
 				}
 
-				// if not, do what's required
 			} else {
-				f(elem.ID, elem.contents)
+
+				// perform the non blocking action
+				if nonBlocking != nil {
+					cont = nonBlocking(elem.ID, elem.contents)
+				}
 			}
 
 			// release current element
 			atomic.AddInt32(&elem.refcount, -1)
 
-			// mark next element as in use so that it doesn't get removed from
-			// the list and we get lost mid scan...
-			if nextElem != nil {
-				atomic.AddInt32(&nextElem.refcount, 1)
-			} else {
-
-				// No need to go through the unlock / relock if we are done
-				if sharedLock {
-					this.locks[b].RUnlock()
-				} else {
-					this.locks[b].Unlock()
-				}
-				break
-			}
-
-			// if we don't have waiters, we can just continue
+			// unlock the cache
 			if sharedLock {
-				if this.lockers[b] == 0 {
+
+				// if we don't have waiters or blocking actions we can just continue
+				if nextElem != nil && cont && blocking == nil && this.lockers[b] == 0 {
 					continue
 				}
 				this.locks[b].RUnlock()
 			} else {
 				this.locks[b].Unlock()
+			}
+
+			// peform the blocking action
+			if cont && !elem.deleted && blocking != nil {
+				cont = blocking()
+			}
+
+			// things went wrong, or got settled early
+			if !cont {
+				return
+			}
+
+			// end of this bucket, onto the next
+			if nextElem == nil {
+				break
 			}
 
 			// restart the scan

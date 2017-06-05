@@ -288,11 +288,11 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		data := make([]map[string]interface{}, numPrepareds)
 		i := 0
 
-		snapshot := func(name string, d *plan.CacheEntry) {
+		snapshot := func(name string, d *plan.CacheEntry) bool {
 
 			// FIXME quick hack to avoid overruns
 			if i >= numPrepareds {
-				return
+				return false
 			}
 			data[i] = map[string]interface{}{}
 			data[i]["name"] = d.Prepared.Name()
@@ -303,9 +303,10 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 				data[i]["lastUse"] = d.LastUse.String()
 			}
 			i++
+			return true
 		}
 
-		plan.PreparedsForeach(snapshot)
+		plan.PreparedsForeach(snapshot, nil)
 		return data, nil
 
 	default:
@@ -434,11 +435,11 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	requests := make([]map[string]interface{}, numRequests)
 	i := 0
 
-	snapshot := func(requestId string, request server.Request) {
+	snapshot := func(requestId string, request server.Request) bool {
 
 		// FIXME quick hack to avoid overruns
 		if i >= numRequests {
-			return
+			return false
 		}
 		requests[i] = map[string]interface{}{}
 		requests[i]["requestId"] = request.Id().String()
@@ -474,8 +475,9 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 			requests[i]["phaseOperators"] = p
 		}
 		i++
+		return true
 	}
-	endpoint.actives.ForEach(snapshot)
+	endpoint.actives.ForEach(snapshot, nil)
 	return requests, nil
 }
 
@@ -571,11 +573,11 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	requests := make([]map[string]interface{}, numRequests)
 	i := 0
 
-	snapshot := func(requestId string, request *server.RequestLogEntry) {
+	snapshot := func(requestId string, request *server.RequestLogEntry) bool {
 
 		// FIXME quick hack to avoid overruns
 		if i >= numRequests {
-			return
+			return false
 		}
 		requests[i] = map[string]interface{}{}
 		requests[i]["requestId"] = request.RequestId
@@ -609,8 +611,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 
 		// FIXME more stats
 		i++
+		return true
 	}
-	server.RequestsForeach(snapshot)
+	server.RequestsForeach(snapshot, nil)
 	return requests, nil
 }
 
@@ -625,15 +628,16 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	}
 	requests := make([]string, numEntries)
 	i := 0
-	snapshot := func(requestId string, request server.Request) {
+	snapshot := func(requestId string, request server.Request) bool {
 		if i >= numEntries {
 			requests = append(requests, requestId)
 		} else {
 			requests[i] = requestId
 		}
 		i++
+		return true
 	}
-	endpoint.actives.ForEach(snapshot)
+	endpoint.actives.ForEach(snapshot, nil)
 	return requests, nil
 }
 
@@ -641,15 +645,16 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	numEntries := server.RequestsCount()
 	completed := make([]string, numEntries)
 	i := 0
-	snapshot := func(requestId string, request *server.RequestLogEntry) {
+	snapshot := func(requestId string, request *server.RequestLogEntry) bool {
 		if i >= numEntries {
 			completed = append(completed, requestId)
 		} else {
 			completed[i] = requestId
 		}
 		i++
+		return true
 	}
-	server.RequestsForeach(snapshot)
+	server.RequestsForeach(snapshot, nil)
 	return completed, nil
 }
 

@@ -115,11 +115,24 @@ type ScanConfiguration interface {
 
 // API for tracking active requests
 type ActiveRequests interface {
+
+	// adds a request to the active queue
 	Put(Request) errors.Error
+
+	// processes a request
 	Get(string, func(Request)) errors.Error
+
+	// removes a request from the active queue / returns success
 	Delete(string, bool) bool
+
+	// request count
 	Count() (int, errors.Error)
-	ForEach(func(string, Request))
+
+	// processes all requests
+	// first function processes within lock (must be non blocking)
+	// second function processes outside of a lock (can be blocking)
+	// both return false if no more processing should be done
+	ForEach(func(string, Request) bool, func() bool)
 }
 
 var actives ActiveRequests
@@ -136,8 +149,8 @@ func ActiveRequestsGet(id string, f func(Request)) errors.Error {
 	return actives.Get(id, f)
 }
 
-func ActiveRequestsForEach(f func(string, Request)) {
-	actives.ForEach(f)
+func ActiveRequestsForEach(nonBlocking func(string, Request) bool, blocking func() bool) {
+	actives.ForEach(nonBlocking, blocking)
 }
 
 func SetActives(ar ActiveRequests) {

@@ -65,7 +65,7 @@ func (this *systemRemoteHttp) SplitKey(key string) (string, string) {
 
 // get remote keys from the specified nodes for the specified endpoint
 func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
-	keyFn func(id string), warnFn func(warn errors.Error)) {
+	keyFn func(id string) bool, warnFn func(warn errors.Error)) {
 	var keys []string
 
 	// now that the local node name can change, use a consistent one across the scan
@@ -124,7 +124,9 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 
 				if keyFn != nil {
 					for _, key := range keys {
-						keyFn("[" + node + "]" + key)
+						if !keyFn("[" + node + "]" + key) {
+							return
+						}
 					}
 				}
 			}
@@ -162,7 +164,9 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 			}
 			if keyFn != nil {
 				for _, key := range keys {
-					keyFn("[" + node + "]" + key)
+					if !keyFn("[" + node + "]" + key) {
+						return
+					}
 				}
 			}
 		}

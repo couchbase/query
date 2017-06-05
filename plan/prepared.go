@@ -228,11 +228,12 @@ func NamePrepareds() []string {
 	return prepareds.cache.Names()
 }
 
-func PreparedsForeach(f func(string, *CacheEntry)) {
-	dummyF := func(id string, r interface{}) {
-		f(id, r.(*CacheEntry))
+func PreparedsForeach(nonBlocking func(string, *CacheEntry) bool,
+	blocking func() bool) {
+	dummyF := func(id string, r interface{}) bool {
+		return nonBlocking(id, r.(*CacheEntry))
 	}
-	prepareds.cache.ForEach(dummyF)
+	prepareds.cache.ForEach(dummyF, blocking)
 }
 
 func PreparedDo(name string, f func(*CacheEntry)) {

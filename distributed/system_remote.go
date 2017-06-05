@@ -15,16 +15,31 @@ import (
 
 // Interface to access remote system data over various protocols
 type SystemRemoteAccess interface {
-	MakeKey(node string, key string) string // given a node and a local key, produce a cluster key
-	SplitKey(key string) (string, string)   // given a cluster key, return node and local key
 
-	GetRemoteKeys(nodes []string, endpoint string, keyFn func(id string),
-		warnFn func(warn errors.Error)) // collect cluster keys for a keyspace from a set of remote nodes
+	// given a node and a local key, produce a cluster key
+	MakeKey(node string, key string) string
+
+	// given a cluster key, return node and local key
+	SplitKey(key string) (string, string)
+
+	// collect cluster keys for a keyspace from a set of remote nodes
+	// keyFn processes each key, returns false to stop processing keys
+	// warnFn issues warnings
+	GetRemoteKeys(nodes []string, endpoint string, keyFn func(id string) bool,
+		warnFn func(warn errors.Error))
+
+	// collect a document for a keyspace from a remote node
+	// docFn processes the document
+	// warnFn issues warnings
 	GetRemoteDoc(node string, key string, endpoint string, command string,
 		docFn func(doc map[string]interface{}),
-		warnFn func(warn errors.Error), creds Creds, authToken string) // collect a document for a keyspace from a remote node
-	WhoAmI() string         // local node name, if known
-	GetNodeNames() []string // all the node names
+		warnFn func(warn errors.Error), creds Creds, authToken string)
+
+	// local node name, if known
+	WhoAmI() string
+
+	// all the node names
+	GetNodeNames() []string
 }
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,

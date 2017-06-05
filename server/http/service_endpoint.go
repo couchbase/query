@@ -269,11 +269,16 @@ func (this *activeHttpRequests) Count() (int, errors.Error) {
 	return len(this.requests), nil
 }
 
-func (this *activeHttpRequests) ForEach(f func(string, server.Request)) {
+func (this *activeHttpRequests) ForEach(nonBlocking func(string, server.Request) bool, blocking func() bool) {
 	this.RLock()
 	defer this.RUnlock()
 	for requestId, request := range this.requests {
-		f(requestId, request)
+		if !nonBlocking(requestId, request) {
+			return
+		}
+		if !blocking() {
+			return
+		}
 	}
 }
 
