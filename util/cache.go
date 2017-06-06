@@ -51,8 +51,8 @@ type genElem struct {
 	contents interface{}
 }
 
-const _CACHE_SIZE = 1 << 10
-const _CACHES = 4
+const _CACHE_SIZE = 1 << 9
+const _CACHES = 8
 
 type Operation int
 
