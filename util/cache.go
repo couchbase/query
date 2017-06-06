@@ -405,10 +405,9 @@ func (this *GenCache) add(elem *genElem, cacheNum int) {
 }
 
 func (this *GenCache) promote(elem *genElem, cacheNum int) {
-	list := this.lists[cacheNum][_LRU]
-	if list.next != elem {
-		list.ditch(elem, _LRU)
-		list.insert(elem, _LRU)
+	if this.lists[cacheNum][_LRU].next != elem {
+		this.lists[cacheNum][_LRU].ditch(elem, _LRU)
+		this.lists[cacheNum][_LRU].insert(elem, _LRU)
 	}
 }
 
