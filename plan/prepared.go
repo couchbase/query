@@ -178,17 +178,20 @@ func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 
 	n := name.Actual().(string)
 	if track {
-		process := func(entry interface{}) {
-			ce := entry.(*CacheEntry)
-			atomic.AddInt32(&ce.Uses, 1)
-			ce.LastUse = time.Now()
-		}
-		cv = prepareds.cache.Use(n, process)
+		cv = prepareds.cache.Use(n, nil)
 	} else {
 		cv = prepareds.cache.Get(n, nil)
 	}
 	rv, ok := cv.(*CacheEntry)
 	if ok {
+		if track {
+			atomic.AddInt32(&rv.Uses, 1)
+
+			// this is not exactly accurate, but since the MRU queue is
+			// managed properly, we'd rather be inaccurate and make the
+			// change outside of the lock than take a performance hit
+			rv.LastUse = time.Now()
+		}
 		return rv.Prepared
 	}
 	return nil
@@ -249,18 +252,20 @@ func PreparedDo(name string, f func(*CacheEntry)) {
 }
 
 func AddPrepared(prepared *Prepared) errors.Error {
-	var err errors.Error = nil
+	added := true
 
 	prepareds.add(prepared, func(ce *CacheEntry) bool {
 		if ce.Prepared.Text() != prepared.Text() {
-			err = errors.NewPreparedNameError(
-				fmt.Sprintf("duplicate name: %s", prepared.Name()))
-			return false
-		} else {
-			return true
+			added = false
 		}
+		return added
 	})
-	return err
+	if !added {
+		return errors.NewPreparedNameError(
+			fmt.Sprintf("duplicate name: %s", prepared.Name()))
+	} else {
+		return nil
+	}
 }
 
 func DeletePrepared(name string) errors.Error {
@@ -332,7 +337,7 @@ func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Dur
 }
 
 func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Prepared, errors.Error) {
-	var cacheErr errors.Error = nil
+	added := true
 
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
@@ -365,6 +370,8 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Pr
 	if prepared.Name() == "" {
 		return prepared, nil
 	}
+
+	when := time.Now()
 	prepareds.add(prepared,
 		func(oldEntry *CacheEntry) bool {
 
@@ -372,8 +379,8 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Pr
 			// also be for the same statement as we have in the cache
 			if oldEntry.Prepared != prepared &&
 				oldEntry.Prepared.text != prepared.text {
-				cacheErr = errors.NewPreparedEncodingMismatchError(prepared_name)
-				return false
+				added = false
+				return added
 			}
 
 			// track the entry if required, whether we amend the plan or
@@ -381,19 +388,20 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Pr
 			// metrics anyway
 			if track {
 				atomic.AddInt32(&oldEntry.Uses, 1)
-				oldEntry.LastUse = time.Now()
+				oldEntry.LastUse = when
 			}
 
 			// MB-19659: this is where we decide plan conflict.
 			// the current behaviour is to always use the new plan
 			// and amend the cache
 			// This is still to be finalized
-			return true
+			return added
 		})
-	if cacheErr == nil {
+
+	if added {
 		return prepared, nil
 	} else {
-		return nil, cacheErr
+		return nil, errors.NewPreparedEncodingMismatchError(prepared_name)
 	}
 }
 
