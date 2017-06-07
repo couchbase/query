@@ -46,13 +46,14 @@ const (
 type genElem struct {
 	ID       string
 	lists    [_LISTTYPES]genSubList
+	lastMRU  uint32
 	refcount int32
 	deleted  bool
 	contents interface{}
 }
 
-const _CACHE_SIZE = 1 << 9
-const _CACHES = 8
+const _CACHE_SIZE = 1 << 8
+const _CACHES = 16
 
 type Operation int
 
@@ -75,6 +76,9 @@ type GenCache struct {
 
 	// maps for direct access
 	maps [_CACHES]map[string]*genElem
+
+	// MRU operation counter
+	lastMRU uint32
 
 	// max size, for LRU lists
 	limit   int
@@ -222,6 +226,12 @@ func (this *GenCache) Get(id string, process func(interface{})) interface{} {
 // Returns an element's contents by id and places it at the top of the bucket
 // Also useful to manipulate an element with an exclusive lock
 func (this *GenCache) Use(id string, process func(interface{})) interface{} {
+
+	// if no processing is involved and the cache is in no danger of being
+	// cleaned, we can can just use a shared lock for performance
+	if process == nil && !this.testMRU(0) {
+		return this.Get(id, nil)
+	}
 	cacheNum := HashString(id, _CACHES)
 	this.lock(cacheNum)
 	defer this.locks[cacheNum].Unlock()
@@ -392,20 +402,42 @@ func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
 	}
 }
 
+// show intent to lock the cacheline and proceed with exclusive lock
 func (this *GenCache) lock(cacheNum int) {
 	atomic.AddInt32(&this.lockers[cacheNum], 1)
 	this.locks[cacheNum].Lock()
 	atomic.AddInt32(&this.lockers[cacheNum], -1)
 }
 
+// mark next MRU operation id
+func (this *GenCache) nextMRU() {
+	atomic.AddUint32(&this.lastMRU, 1)
+}
+
+// test is MRU promotion is needed
+// the general idea is that MRU maintenance is expensive, so we will only bother
+// to do it if an entry is in danger of being cleaned
+func (this *GenCache) testMRU(MRU uint32) bool {
+
+	// handle wraparounds
+	return this.lastMRU < MRU ||
+
+		// if we are in the bottom half, move up
+		int(this.lastMRU-MRU) > this.limit/2
+}
+
 // in all of the following methods, the bucket is expected to be already exclusively locked
 func (this *GenCache) add(elem *genElem, cacheNum int) {
+	this.nextMRU()
+	elem.lastMRU = this.lastMRU
 	this.lists[cacheNum][_LRU].insert(elem, _LRU)
 	this.lists[cacheNum][_SCAN].insert(elem, _SCAN)
 }
 
 func (this *GenCache) promote(elem *genElem, cacheNum int) {
-	if this.lists[cacheNum][_LRU].next != elem {
+	if this.testMRU(elem.lastMRU) {
+		this.nextMRU()
+		elem.lastMRU = this.lastMRU
 		this.lists[cacheNum][_LRU].ditch(elem, _LRU)
 		this.lists[cacheNum][_LRU].insert(elem, _LRU)
 	}
