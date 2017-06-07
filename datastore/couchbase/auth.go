@@ -252,9 +252,7 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 		role = fmt.Sprintf("Data Reader Writer [%s]", keyspace)
 	case auth.PRIV_SYSTEM_READ:
 		role = "Query System Catalog"
-	case auth.PRIV_SECURITY_READ:
-		role = "Admin or Read Only Admin"
-	case auth.PRIV_SECURITY_WRITE:
+	case auth.PRIV_SECURITY_WRITE, auth.PRIV_SECURITY_READ:
 		role = "Admin"
 	case auth.PRIV_QUERY_SELECT:
 		role = fmt.Sprintf("Query Select [%s]", keyspace)
