@@ -247,7 +247,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 	getMethod := false
 	dataOp := false
 	stringData := ""
-	encodedData := false
+	stringDataUrlEnc := ""
 
 	// For silent mode
 	silent := false
@@ -361,57 +361,20 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 			this can be issued with a GET as well. In these cases, the
 			data is appended to the URL followed by a ?.
 		*/
-		case "data", "--data", "d", "-d", "data-urlencode", "--data-urlencode":
+		case "data-urlencode", "--data-urlencode":
 
-			if k == "data-urlencode" || k == "--data-urlencode" {
-				encodedData = true
-			}
-			dataVal := value.NewValue(val).Actual()
-
-			switch dataVal.(type) {
-			case []interface{}:
-			case string:
-				dataVal = []interface{}{dataVal}
-			default:
-				if show_error == true {
-					return nil, fmt.Errorf(" Incorrect type for data option in CURL.It needs to be a string. ")
-				} else {
-					return nil, nil
-				}
+			stringDataUrlEnc, err = this.handleData(true, val, show_error)
+			if stringDataUrlEnc == "" {
+				return nil, err
 			}
 
-			for _, data := range dataVal.([]interface{}) {
-				newDval := value.NewValue(data)
-				if newDval.Type() != value.STRING {
-					if show_error == true {
-						return nil, fmt.Errorf(" Incorrect type for data option. ")
-					} else {
-						return nil, nil
-					}
-				}
+			dataOp = true
 
-				dataT := newDval.Actual().(string)
+		case "data", "--data", "d", "-d":
 
-				// If the option is data-urlencode then encode the data first.
-				if encodedData {
-					// When we encode strings, = should not be encoded.
-					// The curl.Escape() method for go behaves different to the libcurl method.
-					// q=select 1 should be q=select%201 and not q%3Dselect%201
-					// Hence split the string, encode and then rejoin.
-					stringComponent := strings.Split(dataT, "=")
-					for i, _ := range stringComponent {
-						stringComponent[i] = this.myCurl.Escape(stringComponent[i])
-					}
-
-					dataT = strings.Join(stringComponent, "=")
-				}
-
-				if stringData == "" {
-					stringData = dataT
-				} else {
-					stringData = stringData + "&" + dataT
-				}
-
+			stringData, err = this.handleData(false, val, show_error)
+			if stringData == "" {
+				return nil, err
 			}
 			dataOp = true
 
@@ -690,10 +653,24 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 		-data option.
 	*/
 	if dataOp {
+		finalStrData := ""
+
+		if stringDataUrlEnc != "" && stringData != "" {
+			finalStrData = stringData + "&" + stringDataUrlEnc
+		}
+
+		if stringDataUrlEnc == "" && stringData != "" {
+			finalStrData = stringData
+		}
+
+		if stringDataUrlEnc != "" && stringData == "" {
+			finalStrData = stringDataUrlEnc
+		}
+
 		if getMethod {
-			this.simpleGet(url + "?" + stringData)
+			this.simpleGet(url + "?" + finalStrData)
 		} else {
-			this.curlData(stringData)
+			this.curlData(finalStrData)
 		}
 	}
 
@@ -1141,6 +1118,58 @@ func sliceContains(field []interface{}, url string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (this *Curl) handleData(encodedData bool, val interface{}, show_error bool) (string, error) {
+	stringData := ""
+	dataVal := value.NewValue(val).Actual()
+
+	switch dataVal.(type) {
+	case []interface{}:
+	case string:
+		dataVal = []interface{}{dataVal}
+	default:
+		if show_error == true {
+			return "", fmt.Errorf(" Incorrect type for data option in CURL.It needs to be a string. ")
+		} else {
+			return "", nil
+		}
+	}
+
+	for _, data := range dataVal.([]interface{}) {
+		newDval := value.NewValue(data)
+		if newDval.Type() != value.STRING {
+			if show_error == true {
+				return "", fmt.Errorf(" Incorrect type for data option. ")
+			} else {
+				return "", nil
+			}
+		}
+
+		dataT := newDval.Actual().(string)
+
+		// If the option is data-urlencode then encode the data first.
+		if encodedData {
+			// When we encode strings, = should not be encoded.
+			// The curl.Escape() method for go behaves different to the libcurl method.
+			// q=select 1 should be q=select%201 and not q%3Dselect%201
+			// Hence split the string, encode and then rejoin.
+			stringComponent := strings.Split(dataT, "=")
+			for i, _ := range stringComponent {
+				stringComponent[i] = this.myCurl.Escape(stringComponent[i])
+			}
+
+			dataT = strings.Join(stringComponent, "=")
+		}
+
+		if stringData == "" {
+			stringData = dataT
+		} else {
+			stringData = stringData + "&" + dataT
+		}
+
+	}
+	return stringData, nil
 }
 
 /* Other auth values
