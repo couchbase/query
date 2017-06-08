@@ -601,7 +601,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}) (interf
 			// Get directory of currently running file.
 			certDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 			if err != nil {
-				return nil, fmt.Errorf(" ../var/lib/couchbase/n1qlcerts/ does not exist on node " + hostname)
+				return nil, fmt.Errorf(_PATH + " does not exist on node " + hostname)
 			}
 
 			// nsserver uses the inbox folder within var/lib/couchbase to read certificates from.
@@ -949,7 +949,7 @@ func findPath() (string, error) {
 	// Get directory of currently running file.
 	listPath, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		return "", fmt.Errorf(" n1qlcerts directory does not exist under .../var/lib/couchbase/  on node " + hostname)
+		return "", fmt.Errorf(" Cannot locate query service on node " + hostname)
 	}
 
 	// Get the full path to curl_whitelist.json
@@ -969,7 +969,7 @@ func initialCheck() error {
 	_, err = os.Stat(listPath)
 	if os.IsNotExist(err) {
 		// curl_whitelist.json not exist
-		return fmt.Errorf("File ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json does not exist on node" + hostname + ". CURL() end points should be whitelisted.")
+		return fmt.Errorf("File " + listPath + " does not exist on node" + hostname + ". CURL() end points should be whitelisted.")
 	}
 
 	// Some other error other than not exists.
@@ -994,14 +994,14 @@ func whitelistCheck(url string) error {
 	// 2.a. If file curl_whitelist.json exists but is empty, then all access is false. But since all fields
 	//    are treated as empty, it denies access to CURL. (same as above)
 	if len(b) == 0 {
-		return fmt.Errorf("File ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json is empty on node " + hostname + ". CURL() end points should be whitelisted.")
+		return fmt.Errorf("File " + listPath + " is empty on node " + hostname + ". CURL() end points should be whitelisted.")
 	}
 
 	// 2.b. If it exists, is not empty but is invalid JSON (anything except JSON object), then NO ACCESS.
 	var list map[string]interface{}
 
 	if err := json.Unmarshal(b, &list); err != nil {
-		return fmt.Errorf("File ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json contains invalid JSON on node " + hostname + ". Contents have to be a JSON object.")
+		return fmt.Errorf("File " + listPath + " contains invalid JSON on node " + hostname + ". Contents have to be a JSON object.")
 	}
 
 	// 2.c If it exists, and is valid json - Check entries.
@@ -1009,12 +1009,12 @@ func whitelistCheck(url string) error {
 	//        Invalid entries are - {}, populated values not containing the field all_access.
 
 	if len(list) == 0 {
-		return fmt.Errorf("File ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json contains empty JSON object on node " + hostname + ". CURL() end points should be whitelisted.")
+		return fmt.Errorf("File " + listPath + " contains empty JSON object on node " + hostname + ". CURL() end points should be whitelisted.")
 	}
 
 	allaccess, ok := list["all_access"]
 	if !ok {
-		return fmt.Errorf("Boolean field all_access does not exist in file ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json on node " + hostname + ".")
+		return fmt.Errorf("Boolean field all_access does not exist in file " + listPath + " on node " + hostname + ".")
 	}
 
 	// 2.c.ii. If all_access false - Use only those entries that are valid.
@@ -1029,7 +1029,7 @@ func whitelistCheck(url string) error {
 
 	if !isOk {
 		// Type check error
-		return fmt.Errorf("all_access should be boolean value in file ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json on node " + hostname + ".")
+		return fmt.Errorf("all_access should be boolean value in file " + listPath + " on node " + hostname + ".")
 	}
 
 	if !allaccess.(bool) {
@@ -1042,7 +1042,7 @@ func whitelistCheck(url string) error {
 			isOk := checkType(disallowedUrls, false)
 			if !isOk {
 				// Type check error
-				return fmt.Errorf("disallowed_urls should be list of urls in file ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json on node " + hostname + ".")
+				return fmt.Errorf("disallowed_urls should be list of urls in file " + listPath + " on node " + hostname + ".")
 			}
 			// Valid values. Disallowed urls get 1st preference.
 			disallow, err := sliceContains(disallowedUrls.([]interface{}), url)
@@ -1059,7 +1059,7 @@ func whitelistCheck(url string) error {
 			isOk := checkType(allowedUrls, false)
 			if !isOk {
 				// Type check error
-				return fmt.Errorf("allowed_urls should be list of urls in file ../Couchbase/var/lib/couchbase/n1qlcerts/curl_whitelist.json on node " + hostname + ".")
+				return fmt.Errorf("allowed_urls should be list of urls in file " + listPath + " on node " + hostname + ".")
 			}
 
 			// If in allowed_urls then this query is valid.
