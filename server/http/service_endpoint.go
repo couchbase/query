@@ -13,7 +13,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/couchbase/query/accounting"
@@ -215,71 +214,57 @@ func ServicePrefix() string {
 
 // activeHttpRequests implements server.ActiveRequests for http requests
 type activeHttpRequests struct {
-	sync.RWMutex
-	requests map[string]*httpRequest
+	cache *util.GenCache
 }
 
 func NewActiveRequests() server.ActiveRequests {
 	return &activeHttpRequests{
-		requests: map[string]*httpRequest{},
+		cache: util.NewGenCache(-1),
 	}
 }
 
 func (this *activeHttpRequests) Put(req server.Request) errors.Error {
-	this.Lock()
-	defer this.Unlock()
 	http_req, is_http := req.(*httpRequest)
 	if !is_http {
 		return errors.NewServiceErrorHttpReq(req.Id().String())
 	}
-	this.requests[http_req.Id().String()] = http_req
+	this.cache.Add(http_req, http_req.Id().String(), nil)
 	return nil
 }
 
 func (this *activeHttpRequests) Get(id string, f func(server.Request)) errors.Error {
-	this.RLock()
-	defer this.RUnlock()
-	r, ok := this.requests[id]
-	if ok {
-		f(r)
+	var dummyF func(interface{}) = nil
+
+	if f != nil {
+		dummyF = func(e interface{}) {
+			r := e.(*httpRequest)
+			f(r)
+		}
 	}
+	_ = this.cache.Get(id, dummyF)
 	return nil
 }
 
 func (this *activeHttpRequests) Delete(id string, stop bool) bool {
-	this.Lock()
-	defer this.Unlock()
-	if stop {
-
-		// Stop the request
-		req := this.requests[id]
-		if req == nil {
-			return false
+	this.cache.Delete(id, func(e interface{}) {
+		if stop {
+			req := e.(*httpRequest)
+			req.Stop(server.STOPPED)
 		}
-		req.Stop(server.STOPPED)
-	}
+	})
 
-	delete(this.requests, id)
 	return true
 }
 
 func (this *activeHttpRequests) Count() (int, errors.Error) {
-	this.RLock()
-	defer this.RUnlock()
-	return len(this.requests), nil
+	return this.cache.Size(), nil
 }
 
 func (this *activeHttpRequests) ForEach(nonBlocking func(string, server.Request) bool, blocking func() bool) {
-	this.RLock()
-	defer this.RUnlock()
-	for requestId, request := range this.requests {
-		if !nonBlocking(requestId, request) {
-			return
-		}
-		if !blocking() {
-			return
-		}
+	dummyF := func(id string, r interface{}) bool {
+		return nonBlocking(id, r.(*httpRequest))
 	}
+	this.cache.ForEach(dummyF, blocking)
 }
 
 // httpOptions implements server.ServerOptions for http servers
