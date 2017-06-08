@@ -158,6 +158,10 @@ func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbau
 	return creds, authUsers
 }
 
+func userKeyString(c cbauth.Creds) string {
+	return fmt.Sprintf("%s:%s", c.Domain(), c.Name())
+}
+
 func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Credentials,
 	req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
 
@@ -185,7 +189,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 		} else {
 			credentialsList = append(credentialsList, creds)
 			if un != "" {
-				authenticatedUsers = append(authenticatedUsers, un)
+				authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
 			}
 		}
 	}
@@ -197,7 +201,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 			logging.Debugf("Token auth error: %v", err)
 		} else {
 			credentialsList = append(credentialsList, creds)
-			authenticatedUsers = append(authenticatedUsers, creds.Name())
+			authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
 		}
 	}
 

@@ -31,7 +31,7 @@ func (ci *queryContextImpl) Credentials() auth.Credentials {
 }
 
 func (ci *queryContextImpl) AuthenticatedUsers() []string {
-	return []string{"ivanivanov", "petrpetrov"}
+	return []string{"local:ivanivanov", "local:petrpetrov"}
 }
 
 func (ci *queryContextImpl) OriginalHttpRequest() *http.Request {
@@ -144,7 +144,7 @@ func TestSystem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to scan index of system:user_info: %v", err)
 	}
-	if !ui_e["ivanivanov"] || !ui_e["petrpetrov"] {
+	if !ui_e["local:ivanivanov"] || !ui_e["local:petrpetrov"] {
 		t.Fatalf("unexpected results from scan of syste:user_info: %v", ui_e)
 	}
 

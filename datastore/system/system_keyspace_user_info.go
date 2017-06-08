@@ -205,7 +205,17 @@ func userInfoListToMap(sliceOfUsers []interface{}) (map[string]value.Value, erro
 		if !ok {
 			return nil, errors.NewInvalidValueError(fmt.Sprintf("Field id of unexpected type in user_info data at position %d: %v", i, u))
 		}
-		newMap[idAsString] = value.NewValue(u)
+		domain, present := userAsMap["domain"]
+		if !present {
+			return nil, errors.NewInvalidValueError(fmt.Sprintf("Could not find domain in user_info data at position %d: %v", i, u))
+		}
+		domainAsString, ok := domain.(string)
+		if !ok {
+			return nil, errors.NewInvalidValueError(
+				fmt.Sprintf("Field domain of unexpected type in user_info data at position %d: %v", i, u))
+		}
+		userKey := fmt.Sprintf("%s:%s", domainAsString, idAsString)
+		newMap[userKey] = value.NewValue(u)
 	}
 	return newMap, nil
 }

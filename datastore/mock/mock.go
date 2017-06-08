@@ -102,9 +102,9 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 
 func (s *store) UserInfo() (value.Value, errors.Error) {
 	// Stub implementation with fixed content.
-	content := `[{"name":"Ivan Ivanov","id":"ivanivanov","roles":[{"role":"cluster_admin"},
+	content := `[{"name":"Ivan Ivanov","id":"ivanivanov","domain":"local","roles":[{"role":"cluster_admin"},
                         {"role":"bucket_admin","bucket_name":"default"}]},
-                        {"name":"Petr Petrov","id":"petrpetrov","roles":[{"role":"replication_admin"}]}]`
+                        {"name":"Petr Petrov","id":"petrpetrov","domain":"local","roles":[{"role":"replication_admin"}]}]`
 	jsonData := make([]interface{}, 3)
 	err := json.Unmarshal([]byte(content), &jsonData)
 	if err != nil {
