@@ -123,6 +123,11 @@ func handleScriptFlag(liner **liner.State) {
 				command.PrintError(s_err)
 
 				if *errorExitFlag {
+					_, werr := io.WriteString(command.W, command.EXITONERR)
+					if werr != nil {
+						s_err = command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+						command.PrintError(s_err)
+					}
 					(*liner).Close()
 					os.Clearenv()
 					os.Exit(1)
