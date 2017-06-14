@@ -112,10 +112,11 @@ func RequestsCount() int {
 }
 
 func RequestsForeach(f func(string, *RequestLogEntry)) {
-	dummyF := func(id string, r interface{}) {
+	dummyF := func(id string, r interface{}) bool {
 		f(id, r.(*RequestLogEntry))
+		return true
 	}
-	requestLog.cache.ForEach(dummyF)
+	requestLog.cache.ForEach(dummyF, nil)
 }
 
 func LogRequest(request_time time.Duration, service_time time.Duration,
@@ -155,5 +156,5 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	re.PhaseCounts = phaseCounts
 	re.PhaseOperators = phaseOperators
 
-	requestLog.cache.Add(re, id)
+	requestLog.cache.Add(re, id, nil)
 }

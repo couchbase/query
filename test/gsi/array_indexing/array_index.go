@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
@@ -248,6 +249,9 @@ func Start(site, pool, namespace string) *MockServer {
 
 	// Start the completed requests log - keep it small and busy
 	accounting.RequestsInit(0, 8)
+
+	// Start the prepared statement cache
+	plan.PreparedsInit(1024)
 
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)

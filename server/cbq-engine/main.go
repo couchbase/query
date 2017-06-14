@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
@@ -73,6 +74,8 @@ var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this fi
 // Monitoring API
 var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed query lasting longer than this many milliseconds")
 var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
+
+var PREPARED_LIMIT = flag.Int("prepared-limit", 16384, "maximum number of prepared statements")
 
 func main() {
 	HideConsole(true)
@@ -152,6 +155,14 @@ func main() {
 
 	// Start the completed requests log
 	accounting.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
+
+	// Initialized the prepared statement cache
+	if *PREPARED_LIMIT <= 0 {
+		logging.Errorp("Ignoring invalid prepared statement cache size",
+			logging.Pair{"value", *PREPARED_LIMIT})
+		*PREPARED_LIMIT = 16384
+	}
+	plan.PreparedsInit(*PREPARED_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 	channel := make(server.RequestChannel, *REQUEST_CAP*numProcs)

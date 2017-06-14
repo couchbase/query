@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
@@ -325,6 +326,7 @@ const (
 	_TIMEOUT         = "timeout"
 	_CMPTHRESHOLD    = "completed-threshold"
 	_CMPLIMIT        = "completed-limit"
+	_PRPLIMIT        = "prepared-limit"
 	_PRETTY          = "pretty"
 )
 
@@ -338,6 +340,14 @@ func checkBool(val interface{}) bool {
 func checkNumber(val interface{}) bool {
 	_, ok := val.(float64)
 	return ok
+}
+
+func checkPositiveInteger(val interface{}) bool {
+	v, ok := val.(float64)
+
+	// we are getting floats here - val doesn't cast to ints
+	// and we want a cache, however small
+	return ok && (v > 1)
 }
 
 func checkString(val interface{}) bool {
@@ -369,6 +379,7 @@ var _CHECKERS = map[string]checker{
 	_TIMEOUT:         checkNumber,
 	_CMPTHRESHOLD:    checkNumber,
 	_CMPLIMIT:        checkNumber,
+	_PRPLIMIT:        checkPositiveInteger,
 	_PRETTY:          checkBool,
 }
 
@@ -431,6 +442,10 @@ var _SETTERS = map[string]setter{
 		value, _ := o.(float64)
 		accounting.RequestsSetLimit(int(value))
 	},
+	_PRPLIMIT: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		plan.PreparedsSetLimit(int(value))
+	},
 	_PRETTY: func(s *server.Server, o interface{}) {
 		value, _ := o.(bool)
 		s.SetPretty(value)
@@ -492,6 +507,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_LOGLEVEL] = srvr.LogLevel()
 	settings[_CMPTHRESHOLD] = accounting.RequestsThreshold()
 	settings[_CMPLIMIT] = accounting.RequestsLimit()
+	settings[_PRPLIMIT] = plan.PreparedsLimit()
 	settings[_PRETTY] = srvr.Pretty()
 	return settings
 }

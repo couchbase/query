@@ -16,11 +16,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"sync"
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -115,8 +115,7 @@ func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
 }
 
 type preparedCache struct {
-	sync.RWMutex
-	prepareds map[string]*CacheEntry
+	cache *util.GenCache
 }
 
 type CacheEntry struct {
@@ -129,25 +128,45 @@ type CacheEntry struct {
 	// This requires the use of metrics
 }
 
-const (
-	_CACHE_SIZE = 1 << 10
-	_MAX_SIZE   = _CACHE_SIZE * 16
-)
+var prepareds = &preparedCache{}
 
-var cache = &preparedCache{
-	prepareds: make(map[string]*CacheEntry, _CACHE_SIZE),
+// init prepareds cache
+
+func PreparedsInit(limit int) {
+	prepareds.cache = util.NewGenCache(limit)
+}
+
+// configure prepareds cache
+
+func PreparedsLimit() int {
+	return prepareds.cache.Limit()
+}
+
+func PreparedsSetLimit(limit int) {
+	prepareds.cache.SetLimit(limit)
 }
 
 func (this *preparedCache) get(name value.Value, track bool) *Prepared {
+	var cv interface{}
+
 	if name.Type() != value.STRING || !name.Truth() {
 		return nil
 	}
-	this.RLock()
-	defer this.RUnlock()
-	rv := this.prepareds[name.Actual().(string)]
-	if rv != nil {
+
+	n := name.Actual().(string)
+	if track {
+		cv = prepareds.cache.Use(n, nil)
+	} else {
+		cv = prepareds.cache.Get(n, nil)
+	}
+	rv, ok := cv.(*CacheEntry)
+	if ok {
 		if track {
 			atomic.AddInt32(&rv.Uses, 1)
+
+			// this is not exactly accurate, but since the MRU queue is
+			// managed properly, we'd rather be inaccurate and make the
+			// change outside of the lock than take a performance hit
 			rv.LastUse = time.Now()
 		}
 		return rv.Prepared
@@ -156,155 +175,77 @@ func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 }
 
 func (this *preparedCache) add(prepared *Prepared, process func(*CacheEntry) bool) {
-	this.Lock()
-	defer this.Unlock()
 
-	ce, ok := this.prepareds[prepared.Name()]
+	// prepare a new entry, if statement does not exist
+	ce := &CacheEntry{
+		Prepared: prepared,
+	}
+	prepareds.cache.Add(ce, prepared.Name(), func(entry interface{}) util.Operation {
+		var op util.Operation = util.AMEND
+		var cont bool = true
 
-	// build one if missing
-	if !ok {
-		ce = &CacheEntry{
-			Prepared: prepared,
+		// check existing entry, amend if all good, ignore otherwise
+		oldEntry := entry.(*CacheEntry)
+		if process != nil {
+			cont = process(oldEntry)
 		}
-	}
-	if process != nil {
-		if cont := process(ce); !cont {
-			return
+		if cont {
+			oldEntry.Prepared = prepared
+		} else {
+			op = util.IGNORE
 		}
-	}
-
-	// amend existing one if cleared to proceed
-	if ok {
-		ce.Prepared = prepared
-	}
-	if len(this.prepareds) > _MAX_SIZE {
-		this.prepareds = make(map[string]*CacheEntry, _CACHE_SIZE)
-	}
-	this.prepareds[prepared.Name()] = ce
-}
-
-func (this *preparedCache) peek(prepared *Prepared) bool {
-	this.RLock()
-	cached := this.prepareds[prepared.Name()]
-	this.RUnlock()
-	if cached != nil && cached.Prepared.Text() != prepared.Text() {
-		return true
-	}
-	return false
-}
-
-func (this *preparedCache) peekName(name string) bool {
-	this.RLock()
-	cached := this.prepareds[name]
-	this.RUnlock()
-	return cached != nil
-}
-
-func (this *preparedCache) snapshot() []map[string]interface{} {
-	this.RLock()
-	defer this.RUnlock()
-	data := make([]map[string]interface{}, len(this.prepareds))
-	i := 0
-	for _, d := range this.prepareds {
-		data[i] = map[string]interface{}{}
-		data[i]["name"] = d.Prepared.Name()
-		data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
-		data[i]["statement"] = d.Prepared.Text()
-		data[i]["uses"] = d.Uses
-		if d.Uses > 0 {
-			data[i]["lastUse"] = d.LastUse.String()
-		}
-		i++
-	}
-	return data
-}
-
-func (this *preparedCache) size() int {
-	this.RLock()
-	defer this.RUnlock()
-	return len(this.prepareds)
-}
-
-func (this *preparedCache) entry(name string) *CacheEntry {
-	this.RLock()
-	defer this.RUnlock()
-	return this.prepareds[name]
-}
-
-func (this *preparedCache) remove(name string) {
-	this.Lock()
-	defer this.Unlock()
-	delete(this.prepareds, name)
-}
-
-func (this *preparedCache) names() []string {
-	i := 0
-	this.RLock()
-	defer this.RUnlock()
-	n := make([]string, len(this.prepareds))
-	for k := range this.prepareds {
-		n[i] = k
-		i++
-	}
-	return n
-}
-
-func SnapshotPrepared() []map[string]interface{} {
-	return cache.snapshot()
+		return op
+	})
 }
 
 func CountPrepareds() int {
-	return cache.size()
+	return prepareds.cache.Size()
 }
 
 func NamePrepareds() []string {
-	return cache.names()
+	return prepareds.cache.Names()
 }
 
-func PreparedEntry(name string) struct {
-	Uses    int
-	LastUse string
-	Text    string
-	Plan    string
-} {
-	ce := cache.entry(name)
-	return struct {
-		Uses    int
-		LastUse string
-		Text    string
-		Plan    string
-	}{
-		Uses:    int(ce.Uses),
-		LastUse: ce.LastUse.String(),
-		Text:    ce.Prepared.Text(),
-		Plan:    ce.Prepared.EncodedPlan(),
+func PreparedsForeach(f func(string, *CacheEntry)) {
+	dummyF := func(id string, r interface{}) bool {
+		f(id, r.(*CacheEntry))
+		return true
 	}
+	prepareds.cache.ForEach(dummyF, nil)
 }
 
 func PreparedDo(name string, f func(*CacheEntry)) {
-	cache.RLock()
-	defer cache.RUnlock()
-	ce := cache.prepareds[name]
-	if ce != nil {
-		f(ce)
+	var process func(interface{}) = nil
+
+	if f != nil {
+		process = func(entry interface{}) {
+			ce := entry.(*CacheEntry)
+			f(ce)
+		}
 	}
+	_ = prepareds.cache.Get(name, process)
 }
 
 func AddPrepared(prepared *Prepared) errors.Error {
-	if cache.peek(prepared) {
-		return errors.NewPreparedNameError(
-			fmt.Sprintf("duplicate name: %s", prepared.Name()))
-	}
-	cache.add(prepared, nil)
-	return nil
+	var err errors.Error = nil
+
+	prepareds.add(prepared, func(ce *CacheEntry) bool {
+		if ce.Prepared.Text() != prepared.Text() {
+			err = errors.NewPreparedNameError(
+				fmt.Sprintf("duplicate name: %s", prepared.Name()))
+			return false
+		} else {
+			return true
+		}
+	})
+	return err
 }
 
 func DeletePrepared(name string) errors.Error {
-	if !cache.peekName(name) {
-		return errors.NewNoSuchPreparedError(name)
+	if prepareds.cache.Delete(name, nil) {
+		return nil
 	}
-	cache.remove(name)
-	return nil
+	return errors.NewNoSuchPreparedError(name)
 }
 
 var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
@@ -312,7 +253,7 @@ var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
 func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Error) {
 	switch prepared_stmt.Type() {
 	case value.STRING:
-		prepared := cache.get(prepared_stmt, track)
+		prepared := prepareds.get(prepared_stmt, track)
 		if prepared == nil {
 			return nil, errors.NewNoSuchPreparedError(prepared_stmt.Actual().(string))
 		}
@@ -320,7 +261,7 @@ func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Err
 	case value.OBJECT:
 		name_value, has_name := prepared_stmt.Field("name")
 		if has_name {
-			if prepared := cache.get(name_value, track); prepared != nil {
+			if prepared := prepareds.get(name_value, track); prepared != nil {
 				return prepared, nil
 			}
 		}
@@ -350,13 +291,13 @@ func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Dur
 	if name == "" {
 		return
 	}
-	cache.RLock()
-	defer cache.RUnlock()
-	ce := cache.prepareds[name]
-	if ce != nil {
+	// cache get had already moved this entry to the top of the LRU
+	// no need to do it again
+	_ = prepareds.cache.Get(name, func(entry interface{}) {
+		ce := entry.(*CacheEntry)
 		atomic.AddUint64(&ce.ServiceTime, uint64(serviceTime))
 		atomic.AddUint64(&ce.RequestTime, uint64(requestTime))
-	}
+	})
 }
 
 func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Prepared, errors.Error) {
@@ -393,7 +334,7 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Pr
 	if prepared.Name() == "" {
 		return prepared, nil
 	}
-	cache.add(prepared,
+	prepareds.add(prepared,
 		func(oldEntry *CacheEntry) bool {
 
 			// MB-19509: if the entry exists already, the new plan must
