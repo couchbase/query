@@ -175,3 +175,9 @@ func NewRoleNotPresent(user string, role string, bucket string) Error {
 	return &err{level: WARNING, ICode: 5270, IKey: "execution.role_not_present",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
+
+func NewUserWithNoRoles(user string) Error {
+	return &err{level: WARNING, ICode: 5280, IKey: "execution.user_with_no_roles",
+		InternalMsg:    fmt.Sprintf("User %s has no roles. Connecting to Couchbase with this user may not be possible", user),
+		InternalCaller: CallerN(1)}
+}

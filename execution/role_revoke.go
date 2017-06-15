@@ -126,6 +126,10 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 				}
 				newRoles = append(newRoles, role)
 			}
+			// Issue a warning if the user now has no roles at all, an unusual and perhaps unexpected condition.
+			if len(newRoles) == 0 {
+				context.Warning(errors.NewUserWithNoRoles(userId))
+			}
 			user.Roles = newRoles
 			// Update the user with their new roles on the backend.
 			err = context.datastore.PutUserInfo(user)
