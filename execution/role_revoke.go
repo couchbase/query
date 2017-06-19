@@ -54,15 +54,11 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Get the current set of users (with their role information),
-		// and create a map of them by id.
-		currentUsers, err := context.datastore.GetUserInfoAll()
+		// and create a map of them by domain:userid.
+		userMap, err := getUserMap(context.datastore)
 		if err != nil {
 			context.Fatal(err)
 			return
-		}
-		userMap := make(map[string]*datastore.User, len(currentUsers))
-		for i, u := range currentUsers {
-			userMap[u.Id] = &currentUsers[i]
 		}
 
 		// Create the set of deletable roles.
@@ -93,11 +89,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		// Since we only want to update each user once, even if the
 		// statement mentions the user multiple times, create a map
 		// of the input user ids.
-		updateUsers := this.plan.Node().Users()
-		updateUserIdMap := make(map[string]bool, len(updateUsers))
-		for _, u := range updateUsers {
-			updateUserIdMap[u] = true
-		}
+		updateUserIdMap := getUsersMap(this.plan.Node().Users())
 
 		for userId, _ := range updateUserIdMap {
 			user := userMap[userId]

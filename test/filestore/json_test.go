@@ -41,9 +41,9 @@ func TestSyntaxErr(t *testing.T) {
 func TestRoleStatements(t *testing.T) {
 	qc := start()
 
-	pete := datastore.User{Name: "Peter Peterson", Id: "pete",
+	pete := datastore.User{Name: "Peter Peterson", Id: "pete", Domain: "local",
 		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "contacts"}}}
-	sam := datastore.User{Name: "Sam Samson", Id: "sam",
+	sam := datastore.User{Name: "Sam Samson", Id: "sam", Domain: "local",
 		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "products"}}}
 
 	ds := qc.dstore
@@ -67,6 +67,7 @@ func TestRoleStatements(t *testing.T) {
 		datastore.User{
 			Name: "Peter Peterson",
 			Id:   "pete",
+			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
 				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
@@ -76,6 +77,7 @@ func TestRoleStatements(t *testing.T) {
 		datastore.User{
 			Name: "Sam Samson",
 			Id:   "sam",
+			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
 				datastore.Role{Name: "bucket_admin", Bucket: "products"},
@@ -101,6 +103,7 @@ func TestRoleStatements(t *testing.T) {
 		datastore.User{
 			Name: "Peter Peterson",
 			Id:   "pete",
+			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
 				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
@@ -109,6 +112,7 @@ func TestRoleStatements(t *testing.T) {
 		datastore.User{
 			Name: "Sam Samson",
 			Id:   "sam",
+			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
 			},

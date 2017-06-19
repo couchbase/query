@@ -11,6 +11,7 @@ package execution
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -118,6 +119,39 @@ func getRoles(node roleSource) []datastore.Role {
 	}
 }
 
+// Retrieve the complete set of current users and their roles.
+// Return them as a map indexed by domain:user_id.
+func getUserMap(ds datastore.Datastore) (map[string]*datastore.User, errors.Error) {
+	// Get the current set of users (with their role information),
+	// and create a map of them by id.
+	currentUsers, err := ds.GetUserInfoAll()
+	if err != nil {
+		return nil, err
+	}
+	userMap := make(map[string]*datastore.User, len(currentUsers))
+	for i, u := range currentUsers {
+		key := u.Domain + ":" + u.Id
+		userMap[key] = &currentUsers[i]
+	}
+	return userMap, nil
+}
+
+// Given a string of users (in either plain user_id form or domain:user_id form),
+// create a map of users, where all are in domain:user_id form.
+func getUsersMap(users []string) map[string]bool {
+	ret := make(map[string]bool, len(users))
+	for _, v := range users {
+		var domainUser string
+		if strings.Contains(v, ":") {
+			domainUser = v
+		} else {
+			domainUser = "local:" + v
+		}
+		ret[domainUser] = true
+	}
+	return ret
+}
+
 func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
@@ -132,14 +166,10 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 
 		// Get the current set of users (with their role information),
 		// and create a map of them by id.
-		currentUsers, err := context.datastore.GetUserInfoAll()
+		userMap, err := getUserMap(context.datastore)
 		if err != nil {
 			context.Fatal(err)
 			return
-		}
-		userMap := make(map[string]*datastore.User, len(currentUsers))
-		for i, u := range currentUsers {
-			userMap[u.Id] = &currentUsers[i]
 		}
 
 		// Create the set of new roles, in a form suitable for output.
@@ -165,12 +195,8 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 
 		// Since we only want to update each user once, even if the
 		// statement mentions the user multiple times, create a map
-		// of the input user ids.
-		updateUsers := this.plan.Node().Users()
-		updateUserIdMap := make(map[string]bool, len(updateUsers))
-		for _, u := range updateUsers {
-			updateUserIdMap[u] = true
-		}
+		// of the input user ids in domain:user form.
+		updateUserIdMap := getUsersMap(this.plan.Node().Users())
 
 		for userId, _ := range updateUserIdMap {
 			user := userMap[userId]

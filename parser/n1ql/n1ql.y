@@ -392,6 +392,7 @@ tokOffset	 int
 %type <ss>               keyspace_list
 %type <ss>               role_list
 %type <s>                role_name
+%type <s>                user
 
 %start input
 
@@ -1761,16 +1762,27 @@ keyspace_list COMMA IDENT
 ;
 
 user_list:
-IDENT
+user
 {
 	$$ = []string{ $1 }
 }
 |
-user_list COMMA IDENT
+user_list COMMA user
 {
 	$$ = append($1, $3)
 }
 ;
+
+user:
+IDENT
+{
+	$$ = $1
+}
+|
+IDENT COLON IDENT
+{
+	$$ = $1 + ":" + $3
+}
 
 /*************************************************
  *
