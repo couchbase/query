@@ -74,6 +74,9 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			this.bits = nil
 		}()
 
+		if !context.assert(len(this.scans) != 0, "Intersect scan has no scans") {
+			return
+		}
 		pipelineCap := int(context.GetPipelineCap())
 		if pipelineCap <= _INDEX_VALUE_POOL.Size() {
 			this.values = _INDEX_VALUE_POOL.Get()

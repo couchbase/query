@@ -67,6 +67,9 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		n := len(this.children)
+		if !context.assert(n > 0, "Union has no children") {
+			return
+		}
 
 		// Run children in parallel
 		for _, child := range this.children {

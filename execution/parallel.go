@@ -61,6 +61,9 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
+		if !context.assert(this.child != nil, "Parallel has no child") {
+			return
+		}
 		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
 		this.children = _PARALLEL_POOL.Get()[0:n]
 

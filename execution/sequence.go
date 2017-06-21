@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -66,9 +65,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		n := len(this.children)
-		if n == 0 {
-			err := errors.NewPlanInternalError("Sequence has no children")
-			context.Error(err)
+		if !context.assert(n > 0, "Sequence has no children") {
 			return
 		}
 

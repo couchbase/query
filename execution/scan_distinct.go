@@ -75,6 +75,10 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 			this.keys = make(map[string]bool, pipelineCap)
 		}
 
+		if !context.assert(this.scan != nil, "Distinct has no scan") {
+			return
+		}
+
 		this.scan.SetParent(this)
 		go this.scan.RunOnce(context, parent)
 
@@ -176,7 +180,9 @@ func (this *DistinctScan) accrueTimes(o Operator) {
 
 func (this *DistinctScan) Done() {
 	this.wait()
-	this.scan.Done()
+	if this.scan != nil {
+		this.scan.Done()
+	}
 }
 
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

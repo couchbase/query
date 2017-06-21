@@ -496,7 +496,8 @@ func (this *Server) serviceRequest(request Request) {
 	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
-		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest())
+		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
+		prepared)
 
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
@@ -587,6 +588,11 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			if !isprepare {
 				request.SetType(stmt.Type())
 			}
+
+			// even though this is not a prepared statement, add the
+			// text for the benefit of context.Recover(): we can
+			// output the text in case of crashes
+			prepared.SetText(request.Statement())
 		}
 
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))

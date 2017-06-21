@@ -78,6 +78,9 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			this.queue = nil
 		}()
 
+		if !context.assert(len(this.scans) != 0, "Ordered Intersect Scan has no scans") {
+			return
+		}
 		pipelineCap := int(context.GetPipelineCap())
 		if pipelineCap <= _INDEX_VALUE_POOL.Size() {
 			this.values = _INDEX_VALUE_POOL.Get()

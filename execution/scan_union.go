@@ -71,6 +71,9 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			this.keys = nil
 		}()
 
+		if !context.assert(len(this.scans) != 0, "Union Scan has no scans") {
+			return
+		}
 		pipelineCap := int(context.GetPipelineCap())
 		if pipelineCap <= _STRING_BOOL_POOL.Size() {
 			this.keys = _STRING_BOOL_POOL.Get()

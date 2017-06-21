@@ -61,6 +61,9 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 
 		spans := this.plan.Spans()
 		n := len(spans)
+		if !context.assert(n != 0, "Index scan has no spans") {
+			return
+		}
 		this.childChannel = make(StopChannel, n)
 		this.children = _INDEX_SCAN_POOL.Get()
 

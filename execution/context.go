@@ -125,6 +125,7 @@ type Context struct {
 	consistency        datastore.ScanConsistency
 	scanVectorSource   timestamp.ScanVectorSource
 	output             Output
+	prepared           *plan.Prepared
 	subplans           *subqueryMap
 	subresults         *subqueryMap
 	httpRequest        *http.Request
@@ -136,7 +137,8 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	namespace string, readonly bool, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
 	credentials auth.Credentials, consistency datastore.ScanConsistency,
-	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request) *Context {
+	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request,
+	prepared *plan.Prepared) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -158,6 +160,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		subplans:         nil,
 		subresults:       nil,
 		httpRequest:      httpRequest,
+		prepared:         prepared,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -457,22 +460,30 @@ func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
 	this.mutex.Unlock()
 }
 
+func (this *Context) assert(test bool, what string) bool {
+	if test {
+		return true
+	}
+	logging.Severef("assert failure: %v\n\nrequest text:\n%v\n",
+		what, this.prepared.Text())
+	this.Fatal(errors.NewExecutionInternalError(what))
+	return false
+}
+
 func (this *Context) Recover() {
 	err := recover()
 	if err != nil {
 		buf := make([]byte, 1<<16)
 		n := runtime.Stack(buf, false)
 		s := string(buf[0:n])
-		logging.Severep("", logging.Pair{"panic", err},
-			logging.Pair{"stack", s})
+		logging.Severef("panic: %v\n\nrequest text:\n%v\n\nstack:\n%v",
+			err, this.prepared.Text(), s)
+
+		// TODO - this may very well be a duplicate, if the orchestrator is redirecting
+		// the standard error to the same file as the log
 		os.Stderr.WriteString(s)
 		os.Stderr.Sync()
 
-		switch err := err.(type) {
-		case error:
-			this.Fatal(errors.NewExecutionPanicError(err, fmt.Sprintf("Panic: %v", err)))
-		default:
-			this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
-		}
+		this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 	}
 }

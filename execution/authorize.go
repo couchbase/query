@@ -73,6 +73,9 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 		this.switchPhase(_EXECTIME)
 
+		if !context.assert(this.child != nil, "Authorize has no child") {
+			return
+		}
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)
 		this.child.SetStop(nil)
@@ -117,6 +120,8 @@ func (this *Authorize) accrueTimes(o Operator) {
 
 func (this *Authorize) Done() {
 	this.wait()
-	this.child.Done()
+	if this.child != nil {
+		this.child.Done()
+	}
 	this.child = nil
 }

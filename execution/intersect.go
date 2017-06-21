@@ -57,6 +57,9 @@ func (this *IntersectAll) Copy() Operator {
 func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
 	this.active()
 	defer this.inactive()
+	if !context.assert(this.first != nil && this.second != nil, "Intersect has no children") {
+		return
+	}
 	this.runConsumer(this, context, parent)
 }
 
@@ -131,8 +134,12 @@ func (this *IntersectAll) accrueTimes(o Operator) {
 
 func (this *IntersectAll) Done() {
 	this.wait()
-	this.first.Done()
-	this.second.Done()
+	if this.first != nil {
+		this.first.Done()
+	}
+	if this.second != nil {
+		this.second.Done()
+	}
 	this.first = nil
 	this.second = nil
 }
