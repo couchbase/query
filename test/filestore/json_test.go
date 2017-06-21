@@ -65,8 +65,8 @@ func TestRoleStatements(t *testing.T) {
 
 	expectedAfterGrant := []datastore.User{
 		datastore.User{
-			Name: "Peter Peterson",
-			Id:   "pete",
+			Name:   "Peter Peterson",
+			Id:     "pete",
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
@@ -75,8 +75,8 @@ func TestRoleStatements(t *testing.T) {
 			},
 		},
 		datastore.User{
-			Name: "Sam Samson",
-			Id:   "sam",
+			Name:   "Sam Samson",
+			Id:     "sam",
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
@@ -101,8 +101,8 @@ func TestRoleStatements(t *testing.T) {
 
 	expectedAfterRevoke := []datastore.User{
 		datastore.User{
-			Name: "Peter Peterson",
-			Id:   "pete",
+			Name:   "Peter Peterson",
+			Id:     "pete",
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
@@ -110,8 +110,8 @@ func TestRoleStatements(t *testing.T) {
 			},
 		},
 		datastore.User{
-			Name: "Sam Samson",
-			Id:   "sam",
+			Name:   "Sam Samson",
+			Id:     "sam",
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},

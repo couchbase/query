@@ -948,7 +948,7 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 		return nil, nil
 	}
 
-	bulkResponse, keyCount, err := b.cbbucket.GetBulk(keys)
+	bulkResponse, keyCount, err := b.cbbucket.GetBulk(keys, context.GetReqDeadline())
 	defer b.cbbucket.ReleaseGetBulkPools(keyCount, bulkResponse)
 
 	if err != nil {

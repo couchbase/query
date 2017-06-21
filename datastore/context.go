@@ -11,6 +11,7 @@ package datastore
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -45,6 +46,7 @@ func (ci *contextImpl) Warning(err errors.Error) {
 
 // A subset of execution.Context that is useful at the datastore level.
 type QueryContext interface {
+	GetReqDeadline() time.Time
 	Credentials() auth.Credentials
 	AuthenticatedUsers() []string
 	OriginalHttpRequest() *http.Request
@@ -67,4 +69,8 @@ func (ci *queryContextImpl) OriginalHttpRequest() *http.Request {
 }
 
 func (ci *queryContextImpl) Warning(err errors.Error) {
+}
+
+func (ci *queryContextImpl) GetReqDeadline() time.Time {
+	return time.Time{}
 }

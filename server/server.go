@@ -527,6 +527,9 @@ func (this *Server) serviceRequest(request Request) {
 	}
 	if timeout > 0 {
 		request.SetTimer(time.AfterFunc(timeout, func() { request.Expire(TIMEOUT, timeout) }))
+		context.SetReqDeadline(time.Now().Add(timeout))
+	} else {
+		context.SetReqDeadline(time.Time{})
 	}
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())

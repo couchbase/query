@@ -12,6 +12,7 @@ package system
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -28,6 +29,10 @@ type queryContextImpl struct {
 
 func (ci *queryContextImpl) Credentials() auth.Credentials {
 	return ci.creds
+}
+
+func (ci *queryContextImpl) GetReqDeadline() time.Time {
+	return time.Time{}
 }
 
 func (ci *queryContextImpl) AuthenticatedUsers() []string {

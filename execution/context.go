@@ -117,6 +117,7 @@ type Context struct {
 	scanCap            int64
 	pipelineCap        int64
 	pipelineBatch      int
+	reqDeadline        time.Time
 	now                time.Time
 	namedArgs          map[string]value.Value
 	positionalArgs     value.Values
@@ -250,6 +251,14 @@ func (this *Context) ScanCap() int64 {
 
 func (this *Context) SetScanCap(scanCap int64) {
 	this.scanCap = scanCap
+}
+
+func (this *Context) GetReqDeadline() time.Time {
+	return this.reqDeadline
+}
+
+func (this *Context) SetReqDeadline(reqDeadline time.Time) {
+	this.reqDeadline = reqDeadline
 }
 
 func (this *Context) GetPipelineCap() int64 {
