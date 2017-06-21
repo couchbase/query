@@ -22,7 +22,7 @@ import (
 )
 
 func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
-	pl, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false)
+	pl, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false, this.namedArgs, this.positionalArgs)
 	if err != nil {
 		return nil, err
 	}
