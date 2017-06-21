@@ -549,8 +549,19 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, errors.NewParseSyntaxError(err, "")
 		}
 
+		isprepare := false
+		if _, ok := stmt.(*algebra.Prepare); ok {
+			isprepare = true
+		}
+
 		prep := time.Now()
-		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
+		namedArgs := request.NamedArgs()
+		positionalArgs := request.PositionalArgs()
+		if isprepare {
+			namedArgs = nil
+			positionalArgs = nil
+		}
+		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false, namedArgs, positionalArgs)
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}
@@ -573,8 +584,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			// set the type for all statements bar prepare
 			// (doing otherwise would have accounting track prepares
 			// as if they were executions)
-			_, ok := stmt.(*algebra.Prepare)
-			if !ok {
+			if !isprepare {
 				request.SetType(stmt.Type())
 			}
 		}

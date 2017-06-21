@@ -16,11 +16,13 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool) (plan.Operator, error) {
-	builder := newBuilder(datastore, systemstore, namespace, subquery)
+	namespace string, subquery bool, namedArgs map[string]value.Value,
+	positionalArgs value.Values) (plan.Operator, error) {
+	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs)
 	o, err := stmt.Accept(builder)
 
 	if err != nil {
@@ -83,15 +85,19 @@ type builder struct {
 	skipDynamic       bool
 	requirePrimaryKey bool
 	orderScan         plan.SecondaryScan
+	namedArgs         map[string]value.Value
+	positionalArgs    value.Values
 }
 
-func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
+func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool, namedArgs map[string]value.Value, positionalArgs value.Values) *builder {
 	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
 		namespace:       namespace,
 		subquery:        subquery,
 		delayProjection: false,
+		namedArgs:       namedArgs,
+		positionalArgs:  positionalArgs,
 	}
 
 	return rv

@@ -13,11 +13,12 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool) (*plan.Prepared, error) {
-	operator, err := Build(stmt, datastore, systemstore, namespace, subquery)
+	namespace string, subquery bool, namedArgs map[string]value.Value, positionalArgs value.Values) (*plan.Prepared, error) {
+	operator, err := Build(stmt, datastore, systemstore, namespace, subquery, namedArgs, positionalArgs)
 	if err != nil {
 		return nil, err
 	}

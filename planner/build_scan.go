@@ -81,6 +81,30 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	}
 
 	if pred != nil {
+		if len(this.namedArgs) > 0 || len(this.positionalArgs) > 0 {
+			pred = pred.Copy()
+
+			for name, value := range this.namedArgs {
+				nameExpr := algebra.NewNamedParameter(name)
+				valueExpr := expression.NewConstant(value)
+				replacer := expression.NewReplacer(nameExpr, valueExpr)
+				pred, err = replacer.Map(pred)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+
+			for pos, value := range this.positionalArgs {
+				posExpr := algebra.NewPositionalParameter(pos + 1)
+				valueExpr := expression.NewConstant(value)
+				replacer := expression.NewReplacer(posExpr, valueExpr)
+				pred, err = replacer.Map(pred)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+
 		return this.buildPredicateScan(keyspace, node, id, pred, hints)
 	}
 
