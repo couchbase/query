@@ -104,6 +104,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 			ClientAuth:   tls.NoClientCert,
 			MinVersion:   minTlsVersion,
 			CipherSuites: util.CipherSuites(),
+			NextProtos:   []string{"h2", "http/1.1"},
 		}
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
