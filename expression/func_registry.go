@@ -219,6 +219,17 @@ var _FUNCTIONS = map[string]Function{
 	"tan":     &Tan{},
 	"trunc":   &Trunc{},
 
+	// Bitwise
+	"bitand":   &BitAnd{},
+	"bitor":    &BitOr{},
+	"bitxor":   &BitXor{},
+	"bitnot":   &BitNot{},
+	"bitshift": &BitShift{},
+	"bitset":   &BitSet{},
+	"bitclear": &BitClear{},
+	"bittest":  &BitTest{},
+	"isbitset": &BitTest{},
+
 	// Array
 	"array_add":       &ArrayPut{},
 	"array_append":    &ArrayAppend{},
