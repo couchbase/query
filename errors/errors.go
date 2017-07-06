@@ -22,7 +22,6 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	"time"
 )
 
 const (
@@ -148,36 +147,9 @@ func (e *err) OnceOnly() bool {
 	return e.onceOnly
 }
 
-func NewParseError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 4100, IKey: "parse_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
-}
-
-func NewSemanticError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 4200, IKey: "semantic_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
-}
-
-func NewBucketDoesNotExist(bucket string) Error {
-	return &err{level: EXCEPTION, ICode: 4040, IKey: "bucket_not_found", InternalMsg: fmt.Sprintf("Bucket %s does not exist", bucket), InternalCaller: CallerN(1)}
-}
-
-func NewPoolDoesNotExist(pool string) Error {
-	return &err{level: EXCEPTION, ICode: 4041, IKey: "pool_not_found", InternalMsg: fmt.Sprintf("Pool %s does not exist", pool), InternalCaller: CallerN(1)}
-}
-
-func NewTimeoutError(timeout time.Duration) Error {
-	return &err{level: EXCEPTION, ICode: 4080, IKey: "timeout", InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1)}
-}
-
-func NewTotalRowsInfo(rows int) Error {
-	return &err{level: INFO, ICode: 100, IKey: "total_rows", InternalMsg: fmt.Sprintf("%d", rows), InternalCaller: CallerN(1)}
-}
-
-func NewTotalElapsedTimeInfo(time string) Error {
-	return &err{level: INFO, ICode: 101, IKey: "total_elapsed_time", InternalMsg: fmt.Sprintf("%s", time), InternalCaller: CallerN(1)}
-}
-
+// only put errors in the reserved range here (7000-9999)
 func NewNotImplemented(feature string) Error {
-	return &err{level: EXCEPTION, ICode: 1001, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not yet implemented: %v", feature), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: 9999, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not yet implemented: %v", feature), InternalCaller: CallerN(1)}
 }
 
 // Returns "FileName:LineNum" of caller.

@@ -11,6 +11,7 @@ package errors
 
 import (
 	"fmt"
+	"time"
 )
 
 // service level errors - errors that are created in the service package
@@ -57,6 +58,10 @@ func NewServiceErrorUnrecognizedParameter(parameter string) Error {
 func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 	return &err{level: EXCEPTION, ICode: 1070, IKey: "service.io.request.type_mismatch",
 		InternalMsg: fmt.Sprintf("%s has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
+}
+
+func NewTimeoutError(timeout time.Duration) Error {
+	return &err{level: EXCEPTION, ICode: 1080, IKey: "timeout", InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorInvalidJSON(e error) Error {

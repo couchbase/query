@@ -9,14 +9,7 @@
 
 package errors
 
-import (
-	"fmt"
-)
-
-func NewIndexScanSizeError(size int64) Error {
-	return &err{level: EXCEPTION, ICode: 12015, IKey: "datastore.index.scan_size_error",
-		InternalMsg: fmt.Sprintf("Unacceptable size for index scan: %d", size), InternalCaller: CallerN(1)}
-}
+import ()
 
 // Error codes for all other datastores, e.g Mock
 
