@@ -7,12 +7,19 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package arrayIndex
+package gsi
 
 import (
 	"encoding/json"
 	go_er "errors"
 	"fmt"
+        http_base "net/http"
+	"io/ioutil"
+        "os"
+        "reflect"
+        "strconv"
+        "time"
+
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	"github.com/couchbase/query/auth"
@@ -29,12 +36,6 @@ import (
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
-	"io/ioutil"
-	http_base "net/http"
-	"os"
-	"reflect"
-	"strconv"
-	"time"
 )
 
 /*
@@ -290,13 +291,28 @@ func Start(site, pool, namespace string) *MockServer {
 	return mockServer
 }
 
+func (this *MockServer) SetMaxIndexAPI(l int) {
+	this.server.SetMaxIndexAPI(l)
+}
+
+func dropResultEntry(result interface{}, e string) {
+	switch v := result.(type) {
+	case map[string]interface{}:
+		delete(v, e)
+		for _, f := range v {
+			dropResultEntry(f, e)
+		}
+	case []interface{}:
+		for _, f := range v {
+			dropResultEntry(f, e)
+		}
+	}
+}
+
 func dropResultsEntry(results []interface{}, entry interface{}) {
 	e := fmt.Sprintf("%v", entry)
 	for _, r := range results {
-		v, ok := r.(map[string]interface{})
-		if ok {
-			delete(v, e)
-		}
+		dropResultEntry(r, e)
 	}
 }
 
