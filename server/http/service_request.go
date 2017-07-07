@@ -473,8 +473,8 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 			case 2:
 				creds[u_details[0]] = u_details[1]
 			case 3:
-				// Support usernames like "local:xxx" or "admin:xxx"
-				creds[strings.Join(u_details[:2], ":")] = u_details[2]
+				// Support passwords like "local:xxx" or "admin:xxx"
+				creds[u_details[0]] = strings.Join(u_details[1:], ":")
 			default:
 				// Authorization header format is incorrect
 				return nil, errors.NewServiceErrorBadValue(nil, CREDS)
