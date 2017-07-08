@@ -12,21 +12,9 @@ package arrayIndex
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-
-        "github.com/couchbase/query/errors"
-        "github.com/couchbase/query/test/gsi"
 )
-
-/*
-Method to pass in parameters for site, pool and
-namespace to Start method for Couchbase Server.
-*/
-func start_cs() *gsi.MockServer {
-	return gsi.Start(gsi.Site_CBS, gsi.Auth_param+"@"+gsi.Pool_CBS, gsi.Namespace_CBS)
-}
 
 /*
 Basic test to ensure connections to both
@@ -130,33 +118,4 @@ func TestArrayIndex(t *testing.T) {
 		runStmt(qc, "drop primary index on product")
 		runStmt(qc, "drop primary index on purchase")
 	}
-}
-
-func runMatch(filename string, qc *gsi.MockServer, t *testing.T) {
-
-	matches, err := filepath.Glob(filename)
-	if err != nil {
-		t.Errorf("glob failed: %v", err)
-	}
-
-	for _, m := range matches {
-		t.Logf("TestCaseFile: %v\n", m)
-		stmt, errcs := gsi.FtestCaseFile(m, qc, gsi.Namespace_CBS)
-
-		if errcs != nil {
-			t.Errorf("Error : %s", errcs.Error())
-			return
-		}
-
-		if stmt != "" {
-			t.Logf(" %v\n", stmt)
-		}
-
-		fmt.Println("\nQuery : ", m, "\n\n")
-	}
-
-}
-
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
-	return gsi.Run(mockServer, q, gsi.Namespace_CBS)
 }
