@@ -124,8 +124,8 @@ func (this *All) DependsOn(other Expression) bool {
 	return this.array.DependsOn(other)
 }
 
-func (this *All) CoveredBy(keyspace string, exprs Expressions) bool {
-	return this.array.CoveredBy(keyspace, exprs)
+func (this *All) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
+	return this.array.CoveredBy(keyspace, exprs, single)
 }
 
 func (this *All) Children() Expressions {

@@ -67,7 +67,7 @@ outer:
 
 		// Skip non-covering index
 		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, coveringExprs) {
+			if !expr.CoveredBy(alias, coveringExprs, true) {
 				continue outer
 			}
 		}

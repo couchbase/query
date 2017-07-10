@@ -148,7 +148,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			}
 
 			for _, expr := range exprs {
-				if !expr.CoveredBy(alias, coveringExprs) {
+				if !expr.CoveredBy(alias, coveringExprs, true) {
 					continue outer
 				}
 			}

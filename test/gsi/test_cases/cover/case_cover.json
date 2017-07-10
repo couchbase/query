@@ -1,0 +1,210 @@
+[
+    {
+        "statements":"EXPLAIN SELECT f2, f3 FROM shellTest WHERE f1=5",
+	"ignore":"index_id",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "IndexScan2",
+                        "index": "ixCover",
+                        "index_projection": {
+                            "primary_key": true
+                        },
+                        "keyspace": "shellTest",
+                        "namespace": "default",
+                        "spans": [
+                            {
+                                "exact": true,
+                                "range": [
+                                    {
+                                        "high": "5",
+                                        "inclusion": 3,
+                                        "low": "5"
+                                    }
+                                ]
+                            }
+                        ],
+                        "using": "gsi"
+                    },
+                    {
+                        "#operator": "Fetch",
+                        "keyspace": "shellTest",
+                        "namespace": "default"
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((`shellTest`.`f1`) = 5)"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "(`shellTest`.`f2`)"
+                                        },
+                                        {
+                                            "expr": "(`shellTest`.`f3`)"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT f2, f3 FROM shellTest WHERE f1=5"
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT f2, f3 FROM shellTest f2 WHERE f1=5",
+	"ignore":"index_id",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "IndexScan2",
+                        "index": "ixCover",
+                        "index_projection": {
+                            "primary_key": true
+                        },
+                        "keyspace": "shellTest",
+                        "namespace": "default",
+                        "spans": [
+                            {
+                                "range": [
+                                    {
+                                        "high": "5",
+                                        "inclusion": 3,
+                                        "low": "5"
+                                    },
+                                    {
+                                        "inclusion": 0,
+                                        "low": "null"
+                                    }
+                                ]
+                            }
+                        ],
+                        "using": "gsi"
+                    },
+                    {
+                        "#operator": "Fetch",
+                        "as": "f2",
+                        "keyspace": "shellTest",
+                        "namespace": "default"
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((`f2`.`f1`) = 5)"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "`f2`"
+                                        },
+                                        {
+                                            "expr": "(`f2`.`f3`)"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT f2, f3 FROM shellTest f2 WHERE f1=5"
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT f2, f1 FROM shellTest WHERE f1=5",
+        "ignore":"index_id",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "IndexScan2",
+                        "covers": [
+                            "cover ((`shellTest`.`f1`))",
+                            "cover ((`shellTest`.`f2`))",
+                            "cover ((meta(`shellTest`).`id`))"
+                        ],
+                        "index": "ixCover",
+                        "index_projection": {
+                            "entry_keys": [
+                                0,
+                                1
+                            ]
+                        },
+                        "keyspace": "shellTest",
+                        "namespace": "default",
+                        "spans": [
+                            {
+                                "exact": true,
+                                "range": [
+                                    {
+                                        "high": "5",
+                                        "inclusion": 3,
+                                        "low": "5"
+                                    }
+                                ]
+                            }
+                        ],
+                        "using": "gsi"
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(cover ((`shellTest`.`f1`)) = 5)"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "cover ((`shellTest`.`f2`))"
+                                        },
+                                        {
+                                            "expr": "cover ((`shellTest`.`f1`))"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT f2, f1 FROM shellTest WHERE f1=5"
+        }
+    ]
+    }
+]

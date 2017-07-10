@@ -294,13 +294,28 @@ func Start(site, pool, namespace string) *MockServer {
 	return mockServer
 }
 
+func (this *MockServer) SetMaxIndexAPI(l int) {
+	this.server.SetMaxIndexAPI(l)
+}
+
+func dropResultEntry(result interface{}, e string) {
+	switch v := result.(type) {
+	case map[string]interface{}:
+		delete(v, e)
+		for _, f := range v {
+			dropResultEntry(f, e)
+		}
+	case []interface{}:
+		for _, f := range v {
+			dropResultEntry(f, e)
+		}
+	}
+}
+
 func dropResultsEntry(results []interface{}, entry interface{}) {
 	e := fmt.Sprintf("%v", entry)
 	for _, r := range results {
-		v, ok := r.(map[string]interface{})
-		if ok {
-			delete(v, e)
-		}
+		dropResultEntry(r, e)
 	}
 }
 

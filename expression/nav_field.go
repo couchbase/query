@@ -230,6 +230,31 @@ func (this *FieldName) EquivalentTo(other Expression) bool {
 	}
 }
 
+// MB-22112 We need an ad hoc CoveredBy for FieldNames, so that we can make sure
+// that they can be checked for equivalence against their natural match, identifiers
+func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
+
+	for _, expr := range exprs {
+		var isEquivalent bool
+		switch eType := expr.(type) {
+		case *FieldName:
+			isEquivalent = (this.name == eType.name) &&
+				(this.caseInsensitive == eType.caseInsensitive)
+		case *Identifier:
+			isEquivalent = (this.caseInsensitive &&
+				strings.ToLower(this.name) == strings.ToLower(eType.identifier)) ||
+				this.name == eType.identifier
+		default:
+			isEquivalent = false
+		}
+
+		if isEquivalent {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Constants are not transformed, so no need to copy.
 */

@@ -196,7 +196,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	exprs := this.cover.Expressions()
 	for _, expr := range exprs {
 		_, ok := coveredExprs[expr]
-		if !ok && !expr.CoveredBy(alias, coveringExprs) {
+		if !ok && !expr.CoveredBy(alias, coveringExprs, true) {
 			return nil, nil, nil
 		}
 	}

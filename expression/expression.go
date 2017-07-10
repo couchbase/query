@@ -136,7 +136,7 @@ type Expression interface {
 	   expression does not depend on any stored data beyond the
 	   expressions.
 	*/
-	CoveredBy(keyspace string, exprs Expressions) bool
+	CoveredBy(keyspace string, exprs Expressions, single bool) bool
 
 	/*
 	   If this expression is in the WHERE clause of a partial

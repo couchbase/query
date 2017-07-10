@@ -83,14 +83,21 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Identifier) CoveredBy(keyspace string, exprs Expressions) bool {
+func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
 	if this.identifier != keyspace {
 		return true
 	}
 
 	for _, expr := range exprs {
 		if this.EquivalentTo(expr) {
-			return true
+			switch eType := expr.(type) {
+			case *Identifier:
+				if !single || eType.identifier != keyspace {
+					return true
+				}
+			default:
+				return true
+			}
 		}
 	}
 

@@ -241,7 +241,7 @@ Indicates if this expression is based on the keyspace and is covered
 by the list of expressions; that is, this expression does not depend
 on any stored data beyond the expressions.
 */
-func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions) bool {
+func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
 			return true
@@ -249,8 +249,14 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions) bool {
 	}
 
 	children := this.expr.Children()
+	isSingle := len(children) == 1
+
+	// MB-22112: we treat the special case where a keyspace is part of the projection list
+	// a keyspace as a single term does not cover by definition
+	// a keyspace as part of a field or a path does cover to delay the decision in terms
+	// further down the path
 	for _, child := range children {
-		if !child.CoveredBy(keyspace, exprs) {
+		if !child.CoveredBy(keyspace, exprs, isSingle) {
 			return false
 		}
 	}

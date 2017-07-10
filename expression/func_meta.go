@@ -190,7 +190,7 @@ func (this *Meta) Indexable() bool {
 	return true
 }
 
-func (this *Meta) CoveredBy(keyspace string, exprs Expressions) bool {
+func (this *Meta) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
 	if len(this.operands) > 0 {
 		alias := NewIdentifier(keyspace)
 		if !this.operands[0].DependsOn(alias) {
@@ -268,7 +268,7 @@ func (this *Self) Indexable() bool {
 	return true
 }
 
-func (this *Self) CoveredBy(keyspace string, exprs Expressions) bool {
+func (this *Self) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
 	return false
 }
 
