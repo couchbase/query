@@ -321,11 +321,21 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 
 		up := strings.Split(i, ":")
 
-		//Make sure there are no leading and trailing spaces
+		switch len(up) {
+		case 0, 1:
+			return nil, errors.MISSING_CREDENTIAL, ""
+			//Make sure there are no leading and trailing spaces
+		case 2:
+			up[0] = strings.TrimSpace(up[0])
+			up[1] = strings.TrimSpace(up[1])
+		default:
+			// Support passwords like "local:xxx" or "admin:xxx"
+			up[0] = strings.TrimSpace(up[0])
+			up[1] = strings.Join(up[1:], ":")
+		}
+
 		//when processing the username and password.
-		up[0] = strings.TrimSpace(up[0])
-		up[1] = strings.TrimSpace(up[1])
-		if len(up) < 2 || (up[0] == "" && up[1] != "") {
+		if up[0] == "" && up[1] != "" {
 			// One of the input credentials is incorrect
 			return nil, errors.MISSING_CREDENTIAL, ""
 		} else {
