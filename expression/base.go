@@ -29,6 +29,15 @@ type ExpressionBase struct {
 
 var _NIL_VALUE value.Value
 
+type Covered int
+
+const (
+	CoveredFalse  = Covered(iota)
+	CoveredUnused // currently unused
+	CoveredSkip
+	CoveredTrue
+)
+
 func (this *ExpressionBase) String() string {
 	return NewStringer().Visit(this.expr)
 }
@@ -241,10 +250,10 @@ Indicates if this expression is based on the keyspace and is covered
 by the list of expressions; that is, this expression does not depend
 on any stored data beyond the expressions.
 */
-func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
+func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
-			return true
+			return CoveredTrue
 		}
 	}
 
@@ -256,12 +265,17 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, single
 	// a keyspace as part of a field or a path does cover to delay the decision in terms
 	// further down the path
 	for _, child := range children {
-		if !child.CoveredBy(keyspace, exprs, isSingle) {
-			return false
+		switch child.CoveredBy(keyspace, exprs, isSingle) {
+		case CoveredFalse:
+			return CoveredFalse
+
+		// MB-25317: ignore expressions not related to this keyspace
+		case CoveredSkip:
+			return CoveredTrue
 		}
 	}
 
-	return true
+	return CoveredTrue
 }
 
 /*

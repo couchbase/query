@@ -190,22 +190,22 @@ func (this *Meta) Indexable() bool {
 	return true
 }
 
-func (this *Meta) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
+func (this *Meta) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
 	if len(this.operands) > 0 {
 		alias := NewIdentifier(keyspace)
 		if !this.operands[0].DependsOn(alias) {
 			// Different keyspace, return true
-			return true
+			return CoveredTrue
 		}
 	}
 
 	for _, expr := range exprs {
 		if this.EquivalentTo(expr) {
-			return true
+			return CoveredTrue
 		}
 	}
 
-	return false
+	return CoveredFalse
 }
 
 func (this *Meta) MinArgs() int { return 0 }
@@ -268,8 +268,8 @@ func (this *Self) Indexable() bool {
 	return true
 }
 
-func (this *Self) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
-	return false
+func (this *Self) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
+	return CoveredFalse
 }
 
 func (this *Self) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (

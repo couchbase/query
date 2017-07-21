@@ -87,8 +87,8 @@ func (this *Constant) DependsOn(other Expression) bool {
 	return false
 }
 
-func (this *Constant) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
-	return true
+func (this *Constant) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
+	return CoveredTrue
 }
 
 func (this *Constant) Children() Expressions {

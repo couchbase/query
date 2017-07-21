@@ -86,7 +86,7 @@ func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression)
 		if pairs != nil {
 			scope := pairs.Operand()
 			if scope.EquivalentTo(alias) ||
-				pred.CoveredBy(alias.Identifier(), aliasNamed(scope), true) {
+				expression.IsCovered(pred, alias.Identifier(), aliasNamed(scope)) {
 
 				return &dynamicKey{
 					variable: variable,

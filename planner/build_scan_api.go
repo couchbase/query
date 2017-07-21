@@ -158,7 +158,7 @@ func (this *builder) checkPushDowns(entry *indexEntry, pred expression.Expressio
 		return false, err
 	}
 
-	if !pred.CoveredBy(alias, exprs, true) {
+	if !expression.IsCovered(pred, alias, exprs) {
 		return false, err
 	}
 

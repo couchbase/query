@@ -136,7 +136,7 @@ type Expression interface {
 	   expression does not depend on any stored data beyond the
 	   expressions.
 	*/
-	CoveredBy(keyspace string, exprs Expressions, single bool) bool
+	CoveredBy(keyspace string, exprs Expressions, single bool) Covered
 
 	/*
 	   If this expression is in the WHERE clause of a partial
@@ -264,4 +264,14 @@ func Equivalents(exprs1, exprs2 Expressions) bool {
 	}
 
 	return true
+}
+
+/*
+Wrapper for CoveredBy - to be used by the planner
+Function rather than method to make sure we don't pick up
+ExpressionBase.CoveredBy() in error
+*/
+func IsCovered(expr Expression, keyspace string, exprs Expressions) bool {
+	isCovered := expr.CoveredBy(keyspace, exprs, true)
+	return isCovered == CoveredSkip || isCovered == CoveredTrue
 }

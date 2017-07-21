@@ -83,9 +83,11 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, single bool) bool {
+func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
+
+	// MB-25317, if this is not the right keyspace, ignore the expression altogether
 	if this.identifier != keyspace {
-		return true
+		return CoveredSkip
 	}
 
 	for _, expr := range exprs {
@@ -93,15 +95,15 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, single boo
 			switch eType := expr.(type) {
 			case *Identifier:
 				if !single || eType.identifier != keyspace {
-					return true
+					return CoveredTrue
 				}
 			default:
-				return true
+				return CoveredTrue
 			}
 		}
 	}
 
-	return false
+	return CoveredFalse
 }
 
 func (this *Identifier) Children() Expressions {
