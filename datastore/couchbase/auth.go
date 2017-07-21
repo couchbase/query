@@ -20,7 +20,25 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-func privilegeString(bucket string, requested auth.Privilege) (string, error) {
+func opIsUnimplemented(namespace, bucket string, requested auth.Privilege) bool {
+	if namespace == "#system" {
+		// For system monitoring tables INSERT and UPDATE are not supported.
+		if bucket == "prepareds" || bucket == "completed_requests" || bucket == "active_requests" {
+			if requested == auth.PRIV_QUERY_UPDATE || requested == auth.PRIV_QUERY_INSERT {
+				return true
+			}
+			return false
+		}
+		// For other system buckets, INSERT/UPDATE/DELETE are not supported.
+		if requested == auth.PRIV_QUERY_UPDATE || requested == auth.PRIV_QUERY_INSERT || requested == auth.PRIV_QUERY_DELETE {
+			return true
+		}
+		return false
+	}
+	return false
+}
+
+func privilegeString(namespace, bucket string, requested auth.Privilege) (string, error) {
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
@@ -59,8 +77,8 @@ func privilegeString(bucket string, requested auth.Privilege) (string, error) {
 	return permission, nil
 }
 
-func doAuthByCreds(creds cbauth.Creds, bucket string, requested auth.Privilege) (bool, error) {
-	permission, err := privilegeString(bucket, requested)
+func doAuthByCreds(creds cbauth.Creds, namespace string, bucket string, requested auth.Privilege) (bool, error) {
+	permission, err := privilegeString(namespace, bucket, requested)
 	if err != nil {
 		return false, err
 	}
@@ -79,13 +97,16 @@ type authSource interface {
 	authWebCreds(req *http.Request) (cbauth.Creds, error)
 }
 
-func keyspaceFromPrivPair(pair auth.PrivilegePair) string {
-	keyspace := pair.Target
-	if strings.Contains(keyspace, ":") {
-		q := strings.Split(keyspace, ":")
+func namespaceKeyspaceFromPrivPair(pair auth.PrivilegePair) (namespace, keyspace string) {
+	if strings.Contains(pair.Target, ":") {
+		q := strings.Split(pair.Target, ":")
+		namespace = q[0]
 		keyspace = q[1]
+	} else {
+		namespace = "default"
+		keyspace = pair.Target
 	}
-	return keyspace
+	return
 }
 
 // Try to get privsSought privileges from the availableCredentials credentials.
@@ -93,7 +114,7 @@ func keyspaceFromPrivPair(pair auth.PrivilegePair) string {
 func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
 	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
 	for _, pair := range privsSought {
-		keyspace := keyspaceFromPrivPair(pair)
+		namespace, keyspace := namespaceKeyspaceFromPrivPair(pair)
 		privilege := pair.Priv
 
 		thisPrivGranted := false
@@ -105,9 +126,15 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 			continue
 		}
 
+		if opIsUnimplemented(namespace, keyspace, privilege) {
+			// Trivially grant permission for unimplemented operations.
+			// Error reporting will be handled by the execution layer.
+			continue
+		}
+
 		// Check requested privilege against the list of credentials.
 		for _, creds := range availableCredentials {
-			authResult, err := doAuthByCreds(creds, keyspace, privilege)
+			authResult, err := doAuthByCreds(creds, namespace, keyspace, privilege)
 
 			if err != nil {
 				return nil, err
@@ -242,8 +269,8 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 }
 
 func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
-	keyspace := keyspaceFromPrivPair(pair)
-	privilege, err := privilegeString(keyspace, pair.Priv)
+	namespace, keyspace := namespaceKeyspaceFromPrivPair(pair)
+	privilege, err := privilegeString(namespace, keyspace, pair.Priv)
 	if err != nil {
 		return fmt.Sprintf("User does not have credentials to access unknown privilege %+v.", pair)
 	}
