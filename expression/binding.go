@@ -155,11 +155,17 @@ func (this Bindings) Identifiers() Expressions {
 	exprs := make(Expressions, 0, 2*len(this))
 
 	for _, b := range this {
+		var id *Identifier
+
 		if b.nameVariable != "" {
-			exprs = append(exprs, NewIdentifier(b.nameVariable))
+			id = NewIdentifier(b.nameVariable)
+			id.SetCollectionVariable()
+			exprs = append(exprs, id)
 		}
 
-		exprs = append(exprs, NewIdentifier(b.variable))
+		id = NewIdentifier(b.variable)
+		id.SetCollectionVariable()
+		exprs = append(exprs, id)
 	}
 
 	return exprs

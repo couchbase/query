@@ -136,7 +136,7 @@ type Expression interface {
 	   expression does not depend on any stored data beyond the
 	   expressions.
 	*/
-	CoveredBy(keyspace string, exprs Expressions, single bool) Covered
+	CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered
 
 	/*
 	   If this expression is in the WHERE clause of a partial
@@ -272,6 +272,6 @@ Function rather than method to make sure we don't pick up
 ExpressionBase.CoveredBy() in error
 */
 func IsCovered(expr Expression, keyspace string, exprs Expressions) bool {
-	isCovered := expr.CoveredBy(keyspace, exprs, true)
+	isCovered := expr.CoveredBy(keyspace, exprs, coveredOptions{isSingle: true, skip: false})
 	return isCovered == CoveredSkip || isCovered == CoveredTrue
 }

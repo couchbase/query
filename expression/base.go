@@ -25,6 +25,7 @@ type ExpressionBase struct {
 	value       *value.Value
 	conditional bool
 	volatile    bool
+	isVar       bool
 }
 
 var _NIL_VALUE value.Value
@@ -37,6 +38,11 @@ const (
 	CoveredSkip
 	CoveredTrue
 )
+
+type coveredOptions struct {
+	isSingle bool
+	skip     bool
+}
 
 func (this *ExpressionBase) String() string {
 	return NewStringer().Visit(this.expr)
@@ -63,8 +69,20 @@ func (this *ExpressionBase) EvaluateForIndex(item value.Value, context Context) 
 This method indicates if the expression is an array index key, and
 if so, whether it is distinct.
 */
+
 func (this *ExpressionBase) IsArrayIndexKey() (bool, bool) {
 	return false, false
+}
+
+/*
+This method indicates if the expression is a collection variable
+*/
+func (this *ExpressionBase) IsCollectionVariable() bool {
+	return this.isVar
+}
+
+func (this *ExpressionBase) SetCollectionVariable() {
+	this.isVar = true
 }
 
 /*
@@ -250,7 +268,7 @@ Indicates if this expression is based on the keyspace and is covered
 by the list of expressions; that is, this expression does not depend
 on any stored data beyond the expressions.
 */
-func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
+func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
 			return CoveredTrue
@@ -258,20 +276,20 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, single
 	}
 
 	children := this.expr.Children()
-	isSingle := len(children) == 1
+	options.isSingle = len(children) == 1
 
 	// MB-22112: we treat the special case where a keyspace is part of the projection list
 	// a keyspace as a single term does not cover by definition
 	// a keyspace as part of a field or a path does cover to delay the decision in terms
 	// further down the path
 	for _, child := range children {
-		switch child.CoveredBy(keyspace, exprs, isSingle) {
+		switch child.CoveredBy(keyspace, exprs, options) {
 		case CoveredFalse:
 			return CoveredFalse
 
 		// MB-25317: ignore expressions not related to this keyspace
 		case CoveredSkip:
-			return CoveredTrue
+			options.skip = true
 		}
 	}
 

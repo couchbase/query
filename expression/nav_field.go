@@ -232,7 +232,13 @@ func (this *FieldName) EquivalentTo(other Expression) bool {
 
 // MB-22112 We need an ad hoc CoveredBy for FieldNames, so that we can make sure
 // that they can be checked for equivalence against their natural match, identifiers
-func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, single bool) Covered {
+func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+
+	// MB-25317 / MB-25370 if the identifier preceeding the field name is not the keyspace
+	// then we are skipping this test
+	if options.skip {
+		return CoveredSkip
+	}
 	for _, expr := range exprs {
 		var isEquivalent bool
 
