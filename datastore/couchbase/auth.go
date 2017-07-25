@@ -269,38 +269,49 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 }
 
 func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
-	namespace, keyspace := namespaceKeyspaceFromPrivPair(pair)
-	privilege, err := privilegeString(namespace, keyspace, pair.Priv)
-	if err != nil {
-		return fmt.Sprintf("User does not have credentials to access unknown privilege %+v.", pair)
-	}
+	_, keyspace := namespaceKeyspaceFromPrivPair(pair)
 
+	privilege := ""
 	role := ""
 	switch pair.Priv {
 	case auth.PRIV_READ:
-		role = fmt.Sprintf("Data Reader[%s]", keyspace)
+		privilege = "data read queries"
+		role = fmt.Sprintf("data_reader on bucket %s", keyspace)
 	case auth.PRIV_WRITE:
-		role = fmt.Sprintf("Data Reader Writer [%s]", keyspace)
+		privilege = "data write queries"
+		role = fmt.Sprintf("data_reader_writer on bucket %s", keyspace)
 	case auth.PRIV_SYSTEM_READ:
-		role = "Query System Catalog"
-	case auth.PRIV_SECURITY_WRITE, auth.PRIV_SECURITY_READ:
-		role = "Admin"
+		privilege = "queries accessing the system tables"
+		role = "query_system_catalog"
+	case auth.PRIV_SECURITY_WRITE:
+		privilege = "queries updating user information"
+		role = "admin"
+	case auth.PRIV_SECURITY_READ:
+		privilege = "queries accessing user information"
+		role = "admin"
 	case auth.PRIV_QUERY_SELECT:
-		role = fmt.Sprintf("Query Select [%s]", keyspace)
+		privilege = fmt.Sprintf("SELECT queries on the %s bucket", keyspace)
+		role = fmt.Sprintf("query_select on %s", keyspace)
 	case auth.PRIV_QUERY_UPDATE:
-		role = fmt.Sprintf("Query Update [%s]", keyspace)
+		privilege = fmt.Sprintf("UPDATE queries on the %s bucket", keyspace)
+		role = fmt.Sprintf("query_select on %s", keyspace)
 	case auth.PRIV_QUERY_INSERT:
-		role = fmt.Sprintf("Query Insert [%s]", keyspace)
+		privilege = fmt.Sprintf("INSERT queries on the %s bucket", keyspace)
+		role = fmt.Sprintf("query_insert on %s", keyspace)
 	case auth.PRIV_QUERY_DELETE:
-		role = fmt.Sprintf("Query Delete [%s]", keyspace)
+		privilege = fmt.Sprintf("DELETE queries on the %s bucket", keyspace)
+		role = fmt.Sprintf("query_delete on %s", keyspace)
 	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
 		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:
-		role = fmt.Sprintf("Query Manage Index [%s]", keyspace)
+		privilege = "index operations"
+		role = fmt.Sprintf("query_manage_index on %s", keyspace)
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
-		role = "Query External Access"
+		privilege = "queries using the CURL() function"
+		role = "query_external_access"
 	default:
-		role = "Admin"
+		privilege = "this type of query"
+		role = "admin"
 	}
 
-	return fmt.Sprintf("User does not have credentials to access privilege %s. Add role %s to allow the query to run.", privilege, role)
+	return fmt.Sprintf("User does not have credentials to run %s. Add role %s to allow the query to run.", privilege, role)
 }
