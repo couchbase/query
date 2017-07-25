@@ -48,9 +48,9 @@ func privilegeString(namespace, bucket string, requested auth.Privilege) (string
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
-		permission = "cluster.admin!read"
+		permission = "cluster.admin.security!read"
 	case auth.PRIV_SECURITY_WRITE:
-		permission = "cluster.admin!write"
+		permission = "cluster.admin.security!write"
 	case auth.PRIV_QUERY_SELECT:
 		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
 	case auth.PRIV_QUERY_UPDATE:

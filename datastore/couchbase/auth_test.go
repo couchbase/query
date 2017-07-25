@@ -85,7 +85,7 @@ func TestGrantRole(t *testing.T) {
 		users: []authUser{
 			authUser{id: "bob", password: "pwbob",
 				permissions: map[string]bool{
-					"cluster.admin!write":                            true,
+					"cluster.admin.security!write":                   true,
 					"cluster.bucket[testbucket].n1ql.select!execute": true,
 				},
 			},
