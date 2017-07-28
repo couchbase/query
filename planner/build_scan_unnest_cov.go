@@ -108,7 +108,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// Covering expressions from index keys
 	for i, key := range entry.keys {
 		if i == 0 {
-			entry.keys[i] = unrollArrayKeys(key, min, unnest)
+			entry.keys[i] = unrollArrayKeys(key, true, unnest)
 		}
 	}
 
