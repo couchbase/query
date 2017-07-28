@@ -108,13 +108,12 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	allDistinct := false
 
 	if len(entry.keys) > 0 {
-		unrollKeys := expression.Expressions{unrollArrayKeys(entry.keys[0], true, unnest)}
-		if (this.minAgg != nil && canPushDownMin(this.minAgg, entry, unrollKeys)) ||
-			(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, unrollKeys)) ||
+		entry.keys[0] = unrollArrayKeys(entry.keys[0], true, unnest)
+		if (this.minAgg != nil && canPushDownMin(this.minAgg, entry, expression.Expressions{entry.keys[0]})) ||
+			(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, expression.Expressions{entry.keys[0]})) ||
 			this.countDistinctAgg != nil {
 			allDistinct = true
 		}
-		entry.keys[0] = unrollArrayKeys(entry.keys[0], allDistinct, unnest)
 	}
 
 	// Include META().id in covering expressions
