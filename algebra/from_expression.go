@@ -27,8 +27,8 @@ type ExpressionTerm struct {
 Constructor.
 */
 func NewExpressionTerm(fromExpr expression.Expression, as string,
-	keyspaceTerm *KeyspaceTerm) *ExpressionTerm {
-	return &ExpressionTerm{fromExpr: fromExpr, as: as, keyspaceTerm: keyspaceTerm}
+	keyspaceTerm *KeyspaceTerm, isKeyspace bool) *ExpressionTerm {
+	return &ExpressionTerm{fromExpr: fromExpr, as: as, keyspaceTerm: keyspaceTerm, isKeyspace: isKeyspace}
 }
 
 /*
