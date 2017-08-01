@@ -294,7 +294,7 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 		role = fmt.Sprintf("query_select on %s", keyspace)
 	case auth.PRIV_QUERY_UPDATE:
 		privilege = fmt.Sprintf("UPDATE queries on the %s bucket", keyspace)
-		role = fmt.Sprintf("query_select on %s", keyspace)
+		role = fmt.Sprintf("query_update on %s", keyspace)
 	case auth.PRIV_QUERY_INSERT:
 		privilege = fmt.Sprintf("INSERT queries on the %s bucket", keyspace)
 		role = fmt.Sprintf("query_insert on %s", keyspace)
