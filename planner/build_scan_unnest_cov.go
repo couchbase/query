@@ -105,10 +105,20 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		min = true
 	}
 
-	// Covering expressions from index keys
-	for i, key := range entry.keys {
-		if i == 0 {
-			entry.keys[i] = unrollArrayKeys(key, true, unnest)
+	unnestExprInKeys := false
+	for _, key := range entry.keys {
+		if key.EquivalentTo(unnest.Expression()) {
+			unnestExprInKeys = true
+			break
+		}
+	}
+
+	if len(entry.keys) > 0 && !unnestExprInKeys {
+		// Covering expressions from index keys
+		for i, key := range entry.keys {
+			if i == 0 {
+				entry.keys[i] = unrollArrayKeys(key, min, unnest)
+			}
 		}
 	}
 
@@ -145,15 +155,15 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	var coveredUnnests map[*algebra.Unnest]bool
 
 	// Array index covers matching UNNEST expressions
-	if !pred.MayOverlapSpans() {
+	if !pred.MayOverlapSpans() && !unnestExprInKeys {
 		coveredUnnests = make(map[*algebra.Unnest]bool, len(unnests))
 		coveredExprs = make(map[expression.Expression]bool, len(unnests))
 
-		for _, unnest := range unnests {
-			unnestExpr := unnest.Expression()
-			bindingExpr, ok := bindings[unnest.As()]
+		for _, uns := range unnests {
+			unnestExpr := uns.Expression()
+			bindingExpr, ok := bindings[uns.As()]
 			if ok && unnestExpr.EquivalentTo(bindingExpr) {
-				coveredUnnests[unnest] = true
+				coveredUnnests[uns] = true
 				coveredExprs[unnestExpr] = true
 			} else {
 				coveredUnnests = nil
@@ -192,7 +202,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	for _, expr := range exprs {
 		_, ok := coveredExprs[expr]
 		if !ok && (!expr.CoveredBy(alias, coveringExprs) ||
-			!expr.CoveredBy(unnest.As(), coveringExprs)) {
+			(len(coveredUnnests) > 0 && !expr.CoveredBy(unnest.As(), coveringExprs))) {
 			return nil, nil, nil
 		}
 	}
