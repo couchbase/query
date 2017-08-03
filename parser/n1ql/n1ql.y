@@ -858,7 +858,7 @@ expr opt_as_alias opt_use
               $$ = algebra.NewSubqueryTerm(other.Select(), $2)
          case *expression.Identifier:
               ksterm := algebra.NewKeyspaceTerm("", other.Alias(), $2, $3.Keys(), $3.Indexes())
-              $$ = algebra.NewExpressionTerm(other, $2, ksterm, true)
+              $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false)
          default:
               if $3 != algebra.EMPTY_USE {
                   yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
@@ -2807,7 +2807,13 @@ OBJECT expr COLON expr FOR coll_bindings opt_when END
 paren_expr:
 LPAREN expr RPAREN
 {
-    $$ = $2
+    switch other := $2.(type) {
+         case *expression.Identifier:
+              other.SetParenthesis(true)
+              $$ = other
+         default:
+              $$ = other
+    }
 }
 |
 LPAREN all_expr RPAREN

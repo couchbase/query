@@ -21,6 +21,7 @@ type Identifier struct {
 	ExpressionBase
 	identifier      string
 	caseInsensitive bool
+	parenthesis     bool
 }
 
 func NewIdentifier(identifier string) *Identifier {
@@ -154,4 +155,12 @@ func (this *Identifier) CaseInsensitive() bool {
 
 func (this *Identifier) SetCaseInsensitive(insensitive bool) {
 	this.caseInsensitive = insensitive
+}
+
+func (this *Identifier) Parenthesis() bool {
+	return this.parenthesis
+}
+
+func (this *Identifier) SetParenthesis(parenthesis bool) {
+	this.parenthesis = parenthesis
 }

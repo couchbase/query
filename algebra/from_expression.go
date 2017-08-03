@@ -79,13 +79,20 @@ func (this *ExpressionTerm) Privileges() (*auth.Privileges, errors.Error) {
    Representation as a N1QL string.
 */
 func (this *ExpressionTerm) String() string {
+	s := ""
 	if this.isKeyspace {
-		return this.keyspaceTerm.String()
-	} else if this.as != "" {
-		return this.fromExpr.String() + " as " + this.as
+		s = this.keyspaceTerm.String()
 	} else {
-		return this.fromExpr.String()
+		s = this.fromExpr.String()
+		if _, ok := this.fromExpr.(*expression.Identifier); ok {
+			s = "(" + s + ")"
+		}
+
+		if this.as != "" {
+			s += " as `" + this.as + "`"
+		}
 	}
+	return s
 }
 
 /*
