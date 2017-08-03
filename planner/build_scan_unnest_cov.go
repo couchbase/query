@@ -106,14 +106,22 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	sargKey := expression.NewIdentifier(unnest.Alias())
 	entry.sargKeys = expression.Expressions{sargKey}
 	allDistinct := false
+	unnestExprInKeys := false
+	for _, key := range entry.keys {
+		if key.EquivalentTo(unnest.Expression()) {
+			unnestExprInKeys = true
+			break
+		}
+	}
 
-	if len(entry.keys) > 0 {
-		entry.keys[0] = unrollArrayKeys(entry.keys[0], true, unnest)
-		if (this.minAgg != nil && canPushDownMin(this.minAgg, entry, expression.Expressions{entry.keys[0]})) ||
-			(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, expression.Expressions{entry.keys[0]})) ||
+	if len(entry.keys) > 0 && !unnestExprInKeys {
+		unrollKeys := expression.Expressions{unrollArrayKeys(entry.keys[0], true, unnest)}
+		if (this.minAgg != nil && canPushDownMin(this.minAgg, entry, unrollKeys)) ||
+			(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, unrollKeys)) ||
 			this.countDistinctAgg != nil {
 			allDistinct = true
 		}
+		entry.keys[0] = unrollArrayKeys(entry.keys[0], allDistinct, unnest)
 	}
 
 	// Include META().id in covering expressions
@@ -149,15 +157,15 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	var coveredUnnests map[*algebra.Unnest]bool
 
 	// Array index covers matching UNNEST expressions
-	if !pred.MayOverlapSpans() {
+	if !pred.MayOverlapSpans() && !unnestExprInKeys {
 		coveredUnnests = make(map[*algebra.Unnest]bool, len(unnests))
 		coveredExprs = make(map[expression.Expression]bool, len(unnests))
 
-		for _, unnest := range unnests {
-			unnestExpr := unnest.Expression()
-			bindingExpr, ok := bindings[unnest.As()]
+		for _, uns := range unnests {
+			unnestExpr := uns.Expression()
+			bindingExpr, ok := bindings[uns.As()]
 			if ok && unnestExpr.EquivalentTo(bindingExpr) {
-				coveredUnnests[unnest] = true
+				coveredUnnests[uns] = true
 				coveredExprs[unnestExpr] = true
 			} else {
 				coveredUnnests = nil
@@ -196,7 +204,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	for _, expr := range exprs {
 		_, ok := coveredExprs[expr]
 		if !ok && (!expression.IsCovered(expr, alias, coveringExprs) ||
-			!expression.IsCovered(expr, unnest.As(), coveringExprs)) {
+			(len(coveredUnnests) > 0 && !expression.IsCovered(expr, unnest.As(), coveringExprs))) {
 			return nil, nil, nil
 		}
 	}
