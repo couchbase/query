@@ -1,4 +1,3 @@
-//  Copyright (c) 2014 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -20,7 +19,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -59,11 +57,14 @@ type base struct {
 	servTime      time.Duration
 	inDocs        int64
 	outDocs       int64
-	wg            sync.WaitGroup
 	phaseSwitches int64
 	stopped       bool
 	isRoot        bool
 	bit           uint8
+	activeCond    *sync.Cond
+	activeLock    sync.Mutex
+	primed        bool
+	completed     bool
 }
 
 const _ITEM_CAP = 512
@@ -96,23 +97,27 @@ func GetPipelineCap() int64 {
 }
 
 func newBase(context *Context) base {
-	return base{
+	rv := base{
 		itemChannel: make(value.AnnotatedChannel, context.GetPipelineCap()),
 		stopChannel: make(StopChannel, 1),
 		execPhase:   PHASES,
 		phaseTimes:  func(t time.Duration) {},
 	}
+	rv.activeCond = sync.NewCond(&rv.activeLock)
+	return rv
 }
 
 // The output of this operator will be redirected elsewhere, so we
 // allocate a minimal itemChannel.
 func newRedirectBase() base {
-	return base{
+	rv := base{
 		itemChannel: make(value.AnnotatedChannel, 1),
 		stopChannel: make(StopChannel, 1),
 		execPhase:   PHASES,
 		phaseTimes:  func(t time.Duration) {},
 	}
+	rv.activeCond = sync.NewCond(&rv.activeLock)
+	return rv
 }
 
 // accrues operators and phase times
@@ -179,7 +184,7 @@ func (this *base) SetRoot() {
 }
 
 func (this *base) copy() base {
-	return base{
+	rv := base{
 		itemChannel: make(value.AnnotatedChannel, cap(this.itemChannel)),
 		stopChannel: make(StopChannel, 1),
 		input:       this.input,
@@ -188,6 +193,8 @@ func (this *base) copy() base {
 		execPhase:   this.execPhase,
 		phaseTimes:  this.phaseTimes,
 	}
+	rv.activeCond = sync.NewCond(&rv.activeLock)
+	return rv
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
@@ -278,6 +285,12 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		this.notifyStop()
 		cons.afterItems(context)
 	})
+}
+
+// actions to be taken if runConsumer() doesn't get to run
+func (this *base) releaseConsumer() {
+	defer close(this.itemChannel) // Broadcast that I have stopped
+	defer this.notify()           // Notify that I have stopped
 }
 
 // Override if needed
@@ -486,16 +499,47 @@ func (this *base) switchPhase(p timePhases) {
 	}
 }
 
-func (this *base) active() {
-	this.wg.Add(1)
+func (this *base) active() bool {
+	this.activeCond.L.Lock()
+	defer this.activeCond.L.Unlock()
+
+	// we have been killed before we started!
+	if this.completed {
+		return false
+	}
+
+	// we are good to go
+	this.primed = true
+
+	return true
 }
 
 func (this *base) inactive() {
-	this.wg.Done()
+	this.activeCond.L.Lock()
+
+	// we are done
+	this.completed = true
+	this.activeCond.L.Unlock()
+
+	// wake up whoever wants to free us
+	this.activeCond.Signal()
 }
 
 func (this *base) wait() {
-	this.wg.Wait()
+	this.activeCond.L.Lock()
+
+	// still running, just wait
+	if this.primed && !this.completed {
+
+		// technically this should be in a loop testing for completed
+		// but there's ever going to be one other actor, and all it
+		// does is releases us, so this suffices
+		this.activeCond.Wait()
+	}
+
+	// signal that no go routine should touch this operator
+	this.completed = true
+	this.activeCond.L.Unlock()
 }
 
 func (this *base) addExecTime(t time.Duration) {
@@ -599,8 +643,7 @@ func (this *base) time() *base {
 func baseAccrueTimes(o1, o2 Operator) bool {
 	t1 := reflect.TypeOf(o1)
 	t2 := reflect.TypeOf(o2)
-	if t1 != t2 {
-		logging.Stackf(logging.INFO, "mismatching operators detected: found %v, expecting %v", t2, t1)
+	if !assert(t1 == t2, "mismatching operators detected") {
 		return true
 	}
 	o1.accrueTime(o2.time())
@@ -611,8 +654,7 @@ func baseAccrueTimes(o1, o2 Operator) bool {
 func childrenAccrueTimes(o1, o2 []Operator) bool {
 	l1 := len(o1)
 	l2 := len(o2)
-	if l1 != l2 {
-		logging.Stackf(logging.INFO, "mismatching operator lengths detected: found %v, expecting %v", l2, l1)
+	if !assert(l1 == l2, "mismatching operator lengths detected") {
 		return true
 	}
 	for i, c := range o1 {

@@ -51,7 +51,7 @@ func (this *IndexScan) Copy() Operator {
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
-		this.active()
+		active := this.active()
 		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
@@ -61,7 +61,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 
 		spans := this.plan.Spans()
 		n := len(spans)
-		if !context.assert(n != 0, "Index scan has no spans") {
+		if !active || !context.assert(n != 0, "Index scan has no spans") {
 			return
 		}
 		this.childChannel = make(StopChannel, n)

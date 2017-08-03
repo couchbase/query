@@ -60,7 +60,7 @@ func (this *Merge) Copy() Operator {
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
-		this.active()
+		active := this.active()
 		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(MERGE, context)
@@ -68,7 +68,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
-		if context.Readonly() {
+		if !active || context.Readonly() {
 			return
 		}
 

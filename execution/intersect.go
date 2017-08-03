@@ -55,9 +55,10 @@ func (this *IntersectAll) Copy() Operator {
 }
 
 func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
-	this.active()
+	active := this.active()
 	defer this.inactive()
-	if !context.assert(this.first != nil && this.second != nil, "Intersect has no children") {
+	if !active || !context.assert(this.first != nil && this.second != nil, "Intersect has no children") {
+		this.releaseConsumer()
 		return
 	}
 	this.runConsumer(this, context, parent)

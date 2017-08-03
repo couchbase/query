@@ -57,7 +57,7 @@ func (this *Sequence) Copy() Operator {
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
-		this.active()
+		active := this.active()
 		defer this.inactive() // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
@@ -65,7 +65,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		n := len(this.children)
-		if !context.assert(n > 0, "Sequence has no children") {
+		if !active || !context.assert(n > 0, "Sequence has no children") {
 			return
 		}
 

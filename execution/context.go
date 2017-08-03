@@ -487,3 +487,16 @@ func (this *Context) Recover() {
 		this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 	}
 }
+
+// contextless assert - for when we don't have a context!
+// no statement text printend, but behaviour consistent with other asserts
+func assert(test bool, what string) bool {
+	if test {
+		return true
+	}
+	buf := make([]byte, 1<<16)
+	n := runtime.Stack(buf, false)
+	s := string(buf[0:n])
+	logging.Severef("assert failure: %v\n\nstack:\n%v", what, s)
+	return false
+}
