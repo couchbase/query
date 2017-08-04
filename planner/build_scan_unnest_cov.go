@@ -107,6 +107,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	entry.sargKeys = expression.Expressions{sargKey}
 	allDistinct := false
 	unnestExprInKeys := false
+	unAlias := unnest.As()
 	for _, key := range entry.keys {
 		if key.EquivalentTo(unnest.Expression()) {
 			unnestExprInKeys = true
@@ -122,6 +123,9 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 			allDistinct = true
 		}
 		entry.keys[0] = unrollArrayKeys(entry.keys[0], allDistinct, unnest)
+		if _, ok := entry.keys[0].(*expression.Identifier); ok {
+			unAlias = ""
+		}
 	}
 
 	// Include META().id in covering expressions
@@ -204,7 +208,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	for _, expr := range exprs {
 		_, ok := coveredExprs[expr]
 		if !ok && (!expression.IsCovered(expr, alias, coveringExprs) ||
-			(len(coveredUnnests) > 0 && !expression.IsCovered(expr, unnest.As(), coveringExprs))) {
+			(len(coveredUnnests) > 0 && !expression.IsCovered(expr, unAlias, coveringExprs))) {
 			return nil, nil, nil
 		}
 	}
