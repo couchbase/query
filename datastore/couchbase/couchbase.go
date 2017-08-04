@@ -188,9 +188,24 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 					// go through all bucket independet services in the pool
 					for _, ns := range poolServices.NodesExt {
 
+						mgmtPort := ns.Services["mgmt"]
+						if mgmtPort == 0 {
+
+							// shouldn't happen, there should always be a mgmt port on each node
+							// we should return an error
+							msg := fmt.Sprintf("NodeServices does not report mgmt endpoint for "+
+								"this node: %v", node)
+							errs = append(errs, errors.NewAdminGetNodeError(nil, msg))
+							continue
+						}
+
+						nsHostname := ""
+						if n.Hostname != "" {
+							nsHostname = ns.Hostname + ":" + strconv.Itoa(mgmtPort)
+						}
 						// if we can positively match nodeServices and node, add ports
-						if n.Hostname == ns.Hostname ||
-							(ns.Hostname == "" && ns.ThisNode && n.ThisNode) {
+						if n.Hostname == nsHostname ||
+							(nsHostname == "" && ns.ThisNode && n.ThisNode) {
 							ports := make(map[string]interface{}, len(ns.Services))
 
 							// only add the ports for those services that are advertised
