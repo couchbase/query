@@ -101,6 +101,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	sargKey := expression.NewIdentifier(unnest.Alias())
 	entry.sargKeys = expression.Expressions{sargKey}
 	min := false
+	unAlias := unnest.As()
 	if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
 		min = true
 	}
@@ -119,6 +120,10 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 			if i == 0 {
 				entry.keys[i] = unrollArrayKeys(key, min, unnest)
 			}
+		}
+
+		if _, ok := entry.keys[0].(*expression.Identifier); ok {
+			unAlias = ""
 		}
 	}
 
@@ -202,7 +207,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	for _, expr := range exprs {
 		_, ok := coveredExprs[expr]
 		if !ok && (!expr.CoveredBy(alias, coveringExprs) ||
-			(len(coveredUnnests) > 0 && !expr.CoveredBy(unnest.As(), coveringExprs))) {
+			(len(coveredUnnests) > 0 && !expr.CoveredBy(unAlias, coveringExprs))) {
 			return nil, nil, nil
 		}
 	}
