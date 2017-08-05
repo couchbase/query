@@ -285,7 +285,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred, limit expression.Expression, 
 		}
 
 		sargKey = arrayMapping
-	} else if unnest.As() == "" {
+	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
 		return nil, nil, 0, nil
 	} else {
 		sargKey = expression.NewIdentifier(unnest.As())
