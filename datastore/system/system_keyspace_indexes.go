@@ -69,7 +69,9 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 									indexIds, excp := indexer.IndexIds()
 									if excp == nil {
 										if excludeResults {
-											context.Warning(errors.NewSystemFilteredRowsWarning("system:indexes"))
+											if len(indexIds) > 0 {
+												context.Warning(errors.NewSystemFilteredRowsWarning("system:indexes"))
+											}
 										} else {
 											count += int64(len(indexIds))
 										}
