@@ -200,7 +200,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 						}
 
 						nsHostname := ""
-						if n.Hostname != "" {
+						if ns.Hostname != "" {
 							nsHostname = ns.Hostname + ":" + strconv.Itoa(mgmtPort)
 						}
 						// if we can positively match nodeServices and node, add ports
