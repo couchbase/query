@@ -194,8 +194,9 @@ func (this *Meta) CoveredBy(keyspace string, exprs Expressions, options coveredO
 	if len(this.operands) > 0 {
 		alias := NewIdentifier(keyspace)
 		if !this.operands[0].DependsOn(alias) {
-			// Different keyspace, return true
-			return CoveredTrue
+
+			// MB-22561: skip the rest of the expression if different keyspace
+			return CoveredSkip
 		}
 	}
 

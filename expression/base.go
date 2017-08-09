@@ -33,15 +33,17 @@ var _NIL_VALUE value.Value
 type Covered int
 
 const (
-	CoveredFalse  = Covered(iota)
-	CoveredUnused // currently unused
-	CoveredSkip
-	CoveredTrue
+	CoveredFalse    = Covered(iota) // not covered
+	CoveredContinue                 // covering state can't be established yet, currently unused
+	CoveredSkip                     // expression not relevant for covering, skip to next
+	CoveredEquiv                    // expression is covered, ignore the rest
+	CoveredTrue                     // covered
 )
 
 type coveredOptions struct {
-	isSingle bool
-	skip     bool
+	isSingle     bool
+	skip         bool
+	trickleEquiv bool
 }
 
 func (this *ExpressionBase) String() string {
@@ -274,9 +276,9 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 			return CoveredTrue
 		}
 	}
-
 	children := this.expr.Children()
 	options.isSingle = len(children) == 1
+	rv := CoveredTrue
 
 	// MB-22112: we treat the special case where a keyspace is part of the projection list
 	// a keyspace as a single term does not cover by definition
@@ -290,10 +292,19 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 		// MB-25317: ignore expressions not related to this keyspace
 		case CoveredSkip:
 			options.skip = true
+
+		// MB-25650: this subexpression is already covered, no need to check subsequent terms
+		case CoveredEquiv:
+			options.skip = true
+
+			// trickle down CoveredEquiv to outermost field
+			if options.trickleEquiv {
+				rv = CoveredEquiv
+			}
 		}
 	}
 
-	return CoveredTrue
+	return rv
 }
 
 /*

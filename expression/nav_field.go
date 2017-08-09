@@ -87,6 +87,47 @@ func (this *Field) EquivalentTo(other Expression) bool {
 	}
 }
 
+func (this *Field) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+	for _, expr := range exprs {
+
+		// MB-25560: if a field is equivalent, no need to check children field / field names
+		if this.expr.EquivalentTo(expr) {
+			return CoveredEquiv
+		}
+	}
+	children := this.expr.Children()
+	options.isSingle = len(children) == 1
+	trickleEquiv := options.trickleEquiv
+	options.trickleEquiv = true
+	rv := CoveredTrue
+
+	// MB-22112: we treat the special case where a keyspace is part of the projection list
+	// a keyspace as a single term does not cover by definition
+	// a keyspace as part of a field or a path does cover to delay the decision in terms
+	// further down the path
+	for _, child := range children {
+		switch child.CoveredBy(keyspace, exprs, options) {
+		case CoveredFalse:
+			return CoveredFalse
+
+		// MB-25317: ignore expressions not related to this keyspace
+		case CoveredSkip:
+			options.skip = true
+
+		// MB-25650: this subexpression is already covered, no need to check subsequent terms
+		case CoveredEquiv:
+			options.skip = true
+
+			// trickle down CoveredEquiv to outermost field
+			if trickleEquiv {
+				rv = CoveredEquiv
+			}
+		}
+	}
+
+	return rv
+}
+
 /*
 Perform either case-sensitive or case-insensitive field lookup.
 */
@@ -255,7 +296,9 @@ func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, options cov
 		}
 
 		if isEquivalent {
-			return CoveredTrue
+
+			// MV-25560 if a field is covered, so are the sub elements
+			return CoveredEquiv
 		}
 	}
 	return CoveredFalse
