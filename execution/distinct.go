@@ -41,10 +41,14 @@ func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Distinct) Copy() Operator {
+	cap := int(GetPipelineCap())
+	if this.set != nil {
+		cap = this.set.ObjectCap()
+	}
 	return &Distinct{
 		base: this.base.copy(),
 		plan: this.plan,
-		set:  value.NewSet(this.set.ObjectCap(), false),
+		set:  value.NewSet(cap, false),
 	}
 }
 
