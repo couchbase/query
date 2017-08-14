@@ -379,7 +379,6 @@ tokOffset	 int
 %type <exprs>            index_partition
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
-%type <s>                rename
 %type <expr>             index_term_expr index_expr index_where
 %type <indexKeyTerm>     index_term
 %type <indexKeyTerms>    index_terms
@@ -1994,20 +1993,9 @@ DROP INDEX named_keyspace_ref DOT index_name opt_index_using
  *************************************************/
 
 alter_index:
-ALTER INDEX named_keyspace_ref DOT index_name opt_index_using rename
+ALTER INDEX named_keyspace_ref DOT index_name opt_index_using index_with
 {
     $$ = algebra.NewAlterIndex($3, $5, $6, $7)
-}
-
-rename:
-/* empty */
-{
-    $$ = ""
-}
-|
-RENAME TO index_name
-{
-    $$ = $3
 }
 ;
 

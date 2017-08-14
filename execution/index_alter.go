@@ -12,6 +12,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -52,6 +53,15 @@ func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Actually alter index
+		this.switchPhase(_SERVTIME)
+		node := this.plan.Node()
+
+		_, err := this.plan.Index().(datastore.AlterIndex).Alter(context.RequestId(), node.With())
+		if err != nil {
+			context.Error(err)
+			return
+		}
+
 	})
 }
 

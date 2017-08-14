@@ -14,6 +14,8 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 // Alter index
@@ -63,8 +65,12 @@ func (this *AlterIndex) MarshalBase(f func(map[string]interface{})) map[string]i
 	r["index_id"] = this.index.Id()
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["rename"] = this.node.Rename()
 	r["using"] = this.node.Using()
+
+	if this.node.With() != nil {
+		r["with"] = this.node.With()
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -78,8 +84,8 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 		IndexId string              `json:"index_id"`
 		Keys    string              `json:"keyspace"`
 		Names   string              `json:"namespace"`
-		Rename  string              `json:"rename"`
 		Using   datastore.IndexType `json:"using"`
+		With    json.RawMessage     `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -87,19 +93,40 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	// Build the node
+	// Get the keyspace ref (namespace:keyspace)
 	ksref := algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, "")
-	this.node = algebra.NewAlterIndex(ksref, _unmarshalled.Index, _unmarshalled.Using, _unmarshalled.Rename)
 
+	// Get the with clause
+	var with value.Value
+	if len(_unmarshalled.With) > 0 {
+		with = value.NewValue(_unmarshalled.With)
+	}
+
+	this.node = algebra.NewAlterIndex(ksref, _unmarshalled.Index, _unmarshalled.Using, with)
+
+	// Build the index
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	if err != nil {
 		return err
 	}
 
+	// Alter Index is only supported by GSI and doesnt support a USING clause
 	indexer, err := this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	this.index, err = indexer.IndexById(_unmarshalled.IndexId)
-	return err
+	index, err := indexer.IndexById(_unmarshalled.IndexId)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := index.(datastore.AlterIndex); !ok {
+		return errors.NewAlterIndexError()
+	}
+
+	this.index = index
+
+	return nil
 }

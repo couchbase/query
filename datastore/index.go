@@ -123,6 +123,11 @@ type Index interface {
 		vector timestamp.Vector, conn *IndexConnection)
 }
 
+type AlterIndex interface {
+	Index
+	Alter(requestId string, with value.Value) (Index, errors.Error)
+}
+
 type CountIndex interface {
 	Index
 

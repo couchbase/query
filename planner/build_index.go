@@ -92,25 +92,23 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, err
 	}
 
-	indexers, er := keyspace.Indexers()
+	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
 	}
 
-	var index datastore.Index
-	for _, indexer := range indexers {
-		er = indexer.Refresh()
-		if er != nil {
-			return nil, er
-		}
-		index, er = indexer.IndexByName(stmt.Name())
-		if er == nil {
-			break
-		}
-	}
-
+	er = indexer.Refresh()
 	if er != nil {
 		return nil, er
+	}
+
+	index, er := indexer.IndexByName(stmt.Name())
+	if er == nil {
+		return nil, er
+	}
+
+	if _, ok := index.(datastore.AlterIndex); !ok {
+		return nil, errors.NewAlterIndexError()
 	}
 
 	return plan.NewAlterIndex(index, stmt, keyspace), nil

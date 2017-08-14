@@ -134,3 +134,10 @@ func NewPlanInternalError(what string) Error {
 	return &err{level: EXCEPTION, ICode: PLAN_INTERNAL_ERROR, IKey: "plan.internal_error",
 		InternalMsg: fmt.Sprintf("Plan error: %v", what), InternalCaller: CallerN(1)}
 }
+
+const ALTER_INDEX_ERROR = 4322
+
+func NewAlterIndexError() Error {
+	return &err{level: EXCEPTION, ICode: ALTER_INDEX_ERROR, IKey: "plan.alter.index.not.supported",
+		InternalMsg: fmt.Sprintf("ALTER INDEX not supported"), InternalCaller: CallerN(1)}
+}
