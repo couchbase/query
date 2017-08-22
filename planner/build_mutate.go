@@ -27,16 +27,21 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	prevLimit := this.limit
 	prevOffset := this.offset
 	prevRequirePrimaryKey := this.requirePrimaryKey
+	prevBasekeyspaces := this.baseKeyspaces
 
 	defer func() {
 		this.offset = prevOffset
 		this.limit = prevLimit
 		this.requirePrimaryKey = prevRequirePrimaryKey
+		this.baseKeyspaces = prevBasekeyspaces
 	}()
 
 	this.limit = limit
 	this.offset = nil
 	this.requirePrimaryKey = true
+	this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
+	thisKeyspace := newBaseKeyspace(ksref.Alias())
+	this.baseKeyspaces[thisKeyspace.name] = thisKeyspace
 
 	scan, err := this.selectScan(keyspace, term)
 	if err != nil {

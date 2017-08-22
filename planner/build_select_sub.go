@@ -32,6 +32,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCoveredUnnests := this.coveredUnnests
 	prevCountScan := this.countScan
 	prevProjection := this.projection
+	prevBasekeyspaces := this.baseKeyspaces
 
 	defer func() {
 		this.cover = prevCover
@@ -45,6 +46,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.coveredUnnests = prevCoveredUnnests
 		this.countScan = prevCountScan
 		this.projection = prevProjection
+		this.baseKeyspaces = prevBasekeyspaces
 	}()
 
 	this.coveringScans = make([]plan.CoveringOperator, 0, 4)
@@ -52,6 +54,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
 	this.projection = nil
+	this.baseKeyspaces = nil
 	this.resetCountMinMax()
 
 	if this.cover == nil {

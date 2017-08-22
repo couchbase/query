@@ -10,8 +10,11 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
@@ -59,6 +62,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
+	thisKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	if !ok {
+		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
+	}
+
 	pred := this.where
 	if pred != nil {
 		// Handle constant TRUE predicate
@@ -81,9 +89,9 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	}
 
 	if pred != nil {
-		if len(this.namedArgs) > 0 || len(this.positionalArgs) > 0 {
-			pred = pred.Copy()
+		pred = pred.Copy()
 
+		if len(this.namedArgs) > 0 || len(this.positionalArgs) > 0 {
 			for name, value := range this.namedArgs {
 				nameExpr := algebra.NewNamedParameter(name)
 				valueExpr := expression.NewConstant(value)
@@ -105,7 +113,19 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			}
 		}
 
-		return this.buildPredicateScan(keyspace, node, id, pred, hints)
+		err = ClassifyExpr(pred, this.baseKeyspaces)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		thisKeyspace.dnfpred, err = combineFilters(thisKeyspace.filters)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if thisKeyspace.dnfpred != nil {
+			return this.buildPredicateScan(keyspace, node, id, thisKeyspace.dnfpred, hints)
+		}
 	}
 
 	if this.order != nil {

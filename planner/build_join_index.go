@@ -10,6 +10,8 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -94,13 +96,22 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	}
 
 	subset := pred
-	if this.where != nil {
-		subset = expression.NewAnd(subset, this.where.Copy())
-		dnf = NewDNF(subset, true)
-		subset, err = dnf.Map(subset)
+	if kspace, ok := this.baseKeyspaces[node.Alias()]; ok {
+		kspace.dnfpred, err = combineFilters(kspace.filters)
 		if err != nil {
 			return nil, nil, nil, err
 		}
+
+		if kspace.dnfpred != nil {
+			subset = expression.NewAnd(subset, kspace.dnfpred.Copy())
+			dnf = NewDNF(subset, true)
+			subset, err = dnf.Map(subset)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+		}
+	} else {
+		return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildJoinScan: keyspace %s not found", node.Alias()))
 	}
 
 	primaryKey := expression.Expressions{

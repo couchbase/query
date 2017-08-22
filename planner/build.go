@@ -57,6 +57,8 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	}
 }
 
+var _MAP_KEYSPACE_CAP = 4
+
 type builder struct {
 	datastore         datastore.Datastore
 	systemstore       datastore.Datastore
@@ -87,6 +89,7 @@ type builder struct {
 	orderScan         plan.SecondaryScan
 	namedArgs         map[string]value.Value
 	positionalArgs    value.Values
+	baseKeyspaces     map[string]*baseKeyspace
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool, namedArgs map[string]value.Value, positionalArgs value.Values) *builder {

@@ -10,8 +10,11 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
@@ -112,15 +115,35 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	for _, op := range orTerms.Operands() {
 		this.where = op
 		this.limit = limit
-		scan, termSargLength, err := this.buildTermScan(node, id, op, indexes, primaryKey, formalizer)
-		if scan == nil || err != nil {
+
+		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
+		err := ClassifyExpr(op, baseKeyspaces)
+		if err != nil {
 			return nil, 0, err
 		}
 
-		scans = append(scans, scan)
+		if kspace, ok := baseKeyspaces[node.Alias()]; ok {
+			kspace.dnfpred, err = combineFilters(kspace.filters)
+			if err != nil {
+				return nil, 0, err
+			}
 
-		if minSargLength == 0 || minSargLength > termSargLength {
-			minSargLength = termSargLength
+			if kspace.dnfpred == nil {
+				return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
+			}
+
+			scan, termSargLength, err := this.buildTermScan(node, id, kspace.dnfpred, indexes, primaryKey, formalizer)
+			if scan == nil || err != nil {
+				return nil, 0, err
+			}
+
+			scans = append(scans, scan)
+
+			if minSargLength == 0 || minSargLength > termSargLength {
+				minSargLength = termSargLength
+			}
+		} else {
+			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildOrScanNoPushdowns: missing basekeyspace %s", node.Alias()))
 		}
 	}
 

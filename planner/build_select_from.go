@@ -31,12 +31,20 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 			this.resetOrderOffsetLimit()
 		}
 
-		// Use FROM clause in index selection
 		prevFrom := this.from
 		this.from = node.From()
 		defer func() { this.from = prevFrom }()
 
-		_, err := node.From().Accept(this)
+		// gather keyspace references
+		this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
+		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces)
+		_, err := node.From().Accept(keyspaceFinder)
+		if err != nil {
+			return err
+		}
+
+		// Use FROM clause in index selection
+		_, err = node.From().Accept(this)
 		if err != nil {
 			return err
 		}
@@ -74,6 +82,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		this.children = append(this.children, fetch)
 	}
 
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -88,6 +101,12 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 	this.children = append(this.children, sel.(plan.Operator), plan.NewAlias(node.Alias()))
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -103,6 +122,11 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 
 	scan := plan.NewExpressionScan(node.ExpressionTerm(), node.Alias())
 	this.children = append(this.children, scan)
+
+	err := this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
