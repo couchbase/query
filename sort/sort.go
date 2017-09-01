@@ -173,6 +173,10 @@ func quickSort(data sort.Interface, a, b, maxDepth int, parent childChannel) {
 	for b-a > 7 {
 		if maxDepth == 0 {
 			heapSort(data, a, b)
+			// MB-25900 await children
+			for ; childCount > 0; childCount-- {
+				<-children
+			}
 			return
 		}
 		maxDepth--
