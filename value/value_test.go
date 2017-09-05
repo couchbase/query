@@ -11,14 +11,13 @@ package value
 
 import (
 	"compress/gzip"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
 	// "time"
 
-	jsonpointer "github.com/dustin/go-jsonpointer"
+	json "github.com/couchbase/go_json"
 )
 
 var codeJSON []byte
@@ -459,7 +458,7 @@ func BenchmarkLargeMap(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Error parsing JSON: %v", err)
 		}
-		value := jsonpointer.Get(m, keys[0])
+		value := json.Get(m, keys[0])
 		if value.(string) != "ssh" {
 			b.Errorf("expected value ssh, got %v", value)
 		}
@@ -468,7 +467,7 @@ func BenchmarkLargeMap(b *testing.B) {
 
 func TestJsonPointerInvalidJSON(t *testing.T) {
 	bytes := []byte(`{"test":"value"`)
-	val, err := jsonpointer.Find(bytes, "/test")
+	val, err := json.Find(bytes, "/test")
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}

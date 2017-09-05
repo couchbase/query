@@ -18,7 +18,13 @@ import (
 	"testing"
 
 	"github.com/couchbase/query/datastore"
-	"github.com/dustin/go-jsonpointer"
+
+	// For now we can't use go_json for unmarshalling
+	// as it returns a map in a different order than
+	// encoding/json (I suspect this is why the change
+	// was never made here).
+	// use go_json for jsonpointer only.
+	jsonpointer "github.com/couchbase/go_json"
 )
 
 func start() *MockServer {

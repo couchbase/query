@@ -15,7 +15,6 @@ import (
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
-	jsonpointer "github.com/dustin/go-jsonpointer"
 )
 
 /*
@@ -85,7 +84,7 @@ func (this *parsedValue) CopyForUpdate() Value {
 }
 
 /*
-Use "github.com/dustin/go-jsonpointer". Delayed parsing.
+Delayed parsing
 */
 func (this *parsedValue) Field(field string) (Value, bool) {
 	if this.parsed != nil {
@@ -98,7 +97,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		res, err := jsonpointer.Find(raw, "/"+field)
+		res, err := json.Find(raw, "/"+field)
 		if err != nil {
 			return missingField(field), false
 		}
@@ -135,7 +134,7 @@ func (this *parsedValue) UnsetField(field string) error {
 }
 
 /*
-Use "github.com/dustin/go-jsonpointer". Delayed parsing.
+Delayed parsing
 */
 func (this *parsedValue) Index(index int) (Value, bool) {
 	if this.parsed != nil {
@@ -152,7 +151,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		res, err := jsonpointer.Find(raw, "/"+strconv.Itoa(index))
+		res, err := json.Find(raw, "/"+strconv.Itoa(index))
 		if err != nil {
 			return missingIndex(index), false
 		}

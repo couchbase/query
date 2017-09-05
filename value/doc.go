@@ -33,7 +33,7 @@ scope.go: ScopeValue provides alias scoping for subqueries, for’s, lets etc.  
 
 sort.go: The type Sorter is a structure containing one element of type Value. It sorts an array value in place.
 
-parsed.go: It is a structure for storing and manipulating values. Use the jsonpointer package which is the public go-jsonpointer implementation package on github, jsonpointer "github.com/dustin/go-jsonpointer".
+parsed.go: It is a structure for storing and manipulating values. Use the jsonpointer implementation in go_json.
 
 set.go: Set implements a hash set of values.
 */
