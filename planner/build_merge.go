@@ -21,6 +21,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	subChildren := make([]plan.Operator, 0, 8)
 	source := stmt.Source()
 
+	this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
+	sourceKeyspace := newBaseKeyspace(source.Alias())
+	this.baseKeyspaces[sourceKeyspace.name] = sourceKeyspace
+
 	if source.Select() != nil {
 		sel, err := source.Select().Accept(this)
 		if err != nil {
