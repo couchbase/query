@@ -10,8 +10,11 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
@@ -98,6 +101,13 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 
 	for _, unnest := range unnests {
 		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
+		unnestKeyspace, ok := this.baseKeyspaces[unnest.Alias()]
+		if !ok {
+			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildUnnestScan: missing baseKeyspace %s", unnest.Alias()))
+		}
+		for _, fl := range unnestKeyspace.filters {
+			andTerms = append(andTerms, fl.fltrexpr)
+		}
 	}
 
 	pred = expression.NewAnd(andTerms...)
