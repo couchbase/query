@@ -68,21 +68,21 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 }
 
 func likeSpans(pred expression.LikeFunction) SargSpans {
-	range2 := &plan.Range2{}
+	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW)
 
 	switch pred := pred.(type) {
 	case *expression.Like:
-		range2.Low = expression.NewLikePrefix(pred.Second())
-		range2.High = expression.NewLikeStop(pred.Second())
+		if pred.Second().Static() != nil {
+			range2.Low = expression.NewLikePrefix(pred.Second())
+			range2.High = expression.NewLikeStop(pred.Second())
+		}
 	case *expression.RegexpLike:
-		range2.Low = expression.NewRegexpPrefix(pred.Second())
-		range2.High = expression.NewRegexpStop(pred.Second())
-	default:
-		range2.Low = expression.EMPTY_STRING_EXPR
-		range2.High = expression.EMPTY_ARRAY_EXPR
+		if pred.Second().Static() != nil {
+			range2.Low = expression.NewRegexpPrefix(pred.Second())
+			range2.High = expression.NewRegexpStop(pred.Second())
+		}
 	}
 
-	range2.Inclusion = datastore.LOW
 	span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 	return NewTermSpans(span)
 }
