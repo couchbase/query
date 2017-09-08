@@ -15,6 +15,7 @@ import (
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
+	jsonpointer "github.com/dustin/go-jsonpointer"
 )
 
 /*
@@ -97,7 +98,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		res, err := json.Find(raw, "/"+field)
+		res, err := jsonpointer.Find(raw, "/"+field)
 		if err != nil {
 			return missingField(field), false
 		}
@@ -151,7 +152,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		res, err := json.Find(raw, "/"+strconv.Itoa(index))
+		res, err := jsonpointer.Find(raw, "/"+strconv.Itoa(index))
 		if err != nil {
 			return missingIndex(index), false
 		}
@@ -265,7 +266,7 @@ func (this *parsedValue) unwrap() Value {
 			this.parsed = binaryValue(this.raw)
 		} else {
 			var p interface{}
-			err := json.Unmarshal(this.raw, &p)
+			err := json.UnmarshalNoValidate(this.raw, &p)
 			if err != nil {
 				this.parsedType = BINARY
 				this.parsed = binaryValue(this.raw)
