@@ -247,7 +247,14 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 
 	// Allow array indexes to cover ANY predicates
 	if pred != nil && entry.exactSpans && indexHasArrayIndexKey(entry.index) {
-		if _, ok := entry.spans.(*IntersectSpans); !ok {
+		sargKeysHasArray := false
+		for _, sk := range entry.sargKeys {
+			if sargKeysHasArray, _ = sk.IsArrayIndexKey(); sargKeysHasArray {
+				break
+			}
+		}
+
+		if _, ok := entry.spans.(*IntersectSpans); !ok && sargKeysHasArray {
 			covers, err := CoversFor(pred, origPred, keys)
 			if err != nil {
 				return nil, nil, err
