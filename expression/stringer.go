@@ -15,6 +15,8 @@ import (
 	"io"
 	"sort"
 	"strconv"
+
+	"github.com/couchbase/query/value"
 )
 
 type Stringer struct {
@@ -382,6 +384,10 @@ func (this *Stringer) VisitConcat(expr *Concat) (interface{}, error) {
 
 // Constant
 func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
+	if expr.value.Type() == value.MISSING {
+		return expr.value.String(), nil
+	}
+
 	b, _ := expr.value.MarshalJSON()
 	return string(b), nil
 }
