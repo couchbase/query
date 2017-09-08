@@ -81,10 +81,6 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 		return nil, err
 	}
 
-	if s.Type() <= value.NULL {
-		return s, nil
-	}
-
 	for _, w := range this.whenTerms {
 		wv, err := w.When.Evaluate(item, context)
 		if err != nil {
