@@ -278,9 +278,22 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 Restore scope to parent's scope.
 */
 func (this *Formalizer) PopBindings() {
+
+	currLevelAllowed := this.Allowed().GetValue().Fields()
+	currLevelIndentfiers := this.Identifiers().GetValue().Fields()
+
 	this.allowed = this.allowed.Parent().(*value.ScopeValue)
 	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
 	this.aliases = this.aliases.Parent().(*value.ScopeValue)
+
+	// Identifiers that are used in current level but not defined in the current level scope move to parent
+	for ident, _ := range currLevelIndentfiers {
+		if currLevelAllowed != nil {
+			if _, ok := currLevelAllowed[ident]; !ok {
+				this.identifiers.SetField(ident, value.TRUE_VALUE)
+			}
+		}
+	}
 }
 
 func (this *Formalizer) Copy() *Formalizer {
