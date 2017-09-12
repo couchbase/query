@@ -52,6 +52,7 @@ var _OPERATORS = map[string]Operator{
 	"IndexCountScan2":         &IndexCountScan2{},
 	"IndexCountDistinctScan2": &IndexCountDistinctScan2{},
 	"IntersectScan":           &IntersectScan{},
+	"OrderedIntersectScan":    &OrderedIntersectScan{},
 	"UnionScan":               &UnionScan{},
 	"DistinctScan":            &DistinctScan{},
 	"ExpressionScan":          &ExpressionScan{},
