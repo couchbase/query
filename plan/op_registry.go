@@ -71,6 +71,9 @@ var _OPERATORS = map[string]Operator{
 	// Let + Letting
 	"Let": &Let{},
 
+	// Infer
+	"InferKeyspace": &InferKeyspace{},
+
 	// Filter
 	"Filter": &Filter{},
 
