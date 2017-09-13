@@ -86,6 +86,11 @@ func (this *Order) afterItems(context *Context) {
 		this.terms = nil
 	}()
 
+	// MB-25901 don't sort if we have been stopped
+	if this.stopped {
+		return
+	}
+
 	this.setupTerms(context)
 	timer := time.Now()
 	sort.Sort(this)
