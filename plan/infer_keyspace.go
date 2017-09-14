@@ -90,7 +90,7 @@ func (this *InferKeyspace) UnmarshalJSON(body []byte) error {
 
 	var with value.Value
 	if len(_unmarshalled.With) > 0 {
-		with = value.NewValue(_unmarshalled.With)
+		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
 	this.node = algebra.NewInferKeyspace(ksref, _unmarshalled.Using, with)

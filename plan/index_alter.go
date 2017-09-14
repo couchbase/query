@@ -100,7 +100,7 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	// Get the with clause
 	var with value.Value
 	if len(_unmarshalled.With) > 0 {
-		with = value.NewValue(_unmarshalled.With)
+		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
 	this.node = algebra.NewAlterIndex(ksref, _unmarshalled.Index, _unmarshalled.Using, with)
