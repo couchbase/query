@@ -112,13 +112,13 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_            string                 `json:"#operator"`
-		index        string                 `json:"index"`
-		indexId      string                 `json:"index_id"`
-		namespace    string                 `json:"namespace"`
-		keyspace     string                 `json:"keyspace"`
-		using        datastore.IndexType    `json:"using"`
-		spans        Spans                  `json:"spans"`
-		covers       []string               `json:"covers"`
+		Index        string                 `json:"index"`
+		IndexId      string                 `json:"index_id"`
+		Namespace    string                 `json:"namespace"`
+		Keyspace     string                 `json:"keyspace"`
+		Using        datastore.IndexType    `json:"using"`
+		Spans        Spans                  `json:"spans"`
+		Covers       []string               `json:"covers"`
 		FilterCovers map[string]interface{} `json:"filter_covers"`
 	}
 
@@ -127,17 +127,17 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	k, err := datastore.GetKeyspace(_unmarshalled.namespace, _unmarshalled.keyspace)
+	k, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.namespace, _unmarshalled.keyspace, "", nil, nil)
-	this.spans = _unmarshalled.spans
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, "", nil, nil)
+	this.spans = _unmarshalled.Spans
 
-	if len(_unmarshalled.covers) > 0 {
-		this.covers = make(expression.Covers, len(_unmarshalled.covers))
-		for i, c := range _unmarshalled.covers {
+	if len(_unmarshalled.Covers) > 0 {
+		this.covers = make(expression.Covers, len(_unmarshalled.Covers))
+		for i, c := range _unmarshalled.Covers {
 			expr, err := parser.Parse(c)
 			if err != nil {
 				return err
@@ -160,12 +160,12 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	indexer, err := k.Indexer(_unmarshalled.using)
+	indexer, err := k.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	index, err := indexer.IndexById(_unmarshalled.indexId)
+	index, err := indexer.IndexById(_unmarshalled.IndexId)
 	if err != nil {
 		return err
 	}
