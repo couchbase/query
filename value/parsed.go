@@ -12,6 +12,7 @@ package value
 import (
 	"io"
 	"strconv"
+	"strings"
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
@@ -98,7 +99,14 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		res, err := jsonpointer.Find(raw, "/"+field)
+		// MB-26086
+		jfield := field
+		if strings.ContainsAny(jfield, "/ & ~") {
+			jfield = strings.Replace(jfield, "~", "~0", -1)
+			jfield = strings.Replace(jfield, "/", "~1", -1)
+		}
+
+		res, err := jsonpointer.Find(raw, "/"+jfield)
 		if err != nil {
 			return missingField(field), false
 		}
