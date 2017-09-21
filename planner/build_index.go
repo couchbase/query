@@ -103,7 +103,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 	}
 
 	index, er := indexer.IndexByName(stmt.Name())
-	if er == nil {
+	if er != nil {
 		return nil, er
 	}
 
