@@ -37,6 +37,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 
 func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	id expression.Expression, indexes []datastore.Index) (plan.Operator, error) {
+
 	primary, err := buildPrimaryIndex(keyspace, indexes, false)
 	if err != nil {
 		return nil, err
@@ -47,7 +48,14 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
-	op, _, err := this.buildCoveringScan(secondaries, node, id, pred, nil)
+	baseKeyspace := newBaseKeyspace(node.Alias())
+	keyspaces := make(map[string]bool, 1)
+	keyspaces[node.Alias()] = true
+	newfilter := newFilter(pred, pred, keyspaces)
+	baseKeyspace.filters = Filters{newfilter}
+	baseKeyspace.dnfPred = pred
+	baseKeyspace.origPred = nil
+	op, _, err := this.buildCoveringScan(secondaries, node, baseKeyspace, id)
 	return op, err
 }
 

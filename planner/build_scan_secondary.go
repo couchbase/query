@@ -22,11 +22,11 @@ import (
 )
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, origPred expression.Expression) (
+	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace, id expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
 	if this.cover != nil {
-		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, origPred)
+		scan, sargLength, err := this.buildCoveringScan(indexes, node, baseKeyspace, id)
 		if scan != nil || err != nil {
 			return scan, sargLength, err
 		}
@@ -34,10 +34,12 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	this.resetCountMinMax()
 
+	pred := baseKeyspace.dnfPred
+
 	indexes = minimalIndexes(indexes, true)
 
 	var err error
-	indexes, err = sargIndexes(indexes, pred)
+	err = sargIndexes(baseKeyspace, indexes)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -161,7 +163,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 					return
 				}
 
-				dnf := NewDNF(key, true)
+				dnf := NewDNF(key, true, true)
 				key, err = dnf.Map(key)
 				if err != nil {
 					return
@@ -191,7 +193,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 			origCond = cond.Copy()
 
-			dnf := NewDNF(cond, true)
+			dnf := NewDNF(cond, true, true)
 			cond, err = dnf.Map(cond)
 			if err != nil {
 				return
@@ -276,16 +278,30 @@ outer:
 		(shortest && (len(se.keys) <= len(te.keys)))
 }
 
-func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
-	map[datastore.Index]*indexEntry, error) {
+func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*indexEntry) error {
+
+	pred := baseKeyspace.dnfPred
+	isOrPred := false
+	if _, ok := pred.(*expression.Or); ok {
+		isOrPred = true
+	}
+
 	for _, se := range sargables {
-		spans, exactSpans, err := SargFor(pred, se.keys, se.minKeys, len(se.keys))
+		var spans SargSpans
+		var exactSpans bool
+		var err error
+
+		if indexHasArrayIndexKey(se.index) || isOrPred {
+			spans, exactSpans, err = SargFor(pred, se.keys, se.minKeys, len(se.keys))
+		} else {
+			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, len(se.keys))
+		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
 				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
-			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
+			return errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
 				pred.String(), se.sargKeys.String(), err))
-			return nil, err
+			return err
 		}
 
 		se.spans = spans
@@ -295,7 +311,7 @@ func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expr
 		se.exactSpans = exactSpans
 	}
 
-	return sargables, nil
+	return nil
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {

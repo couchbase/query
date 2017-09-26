@@ -17,7 +17,8 @@ type baseKeyspace struct {
 	name        string
 	filters     Filters
 	joinfilters Filters
-	dnfpred     expression.Expression
+	dnfPred     expression.Expression
+	origPred    expression.Expression
 }
 
 func newBaseKeyspace(keyspace string) *baseKeyspace {
@@ -28,12 +29,10 @@ func newBaseKeyspace(keyspace string) *baseKeyspace {
 	return rv
 }
 
-func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {
-	dest := make(map[string]*baseKeyspace, len(src))
-
-	for _, kspace := range src {
-		dest[kspace.name] = newBaseKeyspace(kspace.name)
-	}
+// get a map of baseKeysapces for a single keyspace name
+func getOneBaseKeyspaces(keyspaceName string) map[string]*baseKeyspace {
+	dest := make(map[string]*baseKeyspace, 1)
+	dest[keyspaceName] = newBaseKeyspace(keyspaceName)
 
 	return dest
 }

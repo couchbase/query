@@ -10,14 +10,18 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 )
 
-func PatternFor(pred expression.Expression, indexes []datastore.Index,
-	formalizer *expression.Formalizer) (
-	expression.Expression, error) {
+func PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.Index,
+	formalizer *expression.Formalizer) error {
+
+	pred := baseKeyspace.origPred
 
 	suffixes := _PATTERN_INDEX_POOL.Get()
 	defer _PATTERN_INDEX_POOL.Put(suffixes)
@@ -26,24 +30,42 @@ func PatternFor(pred expression.Expression, indexes []datastore.Index,
 
 	collectPatternIndexes(pred, indexes, formalizer, suffixes, tokens)
 	if len(suffixes) == 0 && len(tokens) == 0 {
-		return pred, nil
+		return nil
 	}
 
 	var err error
 	pred = pred.Copy()
-	dnf := NewDNF(pred, false)
+	dnf := NewDNF(pred, false, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	pat := newPattern(suffixes, tokens)
 	rv, err := pred.Accept(pat)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return rv.(expression.Expression), nil
+	// update filters list in baseKeyspace since new filters are generated above
+	baseKeyspaces := getOneBaseKeyspaces(baseKeyspace.name)
+	err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces)
+	if err != nil {
+		return err
+	}
+
+	newKeyspace, ok := baseKeyspaces[baseKeyspace.name]
+	if !ok {
+		return errors.NewPlanInternalError(fmt.Sprintf("PatternFor: missing baseKeyspace %s", baseKeyspace.name))
+	}
+	baseKeyspace.filters = newKeyspace.filters
+	baseKeyspace.joinfilters = newKeyspace.joinfilters
+	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type pattern struct {
@@ -220,7 +242,7 @@ outer:
 				continue
 			}
 
-			dnf := NewDNF(cond, true)
+			dnf := NewDNF(cond, true, true)
 			cond, err = dnf.Map(cond)
 			if err != nil {
 				return

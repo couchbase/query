@@ -33,8 +33,12 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeys
 }
 
 type exprClassifier struct {
-	baseKeyspaces map[string]*baseKeyspace
-	keyspaceNames map[string]bool
+	baseKeyspaces   map[string]*baseKeyspace
+	keyspaceNames   map[string]bool
+	recursion       bool
+	recurseExpr     expression.Expression
+	recursionJoin   bool
+	recurseJoinExpr expression.Expression
 }
 
 func newExprClassifier(baseKeyspaces map[string]*baseKeyspace) *exprClassifier {
@@ -293,26 +297,77 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		return expr, nil
 	}
 
-	filter := newFilter(expr, keyspaces)
+	// perform expression transformation, but no DNF transformation
+	dnfExpr := expr.Copy()
+	dnf := NewDNF(dnfExpr, true, false)
+	dnfExpr, err = dnf.Map(dnfExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	// if expression transformation generates new AND terms, recurse
+	if and, ok := dnfExpr.(*expression.And); ok {
+		if len(keyspaces) == 1 {
+			recursion := this.recursion
+			defer func() { this.recursion = recursion }()
+			this.recursion = true
+			if this.recurseExpr == nil {
+				this.recurseExpr = expr
+			}
+		} else {
+			recursionJoin := this.recursionJoin
+			defer func() { this.recursionJoin = recursionJoin }()
+			this.recursionJoin = true
+			if this.recurseJoinExpr == nil {
+				this.recurseJoinExpr = expr
+			}
+		}
+		return this.VisitAnd(and)
+	}
+
+	var origExpr expression.Expression
+	if len(keyspaces) == 1 {
+		if this.recursion {
+			// recurseExpr is only used once, even through multiple recursions
+			if this.recurseExpr != nil {
+				origExpr = this.recurseExpr
+				this.recurseExpr = nil
+			}
+		} else {
+			origExpr = expr
+		}
+	} else {
+		if this.recursionJoin {
+			// recurseJoinExpr is only used once, even through multiple recursions
+			if this.recurseJoinExpr != nil {
+				origExpr = this.recurseJoinExpr
+				this.recurseJoinExpr = nil
+			}
+		} else {
+			origExpr = expr
+		}
+	}
 
 	for kspace, _ := range keyspaces {
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
+			filter := newFilter(dnfExpr, origExpr, keyspaces)
+
 			if len(keyspaces) == 1 {
 				baseKspace.filters = append(baseKspace.filters, filter)
 			} else {
 				baseKspace.joinfilters = append(baseKspace.joinfilters, filter)
 				// if this is an OR join predicate, attempt to extract a new OR-predicate
 				// for a single keyspace (to enable union scan)
-				if or, ok := expr.(*expression.Or); ok {
-					newpred, err := this.extractExpr(or, baseKspace.name)
+				if or, ok := dnfExpr.(*expression.Or); ok {
+					newPred, newOrigPred, err := this.extractExpr(or, baseKspace.name)
 					if err != nil {
 						return nil, err
 					}
-					if newpred != nil {
+					if newPred != nil {
 						newKeyspaces := make(map[string]bool)
 						newKeyspaces[baseKspace.name] = true
-						newfilter := newFilter(newpred, newKeyspaces)
-						baseKspace.filters = append(baseKspace.filters, newfilter)
+						newFilter := newFilter(newPred, newOrigPred, newKeyspaces)
+						baseKspace.filters = append(baseKspace.filters, newFilter)
 					}
 				}
 			}
@@ -324,37 +379,51 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 	return expr, nil
 }
 
-func (this *exprClassifier) extractExpr(or *expression.Or, basekspace string) (expression.Expression, error) {
+func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) (
+	expression.Expression, expression.Expression, error) {
+
 	orTerms, truth := flattenOr(or)
 	if orTerms == nil || truth {
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	var newTerm expression.Expression
-	var newTerms expression.Expressions = nil
+	var newTerm, newOrigTerm expression.Expression
+	var newTerms, newOrigTerms expression.Expressions
 	for _, op := range orTerms.Operands() {
-		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
+		baseKeyspaces := getOneBaseKeyspaces(keyspaceName)
 		err := ClassifyExpr(op, baseKeyspaces)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		newTerm = nil
-		if kspace, ok := baseKeyspaces[basekspace]; ok {
+		newOrigTerm = nil
+		if kspace, ok := baseKeyspaces[keyspaceName]; ok {
 			for _, fl := range kspace.filters {
 				if newTerm == nil {
-					newTerm = fl.fltrexpr
+					newTerm = fl.fltrExpr
 				} else {
-					newTerm = expression.NewAnd(newTerm, fl.fltrexpr)
+					newTerm = expression.NewAnd(newTerm, fl.fltrExpr)
+				}
+
+				if fl.origExpr != nil {
+					if newOrigTerm == nil {
+						newOrigTerm = fl.origExpr
+					} else {
+						newOrigTerm = expression.NewAnd(newOrigTerm, fl.origExpr)
+					}
 				}
 			}
 		}
 
 		if newTerm != nil {
 			newTerms = append(newTerms, newTerm)
+			if newOrigTerm != nil {
+				newOrigTerms = append(newOrigTerms, newOrigTerm)
+			}
 		} else {
-			return nil, nil
+			return nil, nil, nil
 		}
 	}
 
-	return expression.NewOr(newTerms...), nil
+	return expression.NewOr(newTerms...), expression.NewOr(newOrigTerms...), nil
 }

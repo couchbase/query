@@ -10,8 +10,11 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -63,7 +66,20 @@ outer:
 		return nil, 0, err
 	}
 
-	return this.buildTermScan(node, id, newPred, []datastore.Index{index}, primaryKey, formalizer)
+	baseKeyspaces := getOneBaseKeyspaces(node.Alias())
+	err = ClassifyExpr(newPred, baseKeyspaces)
+	if err != nil {
+		return nil, 0, err
+	}
+	baseKeyspace, ok := baseKeyspaces[node.Alias()]
+	if !ok {
+		return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildDynamicScan: missing baseKeyspace %s", node.Alias()))
+	}
+	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
+	if err != nil {
+		return nil, 0, err
+	}
+	return this.buildTermScan(node, baseKeyspace, id, []datastore.Index{index}, primaryKey, formalizer)
 }
 
 func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression) *dynamicKey {

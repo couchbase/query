@@ -19,9 +19,10 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, id expression.Expression,
-	pred *expression.Or, indexes []datastore.Index, primaryKey expression.Expressions,
-	formalizer *expression.Formalizer) (scan plan.SecondaryScan, sargLength int, err error) {
+func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
+	id expression.Expression, pred *expression.Or, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	scan plan.SecondaryScan, sargLength int, err error) {
 
 	prevOrder := this.order
 	prevLimit := this.limit
@@ -30,7 +31,7 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, id expression.Expre
 	tryPushdowns := this.cover != nil || this.limit != nil
 
 	if tryPushdowns {
-		scan, sargLength, err = this.buildOrScanTryPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+		scan, sargLength, err = this.buildOrScanTryPushdowns(node, baseKeyspace, id, pred, indexes, primaryKey, formalizer)
 	} else {
 		scan, sargLength, err = this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
 	}
@@ -44,9 +45,10 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, id expression.Expre
 	return
 }
 
-func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
-	pred *expression.Or, indexes []datastore.Index, primaryKey expression.Expressions,
-	formalizer *expression.Formalizer) (plan.SecondaryScan, int, error) {
+func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
+	id expression.Expression, pred *expression.Or, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	plan.SecondaryScan, int, error) {
 
 	coveringScans := this.coveringScans
 
@@ -54,7 +56,7 @@ func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expr
 	limit := this.limit
 	offset := this.offset
 
-	scan, sargLength, err := this.buildTermScan(node, id, pred, indexes, primaryKey, formalizer)
+	scan, sargLength, err := this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -116,23 +118,23 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		this.where = op
 		this.limit = limit
 
-		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
+		baseKeyspaces := getOneBaseKeyspaces(node.Alias())
 		err := ClassifyExpr(op, baseKeyspaces)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		if kspace, ok := baseKeyspaces[node.Alias()]; ok {
-			kspace.dnfpred, err = combineFilters(kspace.filters)
+		if baseKeyspace, ok := baseKeyspaces[node.Alias()]; ok {
+			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
 			if err != nil {
 				return nil, 0, err
 			}
 
-			if kspace.dnfpred == nil {
+			if baseKeyspace.dnfPred == nil {
 				return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
 			}
 
-			scan, termSargLength, err := this.buildTermScan(node, id, kspace.dnfpred, indexes, primaryKey, formalizer)
+			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
 			if scan == nil || err != nil {
 				return nil, 0, err
 			}

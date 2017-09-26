@@ -20,12 +20,14 @@ type DNF struct {
 	expr         expression.Expression
 	dnfTermCount int
 	like         bool
+	doDNF        bool
 }
 
-func NewDNF(expr expression.Expression, like bool) *DNF {
+func NewDNF(expr expression.Expression, like bool, doDNF bool) *DNF {
 	rv := &DNF{
-		expr: expr,
-		like: like,
+		expr:  expr,
+		like:  like,
+		doDNF: doDNF,
 	}
 
 	rv.SetMapper(rv)
@@ -77,8 +79,12 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	case 1:
 		return expr.Operands()[0], nil
 	default:
-		// DNF
-		return this.applyDNF(expr), nil
+		if this.doDNF {
+			// DNF
+			return this.applyDNF(expr), nil
+		} else {
+			return expr, nil
+		}
 	}
 }
 

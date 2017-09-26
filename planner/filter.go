@@ -17,48 +17,60 @@ import (
 )
 
 type Filter struct {
-	fltrexpr  expression.Expression
+	fltrExpr  expression.Expression // filter expression
+	origExpr  expression.Expression // original filter expression
 	keyspaces map[string]bool
 }
 
 type Filters []*Filter
 
-func newFilter(expr expression.Expression, keyspaces map[string]bool) *Filter {
+func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bool) *Filter {
 	rv := &Filter{
-		fltrexpr:  expr,
+		fltrExpr:  fltrExpr,
+		origExpr:  origExpr,
 		keyspaces: keyspaces,
 	}
 
 	return rv
 }
 
-// Combine an array of filters into a single expression by ANDing each filter expression
-// and perform DNF transformation if an OR filter is involved
-func combineFilters(filters Filters) (expression.Expression, error) {
+// Combine an array of filters into a single expression by ANDing each filter expression,
+// perform transformation on each filter, and if an OR filter is involved, perform DNF
+// transformation on the combined filter
+func combineFilters(filters Filters) (expression.Expression, expression.Expression, error) {
 	var err error
 	var hasOr bool = false
-	var dnfpred expression.Expression = nil
+	var dnfPred, origPred expression.Expression
 
 	for _, fl := range filters {
-		if dnfpred == nil {
-			dnfpred = fl.fltrexpr
+		if dnfPred == nil {
+			dnfPred = fl.fltrExpr
 		} else {
-			dnfpred = expression.NewAnd(dnfpred, fl.fltrexpr)
+			dnfPred = expression.NewAnd(dnfPred, fl.fltrExpr)
 		}
-		if _, ok := fl.fltrexpr.(*expression.Or); ok {
+
+		if fl.origExpr != nil {
+			if origPred == nil {
+				origPred = fl.origExpr
+			} else {
+				origPred = expression.NewAnd(origPred, fl.origExpr)
+			}
+		}
+
+		if _, ok := fl.fltrExpr.(*expression.Or); ok {
 			hasOr = true
 		}
 	}
 
 	if hasOr {
-		dnf := NewDNF(dnfpred.Copy(), true)
-		dnfpred, err = dnf.Map(dnfpred)
+		dnf := NewDNF(dnfPred.Copy(), true, true)
+		dnfPred, err = dnf.Map(dnfPred)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return dnfpred, nil
+	return dnfPred, origPred, nil
 }
 
 // Once a keyspace has been visited, join filters referring to this keyspace can remove

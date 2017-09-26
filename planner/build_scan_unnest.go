@@ -106,12 +106,12 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildUnnestScan: missing baseKeyspace %s", unnest.Alias()))
 		}
 		for _, fl := range unnestKeyspace.filters {
-			andTerms = append(andTerms, fl.fltrexpr)
+			andTerms = append(andTerms, fl.fltrExpr)
 		}
 	}
 
 	pred = expression.NewAnd(andTerms...)
-	dnf := NewDNF(pred, true)
+	dnf := NewDNF(pred, true, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {
 		return nil, 0, err

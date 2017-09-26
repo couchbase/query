@@ -20,8 +20,8 @@ import (
 )
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, origPred expression.Expression) (
-	plan.SecondaryScan, int, error) {
+	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
+	id expression.Expression) (plan.SecondaryScan, int, error) {
 
 	if this.cover == nil {
 		return nil, 0, nil
@@ -29,6 +29,8 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
+	pred := baseKeyspace.dnfPred
+	origPred := baseKeyspace.origPred
 
 	arrays := _ARRAY_POOL.Get()
 	defer _ARRAY_POOL.Put(arrays)
@@ -47,7 +49,7 @@ outer:
 		}
 
 		// Sarg to set spans
-		_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
+		err := sargIndexes(baseKeyspace, map[datastore.Index]*indexEntry{index: entry})
 		if err != nil {
 			return nil, 0, err
 		}

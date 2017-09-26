@@ -62,7 +62,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	thisKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
 	}
@@ -118,13 +118,16 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			return nil, nil, err
 		}
 
-		thisKeyspace.dnfpred, err = combineFilters(thisKeyspace.filters)
+		baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if thisKeyspace.dnfpred != nil {
-			return this.buildPredicateScan(keyspace, node, id, thisKeyspace.dnfpred, hints)
+		if baseKeyspace.dnfPred != nil {
+			if baseKeyspace.origPred == nil {
+				return nil, nil, errors.NewPlanInternalError("buildScan: NULL origPred")
+			}
+			return this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints)
 		}
 	}
 
@@ -137,11 +140,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 }
 
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id, pred expression.Expression, hints []datastore.Index) (
+	baseKeyspace *baseKeyspace, id expression.Expression, hints []datastore.Index) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
 	// Handle constant FALSE predicate
-	cpred := pred.Value()
+	cpred := baseKeyspace.origPred.Value()
 	if cpred != nil && !cpred.Truth() {
 		return _EMPTY_PLAN, nil, nil
 	}
@@ -151,7 +154,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	if len(hints) > 0 {
 		secondary, primary, err = this.buildSubsetScan(
-			keyspace, node, id, pred, hints, primaryKey, formalizer, true)
+			keyspace, node, baseKeyspace, id, hints, primaryKey, formalizer, true)
 		if secondary != nil || primary != nil || err != nil {
 			return
 		}
@@ -164,31 +167,25 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		return
 	}
 
-	return this.buildSubsetScan(keyspace, node, id, pred, others, primaryKey, formalizer, false)
+	return this.buildSubsetScan(keyspace, node, baseKeyspace, id, others, primaryKey, formalizer, false)
 }
 
 func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id, pred expression.Expression, indexes []datastore.Index,
+	baseKeyspace *baseKeyspace, id expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
 	// Prefer OR scan
-	dnfPred := pred.Copy()
-	dnf := NewDNF(dnfPred, true)
-	dnfPred, err = dnf.Map(dnfPred)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	dnfPred := baseKeyspace.dnfPred
 	if or, ok := dnfPred.(*expression.Or); ok {
-		scan, _, err := this.buildOrScan(node, id, or, indexes, primaryKey, formalizer)
+		scan, _, err := this.buildOrScan(node, baseKeyspace, id, or, indexes, primaryKey, formalizer)
 		if scan != nil || err != nil {
 			return scan, nil, err
 		}
 	}
 
 	// Prefer secondary scan
-	secondary, _, err = this.buildTermScan(node, id, pred, indexes, primaryKey, formalizer)
+	secondary, _, err = this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
 	if secondary != nil || err != nil {
 		return secondary, nil, err
 	}
@@ -208,27 +205,20 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 }
 
 func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
-	id, pred expression.Expression, indexes []datastore.Index,
+	baseKeyspace *baseKeyspace, id expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	secondary plan.SecondaryScan, sargLength int, err error) {
 
 	var scanbuf [4]plan.SecondaryScan
 	scans := scanbuf[0:1]
 
-	origPred := pred
-
 	// Consider pattern matching indexes
-	pred, err = PatternFor(pred, indexes, formalizer)
+	err = PatternFor(baseKeyspace, indexes, formalizer)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	dnfPred := pred.Copy()
-	dnf := NewDNF(dnfPred, true)
-	dnfPred, err = dnf.Map(dnfPred)
-	if err != nil {
-		return nil, 0, err
-	}
+	dnfPred := baseKeyspace.dnfPred
 
 	sargables, all, arrays, err := sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
 	if err != nil {
@@ -254,7 +244,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	// Try secondary scan
 	if len(minimals) > 0 {
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, dnfPred, origPred)
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, baseKeyspace, id)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -314,8 +304,8 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		this.limit = limitExpr
 		this.offset = offsetExpr
 
-		dynamicPred := pred.Copy()
-		dnf := NewDNF(dynamicPred, false)
+		dynamicPred := baseKeyspace.origPred.Copy()
+		dnf := NewDNF(dynamicPred, false, true)
 		dynamicPred, err = dnf.Map(dynamicPred)
 		if err != nil {
 			return nil, 0, err

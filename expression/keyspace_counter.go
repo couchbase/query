@@ -15,8 +15,6 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-var _MAP_KEYSPACE_CAP = 4
-
 // gather (and count) keyspace references for an expression
 func CountKeySpaces(expr Expression, baseKeyspaces map[string]bool) (map[string]bool, error) {
 
@@ -40,7 +38,7 @@ type keyspaceCounter struct {
 func newKeyspaceCounter(baseKeyspaces map[string]bool) *keyspaceCounter {
 	rv := &keyspaceCounter{
 		baseKeyspaces: baseKeyspaces,
-		keyspaces:     make(map[string]bool, _MAP_KEYSPACE_CAP),
+		keyspaces:     make(map[string]bool, len(baseKeyspaces)),
 	}
 
 	rv.traverser = rv

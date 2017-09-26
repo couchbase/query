@@ -143,7 +143,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		expr = expression.NewIsArray(bexpr)
 		fc = expr.FilterCovers(fc)
 
-		dnf := NewDNF(expr, true)
+		dnf := NewDNF(expr, true, true)
 		expr, err = dnf.Map(expr)
 		if err != nil {
 			return nil, nil, err

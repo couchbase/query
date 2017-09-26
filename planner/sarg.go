@@ -30,7 +30,112 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 		return nil, exactSpan, err
 	}
 
-	n := len(sargSpans)
+	return composeSargSpan(sargSpans, exactSpan)
+}
+
+func sargForOr(or *expression.Or, keys expression.Expressions, min, total int) (
+	SargSpans, bool, error) {
+
+	exact := true
+	spans := make([]SargSpans, len(or.Operands()))
+	for i, c := range or.Operands() {
+		min, _ = SargableFor(c, keys) // Variable length sarging
+		s, ex, err := SargFor(c, keys, min, total)
+		if err != nil {
+			return nil, false, err
+		}
+
+		spans[i] = s
+		exact = exact && ex
+	}
+
+	var rv SargSpans = NewUnionSpans(spans...)
+	return rv.Streamline(), exact, nil
+}
+
+func sargFor(pred, key expression.Expression) (SargSpans, error) {
+	s := &sarg{key}
+
+	r, err := pred.Accept(s)
+	if err != nil || r == nil {
+		return nil, err
+	}
+
+	rs := r.(SargSpans)
+	return rs, nil
+}
+
+func SargForFilters(filters Filters, keys expression.Expressions, min, total int) (
+	SargSpans, bool, error) {
+
+	sargSpans := make([]SargSpans, min)
+	exactSpan := true
+
+	sargKeys := keys[0:min]
+
+	for _, fl := range filters {
+		if _, ok := fl.fltrExpr.(*expression.Or); ok {
+			continue
+		}
+
+		flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, total)
+		if err != nil {
+			return nil, flExactSpan, err
+		}
+
+		if flSargSpans == nil || flSargSpans.Size() == 0 {
+			for _, sargKey := range sargKeys {
+				if fl.fltrExpr.DependsOn(sargKey) {
+					exactSpan = false
+					break
+				}
+			}
+			continue
+		}
+
+		if flSargSpans == _EMPTY_SPANS {
+			return _EMPTY_SPANS, true, nil
+		}
+
+		if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
+			sargSpans[pos] = flSargSpans
+		} else {
+			sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
+			if sargSpans[pos] == _EMPTY_SPANS {
+				return _EMPTY_SPANS, true, nil
+			}
+		}
+
+		exactSpan = exactSpan && flExactSpan
+	}
+
+	return composeSargSpan(sargSpans, exactSpan)
+}
+
+/*
+Compose SargSpan for a composite index
+*/
+func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, error) {
+	// Truncate sarg spans when they exceed the limit
+	size := 1
+	n := 0
+	for _, spans := range sargSpans {
+		if spans == nil {
+			break
+		}
+
+		sz := spans.Size()
+
+		if sz == 0 ||
+			(sz > 1 && size > 1 && sz*size > _FULL_SPAN_FANOUT) {
+			exactSpan = false
+			break
+		}
+
+		size *= sz
+		n++
+	}
+
 	var ns SargSpans
 
 	// Sarg composite indexes right to left
@@ -69,41 +174,8 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 	return ns, exactSpan, nil
 }
 
-func sargForOr(or *expression.Or, keys expression.Expressions, min, total int) (
-	SargSpans, bool, error) {
-
-	exact := true
-	spans := make([]SargSpans, len(or.Operands()))
-	for i, c := range or.Operands() {
-		min, _ = SargableFor(c, keys) // Variable length sarging
-		s, ex, err := SargFor(c, keys, min, total)
-		if err != nil {
-			return nil, false, err
-		}
-
-		spans[i] = s
-		exact = exact && ex
-	}
-
-	var rv SargSpans = NewUnionSpans(spans...)
-	return rv.Streamline(), exact, nil
-}
-
-func sargFor(pred, key expression.Expression) (SargSpans, error) {
-	s := &sarg{key}
-
-	r, err := pred.Accept(s)
-	if err != nil || r == nil {
-		return nil, err
-	}
-
-	rs := r.(SargSpans)
-	return rs, nil
-}
-
 /*
-Get sarg spans for index sarg keys. The sarg spans are truncated when
-they exceed the limit.
+Get sarg spans for index sarg keys.
 */
 func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, total int) (
 	[]SargSpans, bool, error) {
@@ -139,23 +211,45 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 		exactSpan = exactSpan && rs.Exact()
 	}
 
-	// Truncate sarg spans when they exceed the limit
-	size := 1
-	i := 0
-	for _, spans := range sargSpans {
-		sz := spans.Size()
+	return sargSpans, exactSpan, nil
+}
 
-		if sz == 0 ||
-			(sz > 1 && size > 1 && sz*size > _FULL_SPAN_FANOUT) {
-			exactSpan = false
-			break
+/*
+Get sarg span for one of the index sarg keys. Individual filters are passed in
+*/
+func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, total int) (
+	SargSpans, bool, int, error) {
+
+	n := len(sargKeys)
+
+	exactSpan := true
+
+	// Sarg composite indexes left to right
+	for i := 0; i < n; i++ {
+		s := &sarg{sargKeys[i]}
+		r, err := pred.Accept(s)
+		if err != nil {
+			return nil, false, 0, err
 		}
 
-		size *= sz
-		i++
+		if r == nil {
+			// not for this key
+			continue
+		}
+
+		rs := r.(SargSpans)
+		rs = rs.Streamline()
+
+		if rs.Size() == 0 {
+			exactSpan = false
+		}
+
+		exactSpan = exactSpan && rs.Exact()
+
+		return rs, exactSpan, i, nil
 	}
 
-	return sargSpans[0:i], exactSpan, nil
+	return nil, false, 0, nil
 }
 
 const _FULL_SPAN_FANOUT = 8192
