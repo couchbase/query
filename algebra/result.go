@@ -203,6 +203,13 @@ func (this *Projection) Raw() bool {
 }
 
 /*
+Set the raw value
+*/
+func (this *Projection) SetRaw(raw bool) {
+	this.raw = raw
+}
+
+/*
 Return the result expression terms.
 */
 func (this *Projection) Terms() ResultTerms {

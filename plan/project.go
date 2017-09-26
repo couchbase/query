@@ -136,6 +136,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		terms[i] = algebra.NewResultTerm(expr, term_data.Star, term_data.As)
 	}
 	projection := algebra.NewProjection(_unmarshalled.Distinct, terms)
+	projection.SetRaw(_unmarshalled.Raw)
 	results := projection.Terms()
 	project_terms := make(ProjectTerms, len(results))
 
