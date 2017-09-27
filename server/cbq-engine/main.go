@@ -58,7 +58,12 @@ var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
 var HTTPS_ADDR = flag.String("https", ":18093", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
-var SSL_MINIMUM_PROTOCOL = flag.String("ssl_minimum_protocol", "tlsv1", "TLS minimum version ('tlsv1'/'tlsv1.1'/'tlsv1.2')")
+
+// The ssl_minimum_protocol flag is currently provided but is unused.
+// It is included here because if a flag is provided and is not picked up,
+// the server shuts down.
+var _OBSOLETE_SSL_MINIMUM_PROTOCOL = flag.String("ssl_minimum_protocol", "tlsv1", "TLS minimum version (obsolete)")
+
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
@@ -236,7 +241,7 @@ func main() {
 
 	// Create http endpoint
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
-		*HTTP_ADDR, *HTTPS_ADDR, *CERT_FILE, *KEY_FILE, *SSL_MINIMUM_PROTOCOL)
+		*HTTP_ADDR, *HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
 	er := endpoint.Listen()
 	if er != nil {
 		logging.Errorp("cbq-engine exiting with error",

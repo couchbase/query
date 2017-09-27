@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	curl "github.com/andelf/go-curl"
+	"gitub.com/couchbase/query/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -888,7 +889,7 @@ func (this *Curl) curlCiphers() {
 	}
 
 	// Get the Ciphers supported by couchbase based on the level set
-	cbCiphers := util.CipherSuites()
+	cbCiphers := cbauth.CipherSuites()
 
 	// Create a comma separated list of the ciphers that need to be used.
 	finalCipherList := ""
