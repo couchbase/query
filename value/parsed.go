@@ -16,7 +16,6 @@ import (
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
-	jsonpointer "github.com/dustin/go-jsonpointer"
 )
 
 /*
@@ -106,7 +105,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 			jfield = strings.Replace(jfield, "/", "~1", -1)
 		}
 
-		res, err := jsonpointer.Find(raw, "/"+jfield)
+		res, err := json.Find(raw, "/"+jfield)
 		if err != nil {
 			return missingField(field), false
 		}
@@ -160,7 +159,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		res, err := jsonpointer.Find(raw, "/"+strconv.Itoa(index))
+		res, err := json.Find(raw, "/"+strconv.Itoa(index))
 		if err != nil {
 			return missingIndex(index), false
 		}
