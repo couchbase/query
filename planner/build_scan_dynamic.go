@@ -66,7 +66,7 @@ outer:
 		return nil, 0, err
 	}
 
-	baseKeyspaces := getOneBaseKeyspaces(node.Alias())
+	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
 	err = ClassifyExpr(newPred, baseKeyspaces)
 	if err != nil {
 		return nil, 0, err

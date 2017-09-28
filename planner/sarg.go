@@ -73,40 +73,56 @@ func SargForFilters(filters Filters, keys expression.Expressions, min, total int
 
 	sargKeys := keys[0:min]
 
+outer:
 	for _, fl := range filters {
+		isOr := false
 		if _, ok := fl.fltrExpr.(*expression.Or); ok {
-			continue
+			isOr = true
 		}
 
-		flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, total)
-		if err != nil {
-			return nil, flExactSpan, err
-		}
-
-		if flSargSpans == nil || flSargSpans.Size() == 0 {
-			for _, sargKey := range sargKeys {
-				if fl.fltrExpr.DependsOn(sargKey) {
-					exactSpan = false
-					break
-				}
+		// OR predicate may contains sargable predicates for multiple index keys, thus
+		// a for loop is used to set spans for potentially multiple index keys. However,
+		// note that for an OR predicate to be sargable for an index key, each arm of
+		// the OR clause must be sargable for the same index key.
+		start := 0
+		for start < min {
+			flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, start, total)
+			if err != nil {
+				return nil, flExactSpan, err
 			}
-			continue
-		}
 
-		if flSargSpans == _EMPTY_SPANS {
-			return _EMPTY_SPANS, true, nil
-		}
+			if flSargSpans == nil || flSargSpans.Size() == 0 {
+				for _, sargKey := range sargKeys {
+					if fl.fltrExpr.DependsOn(sargKey) {
+						exactSpan = false
+						break
+					}
+				}
+				continue outer
+			}
 
-		if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
-			sargSpans[pos] = flSargSpans
-		} else {
-			sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
-			if sargSpans[pos] == _EMPTY_SPANS {
+			if flSargSpans == _EMPTY_SPANS {
 				return _EMPTY_SPANS, true, nil
 			}
-		}
 
-		exactSpan = exactSpan && flExactSpan
+			if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
+				sargSpans[pos] = flSargSpans
+			} else {
+				sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
+				if sargSpans[pos] == _EMPTY_SPANS {
+					return _EMPTY_SPANS, true, nil
+				}
+			}
+
+			exactSpan = exactSpan && flExactSpan
+
+			// for OR predicate attempt to set span for next index key
+			if isOr {
+				start = pos + 1
+			} else {
+				break
+			}
+		}
 	}
 
 	return composeSargSpan(sargSpans, exactSpan)
@@ -217,7 +233,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 /*
 Get sarg span for one of the index sarg keys. Individual filters are passed in
 */
-func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, total int) (
+func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, start, total int) (
 	SargSpans, bool, int, error) {
 
 	n := len(sargKeys)
@@ -225,7 +241,7 @@ func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, to
 	exactSpan := true
 
 	// Sarg composite indexes left to right
-	for i := 0; i < n; i++ {
+	for i := start; i < n; i++ {
 		s := &sarg{sargKeys[i]}
 		r, err := pred.Accept(s)
 		if err != nil {

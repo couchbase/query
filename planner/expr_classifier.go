@@ -390,7 +390,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var newTerm, newOrigTerm expression.Expression
 	var newTerms, newOrigTerms expression.Expressions
 	for _, op := range orTerms.Operands() {
-		baseKeyspaces := getOneBaseKeyspaces(keyspaceName)
+		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
 		err := ClassifyExpr(op, baseKeyspaces)
 		if err != nil {
 			return nil, nil, err

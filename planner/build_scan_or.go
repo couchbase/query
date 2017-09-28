@@ -118,7 +118,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		this.where = op
 		this.limit = limit
 
-		baseKeyspaces := getOneBaseKeyspaces(node.Alias())
+		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
 		err := ClassifyExpr(op, baseKeyspaces)
 		if err != nil {
 			return nil, 0, err

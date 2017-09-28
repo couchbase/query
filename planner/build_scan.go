@@ -213,7 +213,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	scans := scanbuf[0:1]
 
 	// Consider pattern matching indexes
-	err = PatternFor(baseKeyspace, indexes, formalizer)
+	err = this.PatternFor(baseKeyspace, indexes, formalizer)
 	if err != nil {
 		return nil, 0, err
 	}

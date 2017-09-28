@@ -29,10 +29,12 @@ func newBaseKeyspace(keyspace string) *baseKeyspace {
 	return rv
 }
 
-// get a map of baseKeysapces for a single keyspace name
-func getOneBaseKeyspaces(keyspaceName string) map[string]*baseKeyspace {
-	dest := make(map[string]*baseKeyspace, 1)
-	dest[keyspaceName] = newBaseKeyspace(keyspaceName)
+func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {
+	dest := make(map[string]*baseKeyspace, len(src))
+
+	for _, kspace := range src {
+		dest[kspace.name] = newBaseKeyspace(kspace.name)
+	}
 
 	return dest
 }

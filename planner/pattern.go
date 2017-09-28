@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-func PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.Index,
+func (this *builder) PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.Index,
 	formalizer *expression.Formalizer) error {
 
 	pred := baseKeyspace.origPred
@@ -48,7 +48,7 @@ func PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.Index,
 	}
 
 	// update filters list in baseKeyspace since new filters are generated above
-	baseKeyspaces := getOneBaseKeyspaces(baseKeyspace.name)
+	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
 	err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces)
 	if err != nil {
 		return err
