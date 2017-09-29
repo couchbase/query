@@ -31,8 +31,9 @@ const (
 const (
 	INDEX_API_1   = 1
 	INDEX_API_2   = 2
+	INDEX_API_3   = 3
 	INDEX_API_MIN = INDEX_API_1
-	INDEX_API_MAX = INDEX_API_2
+	INDEX_API_MAX = INDEX_API_3
 )
 
 type Indexer interface {
@@ -190,7 +191,8 @@ type Range2 struct {
 }
 
 type IndexProjection struct {
-	EntryKeys  []int
+	EntryKeys []int // >= 0 and < length(indexKeys) project indexKey at that position
+	// >= len(indexKeys)  Project matching EntryKeyId in  Groups or Aggregates
 	PrimaryKey bool
 }
 
@@ -235,6 +237,78 @@ type StreamingDistinctIndex interface {
 ////////////////////////////////////////////////////////////////////////
 //
 // End of Index API2.
+//
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+//
+// Index API3 introduced in Vulcan for Index GROUP and Aggregates
+//
+////////////////////////////////////////////////////////////////////////
+
+type AggregateType string
+
+const (
+	AGG_MIN    AggregateType = "MIN"
+	AGG_MAX    AggregateType = "MAX"
+	AGG_SUM    AggregateType = "SUM"
+	AGG_COUNT  AggregateType = "COUNT"
+	AGG_COUNTN AggregateType = "COUNTN" // Count only when argument is numeric. Required for AVG
+	AGG_ARRAY  AggregateType = "ARRAY_AGG"
+	AGG_AVG    AggregateType = "AVG"
+)
+
+type GroupKeys []GroupKey
+type AggregateKeys []AggregateKey
+
+type GroupKey struct {
+	EntryKeyId int                   // Id that can be used in IndexProjection
+	KeyPos     int                   // >=0 means use expr at index key position otherwise use Expr
+	Expr       expression.Expression // group expression
+}
+
+type AggregateKey struct {
+	Operation  AggregateType         // Aggregate operation
+	EntryKeyId int                   // Id that can be used in IndexProjection
+	KeyPos     int                   // >=0 means use expr at index key position otherwise use Expr
+	Expr       expression.Expression // Aggregate expression
+	Distinct   bool                  // Distinct on aggregate expression.
+	// Aggregate only on Distinct values with in the group
+}
+
+type IndexGroupAggregates struct {
+	Name          string        // name of the index aggregate
+	Group         GroupKeys     // group keys, nil means no group by
+	Aggregates    AggregateKeys // aggregates with in the group, nil means no aggregates
+	DependentKeys []int         // List of index keys positions that used by GROUP and Aggregates
+
+}
+
+type Index3 interface {
+	Index2
+
+	CreateAggregate(requestId string, groupAggs *IndexGroupAggregates, with value.Value) errors.Error
+	DropAggregate(requestId, name string) errors.Error
+	Aggregates() ([]IndexGroupAggregates, errors.Error)
+
+	Scan3(requestId string, spans Spans2, reverse, distinctAfterProjection,
+		ordered bool, projection *IndexProjection, offset, limit int64,
+		groupAggs *IndexGroupAggregates,
+		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
+}
+
+type PrimaryIndex3 interface {
+	Index3
+
+	// Perform a scan of all the entries in this index
+	ScanEntries3(requestId string, projection *IndexProjection, offset, limit int64,
+		groupAggs *IndexGroupAggregates, cons ScanConsistency,
+		vector timestamp.Vector, conn *IndexConnection)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// End of Index API3.
 //
 ////////////////////////////////////////////////////////////////////////
 
