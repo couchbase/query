@@ -465,18 +465,6 @@ func BenchmarkLargeMap(b *testing.B) {
 	}
 }
 
-func TestJsonPointerInvalidJSON(t *testing.T) {
-	bytes := []byte(`{"test":"value"`)
-	val, err := json.Find(bytes, "/test")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
-	}
-
-	if !reflect.DeepEqual(val, []byte(`"value"`)) {
-		t.Errorf(`expected "value", got : %v`, string(val))
-	}
-}
-
 func TestCopyValueFromBytes(t *testing.T) {
 
 	val := NewValue([]byte(`{"name":"marty","type":"contact","address":{"street":"sutton oaks"}}`))
