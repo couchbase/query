@@ -983,8 +983,7 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 			var doc value.AnnotatedPair
 			doc.Name = k
 
-			val := value.NewAnnotatedValue(value.NewValue(v.Body))
-
+			val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
 			flags := binary.BigEndian.Uint32(v.Extras[0:4])
 
 			expiration := uint32(0)

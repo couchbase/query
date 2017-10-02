@@ -387,7 +387,7 @@ func NewValue(val interface{}) Value {
 	case nil:
 		return NULL_VALUE
 	case []byte:
-		return newValueFromBytes(val)
+		return NewParsedValue(val, false)
 	case []interface{}:
 		return sliceValue(val)
 	case map[string]interface{}:
@@ -435,39 +435,6 @@ For token search.
 type MatchFunc func(token interface{}) bool
 
 /*
-Create a new Value from a slice of bytes. The type is inferred from
-the first non-whitespace byte.
-*/
-func newValueFromBytes(bytes []byte) Value {
-	parsedType := identifyType(bytes)
-
-	// Atomic types
-	switch parsedType {
-	case NUMBER, STRING, BOOLEAN, NULL:
-		var p interface{}
-		err := json.Unmarshal(bytes, &p)
-		if err != nil {
-			return binaryValue(bytes)
-		}
-
-		return NewValue(p)
-	case BINARY:
-		return binaryValue(bytes)
-	}
-
-	// Container types
-	err := json.Validate(bytes)
-	if err != nil {
-		return binaryValue(bytes)
-	}
-
-	return &parsedValue{
-		raw:        bytes,
-		parsedType: parsedType,
-	}
-}
-
-/*
 Function takes an input interface and returns an interface.
 */
 type copyFunc func(interface{}) interface{}
@@ -488,37 +455,6 @@ of the array, which can have any JSON type.
 */
 func copyForUpdate(val interface{}) interface{} {
 	return NewValue(val).CopyForUpdate()
-}
-
-/*
-Used to return the type of input bytes. It ranges over bytes,
-and classifies it into an object (if '{' is seen), array ('['),
-string ('"'), number (for any digit and '-'), boolean ('t/f'),
-and null ('n'). If a whitespace is encountered, look at the
-next byte. If none of these types fit then we throw an error
-stating that we were unable to identify they type of JSON data.
-*/
-func identifyType(bytes []byte) Type {
-	for _, b := range bytes {
-		switch b {
-		case '{':
-			return OBJECT
-		case '[':
-			return ARRAY
-		case '"':
-			return STRING
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-':
-			return NUMBER
-		case 't', 'f':
-			return BOOLEAN
-		case 'n':
-			return NULL
-		case ' ', '\t', '\n':
-			continue
-		}
-	}
-
-	return BINARY
 }
 
 func marshalString(v Value) string {

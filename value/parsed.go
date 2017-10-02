@@ -27,6 +27,66 @@ type parsedValue struct {
 	parsed     Value
 }
 
+func NewParsedValue(bytes []byte, isValidated bool) Value {
+	parsedType := identifyType(bytes)
+
+	// Atomic types
+	switch parsedType {
+	case NUMBER, STRING, BOOLEAN, NULL:
+		var p interface{}
+		err := json.Unmarshal(bytes, &p)
+		if err != nil {
+			return binaryValue(bytes)
+		}
+
+		return NewValue(p)
+	case BINARY:
+		return binaryValue(bytes)
+	}
+
+	// Container types
+
+	// skip validation if already done elsewhere
+	if !isValidated && json.Validate(bytes) != nil {
+		return binaryValue(bytes)
+	}
+
+	return &parsedValue{
+		raw:        bytes,
+		parsedType: parsedType,
+	}
+}
+
+/*
+Used to return the type of input bytes. It ranges over bytes,
+and classifies it into an object (if '{' is seen), array ('['),
+string ('"'), number (for any digit and '-'), boolean ('t/f'),
+and null ('n'). If a whitespace is encountered, look at the
+next byte. If none of these types fit then it has to be binary.
+*/
+func identifyType(bytes []byte) Type {
+	for _, b := range bytes {
+		switch b {
+		case '{':
+			return OBJECT
+		case '[':
+			return ARRAY
+		case '"':
+			return STRING
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-':
+			return NUMBER
+		case 't', 'f':
+			return BOOLEAN
+		case 'n':
+			return NULL
+		case ' ', '\t', '\n':
+			continue
+		}
+		break
+	}
+
+	return BINARY
+}
 func (this *parsedValue) String() string {
 	return this.unwrap().String()
 }
