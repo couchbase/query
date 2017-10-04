@@ -712,7 +712,7 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
 	var args map[string]value.Value
 
 	for name, _ := range this.req.Form {
-		if !strings.HasPrefix(name, "$") {
+		if !strings.HasPrefix(strings.TrimSpace(name), "$") {
 			continue
 		}
 		arg, err := this.formValue(name)
@@ -921,9 +921,12 @@ func (this *urlArgs) getValue(field string) (value.Value, errors.Error) {
 	return val, err
 }
 
+// To handle cases where the inp req contains spaces before and after the
+// query param add Trimspace().
 func (this *urlArgs) getField(field string) []string {
 	for name, value := range this.req.Form {
-		if strings.EqualFold(field, name) {
+
+		if strings.EqualFold(strings.TrimSpace(field), strings.TrimSpace(name)) {
 			return value
 		}
 	}
@@ -937,7 +940,7 @@ func (this *urlArgs) formValue(field string) (string, errors.Error) {
 	case 0:
 		return "", nil
 	case 1:
-		return values[0], nil
+		return strings.TrimSpace(values[0]), nil
 	default:
 		return "", errors.NewServiceErrorMultipleValues(field)
 	}
@@ -1412,6 +1415,7 @@ func addNamedArg(args map[string]value.Value, name string, arg value.Value) map[
 	if args == nil {
 		args = make(map[string]value.Value)
 	}
+	name = strings.TrimSpace(name)
 	// The '$' is trimmed from the argument name when added to args:
 	args[strings.TrimPrefix(name, "$")] = arg
 	return args
