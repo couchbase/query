@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/cbauth"
 	cbauthi "github.com/couchbase/cbauth/cbauthimpl"
 	cb "github.com/couchbase/go-couchbase"
+	"github.com/couchbase/gomemcached"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -958,13 +959,22 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+	var bulkResponse map[string]*gomemcached.MCResponse
+	var mcr *gomemcached.MCResponse
+	var keyCount map[string]int
+	var err error
 
-	if len(keys) == 0 {
+	l := len(keys)
+	if l == 0 {
 		return nil, nil
 	}
 
-	bulkResponse, keyCount, err := b.cbbucket.GetBulk(keys, context.GetReqDeadline())
-	defer b.cbbucket.ReleaseGetBulkPools(keyCount, bulkResponse)
+	if l == 1 {
+		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline())
+	} else {
+		bulkResponse, keyCount, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline())
+		defer b.cbbucket.ReleaseGetBulkPools(keyCount, bulkResponse)
+	}
 
 	if err != nil {
 		// Ignore "Not found" keys
@@ -977,45 +987,56 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 	}
 
 	i := 0
-	rv := make([]value.AnnotatedPair, 0, len(keys))
-	for k, v := range bulkResponse {
-		for j := 0; j < keyCount[k]; j++ {
-			var doc value.AnnotatedPair
-			doc.Name = k
-
-			val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
-			flags := binary.BigEndian.Uint32(v.Extras[0:4])
-
-			expiration := uint32(0)
-			if len(v.Extras) >= 8 {
-				expiration = binary.BigEndian.Uint32(v.Extras[4:8])
+	rv := make([]value.AnnotatedPair, 0, l)
+	if l == 1 {
+		if mcr != nil && err == nil {
+			rv = append(rv, doFetch(keys[0], mcr))
+			i = 1
+		}
+	} else {
+		for k, v := range bulkResponse {
+			for j := 0; j < keyCount[k]; j++ {
+				rv = append(rv, doFetch(k, v))
+				i++
 			}
-
-			meta_type := "json"
-			if val.Type() == value.BINARY {
-				meta_type = "base64"
-			}
-
-			val.SetAttachment("meta", map[string]interface{}{
-				"id":         k,
-				"cas":        v.Cas,
-				"type":       meta_type,
-				"flags":      flags,
-				"expiration": expiration,
-			})
-
-			// Uncomment when needed
-			//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
-
-			doc.Value = val
-			rv = append(rv, doc)
-			i++
 		}
 	}
 
 	logging.Debugf("Fetched %d keys ", i)
 
 	return rv, nil
+}
+
+func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedPair {
+	var doc value.AnnotatedPair
+	doc.Name = k
+
+	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
+	flags := binary.BigEndian.Uint32(v.Extras[0:4])
+
+	expiration := uint32(0)
+	if len(v.Extras) >= 8 {
+		expiration = binary.BigEndian.Uint32(v.Extras[4:8])
+	}
+
+	meta_type := "json"
+	if val.Type() == value.BINARY {
+		meta_type = "base64"
+	}
+
+	val.SetAttachment("meta", map[string]interface{}{
+		"id":         k,
+		"cas":        v.Cas,
+		"type":       meta_type,
+		"flags":      flags,
+		"expiration": expiration,
+	})
+
+	// Uncomment when needed
+	//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
+
+	doc.Value = val
+	return doc
 }
 
 const (
