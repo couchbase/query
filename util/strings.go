@@ -10,6 +10,7 @@
 package util
 
 import (
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -68,4 +69,15 @@ func ReversePreservingCombiningCharacters(s string) string {
 		i = j
 	}
 	return (string(r[start:]))
+}
+
+func TrimSpace(s string) string {
+
+	if len(s) > 0 {
+		if s[0] == ' ' || s[len(s)-1] == ' ' {
+			s = strings.TrimSpace(s)
+		}
+	}
+
+	return s
 }

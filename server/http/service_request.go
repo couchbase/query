@@ -712,7 +712,7 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
 	var args map[string]value.Value
 
 	for name, _ := range this.req.Form {
-		if !strings.HasPrefix(strings.TrimSpace(name), "$") {
+		if !strings.HasPrefix(util.TrimSpace(name), "$") {
 			continue
 		}
 		arg, err := this.formValue(name)
@@ -926,7 +926,7 @@ func (this *urlArgs) getValue(field string) (value.Value, errors.Error) {
 func (this *urlArgs) getField(field string) []string {
 	for name, value := range this.req.Form {
 
-		if strings.EqualFold(strings.TrimSpace(field), strings.TrimSpace(name)) {
+		if strings.EqualFold(util.TrimSpace(field), util.TrimSpace(name)) {
 			return value
 		}
 	}
@@ -940,7 +940,7 @@ func (this *urlArgs) formValue(field string) (string, errors.Error) {
 	case 0:
 		return "", nil
 	case 1:
-		return strings.TrimSpace(values[0]), nil
+		return util.TrimSpace(values[0]), nil
 	default:
 		return "", errors.NewServiceErrorMultipleValues(field)
 	}
@@ -1415,7 +1415,7 @@ func addNamedArg(args map[string]value.Value, name string, arg value.Value) map[
 	if args == nil {
 		args = make(map[string]value.Value)
 	}
-	name = strings.TrimSpace(name)
+	name = util.TrimSpace(name)
 	// The '$' is trimmed from the argument name when added to args:
 	args[strings.TrimPrefix(name, "$")] = arg
 	return args
