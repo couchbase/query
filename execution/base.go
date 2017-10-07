@@ -46,7 +46,7 @@ type base struct {
 	output        Operator
 	stop          Operator
 	parent        Parent
-	once          sync.Once
+	once          util.Once
 	batch         []value.AnnotatedValue
 	timePhase     timePhases
 	startTime     time.Time
