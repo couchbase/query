@@ -258,16 +258,16 @@ const (
 	AGG_AVG    AggregateType = "AVG"
 )
 
-type GroupKeys []GroupKey
-type AggregateKeys []AggregateKey
+type IndexGroupKeys []*IndexGroupKey
+type IndexAggregates []*IndexAggregate
 
-type GroupKey struct {
+type IndexGroupKey struct {
 	EntryKeyId int                   // Id that can be used in IndexProjection
 	KeyPos     int                   // >=0 means use expr at index key position otherwise use Expr
 	Expr       expression.Expression // group expression
 }
 
-type AggregateKey struct {
+type IndexAggregate struct {
 	Operation  AggregateType         // Aggregate operation
 	EntryKeyId int                   // Id that can be used in IndexProjection
 	KeyPos     int                   // >=0 means use expr at index key position otherwise use Expr
@@ -277,10 +277,11 @@ type AggregateKey struct {
 }
 
 type IndexGroupAggregates struct {
-	Name          string        // name of the index aggregate
-	Group         GroupKeys     // group keys, nil means no group by
-	Aggregates    AggregateKeys // aggregates with in the group, nil means no aggregates
-	DependentKeys []int         // List of index keys positions that used by GROUP and Aggregates
+	Name                string          // name of the index aggregate
+	Group               IndexGroupKeys  // group keys, nil means no group by
+	Aggregates          IndexAggregates // aggregates with in the group, nil means no aggregates
+	DependsOnIndexKeys  []int           // GROUP and Aggregates Depends on List of index keys positions
+	DependsOnPrimaryKey bool            // GROUP and Aggregates Depends on primary key
 
 }
 
