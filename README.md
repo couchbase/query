@@ -459,8 +459,15 @@ Clone the git repo into the current working directory, to get the
 source, so as to be able to make a build. This clones it into query:
 
      $ git clone https://github.com/couchbase/query query
+
+Go into src/golang.org/x and clone tools here – git clone https://github.com/golang/tools.git
+Go into cmd/goyacc and run go build, go install. 
+Then run export PATH=$PATH:/path/to/query/bin as follows
+
+     $ export PATH=$PATH:$GOPATH/bin/
      $ cd query 
      $ ./build.sh
+
 
 By default, this builds the community edition of query. If you want
 the enterprise version (which includes schema inferencing), use:
@@ -510,7 +517,7 @@ Data sample set zip file(sample set of json documents)
 4.	Connect N1QL with the Couchbase server we need to run the following command in two terminals one after the other. 
       
         $ ./cbq-engine –datastore “http://127.0.0.1:8091/” 
-        $ ./cbq
+        $ ./cbq -u=<username> -p=<password> localhost:8091
 
 5.	Run the following command on the created buckets before querying them
      
