@@ -93,7 +93,10 @@ func TestFieldAccess(t *testing.T) {
 			t.Errorf("Expected ok=%v, got ok=%v for field %s.", test.ok, ok, test.field)
 		}
 
-		if !reflect.DeepEqual(result, test.result) {
+		// parsed types have a state and can't be compared with DeepEqual
+		// missing types are never equal and must be compared by type
+		if !((result.Equals(test.result) == TRUE_VALUE) ||
+		     (test.result.Type() == MISSING && result.Type() == MISSING)) {
 			t.Errorf("Expected result=%v, got result=%v for field %s.", test.result, result, test.field)
 		}
 	}
@@ -120,7 +123,10 @@ func TestIndexAccess(t *testing.T) {
 			t.Errorf("Expected ok=%v, got ok=%v for index %d.", test.ok, ok, test.index)
 		}
 
-		if !reflect.DeepEqual(result, test.result) {
+		// parsed types have a state and can't be compared with DeepEqual
+		// missing types are never equal and must be compared by type
+		if !((result.Equals(test.result) == TRUE_VALUE) ||
+		     (test.result.Type() == MISSING && result.Type() == MISSING)) {
 			t.Errorf("Expected result=%v, got result=%v for index %d.", test.result, result, test.index)
 		}
 	}

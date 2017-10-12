@@ -12,8 +12,8 @@ package value
 import (
 	"io"
 	"strconv"
-	"strings"
 
+	atomic "github.com/couchbase/go-couchbase/platform"
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
 )
@@ -25,6 +25,8 @@ type parsedValue struct {
 	raw        []byte
 	parsedType Type
 	parsed     Value
+	state      *json.FindState
+	used       int32
 }
 
 func NewParsedValue(bytes []byte, isValidated bool) Value {
@@ -54,6 +56,7 @@ func NewParsedValue(bytes []byte, isValidated bool) Value {
 	return &parsedValue{
 		raw:        bytes,
 		parsedType: parsedType,
+		state:      json.NewFindState(bytes),
 	}
 }
 
@@ -158,19 +161,31 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 
 	raw := this.raw
 	if raw != nil {
-		// MB-26086
-		jfield := field
-		if strings.ContainsAny(jfield, "/ & ~") {
-			jfield = strings.Replace(jfield, "~", "~0", -1)
-			jfield = strings.Replace(jfield, "/", "~1", -1)
-		}
+		var res []byte
+		var err error
 
-		res, err := json.Find(raw, "/"+jfield)
+		goahead := atomic.AddInt32(&this.used, 1)
+		defer atomic.AddInt32(&this.used, -1)
+
+		// Two operators can use the same value at the same time
+		// this is particularly the case for unnest, which scans
+		// an object looking for array elements.
+		// Since the state is, well, statefull, we'll only let the
+		// first served modify it, while the other will have to go
+		// the slow route
+		if goahead == 1 {
+			res, err = json.FirstFindWithState(this.state, field)
+		} else {
+			res, err = json.FirstFind(raw, field)
+		}
 		if err != nil {
 			return missingField(field), false
 		}
 		if res != nil {
-			return NewValue(res), true
+
+			// since this field was part of a validated value,
+			// we don't need to validate it again
+			return NewParsedValue(res, true), true
 		}
 	}
 
@@ -224,7 +239,10 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 			return missingIndex(index), false
 		}
 		if res != nil {
-			return NewValue(res), true
+
+			// since this array element  was part of a validated value,
+			// we don't need to validate it again
+			return NewParsedValue(res, true), true
 		}
 	}
 
@@ -333,6 +351,7 @@ func (this *parsedValue) unwrap() Value {
 			this.parsed = binaryValue(this.raw)
 		} else {
 			var p interface{}
+
 			err := json.UnmarshalNoValidate(this.raw, &p)
 			if err != nil {
 				this.parsedType = BINARY
@@ -344,6 +363,7 @@ func (this *parsedValue) unwrap() Value {
 
 		// Release raw memory when no longer needed
 		this.raw = nil
+		this.state = nil
 	}
 
 	return this.parsed
