@@ -37,6 +37,8 @@ func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expr
 
 	coveringScans := this.coveringScans
 
+	order := this.order
+
 	scan, sargLength, err := this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
 	if err != nil {
 		return nil, 0, err
@@ -50,6 +52,8 @@ func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expr
 			return scan, sargLength, nil
 		}
 	}
+
+	this.order = order
 
 	return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 }
