@@ -127,7 +127,6 @@ type SystemRemoteAccess interface {
 var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()
 
 func SetRemoteAccess(remoteAccess SystemRemoteAccess) {
-	_REMOTEACCESS = remoteAccess
 }
 
 type systemIndexer struct {
