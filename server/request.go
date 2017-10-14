@@ -74,7 +74,7 @@ type Request interface {
 	CloseNotify() chan bool
 	Servicing()
 	Fail(err errors.Error)
-	Execute(server *Server, signature value.Value, notifyStop chan int)
+	Execute(server *Server, signature value.Value, notifyStop execution.Operator)
 	Failed(server *Server)
 	Expire(state State, timeout time.Duration)
 	SortCount() uint64
@@ -193,10 +193,10 @@ type BaseRequest struct {
 	results        value.ValueChannel
 	errors         errors.ErrorChannel
 	warnings       errors.ErrorChannel
-	closeNotify    chan bool // implement http.CloseNotifier
-	stopNotify     chan int  // notified when request execution stops
-	stopResult     chan bool // stop consuming results
-	stopExecute    chan bool // stop executing request
+	closeNotify    chan bool          // implement http.CloseNotifier
+	stopResult     chan bool          // stop consuming results
+	stopExecute    chan bool          // stop executing request
+	stopOperator   execution.Operator // notified when request execution stops
 	timings        execution.Operator
 	controls       value.Tristate
 	profile        Profile
@@ -599,16 +599,16 @@ func (this *BaseRequest) Warnings() errors.ErrorChannel {
 	return this.warnings
 }
 
-func (this *BaseRequest) NotifyStop(ch chan int) {
+func (this *BaseRequest) NotifyStop(o execution.Operator) {
 	this.Lock()
 	defer this.Unlock()
-	this.stopNotify = ch
+	this.stopOperator = o
 }
 
-func (this *BaseRequest) StopNotify() chan int {
+func (this *BaseRequest) StopNotify() execution.Operator {
 	this.RLock()
 	defer this.RUnlock()
-	return this.stopNotify
+	return this.stopOperator
 }
 
 func (this *BaseRequest) StopExecute() chan bool {
@@ -616,15 +616,15 @@ func (this *BaseRequest) StopExecute() chan bool {
 }
 
 func (this *BaseRequest) Stop(state State) {
-	defer sendStop(this.stopResult)
-	defer sendStop(this.stopExecute)
-
 	this.SetState(state)
 
-	select {
-	case this.StopNotify() <- 0:
-	default:
+	// just in case we are being stopped before the root operator is set
+	// (like a syntax error in filestore or multistore)
+	if this.stopOperator != nil {
+		this.stopOperator.SendStop()
 	}
+	sendStop(this.stopExecute)
+	sendStop(this.stopResult)
 }
 
 func (this *BaseRequest) Close() {

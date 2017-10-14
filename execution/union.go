@@ -115,6 +115,20 @@ func (this *UnionAll) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.children, copy.children)
 }
 
+func (this *UnionAll) SendStop() {
+	this.baseSendStop()
+	for _, child := range this.children {
+		child.SendStop()
+	}
+}
+
+func (this *UnionAll) reopen(context *Context) {
+	this.baseReopen(context)
+	for _, child := range this.children {
+		child.reopen(context)
+	}
+}
+
 func (this *UnionAll) Done() {
 	this.wait()
 	for c, child := range this.children {

@@ -120,6 +120,49 @@ func newRedirectBase() base {
 	return rv
 }
 
+// IMPORTANT - please remember to override the next three methods
+// in individual operators whenever there are actions to be taken on
+// children operators, so as to ensure correct operation and avoid
+// hangs destruction and contain memory consumption
+
+// send a stop
+func (this *base) SendStop() {
+	this.baseSendStop()
+}
+
+// reset the operator to an initial state
+// it's the caller's responsability to make sure the operator has
+// stopped, or, at least, will definitely stop: if not this method
+// might wait indefinitely
+func (this *base) reopen(context *Context) {
+	this.baseReopen(context)
+}
+
+// execution destructor is empty by default
+func (this *base) Done() {
+}
+
+// stop for the terminal operator case
+func (this *base) baseSendStop() {
+	if this.completed {
+		return
+	}
+	this.switchPhase(_CHANTIME)
+	select {
+	case this.stopChannel <- 0:
+	default:
+	}
+	this.switchPhase(_EXECTIME)
+}
+
+// reopen for the terminal operator case
+func (this *base) baseReopen(context *Context) {
+	this.wait()
+	this.itemChannel = make(value.AnnotatedChannel, context.GetPipelineCap())
+	this.stopChannel = make(StopChannel, 1)
+	this.once.Reset()
+}
+
 // accrues operators and phase times
 func (this *base) setExecPhase(phase Phases, context *Context) {
 	context.AddPhaseOperator(phase)
@@ -661,12 +704,4 @@ func childrenAccrueTimes(o1, o2 []Operator) bool {
 		c.accrueTimes(o2[i])
 	}
 	return false
-}
-
-// execution destructor is empty by default
-// IMPORTANT - please remember to override this method
-// in individual operators whenever there are actions
-// to be taken on destruction, so as to contain memory
-// consumption
-func (this *base) Done() {
 }

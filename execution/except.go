@@ -129,6 +129,26 @@ func (this *ExceptAll) accrueTimes(o Operator) {
 	this.second.accrueTimes(copy.second)
 }
 
+func (this *ExceptAll) SendStop() {
+	this.baseSendStop()
+	if this.first != nil {
+		this.first.SendStop()
+	}
+	if this.second != nil {
+		this.second.SendStop()
+	}
+}
+
+func (this *ExceptAll) reopen(context *Context) {
+	this.baseReopen(context)
+	if this.first != nil {
+		this.first.reopen(context)
+	}
+	if this.second != nil {
+		this.second.reopen(context)
+	}
+}
+
 func (this *ExceptAll) Done() {
 	this.wait()
 	if this.first != nil {

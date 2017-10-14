@@ -116,6 +116,20 @@ func (this *IndexScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.children, copy.children)
 }
 
+func (this *IndexScan) SendStop() {
+	this.baseSendStop()
+	for _, child := range this.children {
+		child.SendStop()
+	}
+}
+
+func (this *IndexScan) reopen(context *Context) {
+	this.baseReopen(context)
+	for _, child := range this.children {
+		child.reopen(context)
+	}
+}
+
 func (this *IndexScan) Done() {
 	this.wait()
 	for c, _ := range this.children {

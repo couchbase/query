@@ -121,6 +121,20 @@ func (this *Authorize) accrueTimes(o Operator) {
 	this.child.accrueTimes(copy.child)
 }
 
+func (this *Authorize) SendStop() {
+	this.baseSendStop()
+	if this.child != nil {
+		this.child.SendStop()
+	}
+}
+
+func (this *Authorize) reopen(context *Context) {
+	this.baseReopen(context)
+	if this.child != nil {
+		this.child.reopen(context)
+	}
+}
+
 func (this *Authorize) Done() {
 	this.wait()
 	if this.child != nil {

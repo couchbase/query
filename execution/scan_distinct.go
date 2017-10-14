@@ -182,11 +182,26 @@ func (this *DistinctScan) accrueTimes(o Operator) {
 	this.scan.accrueTimes(copy.scan)
 }
 
+func (this *DistinctScan) SendStop() {
+	this.baseSendStop()
+	if this.scan != nil {
+		this.scan.SendStop()
+	}
+}
+
+func (this *DistinctScan) reopen(context *Context) {
+	this.baseReopen(context)
+	if this.scan != nil {
+		this.scan.reopen(context)
+	}
+}
+
 func (this *DistinctScan) Done() {
 	this.wait()
 	if this.scan != nil {
 		this.scan.Done()
 	}
+	this.scan = nil
 }
 
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

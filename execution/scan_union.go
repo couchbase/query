@@ -193,6 +193,20 @@ func (this *UnionScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.scans, copy.scans)
 }
 
+func (this *UnionScan) SendStop() {
+	this.baseSendStop()
+	for _, scan := range this.scans {
+		scan.SendStop()
+	}
+}
+
+func (this *UnionScan) reopen(context *Context) {
+	this.baseReopen(context)
+	for _, scan := range this.scans {
+		scan.reopen(context)
+	}
+}
+
 func (this *UnionScan) Done() {
 	this.wait()
 	for s, scan := range this.scans {

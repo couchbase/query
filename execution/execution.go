@@ -42,8 +42,10 @@ type Operator interface {
 	SetRoot()                                     // Let the root operator know that it is, in fact, root
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
-	Done()                                        // frees and pools resources
+	SendStop()                                    // Stops the operator
+	Done()                                        // Frees and pools resources
 
+	reopen(context *Context) // resets operator to initial state
 	// local infrastructure to add up times of children of the parallel operator
 	accrueTimes(o Operator)
 	time() *base

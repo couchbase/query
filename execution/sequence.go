@@ -123,6 +123,20 @@ func (this *Sequence) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.children, copy.children)
 }
 
+func (this *Sequence) SendStop() {
+	this.baseSendStop()
+	for _, child := range this.children {
+		child.SendStop()
+	}
+}
+
+func (this *Sequence) reopen(context *Context) {
+	this.baseReopen(context)
+	for _, child := range this.children {
+		child.reopen(context)
+	}
+}
+
 func (this *Sequence) Done() {
 	this.wait()
 	for c, child := range this.children {

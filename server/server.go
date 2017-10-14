@@ -533,7 +533,7 @@ func (this *Server) serviceRequest(request Request) {
 		context.SetReqDeadline(time.Time{})
 	}
 
-	go request.Execute(this, prepared.Signature(), operator.StopChannel())
+	go request.Execute(this, prepared.Signature(), operator)
 
 	run := time.Now()
 	operator.RunOnce(context, nil)

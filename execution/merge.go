@@ -267,6 +267,32 @@ func (this *Merge) accrueTimes(o Operator) {
 	}
 }
 
+func (this *Merge) SendStop() {
+	this.baseSendStop()
+	if this.update != nil {
+		this.update.SendStop()
+	}
+	if this.delete != nil {
+		this.delete.SendStop()
+	}
+	if this.insert != nil {
+		this.insert.SendStop()
+	}
+}
+
+func (this *Merge) reopen(context *Context) {
+	this.baseReopen(context)
+	if this.update != nil {
+		this.update.reopen(context)
+	}
+	if this.delete != nil {
+		this.delete.reopen(context)
+	}
+	if this.insert != nil {
+		this.insert.reopen(context)
+	}
+}
+
 func (this *Merge) Done() {
 	this.wait()
 	if this.update != nil {

@@ -110,7 +110,7 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 		childCount := len(this.children)
 		r["copies"] = childCount
 
-		// when we have multuple copies, we create a temporary child
+		// when we have multiple copies, we create a temporary child
 		// for the purpose of adding up all of the times (remember, the
 		// actual query might be running and we are accessing the times
 		// via system:active_requests)
@@ -139,6 +139,20 @@ func (this *Parallel) accrueTimes(o Operator) {
 	}
 	copy, _ := o.(*Parallel)
 	childrenAccrueTimes(this.children, copy.children)
+}
+
+func (this *Parallel) SendStop() {
+	this.baseSendStop()
+	for _, child := range this.children {
+		child.SendStop()
+	}
+}
+
+func (this *Parallel) reopen(context *Context) {
+	this.baseReopen(context)
+	for _, child := range this.children {
+		child.reopen(context)
+	}
 }
 
 func (this *Parallel) Done() {

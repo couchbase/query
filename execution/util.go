@@ -17,10 +17,7 @@ import (
 func notifyChildren(children ...Operator) {
 	for _, child := range children {
 		if child != nil {
-			select {
-			case child.StopChannel() <- 0:
-			default:
-			}
+			child.SendStop()
 		}
 	}
 }

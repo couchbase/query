@@ -249,6 +249,20 @@ func (this *IntersectScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.scans, copy.scans)
 }
 
+func (this *IntersectScan) SendStop() {
+	this.baseSendStop()
+	for _, scan := range this.scans {
+		scan.SendStop()
+	}
+}
+
+func (this *IntersectScan) reopen(context *Context) {
+	this.baseReopen(context)
+	for _, scan := range this.scans {
+		scan.reopen(context)
+	}
+}
+
 func (this *IntersectScan) Done() {
 	this.wait()
 	for s, scan := range this.scans {
