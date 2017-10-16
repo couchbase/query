@@ -1,0 +1,12 @@
+[{
+        "statements": "SELECT rs.formatted_address, rs.geometry.location FROM CURL(\"https://maps.googleapis.com/maps/api/geocode/json\",{\"data\":\"address=Half+Moon+Bay\", \"G\": true} ).results rs",
+        "results": [
+        {
+            "formatted_address": "Half Moon Bay, CA, USA",
+            "location": {
+                    "lat": 37.4635519,
+                    "lng": -122.4285862
+                }
+        }
+    ]
+}]

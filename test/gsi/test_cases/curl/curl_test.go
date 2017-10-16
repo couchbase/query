@@ -1,4 +1,4 @@
-//  Copyright (c) 2013 Couchbase, Inc.
+//  Copyright (c) 2017 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -7,30 +7,19 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package testcs_curlfunc
+package curlTest
 
 import (
-	"fmt"
-	"path/filepath"
+	"os"
+	"strings"
 	"testing"
 )
 
-func TestAllCaseFiles(t *testing.T) {
-	qc := Start_test()
-	matches, err := filepath.Glob("../case_*.json")
-	if err != nil {
-		t.Errorf("glob failed: %v", err)
-	}
-	for _, m := range matches {
-		t.Logf("TestCaseFile: %v\n", m)
-		stmt, err := testCaseFile(m, qc)
-		if err != nil {
-			t.Errorf("Error received : %s \n", err)
-			return
-		}
-		if stmt != "" {
-			t.Logf(" %v\n", stmt)
-		}
-		fmt.Println("\nQuery matched: ", m, "\n\n")
+// Basic test on cobering indexes
+func TestCover(t *testing.T) {
+
+	val := os.Getenv("GSI_TEST")
+	if strings.ToLower(val) == "true" {
+		runMatch("case_curl.json", start_cs(), t)
 	}
 }
