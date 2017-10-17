@@ -111,6 +111,7 @@ func (this *GenCache) Add(entry interface{}, id string, process func(interface{}
 		// required rather than switching it to the new entry
 		if process != nil {
 			if op = process(elem.contents); op == IGNORE {
+				this.locks[cacheNum].Unlock()
 				return
 			}
 		}
