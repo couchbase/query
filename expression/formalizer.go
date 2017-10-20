@@ -69,7 +69,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 }
 
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
@@ -237,10 +237,17 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 /*
 Create new scope containing bindings.
 */
-func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
-	allowed := value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
-	identifiers := value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
-	aliases := value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.aliases)
+
+func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
+	allowed := this.allowed
+	identifiers := this.identifiers
+	aliases := this.aliases
+
+	if push {
+		allowed = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
+		identifiers = value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
+		aliases = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.aliases)
+	}
 
 	var expr Expression
 	for _, b := range bindings {
@@ -268,9 +275,11 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 		b.SetExpression(expr)
 	}
 
-	this.allowed = allowed
-	this.identifiers = identifiers
-	this.aliases = aliases
+	if push {
+		this.allowed = allowed
+		this.identifiers = identifiers
+		this.aliases = aliases
+	}
 	return nil
 }
 
