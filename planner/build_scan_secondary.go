@@ -257,6 +257,8 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 		defer _FILTER_COVERS_POOL.Put(fc)
 		fc = se.cond.FilterCovers(fc)
 	}
+
+	nfcmatch := 0
 outer:
 	for _, tk := range te.sargKeys {
 		for _, sk := range se.sargKeys {
@@ -271,7 +273,12 @@ outer:
 
 		if _, ok := fc[tk.String()]; !ok {
 			return false
+		} else {
+			nfcmatch++
 		}
+	}
+	if len(te.sargKeys) == nfcmatch {
+		return true
 	}
 
 	return se.sumKeys > te.sumKeys ||
