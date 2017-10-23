@@ -130,6 +130,10 @@ func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expressi
 		return _EMPTY_SPANS, nil
 	}
 
+	if spans == nil || len(spans) == 0 {
+		return nil, nil
+	}
+
 	rv := NewIntersectSpans(spans...)
 	return rv.Streamline(), nil
 }
