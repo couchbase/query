@@ -56,7 +56,6 @@ func NewParsedValue(bytes []byte, isValidated bool) Value {
 	return &parsedValue{
 		raw:        bytes,
 		parsedType: parsedType,
-		state:      json.NewFindState(bytes),
 	}
 }
 
@@ -174,6 +173,9 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		// first served modify it, while the other will have to go
 		// the slow route
 		if goahead == 1 {
+			if this.state == nil {
+				this.state = json.NewFindState(this.raw)
+			}
 			res, err = json.FirstFindWithState(this.state, field)
 		} else {
 			res, err = json.FirstFind(raw, field)
