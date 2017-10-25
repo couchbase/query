@@ -155,6 +155,11 @@ func (this *base) baseReopen(context *Context) {
 	this.itemChannel = make(value.AnnotatedChannel, context.GetPipelineCap())
 	this.stopChannel = make(StopChannel, 1)
 	this.once.Reset()
+	this.primed = false
+	this.stopped = false
+	this.activeCond.L.Lock()
+	this.completed = false
+	this.activeCond.L.Unlock()
 }
 
 // accrues operators and phase times

@@ -141,6 +141,7 @@ func (this *ExceptAll) SendStop() {
 
 func (this *ExceptAll) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, 2)
 	if this.first != nil {
 		this.first.reopen(context)
 	}

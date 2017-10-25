@@ -124,6 +124,7 @@ func (this *UnionAll) SendStop() {
 
 func (this *UnionAll) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, len(this.children))
 	for _, child := range this.children {
 		child.reopen(context)
 	}

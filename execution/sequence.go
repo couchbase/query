@@ -133,6 +133,7 @@ func (this *Sequence) SendStop() {
 
 func (this *Sequence) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, 1)
 	for _, child := range this.children {
 		child.reopen(context)
 	}

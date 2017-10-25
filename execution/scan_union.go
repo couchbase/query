@@ -203,6 +203,7 @@ func (this *UnionScan) SendStop() {
 
 func (this *UnionScan) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, len(this.scans))
 	for _, scan := range this.scans {
 		scan.reopen(context)
 	}

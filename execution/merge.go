@@ -283,6 +283,7 @@ func (this *Merge) SendStop() {
 
 func (this *Merge) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, 3)
 	if this.update != nil {
 		this.update.reopen(context)
 	}

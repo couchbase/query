@@ -151,6 +151,7 @@ func (this *Parallel) SendStop() {
 
 func (this *Parallel) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, runtime.NumCPU())
 	for _, child := range this.children {
 		child.reopen(context)
 	}

@@ -192,6 +192,7 @@ func (this *DistinctScan) SendStop() {
 
 func (this *DistinctScan) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, 1)
 	if this.scan != nil {
 		this.scan.reopen(context)
 	}

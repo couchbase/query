@@ -86,3 +86,8 @@ func (this *Distinct) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *Distinct) reopen(context *Context) {
+	this.baseReopen(context)
+	this.set = value.NewSet(int(context.GetPipelineCap()), false)
+}

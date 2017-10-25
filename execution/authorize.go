@@ -131,6 +131,7 @@ func (this *Authorize) SendStop() {
 
 func (this *Authorize) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, 1)
 	if this.child != nil {
 		this.child.reopen(context)
 	}

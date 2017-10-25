@@ -228,3 +228,8 @@ func (this *OrderLimit) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *OrderLimit) reopen(context *Context) {
+	this.Order.reopen(context)
+	this.limit.baseReopen(context)
+}

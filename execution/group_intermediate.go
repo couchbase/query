@@ -117,3 +117,8 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *IntermediateGroup) reopen(context *Context) {
+	this.baseReopen(context)
+	this.groups = make(map[string]value.AnnotatedValue)
+}

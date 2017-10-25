@@ -308,6 +308,7 @@ func (this *OrderedIntersectScan) SendStop() {
 
 func (this *OrderedIntersectScan) reopen(context *Context) {
 	this.baseReopen(context)
+	this.childChannel = make(StopChannel, len(this.scans))
 	for _, scan := range this.scans {
 		scan.reopen(context)
 	}

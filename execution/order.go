@@ -178,3 +178,8 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *Order) reopen(context *Context) {
+	this.baseReopen(context)
+	this.values = _ORDER_POOL.Get()
+}
