@@ -28,10 +28,10 @@ type IndexNest struct {
 
 func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
 	rv := &IndexNest{
-		joinBase: newJoinBase(context),
-		plan:     plan,
+		plan: plan,
 	}
 
+	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = INDEX_NEST
 	rv.output = rv
 	return rv
@@ -42,10 +42,11 @@ func (this *IndexNest) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexNest) Copy() Operator {
-	return &IndexNest{
-		joinBase: this.joinBase.copy(),
-		plan:     this.plan,
+	rv := &IndexNest{
+		plan: this.plan,
 	}
+	this.joinBase.copy(&rv.joinBase)
+	return rv
 }
 
 func (this *IndexNest) RunOnce(context *Context, parent value.Value) {

@@ -59,16 +59,16 @@ func NewOrderLimit(plan *plan.Order, context *Context) *OrderLimit {
 }
 
 func (this *OrderLimit) Copy() Operator {
+	var rv *OrderLimit
+
 	if this.offset == nil {
-		return &OrderLimit{
+		rv = &OrderLimit{
 			Order: Order{
-				base:   this.base.copy(),
 				plan:   this.plan,
 				values: _ORDER_POOL.Get(),
 			},
 			offset: nil,
 			limit: &Limit{
-				base: this.limit.base.copy(),
 				plan: this.limit.plan,
 			},
 			numReturnedRows:  this.numReturnedRows,
@@ -76,19 +76,17 @@ func (this *OrderLimit) Copy() Operator {
 			fallback:         this.fallback,
 			numProcessedRows: this.numProcessedRows,
 		}
+		this.limit.base.copy(&rv.limit.base)
 	} else {
-		return &OrderLimit{
+		rv = &OrderLimit{
 			Order: Order{
-				base:   this.base.copy(),
 				plan:   this.plan,
 				values: _ORDER_POOL.Get(),
 			},
 			offset: &Offset{
-				base: this.offset.base.copy(),
 				plan: this.offset.plan,
 			},
 			limit: &Limit{
-				base: this.limit.base.copy(),
 				plan: this.limit.plan,
 			},
 			numReturnedRows:  this.numReturnedRows,
@@ -96,7 +94,11 @@ func (this *OrderLimit) Copy() Operator {
 			fallback:         this.fallback,
 			numProcessedRows: this.numProcessedRows,
 		}
+		this.offset.base.copy(&rv.offset.base)
+		this.limit.base.copy(&rv.limit.base)
 	}
+	this.Order.base.copy(&rv.Order.base)
+	return rv
 }
 
 func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {

@@ -27,13 +27,13 @@ type ExceptAll struct {
 
 func NewExceptAll(plan *plan.ExceptAll, context *Context, first, second Operator) *ExceptAll {
 	rv := &ExceptAll{
-		base:         newBase(context),
 		plan:         plan,
 		first:        first,
 		second:       second,
 		childChannel: make(StopChannel, 2),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -44,13 +44,13 @@ func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ExceptAll) Copy() Operator {
 	rv := &ExceptAll{
-		base:         this.base.copy(),
 		plan:         this.plan,
 		first:        this.first.Copy(),
 		second:       this.second.Copy(),
 		childChannel: make(StopChannel, 2),
 	}
 
+	this.base.copy(&rv.base)
 	return rv
 }
 

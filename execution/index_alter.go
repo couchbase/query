@@ -24,10 +24,10 @@ type AlterIndex struct {
 
 func NewAlterIndex(plan *plan.AlterIndex, context *Context) *AlterIndex {
 	rv := &AlterIndex{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -37,7 +37,9 @@ func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *AlterIndex) Copy() Operator {
-	return &AlterIndex{this.base.copy(), this.plan}
+	rv := &AlterIndex{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {

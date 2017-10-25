@@ -27,10 +27,10 @@ type Set struct {
 
 func NewSet(plan *plan.Set, context *Context) *Set {
 	rv := &Set{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -40,7 +40,9 @@ func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Set) Copy() Operator {
-	return &Set{this.base.copy(), this.plan}
+	rv := &Set{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Set) RunOnce(context *Context, parent value.Value) {

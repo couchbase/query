@@ -23,10 +23,10 @@ type Alias struct {
 
 func NewAlias(plan *plan.Alias, context *Context) *Alias {
 	rv := &Alias{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -36,7 +36,9 @@ func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Alias) Copy() Operator {
-	return &Alias{this.base.copy(), this.plan}
+	rv := &Alias{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Alias) RunOnce(context *Context, parent value.Value) {

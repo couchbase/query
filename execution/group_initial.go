@@ -27,11 +27,11 @@ type InitialGroup struct {
 
 func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 	rv := &InitialGroup{
-		base:   newBase(context),
 		plan:   plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -41,11 +41,12 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InitialGroup) Copy() Operator {
-	return &InitialGroup{
-		base:   this.base.copy(),
+	rv := &InitialGroup{
 		plan:   this.plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {

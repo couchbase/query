@@ -26,11 +26,11 @@ type SendInsert struct {
 
 func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
 	rv := &SendInsert{
-		base:  newBase(context),
 		plan:  plan,
 		limit: -1,
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = INSERT
 	rv.output = rv
 	return rv
@@ -41,7 +41,9 @@ func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendInsert) Copy() Operator {
-	return &SendInsert{this.base.copy(), this.plan, this.limit}
+	rv := &SendInsert{plan: this.plan, limit: this.limit}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *SendInsert) RunOnce(context *Context, parent value.Value) {

@@ -26,12 +26,12 @@ type Authorize struct {
 
 func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Authorize {
 	rv := &Authorize{
-		base:         newRedirectBase(),
 		plan:         plan,
 		child:        child,
 		childChannel: make(StopChannel, 1),
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -41,12 +41,13 @@ func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Authorize) Copy() Operator {
-	return &Authorize{
-		base:         this.base.copy(),
+	rv := &Authorize{
 		plan:         this.plan,
 		child:        this.child.Copy(),
 		childChannel: make(StopChannel, 1),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Authorize) RunOnce(context *Context, parent value.Value) {

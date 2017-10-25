@@ -23,10 +23,10 @@ type Join struct {
 
 func NewJoin(plan *plan.Join, context *Context) *Join {
 	rv := &Join{
-		joinBase: newJoinBase(context),
-		plan:     plan,
+		plan: plan,
 	}
 
+	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = JOIN
 	rv.output = rv
 	return rv
@@ -37,10 +37,11 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Join) Copy() Operator {
-	return &Join{
-		joinBase: this.joinBase.copy(),
-		plan:     this.plan,
+	rv := &Join{
+		plan: this.plan,
 	}
+	this.joinBase.copy(&rv.joinBase)
+	return rv
 }
 
 func (this *Join) RunOnce(context *Context, parent value.Value) {

@@ -26,11 +26,11 @@ type SendDelete struct {
 
 func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 	rv := &SendDelete{
-		base:  newBase(context),
 		plan:  plan,
 		limit: -1,
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = DELETE
 	rv.output = rv
 	return rv
@@ -41,7 +41,9 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendDelete) Copy() Operator {
-	return &SendDelete{this.base.copy(), this.plan, this.limit}
+	rv := &SendDelete{plan: this.plan, limit: this.limit}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {

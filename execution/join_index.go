@@ -30,10 +30,10 @@ type IndexJoin struct {
 
 func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 	rv := &IndexJoin{
-		joinBase: newJoinBase(context),
-		plan:     plan,
+		plan: plan,
 	}
 
+	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = INDEX_JOIN
 	rv.output = rv
 	return rv
@@ -44,10 +44,11 @@ func (this *IndexJoin) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexJoin) Copy() Operator {
-	return &IndexJoin{
-		joinBase: this.joinBase.copy(),
-		plan:     this.plan,
+	rv := &IndexJoin{
+		plan: this.plan,
 	}
+	this.joinBase.copy(&rv.joinBase)
+	return rv
 }
 
 func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {

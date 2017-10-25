@@ -25,10 +25,10 @@ type RevokeRole struct {
 
 func NewRevokeRole(plan *plan.RevokeRole, context *Context) *RevokeRole {
 	rv := &RevokeRole{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -38,7 +38,9 @@ func (this *RevokeRole) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *RevokeRole) Copy() Operator {
-	return &RevokeRole{this.base.copy(), this.plan}
+	rv := &RevokeRole{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {

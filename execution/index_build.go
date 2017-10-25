@@ -23,10 +23,10 @@ type BuildIndexes struct {
 
 func NewBuildIndexes(plan *plan.BuildIndexes, context *Context) *BuildIndexes {
 	rv := &BuildIndexes{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,7 +36,9 @@ func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *BuildIndexes) Copy() Operator {
-	return &BuildIndexes{this.base.copy(), this.plan}
+	rv := &BuildIndexes{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {

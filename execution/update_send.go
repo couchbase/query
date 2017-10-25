@@ -28,11 +28,11 @@ type SendUpdate struct {
 
 func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
 	rv := &SendUpdate{
-		base:  newBase(context),
 		plan:  plan,
 		limit: -1,
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = UPDATE
 	rv.output = rv
 	return rv
@@ -43,7 +43,9 @@ func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendUpdate) Copy() Operator {
-	return &SendUpdate{this.base.copy(), this.plan, this.limit}
+	rv := &SendUpdate{plan: this.plan, limit: this.limit}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {

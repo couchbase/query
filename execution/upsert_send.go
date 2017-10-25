@@ -25,10 +25,10 @@ type SendUpsert struct {
 
 func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
 	rv := &SendUpsert{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = UPSERT
 	rv.output = rv
 	return rv
@@ -39,7 +39,9 @@ func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendUpsert) Copy() Operator {
-	return &SendUpsert{this.base.copy(), this.plan}
+	rv := &SendUpsert{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {

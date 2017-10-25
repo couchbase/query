@@ -33,12 +33,12 @@ type OrderedIntersectScan struct {
 
 func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, context *Context, scans []Operator) *OrderedIntersectScan {
 	rv := &OrderedIntersectScan{
-		base:         newBase(context),
 		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -54,12 +54,13 @@ func (this *OrderedIntersectScan) Copy() Operator {
 		scans = append(scans, s.Copy())
 	}
 
-	return &OrderedIntersectScan{
-		base:         this.base.copy(),
+	rv := &OrderedIntersectScan{
 		plan:         this.plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) {

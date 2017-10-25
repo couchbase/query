@@ -28,12 +28,12 @@ type Parallel struct {
 
 func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Parallel {
 	rv := &Parallel{
-		base:         newBase(context),
 		plan:         plan,
 		child:        child,
 		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -43,12 +43,13 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Parallel) Copy() Operator {
-	return &Parallel{
-		base:         this.base.copy(),
+	rv := &Parallel{
 		plan:         this.plan,
 		child:        this.child.Copy(),
 		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {

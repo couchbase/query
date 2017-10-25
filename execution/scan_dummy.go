@@ -24,10 +24,10 @@ type DummyScan struct {
 
 func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
 	rv := &DummyScan{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -37,10 +37,11 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyScan) Copy() Operator {
-	return &DummyScan{
-		this.base.copy(),
-		this.plan,
+	rv := &DummyScan{
+		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *DummyScan) RunOnce(context *Context, parent value.Value) {

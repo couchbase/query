@@ -21,16 +21,12 @@ type joinBase struct {
 	joinKeyCount int
 }
 
-func newJoinBase(context *Context) joinBase {
-	return joinBase{
-		base: newBase(context),
-	}
+func newJoinBase(joinBase *joinBase, context *Context) {
+	newBase(&joinBase.base, context)
 }
 
-func (this *joinBase) copy() joinBase {
-	return joinBase{
-		base: this.base.copy(),
-	}
+func (this *joinBase) copy(joinBase *joinBase) {
+	this.base.copy(&joinBase.base)
 }
 
 func (this *joinBase) allocateBatch(context *Context) {

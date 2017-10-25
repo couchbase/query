@@ -27,10 +27,10 @@ type GrantRole struct {
 
 func NewGrantRole(plan *plan.GrantRole, context *Context) *GrantRole {
 	rv := &GrantRole{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -40,7 +40,9 @@ func (this *GrantRole) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *GrantRole) Copy() Operator {
-	return &GrantRole{this.base.copy(), this.plan}
+	rv := &GrantRole{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func validateRoles(candidateRoles, allRoles []datastore.Role, keyspaces map[string]bool) errors.Error {

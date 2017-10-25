@@ -26,10 +26,10 @@ type IndexCountScan struct {
 
 func NewIndexCountScan(plan *plan.IndexCountScan, context *Context) *IndexCountScan {
 	rv := &IndexCountScan{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -39,7 +39,9 @@ func (this *IndexCountScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexCountScan) Copy() Operator {
-	return &IndexCountScan{base: this.base.copy(), plan: this.plan}
+	rv := &IndexCountScan{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {

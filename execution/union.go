@@ -25,12 +25,12 @@ type UnionAll struct {
 
 func NewUnionAll(plan *plan.UnionAll, context *Context, children ...Operator) *UnionAll {
 	rv := &UnionAll{
-		base:         newBase(context),
 		plan:         plan,
 		children:     children,
 		childChannel: make(StopChannel, len(children)),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -41,10 +41,10 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *UnionAll) Copy() Operator {
 	rv := &UnionAll{
-		base:         this.base.copy(),
 		plan:         this.plan,
 		childChannel: make(StopChannel, len(this.children)),
 	}
+	this.base.copy(&rv.base)
 
 	children := _UNION_POOL.Get()
 

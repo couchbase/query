@@ -23,10 +23,10 @@ type CountScan struct {
 
 func NewCountScan(plan *plan.CountScan, context *Context) *CountScan {
 	rv := &CountScan{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,7 +36,9 @@ func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *CountScan) Copy() Operator {
-	return &CountScan{this.base.copy(), this.plan}
+	rv := &CountScan{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *CountScan) RunOnce(context *Context, parent value.Value) {

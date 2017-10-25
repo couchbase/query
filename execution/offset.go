@@ -27,10 +27,10 @@ type Offset struct {
 
 func NewOffset(plan *plan.Offset, context *Context) *Offset {
 	rv := &Offset{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -40,7 +40,9 @@ func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Offset) Copy() Operator {
-	return &Offset{this.base.copy(), this.plan, 0}
+	rv := &Offset{plan: this.plan, offset: 0}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Offset) RunOnce(context *Context, parent value.Value) {

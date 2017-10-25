@@ -27,11 +27,11 @@ type Fetch struct {
 
 func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv := &Fetch{
-		base:      newBase(context),
 		plan:      plan,
 		batchSize: PipelineBatchSize(),
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = FETCH
 	rv.output = rv
 	return rv
@@ -42,7 +42,9 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Fetch) Copy() Operator {
-	return &Fetch{this.base.copy(), this.plan, this.batchSize, 0}
+	rv := &Fetch{plan: this.plan, batchSize: this.batchSize}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
@@ -164,10 +166,10 @@ type DummyFetch struct {
 
 func NewDummyFetch(plan *plan.DummyFetch, context *Context) *DummyFetch {
 	rv := &DummyFetch{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -177,7 +179,9 @@ func (this *DummyFetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyFetch) Copy() Operator {
-	return &DummyFetch{this.base.copy(), this.plan}
+	rv := &DummyFetch{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *DummyFetch) RunOnce(context *Context, parent value.Value) {

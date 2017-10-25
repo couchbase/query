@@ -28,10 +28,10 @@ type IndexScan2 struct {
 
 func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {
 	rv := &IndexScan2{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -41,10 +41,11 @@ func (this *IndexScan2) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexScan2) Copy() Operator {
-	return &IndexScan2{
-		base: this.base.copy(),
+	rv := &IndexScan2{
 		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {

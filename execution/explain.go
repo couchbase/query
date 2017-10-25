@@ -24,10 +24,10 @@ type Explain struct {
 
 func NewExplain(plan plan.Operator, context *Context) *Explain {
 	rv := &Explain{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -37,7 +37,9 @@ func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Explain) Copy() Operator {
-	return &Explain{this.base.copy(), this.plan}
+	rv := &Explain{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Explain) RunOnce(context *Context, parent value.Value) {

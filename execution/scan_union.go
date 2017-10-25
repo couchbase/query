@@ -28,12 +28,12 @@ type UnionScan struct {
 
 func NewUnionScan(plan *plan.UnionScan, context *Context, scans []Operator) *UnionScan {
 	rv := &UnionScan{
-		base:         newBase(context),
 		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -49,12 +49,13 @@ func (this *UnionScan) Copy() Operator {
 		scans[i] = s.Copy()
 	}
 
-	return &UnionScan{
-		base:         this.base.copy(),
+	rv := &UnionScan{
 		plan:         this.plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *UnionScan) RunOnce(context *Context, parent value.Value) {

@@ -23,10 +23,10 @@ type Discard struct {
 
 func NewDiscard(plan *plan.Discard, context *Context) *Discard {
 	rv := &Discard{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,10 +36,11 @@ func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Discard) Copy() Operator {
-	return &Discard{
-		this.base.copy(),
-		this.plan,
+	rv := &Discard{
+		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Discard) RunOnce(context *Context, parent value.Value) {

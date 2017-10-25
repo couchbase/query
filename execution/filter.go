@@ -24,10 +24,10 @@ type Filter struct {
 
 func NewFilter(plan *plan.Filter, context *Context) *Filter {
 	rv := &Filter{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -37,7 +37,9 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Filter) Copy() Operator {
-	return &Filter{this.base.copy(), this.plan}
+	rv := &Filter{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Filter) RunOnce(context *Context, parent value.Value) {

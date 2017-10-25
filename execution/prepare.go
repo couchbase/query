@@ -24,11 +24,11 @@ type Prepare struct {
 
 func NewPrepare(plan *plan.Prepare, context *Context, prepared value.Value) *Prepare {
 	rv := &Prepare{
-		base:     newRedirectBase(),
 		plan:     plan,
 		prepared: prepared,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -38,11 +38,12 @@ func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Prepare) Copy() Operator {
-	return &Prepare{
-		this.base.copy(),
-		this.plan,
-		this.prepared,
+	rv := &Prepare{
+		plan:     this.plan,
+		prepared: this.prepared,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Prepare) RunOnce(context *Context, parent value.Value) {

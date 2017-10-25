@@ -29,12 +29,12 @@ type DistinctScan struct {
 
 func NewDistinctScan(plan *plan.DistinctScan, context *Context, scan Operator) *DistinctScan {
 	rv := &DistinctScan{
-		base:         newBase(context),
 		plan:         plan,
 		scan:         scan,
 		childChannel: make(StopChannel, 1),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -44,11 +44,12 @@ func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DistinctScan) Copy() Operator {
-	return &DistinctScan{
-		base:         this.base.copy(),
+	rv := &DistinctScan{
 		scan:         this.scan.Copy(),
 		childChannel: make(StopChannel, 1),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {

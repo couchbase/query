@@ -27,10 +27,10 @@ type Unset struct {
 
 func NewUnset(plan *plan.Unset, context *Context) *Unset {
 	rv := &Unset{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -40,7 +40,9 @@ func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Unset) Copy() Operator {
-	return &Unset{this.base.copy(), this.plan}
+	rv := &Unset{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Unset) RunOnce(context *Context, parent value.Value) {

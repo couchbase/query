@@ -23,10 +23,10 @@ type CreatePrimaryIndex struct {
 
 func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex, context *Context) *CreatePrimaryIndex {
 	rv := &CreatePrimaryIndex{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,7 +36,9 @@ func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *CreatePrimaryIndex) Copy() Operator {
-	return &CreatePrimaryIndex{this.base.copy(), this.plan}
+	rv := &CreatePrimaryIndex{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {

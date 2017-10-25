@@ -30,7 +30,6 @@ type Merge struct {
 
 func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
 	rv := &Merge{
-		base:         newBase(context),
 		plan:         plan,
 		update:       update,
 		delete:       delete,
@@ -38,6 +37,7 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 		childChannel: make(StopChannel, 3),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -47,14 +47,15 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Merge) Copy() Operator {
-	return &Merge{
-		base:         this.base.copy(),
+	rv := &Merge{
 		plan:         this.plan,
 		update:       copyOperator(this.update),
 		delete:       copyOperator(this.delete),
 		insert:       copyOperator(this.insert),
 		childChannel: make(StopChannel, 3),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Merge) RunOnce(context *Context, parent value.Value) {

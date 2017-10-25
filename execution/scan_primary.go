@@ -27,10 +27,10 @@ type PrimaryScan struct {
 
 func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
 	rv := &PrimaryScan{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -40,7 +40,9 @@ func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *PrimaryScan) Copy() Operator {
-	return &PrimaryScan{this.base.copy(), this.plan}
+	rv := &PrimaryScan{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {

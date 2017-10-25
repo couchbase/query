@@ -24,10 +24,10 @@ type Unnest struct {
 
 func NewUnnest(plan *plan.Unnest, context *Context) *Unnest {
 	rv := &Unnest{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -37,7 +37,9 @@ func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Unnest) Copy() Operator {
-	return &Unnest{this.base.copy(), this.plan}
+	rv := &Unnest{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Unnest) RunOnce(context *Context, parent value.Value) {

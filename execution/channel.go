@@ -19,10 +19,8 @@ type Channel struct {
 }
 
 func NewChannel(context *Context) *Channel {
-	rv := &Channel{
-		base: newBase(context),
-	}
-
+	rv := &Channel{}
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -32,9 +30,9 @@ func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Channel) Copy() Operator {
-	return &Channel{
-		base: this.base.copy(),
-	}
+	rv := &Channel{}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 // This operator is a no-op. It simply provides a shared itemChannel.

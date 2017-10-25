@@ -29,10 +29,10 @@ type IndexScan struct {
 
 func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
 	rv := &IndexScan{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -42,10 +42,11 @@ func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexScan) Copy() Operator {
-	return &IndexScan{
-		base: this.base.copy(),
+	rv := &IndexScan{
 		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
@@ -148,11 +149,11 @@ type spanScan struct {
 
 func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
 	rv := &spanScan{
-		base: newRedirectBase(),
 		plan: parent.plan,
 		span: span,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.parent = parent
 	rv.output = parent.output
 	return rv
@@ -163,11 +164,12 @@ func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *spanScan) Copy() Operator {
-	return &spanScan{
-		base: this.base.copy(),
+	rv := &spanScan{
 		plan: this.plan,
 		span: this.span,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {

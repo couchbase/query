@@ -27,11 +27,11 @@ type IntermediateGroup struct {
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *IntermediateGroup {
 	rv := &IntermediateGroup{
-		base:   newBase(context),
 		plan:   plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -41,11 +41,12 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntermediateGroup) Copy() Operator {
-	return &IntermediateGroup{
-		base:   this.base.copy(),
+	rv := &IntermediateGroup{
 		plan:   this.plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {

@@ -26,11 +26,11 @@ type FinalGroup struct {
 
 func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 	rv := &FinalGroup{
-		base:   newBase(context),
 		plan:   plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -40,11 +40,12 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *FinalGroup) Copy() Operator {
-	return &FinalGroup{
-		base:   this.base.copy(),
+	rv := &FinalGroup{
 		plan:   this.plan,
 		groups: make(map[string]value.AnnotatedValue),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {

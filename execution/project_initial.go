@@ -25,10 +25,10 @@ type InitialProject struct {
 
 func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProject {
 	rv := &InitialProject{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -38,7 +38,9 @@ func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InitialProject) Copy() Operator {
-	return &InitialProject{this.base.copy(), this.plan}
+	rv := &InitialProject{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *InitialProject) RunOnce(context *Context, parent value.Value) {

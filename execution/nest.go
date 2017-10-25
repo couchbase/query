@@ -23,10 +23,10 @@ type Nest struct {
 
 func NewNest(plan *plan.Nest, context *Context) *Nest {
 	rv := &Nest{
-		joinBase: newJoinBase(context),
-		plan:     plan,
+		plan: plan,
 	}
 
+	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = NEST
 	rv.output = rv
 	return rv
@@ -37,10 +37,11 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Nest) Copy() Operator {
-	return &Nest{
-		joinBase: this.joinBase.copy(),
-		plan:     this.plan,
+	rv := &Nest{
+		plan: this.plan,
 	}
+	this.joinBase.copy(&rv.joinBase)
+	return rv
 }
 
 func (this *Nest) RunOnce(context *Context, parent value.Value) {

@@ -27,13 +27,13 @@ type IntersectAll struct {
 
 func NewIntersectAll(plan *plan.IntersectAll, context *Context, first, second Operator) *IntersectAll {
 	rv := &IntersectAll{
-		base:         newBase(context),
 		plan:         plan,
 		first:        first,
 		second:       second,
 		childChannel: make(StopChannel, 2),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -44,13 +44,13 @@ func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IntersectAll) Copy() Operator {
 	rv := &IntersectAll{
-		base:         this.base.copy(),
 		plan:         this.plan,
 		first:        this.first.Copy(),
 		second:       this.second.Copy(),
 		childChannel: make(StopChannel, 2),
 	}
 
+	this.base.copy(&rv.base)
 	return rv
 }
 

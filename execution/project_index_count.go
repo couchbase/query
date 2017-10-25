@@ -25,10 +25,10 @@ type IndexCountProject struct {
 
 func NewIndexCountProject(plan *plan.IndexCountProject, context *Context) *IndexCountProject {
 	rv := &IndexCountProject{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -38,7 +38,9 @@ func (this *IndexCountProject) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexCountProject) Copy() Operator {
-	return &IndexCountProject{this.base.copy(), this.plan}
+	rv := &IndexCountProject{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IndexCountProject) RunOnce(context *Context, parent value.Value) {

@@ -26,12 +26,12 @@ type Distinct struct {
 
 func NewDistinct(plan *plan.Distinct, context *Context, collect bool) *Distinct {
 	rv := &Distinct{
-		base:    newBase(context),
 		set:     value.NewSet(int(context.GetPipelineCap()), false),
 		plan:    plan,
 		collect: collect,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -45,11 +45,12 @@ func (this *Distinct) Copy() Operator {
 	if this.set != nil {
 		cap = this.set.ObjectCap()
 	}
-	return &Distinct{
-		base: this.base.copy(),
+	rv := &Distinct{
 		plan: this.plan,
 		set:  value.NewSet(cap, false),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Distinct) RunOnce(context *Context, parent value.Value) {

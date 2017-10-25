@@ -96,28 +96,22 @@ func GetPipelineCap() int64 {
 	}
 }
 
-func newBase(context *Context) base {
-	rv := base{
-		itemChannel: make(value.AnnotatedChannel, context.GetPipelineCap()),
-		stopChannel: make(StopChannel, 1),
-		execPhase:   PHASES,
-		phaseTimes:  func(t time.Duration) {},
-	}
-	rv.activeCond = sync.NewCond(&rv.activeLock)
-	return rv
+func newBase(base *base, context *Context) {
+	base.itemChannel = make(value.AnnotatedChannel, context.GetPipelineCap())
+	base.stopChannel = make(StopChannel, 1)
+	base.execPhase = PHASES
+	base.phaseTimes = func(t time.Duration) {}
+	base.activeCond = sync.NewCond(&base.activeLock)
 }
 
 // The output of this operator will be redirected elsewhere, so we
 // allocate a minimal itemChannel.
-func newRedirectBase() base {
-	rv := base{
-		itemChannel: make(value.AnnotatedChannel, 1),
-		stopChannel: make(StopChannel, 1),
-		execPhase:   PHASES,
-		phaseTimes:  func(t time.Duration) {},
-	}
-	rv.activeCond = sync.NewCond(&rv.activeLock)
-	return rv
+func newRedirectBase(base *base) {
+	base.itemChannel = make(value.AnnotatedChannel, 1)
+	base.stopChannel = make(StopChannel, 1)
+	base.execPhase = PHASES
+	base.phaseTimes = func(t time.Duration) {}
+	base.activeCond = sync.NewCond(&base.activeLock)
 }
 
 // IMPORTANT - please remember to override the next three methods
@@ -226,18 +220,15 @@ func (this *base) SetRoot() {
 	this.isRoot = true
 }
 
-func (this *base) copy() base {
-	rv := base{
-		itemChannel: make(value.AnnotatedChannel, cap(this.itemChannel)),
-		stopChannel: make(StopChannel, 1),
-		input:       this.input,
-		output:      this.output,
-		parent:      this.parent,
-		execPhase:   this.execPhase,
-		phaseTimes:  this.phaseTimes,
-	}
-	rv.activeCond = sync.NewCond(&rv.activeLock)
-	return rv
+func (this *base) copy(base *base) {
+	base.itemChannel = make(value.AnnotatedChannel, cap(this.itemChannel))
+	base.stopChannel = make(StopChannel, 1)
+	base.input = this.input
+	base.output = this.output
+	base.parent = this.parent
+	base.execPhase = this.execPhase
+	base.phaseTimes = this.phaseTimes
+	base.activeCond = sync.NewCond(&base.activeLock)
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {

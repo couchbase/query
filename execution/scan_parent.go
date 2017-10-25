@@ -23,10 +23,10 @@ type ParentScan struct {
 
 func NewParentScan(plan *plan.ParentScan, context *Context) *ParentScan {
 	rv := &ParentScan{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,10 +36,11 @@ func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ParentScan) Copy() Operator {
-	return &ParentScan{
-		this.base.copy(),
-		this.plan,
+	rv := &ParentScan{
+		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *ParentScan) RunOnce(context *Context, parent value.Value) {

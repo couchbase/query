@@ -24,10 +24,10 @@ type Let struct {
 
 func NewLet(plan *plan.Let, context *Context) *Let {
 	rv := &Let{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -37,7 +37,9 @@ func (this *Let) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Let) Copy() Operator {
-	return &Let{this.base.copy(), this.plan}
+	rv := &Let{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Let) RunOnce(context *Context, parent value.Value) {

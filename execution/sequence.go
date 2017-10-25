@@ -25,12 +25,12 @@ type Sequence struct {
 
 func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *Sequence {
 	rv := &Sequence{
-		base:         newBase(context),
 		plan:         plan,
 		children:     children,
 		childChannel: make(StopChannel, 1),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -46,12 +46,13 @@ func (this *Sequence) Copy() Operator {
 		children = append(children, child.Copy())
 	}
 
-	return &Sequence{
-		base:         this.base.copy(),
+	rv := &Sequence{
 		plan:         this.plan,
 		children:     children,
 		childChannel: make(StopChannel, 1),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {

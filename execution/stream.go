@@ -23,10 +23,10 @@ type Stream struct {
 
 func NewStream(plan *plan.Stream, context *Context) *Stream {
 	rv := &Stream{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,10 +36,11 @@ func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Stream) Copy() Operator {
-	return &Stream{
-		this.base.copy(),
-		this.plan,
+	rv := &Stream{
+		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Stream) RunOnce(context *Context, parent value.Value) {

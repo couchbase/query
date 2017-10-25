@@ -27,11 +27,11 @@ const _COLLECT_CAP = 64
 
 func NewCollect(plan *plan.Collect, context *Context) *Collect {
 	rv := &Collect{
-		base:   newBase(context),
 		plan:   plan,
 		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -41,11 +41,12 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Collect) Copy() Operator {
-	return &Collect{
-		base:   this.base.copy(),
+	rv := &Collect{
 		plan:   this.plan,
 		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Collect) RunOnce(context *Context, parent value.Value) {

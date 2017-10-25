@@ -25,10 +25,10 @@ type ExpressionScan struct {
 
 func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionScan {
 	rv := &ExpressionScan{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -38,7 +38,9 @@ func (this *ExpressionScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ExpressionScan) Copy() Operator {
-	return &ExpressionScan{this.base.copy(), this.plan}
+	rv := &ExpressionScan{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {

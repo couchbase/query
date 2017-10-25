@@ -30,12 +30,12 @@ type IntersectScan struct {
 
 func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operator) *IntersectScan {
 	rv := &IntersectScan{
-		base:         newBase(context),
 		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -51,12 +51,13 @@ func (this *IntersectScan) Copy() Operator {
 		scans = append(scans, s.Copy())
 	}
 
-	return &IntersectScan{
-		base:         this.base.copy(),
+	rv := &IntersectScan{
 		plan:         this.plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {

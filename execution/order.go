@@ -32,11 +32,11 @@ var _ORDER_POOL = value.NewAnnotatedPool(_ORDER_CAP)
 
 func NewOrder(plan *plan.Order, context *Context) *Order {
 	rv := &Order{
-		base:   newBase(context),
 		plan:   plan,
 		values: _ORDER_POOL.Get(),
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = SORT
 	rv.output = rv
 	return rv
@@ -47,11 +47,12 @@ func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Order) Copy() Operator {
-	return &Order{
-		base:   this.base.copy(),
+	rv := &Order{
 		plan:   this.plan,
 		values: _ORDER_POOL.Get(),
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {

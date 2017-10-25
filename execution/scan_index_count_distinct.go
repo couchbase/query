@@ -25,10 +25,10 @@ type IndexCountDistinctScan2 struct {
 
 func NewIndexCountDistinctScan2(plan *plan.IndexCountDistinctScan2, context *Context) *IndexCountDistinctScan2 {
 	rv := &IndexCountDistinctScan2{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -38,7 +38,9 @@ func (this *IndexCountDistinctScan2) Accept(visitor Visitor) (interface{}, error
 }
 
 func (this *IndexCountDistinctScan2) Copy() Operator {
-	return &IndexCountDistinctScan2{base: this.base.copy(), plan: this.plan}
+	rv := &IndexCountDistinctScan2{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *IndexCountDistinctScan2) RunOnce(context *Context, parent value.Value) {

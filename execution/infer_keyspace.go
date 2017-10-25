@@ -25,10 +25,10 @@ type InferKeyspace struct {
 
 func NewInferKeyspace(plan *plan.InferKeyspace, context *Context) *InferKeyspace {
 	rv := &InferKeyspace{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.execPhase = INFER
 	rv.output = rv
 	return rv
@@ -39,7 +39,9 @@ func (this *InferKeyspace) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InferKeyspace) Copy() Operator {
-	return &InferKeyspace{this.base.copy(), this.plan}
+	rv := &InferKeyspace{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {

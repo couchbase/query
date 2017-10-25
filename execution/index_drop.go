@@ -23,10 +23,10 @@ type DropIndex struct {
 
 func NewDropIndex(plan *plan.DropIndex, context *Context) *DropIndex {
 	rv := &DropIndex{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -36,7 +36,9 @@ func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DropIndex) Copy() Operator {
-	return &DropIndex{this.base.copy(), this.plan}
+	rv := &DropIndex{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *DropIndex) RunOnce(context *Context, parent value.Value) {

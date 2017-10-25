@@ -26,10 +26,10 @@ type ValueScan struct {
 
 func NewValueScan(plan *plan.ValueScan, context *Context) *ValueScan {
 	rv := &ValueScan{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -39,7 +39,9 @@ func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ValueScan) Copy() Operator {
-	return &ValueScan{this.base.copy(), this.plan}
+	rv := &ValueScan{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *ValueScan) RunOnce(context *Context, parent value.Value) {

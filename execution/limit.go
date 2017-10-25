@@ -27,10 +27,10 @@ type Limit struct {
 
 func NewLimit(plan *plan.Limit, context *Context) *Limit {
 	rv := &Limit{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -40,7 +40,9 @@ func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Limit) Copy() Operator {
-	return &Limit{this.base.copy(), this.plan, this.limit}
+	rv := &Limit{plan: this.plan, limit: this.limit}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Limit) RunOnce(context *Context, parent value.Value) {

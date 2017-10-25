@@ -25,10 +25,10 @@ type CreateIndex struct {
 
 func NewCreateIndex(plan *plan.CreateIndex, context *Context) *CreateIndex {
 	rv := &CreateIndex{
-		base: newRedirectBase(),
 		plan: plan,
 	}
 
+	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -38,7 +38,9 @@ func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *CreateIndex) Copy() Operator {
-	return &CreateIndex{this.base.copy(), this.plan}
+	rv := &CreateIndex{plan: this.plan}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {

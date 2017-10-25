@@ -24,10 +24,10 @@ type Clone struct {
 
 func NewClone(plan *plan.Clone, context *Context) *Clone {
 	rv := &Clone{
-		base: newBase(context),
 		plan: plan,
 	}
 
+	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -37,10 +37,11 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Clone) Copy() Operator {
-	return &Clone{
-		base: this.base.copy(),
+	rv := &Clone{
 		plan: this.plan,
 	}
+	this.base.copy(&rv.base)
+	return rv
 }
 
 func (this *Clone) RunOnce(context *Context, parent value.Value) {
