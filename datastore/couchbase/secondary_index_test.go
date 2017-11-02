@@ -41,7 +41,8 @@ var index *secondaryIndex
 var qpServer *qp.Server
 
 func init() {
-	qpServer = startQueryport("localhost:9998", serverCallb)
+	testUrl := server.GetIP(true) + ":9998"
+	qpServer = startQueryport(testUrl, serverCallb)
 
 	ns := &namespace{
 		name:          "default",
@@ -68,7 +69,7 @@ func init() {
 	}
 	index, _ = new2iIndex(
 		"testindex", equalKey, rangeKey, whereKey, "gsi", ks)
-	index.setHost([]string{"localhost:9998"})
+	index.setHost([]string{testUrl})
 }
 
 func Test2iKeyspaceId(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 	"github.com/peterh/liner"
 )
 
-var Server = "http://127.0.0.1:8091"
+var Server = "http://localhost:8091"
 
 func execline(line string, t *testing.T) {
 	var liner = liner.NewLiner()

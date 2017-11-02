@@ -27,6 +27,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 )
 
@@ -86,7 +87,7 @@ func (this *cbConfigStore) URL() string {
 
 func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
 	if httpAddr != "" {
-		port := hostPort(httpAddr)
+		_, port := server.HostNameandPort(httpAddr)
 		if port != "" {
 			portNum, err := strconv.Atoi(port)
 			if err == nil && portNum > 0 {
@@ -99,7 +100,7 @@ func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
 		}
 	}
 	if httpsAddr != "" {
-		port := hostPort(httpsAddr)
+		_, port := server.HostNameandPort(httpsAddr)
 		if port != "" {
 			portNum, err := strconv.Atoi(port)
 			if err == nil && portNum > 0 {
@@ -296,10 +297,12 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 					this.whoAmI = whoAmI
 					this.state = state
 
+					hostName, _ := server.HostNameandPort(whoAmI)
+
 					// no more changes will happen if we are clustered and have a FQDN
 					// (name will not fall back to 127.0.0.1), or we are standalone
 					this.noMoreChecks = (state == clustering.STANDALONE ||
-						(state == clustering.CLUSTERED && hostName(whoAmI) != "127.0.0.1"))
+						(state == clustering.CLUSTERED && hostName != server.GetIP(false)))
 
 				}
 				return this.whoAmI, this.state, nil
@@ -331,8 +334,11 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 		if newErr == nil && state != "" {
 			this.whoAmI = whoAmI
 			this.state = state
+
+			hostName, _ := server.HostNameandPort(whoAmI)
+
 			this.noMoreChecks = (state == clustering.STANDALONE ||
-				(state == clustering.CLUSTERED && hostName(whoAmI) != "127.0.0.1"))
+				(state == clustering.CLUSTERED && hostName != server.GetIP(false)))
 			return this.whoAmI, this.state, nil
 		} else if err == nil {
 			err = newErr
@@ -367,8 +373,11 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 		this.poolName = p.Name
 		this.whoAmI = whoAmI
 		this.state = state
+
+		hostName, _ := server.HostNameandPort(whoAmI)
+
 		this.noMoreChecks = (state == clustering.STANDALONE ||
-			(state == clustering.CLUSTERED && hostName(whoAmI) != "127.0.0.1"))
+			(state == clustering.CLUSTERED && hostName != server.GetIP(false)))
 		return this.whoAmI, this.state, nil
 	}
 
@@ -393,7 +402,9 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 		// hostname is 127.0.0.1
 		hostname := node.Hostname
 		if hostname == "" {
-			hostname = "127.0.0.1"
+			// For constructing URLs with raw IPv6 addresses- the IPv6 address
+			// must be enclosed within ‘[‘ and ‘]’ brackets.
+			hostname = server.GetIP(true)
 		}
 
 		mgmtPort := node.Services["mgmt"]
@@ -564,8 +575,10 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 		// nodeServices.Hostname is either a fully-qualified domain name or
 		// the empty string - which indicates 127.0.0.1
+		// For constructing URLs with raw IPv6 addresses- the IPv6 address
+		// must be enclosed within ‘[‘ and ‘]’ brackets.
 		if hostname == "" {
-			hostname = "127.0.0.1"
+			hostname = server.GetIP(true)
 		}
 
 		mgmtPort := nodeServices.Services["mgmt"]
@@ -594,19 +607,6 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 	this.poolSrvRev = poolServices.Rev
 	return this.queryNodeNames, nil
-}
-
-func hostName(node string) string {
-	tokens := strings.Split(node, ":")
-	return tokens[0]
-}
-
-func hostPort(node string) string {
-	tokens := strings.Split(node, ":")
-	if len(tokens) == 2 {
-		return tokens[1]
-	}
-	return ""
 }
 
 func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {

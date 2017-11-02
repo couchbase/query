@@ -13,6 +13,8 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 	"github.com/samuel/go-zookeeper/zk"
+
+	"github.com/couchbase/query/server"
 )
 
 const _PREFIX = "zookeeper:"
@@ -379,7 +381,7 @@ func NewQueryNode(query_addr string,
 	opts *clustering.ClOptions) (clustering.QueryNode, errors.Error) {
 	ip_addr, err := util.ExternalIP()
 	if err != nil {
-		ip_addr = "127.0.0.1"
+		ip_addr = server.GetIP(true)
 	}
 	// Construct query node name from ip addr and http_addr. Assumption that this will be unique
 	queryName := ip_addr + query_addr

@@ -53,6 +53,8 @@ var Namespace_FS = "dimestore"
 var Consistency_parameter = datastore.SCAN_PLUS
 
 func init() {
+	Pool_CBS = server.GetIP(true) + ":8091/"
+
 	logger, _ := log_resolver.NewLogger("golog")
 	logging.SetLogger(logger)
 }

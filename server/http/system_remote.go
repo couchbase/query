@@ -52,14 +52,51 @@ func (this *systemRemoteHttp) MakeKey(node string, key string) string {
 
 // split global key into name and local key
 func (this *systemRemoteHttp) SplitKey(key string) (string, string) {
-	if strings.HasPrefix(key, "[") {
-		fields := strings.FieldsFunc(key, func(c rune) bool {
-			return c == '[' || c == ']'
-		})
-		if len(fields) == 2 {
-			return fields[0], fields[1]
-		}
+	bytes := []byte(key)
+	l := len(bytes)
+	o := 0
+
+	// skip spaces
+	for o < l && bytes[o] == ' ' {
+		o++
 	}
+
+	// if no square brackets or a single character, no node name
+	if o >= l-1 || bytes[o] != '[' {
+		return "", key
+	}
+
+	o++
+	start := o
+	brackets := 1
+
+	// two consecutive square brackets mean IPv6
+	if bytes[o] == '[' {
+		brackets++
+	}
+
+	// scan the string and look for the other side
+	for o <= l {
+		if bytes[o] == ']' {
+			brackets--
+
+			// yay, found the node
+			if brackets == 0 {
+
+				// if there's characters after the last bracket, all good
+				if o < l-1 {
+					return string(bytes[start:o]), string(bytes[o+1 : l])
+				} else {
+
+					// node but no document key?
+					break
+				}
+			}
+		}
+		o++
+	}
+
+	// couldn't make sense of anything
 	return "", key
 }
 

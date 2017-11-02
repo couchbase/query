@@ -21,11 +21,18 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore/mock"
 	_ "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/server"
 )
 
 const (
 	couchbase_location = "localhost"
 )
+
+func init() {
+	// For constructing URLs with raw IPv6 addresses- the IPv6 address
+	// must be enclosed within ‘[‘ and ‘]’ brackets.
+	couchbase_location = server.GetIP(true)
+}
 
 func TestCBClustering(t *testing.T) {
 	if !couchbase_running(couchbase_location) {

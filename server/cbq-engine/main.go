@@ -58,6 +58,7 @@ var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
 var HTTPS_ADDR = flag.String("https", ":18093", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
+var IPv6 = flag.Bool("ipv6", false, "Query is IPv6 compliant")
 
 // The ssl_minimum_protocol flag is currently provided but is unused.
 // It is included here because if a flag is provided and is not picked up,
@@ -95,8 +96,13 @@ func main() {
 	HideConsole(true)
 	defer HideConsole(false)
 
+	// Set Ipv6 or Ipv4
+	server.SetIP(*IPv6)
+
 	// useful for getting list of go-routines
-	go go_http.ListenAndServe("localhost:6060", nil)
+	// localhost needs to refer to either 127.0.0.1 or [::1]
+	urlV := server.GetIP(true) + ":6060"
+	go go_http.ListenAndServe(urlV, nil)
 
 	flag.Parse()
 
@@ -199,6 +205,7 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,

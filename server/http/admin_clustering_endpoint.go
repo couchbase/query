@@ -150,7 +150,7 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 	}
 	name, er := cfgStore.WhoAmI()
 	if er != nil {
-		return nil, errors.NewAdminGetNodeError(er, "localhost")
+		return nil, errors.NewAdminGetNodeError(er, server.GetIP(false))
 	}
 	if localConfig.myConfig != nil && name == localConfig.name {
 		return localConfig.myConfig, nil

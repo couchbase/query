@@ -19,10 +19,15 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore/mock"
 	"github.com/samuel/go-zookeeper/zk"
+
+	"github.com/couchbase/query/server"
 )
 
 func TestZKClustering(t *testing.T) {
-	cs, err := NewConfigstore("localhost:2181")
+	// When creating a new configstore we call zookeeper.connect which
+	// uses a url. Hence for IPv6 this value needs to be changed to [::1]
+	localhost = server.GetIP(true) + ":2181"
+	cs, err := NewConfigstore(localhost)
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
 	version := clustering.NewVersion("0.7.0")
@@ -131,7 +136,9 @@ func TestZKClustering(t *testing.T) {
 }
 
 func zookeeper_running() bool {
-	c, _, err1 := zk.Connect([]string{"127.0.0.1"}, time.Second) //*10)
+	// For constructing URLs with raw IPv6 addresses- the IPv6 address
+	// must be enclosed within ‘[‘ and ‘]’ brackets.
+	c, _, err1 := zk.Connect([]string{server.GetIP(true)}, time.Second) //*10)
 	_, _, _, err2 := c.ChildrenW("/")
 	return err1 == nil && err2 == nil
 }

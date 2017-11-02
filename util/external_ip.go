@@ -14,6 +14,8 @@ import (
 	"net"
 )
 
+var IPv6 = false
+
 // helper function to determine the external IP address of a query node -
 // used to create a name for the query node in NewQueryNode function.
 func ExternalIP() (string, error) {
@@ -75,9 +77,14 @@ func ExternalNICs() ([]*NetworkInterface, []error) {
 			if ip == nil || ip.IsLoopback() {
 				continue
 			}
-			ip = ip.To4()
+			if IPv6 {
+				ip = ip.To16()
+			} else {
+				ip = ip.To4()
+			}
+
 			if ip == nil {
-				continue // not an ipv4 address
+				continue // not an ipv4 or an ipv6 address
 			}
 
 			// we want the pointer to the actual interface, if we want to be

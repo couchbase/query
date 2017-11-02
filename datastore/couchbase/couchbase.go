@@ -39,6 +39,8 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+
+	"github.com/couchbase/query/server"
 )
 
 var REQUIRE_CBAUTH bool // Connection to authorization system must succeed.
@@ -104,12 +106,12 @@ func (info *infoImpl) Version() string {
 	return info.client.Info.ImplementationVersion
 }
 
-func hostName(n string) string {
-	tokens := strings.Split(n, ":")
-	if tokens[0] != "" {
+func fullhostName(n string) string {
+	hostName, portVal := server.HostNameandPort(n)
+	if hostName != "" {
 		return n
 	}
-	return "127.0.0.1:" + tokens[1]
+	return server.GetIP(true) + ":" + portVal
 }
 
 func (info *infoImpl) Topology() ([]string, []errors.Error) {
@@ -121,7 +123,7 @@ func (info *infoImpl) Topology() ([]string, []errors.Error) {
 
 		if err == nil {
 			for _, node := range pool.Nodes {
-				nodes = append(nodes, hostName(node.Hostname))
+				nodes = append(nodes, fullhostName(node.Hostname))
 			}
 		} else {
 			errs = append(errs, errors.NewDatastoreClusterError(err, p.Name))
@@ -180,7 +182,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 					var servicesCopy []interface{}
 
 					newServices := make(map[string]interface{}, 3)
-					newServices["name"] = hostName(n.Hostname)
+					newServices["name"] = fullhostName(n.Hostname)
 					for _, s := range n.Services {
 						servicesCopy = append(servicesCopy, s)
 					}
@@ -221,7 +223,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 							break
 						}
 					}
-					nodeServices[hostName(n.Hostname)] = newServices
+					nodeServices[fullhostName(n.Hostname)] = newServices
 				}
 				newPoolServices.nodeServices = nodeServices
 				_POOLMAP.poolServices[p.Name] = newPoolServices

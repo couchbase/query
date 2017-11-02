@@ -30,6 +30,12 @@ import (
 
 const TEST_URL = "http://localhost:9000/"
 
+func init() {
+	// For constructing URLs with raw IPv6 addresses- the IPv6 address
+	// must be enclosed within ‘[‘ and ‘]’ brackets.
+	TEST_URL = "http://" + server.GetIP(true) + ":9000"
+}
+
 func TestServer(t *testing.T) {
 
 	logger, _ := log_resolver.NewLogger("golog")

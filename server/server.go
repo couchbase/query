@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -56,6 +57,8 @@ var _PROFILE_NAMES = []string{
 	ProfPhases: "phases",
 	ProfOn:     "timings",
 }
+
+var _IPv6 = false
 
 func (profile Profile) String() string {
 	return _PROFILE_NAMES[profile]
@@ -640,4 +643,48 @@ func GetControls() bool {
 
 func GetProfile() Profile {
 	return options.Profile()
+}
+
+// Return the correct address for localhost depending on if
+// IPv4 or IPv6
+func GetIP(is_url bool) string {
+	if _IPv6 {
+		if is_url {
+			return "[::1]"
+		} else {
+			return "::1"
+		}
+	}
+	return "127.0.0.1"
+}
+
+func SetIP(val bool) {
+	_IPv6 = val
+	util.IPv6 = val
+}
+
+// This needs to support both IPv4 and IPv6
+// The prev version of impl for this function assumed
+// that node is always ip:port. It should not have a protocol component.
+func HostNameandPort(node string) (host, port string) {
+	tokens := []string{}
+	// For IPv6
+	if _IPv6 {
+		// Then the url should be of the form [::1]:8091
+		tokens = strings.Split(node, "]:")
+		host = strings.Replace(tokens[0], "[", "", 1)
+
+	} else {
+		// For IPv4
+		tokens = strings.Split(node, ":")
+		host = tokens[0]
+	}
+
+	if len(tokens) == 2 {
+		port = tokens[1]
+	} else {
+		port = ""
+	}
+
+	return
 }
