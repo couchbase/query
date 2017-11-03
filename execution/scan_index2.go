@@ -21,9 +21,8 @@ import (
 
 type IndexScan2 struct {
 	base
-	plan         *plan.IndexScan2
-	children     []Operator
-	childChannel StopChannel
+	plan     *plan.IndexScan2
+	children []Operator
 }
 
 func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {
@@ -51,10 +50,11 @@ func (this *IndexScan2) Copy() Operator {
 func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		conn := datastore.NewIndexConnection(context)
@@ -62,7 +62,6 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 
 		go this.scan(context, conn)
 
-		var entry *datastore.IndexEntry
 		ok := true
 		var docs uint64 = 0
 
@@ -74,17 +73,9 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 		defer countDocs()
 
 		for ok {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				return
-			default:
-			}
-
-			select {
-			case entry, ok = <-conn.EntryChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+			entry, cont := this.getItemEntry(conn.EntryChannel())
+			if cont {
+				if entry != nil {
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)
 
@@ -130,9 +121,10 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 						context.AddPhaseCount(INDEX_SCAN, docs)
 						docs = 0
 					}
+				} else {
+					ok = false
 				}
-
-			case <-this.stopChannel:
+			} else {
 				return
 			}
 		}

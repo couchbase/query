@@ -374,12 +374,15 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	// FIXME: this should handled by the planner
 	collect := NewCollect(plan.NewCollect(), this)
 	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
+	sequence.SetInput(sequence)
 	sequence.RunOnce(this, parent)
 
 	// Await completion
-	ok = true
+	// No value goes in the way of the sequence (it's reading on itself)
+	// but while the channel is open, the query is running, so that's
+	// a simple way to wait.
 	for ok {
-		_, ok = <-collect.Output().ItemChannel()
+		_, ok = sequence.getItem()
 	}
 
 	results := collect.ValuesOnce()

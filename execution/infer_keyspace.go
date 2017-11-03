@@ -47,10 +47,11 @@ func (this *InferKeyspace) Copy() Operator {
 func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer func() { this.switchPhase(_NOTIME) }()
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		conn := datastore.NewValueConnection(context)
 		defer notifyConn(conn.StopChannel())
@@ -67,25 +68,16 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 
 		ok := true
 		for ok {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				return
-			default:
-			}
+			item, cont := this.getItemValue(conn.ValueChannel())
+			if item != nil && cont {
+				val = item.(value.Value)
 
-			select {
-			case val, ok = <-conn.ValueChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
-
-					// current policy is to only count 'in' documents
-					// from operators, not kv
-					// add this.addInDocs(1) if this changes
-					ok = this.sendItem(value.NewAnnotatedValue(val))
-				}
-			case <-this.stopChannel:
-				return
+				// current policy is to only count 'in' documents
+				// from operators, not kv
+				// add this.addInDocs(1) if this changes
+				ok = this.sendItem(value.NewAnnotatedValue(val))
+			} else {
+				break
 			}
 		}
 	})

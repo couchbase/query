@@ -44,10 +44,11 @@ func (this *CountScan) Copy() Operator {
 func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(COUNT, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		this.switchPhase(_SERVTIME)

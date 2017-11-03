@@ -20,20 +20,19 @@ import (
 
 type UnionScan struct {
 	base
-	plan         *plan.UnionScan
-	scans        []Operator
-	keys         map[string]bool
-	childChannel StopChannel
+	plan  *plan.UnionScan
+	scans []Operator
+	keys  map[string]bool
 }
 
 func NewUnionScan(plan *plan.UnionScan, context *Context, scans []Operator) *UnionScan {
 	rv := &UnionScan{
-		plan:         plan,
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		plan:  plan,
+		scans: scans,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(len(scans))
 	rv.output = rv
 	return rv
 }
@@ -50,9 +49,8 @@ func (this *UnionScan) Copy() Operator {
 	}
 
 	rv := &UnionScan{
-		plan:         this.plan,
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		plan:  this.plan,
+		scans: scans,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -62,11 +60,10 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		defer func() {
 			this.keys = nil
@@ -86,7 +83,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		channel := NewChannel(context)
-		defer channel.Close()
+		this.SetInput(channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
@@ -94,7 +91,6 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			go scan.RunOnce(context, parent)
 		}
 
-		var item value.AnnotatedValue
 		limit := evalLimitOffset(this.plan.Limit(), nil, int64(-1), this.plan.Covering(), context)
 		offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
 		n := len(this.scans)
@@ -102,42 +98,35 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 
 	loop:
 		for ok {
-			this.switchPhase(_CHANTIME)
-			select {
-			case <-this.stopChannel:
-				break loop
-			default:
-			}
-
-			select {
-			case item, ok = <-channel.ItemChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+			item, child, cont := this.getItemChildren()
+			if cont {
+				if item != nil {
 					this.addInDocs(1)
 					ok = this.processKey(item, context, limit, offset)
-				}
-			case <-this.childChannel:
-				n--
-			case <-this.stopChannel:
-				break loop
-			default:
-				if n == 0 {
+				} else if child >= 0 {
+					n--
+
+					// now that no child is left behind, signal that there
+					// is no further input coming in past what already queued
+					if n == 0 {
+						channel.close(context)
+					}
+				} else {
 					break loop
 				}
+			} else {
+
+				// stop children, wait and clean up
+				if n > 0 {
+					notifyChildren(this.scans...)
+					this.childrenWaitNoStop(n)
+					channel.close(context)
+				}
+				break loop
 			}
 		}
 
-		// Await children
-		this.switchPhase(_CHANTIME)
-		notifyChildren(this.scans...)
-		for ; n > 0; n-- {
-			<-this.childChannel
-		}
 	})
-}
-
-func (this *UnionScan) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *UnionScan) processKey(item value.AnnotatedValue,
@@ -203,7 +192,6 @@ func (this *UnionScan) SendStop() {
 
 func (this *UnionScan) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, len(this.scans))
 	for _, scan := range this.scans {
 		scan.reopen(context)
 	}

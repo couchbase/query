@@ -1,3 +1,4 @@
+//  Copyright (c) 2014 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -7,6 +8,11 @@
 //  and limitations under the License.
 
 package execution
+
+// IMPORTANT - please remember to override the opener, destructor and
+// message methods in individual operators whenever there are actions
+// to be taken on children operators, so as to ensure correct operation
+// and avoid hangs destruction and contain memory consumption
 
 import (
 	"fmt"
@@ -39,13 +45,16 @@ var _PHASENAMES = []string{
 	_SERVTIME: "services",
 }
 
+type annotatedChannel chan value.AnnotatedValue
+
 type base struct {
-	itemChannel   value.AnnotatedChannel
-	stopChannel   StopChannel // Never closed
+	itemChannel   annotatedChannel
+	stopChannel   stopChannel // Never closed
+	childChannel  stopChannel // Never closed
 	input         Operator
 	output        Operator
 	stop          Operator
-	parent        Parent
+	parent        Operator
 	once          util.Once
 	batch         []value.AnnotatedValue
 	timePhase     timePhases
@@ -96,9 +105,11 @@ func GetPipelineCap() int64 {
 	}
 }
 
+// Constructor, (re)opener, closer, destructor
+
 func newBase(base *base, context *Context) {
-	base.itemChannel = make(value.AnnotatedChannel, context.GetPipelineCap())
-	base.stopChannel = make(StopChannel, 1)
+	base.itemChannel = make(annotatedChannel, context.GetPipelineCap())
+	base.stopChannel = make(stopChannel, 1)
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
 	base.activeCond = sync.NewCond(&base.activeLock)
@@ -107,21 +118,25 @@ func newBase(base *base, context *Context) {
 // The output of this operator will be redirected elsewhere, so we
 // allocate a minimal itemChannel.
 func newRedirectBase(base *base) {
-	base.itemChannel = make(value.AnnotatedChannel, 1)
-	base.stopChannel = make(StopChannel, 1)
+	base.itemChannel = make(annotatedChannel, 1)
+	base.stopChannel = make(stopChannel, 1)
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
 	base.activeCond = sync.NewCond(&base.activeLock)
 }
 
-// IMPORTANT - please remember to override the next three methods
-// in individual operators whenever there are actions to be taken on
-// children operators, so as to ensure correct operation and avoid
-// hangs destruction and contain memory consumption
-
-// send a stop
-func (this *base) SendStop() {
-	this.baseSendStop()
+func (this *base) copy(base *base) {
+	base.itemChannel = make(annotatedChannel, cap(this.itemChannel))
+	base.stopChannel = make(stopChannel, 1)
+	if this.childChannel != nil {
+		base.childChannel = make(stopChannel, cap(this.childChannel))
+	}
+	base.input = this.input
+	base.output = this.output
+	base.parent = this.parent
+	base.execPhase = this.execPhase
+	base.phaseTimes = this.phaseTimes
+	base.activeCond = sync.NewCond(&base.activeLock)
 }
 
 // reset the operator to an initial state
@@ -132,28 +147,23 @@ func (this *base) reopen(context *Context) {
 	this.baseReopen(context)
 }
 
-// execution destructor is empty by default
-func (this *base) Done() {
+func (this *base) close(context *Context) {
+	this.inactive()
+	close(this.itemChannel)
 }
 
-// stop for the terminal operator case
-func (this *base) baseSendStop() {
-	if this.completed {
-		return
-	}
-	this.switchPhase(_CHANTIME)
-	select {
-	case this.stopChannel <- 0:
-	default:
-	}
-	this.switchPhase(_EXECTIME)
+// execution destructor is empty by default
+func (this *base) Done() {
 }
 
 // reopen for the terminal operator case
 func (this *base) baseReopen(context *Context) {
 	this.wait()
-	this.itemChannel = make(value.AnnotatedChannel, context.GetPipelineCap())
-	this.stopChannel = make(StopChannel, 1)
+	this.itemChannel = make(annotatedChannel, context.GetPipelineCap())
+	this.stopChannel = make(stopChannel, 1)
+	if this.childChannel != nil {
+		this.childChannel = make(stopChannel, cap(this.childChannel))
+	}
 	this.once.Reset()
 	this.primed = false
 	this.stopped = false
@@ -162,23 +172,22 @@ func (this *base) baseReopen(context *Context) {
 	this.activeCond.L.Unlock()
 }
 
-// accrues operators and phase times
-func (this *base) setExecPhase(phase Phases, context *Context) {
-	context.AddPhaseOperator(phase)
-	this.addExecPhase(phase, context)
+// setUp
+
+func (this *base) trackChildren(count int) {
+	this.childChannel = make(stopChannel, count)
 }
 
-// accrues phase times (useful where we don't want to count operators)
-func (this *base) addExecPhase(phase Phases, context *Context) {
-	this.phaseTimes = func(t time.Duration) { context.AddPhaseTime(phase, t) }
-}
-
-func (this *base) ItemChannel() value.AnnotatedChannel {
+func (this *base) ItemChannel() annotatedChannel {
 	return this.itemChannel
 }
 
-func (this *base) StopChannel() StopChannel {
+func (this *base) stopCh() stopChannel {
 	return this.stopChannel
+}
+
+func (this *base) childCh() stopChannel {
+	return this.childChannel
 }
 
 func (this *base) Input() Operator {
@@ -205,11 +214,11 @@ func (this *base) SetStop(op Operator) {
 	this.stop = op
 }
 
-func (this *base) Parent() Parent {
+func (this *base) Parent() Operator {
 	return this.parent
 }
 
-func (this *base) SetParent(parent Parent) {
+func (this *base) SetParent(parent Operator) {
 	this.parent = parent
 }
 
@@ -225,25 +234,49 @@ func (this *base) SetRoot() {
 	this.isRoot = true
 }
 
-func (this *base) copy(base *base) {
-	base.itemChannel = make(value.AnnotatedChannel, cap(this.itemChannel))
-	base.stopChannel = make(StopChannel, 1)
-	base.input = this.input
-	base.output = this.output
-	base.parent = this.parent
-	base.execPhase = this.execPhase
-	base.phaseTimes = this.phaseTimes
-	base.activeCond = sync.NewCond(&base.activeLock)
+// value and message exchange
+//
+// The rules are simple - we always receive from input and send onto output.
+// Use SetInput() and SetOutput() as required.
+// Output by default set to our own item channel.
+// If you need to receive from a specific operator, set your input to that operator.
+// If you need to fan out - set multiple inputs to the same producer operator
+// If you need to fan in - create a channel operator, set the producer outputs to
+// the channel, set the consumer input to the channel.
+//
+// The boolean return value is always true unless a stop signal has been received.
+// The returned item is nil on no more data (usually, a channel close).
+// The child return value is >=0 if a child message has been received.
+
+// send a stop
+func (this *base) SendStop() {
+	this.baseSendStop()
+}
+
+// stop for the terminal operator case
+func (this *base) baseSendStop() {
+	if this.completed {
+		return
+	}
+	this.switchPhase(_CHANTIME)
+	select {
+	case this.stopChannel <- 0:
+	default:
+	}
+	this.switchPhase(_EXECTIME)
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
-	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
+	return this.sendItemOp(this.output, item)
+}
 
+func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 	if this.stopped {
 		return false
 	}
 
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
 	select {
 	case <-this.stopChannel: // Never closed
 		return false
@@ -251,14 +284,166 @@ func (this *base) sendItem(item value.AnnotatedValue) bool {
 	}
 
 	select {
-	case this.output.ItemChannel() <- item:
+	case op.ItemChannel() <- item:
 
-		// sendItem keeps track of outgoing
+		// sendItemOp keeps track of outgoing
 		// documengs for most operators
 		this.addOutDocs(1)
 		return true
 	case <-this.stopChannel: // Never closed
 		return false
+	}
+}
+
+func (this *base) getItem() (value.AnnotatedValue, bool) {
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
+
+	select {
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, false
+	default:
+	}
+
+	select {
+	case item, ok := <-this.Input().ItemChannel():
+		if ok {
+
+			// getItem does not keep track of
+			// incoming documents
+			return item, true
+		}
+
+		// no more data
+		return nil, true
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, false
+	}
+}
+
+func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
+
+	select {
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, false
+	default:
+	}
+
+	select {
+	case item, ok := <-channel:
+		if ok {
+
+			// getItemValue does not keep track of
+			// incoming documents
+			return item, true
+		}
+
+		// no more data
+		return nil, true
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, false
+	}
+}
+
+func (this *base) getItemEntry(channel datastore.EntryChannel) (*datastore.IndexEntry, bool) {
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
+
+	select {
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, false
+	default:
+	}
+
+	select {
+	case item, ok := <-channel:
+		if ok {
+
+			// getItemValue does not keep track of
+			// incoming documents
+			return item, true
+		}
+
+		// no more data
+		return nil, true
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, false
+	}
+}
+
+func (this *base) getItemChildren() (value.AnnotatedValue, int, bool) {
+	return this.getItemChildrenOp(this.input)
+}
+
+func (this *base) getItemChildrenOp(op Operator) (value.AnnotatedValue, int, bool) {
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
+
+	select {
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, -1, false
+	default:
+	}
+
+	select {
+	case child := <-this.childChannel:
+		return nil, child, true
+	default:
+	}
+
+	select {
+	case item, ok := <-op.ItemChannel():
+		if ok {
+
+			// getItem does not keep track of
+			// incoming documents
+			return item, -1, true
+		}
+
+		// no more data
+		return nil, -1, true
+	case child := <-this.childChannel:
+		return nil, child, true
+	case <-this.stopChannel: // Never closed
+		this.stopped = true
+		return nil, -1, false
+	}
+}
+
+// wait for at least n children to complete
+func (this *base) childrenWait(n int) bool {
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
+	for n > 0 {
+		select {
+		case <-this.childChannel: // Never closed
+			n--
+		case <-this.stopChannel: // Never closed
+			return false
+		}
+	}
+
+	return true
+}
+
+// wait for at least n children to complete ignoring stop messages
+func (this *base) childrenWaitNoStop(n int) {
+	this.switchPhase(_CHANTIME)
+	defer this.switchPhase(_EXECTIME)
+	for n > 0 {
+		select {
+		case <-this.childChannel: // Never closed
+			n--
+		}
 	}
 }
 
@@ -272,16 +457,17 @@ type consumer interface {
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		active := this.active()
+		defer this.close(context)
 		if this.execPhase != PHASES {
 			this.setExecPhase(this.execPhase, context)
 		}
 		this.switchPhase(_EXECTIME)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 		defer func() { this.batch = nil }()
 
-		if context.Readonly() && !cons.readonly() {
+		if !active || (context.Readonly() && !cons.readonly()) {
 			return
 		}
 
@@ -291,45 +477,18 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			go this.input.RunOnce(context, parent)
 		}
 
-		var item value.AnnotatedValue
-	loop:
 		for ok {
-			this.switchPhase(_CHANTIME)
-
-			select {
-			case <-this.stopChannel: // Never closed
-				this.switchPhase(_EXECTIME)
-				this.stopped = true
-				break loop
-			default:
+			item, ok := this.getItem()
+			if !ok || item == nil {
+				break
 			}
-
-			select {
-			case item, ok = <-this.input.ItemChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
-
-					// runConsumer keeps track of incoming
-					// documents for most operators
-					this.addInDocs(1)
-					ok = cons.processItem(item, context)
-				}
-			case <-this.stopChannel: // Never closed
-				this.switchPhase(_EXECTIME)
-				this.stopped = true
-				break loop
-			}
+			this.addInDocs(1)
+			ok = cons.processItem(item, context)
 		}
 
 		this.notifyStop()
 		cons.afterItems(context)
 	})
-}
-
-// actions to be taken if runConsumer() doesn't get to run
-func (this *base) releaseConsumer() {
-	defer close(this.itemChannel) // Broadcast that I have stopped
-	defer this.notify()           // Notify that I have stopped
 }
 
 // Override if needed
@@ -359,7 +518,7 @@ func (this *base) notifyParent() {
 
 		// Block on parent
 		this.switchPhase(_CHANTIME)
-		parent.ChildChannel() <- int(this.bit)
+		parent.childCh() <- int(this.bit)
 		this.switchPhase(_EXECTIME)
 		this.parent = nil
 	}
@@ -371,7 +530,7 @@ func (this *base) notifyStop() {
 	if stop != nil {
 		this.switchPhase(_CHANTIME)
 		select {
-		case stop.StopChannel() <- 0:
+		case stop.stopCh() <- 0:
 		default:
 			// Already notified.
 		}
@@ -506,38 +665,7 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 	return keys, true
 }
 
-func (this *base) switchPhase(p timePhases) {
-	oldPhase := this.timePhase
-	this.timePhase = p
-
-	// not switching phases
-	if oldPhase == p {
-		return
-	}
-	oldTime := this.startTime
-	this.startTime = time.Now()
-
-	// starting or restarting after a stop
-	// either way, no time to accrue as of yet
-	if oldPhase == _NOTIME {
-		return
-	}
-
-	// keep track of phase switching
-	go_atomic.AddInt64((*int64)(&this.phaseSwitches), 1)
-	d := this.startTime.Sub(oldTime)
-	switch oldPhase {
-	case _EXECTIME:
-		this.addExecTime(d)
-		this.phaseTimes(d)
-	case _SERVTIME:
-		this.addServTime(d)
-		this.phaseTimes(d)
-	case _CHANTIME:
-		this.addChanTime(d)
-	}
-}
-
+// operator state handling
 func (this *base) active() bool {
 	this.activeCond.L.Lock()
 	defer this.activeCond.L.Unlock()
@@ -581,6 +709,53 @@ func (this *base) wait() {
 	this.activeCond.L.Unlock()
 }
 
+// profiling
+
+// phase switching
+func (this *base) switchPhase(p timePhases) {
+	oldPhase := this.timePhase
+	this.timePhase = p
+
+	// not switching phases
+	if oldPhase == p {
+		return
+	}
+	oldTime := this.startTime
+	this.startTime = time.Now()
+
+	// starting or restarting after a stop
+	// either way, no time to accrue as of yet
+	if oldPhase == _NOTIME {
+		return
+	}
+
+	// keep track of phase switching
+	go_atomic.AddInt64((*int64)(&this.phaseSwitches), 1)
+	d := this.startTime.Sub(oldTime)
+	switch oldPhase {
+	case _EXECTIME:
+		this.addExecTime(d)
+		this.phaseTimes(d)
+	case _SERVTIME:
+		this.addServTime(d)
+		this.phaseTimes(d)
+	case _CHANTIME:
+		this.addChanTime(d)
+	}
+}
+
+// accrues operators and phase times
+func (this *base) setExecPhase(phase Phases, context *Context) {
+	context.AddPhaseOperator(phase)
+	this.addExecPhase(phase, context)
+}
+
+// accrues phase times (useful where we don't want to count operators)
+func (this *base) addExecPhase(phase Phases, context *Context) {
+	this.phaseTimes = func(t time.Duration) { context.AddPhaseTime(phase, t) }
+}
+
+// operator times and items accrual
 func (this *base) addExecTime(t time.Duration) {
 	go_atomic.AddInt64((*int64)(&this.execTime), int64(t))
 }
@@ -601,6 +776,7 @@ func (this *base) addOutDocs(d int64) {
 	go_atomic.AddInt64((*int64)(&this.outDocs), d)
 }
 
+// profile marshaller
 func (this *base) marshalTimes(r map[string]interface{}) {
 	var d time.Duration
 	stats := make(map[string]interface{}, 6)

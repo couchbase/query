@@ -18,22 +18,21 @@ import (
 
 type IntersectAll struct {
 	base
-	plan         *plan.IntersectAll
-	first        Operator
-	second       Operator
-	childChannel StopChannel
-	set          *value.Set
+	plan   *plan.IntersectAll
+	first  Operator
+	second Operator
+	set    *value.Set
 }
 
 func NewIntersectAll(plan *plan.IntersectAll, context *Context, first, second Operator) *IntersectAll {
 	rv := &IntersectAll{
-		plan:         plan,
-		first:        first,
-		second:       second,
-		childChannel: make(StopChannel, 2),
+		plan:   plan,
+		first:  first,
+		second: second,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(2)
 	rv.output = rv
 	return rv
 }
@@ -44,10 +43,9 @@ func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IntersectAll) Copy() Operator {
 	rv := &IntersectAll{
-		plan:         this.plan,
-		first:        this.first.Copy(),
-		second:       this.second.Copy(),
-		childChannel: make(StopChannel, 2),
+		plan:   this.plan,
+		first:  this.first.Copy(),
+		second: this.second.Copy(),
 	}
 
 	this.base.copy(&rv.base)
@@ -55,16 +53,13 @@ func (this *IntersectAll) Copy() Operator {
 }
 
 func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
-	active := this.active()
-	defer this.inactive()
-	if !active || !context.assert(this.first != nil && this.second != nil, "Intersect has no children") {
-		this.releaseConsumer()
-		return
-	}
 	this.runConsumer(this, context, parent)
 }
 
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {
+	if !context.assert(this.first != nil && this.second != nil, "Intersect has no children") {
+		return false
+	}
 
 	// FIXME: should this be handled by the planner?
 	distinct := NewDistinct(plan.NewDistinct(), context, true)
@@ -72,23 +67,11 @@ func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)
 
-	stopped := false
-	this.switchPhase(_CHANTIME)
-loop:
-	for {
-		select {
-		case <-this.childChannel: // Never closed
-			// Wait for child
-			break loop
-		case <-this.stopChannel: // Never closed
-			stopped = true
-			this.notifyStop()
-			notifyChildren(sequence)
-		}
-	}
-	this.switchPhase(_EXECTIME)
-
-	if stopped {
+	// we only need to wait for the first child to end
+	// after that no other value will qualify anyway
+	if !this.childrenWait(1) {
+		this.notifyStop()
+		notifyChildren(sequence)
 		return false
 	}
 
@@ -109,10 +92,6 @@ func (this *IntersectAll) processItem(item value.AnnotatedValue, context *Contex
 func (this *IntersectAll) afterItems(context *Context) {
 	this.set = nil
 	context.SetSortCount(0)
-}
-
-func (this *IntersectAll) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *IntersectAll) MarshalJSON() ([]byte, error) {
@@ -145,7 +124,6 @@ func (this *IntersectAll) SendStop() {
 
 func (this *IntersectAll) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, 2)
 	if this.first != nil {
 		this.first.reopen(context)
 	}

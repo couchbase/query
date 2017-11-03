@@ -50,6 +50,7 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
 	this.switchPhase(_CHANTIME)
 	ok := context.Result(item)
+	this.switchPhase(_EXECTIME)
 	if ok {
 		this.addOutDocs(1)
 	}

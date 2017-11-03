@@ -49,10 +49,11 @@ func (this *Prepare) Copy() Operator {
 func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 		err := plan.AddPrepared(this.plan.Plan())
 		if err != nil {
 			context.Fatal(err)
@@ -60,7 +61,6 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		}
 		value := value.NewAnnotatedValue(this.prepared)
 		this.sendItem(value)
-
 	})
 }
 

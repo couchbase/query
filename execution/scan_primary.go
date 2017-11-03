@@ -48,9 +48,10 @@ func (this *PrimaryScan) Copy() Operator {
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.setExecPhase(PRIMARY_SCAN, context)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		this.scanPrimary(context, parent)
 	})
@@ -64,9 +65,6 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 	go this.scanEntries(context, conn)
 
-	var entry, lastEntry *datastore.IndexEntry
-
-	ok := true
 	nitems := 0
 
 	var docs uint64 = 0
@@ -76,19 +74,11 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		}
 	}()
 
-	for ok {
-		this.switchPhase(_SERVTIME)
-		select {
-		case <-this.stopChannel:
-			return
-		default:
-		}
-
-		select {
-		case entry, ok = <-conn.EntryChannel():
-			this.switchPhase(_EXECTIME)
-			if ok {
-
+	var lastEntry *datastore.IndexEntry
+	for {
+		entry, ok := this.getItemEntry(conn.EntryChannel())
+		if ok {
+			if entry != nil {
 				// current policy is to only count 'in' documents
 				// from operators, not kv
 				// add this.addInDocs(1) if this changes
@@ -103,12 +93,12 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 					context.AddPhaseCount(PRIMARY_SCAN, docs)
 					docs = 0
 				}
+			} else {
+				break
 			}
-
-		case <-this.stopChannel:
+		} else {
 			return
 		}
-
 	}
 
 	if conn.Timeout() {
@@ -135,10 +125,6 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 	go this.scanChunk(context, conn, chunkSize, indexEntry)
 
-	var entry, lastEntry *datastore.IndexEntry
-
-	ok := true
-
 	nitems := 0
 	var docs uint64 = 0
 	defer func() {
@@ -147,18 +133,11 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 		}
 	}()
 
-	for ok {
-		this.switchPhase(_SERVTIME)
-		select {
-		case <-this.stopChannel:
-			return nil
-		default:
-		}
-
-		select {
-		case entry, ok = <-conn.EntryChannel():
-			this.switchPhase(_EXECTIME)
-			if ok {
+	var lastEntry *datastore.IndexEntry
+	for {
+		entry, ok := this.getItemEntry(conn.EntryChannel())
+		if ok {
+			if entry != nil {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
 				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
@@ -170,12 +149,12 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 					context.AddPhaseCount(PRIMARY_SCAN, docs)
 					docs = 0
 				}
+			} else {
+				break
 			}
-
-		case <-this.stopChannel:
+		} else {
 			return nil
 		}
-
 	}
 	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", lastEntry})
 	return lastEntry

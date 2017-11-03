@@ -13,7 +13,6 @@ import (
 	"io"
 )
 
-type AnnotatedChannel chan AnnotatedValue
 type AnnotatedValues []AnnotatedValue
 
 func (this AnnotatedValues) Append(val AnnotatedValue, pool *AnnotatedPool) AnnotatedValues {

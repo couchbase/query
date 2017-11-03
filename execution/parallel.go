@@ -20,20 +20,19 @@ import (
 
 type Parallel struct {
 	base
-	plan         *plan.Parallel
-	child        Operator
-	children     []Operator
-	childChannel StopChannel
+	plan     *plan.Parallel
+	child    Operator
+	children []Operator
 }
 
 func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Parallel {
 	rv := &Parallel{
-		plan:         plan,
-		child:        child,
-		childChannel: make(StopChannel, runtime.NumCPU()),
+		plan:  plan,
+		child: child,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(runtime.NumCPU())
 	rv.output = rv
 	return rv
 }
@@ -44,9 +43,8 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Parallel) Copy() Operator {
 	rv := &Parallel{
-		plan:         this.plan,
-		child:        this.child.Copy(),
-		childChannel: make(StopChannel, runtime.NumCPU()),
+		plan:  this.plan,
+		child: this.child.Copy(),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -56,11 +54,10 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		if !active || !context.assert(this.child != nil, "Parallel has no child") {
 			return
@@ -76,22 +73,11 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		this.children[0] = this.child
 		go this.runChild(this.children[0], context, parent)
 
-		this.switchPhase(_CHANTIME)
-		for n > 0 {
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for all children
-				n--
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(this.children...)
-			}
+		if !this.childrenWait(n) {
+			this.notifyStop()
+			notifyChildren(this.children...)
 		}
 	})
-}
-
-func (this *Parallel) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *Parallel) runChild(child Operator, context *Context, parent value.Value) {
@@ -151,7 +137,6 @@ func (this *Parallel) SendStop() {
 
 func (this *Parallel) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, runtime.NumCPU())
 	for _, child := range this.children {
 		child.reopen(context)
 	}

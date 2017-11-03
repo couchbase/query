@@ -22,9 +22,8 @@ import (
 
 type IndexScan struct {
 	base
-	plan         *plan.IndexScan
-	children     []Operator
-	childChannel StopChannel
+	plan     *plan.IndexScan
+	children []Operator
 }
 
 func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
@@ -53,11 +52,10 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		spans := this.plan.Spans()
@@ -65,40 +63,22 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		if !active || !context.assert(n != 0, "Index scan has no spans") {
 			return
 		}
-		this.childChannel = make(StopChannel, n)
+		this.trackChildren(n)
 		this.children = _INDEX_SCAN_POOL.Get()
 
 		for i, span := range spans {
 			scan := newSpanScan(this, span)
+			scan.SetOutput(this.output)
 			scan.SetBit(this.bit)
 			this.children = append(this.children, scan)
 			go this.children[i].RunOnce(context, parent)
 		}
 
-		// a bit of an oversimplification, but...
-		this.switchPhase(_CHANTIME)
-		for n > 0 {
-			select {
-			case <-this.stopChannel:
-				this.notifyStop()
-				notifyChildren(this.children...)
-			default:
-			}
-
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for all children
-				n--
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(this.children...)
-			}
+		if !this.childrenWait(n) {
+			this.notifyStop()
+			notifyChildren(this.children...)
 		}
 	})
-}
-
-func (this *IndexScan) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
@@ -175,10 +155,11 @@ func (this *spanScan) Copy() Operator {
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.addExecPhase(INDEX_SCAN, context)       // we have already added the scan operator in the primary scan
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		conn := datastore.NewIndexConnection(context)
@@ -186,7 +167,6 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 		go this.scan(context, conn)
 
-		var entry *datastore.IndexEntry
 		ok := true
 		var docs uint64 = 0
 
@@ -198,17 +178,9 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		defer countDocs()
 
 		for ok {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				return
-			default:
-			}
-
-			select {
-			case entry, ok = <-conn.EntryChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+			entry, cont := this.getItemEntry(conn.EntryChannel())
+			if cont {
+				if entry != nil {
 
 					// current policy is to only count 'in' documents
 					// from operators, not kv
@@ -245,9 +217,10 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 						context.AddPhaseCount(INDEX_SCAN, docs)
 						docs = 0
 					}
+				} else {
+					ok = false
 				}
-
-			case <-this.stopChannel:
+			} else {
 				return
 			}
 		}

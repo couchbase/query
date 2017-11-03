@@ -18,19 +18,18 @@ import (
 
 type Sequence struct {
 	base
-	plan         *plan.Sequence
-	children     []Operator
-	childChannel StopChannel
+	plan     *plan.Sequence
+	children []Operator
 }
 
 func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *Sequence {
 	rv := &Sequence{
-		plan:         plan,
-		children:     children,
-		childChannel: make(StopChannel, 1),
+		plan:     plan,
+		children: children,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(1)
 	rv.output = rv
 	return rv
 }
@@ -47,9 +46,8 @@ func (this *Sequence) Copy() Operator {
 	}
 
 	rv := &Sequence{
-		plan:         this.plan,
-		children:     children,
-		childChannel: make(StopChannel, 1),
+		plan:     this.plan,
+		children: children,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -59,11 +57,10 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		n := len(this.children)
 		if !active || !context.assert(n > 0, "Sequence has no children") {
@@ -90,22 +87,8 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		// Run last child
 		go last_child.RunOnce(context, parent)
 
-		this.switchPhase(_CHANTIME)
-		for {
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for last child
-				return
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(last_child)
-			}
-		}
+		this.childrenWait(1)
 	})
-}
-
-func (this *Sequence) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *Sequence) MarshalJSON() ([]byte, error) {
@@ -133,7 +116,6 @@ func (this *Sequence) SendStop() {
 
 func (this *Sequence) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, 1)
 	for _, child := range this.children {
 		child.reopen(context)
 	}

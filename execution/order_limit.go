@@ -103,11 +103,11 @@ func (this *OrderLimit) Copy() Operator {
 
 func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
-	context.AddPhaseOperator(SORT)
 	this.runConsumer(this, context, parent)
 }
 
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
+	context.AddPhaseOperator(SORT)
 	this.numReturnedRows = 0
 	this.fallback = false
 	this.numProcessedRows = 0

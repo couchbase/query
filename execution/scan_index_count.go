@@ -20,8 +20,7 @@ import (
 
 type IndexCountScan struct {
 	base
-	plan         *plan.IndexCountScan
-	childChannel chan int64
+	plan *plan.IndexCountScan
 }
 
 func NewIndexCountScan(plan *plan.IndexCountScan, context *Context) *IndexCountScan {
@@ -47,47 +46,50 @@ func (this *IndexCountScan) Copy() Operator {
 func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_COUNT, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		spans := this.plan.Spans()
 		n := len(spans)
-		this.childChannel = make(chan int64, n)
+
+		// ideally we should use this.itemChannel
+		// for this to work properly, this channel must be never closed
+		// ideally we should stop the scanCount goroutines
+		countChannel := make(value.ValueChannel, n)
+
 		keyspaceTerm := this.plan.Term()
 		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
 
 		var count int64
-		var subcount int64
+
 		for _, span := range spans {
-			go this.scanCount(span, scanVector, context)
+			go this.scanCount(span, scanVector, countChannel, context)
 		}
 
 		for n > 0 {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				return
-			default:
-			}
-
-			select {
-			case subcount = <-this.childChannel:
-				this.switchPhase(_EXECTIME)
-
-				// current policy is to only count 'in' documents
-				// from operators, not kv
-				// add this.addInDocs(1) if this changes
-				// this could be used for diagnostic purposes:
-				// if docsIn != spans, somethimg has gone wrong
-				// somewhere
-				count += subcount
-				n--
-			case <-this.stopChannel:
+			val, ok := this.getItemValue(countChannel)
+			if !ok {
 				return
 			}
+
+			// not necessary, but for completeness...
+			subcount, ok := val.Actual().(int64)
+			if !ok {
+				subcount = 0
+			}
+
+			// current policy is to only count 'in' documents
+			// from operators, not kv
+			// add this.addInDocs(1) if this changes
+			// this could be used for diagnostic purposes:
+			// if docsIn != spans, something has gone wrong
+			// somewhere
+			count += subcount
+			n--
 		}
 
 		av := value.NewAnnotatedValue(count)
@@ -96,7 +98,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vector, context *Context) {
+func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vector, countChannel value.ValueChannel, context *Context) {
 	dspan, empty, err := evalSpan(span, context)
 
 	var count int64
@@ -108,7 +110,7 @@ func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vect
 		context.Error(errors.NewEvaluationError(err, "scanCount()"))
 	}
 
-	this.childChannel <- count
+	countChannel <- value.NewValue(count)
 }
 
 func (this *IndexCountScan) MarshalJSON() ([]byte, error) {

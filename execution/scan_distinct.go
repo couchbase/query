@@ -21,20 +21,19 @@ import (
 
 type DistinctScan struct {
 	base
-	plan         *plan.DistinctScan
-	scan         Operator
-	keys         map[string]bool
-	childChannel StopChannel
+	plan *plan.DistinctScan
+	scan Operator
+	keys map[string]bool
 }
 
 func NewDistinctScan(plan *plan.DistinctScan, context *Context, scan Operator) *DistinctScan {
 	rv := &DistinctScan{
-		plan:         plan,
-		scan:         scan,
-		childChannel: make(StopChannel, 1),
+		plan: plan,
+		scan: scan,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(1)
 	rv.output = rv
 	return rv
 }
@@ -45,8 +44,7 @@ func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *DistinctScan) Copy() Operator {
 	rv := &DistinctScan{
-		scan:         this.scan.Copy(),
-		childChannel: make(StopChannel, 1),
+		scan: this.scan.Copy(),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -56,11 +54,10 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		if !active {
 			return
@@ -85,9 +82,9 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.scan.SetParent(this)
+		this.SetInput(this.scan)
 		go this.scan.RunOnce(context, parent)
 
-		var item value.AnnotatedValue
 		limit := evalLimitOffset(this.plan.Limit(), nil, int64(-1), this.plan.Covering(), context)
 		offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
 		n := 1
@@ -95,38 +92,27 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 
 	loop:
 		for ok {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				break loop
-			default:
-			}
-
-			select {
-			case item, ok = <-this.scan.ItemChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+			item, child, cont := this.getItemChildren()
+			if cont {
+				if item != nil {
 					this.addInDocs(1)
 					ok = this.processKey(item, context, limit, offset)
+				} else if child >= 0 {
+					n--
+				} else {
+					break loop
 				}
-			case <-this.childChannel:
-				n--
-			case <-this.stopChannel:
+			} else {
 				break loop
 			}
 		}
 
 		// Await child scan
 		if n > 0 {
-			this.switchPhase(_CHANTIME)
 			notifyChildren(this.scan)
-			<-this.childChannel
+			this.childrenWaitNoStop(n)
 		}
 	})
-}
-
-func (this *DistinctScan) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *DistinctScan) processKey(item value.AnnotatedValue,
@@ -192,7 +178,6 @@ func (this *DistinctScan) SendStop() {
 
 func (this *DistinctScan) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, 1)
 	if this.scan != nil {
 		this.scan.reopen(context)
 	}

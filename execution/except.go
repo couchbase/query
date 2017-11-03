@@ -18,22 +18,21 @@ import (
 
 type ExceptAll struct {
 	base
-	plan         *plan.ExceptAll
-	first        Operator
-	second       Operator
-	childChannel StopChannel
-	set          *value.Set
+	plan   *plan.ExceptAll
+	first  Operator
+	second Operator
+	set    *value.Set
 }
 
 func NewExceptAll(plan *plan.ExceptAll, context *Context, first, second Operator) *ExceptAll {
 	rv := &ExceptAll{
-		plan:         plan,
-		first:        first,
-		second:       second,
-		childChannel: make(StopChannel, 2),
+		plan:   plan,
+		first:  first,
+		second: second,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(2)
 	rv.output = rv
 	return rv
 }
@@ -44,10 +43,9 @@ func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ExceptAll) Copy() Operator {
 	rv := &ExceptAll{
-		plan:         this.plan,
-		first:        this.first.Copy(),
-		second:       this.second.Copy(),
-		childChannel: make(StopChannel, 2),
+		plan:   this.plan,
+		first:  this.first.Copy(),
+		second: this.second.Copy(),
 	}
 
 	this.base.copy(&rv.base)
@@ -55,16 +53,13 @@ func (this *ExceptAll) Copy() Operator {
 }
 
 func (this *ExceptAll) RunOnce(context *Context, parent value.Value) {
-	active := this.active()
-	defer this.inactive()
-	if !active || !context.assert(this.first != nil && this.second != nil, "Except has no children") {
-		this.releaseConsumer()
-		return
-	}
 	this.runConsumer(this, context, parent)
 }
 
 func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
+	if !context.assert(this.first != nil && this.second != nil, "Except has no children") {
+		return false
+	}
 
 	// FIXME: this should be handled by the planner
 	distinct := NewDistinct(plan.NewDistinct(), context, true)
@@ -72,23 +67,9 @@ func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)
 
-	stopped := false
-	this.switchPhase(_CHANTIME)
-loop:
-	for {
-		select {
-		case <-this.childChannel: // Never closed
-			// Wait for child
-			break loop
-		case <-this.stopChannel: // Never closed
-			stopped = true
-			this.notifyStop()
-			notifyChildren(sequence)
-		}
-	}
-	this.switchPhase(_EXECTIME)
-
-	if stopped {
+	if !this.childrenWait(1) {
+		this.notifyStop()
+		notifyChildren(sequence)
 		return false
 	}
 
@@ -105,10 +86,6 @@ func (this *ExceptAll) processItem(item value.AnnotatedValue, context *Context) 
 func (this *ExceptAll) afterItems(context *Context) {
 	this.set = nil
 	context.SetSortCount(0)
-}
-
-func (this *ExceptAll) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *ExceptAll) MarshalJSON() ([]byte, error) {
@@ -141,7 +118,6 @@ func (this *ExceptAll) SendStop() {
 
 func (this *ExceptAll) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, 2)
 	if this.first != nil {
 		this.first.reopen(context)
 	}

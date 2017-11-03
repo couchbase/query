@@ -20,22 +20,21 @@ import (
 
 type IntersectScan struct {
 	base
-	plan         *plan.IntersectScan
-	scans        []Operator
-	values       map[string]value.AnnotatedValue
-	bits         map[string]int64
-	childChannel StopChannel
-	sent         int64
+	plan   *plan.IntersectScan
+	scans  []Operator
+	values map[string]value.AnnotatedValue
+	bits   map[string]int64
+	sent   int64
 }
 
 func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operator) *IntersectScan {
 	rv := &IntersectScan{
-		plan:         plan,
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		plan:  plan,
+		scans: scans,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(len(scans))
 	rv.output = rv
 	return rv
 }
@@ -52,9 +51,8 @@ func (this *IntersectScan) Copy() Operator {
 	}
 
 	rv := &IntersectScan{
-		plan:         this.plan,
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		plan:  this.plan,
+		scans: scans,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -64,11 +62,10 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		defer func() {
 			this.values = nil
@@ -99,7 +96,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		channel := NewChannel(context)
-		defer channel.Close()
+		this.SetInput(channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
@@ -107,73 +104,56 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			go scan.RunOnce(context, parent)
 		}
 
-		var item value.AnnotatedValue
 		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
 		n := len(this.scans)
 		nscans := len(this.scans)
-		childBit := 0
 		childBits := int64(0)
 		stopped := false
 		ok := true
 
 	loop:
 		for ok {
-			this.switchPhase(_CHANTIME)
-			select {
-			case <-this.stopChannel:
-				stopped = true
-				break loop
-			default:
-			}
+			item, childBit, cont := this.getItemChildren()
+			if cont {
+				if childBit >= 0 {
 
-			select {
-			case childBit = <-this.childChannel:
-				if n == nscans {
-					notifyChildren(this.scans...)
-					childBits |= int64(0x01) << uint(childBit)
-				}
-				n--
-			default:
-			}
+					// MB-22321 terminate when first child terminates
+					if n == nscans {
+						notifyChildren(this.scans...)
+						childBits |= int64(0x01) << uint(childBit)
+					}
+					n--
 
-			select {
-			case item, ok = <-channel.ItemChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+					// now that all children are gone, flag that there's
+					// no more values coming in
+					if n == 0 {
+						channel.close(context)
+					}
+				} else if item != nil {
 					this.addInDocs(1)
 					ok = this.processKey(item, context, fullBits, limit)
+				} else {
+					ok = false
 				}
-			case childBit = <-this.childChannel:
+			} else {
+				stopped = true
+
+				// if not done already, stop children, wait and clean up
 				if n == nscans {
 					notifyChildren(this.scans...)
-					childBits |= int64(0x01) << uint(childBit)
 				}
-				n--
-			case <-this.stopChannel:
-				stopped = true
+				if n > 0 {
+					this.childrenWaitNoStop(n)
+					channel.close(context)
+				}
 				break loop
-			default:
-				if n == 0 || n < nscans {
-					break loop
-				}
 			}
-		}
-
-		// Await children
-		this.switchPhase(_CHANTIME)
-		notifyChildren(this.scans...)
-		for ; n > 0; n-- {
-			<-this.childChannel
 		}
 
 		if !stopped && ok && childBits != 0 && (limit <= 0 || this.sent < limit) {
 			this.sendItems(childBits)
 		}
 	})
-}
-
-func (this *IntersectScan) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *IntersectScan) processKey(item value.AnnotatedValue,
@@ -259,7 +239,6 @@ func (this *IntersectScan) SendStop() {
 
 func (this *IntersectScan) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, len(this.scans))
 	for _, scan := range this.scans {
 		scan.reopen(context)
 	}

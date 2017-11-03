@@ -19,8 +19,7 @@ import (
 
 type IndexCountScan2 struct {
 	base
-	plan         *plan.IndexCountScan2
-	childChannel chan int64
+	plan *plan.IndexCountScan2
 }
 
 func NewIndexCountScan2(plan *plan.IndexCountScan2, context *Context) *IndexCountScan2 {
@@ -46,10 +45,11 @@ func (this *IndexCountScan2) Copy() Operator {
 func (this *IndexCountScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
+		this.active()
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_COUNT, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		var count int64

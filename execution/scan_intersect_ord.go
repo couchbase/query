@@ -21,24 +21,23 @@ import (
 
 type OrderedIntersectScan struct {
 	base
-	plan         *plan.OrderedIntersectScan
-	scans        []Operator
-	values       map[string]value.AnnotatedValue
-	bits         map[string]int64
-	queue        *util.Queue
-	childChannel StopChannel
-	sent         int64
-	fullCount    int64
+	plan      *plan.OrderedIntersectScan
+	scans     []Operator
+	values    map[string]value.AnnotatedValue
+	bits      map[string]int64
+	queue     *util.Queue
+	sent      int64
+	fullCount int64
 }
 
 func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, context *Context, scans []Operator) *OrderedIntersectScan {
 	rv := &OrderedIntersectScan{
-		plan:         plan,
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		plan:  plan,
+		scans: scans,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(len(scans))
 	rv.output = rv
 	return rv
 }
@@ -55,9 +54,8 @@ func (this *OrderedIntersectScan) Copy() Operator {
 	}
 
 	rv := &OrderedIntersectScan{
-		plan:         this.plan,
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		plan:  this.plan,
+		scans: scans,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -67,11 +65,10 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		defer func() {
 			this.values = nil
@@ -106,7 +103,8 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		}
 
 		channel := NewChannel(context)
-		defer channel.Close()
+		defer channel.close(context)
+		this.SetInput(channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
@@ -114,11 +112,9 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			go scan.RunOnce(context, parent)
 		}
 
-		var item value.AnnotatedValue
 		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
 		n := len(this.scans)
 		nscans := len(this.scans)
-		childBit := 0
 		childBits := int64(0)
 		sendBits := int64(0)
 		finalScan := false
@@ -127,30 +123,25 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 	loop:
 		for ok {
-			this.switchPhase(_CHANTIME)
-			select {
-			case <-this.stopChannel:
-				stopped = true
-				break loop
-			default:
-			}
+			item, childBit, cont := this.getItemChildren()
+			if cont {
+				if childBit >= 0 {
 
-			select {
-			case childBit = <-this.childChannel:
-				if childBit == 0 || n == nscans {
-					if len(this.scans) > 1 {
-						notifyChildren(this.scans[1:]...)
+					// MB-22321 we stop when the first scan finishes
+					if childBit == 0 || n == nscans {
+						if nscans > 1 {
+							notifyChildren(this.scans[1:]...)
+						}
+						childBits |= int64(0x01) << uint(childBit)
 					}
-					childBits |= int64(0x01) << uint(childBit)
-				}
-				n--
-			default:
-			}
+					n--
 
-			select {
-			case item, ok = <-channel.ItemChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+					// now that all children are gone, flag that there's
+					// no more values coming in
+					if n == 0 {
+						channel.close(context)
+					}
+				} else if item != nil {
 					this.addInDocs(1)
 
 					if finalScan {
@@ -164,45 +155,34 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 						childBits |= int64(0x01)
 						break loop
 					}
+				} else {
+					ok = false
 				}
-			case childBit = <-this.childChannel:
-				if childBit == 0 || n == nscans {
-					if len(this.scans) > 1 {
-						notifyChildren(this.scans[1:]...)
-					}
-					childBits |= int64(0x01) << uint(childBit)
-				}
-				n--
-			case <-this.stopChannel:
+			} else {
 				stopped = true
-				break loop
-			default:
-				if n == 0 {
-					break loop
-				}
 
-				finalScan = finalScan || (n == 1 && (childBits&0x01 == 0))
-				if finalScan && len(this.bits) == 0 {
+				// if not done already, stop children, wait and clean up
+				if n == nscans {
+					notifyChildren(this.scans...)
+				}
+				if n > 0 {
 					notifyChildren(this.scans[0])
+					this.childrenWaitNoStop(n)
+					channel.close(context)
 				}
+				break loop
 			}
-		}
 
-		// Await children
-		this.switchPhase(_CHANTIME)
-		notifyChildren(this.scans...)
-		for ; n > 0; n-- {
-			<-this.childChannel
+			finalScan = finalScan || (n == 1 && (childBits&0x01 == 0))
+			if finalScan && len(this.bits) == 0 {
+				notifyChildren(this.scans[0])
+			}
 		}
 
 		if !stopped && (limit <= 0 || this.sent < limit) {
 			this.processQueue(fullBits, childBits, limit, true)
 		}
 	})
-}
-
-func (this *OrderedIntersectScan) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
@@ -308,7 +288,6 @@ func (this *OrderedIntersectScan) SendStop() {
 
 func (this *OrderedIntersectScan) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, len(this.scans))
 	for _, scan := range this.scans {
 		scan.reopen(context)
 	}

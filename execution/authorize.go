@@ -19,19 +19,18 @@ import (
 
 type Authorize struct {
 	base
-	plan         *plan.Authorize
-	child        Operator
-	childChannel StopChannel
+	plan  *plan.Authorize
+	child Operator
 }
 
 func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Authorize {
 	rv := &Authorize{
-		plan:         plan,
-		child:        child,
-		childChannel: make(StopChannel, 1),
+		plan:  plan,
+		child: child,
 	}
 
 	newRedirectBase(&rv.base)
+	rv.trackChildren(1)
 	rv.output = rv
 	return rv
 }
@@ -42,9 +41,8 @@ func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Authorize) Copy() Operator {
 	rv := &Authorize{
-		plan:         this.plan,
-		child:        this.child.Copy(),
-		childChannel: make(StopChannel, 1),
+		plan:  this.plan,
+		child: this.child.Copy(),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -54,11 +52,10 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context) // signal that resources can be freed
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(AUTHORIZE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 		if !active {
 			return
@@ -86,24 +83,10 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.child.SetParent(this)
 
 		go this.child.RunOnce(context, parent)
-
-		this.switchPhase(_CHANTIME)
-		for {
-			select {
-			case <-this.childChannel: // Never closed
-
-				// Wait for child
-				return
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(this.child)
-			}
+		if !this.childrenWait(1) {
+			notifyChildren(this.child)
 		}
 	})
-}
-
-func (this *Authorize) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *Authorize) MarshalJSON() ([]byte, error) {
@@ -131,7 +114,6 @@ func (this *Authorize) SendStop() {
 
 func (this *Authorize) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, 1)
 	if this.child != nil {
 		this.child.reopen(context)
 	}

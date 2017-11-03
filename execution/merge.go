@@ -20,24 +20,23 @@ import (
 
 type Merge struct {
 	base
-	plan         *plan.Merge
-	update       Operator
-	delete       Operator
-	insert       Operator
-	children     []Operator
-	childChannel StopChannel
+	plan     *plan.Merge
+	update   Operator
+	delete   Operator
+	insert   Operator
+	children []Operator
 }
 
 func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
 	rv := &Merge{
-		plan:         plan,
-		update:       update,
-		delete:       delete,
-		insert:       insert,
-		childChannel: make(StopChannel, 3),
+		plan:   plan,
+		update: update,
+		delete: delete,
+		insert: insert,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(3)
 	rv.output = rv
 	return rv
 }
@@ -48,11 +47,10 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Merge) Copy() Operator {
 	rv := &Merge{
-		plan:         this.plan,
-		update:       copyOperator(this.update),
-		delete:       copyOperator(this.delete),
-		insert:       copyOperator(this.insert),
-		childChannel: make(StopChannel, 3),
+		plan:   this.plan,
+		update: copyOperator(this.update),
+		delete: copyOperator(this.delete),
+		insert: copyOperator(this.insert),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -62,11 +60,10 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(MERGE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer close(this.itemChannel)                // Broadcast that I have stopped
 		defer this.notify()                          // Notify that I have stopped
 
 		if !active || context.Readonly() {
@@ -104,67 +101,24 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		var item value.AnnotatedValue
 		ok := true
-	loop:
-		for ok {
-			this.switchPhase(_CHANTIME)
-			select {
-			case <-this.stopChannel: // Never closed
-				this.switchPhase(_EXECTIME)
-				break loop
-			default:
-			}
 
-			select {
-			case item, ok = <-this.input.ItemChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
-					this.addInDocs(1)
-					ok = this.processMatch(item, context, update, delete, insert)
-				}
-			case <-this.stopChannel: // Never closed
-				this.switchPhase(_EXECTIME)
-				break loop
+		for ok {
+			item, ok = this.getItem()
+			if !ok || item == nil {
+				break
 			}
+			this.addInDocs(1)
+			ok = this.processMatch(item, context, update, delete, insert)
 		}
 
 		// Close child input Channels, which will signal children
 		for _, input := range inputs {
-			input.Close()
+			input.close(context)
 		}
 
 		// Wait for all children
-		n := len(this.children)
-		this.switchPhase(_CHANTIME)
-		for n > 0 {
-			select {
-			case <-this.childChannel: // Never closed
-				n--
-			}
-		}
+		this.childrenWaitNoStop(len(this.children))
 	})
-}
-
-func (this *Merge) ChildChannel() StopChannel {
-	return this.childChannel
-}
-
-func (this *Merge) mergeSendItem(op Operator, item value.AnnotatedValue) bool {
-	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
-
-	select {
-	case <-this.stopChannel: // Never closed
-		return false
-	default:
-	}
-
-	select {
-	case op.Input().ItemChannel() <- item:
-		this.addOutDocs(1)
-		return true
-	case <-this.stopChannel: // Never closed
-		return false
-	}
 }
 
 func (this *Merge) processMatch(item value.AnnotatedValue,
@@ -207,16 +161,16 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
-			ok = this.mergeSendItem(update, item)
+			ok = this.sendItemOp(update.Input(), item)
 		}
 
 		if ok && delete != nil {
-			ok = this.mergeSendItem(delete, item)
+			ok = this.sendItemOp(delete.Input(), item)
 		}
 	} else {
 		// Not matched; INSERT
 		if insert != nil {
-			ok = this.mergeSendItem(insert, item)
+			ok = this.sendItemOp(insert.Input(), item)
 		}
 	}
 
@@ -283,7 +237,6 @@ func (this *Merge) SendStop() {
 
 func (this *Merge) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, 3)
 	if this.update != nil {
 		this.update.reopen(context)
 	}

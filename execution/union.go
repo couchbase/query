@@ -18,19 +18,18 @@ import (
 
 type UnionAll struct {
 	base
-	plan         *plan.UnionAll
-	children     []Operator
-	childChannel StopChannel
+	plan     *plan.UnionAll
+	children []Operator
 }
 
 func NewUnionAll(plan *plan.UnionAll, context *Context, children ...Operator) *UnionAll {
 	rv := &UnionAll{
-		plan:         plan,
-		children:     children,
-		childChannel: make(StopChannel, len(children)),
+		plan:     plan,
+		children: children,
 	}
 
 	newBase(&rv.base, context)
+	rv.trackChildren(len(children))
 	rv.output = rv
 	return rv
 }
@@ -41,8 +40,7 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *UnionAll) Copy() Operator {
 	rv := &UnionAll{
-		plan:         this.plan,
-		childChannel: make(StopChannel, len(this.children)),
+		plan: this.plan,
 	}
 	this.base.copy(&rv.base)
 
@@ -60,11 +58,10 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.inactive() // signal that resources can be freed
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+		defer this.notify() // Notify that I have stopped
 
 		n := len(this.children)
 		if !active || !context.assert(n > 0, "Union has no children") {
@@ -79,24 +76,13 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 			go child.RunOnce(context, parent)
 		}
 
-		this.switchPhase(_CHANTIME)
-		for n > 0 {
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for all children
-				n--
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(this.children...)
-			}
+		if !this.childrenWait(n) {
+			this.notifyStop()
+			notifyChildren(this.children...)
 		}
 
 		context.SetSortCount(0)
 	})
-}
-
-func (this *UnionAll) ChildChannel() StopChannel {
-	return this.childChannel
 }
 
 func (this *UnionAll) MarshalJSON() ([]byte, error) {
@@ -124,7 +110,6 @@ func (this *UnionAll) SendStop() {
 
 func (this *UnionAll) reopen(context *Context) {
 	this.baseReopen(context)
-	this.childChannel = make(StopChannel, len(this.children))
 	for _, child := range this.children {
 		child.reopen(context)
 	}

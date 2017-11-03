@@ -77,26 +77,18 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 		wg.Add(1)
 		go this.scan(id, context, conn, &wg)
 
-		var entry *datastore.IndexEntry
-		ok := true
-		for ok {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				return false
-			default:
-			}
-
-			select {
-			case entry, ok = <-conn.EntryChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
+		for {
+			entry, cont := this.getItemEntry(conn.EntryChannel())
+			if cont {
+				if entry != nil {
 					// current policy is to only count 'in' documents
 					// from operators, not kv
 					// add this.addInDocs(1) if this changes
 					entries = append(entries, entry)
+				} else {
+					break
 				}
-			case <-this.stopChannel:
+			} else {
 				return false
 			}
 		}

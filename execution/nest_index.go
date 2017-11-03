@@ -61,7 +61,6 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		return false
 	}
 
-	var entry *datastore.IndexEntry
 	entries := _INDEX_ENTRY_POOL.Get()
 	defer _INDEX_ENTRY_POOL.Put(entries)
 
@@ -76,26 +75,18 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		wg.Add(1)
 		go this.scan(id, context, conn, &wg)
 
-		ok := true
-		for ok {
-			this.switchPhase(_SERVTIME)
-			select {
-			case <-this.stopChannel:
-				return false
-			default:
-			}
-
-			select {
-			case entry, ok = <-conn.EntryChannel():
-				this.switchPhase(_EXECTIME)
-				if ok {
-
+		for {
+			entry, ok := this.getItemEntry(conn.EntryChannel())
+			if ok {
+				if entry != nil {
 					// current policy is to only count 'in' documents
 					// from operators, not kv
 					// add this.addInDocs(1) if this changes
 					entries = append(entries, entry)
+				} else {
+					break
 				}
-			case <-this.stopChannel:
+			} else {
 				return false
 			}
 		}
