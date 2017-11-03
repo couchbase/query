@@ -251,7 +251,10 @@ func (this *ExpressionBase) DependsOn(other Expression) bool {
 	if this.conditional || other.Value() != nil {
 		return false
 	}
+	return this.dependsOn(other)
+}
 
+func (this *ExpressionBase) dependsOn(other Expression) bool {
 	if this.expr.EquivalentTo(other) {
 		return true
 	}

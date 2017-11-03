@@ -54,8 +54,7 @@ func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *IfInf) DependsOn(other Expression) bool {
-	return len(this.operands) > 0 &&
-		this.operands[0].DependsOn(other)
+	return this.dependsOn(other)
 }
 
 /*
@@ -135,9 +134,9 @@ func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *IfNaN) DependsOn(other Expression) bool {
-	return len(this.operands) > 0 &&
-		this.operands[0].DependsOn(other)
+	return this.dependsOn(other)
 }
+
 func (this *IfNaN) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -211,8 +210,7 @@ func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value
 }
 
 func (this *IfNaNOrInf) DependsOn(other Expression) bool {
-	return len(this.operands) > 0 &&
-		this.operands[0].DependsOn(other)
+	return this.dependsOn(other)
 }
 
 func (this *IfNaNOrInf) Apply(context Context, args ...value.Value) (value.Value, error) {
