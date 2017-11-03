@@ -44,8 +44,8 @@ func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
 func (this *UnionScan) Copy() Operator {
 	scans := _INDEX_SCAN_POOL.Get()
 
-	for i, s := range this.scans {
-		scans[i] = s.Copy()
+	for _, s := range this.scans {
+		scans = append(scans, s.Copy())
 	}
 
 	rv := &UnionScan{

@@ -50,4 +50,6 @@ type SecondaryScan interface {
 
 	Offset() expression.Expression
 	SetOffset(offset expression.Expression)
+
+	CoverJoinSpanExpressions(coverer *expression.Coverer) error
 }

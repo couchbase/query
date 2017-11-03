@@ -87,6 +87,38 @@ func (this *IndexScan) Offset() expression.Expression {
 func (this *IndexScan) SetOffset(offset expression.Expression) {
 }
 
+func (this *IndexScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	var err error
+	for _, span := range this.spans {
+		for i, seek := range span.Seek {
+			if seek != nil {
+				span.Seek[i], err = coverer.Map(seek)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		for i, low := range span.Range.Low {
+			if low != nil {
+				span.Range.Low[i], err = coverer.Map(low)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		for i, high := range span.Range.High {
+			if high != nil {
+				span.Range.High[i], err = coverer.Map(high)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (this *IndexScan) Covers() expression.Covers {
 	return this.covers
 }
@@ -117,8 +149,20 @@ func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]in
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
 
+	if this.term.As() != "" {
+		r["as"] = this.term.As()
+	}
+
 	if this.distinct {
 		r["distinct"] = this.distinct
+	}
+
+	if this.term.IsAnsiJoin() {
+		r["ansi_join"] = this.term.IsAnsiJoin()
+	}
+
+	if this.term.IsAnsiNest() {
+		r["ansi_nest"] = this.term.IsAnsiNest()
 	}
 
 	if this.limit != nil {
@@ -151,9 +195,12 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		IndexId      string                 `json:"index_id"`
 		Namespace    string                 `json:"namespace"`
 		Keyspace     string                 `json:"keyspace"`
+		As           string                 `json:"as"`
 		Using        datastore.IndexType    `json:"using"`
 		Spans        Spans                  `json:"spans"`
 		Distinct     bool                   `json:"distinct"`
+		AnsiJoin     bool                   `json:"ansi_join"`
+		AnsiNest     bool                   `json:"ansi_nest"`
 		Limit        string                 `json:"limit"`
 		Covers       []string               `json:"covers"`
 		FilterCovers map[string]interface{} `json:"filter_covers"`
@@ -169,7 +216,13 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, "", nil, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
+	if _unmarshalled.AnsiJoin {
+		this.term.SetAnsiJoin()
+	}
+	if _unmarshalled.AnsiNest {
+		this.term.SetAnsiNest()
+	}
 	this.spans = _unmarshalled.Spans
 	this.distinct = _unmarshalled.Distinct
 

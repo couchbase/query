@@ -45,7 +45,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		}
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
-		return sargFor(pred.Satisfies(), variable)
+		return sargFor(pred.Satisfies(), variable, this.isJoin, this.keyspaceName)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -62,5 +62,5 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
-	return sargFor(satisfies, array.ValueMapping())
+	return sargFor(satisfies, array.ValueMapping(), this.isJoin, this.keyspaceName)
 }

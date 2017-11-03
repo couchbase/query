@@ -33,6 +33,14 @@ func NewJoin(keyspace datastore.Keyspace, join *algebra.Join) *Join {
 	}
 }
 
+func NewJoinFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool) *Join {
+	return &Join{
+		keyspace: keyspace,
+		term:     term,
+		outer:    outer,
+	}
+}
+
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }

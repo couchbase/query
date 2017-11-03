@@ -86,6 +86,10 @@ func (this *IndexCountScan) Offset() expression.Expression {
 func (this *IndexCountScan) SetOffset(offset expression.Expression) {
 }
 
+func (this *IndexCountScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	return nil
+}
+
 func (this *IndexCountScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
@@ -103,6 +107,10 @@ func (this *IndexCountScan) MarshalBase(f func(map[string]interface{})) map[stri
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
+
+	if this.term.As() != "" {
+		r["as"] = this.term.As()
+	}
 
 	if len(this.covers) > 0 {
 		r["covers"] = this.covers
@@ -130,6 +138,7 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		IndexId      string                 `json:"index_id"`
 		Namespace    string                 `json:"namespace"`
 		Keyspace     string                 `json:"keyspace"`
+		As           string                 `json:"as"`
 		Using        datastore.IndexType    `json:"using"`
 		Spans        Spans                  `json:"spans"`
 		Covers       []string               `json:"covers"`
@@ -146,7 +155,7 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, "", nil, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
 	this.spans = _unmarshalled.Spans
 
 	if len(_unmarshalled.Covers) > 0 {

@@ -72,6 +72,10 @@ func (this *PrimaryScan) MarshalBase(f func(map[string]interface{})) map[string]
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
 
+	if this.term.As() != "" {
+		r["as"] = this.term.As()
+	}
+
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
@@ -88,6 +92,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		Index string              `json:"index"`
 		Names string              `json:"namespace"`
 		Keys  string              `json:"keyspace"`
+		As    string              `json:"as"`
 		Using datastore.IndexType `json:"using"`
 		Limit string              `json:"limit"`
 	}
@@ -109,7 +114,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, "", nil, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
 	indexer, err := this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err

@@ -17,13 +17,13 @@ import (
 )
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
-func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeyspace) error {
+func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeyspace, isOnclause bool) error {
 
 	if len(baseKeyspaces) == 0 {
 		return errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
-	classifier := newExprClassifier(baseKeyspaces)
+	classifier := newExprClassifier(baseKeyspaces, isOnclause)
 	_, err := expr.Accept(classifier)
 	if err != nil {
 		return err
@@ -39,12 +39,14 @@ type exprClassifier struct {
 	recurseExpr     expression.Expression
 	recursionJoin   bool
 	recurseJoinExpr expression.Expression
+	isOnclause      bool
 }
 
-func newExprClassifier(baseKeyspaces map[string]*baseKeyspace) *exprClassifier {
+func newExprClassifier(baseKeyspaces map[string]*baseKeyspace, isOnclause bool) *exprClassifier {
 
 	rv := &exprClassifier{
 		baseKeyspaces: baseKeyspaces,
+		isOnclause:    isOnclause,
 	}
 
 	rv.keyspaceNames = make(map[string]bool, len(baseKeyspaces))
@@ -348,9 +350,25 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 	}
 
+	isJoin := false
+	if len(keyspaces) > 1 {
+		isJoin = true
+	}
+
+	if this.isOnclause {
+		// remove references to keyspaces that's already processed
+		for kspace, _ := range keyspaces {
+			if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
+				if baseKspace.PlanDone() {
+					delete(keyspaces, kspace)
+				}
+			}
+		}
+	}
+
 	for kspace, _ := range keyspaces {
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
-			filter := newFilter(dnfExpr, origExpr, keyspaces)
+			filter := newFilter(dnfExpr, origExpr, keyspaces, this.isOnclause, isJoin)
 
 			if len(keyspaces) == 1 {
 				baseKspace.filters = append(baseKspace.filters, filter)
@@ -359,14 +377,14 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 				// if this is an OR join predicate, attempt to extract a new OR-predicate
 				// for a single keyspace (to enable union scan)
 				if or, ok := dnfExpr.(*expression.Or); ok {
-					newPred, newOrigPred, err := this.extractExpr(or, baseKspace.name)
+					newPred, newOrigPred, orIsJoin, err := this.extractExpr(or, baseKspace.name)
 					if err != nil {
 						return nil, err
 					}
 					if newPred != nil {
-						newKeyspaces := make(map[string]bool)
+						newKeyspaces := make(map[string]bool, 1)
 						newKeyspaces[baseKspace.name] = true
-						newFilter := newFilter(newPred, newOrigPred, newKeyspaces)
+						newFilter := newFilter(newPred, newOrigPred, newKeyspaces, this.isOnclause, orIsJoin)
 						baseKspace.filters = append(baseKspace.filters, newFilter)
 					}
 				}
@@ -380,20 +398,21 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 }
 
 func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) (
-	expression.Expression, expression.Expression, error) {
+	expression.Expression, expression.Expression, bool, error) {
 
 	orTerms, truth := flattenOr(or)
 	if orTerms == nil || truth {
-		return nil, nil, nil
+		return nil, nil, false, nil
 	}
 
 	var newTerm, newOrigTerm expression.Expression
 	var newTerms, newOrigTerms expression.Expressions
+	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-		err := ClassifyExpr(op, baseKeyspaces)
+		err := ClassifyExpr(op, baseKeyspaces, this.isOnclause)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 		newTerm = nil
 		newOrigTerm = nil
@@ -412,6 +431,8 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 						newOrigTerm = expression.NewAnd(newOrigTerm, fl.origExpr)
 					}
 				}
+
+				isJoin = isJoin || fl.isJoin
 			}
 		}
 
@@ -421,9 +442,9 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 				newOrigTerms = append(newOrigTerms, newOrigTerm)
 			}
 		} else {
-			return nil, nil, nil
+			return nil, nil, false, nil
 		}
 	}
 
-	return expression.NewOr(newTerms...), expression.NewOr(newOrigTerms...), nil
+	return expression.NewOr(newTerms...), expression.NewOr(newOrigTerms...), isJoin, nil
 }

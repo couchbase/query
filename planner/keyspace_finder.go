@@ -37,7 +37,7 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string) error {
 	return nil
 }
 
-func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right *algebra.KeyspaceTerm) error {
+func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.FromTerm) error {
 	_, err := left.Accept(this)
 	if err != nil {
 		return err
@@ -87,6 +87,14 @@ func (this *keyspaceFinder) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *keyspaceFinder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+	return nil, this.visitJoin(node.Left(), node.Right())
+}
+
+func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+	return nil, this.visitJoin(node.Left(), node.Right())
+}
+
+func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 

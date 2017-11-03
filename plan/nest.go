@@ -33,6 +33,14 @@ func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest) *Nest {
 	}
 }
 
+func NewNestFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool) *Nest {
+	return &Nest{
+		keyspace: keyspace,
+		term:     term,
+		outer:    outer,
+	}
+}
+
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }

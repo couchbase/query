@@ -67,7 +67,7 @@ outer:
 	}
 
 	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-	err = ClassifyExpr(newPred, baseKeyspaces)
+	err = ClassifyExpr(newPred, baseKeyspaces, false)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -75,7 +75,7 @@ outer:
 	if !ok {
 		return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildDynamicScan: missing baseKeyspace %s", node.Alias()))
 	}
-	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
+	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, false)
 	if err != nil {
 		return nil, 0, err
 	}

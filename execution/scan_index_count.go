@@ -99,7 +99,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vector, countChannel value.ValueChannel, context *Context) {
-	dspan, empty, err := evalSpan(span, context)
+	dspan, empty, err := evalSpan(span, nil, context)
 
 	var count int64
 	if err == nil && !empty {

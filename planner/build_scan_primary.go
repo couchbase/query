@@ -51,7 +51,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	baseKeyspace := newBaseKeyspace(node.Alias())
 	keyspaces := make(map[string]bool, 1)
 	keyspaces[node.Alias()] = true
-	newfilter := newFilter(pred, pred, keyspaces)
+	newfilter := newFilter(pred, pred, keyspaces, false, false)
 	baseKeyspace.filters = Filters{newfilter}
 	baseKeyspace.dnfPred = pred
 	baseKeyspace.origPred = nil

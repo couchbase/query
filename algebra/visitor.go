@@ -72,6 +72,8 @@ type NodeVisitor interface {
 	VisitSubqueryTerm(node *SubqueryTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitIndexJoin(node *IndexJoin) (interface{}, error)
+	VisitAnsiJoin(node *AnsiJoin) (interface{}, error)
+	VisitAnsiNest(node *AnsiNest) (interface{}, error)
 	VisitNest(node *Nest) (interface{}, error)
 	VisitIndexNest(node *IndexNest) (interface{}, error)
 	VisitUnnest(node *Unnest) (interface{}, error)

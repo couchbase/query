@@ -56,7 +56,7 @@ func (this *IndexCountDistinctScan2) RunOnce(context *Context, parent value.Valu
 
 		keyspaceTerm := this.plan.Term()
 		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
-		dspans, empty, err := evalSpan2(this.plan.Spans(), context)
+		dspans, empty, err := evalSpan2(this.plan.Spans(), nil, context)
 		if err == nil && !empty {
 			count, err = this.plan.Index().CountDistinct(context.RequestId(), dspans, context.ScanConsistency(), scanVector)
 		}

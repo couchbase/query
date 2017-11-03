@@ -25,7 +25,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace, id expression.Expression) (
 	plan.SecondaryScan, int, error) {
 
-	if this.cover != nil {
+	if this.cover != nil && !node.IsAnsiNest() {
 		scan, sargLength, err := this.buildCoveringScan(indexes, node, baseKeyspace, id)
 		if scan != nil || err != nil {
 			return scan, sargLength, err
@@ -105,6 +105,27 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	}
 
 	for index, entry := range indexes {
+		// If this is a join with primary key (meta().id), then it's
+		// possible to get right hand documdents directly without
+		// accessing through an index (similar to "regular" join).
+		// In such cases do not consider secondary indexes that does
+		// not include meta().id as a sargable index key. In addition,
+		// the index must have either a WHERE clause or at least
+		// one other sargable key.
+		if node.IsPrimaryJoin() {
+			metaFound := false
+			for _, key := range entry.sargKeys {
+				if key.EquivalentTo(id) {
+					metaFound = true
+					break
+				}
+			}
+
+			if !metaFound || (len(entry.sargKeys) <= 1 && index.Condition() == nil) {
+				continue
+			}
+		}
+
 		scan = entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, nil, nil)
 
 		if index == orderIndex {
@@ -288,20 +309,16 @@ outer:
 func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*indexEntry) error {
 
 	pred := baseKeyspace.dnfPred
-	isOrPred := false
-	if _, ok := pred.(*expression.Or); ok {
-		isOrPred = true
-	}
 
 	for _, se := range sargables {
 		var spans SargSpans
 		var exactSpans bool
 		var err error
 
-		if indexHasArrayIndexKey(se.index) || isOrPred {
-			spans, exactSpans, err = SargFor(pred, se.keys, se.minKeys, len(se.keys))
+		if indexHasArrayIndexKey(se.index) {
+			spans, exactSpans, err = SargFor(pred, se.keys, se.minKeys, len(se.keys), baseKeyspace.name)
 		} else {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, len(se.keys))
+			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, len(se.keys), baseKeyspace.name)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},

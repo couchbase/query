@@ -75,6 +75,10 @@ func (this *DistinctScan) SetOffset(offset expression.Expression) {
 	this.scan.SetOffset(offset)
 }
 
+func (this *DistinctScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	return this.scan.CoverJoinSpanExpressions(coverer)
+}
+
 func (this *DistinctScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

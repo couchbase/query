@@ -76,6 +76,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "f2",
                         "index": "ixCover",
                         "index_projection": {
                             "primary_key": true
@@ -144,6 +145,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "f1",
                         "index": "ixCover",
                         "index_projection": {
                             "primary_key": true
@@ -280,6 +282,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "d1",
                         "covers": [
                             "cover ((`d1`.`k0`))",
                             "cover ((`d1`.`k1`))",
@@ -360,6 +363,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "d",
                         "covers": [
                             "cover ((`d`.`x`))",
                             "cover ((`d`.`id`))",
@@ -424,6 +428,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "d1",
                         "index": "ixCover2",
                         "index_projection": {
                             "primary_key": true
@@ -508,6 +513,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "d1",
                         "covers": [
                             "cover ((`d1`.`k0`))",
                             "cover ((`d1`.`k1`))",
@@ -599,6 +605,7 @@
                 "~children": [
                     {
                         "#operator": "IndexScan2",
+                        "as": "b1",
                         "covers": [
                             "cover ((meta(`b1`).`id`))"
                         ],

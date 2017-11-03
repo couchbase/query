@@ -24,11 +24,11 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 	range2 := &plan.Range2{}
 
 	if pred.First().EquivalentTo(this.key) {
-		expr = pred.Second().Static()
+		expr = this.getSarg(pred.Second())
 		range2.Low = expression.NULL_EXPR
 		range2.High = expr
 	} else if pred.Second().EquivalentTo(this.key) {
-		expr = pred.First().Static()
+		expr = this.getSarg(pred.First())
 		range2.Low = expr
 	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil

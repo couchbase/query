@@ -105,6 +105,7 @@
                     "~children": [
                         {
                             "#operator": "PrimaryScan",
+                            "as": "u",
                             "index": "#primary",
                             "keyspace": "user_profile",
                             "namespace": "default",

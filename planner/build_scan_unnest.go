@@ -305,7 +305,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		return nil, nil, 0, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, sargKeys, 1, 1)
+	spans, exactSpans, err := SargFor(pred, sargKeys, 1, 1, node.Alias())
 	if err != nil {
 		return nil, nil, 0, err
 	}

@@ -103,6 +103,17 @@ func (this *IntersectScan) Offset() expression.Expression {
 func (this *IntersectScan) SetOffset(limit expression.Expression) {
 }
 
+func (this *IntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	for _, scan := range this.scans {
+		err := scan.CoverJoinSpanExpressions(coverer)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (this *IntersectScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

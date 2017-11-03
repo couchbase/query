@@ -96,6 +96,17 @@ func (this *OrderedIntersectScan) String() string {
 	return string(bytes)
 }
 
+func (this *OrderedIntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	for _, scan := range this.scans {
+		err := scan.CoverJoinSpanExpressions(coverer)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (this *OrderedIntersectScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

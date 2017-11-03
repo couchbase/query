@@ -110,6 +110,36 @@ func (this *IndexScan2) SetOffset(offset expression.Expression) {
 	this.offset = offset
 }
 
+func (this *IndexScan2) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	var err error
+	for _, span := range this.spans {
+		for i, seek := range span.Seek {
+			if seek != nil {
+				span.Seek[i], err = coverer.Map(seek)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		for _, srange := range span.Ranges {
+			if srange.Low != nil {
+				srange.Low, err = coverer.Map(srange.Low)
+				if err != nil {
+					return err
+				}
+			}
+			if srange.High != nil {
+				srange.High, err = coverer.Map(srange.High)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (this *IndexScan2) Covers() expression.Covers {
 	return this.covers
 }
@@ -140,6 +170,10 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
 
+	if this.term.As() != "" {
+		r["as"] = this.term.As()
+	}
+
 	if this.reverse {
 		r["reverse"] = this.reverse
 	}
@@ -150,6 +184,14 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 
 	if this.ordered {
 		r["ordered"] = this.ordered
+	}
+
+	if this.term.IsAnsiJoin() {
+		r["ansi_join"] = this.term.IsAnsiJoin()
+	}
+
+	if this.term.IsAnsiNest() {
+		r["ansi_nest"] = this.term.IsAnsiNest()
 	}
 
 	if this.projection != nil {
@@ -190,11 +232,14 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 		IndexId      string                 `json:"index_id"`
 		Namespace    string                 `json:"namespace"`
 		Keyspace     string                 `json:"keyspace"`
+		As           string                 `json:"as"`
 		Using        datastore.IndexType    `json:"using"`
 		Spans        Spans2                 `json:"spans"`
 		Reverse      bool                   `json:"reverse"`
 		Distinct     bool                   `json:"distinct"`
 		Ordered      bool                   `json:"ordered"`
+		AnsiJoin     bool                   `json:"ansi_join"`
+		AnsiNest     bool                   `json:"ansi_nest"`
 		Projection   *IndexProjection       `json:"index_projection"`
 		Offset       string                 `json:"offset"`
 		Limit        string                 `json:"limit"`
@@ -212,7 +257,13 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, "", nil, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
+	if _unmarshalled.AnsiJoin {
+		this.term.SetAnsiJoin()
+	}
+	if _unmarshalled.AnsiNest {
+		this.term.SetAnsiNest()
+	}
 	this.spans = _unmarshalled.Spans
 	this.reverse = _unmarshalled.Reverse
 	this.distinct = _unmarshalled.Distinct

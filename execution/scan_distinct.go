@@ -44,6 +44,7 @@ func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *DistinctScan) Copy() Operator {
 	rv := &DistinctScan{
+		plan: this.plan,
 		scan: this.scan.Copy(),
 	}
 	this.base.copy(&rv.base)
@@ -82,6 +83,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.scan.SetParent(this)
+		this.scan.SetOutput(this.scan)
 		this.SetInput(this.scan)
 		go this.scan.RunOnce(context, parent)
 

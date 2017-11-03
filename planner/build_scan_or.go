@@ -114,18 +114,19 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		return nil, minSargLength, nil
 	}
 
+	join := node.IsAnsiJoinOp()
 	for _, op := range orTerms.Operands() {
 		this.where = op
 		this.limit = limit
 
 		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-		err := ClassifyExpr(op, baseKeyspaces)
+		err := ClassifyExpr(op, baseKeyspaces, join)
 		if err != nil {
 			return nil, 0, err
 		}
 
 		if baseKeyspace, ok := baseKeyspaces[node.Alias()]; ok {
-			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
+			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, join)
 			if err != nil {
 				return nil, 0, err
 			}

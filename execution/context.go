@@ -38,8 +38,10 @@ const (
 	PRIMARY_SCAN
 	JOIN
 	INDEX_JOIN
+	ANSI_JOIN
 	NEST
 	INDEX_NEST
+	ANSI_NEST
 	COUNT
 	INDEX_COUNT
 	SORT
@@ -69,8 +71,10 @@ var _PHASE_NAMES = []string{
 	PRIMARY_SCAN: "primaryScan",
 	JOIN:         "join",
 	INDEX_JOIN:   "indexJoin",
+	ANSI_JOIN:    "ansiJoin",
 	NEST:         "nest",
 	INDEX_NEST:   "indexNest",
+	ANSI_NEST:    "ansiNest",
 	COUNT:        "count",
 	INDEX_COUNT:  "indexCount",
 	SORT:         "sort",

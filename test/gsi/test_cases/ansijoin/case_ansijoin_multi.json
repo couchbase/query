@@ -1,0 +1,61 @@
+[
+    {
+        "statements":"SELECT pc.purchaseId, l.product, pd.name FROM purchase pc UNNEST pc.lineItems as l JOIN product pd ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "results": [
+        {
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "results": [
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    }
+]
+

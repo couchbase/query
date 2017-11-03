@@ -49,7 +49,7 @@ func (this *builder) PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.
 
 	// update filters list in baseKeyspace since new filters are generated above
 	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-	err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces)
+	err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces, false)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (this *builder) PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.
 	}
 	baseKeyspace.filters = newKeyspace.filters
 	baseKeyspace.joinfilters = newKeyspace.joinfilters
-	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
+	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, false)
 	if err != nil {
 		return err
 	}

@@ -141,3 +141,10 @@ func NewAlterIndexError() Error {
 	return &err{level: EXCEPTION, ICode: ALTER_INDEX_ERROR, IKey: "plan.alter.index.not.supported",
 		InternalMsg: fmt.Sprintf("ALTER INDEX not supported"), InternalCaller: CallerN(1)}
 }
+
+const NO_ANSI_JOIN = 4330
+
+func NewNoAnsiJoinError(alias, op string) Error {
+	return &err{level: EXCEPTION, ICode: NO_ANSI_JOIN, IKey: fmt.Sprintf("plan.ansi_%s.no_index", op),
+		InternalMsg: fmt.Sprintf("No index available for ANSI join term %s", alias), InternalCaller: CallerN(1)}
+}

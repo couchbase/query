@@ -35,8 +35,6 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		return plan.NewKeyScan(keys), nil
 	}
 
-	this.maxParallelism = 0 // Use default parallelism for index scans
-
 	secondary, primary, err := this.buildScan(keyspace, node)
 	if err != nil {
 		return nil, err
@@ -44,13 +42,17 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 	if secondary != nil {
 		return secondary, nil
-	} else {
+	} else if primary != nil {
 		return primary, nil
+	} else {
+		return nil, nil
 	}
 }
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
+	join := node.IsAnsiJoinOp()
 
 	var hints []datastore.Index
 	if len(node.Indexes()) > 0 {
@@ -67,12 +69,17 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
 	}
 
-	pred := this.where
-	if pred != nil {
-		// Handle constant TRUE predicate
-		cpred := pred.Value()
-		if cpred != nil && cpred.Truth() {
-			pred = nil
+	var pred expression.Expression
+	if join {
+		pred = baseKeyspace.dnfPred
+	} else {
+		pred = this.where
+		if pred != nil {
+			// Handle constant TRUE predicate
+			cpred := pred.Value()
+			if cpred != nil && cpred.Truth() {
+				pred = nil
+			}
 		}
 	}
 
@@ -81,7 +88,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		expression.NewFieldName("id", false))
 
 	// First handle covering primary scan
-	if this.cover != nil && pred == nil {
+	if this.cover != nil && pred == nil && !node.IsAnsiNest() {
 		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, hints)
 		if scan != nil || err != nil {
 			return scan, nil, err
@@ -89,38 +96,24 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	}
 
 	if pred != nil {
-		pred = pred.Copy()
+		// for ANSI JOIN, the following process is already done for ON clause filters
+		if !join {
+			pred = pred.Copy()
 
-		if len(this.namedArgs) > 0 || len(this.positionalArgs) > 0 {
-			for name, value := range this.namedArgs {
-				nameExpr := algebra.NewNamedParameter(name)
-				valueExpr := expression.NewConstant(value)
-				replacer := expression.NewReplacer(nameExpr, valueExpr)
-				pred, err = replacer.Map(pred)
-				if err != nil {
-					return nil, nil, err
-				}
+			pred, err = this.processHostParameters(pred)
+			if err != nil {
+				return nil, nil, err
 			}
 
-			for pos, value := range this.positionalArgs {
-				posExpr := algebra.NewPositionalParameter(pos + 1)
-				valueExpr := expression.NewConstant(value)
-				replacer := expression.NewReplacer(posExpr, valueExpr)
-				pred, err = replacer.Map(pred)
-				if err != nil {
-					return nil, nil, err
-				}
+			err = ClassifyExpr(pred, this.baseKeyspaces, false)
+			if err != nil {
+				return nil, nil, err
 			}
-		}
 
-		err = ClassifyExpr(pred, this.baseKeyspaces)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters)
-		if err != nil {
-			return nil, nil, err
+			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, false)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		if baseKeyspace.dnfPred != nil {
@@ -129,6 +122,14 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			}
 			return this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints)
 		}
+	}
+
+	if join {
+		op := "join"
+		if node.IsAnsiNest() {
+			op = "nest"
+		}
+		return nil, nil, errors.NewNoAnsiJoinError(node.Alias(), op)
 	}
 
 	if this.order != nil {
@@ -149,7 +150,12 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		return _EMPTY_PLAN, nil, nil
 	}
 
-	primaryKey := expression.Expressions{id}
+	// do not consider primary index for ANSI JOIN or ANSI NEST
+	var primaryKey expression.Expressions
+	if !node.IsAnsiJoinOp() {
+		primaryKey = expression.Expressions{id}
+	}
+
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 
 	if len(hints) > 0 {
@@ -167,13 +173,36 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		return
 	}
 
-	return this.buildSubsetScan(keyspace, node, baseKeyspace, id, others, primaryKey, formalizer, false)
+	secondary, primary, err = this.buildSubsetScan(keyspace, node, baseKeyspace, id, others, primaryKey, formalizer, false)
+
+	if secondary != nil || primary != nil || err != nil {
+		return
+	}
+
+	if node.IsAnsiJoinOp() {
+		if node.IsPrimaryJoin() {
+			return nil, nil, nil
+		} else {
+			op := "join"
+			if node.IsAnsiNest() {
+				op = "nest"
+			}
+			return nil, nil, errors.NewNoAnsiJoinError(node.Alias(), op)
+		}
+	} else {
+		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildPredicateScan: No plan generated for %s", node.Alias()))
+	}
 }
 
 func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	baseKeyspace *baseKeyspace, id expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
+	join := node.IsAnsiJoinOp()
+	if join {
+		this.resetPushDowns()
+	}
 
 	// Prefer OR scan
 	dnfPred := baseKeyspace.dnfPred
@@ -190,15 +219,19 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		return secondary, nil, err
 	}
 
-	// No secondary scan, try primary scan
-	primary, err = this.buildPrimaryScan(keyspace, node, indexes, force, false)
-	if err != nil {
-		return nil, nil, err
-	}
+	if !join {
+		// No secondary scan, try primary scan
+		primary, err = this.buildPrimaryScan(keyspace, node, indexes, force, false)
+		if err != nil {
+			return nil, nil, err
+		}
 
-	// Primary scan with predicates -- disable pushdown
-	if primary != nil {
-		this.resetPushDowns()
+		// Primary scan with predicates -- disable pushdown
+		if primary != nil {
+			this.resetPushDowns()
+		}
+	} else {
+		primary = nil
 	}
 
 	return nil, primary, nil
@@ -209,13 +242,17 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	secondary plan.SecondaryScan, sargLength int, err error) {
 
+	join := node.IsAnsiJoinOp()
+
 	var scanbuf [4]plan.SecondaryScan
 	scans := scanbuf[0:1]
 
-	// Consider pattern matching indexes
-	err = this.PatternFor(baseKeyspace, indexes, formalizer)
-	if err != nil {
-		return nil, 0, err
+	if !join {
+		// Consider pattern matching indexes
+		err = this.PatternFor(baseKeyspace, indexes, formalizer)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	dnfPred := baseKeyspace.dnfPred
@@ -223,6 +260,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	sargables, all, arrays, err := sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
 	if err != nil {
 		return nil, 0, err
+	}
+
+	if join {
+		for idx, _ := range arrays {
+			delete(sargables, idx)
+		}
 	}
 
 	minimals := minimalIndexes(sargables, false)
@@ -266,7 +309,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	// Try UNNEST scan
-	if this.from != nil {
+	if !join && this.from != nil {
 		// Try pushdowns
 		this.order = order
 		this.limit = limitExpr
@@ -299,7 +342,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	// Try dynamic scan
-	if len(arrays) > 0 {
+	if !join && len(arrays) > 0 {
 		// Try pushdowns
 		this.limit = limitExpr
 		this.offset = offsetExpr
@@ -370,6 +413,36 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	// Return secondary scan, if any
 	return secondary, sargLength, nil
+}
+
+func (this *builder) processHostParameters(pred expression.Expression) (expression.Expression, error) {
+	if len(this.namedArgs) == 0 && len(this.positionalArgs) == 0 {
+		return pred, nil
+	}
+
+	var err error
+
+	for name, value := range this.namedArgs {
+		nameExpr := algebra.NewNamedParameter(name)
+		valueExpr := expression.NewConstant(value)
+		replacer := expression.NewReplacer(nameExpr, valueExpr)
+		pred, err = replacer.Map(pred)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for pos, value := range this.positionalArgs {
+		posExpr := algebra.NewPositionalParameter(pos + 1)
+		valueExpr := expression.NewConstant(value)
+		replacer := expression.NewReplacer(posExpr, valueExpr)
+		pred, err = replacer.Map(pred)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return pred, nil
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) (

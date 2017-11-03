@@ -24,12 +24,12 @@ func (this *sarg) VisitLE(pred *expression.LE) (interface{}, error) {
 	range2 := &plan.Range2{}
 
 	if pred.First().EquivalentTo(this.key) {
-		expr = pred.Second().Static()
+		expr = this.getSarg(pred.Second())
 		range2.Low = expression.NULL_EXPR
 		range2.High = expr
 		range2.Inclusion = datastore.HIGH
 	} else if pred.Second().EquivalentTo(this.key) {
-		expr = pred.First().Static()
+		expr = this.getSarg(pred.First())
 		range2.Low = expr
 		range2.Inclusion = datastore.LOW
 	} else if pred.DependsOn(this.key) {

@@ -60,7 +60,7 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 		conn := datastore.NewIndexConnection(context)
 		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
-		go this.scan(context, conn)
+		go this.scan(context, conn, parent)
 
 		ok := true
 		var docs uint64 = 0
@@ -72,11 +72,18 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 		}
 		defer countDocs()
 
+		// for right hand side of ANSI JOIN we don't want to include parent values
+		// in the returned scope value
+		scope_value := parent
+		if this.plan.Term().IsAnsiJoinOp() {
+			scope_value = nil
+		}
+
 		for ok {
 			entry, cont := this.getItemEntry(conn.EntryChannel())
 			if cont {
 				if entry != nil {
-					cv := value.NewScopeValue(make(map[string]interface{}), parent)
+					cv := value.NewScopeValue(make(map[string]interface{}), scope_value)
 					av := value.NewAnnotatedValue(cv)
 
 					// For downstream Fetch
@@ -131,12 +138,18 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection) {
+func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection, parent value.Value) {
 	defer context.Recover() // Recover from any panic
 
 	plan := this.plan
 
-	dspans, empty, err := evalSpan2(plan.Spans(), context)
+	// for ANSI JOIN we need to pass in values from left-hand-side (outer) of the join
+	// for span evaluation
+	outer_values := parent
+	if !this.plan.Term().IsAnsiJoinOp() {
+		outer_values = nil
+	}
+	dspans, empty, err := evalSpan2(plan.Spans(), outer_values, context)
 	if err != nil || empty {
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "span"))
@@ -162,7 +175,7 @@ func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection) 
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func evalSpan2(pspans plan.Spans2, context *Context) (datastore.Spans2, bool, error) {
+func evalSpan2(pspans plan.Spans2, parent value.Value, context *Context) (datastore.Spans2, bool, error) {
 	var err error
 	var empty bool
 
@@ -181,7 +194,7 @@ func evalSpan2(pspans plan.Spans2, context *Context) (datastore.Spans2, bool, er
 			dsRange := &datastore.Range2{}
 			dsRange.Inclusion = psRange.Inclusion
 
-			dsRange.Low, empty, err = evalOne(psRange.Low, context, nil)
+			dsRange.Low, empty, err = evalOne(psRange.Low, context, parent)
 			if err != nil {
 				return nil, empty, err
 			}
@@ -189,7 +202,7 @@ func evalSpan2(pspans plan.Spans2, context *Context) (datastore.Spans2, bool, er
 				break
 			}
 
-			dsRange.High, empty, err = evalOne(psRange.High, context, nil)
+			dsRange.High, empty, err = evalOne(psRange.High, context, parent)
 			if err != nil {
 				return nil, empty, err
 			}

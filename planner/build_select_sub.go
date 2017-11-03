@@ -33,6 +33,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCountScan := this.countScan
 	prevProjection := this.projection
 	prevBasekeyspaces := this.baseKeyspaces
+	prevMaxParallelism := this.maxParallelism
 
 	defer func() {
 		this.cover = prevCover
@@ -47,6 +48,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.countScan = prevCountScan
 		this.projection = prevProjection
 		this.baseKeyspaces = prevBasekeyspaces
+		this.maxParallelism = prevMaxParallelism
 	}()
 
 	this.coveringScans = make([]plan.CoveringOperator, 0, 4)
@@ -55,6 +57,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.correlated = node.IsCorrelated()
 	this.projection = nil
 	this.baseKeyspaces = nil
+	this.maxParallelism = 0
 	this.resetCountMinMax()
 
 	if this.cover == nil {
@@ -281,6 +284,19 @@ func (this *builder) coverExpressions() error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func (this *builder) coverJoinSpanExpressions(coveringScans []plan.CoveringOperator, secondary plan.SecondaryScan) error {
+	for _, op := range coveringScans {
+		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+
+		err := secondary.CoverJoinSpanExpressions(coverer)
+		if err != nil {
+			return err
 		}
 	}
 

@@ -14,7 +14,32 @@ import (
 )
 
 type sarg struct {
-	key expression.Expression
+	key          expression.Expression
+	keyspaceName string
+	isJoin       bool
+}
+
+func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
+	if pred == nil {
+		return nil
+	}
+
+	cpred := pred.Static()
+	if cpred != nil || !this.isJoin {
+		return cpred
+	}
+
+	if pred.Indexable() {
+		// make sure the expression does NOT reference current keyspace
+		keyspaceNames := make(map[string]bool, 1)
+		keyspaceNames[this.keyspaceName] = true
+		keyspaces, err := expression.CountKeySpaces(pred, keyspaceNames)
+		if err == nil && len(keyspaces) == 0 {
+			return pred.Copy()
+		}
+	}
+
+	return nil
 }
 
 // Arithmetic

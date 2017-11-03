@@ -57,10 +57,11 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		second := pred.Second()
 		if acons, ok := second.(*expression.ArrayConstruct); ok {
 			array = acons.Operands()
-		} else if second.Static() == nil {
-			return _VALUED_SPANS, nil
 		} else {
-			static := second.Static()
+			static := this.getSarg(second)
+			if static == nil {
+				return _VALUED_SPANS, nil
+			}
 
 			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH)
 			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
@@ -74,7 +75,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 	spans := make(plan.Spans2, 0, len(array))
 	for _, elem := range array {
-		static := elem.Static()
+		static := this.getSarg(elem)
 		if static == nil {
 			return _VALUED_SPANS, nil
 		}

@@ -17,18 +17,22 @@ import (
 )
 
 type Filter struct {
-	fltrExpr  expression.Expression // filter expression
-	origExpr  expression.Expression // original filter expression
-	keyspaces map[string]bool
+	fltrExpr   expression.Expression // filter expression
+	origExpr   expression.Expression // original filter expression
+	keyspaces  map[string]bool       // keyspace references
+	isOnclause bool                  // is this an ON-clause filter for ANSI JOIN
+	isJoin     bool                  // is this originally a join filter
 }
 
 type Filters []*Filter
 
-func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bool) *Filter {
+func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bool, isOnclause bool, isJoin bool) *Filter {
 	rv := &Filter{
-		fltrExpr:  fltrExpr,
-		origExpr:  origExpr,
-		keyspaces: keyspaces,
+		fltrExpr:   fltrExpr,
+		origExpr:   origExpr,
+		keyspaces:  keyspaces,
+		isOnclause: isOnclause,
+		isJoin:     isJoin,
 	}
 
 	return rv
@@ -37,12 +41,16 @@ func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bo
 // Combine an array of filters into a single expression by ANDing each filter expression,
 // perform transformation on each filter, and if an OR filter is involved, perform DNF
 // transformation on the combined filter
-func combineFilters(filters Filters) (expression.Expression, expression.Expression, error) {
+func combineFilters(filters Filters, includeOnclause bool) (expression.Expression, expression.Expression, error) {
 	var err error
 	var hasOr bool = false
 	var dnfPred, origPred expression.Expression
 
 	for _, fl := range filters {
+		if !includeOnclause && fl.isOnclause {
+			continue
+		}
+
 		if dnfPred == nil {
 			dnfPred = fl.fltrExpr
 		} else {
@@ -119,7 +127,10 @@ func (this *builder) moveJoinFilters(keyspace string, baseKeyspace *baseKeyspace
 func (this *builder) processKeyspaceDone(keyspace string) error {
 	var err error
 	for _, baseKeyspace := range this.baseKeyspaces {
-		if keyspace == baseKeyspace.name {
+		if baseKeyspace.PlanDone() {
+			continue
+		} else if keyspace == baseKeyspace.name {
+			baseKeyspace.SetPlanDone()
 			continue
 		}
 

@@ -106,6 +106,17 @@ func (this *UnionScan) SetOffset(offset expression.Expression) {
 	}
 }
 
+func (this *UnionScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+	for _, scan := range this.scans {
+		err := scan.CoverJoinSpanExpressions(coverer)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (this *UnionScan) Streamline() SecondaryScan {
 	scans := make([]SecondaryScan, 0, len(this.scans))
 	hash := _STRING_SCANS_POOL.Get()

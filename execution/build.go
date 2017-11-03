@@ -218,12 +218,32 @@ func (this *builder) VisitIndexJoin(plan *plan.IndexJoin) (interface{}, error) {
 	return NewIndexJoin(plan, this.context), nil
 }
 
+func (this *builder) VisitAnsiJoin(plan *plan.AnsiJoin) (interface{}, error) {
+	child := plan.Child()
+	c, e := child.Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewAnsiJoin(plan, this.context, c.(Operator)), nil
+}
+
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
 	return NewNest(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexNest(plan *plan.IndexNest) (interface{}, error) {
 	return NewIndexNest(plan, this.context), nil
+}
+
+func (this *builder) VisitAnsiNest(plan *plan.AnsiNest) (interface{}, error) {
+	child := plan.Child()
+	c, e := child.Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewAnsiNest(plan, this.context, c.(Operator)), nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {

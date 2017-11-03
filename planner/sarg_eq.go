@@ -23,9 +23,9 @@ func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
 	var expr expression.Expression
 
 	if pred.First().EquivalentTo(this.key) {
-		expr = pred.Second().Static()
+		expr = this.getSarg(pred.Second())
 	} else if pred.Second().EquivalentTo(this.key) {
-		expr = pred.First().Static()
+		expr = this.getSarg(pred.First())
 	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil
 	} else {

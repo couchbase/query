@@ -75,6 +75,13 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, err
 	}
 
+	if scan == nil {
+		if node.IsPrimaryJoin() {
+			return nil, nil
+		} else {
+			return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: no plan generated")
+		}
+	}
 	this.children = append(this.children, scan)
 
 	if len(this.coveringScans) == 0 && this.countScan == nil {
@@ -164,6 +171,12 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		this.subChildren = make([]plan.Operator, 0, 16)
 	}
 	this.children = append(this.children, join)
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -200,6 +213,51 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 	}
 
 	this.subChildren = append(this.subChildren, join)
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+	this.requirePrimaryKey = true
+	this.resetCountMinMax()
+	this.resetProjection()
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+		this.resetOffsetLimit()
+	} else {
+		this.resetOrderOffsetLimit()
+	}
+
+	_, err := node.Left().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	join, err := this.buildAnsiJoin(node)
+	if err != nil {
+		return nil, err
+	}
+
+	if njoin, ok := join.(*plan.Join); ok {
+		if len(this.subChildren) > 0 {
+			parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+			this.children = append(this.children, parallel)
+			this.subChildren = make([]plan.Operator, 0, 16)
+		}
+		this.children = append(this.children, njoin)
+	} else {
+		this.subChildren = append(this.subChildren, join)
+	}
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -236,6 +294,12 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 
 	nest := plan.NewNest(keyspace, node)
 	this.children = append(this.children, nest)
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -271,6 +335,50 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 	}
 
 	this.subChildren = append(this.subChildren, nest)
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+	this.requirePrimaryKey = true
+	this.resetCountMinMax()
+	this.resetProjection()
+
+	if this.hasOffsetOrLimit() && !node.Outer() {
+		this.resetOffsetLimit()
+	}
+
+	_, err := node.Left().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	nest, err := this.buildAnsiNest(node)
+	if err != nil {
+		return nil, err
+	}
+
+	if nnest, ok := nest.(*plan.Nest); ok {
+		if len(this.subChildren) > 0 {
+			parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+			this.children = append(this.children, parallel)
+			this.subChildren = make([]plan.Operator, 0, 16)
+		}
+		this.children = append(this.children, nnest)
+	} else {
+		this.subChildren = append(this.subChildren, nest)
+	}
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -295,6 +403,12 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
 	this.children = append(this.children, parallel)
 	this.subChildren = make([]plan.Operator, 0, 16)
+
+	err = this.processKeyspaceDone(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 

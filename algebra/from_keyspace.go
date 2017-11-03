@@ -17,6 +17,12 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+const (
+	KS_ANSI_JOIN    = 1 << iota // right-hand side of ANSI JOIN
+	KS_ANSI_NEST                // right-hand side of ANSI NEST
+	KS_PRIMARY_JOIN             // join on primary key (meta().id)
+)
+
 /*
 Represents the Keyspace (bucket) term in the FROM clause.  The
 keyspace can be prefixed with an optional namespace (pool).
@@ -37,11 +43,12 @@ type KeyspaceTerm struct {
 	as        string
 	keys      expression.Expression
 	indexes   IndexRefs
+	property  uint32
 }
 
 func NewKeyspaceTerm(namespace, keyspace string, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes}
+	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes, 0}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -149,28 +156,53 @@ Qualify all identifiers for the parent expression. Checks for
 duplicate aliases.
 */
 func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
+	var errString string
 	keyspace := this.Alias()
 	if keyspace == "" {
-		err = errors.NewNoTermNameError("FROM", "plan.keyspace.requires_name_or_alias")
+		if this.IsAnsiJoin() {
+			errString = "JOIN"
+		} else if this.IsAnsiNest() {
+			errString = "NEST"
+		} else {
+			errString = "FROM"
+		}
+		err = errors.NewNoTermNameError(errString, "plan.keyspace.requires_name_or_alias")
 		return
 	}
 
-	f = expression.NewFormalizer("", parent)
-	if this.keys != nil {
-		_, err = this.keys.Accept(f)
-		if err != nil {
-			return
+	if this.IsAnsiJoinOp() {
+		f = parent
+	} else {
+		f = expression.NewFormalizer("", parent)
+		if this.keys != nil {
+			_, err = this.keys.Accept(f)
+			if err != nil {
+				return
+			}
 		}
 	}
 
 	_, ok := parent.Allowed().Field(keyspace)
 	if ok {
-		err = errors.NewDuplicateAliasError("subquery", keyspace, "plan.keyspace.duplicate_alias")
+		if this.IsAnsiJoin() {
+			errString = "JOIN"
+		} else if this.IsAnsiNest() {
+			errString = "NEST"
+		} else {
+			errString = "subquery"
+		}
+		err = errors.NewDuplicateAliasError(errString, keyspace, "plan.keyspace.duplicate_alias")
 		return nil, err
 	}
 
-	f.SetAlias(this.As())
-	f.SetKeyspace(keyspace)
+	if this.IsAnsiJoinOp() {
+		f.SetKeyspace("")
+		f.Allowed().SetField(keyspace, keyspace)
+		f.SetAlias(keyspace)
+	} else {
+		f.SetAlias(this.As())
+		f.SetKeyspace(keyspace)
+	}
 	return
 }
 
@@ -235,6 +267,85 @@ Returns the indexes defined by the USE INDEX clause.
 */
 func (this *KeyspaceTerm) Indexes() IndexRefs {
 	return this.indexes
+}
+
+/*
+Returns the property.
+*/
+func (this *KeyspaceTerm) Property() uint32 {
+	return this.property
+}
+
+/*
+Returns whether this keyspace is for an ANSI JOIN
+*/
+func (this *KeyspaceTerm) IsAnsiJoin() bool {
+	return (this.property & KS_ANSI_JOIN) != 0
+}
+
+/*
+Returns whether this keyspace is for an ANSI NEST
+*/
+func (this *KeyspaceTerm) IsAnsiNest() bool {
+	return (this.property & KS_ANSI_NEST) != 0
+}
+
+/*
+Returns whether this keyspace is for an ANSI JOIN or ANSI NEST
+*/
+func (this *KeyspaceTerm) IsAnsiJoinOp() bool {
+	return (this.property & (KS_ANSI_JOIN | KS_ANSI_NEST)) != 0
+}
+
+/*
+Returns whether joining on primary key (meta().id)
+*/
+func (this *KeyspaceTerm) IsPrimaryJoin() bool {
+	if this.IsAnsiJoinOp() {
+		return (this.property & KS_PRIMARY_JOIN) != 0
+	} else {
+		return false
+	}
+}
+
+/*
+Set join keys
+*/
+func (this *KeyspaceTerm) SetJoinKeys(keys expression.Expression) {
+	this.keys = keys
+	return
+}
+
+/*
+Set property
+*/
+func (this *KeyspaceTerm) SetProperty(property uint32) {
+	this.property = property
+}
+
+/*
+Set ANSI JOIN property
+*/
+func (this *KeyspaceTerm) SetAnsiJoin() {
+	this.property |= KS_ANSI_JOIN
+	return
+}
+
+/*
+Set ANSI NEST property
+*/
+func (this *KeyspaceTerm) SetAnsiNest() {
+	this.property |= KS_ANSI_NEST
+	return
+}
+
+/*
+Set PRIMARY JOIN property
+*/
+func (this *KeyspaceTerm) SetPrimaryJoin() {
+	if this.IsAnsiJoinOp() {
+		this.property |= KS_PRIMARY_JOIN
+	}
 }
 
 /*
