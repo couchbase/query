@@ -68,6 +68,10 @@ func (this *IfMissing) Apply(context Context, args ...value.Value) (value.Value,
 	return value.NULL_VALUE, nil
 }
 
+func (this *IfMissing) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
+}
+
 /*
 Minimum input arguments required is 2
 */
@@ -133,6 +137,10 @@ func (this *IfMissingOrNull) Apply(context Context, args ...value.Value) (value.
 	}
 
 	return value.NULL_VALUE, nil
+}
+
+func (this *IfMissingOrNull) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
 }
 
 /*
@@ -279,6 +287,10 @@ func (this *MissingIf) Apply(context Context, first, second value.Value) (value.
 			return first, nil
 		}
 	}
+}
+
+func (this *MissingIf) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
 }
 
 /*
