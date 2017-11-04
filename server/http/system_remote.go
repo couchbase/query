@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/clustering"
