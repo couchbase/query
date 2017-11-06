@@ -51,7 +51,7 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		this.active()
-		this.close(context)
+		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
