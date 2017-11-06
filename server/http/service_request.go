@@ -297,6 +297,30 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	return rv
 }
 
+// For audit.Auditable interface.
+func (this *httpRequest) EventResult() string {
+	state := this.State()
+	if state == server.COMPLETED {
+		if this.errorCount == 0 {
+			state = server.SUCCESS
+		} else {
+			state = server.ERRORS
+		}
+	}
+
+	return string(state)
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventStatement() string {
+	return this.Statement()
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventId() string {
+	return this.Id().String()
+}
+
 const ( // Request argument names
 	MAX_PARALLELISM   = "max_parallelism"
 	SCAN_CAP          = "scan_cap"
