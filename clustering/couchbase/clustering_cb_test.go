@@ -24,7 +24,7 @@ import (
 	"github.com/couchbase/query/server"
 )
 
-const (
+var (
 	couchbase_location = "localhost"
 )
 

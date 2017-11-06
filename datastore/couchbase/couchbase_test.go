@@ -25,10 +25,11 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
 )
 
-const TEST_URL = "http://localhost:9000/"
+var TEST_URL = "http://localhost:9000/"
 
 func init() {
 	// For constructing URLs with raw IPv6 addresses- the IPv6 address

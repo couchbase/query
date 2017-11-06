@@ -26,7 +26,7 @@ import (
 func TestZKClustering(t *testing.T) {
 	// When creating a new configstore we call zookeeper.connect which
 	// uses a url. Hence for IPv6 this value needs to be changed to [::1]
-	localhost = server.GetIP(true) + ":2181"
+	localhost := server.GetIP(true) + ":2181"
 	cs, err := NewConfigstore(localhost)
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
