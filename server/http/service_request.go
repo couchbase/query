@@ -321,6 +321,19 @@ func (this *httpRequest) EventId() string {
 	return this.Id().String()
 }
 
+// For audit.Auditable interface.
+func (this *httpRequest) EventType() string {
+	t := this.Type()
+	if t == "" {
+		if this.IsPrepare() {
+			t = "PREPARE"
+		} else {
+			t = "MISC"
+		}
+	}
+	return t
+}
+
 const ( // Request argument names
 	MAX_PARALLELISM   = "max_parallelism"
 	SCAN_CAP          = "scan_cap"

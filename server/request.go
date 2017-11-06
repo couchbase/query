@@ -51,6 +51,8 @@ type Request interface {
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
 	SetType(string)
+	IsPrepare() bool
+	SetIsPrepare(bool)
 	NamedArgs() map[string]value.Value
 	PositionalArgs() value.Values
 	Namespace() string
@@ -170,6 +172,7 @@ type BaseRequest struct {
 	statement      string
 	prepared       *plan.Prepared
 	reqType        string
+	isPrepare      bool
 	namedArgs      map[string]value.Value
 	positionalArgs value.Values
 	namespace      string
@@ -309,6 +312,10 @@ func (this *BaseRequest) Type() string {
 	return this.reqType
 }
 
+func (this *BaseRequest) IsPrepare() bool {
+	return this.isPrepare
+}
+
 func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
 }
@@ -389,6 +396,12 @@ func (this *BaseRequest) SetType(reqType string) {
 	this.Lock()
 	defer this.Unlock()
 	this.reqType = reqType
+}
+
+func (this *BaseRequest) SetIsPrepare(ip bool) {
+	this.Lock()
+	defer this.Unlock()
+	this.isPrepare = ip
 }
 
 func (this *BaseRequest) SetState(state State) {

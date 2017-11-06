@@ -588,7 +588,9 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			// set the type for all statements bar prepare
 			// (doing otherwise would have accounting track prepares
 			// as if they were executions)
-			if !isprepare {
+			if isprepare {
+				request.SetIsPrepare(true)
+			} else {
 				request.SetType(stmt.Type())
 			}
 

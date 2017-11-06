@@ -24,6 +24,9 @@ type Auditable interface {
 
 	// Statement id.
 	EventId() string
+
+	// Event type. eg. "SELECT", "DELETE", "PREPARE"
+	EventType() string
 }
 
 var doAudit = false
@@ -33,5 +36,5 @@ func Submit(event Auditable) {
 		return
 	}
 	// For now, just log the audit events.
-	logging.Infof("result=\"%s\", statement=\"%s\", id=\"%s\"", event.EventResult(), event.EventStatement(), event.EventId())
+	logging.Infof("result=\"%s\", statement=\"%s\", id=\"%s\", type=\"%s\"", event.EventResult(), event.EventStatement(), event.EventId(), event.EventType())
 }
