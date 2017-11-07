@@ -312,26 +312,23 @@ func (this *httpRequest) EventResult() string {
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) EventStatement() string {
-	return this.Statement()
+func (this *httpRequest) EventResultCount() int {
+	return this.resultCount
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) EventId() string {
-	return this.Id().String()
+func (this *httpRequest) EventResultSize() int {
+	return this.resultSize
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) EventType() string {
-	t := this.Type()
-	if t == "" {
-		if this.IsPrepare() {
-			t = "PREPARE"
-		} else {
-			t = "MISC"
-		}
-	}
-	return t
+func (this *httpRequest) EventErrorCount() int {
+	return this.errorCount
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventWarningCount() int {
+	return this.warningCount
 }
 
 const ( // Request argument names

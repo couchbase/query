@@ -17,6 +17,7 @@ import (
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -193,6 +194,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	request.CompleteRequest(request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.req, srvr)
+
+	audit.Submit(request)
 }
 
 func ServicePrefix() string {

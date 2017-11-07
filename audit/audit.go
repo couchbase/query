@@ -13,20 +13,44 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-// Use Event... as prefix of every method, to avoid interference
-// with existing interfaces.
 type Auditable interface {
 	// success/fatal/stopped/etc.
 	EventResult() string
 
 	// The N1QL statement executed.
-	EventStatement() string
+	Statement() string
 
 	// Statement id.
 	EventId() string
 
 	// Event type. eg. "SELECT", "DELETE", "PREPARE"
 	EventType() string
+
+	// Event start time in RFC3339Nano format in UTC, eg. "2017-11-07T14:31:27.800880428Z"
+	EventTimestamp() string
+
+	// User ids submitted with request. eg. ["kirk", "spock"]
+	EventUsers() []string
+
+	// The User-Agent string from the request. This is used to identify the type of client
+	// that sent the request (SDK, QWB, CBQ, ...)
+	UserAgent() string
+
+	// The address the request came from.
+	RemoteAddr() string
+
+	// Event server name.
+	EventServerName() string
+
+	// Event execution metrics.
+	EventElapsedTime() string
+	EventExecutionTime() string
+	EventResultCount() int
+	EventResultSize() int
+	MutationCount() uint64
+	SortCount() uint64
+	EventErrorCount() int
+	EventWarningCount() int
 }
 
 var doAudit = false
@@ -36,5 +60,10 @@ func Submit(event Auditable) {
 		return
 	}
 	// For now, just log the audit events.
-	logging.Infof("result=\"%s\", statement=\"%s\", id=\"%s\", type=\"%s\"", event.EventResult(), event.EventStatement(), event.EventId(), event.EventType())
+	logging.Infof("result=\"%s\", statement=\"%s\", id=\"%s\", type=\"%s\", timestamp=\"%s\", users=%v, user_agent=\"%s\", client_address=\"%s\", server_name=\"%s\"",
+		event.EventResult(), event.Statement(), event.EventId(), event.EventType(), event.EventTimestamp(), event.EventUsers(),
+		event.UserAgent(), event.RemoteAddr(), event.EventServerName())
+	logging.Infof("elapsed_time=%s, execution_time=%s, result_count=%d, result_size=%d, mutation_count=%d, sort_count=%d, error_count=%d, warning_count=%d",
+		event.EventElapsedTime(), event.EventExecutionTime(), event.EventResultCount(), event.EventResultSize(),
+		event.MutationCount(), event.SortCount(), event.EventErrorCount(), event.EventWarningCount())
 }

@@ -19,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
@@ -132,7 +131,6 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	} else {
 		this.stopAndClose(server.COMPLETED)
 	}
-	audit.Submit(this)
 }
 
 func (this *httpRequest) Expire(state server.State, timeout time.Duration) {

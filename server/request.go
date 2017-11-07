@@ -10,6 +10,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"runtime"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
@@ -669,4 +671,60 @@ func sendStop(ch chan bool) {
 	case ch <- false:
 	default:
 	}
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventId() string {
+	return this.Id().String()
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventType() string {
+	t := this.Type()
+	if t == "" {
+		if this.IsPrepare() {
+			t = "PREPARE"
+		} else {
+			t = "MISC"
+		}
+	}
+	return t
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventTimestamp() string {
+	return this.RequestTime().UTC().Format(time.RFC3339Nano)
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventUsers() []string {
+	userToPassword := this.Credentials()
+	ret := make([]string, len(userToPassword))
+	index := 0
+	for user := range userToPassword {
+		ret[index] = user
+		index++
+	}
+	return ret
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventServerName() string {
+	ret := distributed.RemoteAccess().WhoAmI()
+	if ret == "" {
+		ret = "local_node"
+	}
+	return ret
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventElapsedTime() string {
+	tr := time.Since(this.RequestTime())
+	return fmt.Sprintf("%v", tr)
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventExecutionTime() string {
+	ts := time.Since(this.ServiceTime())
+	return fmt.Sprintf("%v", ts)
 }
