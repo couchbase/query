@@ -18,6 +18,11 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+// we try to find a balance between the need to have a find state
+// and the cost of using it: for documents shorter than this, not
+// worth it!
+const _THRESHOLD = 2560
+
 /*
 A Value with delayed parsing.
 */
@@ -25,6 +30,7 @@ type parsedValue struct {
 	raw        []byte
 	parsedType Type
 	parsed     Value
+	useState   bool
 	state      *json.FindState
 	used       int32
 }
@@ -56,6 +62,7 @@ func NewParsedValue(bytes []byte, isValidated bool) Value {
 	return &parsedValue{
 		raw:        bytes,
 		parsedType: parsedType,
+		useState:   len(bytes) > _THRESHOLD,
 	}
 }
 
@@ -163,8 +170,11 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		var res []byte
 		var err error
 
-		goahead := atomic.AddInt32(&this.used, 1)
-		defer atomic.AddInt32(&this.used, -1)
+		goahead := int32(0)
+		if this.useState {
+			goahead = atomic.AddInt32(&this.used, 1)
+			defer atomic.AddInt32(&this.used, -1)
+		}
 
 		// Two operators can use the same value at the same time
 		// this is particularly the case for unnest, which scans
@@ -172,7 +182,9 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		// Since the state is, well, statefull, we'll only let the
 		// first served modify it, while the other will have to go
 		// the slow route
-		if goahead == 1 {
+		// For small documents manipulating the state is constly,
+		// so we do a scan anyway
+		if this.useState && goahead == 1 {
 			if this.state == nil {
 				this.state = json.NewFindState(this.raw)
 			}
