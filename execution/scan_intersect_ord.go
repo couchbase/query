@@ -103,7 +103,6 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		}
 
 		channel := NewChannel(context)
-		defer channel.close(context)
 		this.SetInput(channel)
 
 		for _, scan := range this.scans {
@@ -156,7 +155,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 						break loop
 					}
 				} else {
-					ok = false
+					break loop
 				}
 			} else {
 				stopped = true
