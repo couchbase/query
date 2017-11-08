@@ -90,6 +90,7 @@ type Request interface {
 	SetTimings(o execution.Operator)
 	GetTimings() execution.Operator
 	OriginalHttpRequest() *http.Request
+	IsAdHoc() bool
 }
 
 type RequestID interface {
@@ -727,4 +728,29 @@ func (this *BaseRequest) EventElapsedTime() string {
 func (this *BaseRequest) EventExecutionTime() string {
 	ts := time.Since(this.ServiceTime())
 	return fmt.Sprintf("%v", ts)
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventNamedArgs() map[string]string {
+	argsMap := this.NamedArgs()
+	ret := make(map[string]string, len(argsMap))
+	for name, argValue := range argsMap {
+		ret[name] = argValue.String()
+	}
+	return ret
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventPositionalArgs() []string {
+	args := this.PositionalArgs()
+	ret := make([]string, len(args))
+	for i, v := range args {
+		ret[i] = v.String()
+	}
+	return ret
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) IsAdHoc() bool {
+	return this.Prepared() == nil
 }

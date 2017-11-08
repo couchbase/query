@@ -51,6 +51,12 @@ type Auditable interface {
 	SortCount() uint64
 	EventErrorCount() int
 	EventWarningCount() int
+
+	// Query parameters.
+	EventNamedArgs() map[string]string
+	EventPositionalArgs() []string
+
+	IsAdHoc() bool
 }
 
 var doAudit = false
@@ -66,4 +72,5 @@ func Submit(event Auditable) {
 	logging.Infof("elapsed_time=%s, execution_time=%s, result_count=%d, result_size=%d, mutation_count=%d, sort_count=%d, error_count=%d, warning_count=%d",
 		event.EventElapsedTime(), event.EventExecutionTime(), event.EventResultCount(), event.EventResultSize(),
 		event.MutationCount(), event.SortCount(), event.EventErrorCount(), event.EventWarningCount())
+	logging.Infof("named_args=%v, positional_args=%v, ad_hoc=%v", event.EventNamedArgs(), event.EventPositionalArgs(), event.IsAdHoc())
 }
