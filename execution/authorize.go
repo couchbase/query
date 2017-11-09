@@ -30,7 +30,6 @@ func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Autho
 	}
 
 	newRedirectBase(&rv.base)
-	rv.trackChildren(1)
 	rv.output = rv
 	return rv
 }
@@ -52,11 +51,10 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.close(context) // signal that resources can be freed
+		this.SetKeepAlive(1, context) // terminate early
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(AUTHORIZE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer this.notify()                          // Notify that I have stopped
 		if !active {
 			return
 		}
@@ -83,9 +81,6 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.child.SetParent(this)
 
 		go this.child.RunOnce(context, parent)
-		if !this.childrenWait(1) {
-			notifyChildren(this.child)
-		}
 	})
 }
 

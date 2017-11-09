@@ -39,14 +39,17 @@ type Operator interface {
 	Bit() uint8                                   // Child bit
 	SetBit(b uint8)                               // Child bit
 	SetRoot()                                     // Let the root operator know that it is, in fact, root
+	SetKeepAlive(children int, context *Context)  // Sets keep alive
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
 	SendStop()                                    // Stops the operator
 	Done()                                        // Frees and pools resources
 
-	reopen(context *Context) // resets operator to initial state
-	stopCh() stopChannel     // Never closed, just garbage-collected
-	childCh() stopChannel    // Never closed, just garbage-collected
+	reopen(context *Context)    // resets operator to initial state
+	close(context *Context)     // the operator is no longer operating!
+	keepAlive(op Operator) bool // operator was set to terminate early
+	stopCh() stopChannel        // Never closed, just garbage-collected
+	childCh() stopChannel       // Never closed, just garbage-collected
 
 	// local infrastructure to add up times of children of the parallel operator
 	accrueTimes(o Operator)

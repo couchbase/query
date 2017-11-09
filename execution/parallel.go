@@ -54,15 +54,14 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.close(context)
+		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
+		this.SetKeepAlive(n, context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer this.notify() // Notify that I have stopped
 
 		if !active || !context.assert(this.child != nil, "Parallel has no child") {
 			return
 		}
-		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
 		this.children = _PARALLEL_POOL.Get()[0:n]
 
 		for i := 1; i < n; i++ {
@@ -72,11 +71,6 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 		this.children[0] = this.child
 		go this.runChild(this.children[0], context, parent)
-
-		if !this.childrenWait(n) {
-			this.notifyStop()
-			notifyChildren(this.children...)
-		}
 	})
 }
 

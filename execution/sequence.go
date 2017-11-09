@@ -29,7 +29,6 @@ func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *S
 	}
 
 	newBase(&rv.base, context)
-	rv.trackChildren(1)
 	rv.output = rv
 	return rv
 }
@@ -57,13 +56,13 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
-		defer this.notify() // Notify that I have stopped
+		this.SetKeepAlive(1, context)
 
 		n := len(this.children)
 		if !active || !context.assert(n > 0, "Sequence has no children") {
+			this.close(context)
 			return
 		}
 
@@ -86,8 +85,6 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 
 		// Run last child
 		go last_child.RunOnce(context, parent)
-
-		this.childrenWait(1)
 	})
 }
 

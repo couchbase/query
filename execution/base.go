@@ -48,32 +48,34 @@ var _PHASENAMES = []string{
 type annotatedChannel chan value.AnnotatedValue
 
 type base struct {
-	itemChannel   annotatedChannel
-	stopChannel   stopChannel // Never closed
-	childChannel  stopChannel // Never closed
-	input         Operator
-	output        Operator
-	stop          Operator
-	parent        Operator
-	once          util.Once
-	batch         []value.AnnotatedValue
-	timePhase     timePhases
-	startTime     time.Time
-	execPhase     Phases
-	phaseTimes    func(time.Duration)
-	execTime      time.Duration
-	chanTime      time.Duration
-	servTime      time.Duration
-	inDocs        int64
-	outDocs       int64
-	phaseSwitches int64
-	stopped       bool
-	isRoot        bool
-	bit           uint8
-	activeCond    *sync.Cond
-	activeLock    sync.Mutex
-	primed        bool
-	completed     bool
+	itemChannel    annotatedChannel
+	stopChannel    stopChannel // Never closed
+	childChannel   stopChannel // Never closed
+	input          Operator
+	output         Operator
+	stop           Operator
+	parent         Operator
+	once           util.Once
+	batch          []value.AnnotatedValue
+	timePhase      timePhases
+	startTime      time.Time
+	execPhase      Phases
+	phaseTimes     func(time.Duration)
+	execTime       time.Duration
+	chanTime       time.Duration
+	servTime       time.Duration
+	inDocs         int64
+	outDocs        int64
+	phaseSwitches  int64
+	stopped        bool
+	isRoot         bool
+	bit            uint8
+	contextTracked *Context
+	childrenLeft   int32
+	activeCond     *sync.Cond
+	activeLock     sync.Mutex
+	primed         bool
+	completed      bool
 }
 
 const _ITEM_CAP = 512
@@ -165,6 +167,8 @@ func (this *base) baseReopen(context *Context) {
 		this.childChannel = make(stopChannel, cap(this.childChannel))
 	}
 	this.once.Reset()
+	this.contextTracked = nil
+	this.childrenLeft = 0
 	this.primed = false
 	this.stopped = false
 	this.activeCond.L.Lock()
@@ -234,6 +238,11 @@ func (this *base) SetRoot() {
 	this.isRoot = true
 }
 
+func (this *base) SetKeepAlive(children int, context *Context) {
+	this.contextTracked = context
+	this.childrenLeft = int32(children)
+}
+
 // value and message exchange
 //
 // The rules are simple - we always receive from input and send onto output.
@@ -255,6 +264,7 @@ func (this *base) SendStop() {
 
 // stop for the terminal operator case
 func (this *base) baseSendStop() {
+	this.notifyStop()
 	if this.completed {
 		return
 	}
@@ -296,6 +306,9 @@ func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 }
 
 func (this *base) getItem() (value.AnnotatedValue, bool) {
+	return this.getItemOp(this.input)
+}
+func (this *base) getItemOp(op Operator) (value.AnnotatedValue, bool) {
 	this.switchPhase(_CHANTIME)
 	defer this.switchPhase(_EXECTIME)
 
@@ -307,7 +320,7 @@ func (this *base) getItem() (value.AnnotatedValue, bool) {
 	}
 
 	select {
-	case item, ok := <-this.Input().ItemChannel():
+	case item, ok := <-op.ItemChannel():
 		if ok {
 
 			// getItem does not keep track of
@@ -511,31 +524,36 @@ func (this *base) notify() {
 	this.notifyParent()
 }
 
+// release parent resources, if necessary
+func (this *base) keepAlive(op Operator) bool {
+	if this.contextTracked == nil {
+		return false
+	}
+	if go_atomic.AddInt32(&this.childrenLeft, -1) == 0 {
+		this.notify()
+		op.close(this.contextTracked)
+	}
+	return true
+}
+
 // Notify parent, if any.
 func (this *base) notifyParent() {
 	parent := this.parent
-	if parent != nil {
+	if parent != nil && !parent.keepAlive(parent) {
 
 		// Block on parent
 		this.switchPhase(_CHANTIME)
 		parent.childCh() <- int(this.bit)
 		this.switchPhase(_EXECTIME)
-		this.parent = nil
 	}
+	this.parent = nil
 }
 
 // Notify upstream to stop.
 func (this *base) notifyStop() {
 	stop := this.stop
 	if stop != nil {
-		this.switchPhase(_CHANTIME)
-		select {
-		case stop.stopCh() <- 0:
-		default:
-			// Already notified.
-		}
-		this.switchPhase(_EXECTIME)
-
+		stop.SendStop()
 		this.stop = nil
 	}
 }
