@@ -1,0 +1,40 @@
+{
+  "version" : 1,
+  "module" : "n1ql",
+  "events" : [
+    {
+      "id" : 28672,
+      "name" : "SELECT statement",
+      "description" : "A N1QL SELECT statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "users" : [ "" ]},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "statement" : "",
+        "named_args" : { "name1" : "", "name2" : "" },
+        "positional_args" : [ "" ],
+        "type" : "",
+
+        "is_adhoc" : true,
+        "user_agent" : "",
+        "server_name" : "",
+
+        "request_id" : "",
+        "result" : "",
+        "elapsed_time" : "",
+        "execution_time" : "",
+        "result_count" : 1,
+        "result_size" : 1
+      },
+      "optional_fields" : {
+        "mutation_count" : 1,
+        "sort_count" : 1,
+        "error_count" : 1,
+        "warning_count" : 1
+      }
+    }
+  ]
+}
