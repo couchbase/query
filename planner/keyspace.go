@@ -19,7 +19,7 @@ type baseKeyspace struct {
 	joinfilters Filters
 	dnfPred     expression.Expression
 	origPred    expression.Expression
-	plandone    bool
+	planDone    bool
 }
 
 func newBaseKeyspace(keyspace string) *baseKeyspace {
@@ -31,11 +31,11 @@ func newBaseKeyspace(keyspace string) *baseKeyspace {
 }
 
 func (this *baseKeyspace) PlanDone() bool {
-	return this.plandone
+	return this.planDone
 }
 
 func (this *baseKeyspace) SetPlanDone() {
-	this.plandone = true
+	this.planDone = true
 }
 
 func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {
@@ -43,7 +43,7 @@ func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {
 
 	for _, kspace := range src {
 		dest[kspace.name] = newBaseKeyspace(kspace.name)
-		dest[kspace.name].plandone = kspace.plandone
+		dest[kspace.name].planDone = kspace.planDone
 	}
 
 	return dest

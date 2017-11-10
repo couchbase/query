@@ -67,7 +67,7 @@ func (this *AnsiNest) MarshalJSON() ([]byte, error) {
 func (this *AnsiNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "AnsiNest"}
 	r["alias"] = this.alias
-	r["onclause"] = expression.NewStringer().Visit(this.onclause)
+	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
 
 	if this.outer {
 		r["outer"] = this.outer
@@ -84,7 +84,7 @@ func (this *AnsiNest) MarshalBase(f func(map[string]interface{})) map[string]int
 func (this *AnsiNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_        string          `json:"#operator"`
-		Onclause string          `json:"onclause"`
+		Onclause string          `json:"on_clause"`
 		Outer    bool            `json:"outer"`
 		Alias    string          `json:"alias"`
 		Child    json.RawMessage `json:"~child"`
