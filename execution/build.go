@@ -460,7 +460,12 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 		children = append(children, child.(Operator))
 	}
 
-	return NewSequence(plan, this.context, children...), nil
+	if len(children) == 1 {
+		defer _SEQUENCE_POOL.Put(children)
+		return children[0], nil
+	} else {
+		return NewSequence(plan, this.context, children...), nil
+	}
 }
 
 // Discard
