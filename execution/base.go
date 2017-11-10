@@ -264,7 +264,6 @@ func (this *base) SendStop() {
 
 // stop for the terminal operator case
 func (this *base) baseSendStop() {
-	this.notifyStop()
 	if this.completed {
 		return
 	}
