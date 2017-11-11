@@ -105,6 +105,7 @@ func (this *builder) moveJoinFilters(keyspace string, baseKeyspace *baseKeyspace
 
 	if compact == true {
 		curlen := len(baseKeyspace.joinfilters)
+		curlen = trimJoinFilters(baseKeyspace.joinfilters, curlen)
 		newlen := curlen
 		for i := 0; i < curlen; i++ {
 			if i >= newlen {
@@ -115,13 +116,32 @@ func (this *builder) moveJoinFilters(keyspace string, baseKeyspace *baseKeyspace
 					baseKeyspace.joinfilters[i] = baseKeyspace.joinfilters[newlen-1]
 				}
 				baseKeyspace.joinfilters[newlen-1] = nil
-				newlen--
+				newlen = trimJoinFilters(baseKeyspace.joinfilters, newlen-1)
 			}
 		}
 		baseKeyspace.joinfilters = baseKeyspace.joinfilters[:newlen]
 	}
 
 	return nil
+}
+
+// trim nil entries at the end of joinfilters slice
+func trimJoinFilters(joinfilters Filters, curlen int) (newlen int) {
+	newlen = curlen
+	if newlen == 0 {
+		return
+	}
+
+	for {
+		if joinfilters[newlen-1] == nil {
+			newlen--
+			if newlen == 0 {
+				return
+			}
+		} else {
+			return
+		}
+	}
 }
 
 func (this *builder) processKeyspaceDone(keyspace string) error {
