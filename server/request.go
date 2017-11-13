@@ -10,7 +10,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"sync"
@@ -693,11 +692,6 @@ func (this *BaseRequest) EventType() string {
 }
 
 // For audit.Auditable interface.
-func (this *BaseRequest) EventTimestamp() string {
-	return this.RequestTime().UTC().Format(time.RFC3339Nano)
-}
-
-// For audit.Auditable interface.
 func (this *BaseRequest) EventUsers() []string {
 	userToPassword := this.Credentials()
 	ret := make([]string, len(userToPassword))
@@ -710,24 +704,12 @@ func (this *BaseRequest) EventUsers() []string {
 }
 
 // For audit.Auditable interface.
-func (this *BaseRequest) EventServerName() string {
+func (this *BaseRequest) EventNodeName() string {
 	ret := distributed.RemoteAccess().WhoAmI()
 	if ret == "" {
 		ret = "local_node"
 	}
 	return ret
-}
-
-// For audit.Auditable interface.
-func (this *BaseRequest) EventElapsedTime() string {
-	tr := time.Since(this.RequestTime())
-	return fmt.Sprintf("%v", tr)
-}
-
-// For audit.Auditable interface.
-func (this *BaseRequest) EventExecutionTime() string {
-	ts := time.Since(this.ServiceTime())
-	return fmt.Sprintf("%v", ts)
 }
 
 // For audit.Auditable interface.

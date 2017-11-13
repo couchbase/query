@@ -25,6 +25,7 @@ import (
 
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
+	"github.com/couchbase/query/audit"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
@@ -225,6 +226,8 @@ func main() {
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
+
+	audit.StartAuditService(*DATASTORE)
 
 	go server.Serve()
 	go server.PlusServe()

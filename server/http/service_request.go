@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -298,7 +299,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) EventResult() string {
+func (this *httpRequest) EventStatus() string {
 	state := this.State()
 	if state == server.COMPLETED {
 		if this.errorCount == 0 {
@@ -312,23 +313,8 @@ func (this *httpRequest) EventResult() string {
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) EventResultCount() int {
-	return this.resultCount
-}
-
-// For audit.Auditable interface.
-func (this *httpRequest) EventResultSize() int {
-	return this.resultSize
-}
-
-// For audit.Auditable interface.
-func (this *httpRequest) EventErrorCount() int {
-	return this.errorCount
-}
-
-// For audit.Auditable interface.
-func (this *httpRequest) EventWarningCount() int {
-	return this.warningCount
+func (this *httpRequest) EventGenericFields() adt.GenericFields {
+	return adt.GetAuditBasicFields(this.req)
 }
 
 const ( // Request argument names

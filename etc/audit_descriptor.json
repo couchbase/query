@@ -10,30 +10,22 @@
       "enabled" : true,
       "mandatory_fields" : {
         "timestamp" : "",
-        "real_userid" : {"source" : "", "users" : [ "" ]},
+        "real_userid" : {"source" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
 
+        "requestId" : "",
         "statement" : "",
-        "named_args" : { "name1" : "", "name2" : "" },
-        "positional_args" : [ "" ],
-        "type" : "",
 
-        "is_adhoc" : true,
-        "user_agent" : "",
-        "server_name" : "",
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
 
-        "request_id" : "",
-        "result" : "",
-        "elapsed_time" : "",
-        "execution_time" : "",
-        "result_count" : 1,
-        "result_size" : 1
+        "status" : ""
       },
       "optional_fields" : {
-        "mutation_count" : 1,
-        "sort_count" : 1,
-        "error_count" : 1,
-        "warning_count" : 1
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
       }
     }
   ]
