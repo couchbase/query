@@ -95,6 +95,7 @@ func init() {
 func main() {
 	HideConsole(true)
 	defer HideConsole(false)
+	flag.Parse()
 
 	// Set Ipv6 or Ipv4
 	server.SetIP(*IPv6)
@@ -103,8 +104,6 @@ func main() {
 	// localhost needs to refer to either 127.0.0.1 or [::1]
 	urlV := server.GetIP(true) + ":6060"
 	go go_http.ListenAndServe(urlV, nil)
-
-	flag.Parse()
 
 	if *LOGGER != "" {
 		logger, _ := log_resolver.NewLogger(*LOGGER)

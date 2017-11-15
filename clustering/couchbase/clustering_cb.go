@@ -631,10 +631,11 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 	}
 
 	// We find the host based on query name
-	queryHost := qryNodeName
-	hostPort := strings.Split(qryNodeName, ":")
-	if len(hostPort) > 0 {
-		queryHost = hostPort[0]
+	queryHost, _ := server.HostNameandPort(qryNodeName)
+
+	// Since we are using it in the URL
+	if strings.Contains(queryHost, ":") {
+		queryHost = "[" + queryHost + "]"
 	}
 
 	for protocol, port := range this.queryNodes[qryNodeName] {
