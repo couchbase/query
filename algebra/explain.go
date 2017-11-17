@@ -98,3 +98,7 @@ Return the text of the statement being explained
 func (this *Explain) Text() string {
 	return this.text
 }
+
+func (this *Explain) Type() string {
+	return "EXPLAIN"
+}

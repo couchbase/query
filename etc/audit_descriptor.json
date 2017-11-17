@@ -27,6 +27,422 @@
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
+    },
+    {
+      "id" : 28673,
+      "name" : "EXPLAIN statement",
+      "description" : "A N1QL EXPLAIN statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28674,
+      "name" : "PREPARE statement",
+      "description" : "A N1QL PREPARE statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28675,
+      "name" : "INFER statement",
+      "description" : "A N1QL INFER statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28676,
+      "name" : "INSERT statement",
+      "description" : "A N1QL INSERT statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28677,
+      "name" : "UPSERT statement",
+      "description" : "A N1QL UPSERT statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28678,
+      "name" : "DELETE statement",
+      "description" : "A N1QL DELETE statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28679,
+      "name" : "UPDATE statement",
+      "description" : "A N1QL UPDATE statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28680,
+      "name" : "MERGE statement",
+      "description" : "A N1QL MERGE statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28681,
+      "name" : "CREATE INDEX statement",
+      "description" : "A N1QL CREATE INDEX statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28682,
+      "name" : "DROP INDEX statement",
+      "description" : "A N1QL DROP INDEX statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28683,
+      "name" : "ALTER INDEX statement",
+      "description" : "A N1QL ALTER INDEX statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28684,
+      "name" : "BUILD INDEX statement",
+      "description" : "A N1QL BUILD INDEX statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28685,
+      "name" : "GRANT ROLE statement",
+      "description" : "A N1QL GRANT ROLE statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28686,
+      "name" : "REVOKE ROLE statement",
+      "description" : "A N1QL REVOKE ROLE statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28687,
+      "name" : "UNRECOGNIZED statement",
+      "description" : "An unrecognized statement was received by the N1QL query engine",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28688,
+      "name" : "CREATE PRIMARY INDEX statement",
+      "description" : "A N1QL CREATE PRIMARY INDEX statement was executed",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+	"users": [ "" ],
+
+        "status" : ""
+      },
+      "optional_fields" : {
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
     }
   ]
 }

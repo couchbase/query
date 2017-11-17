@@ -230,6 +230,10 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *CreateIndex) Type() string {
+	return "CREATE_INDEX"
+}
+
 /*
 It represents multiple IndexKey terms.
 Type IndexKeyTerms is a slice of IndexKeyTerm.

@@ -93,3 +93,7 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 	r["with"] = this.with
 	return json.Marshal(r)
 }
+
+func (this *InferKeyspace) Type() string {
+	return "INFER"
+}

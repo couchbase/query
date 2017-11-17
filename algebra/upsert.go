@@ -279,3 +279,7 @@ upsert statement.
 func (this *Upsert) Returning() *Projection {
 	return this.returning
 }
+
+func (this *Upsert) Type() string {
+	return "UPSERT"
+}

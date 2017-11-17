@@ -681,12 +681,8 @@ func (this *BaseRequest) EventId() string {
 // For audit.Auditable interface.
 func (this *BaseRequest) EventType() string {
 	t := this.Type()
-	if t == "" {
-		if this.IsPrepare() {
-			t = "PREPARE"
-		} else {
-			t = "MISC"
-		}
+	if t == "" && this.IsPrepare() {
+		t = "PREPARE"
 	}
 	return t
 }

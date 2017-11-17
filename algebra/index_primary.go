@@ -142,3 +142,7 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(r)
 }
+
+func (this *CreatePrimaryIndex) Type() string {
+	return "CREATE_PRIMARY_INDEX"
+}

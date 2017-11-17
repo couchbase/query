@@ -90,3 +90,7 @@ func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
 	r["names"] = this.names
 	return json.Marshal(r)
 }
+
+func (this *BuildIndexes) Type() string {
+	return "BUILD_INDEX"
+}

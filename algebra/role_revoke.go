@@ -126,3 +126,7 @@ func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(r)
 }
+
+func (this *RevokeRole) Type() string {
+	return "REVOKE_ROLE"
+}

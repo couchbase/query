@@ -62,6 +62,26 @@ type Auditable interface {
 var doAudit = false
 var doLogAuditEvent = false
 
+// Event types are described in /query/etc/audit_descriptor.json
+var _EVENT_TYPE_MAP = map[string]uint32{
+	"SELECT":               28672,
+	"EXPLAIN":              28673,
+	"PREPARE":              28674,
+	"INFER":                28675,
+	"INSERT":               28676,
+	"UPSERT":               28677,
+	"DELETE":               28678,
+	"UPDATE":               28679,
+	"MERGE":                28680,
+	"CREATE_INDEX":         28681,
+	"DROP_INDEX":           28682,
+	"ALTER_INDEX":          28683,
+	"BUILD_INDEX":          28684,
+	"GRANT_ROLE":           28685,
+	"REVOKE_ROLE":          28686,
+	"CREATE_PRIMARY_INDEX": 28688,
+}
+
 func Submit(event Auditable) {
 	if !doAudit {
 		return
@@ -76,15 +96,18 @@ func Submit(event Auditable) {
 	}
 
 	eventType := event.EventType()
-	if eventType == "SELECT" {
-		// We build the audit record from the request in the main thread
-		// because the request will be destroyed soon after the call to Submit(),
-		// and we don't want to cause a race condition.
-		auditRecord := buildAuditRecord(event)
-		go submitForAudit(28672, auditRecord)
-	} else {
-		logging.Infof("Event submitted for audit of unknown type %s. Not dispatched.", eventType)
+	eventTypeId := _EVENT_TYPE_MAP[eventType]
+
+	// Handle unrecognized events.
+	if eventTypeId == 0 {
+		eventTypeId = 28687
 	}
+
+	// We build the audit record from the request in the main thread
+	// because the request will be destroyed soon after the call to Submit(),
+	// and we don't want to cause a race condition.
+	auditRecord := buildAuditRecord(event)
+	go submitForAudit(eventTypeId, auditRecord)
 }
 
 func buildAuditRecord(event Auditable) *n1qlAuditEvent {

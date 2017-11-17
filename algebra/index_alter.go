@@ -96,3 +96,7 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(r)
 }
+
+func (this *AlterIndex) Type() string {
+	return "ALTER_INDEX"
+}

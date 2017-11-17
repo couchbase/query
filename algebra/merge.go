@@ -268,6 +268,10 @@ func (this *Merge) Returning() *Projection {
 	return this.returning
 }
 
+func (this *Merge) Type() string {
+	return "MERGE"
+}
+
 /*
 Represents the merge source. Type MergeSource is a
 struct containing three fields, the from keyspace

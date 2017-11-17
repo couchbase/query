@@ -126,3 +126,7 @@ func (this *GrantRole) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(r)
 }
+
+func (this *GrantRole) Type() string {
+	return "GRANT_ROLE"
+}

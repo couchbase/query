@@ -125,3 +125,7 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	r["using"] = this.using
 	return json.Marshal(r)
 }
+
+func (this *DropIndex) Type() string {
+	return "DROP_INDEX"
+}
