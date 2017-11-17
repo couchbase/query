@@ -53,6 +53,11 @@ type Indexer interface {
 	SetLogLevel(level logging.Level)                            // Set log level for in-process logging
 }
 
+type IndexConfig interface {
+	SetConfig(KVal map[string]interface{}) errors.Error
+	SetParam(name string, val interface{}) errors.Error
+}
+
 type IndexState string
 
 const (
