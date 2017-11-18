@@ -204,7 +204,6 @@
         }
     ]
 },
-
 {
     "statements": "SELECT product.categories AS CATG, COUNT (*) AS numprods FROM product WHERE test_id = \"agg_func\" GROUP BY product.categories ORDER BY numprods,CATG LIMIT 3",
     "results": [
@@ -227,6 +226,17 @@
             "numprods": 7
         }
     ]
-}
+},
+{
+    "statements": "SELECT COUNTN(cntn) AS cntn, COUNTN(DISTINCT cntn) AS dcntn, COUNT(cnt) AS cnt, COUNT(DISTINCT cntn) AS dcnt FROM product WHERE test_id = \"agg_func\"",
+    "results": [
+        {
+            "dcnt": 4,
+            "dcntn": 2,
+            "cnt": 5
+            "cntn": 3
+        }
+    ]
 ]
+}
 

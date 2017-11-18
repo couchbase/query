@@ -42,6 +42,7 @@ var _DISTINCT_AGGREGATES = map[string]Aggregate{
 	"array_agg": &ArrayAggDistinct{},
 	"avg":       &AvgDistinct{},
 	"count":     &CountDistinct{},
+	"countn":    &CountnDistinct{},
 	"sum":       &SumDistinct{},
 }
 
@@ -54,6 +55,7 @@ var _OTHER_AGGREGATES = map[string]Aggregate{
 	"array_agg": &ArrayAgg{},
 	"avg":       &Avg{},
 	"count":     &Count{},
+	"countn":    &Countn{},
 	"max":       &Max{},
 	"min":       &Min{},
 	"sum":       &Sum{},

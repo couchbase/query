@@ -2717,4 +2717,20 @@
 {
  "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1236_agg_func\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer38\", \"id\": \"1236\", \"shipped-on\": null, \"test_id\" : \"agg_func\" })"
  }
+{
+ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1300_agg_func\", {\"cntn\":10,\"test_id\" : \"agg_func\" })"
+ }
+{
+ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1301_agg_func\", {\"cntn\":10,\"test_id\" : \"agg_func\" })"
+ }
+{
+ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1302_agg_func\", {\"cntn\":11,\"test_id\" : \"agg_func\" })"
+ }
+{
+ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1303_agg_func\", {\"cntn\":\"abc\",\"test_id\" : \"agg_func\" })"
+ }
+{
+ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1304_agg_func\", {\"cntn\":\"efg\",\"test_id\" : \"agg_func\" })"
+ }
+]
 ]
