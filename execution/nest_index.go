@@ -32,6 +32,7 @@ func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
 	}
 
 	newJoinBase(&rv.joinBase, context)
+	rv.newStopChannel()
 	rv.execPhase = INDEX_NEST
 	rv.output = rv
 	return rv
@@ -150,6 +151,11 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+// send a stop
+func (this *IndexNest) SendStop() {
+	this.chanSendStop()
 }
 
 var _INDEX_ENTRY_POOL = datastore.NewIndexEntryPool(16)

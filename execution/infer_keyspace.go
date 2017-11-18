@@ -29,6 +29,7 @@ func NewInferKeyspace(plan *plan.InferKeyspace, context *Context) *InferKeyspace
 	}
 
 	newBase(&rv.base, context)
+	rv.newStopChannel()
 	rv.execPhase = INFER
 	rv.output = rv
 	return rv
@@ -88,4 +89,9 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+// send a stop
+func (this *InferKeyspace) SendStop() {
+	this.chanSendStop()
 }

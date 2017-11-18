@@ -34,6 +34,7 @@ func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 	}
 
 	newJoinBase(&rv.joinBase, context)
+	rv.newStopChannel()
 	rv.execPhase = INDEX_JOIN
 	rv.output = rv
 	return rv
@@ -211,4 +212,9 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+// send a stop
+func (this *IndexJoin) SendStop() {
+	this.chanSendStop()
 }

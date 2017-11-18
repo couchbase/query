@@ -52,14 +52,13 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.close(context)
 		this.switchPhase(_EXECTIME)
-		this.setExecPhase(INDEX_SCAN, context)
-		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer this.notify()                          // Notify that I have stopped
-
 		spans := this.plan.Spans()
 		n := len(spans)
+		this.SetKeepAlive(n, context)
+		this.setExecPhase(INDEX_SCAN, context)
+		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+
 		if !active || !context.assert(n != 0, "Index scan has no spans") {
 			return
 		}
@@ -72,11 +71,6 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			scan.SetBit(this.bit)
 			this.children = append(this.children, scan)
 			go this.children[i].RunOnce(context, parent)
-		}
-
-		if !this.childrenWait(n) {
-			this.notifyStop()
-			notifyChildren(this.children...)
 		}
 	})
 }
@@ -112,7 +106,7 @@ func (this *IndexScan) reopen(context *Context) {
 }
 
 func (this *IndexScan) Done() {
-	this.wait()
+	this.baseDone()
 	for c, _ := range this.children {
 		// we happen to know that there's nothing to be done for the chilren spans
 		this.children[c] = nil
@@ -134,6 +128,7 @@ func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
 	}
 
 	newRedirectBase(&rv.base)
+	rv.newStopChannel()
 	rv.parent = parent
 	rv.output = parent.output
 	return rv
@@ -291,4 +286,9 @@ func (this *spanScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+// send a stop
+func (this *spanScan) SendStop() {
+	this.chanSendStop()
 }

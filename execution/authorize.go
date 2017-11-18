@@ -115,7 +115,7 @@ func (this *Authorize) reopen(context *Context) {
 }
 
 func (this *Authorize) Done() {
-	this.wait()
+	this.baseDone()
 	if this.child != nil {
 		this.child.Done()
 	}

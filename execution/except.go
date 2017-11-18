@@ -127,7 +127,7 @@ func (this *ExceptAll) reopen(context *Context) {
 }
 
 func (this *ExceptAll) Done() {
-	this.wait()
+	this.baseDone()
 	if this.first != nil {
 		this.first.Done()
 	}

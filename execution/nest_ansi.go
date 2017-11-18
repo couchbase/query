@@ -190,7 +190,7 @@ func (this *AnsiNest) reopen(context *Context) {
 }
 
 func (this *AnsiNest) Done() {
-	this.wait()
+	this.baseDone()
 	if this.child != nil {
 		this.child.Done()
 	}

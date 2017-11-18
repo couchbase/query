@@ -71,9 +71,9 @@ func (this *Fetch) afterItems(context *Context) {
 
 func (this *Fetch) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
-	if this.batchSize < cap(this.output.ItemChannel()) {
+	if this.batchSize < int(context.PipelineCap()) {
 		defer func() {
-			this.batchSize = cap(this.output.ItemChannel())
+			this.batchSize = int(context.PipelineCap())
 		}()
 	}
 

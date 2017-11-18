@@ -75,6 +75,6 @@ func (this *Explain) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Explain) Done() {
-	this.wait()
+	this.baseDone()
 	this.plan = nil
 }

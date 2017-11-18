@@ -226,7 +226,7 @@ func (this *AnsiJoin) reopen(context *Context) {
 }
 
 func (this *AnsiJoin) Done() {
-	this.wait()
+	this.baseDone()
 	if this.child != nil {
 		this.child.Done()
 	}

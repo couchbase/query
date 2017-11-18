@@ -27,7 +27,7 @@ type Operator interface {
 	json.Marshaler // used for profiling
 
 	Accept(visitor Visitor) (interface{}, error)
-	ItemChannel() annotatedChannel                // Closed by this operator
+	ValueExchange() *valueExchange                // Closed by this operator
 	Input() Operator                              // Read by this operator
 	SetInput(op Operator)                         // Can be set
 	Output() Operator                             // Written by this operator
@@ -49,7 +49,6 @@ type Operator interface {
 	close(context *Context)     // the operator is no longer operating!
 	keepAlive(op Operator) bool // operator was set to terminate early
 	stopCh() stopChannel        // Never closed, just garbage-collected
-	childCh() stopChannel       // Never closed, just garbage-collected
 
 	// local infrastructure to add up times of children of the parallel operator
 	accrueTimes(o Operator)

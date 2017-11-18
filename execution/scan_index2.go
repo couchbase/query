@@ -31,6 +31,7 @@ func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {
 	}
 
 	newBase(&rv.base, context)
+	rv.newStopChannel()
 	rv.output = rv
 	return rv
 }
@@ -228,4 +229,9 @@ func (this *IndexScan2) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+// send a stop
+func (this *IndexScan2) SendStop() {
+	this.chanSendStop()
 }

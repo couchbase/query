@@ -32,7 +32,6 @@ func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Paralle
 	}
 
 	newBase(&rv.base, context)
-	rv.trackChildren(runtime.NumCPU())
 	rv.output = rv
 	return rv
 }
@@ -137,7 +136,7 @@ func (this *Parallel) reopen(context *Context) {
 }
 
 func (this *Parallel) Done() {
-	this.wait()
+	this.baseDone()
 	for c, child := range this.children {
 		child.Done()
 		this.children[c] = nil

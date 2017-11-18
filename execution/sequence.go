@@ -119,7 +119,7 @@ func (this *Sequence) reopen(context *Context) {
 }
 
 func (this *Sequence) Done() {
-	this.wait()
+	this.baseDone()
 	for c, child := range this.children {
 		child.Done()
 		this.children[c] = nil

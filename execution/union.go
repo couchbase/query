@@ -116,7 +116,7 @@ func (this *UnionAll) reopen(context *Context) {
 }
 
 func (this *UnionAll) Done() {
-	this.wait()
+	this.baseDone()
 	for c, child := range this.children {
 		child.Done()
 		this.children[c] = nil

@@ -18,7 +18,7 @@ import (
 )
 
 type OrderLimit struct {
-	Order
+	*Order
 	offset           *Offset // offset is optional
 	limit            *Limit  // limit must present
 	numReturnedRows  int
@@ -32,7 +32,7 @@ func NewOrderLimit(plan *plan.Order, context *Context) *OrderLimit {
 	var rv *OrderLimit
 	if plan.Offset() == nil {
 		rv = &OrderLimit{
-			Order:            *NewOrder(plan, context),
+			Order:            NewOrder(plan, context),
 			offset:           nil,
 			limit:            NewLimit(plan.Limit(), context),
 			numReturnedRows:  0,
@@ -43,7 +43,7 @@ func NewOrderLimit(plan *plan.Order, context *Context) *OrderLimit {
 		}
 	} else {
 		rv = &OrderLimit{
-			Order:            *NewOrder(plan, context),
+			Order:            NewOrder(plan, context),
 			offset:           NewOffset(plan.Offset(), context),
 			limit:            NewLimit(plan.Limit(), context),
 			numReturnedRows:  0,
@@ -63,41 +63,25 @@ func (this *OrderLimit) Copy() Operator {
 
 	if this.offset == nil {
 		rv = &OrderLimit{
-			Order: Order{
-				plan:   this.plan,
-				values: _ORDER_POOL.Get(),
-			},
-			offset: nil,
-			limit: &Limit{
-				plan: this.limit.plan,
-			},
+			Order:            this.Order.Copy().(*Order),
+			offset:           nil,
+			limit:            this.limit.Copy().(*Limit),
 			numReturnedRows:  this.numReturnedRows,
 			ignoreInput:      this.ignoreInput,
 			fallback:         this.fallback,
 			numProcessedRows: this.numProcessedRows,
 		}
-		this.limit.base.copy(&rv.limit.base)
 	} else {
 		rv = &OrderLimit{
-			Order: Order{
-				plan:   this.plan,
-				values: _ORDER_POOL.Get(),
-			},
-			offset: &Offset{
-				plan: this.offset.plan,
-			},
-			limit: &Limit{
-				plan: this.limit.plan,
-			},
+			Order:            this.Order.Copy().(*Order),
+			offset:           this.offset.Copy().(*Offset),
+			limit:            this.limit.Copy().(*Limit),
 			numReturnedRows:  this.numReturnedRows,
 			ignoreInput:      this.ignoreInput,
 			fallback:         this.fallback,
 			numProcessedRows: this.numProcessedRows,
 		}
-		this.offset.base.copy(&rv.offset.base)
-		this.limit.base.copy(&rv.limit.base)
 	}
-	this.Order.base.copy(&rv.Order.base)
 	return rv
 }
 
@@ -232,4 +216,17 @@ func (this *OrderLimit) MarshalJSON() ([]byte, error) {
 func (this *OrderLimit) reopen(context *Context) {
 	this.Order.reopen(context)
 	this.limit.baseReopen(context)
+}
+
+func (this *OrderLimit) Done() {
+	this.Order.Done()
+	this.Order = nil
+	if this.limit != nil {
+		this.limit.Done()
+		this.limit = nil
+	}
+	if this.offset != nil {
+		this.offset.Done()
+		this.offset = nil
+	}
 }

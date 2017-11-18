@@ -48,9 +48,8 @@ var _PHASENAMES = []string{
 type annotatedChannel chan value.AnnotatedValue
 
 type base struct {
-	itemChannel    annotatedChannel
-	stopChannel    stopChannel // Never closed
-	childChannel   stopChannel // Never closed
+	valueExchange
+	stopChannel    stopChannel
 	input          Operator
 	output         Operator
 	stop           Operator
@@ -110,8 +109,7 @@ func GetPipelineCap() int64 {
 // Constructor, (re)opener, closer, destructor
 
 func newBase(base *base, context *Context) {
-	base.itemChannel = make(annotatedChannel, context.GetPipelineCap())
-	base.stopChannel = make(stopChannel, 1)
+	newValueExchange(&base.valueExchange, context.GetPipelineCap())
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
 	base.activeCond = sync.NewCond(&base.activeLock)
@@ -120,18 +118,16 @@ func newBase(base *base, context *Context) {
 // The output of this operator will be redirected elsewhere, so we
 // allocate a minimal itemChannel.
 func newRedirectBase(base *base) {
-	base.itemChannel = make(annotatedChannel, 1)
-	base.stopChannel = make(stopChannel, 1)
+	newValueExchange(&base.valueExchange, 1)
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
 	base.activeCond = sync.NewCond(&base.activeLock)
 }
 
 func (this *base) copy(base *base) {
-	base.itemChannel = make(annotatedChannel, cap(this.itemChannel))
-	base.stopChannel = make(stopChannel, 1)
-	if this.childChannel != nil {
-		base.childChannel = make(stopChannel, cap(this.childChannel))
+	newValueExchange(&base.valueExchange, int64(cap(this.valueExchange.items)))
+	if this.valueExchange.children != nil {
+		base.trackChildren(cap(this.valueExchange.children))
 	}
 	base.input = this.input
 	base.output = this.output
@@ -150,22 +146,23 @@ func (this *base) reopen(context *Context) {
 }
 
 func (this *base) close(context *Context) {
+	this.valueExchange.close()
 	this.inactive()
-	close(this.itemChannel)
 }
 
-// execution destructor is empty by default
 func (this *base) Done() {
+	this.baseDone()
+}
+
+func (this *base) baseDone() {
+	this.wait()
+	this.valueExchange.dispose()
 }
 
 // reopen for the terminal operator case
 func (this *base) baseReopen(context *Context) {
 	this.wait()
-	this.itemChannel = make(annotatedChannel, context.GetPipelineCap())
-	this.stopChannel = make(stopChannel, 1)
-	if this.childChannel != nil {
-		this.childChannel = make(stopChannel, cap(this.childChannel))
-	}
+	this.valueExchange.reset()
 	this.once.Reset()
 	this.contextTracked = nil
 	this.childrenLeft = 0
@@ -179,19 +176,20 @@ func (this *base) baseReopen(context *Context) {
 // setUp
 
 func (this *base) trackChildren(count int) {
-	this.childChannel = make(stopChannel, count)
+	this.valueExchange.trackChildren(count)
 }
 
-func (this *base) ItemChannel() annotatedChannel {
-	return this.itemChannel
+func (this *base) ValueExchange() *valueExchange {
+	return &this.valueExchange
+}
+
+// for those operators that really use channels
+func (this *base) newStopChannel() {
+	this.stopChannel = make(stopChannel, 1)
 }
 
 func (this *base) stopCh() stopChannel {
 	return this.stopChannel
-}
-
-func (this *base) childCh() stopChannel {
-	return this.childChannel
 }
 
 func (this *base) Input() Operator {
@@ -264,10 +262,20 @@ func (this *base) SendStop() {
 
 // stop for the terminal operator case
 func (this *base) baseSendStop() {
+	if this.stopped || this.completed {
+		return
+	}
+	this.switchPhase(_CHANTIME)
+	this.valueExchange.sendStop()
+	this.switchPhase(_EXECTIME)
+}
+
+func (this *base) chanSendStop() {
 	if this.completed {
 		return
 	}
 	this.switchPhase(_CHANTIME)
+	this.valueExchange.sendStop()
 	select {
 	case this.stopChannel <- 0:
 	default:
@@ -283,56 +291,31 @@ func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 	if this.stopped {
 		return false
 	}
-
 	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
-	select {
-	case <-this.stopChannel: // Never closed
-		return false
-	default:
-	}
+	ok := this.ValueExchange().sendItem(op.ValueExchange(), item)
+	this.switchPhase(_EXECTIME)
+	if ok {
 
-	select {
-	case op.ItemChannel() <- item:
-
-		// sendItemOp keeps track of outgoing
-		// documengs for most operators
+		// sendItem tracks outgoing documents for most operators
 		this.addOutDocs(1)
-		return true
-	case <-this.stopChannel: // Never closed
-		return false
+	} else {
+		this.stopped = true
 	}
+	return ok
 }
 
 func (this *base) getItem() (value.AnnotatedValue, bool) {
 	return this.getItemOp(this.input)
 }
+
 func (this *base) getItemOp(op Operator) (value.AnnotatedValue, bool) {
 	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
-
-	select {
-	case <-this.stopChannel: // Never closed
+	val, ok := this.ValueExchange().getItem(op.ValueExchange())
+	this.switchPhase(_EXECTIME)
+	if !ok {
 		this.stopped = true
-		return nil, false
-	default:
 	}
-
-	select {
-	case item, ok := <-op.ItemChannel():
-		if ok {
-
-			// getItem does not keep track of
-			// incoming documents
-			return item, true
-		}
-
-		// no more data
-		return nil, true
-	case <-this.stopChannel: // Never closed
-		this.stopped = true
-		return nil, false
-	}
+	return val, ok
 }
 
 func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
@@ -397,66 +380,43 @@ func (this *base) getItemChildren() (value.AnnotatedValue, int, bool) {
 
 func (this *base) getItemChildrenOp(op Operator) (value.AnnotatedValue, int, bool) {
 	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
-
-	select {
-	case <-this.stopChannel: // Never closed
+	val, child, ok := this.ValueExchange().getItemChildren(op.ValueExchange())
+	this.switchPhase(_EXECTIME)
+	if !ok {
 		this.stopped = true
-		return nil, -1, false
-	default:
 	}
-
-	select {
-	case child := <-this.childChannel:
-		return nil, child, true
-	default:
-	}
-
-	select {
-	case item, ok := <-op.ItemChannel():
-		if ok {
-
-			// getItem does not keep track of
-			// incoming documents
-			return item, -1, true
-		}
-
-		// no more data
-		return nil, -1, true
-	case child := <-this.childChannel:
-		return nil, child, true
-	case <-this.stopChannel: // Never closed
-		this.stopped = true
-		return nil, -1, false
-	}
+	return val, child, ok
 }
 
 // wait for at least n children to complete
 func (this *base) childrenWait(n int) bool {
 	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
 	for n > 0 {
-		select {
-		case <-this.childChannel: // Never closed
-			n--
-		case <-this.stopChannel: // Never closed
+
+		// no values are actually coming
+		_, child, ok := this.ValueExchange().getItemChildren(this.ValueExchange())
+		if !ok {
+			this.stopped = true
+			this.switchPhase(_EXECTIME)
 			return false
+		}
+		if child >= 0 {
+			n--
 		}
 	}
 
+	this.switchPhase(_EXECTIME)
 	return true
 }
 
 // wait for at least n children to complete ignoring stop messages
 func (this *base) childrenWaitNoStop(n int) {
 	this.switchPhase(_CHANTIME)
-	defer this.switchPhase(_EXECTIME)
 	for n > 0 {
-		select {
-		case <-this.childChannel: // Never closed
-			n--
-		}
+		this.ValueExchange().retrieveChild()
+		n--
 	}
+	this.switchPhase(_EXECTIME)
 }
 
 type consumer interface {
@@ -542,7 +502,7 @@ func (this *base) notifyParent() {
 
 		// Block on parent
 		this.switchPhase(_CHANTIME)
-		parent.childCh() <- int(this.bit)
+		parent.ValueExchange().sendChild(int(this.bit))
 		this.switchPhase(_EXECTIME)
 	}
 	this.parent = nil
@@ -714,6 +674,23 @@ func (this *base) wait() {
 
 	// still running, just wait
 	if this.primed && !this.completed {
+
+		// technically this should be in a loop testing for completed
+		// but there's ever going to be one other actor, and all it
+		// does is releases us, so this suffices
+		this.activeCond.Wait()
+	}
+
+	// signal that no go routine should touch this operator
+	this.completed = true
+	this.activeCond.L.Unlock()
+}
+
+func (this *base) waitComplete() {
+	this.activeCond.L.Lock()
+
+	// still running, just wait
+	if !this.completed {
 
 		// technically this should be in a loop testing for completed
 		// but there's ever going to be one other actor, and all it

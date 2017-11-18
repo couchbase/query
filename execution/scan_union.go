@@ -198,7 +198,7 @@ func (this *UnionScan) reopen(context *Context) {
 }
 
 func (this *UnionScan) Done() {
-	this.wait()
+	this.baseDone()
 	for s, scan := range this.scans {
 		scan.Done()
 		this.scans[s] = nil

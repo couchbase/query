@@ -245,7 +245,7 @@ func (this *IntersectScan) reopen(context *Context) {
 }
 
 func (this *IntersectScan) Done() {
-	this.wait()
+	this.baseDone()
 	for s, scan := range this.scans {
 		scan.Done()
 		this.scans[s] = nil

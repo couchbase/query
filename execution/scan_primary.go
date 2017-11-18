@@ -31,6 +31,7 @@ func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
 	}
 
 	newBase(&rv.base, context)
+	rv.newStopChannel()
 	rv.output = rv
 	return rv
 }
@@ -223,4 +224,9 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+// send a stop
+func (this *PrimaryScan) SendStop() {
+	this.chanSendStop()
 }

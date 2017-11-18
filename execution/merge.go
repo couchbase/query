@@ -249,7 +249,7 @@ func (this *Merge) reopen(context *Context) {
 }
 
 func (this *Merge) Done() {
-	this.wait()
+	this.baseDone()
 	if this.update != nil {
 		this.update.Done()
 		this.update = nil

@@ -381,8 +381,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	sequence.RunOnce(this, parent)
 
 	// Await completion
-	// nothing goes in the collect channel, so when it closes we are done
-	collect.getItemOp(collect)
+	collect.waitComplete()
 
 	results := collect.ValuesOnce()
 	sequence.Done()

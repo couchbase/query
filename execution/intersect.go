@@ -133,7 +133,7 @@ func (this *IntersectAll) reopen(context *Context) {
 }
 
 func (this *IntersectAll) Done() {
-	this.wait()
+	this.baseDone()
 	if this.first != nil {
 		this.first.Done()
 	}

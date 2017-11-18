@@ -186,7 +186,7 @@ func (this *DistinctScan) reopen(context *Context) {
 }
 
 func (this *DistinctScan) Done() {
-	this.wait()
+	this.baseDone()
 	if this.scan != nil {
 		this.scan.Done()
 	}
