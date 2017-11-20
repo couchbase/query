@@ -282,12 +282,30 @@ type IndexAggregate struct {
 }
 
 type IndexGroupAggregates struct {
-	Name                string          // name of the index aggregate
-	Group               IndexGroupKeys  // group keys, nil means no group by
-	Aggregates          IndexAggregates // aggregates with in the group, nil means no aggregates
-	DependsOnIndexKeys  []int           // GROUP and Aggregates Depends on List of index keys positions
-	DependsOnPrimaryKey bool            // GROUP and Aggregates Depends on primary key
+	Name               string          // name of the index aggregate
+	Group              IndexGroupKeys  // group keys, nil means no group by
+	Aggregates         IndexAggregates // aggregates with in the group, nil means no aggregates
+	DependsOnIndexKeys []int           // GROUP and Aggregates Depends on List of index keys positions
+	IndexKeyNames      []string        // Index key names used in expressions
+}
 
+type IndexKeyOrders []*IndexKeyOrder
+
+type IndexKeyOrder struct {
+	KeyPos int
+	Desc   bool
+}
+
+type PartitionType string
+
+const (
+	NO_PARTITION   PartitionType = ""
+	HASH_PARTITION PartitionType = "HASH"
+)
+
+type IndexPartition struct {
+	Strategy PartitionType
+	Exprs    expression.Expressions
 }
 
 type Index3 interface {
@@ -296,10 +314,11 @@ type Index3 interface {
 	CreateAggregate(requestId string, groupAggs *IndexGroupAggregates, with value.Value) errors.Error
 	DropAggregate(requestId, name string) errors.Error
 	Aggregates() ([]IndexGroupAggregates, errors.Error)
+	PartitionKeys() (*IndexPartition, errors.Error) // Partition Info
 
-	Scan3(requestId string, spans Spans2, reverse, distinctAfterProjection,
-		ordered bool, projection *IndexProjection, offset, limit int64,
-		groupAggs *IndexGroupAggregates,
+	Scan3(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
+		projection *IndexProjection, offset, limit int64,
+		groupAggs *IndexGroupAggregates, indexOrders IndexKeyOrders,
 		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
 }
 
@@ -308,8 +327,20 @@ type PrimaryIndex3 interface {
 
 	// Perform a scan of all the entries in this index
 	ScanEntries3(requestId string, projection *IndexProjection, offset, limit int64,
-		groupAggs *IndexGroupAggregates, cons ScanConsistency,
+		groupAggs *IndexGroupAggregates, indexOrders IndexKeyOrders, cons ScanConsistency,
 		vector timestamp.Vector, conn *IndexConnection)
+}
+
+type Indexer3 interface {
+	Indexer2
+
+	// Create a secondary index on this keyspace
+	CreateIndex3(requestId, name string, rangeKey IndexKeys, indexPartition *IndexPartition,
+		where expression.Expression, with value.Value) (Index, errors.Error)
+
+	// Create a primary index on this keyspace
+	CreatePrimaryIndex3(requestId, name string, indexPartition *IndexPartition,
+		with value.Value) (PrimaryIndex, errors.Error)
 }
 
 ////////////////////////////////////////////////////////////////////////
