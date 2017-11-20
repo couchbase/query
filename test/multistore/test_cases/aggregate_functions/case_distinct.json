@@ -228,15 +228,14 @@
     ]
 },
 {
-    "statements": "SELECT COUNTN(cntn) AS cntn, COUNTN(DISTINCT cntn) AS dcntn, COUNT(cnt) AS cnt, COUNT(DISTINCT cntn) AS dcnt FROM product WHERE test_id = \"agg_func\"",
+    "statements": "SELECT COUNTN(cntn) AS cntn, COUNTN(DISTINCT cntn) AS dcntn, COUNT(cntn) AS cnt, COUNT(DISTINCT cntn) AS dcnt FROM orders WHERE test_id = \"cntn_agg_func\"",
     "results": [
         {
+            "cnt": 5,
+            "cntn": 3,
             "dcnt": 4,
-            "dcntn": 2,
-            "cnt": 5
-            "cntn": 3
+            "dcntn": 2
         }
     ]
-]
 }
-
+]
