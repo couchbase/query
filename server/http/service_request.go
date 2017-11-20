@@ -579,8 +579,7 @@ func getClientID(a httpRequestArgs) (string, errors.Error) {
 	l := len(client_id)
 	for i := 0; i < l; i++ {
 		switch client_id[i] {
-		case '"':
-		case '\\':
+		case '"', '\\':
 			return client_id, errors.NewServiceErrorClientID(client_id)
 		default:
 			continue
