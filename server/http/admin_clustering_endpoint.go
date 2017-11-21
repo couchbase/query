@@ -497,6 +497,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		for setting, value := range settings {
 			set_it := _SETTERS[setting]
 			set_it(srvr, value)
+			logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
 		}
 		return fillSettings(settings, srvr), nil
 	default:
