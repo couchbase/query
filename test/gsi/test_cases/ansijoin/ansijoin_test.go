@@ -41,6 +41,11 @@ func TestCover(t *testing.T) {
 		runStmt(qc, "CREATE INDEX purch_purchaseId on purchase(purchaseId)")
 		runStmt(qc, "CREATE INDEX purch_customerId_metaid on purchase(customerId || \"_\" || test_id)")
 		runStmt(qc, "CREATE INDEX ord_customerId_ordersId on orders(customerId, orderId)")
+		runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, customerId)")
+		runStmt(qc, "CREATE INDEX prod_reviewList_productId on product(DISTINCT reviewList, productId)")
+		runStmt(qc, "CREATE INDEX st_ix11 on shellTest(c11, DISTINCT a11) WHERE type = \"left\"")
+		runStmt(qc, "CREATE INDEX st_ix21 on shellTest(c21, DISTINCT a21) WHERE type = \"right\"")
+		runStmt(qc, "CREATE INDEX st_ix22 on shellTest(a22) WHERE type = \"right\"")
 
 		fmt.Println("Running ANSI JOIN test cases")
 
@@ -59,11 +64,17 @@ func TestCover(t *testing.T) {
 		// test ANSI OUTER JOIN
 		runMatch("case_ansijoin_outer.json", qc, t)
 
-		// test ANSI JOIN on meta().id
+		// test ANSI NEST on meta().id
 		runMatch("case_ansinest_metaid.json", qc, t)
 
 		// test ANSI NEST
 		runMatch("case_ansinest_simple.json", qc, t)
+
+		// test ANSI JOIN on arrays
+		runMatch("case_ansijoin_array_simple.json", qc, t)
+
+		// test ANSI JOIN on arrays -- more
+		runMatch("case_ansijoin_array_more.json", qc, t)
 
 		fmt.Println("Dropping indexes")
 		runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
@@ -73,11 +84,24 @@ func TestCover(t *testing.T) {
 		runStmt(qc, "DROP INDEX purchase.purch_purchaseId")
 		runStmt(qc, "DROP INDEX purchase.purch_customerId_metaid")
 		runStmt(qc, "DROP INDEX orders.ord_customerId_ordersId")
+		runStmt(qc, "DROP INDEX purchase.purch_arrProduct_customerId")
+		runStmt(qc, "DROP INDEX product.prod_reviewList_productId")
+		runStmt(qc, "DROP INDEX shellTest.st_ix11")
+		runStmt(qc, "DROP INDEX shellTest.st_ix21")
+		runStmt(qc, "DROP INDEX shellTest.st_ix22")
 
 		// delete all rows from keyspaces used
 		runStmt(qc, "DELETE FROM customer")
 		runStmt(qc, "DELETE FROM product")
 		runStmt(qc, "DELETE FROM purchase")
 		runStmt(qc, "DELETE FROM orders")
+		runStmt(qc, "DELETE FROM shellTest")
+
+		// drop primary indexes (created in insert.json)
+		runStmt(qc, "DROP PRIMARY INDEX ON customer")
+		runStmt(qc, "DROP PRIMARY INDEX ON product")
+		runStmt(qc, "DROP PRIMARY INDEX ON purchase")
+		runStmt(qc, "DROP PRIMARY INDEX ON orders")
+		runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
 	}
 }

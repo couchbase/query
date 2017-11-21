@@ -1,0 +1,248 @@
+[
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 JOIN shellTest b2 ON b1.a11 = b2.a22 WHERE b1.type = \"left\" AND b2.type = \"right\" ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 1,
+            "c21": 1,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c21": 2,
+            "c22": 21
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 30
+        },
+        {
+            "c11": 1,
+            "c21": 5,
+            "c22": 50
+        },
+        {
+            "c11": 2,
+            "c21": 6,
+            "c22": 60
+        },
+        {
+            "c11": 4,
+            "c21": 7,
+            "c22": 70
+        },
+        {
+            "c11": 4,
+            "c21": 8,
+            "c22": 80
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b2.c21, b2.c22, b2.a21 FROM shellTest b1 JOIN shellTest b2 ON b1.c11 = b2.c21 AND ANY v IN b2.a21 SATISFIES v = 10 END AND b2.type = \"right\" WHERE b1.type = \"left\" ORDER BY b2.c22",
+        "results": [
+        {
+            "a21": [
+                1,
+                10,
+                20
+            ],
+            "c21": 1,
+            "c22": 10
+        },
+        {
+            "a21": [
+                3,
+                10,
+                30
+            ],
+            "c21": 3,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 JOIN shellTest b2 ON b2.c21 = b1.c11 AND ANY v IN b2.a21 SATISFIES v = b1.c12 END AND b2.type = \"right\" WHERE b1.type = \"left\" AND b1.c11 IS NOT MISSING ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 1,
+            "c21": 1,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c21": 2,
+            "c22": 21
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 UNNEST b1.a11 AS ba1 JOIN shellTest b2 ON ba1 = b2.c21 AND b2.type = \"right\" WHERE b1.c11 = 2 AND b1.type = \"left\" ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 30
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 30
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 32
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 32
+        },
+        {
+            "c11": 2,
+            "c21": 5,
+            "c22": 50
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 UNNEST b1.a11 AS ba1 LEFT JOIN shellTest b2 ON ba1 = b2.c21 AND b2.type = \"right\" WHERE b1.c11 = 4 AND b1.type = \"left\"",
+        "results": [
+        {
+            "c11": 4
+        },
+        {
+            "c11": 4
+        },
+        {
+            "c11": 4
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 JOIN shellTest b2 ON b2.c21 IN b1.a11 AND b2.type = \"right\" WHERE b1.c11 = 2 AND b1.type = \"left\" ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 30
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 2,
+            "c21": 3,
+            "c22": 32
+        },
+        {
+            "c11": 2,
+            "c21": 5,
+            "c22": 50
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 LEFT JOIN shellTest b2 ON b2.c21 IN b1.a11 AND b2.type = \"right\" WHERE b1.c11 = 4 AND b1.type = \"left\"",
+        "results": [
+        {
+            "c11": 4
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 UNNEST b1.a11 AS ba1 JOIN shellTest b2 ON b2.c21 = b1.c11 AND ANY v IN b2.a21 SATISFIES v = ba1 END AND b2.type = \"right\" WHERE b1.type = \"left\" AND b1.c11 IS NOT MISSING ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 1,
+            "c21": 1,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c21": 2,
+            "c22": 20
+        },
+        {
+            "c11": 2,
+            "c21": 2,
+            "c22": 20
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 30
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 32
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 JOIN shellTest b2 ON b2.c21 = b1.c11 AND ANY v IN b2.a21 SATISFIES v IN b1.a11 END AND b2.type = \"right\" WHERE b1.type = \"left\" AND b1.c11 IS NOT MISSING ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 1,
+            "c21": 1,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c21": 2,
+            "c22": 20
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 30
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 31
+        },
+        {
+            "c11": 3,
+            "c21": 3,
+            "c22": 32
+        }
+    ]
+    }
+]
+

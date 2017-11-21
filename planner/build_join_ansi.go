@@ -23,9 +23,13 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		scans, primaryJoinKeys, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause())
 		if err != nil {
 			return nil, err
+		}
+
+		if newOnclause != nil {
+			node.SetOnclause(newOnclause)
 		}
 
 		if len(scans) > 0 {
@@ -64,9 +68,13 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		scans, primaryJoinKeys, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause())
 		if err != nil {
 			return nil, err
+		}
+
+		if newOnclause != nil {
+			node.SetOnclause(newOnclause)
 		}
 
 		if len(scans) > 0 {
@@ -101,7 +109,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 }
 
 func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expression.Expression) (
-	[]plan.Operator, expression.Expression, error) {
+	[]plan.Operator, expression.Expression, expression.Expression, error) {
 
 	children := this.children
 	coveringScans := this.coveringScans
@@ -135,13 +143,13 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 
 	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
-		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoinScan: missing baseKeyspace %s", node.Alias()))
+		return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoinScan: missing baseKeyspace %s", node.Alias()))
 	}
 
 	pred := onclause.Copy()
 	pred, err := this.processHostParameters(pred)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// For the keyspace as the inner of an ANSI JOIN, the ClassifyExpr() call
@@ -155,12 +163,12 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 	// the outer keyspace.
 	err = ClassifyExpr(pred, this.baseKeyspaces, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// check whether joining on meta().id
@@ -182,25 +190,70 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 					primaryJoinKeys = eqFltr.First()
 					break
 				}
+			} else if inFltr, ok := fltr.fltrExpr.(*expression.In); ok {
+				if inFltr.First().EquivalentTo(id) {
+					node.SetPrimaryJoin()
+					primaryJoinKeys = inFltr.Second()
+					break
+				}
 			}
 		}
 	}
 
 	_, err = node.Accept(this)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	// perform cover transformation for ON-clause
+	// this needs to be done here since we build plan.AnsiJoin or plan.AnsiNest
+	// by the caller right after returning from this function, and the plan
+	// operators gets onclause expression from algebra.AnsiJoin or algebra.AnsiNest,
+	// in case the entire ON-clause is transformed into a cover() expression
+	// (e.g., an ANY clause as the entire ON-clause), this transformation needs to
+	// be done before we build plan.AnsiJoin or plan.AnsiNest (since the root of
+	// the expression changes), otherwise the transformed onclause will not be in
+	// the plan operators.
+
+	newOnclause := onclause
+
+	// do right-hand-side covering index scan first, in case an ANY clause contains
+	// a join filter, if part of the join filter gets transformed first, the ANY clause
+	// will no longer match during transformation.
+	// (note this assumes the ANY clause is on the right-hand-side keyspace)
+	if len(this.coveringScans) > 0 {
+		for _, op := range this.coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+
+			newOnclause, err = coverer.Map(newOnclause)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+		}
 	}
 
 	if len(coveringScans) > 0 {
-		for _, child := range this.children {
-			if secondary, ok := child.(plan.SecondaryScan); ok {
-				err = this.coverJoinSpanExpressions(coveringScans, secondary)
-				if err != nil {
-					return nil, nil, err
+		for _, op := range coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+
+			newOnclause, err = coverer.Map(newOnclause)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			// also need to perform cover transformation for index spans for
+			// right-hand-side index scans since left-hand-side expressions
+			// could be used as part of index spans for right-hand-side index scan
+			for _, child := range this.children {
+				if secondary, ok := child.(plan.SecondaryScan); ok {
+					err := secondary.CoverJoinSpanExpressions(coverer)
+					if err != nil {
+						return nil, nil, nil, err
+					}
 				}
 			}
 		}
 	}
 
-	return this.children, primaryJoinKeys, nil
+	return this.children, primaryJoinKeys, newOnclause, nil
 }

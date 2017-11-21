@@ -172,6 +172,13 @@ func (this *AnsiNest) Onclause() expression.Expression {
 }
 
 /*
+Set ON-clause
+*/
+func (this *AnsiNest) SetOnclause(onclause expression.Expression) {
+	this.onclause = onclause
+}
+
+/*
 Marshals input NEST terms into byte array.
 */
 func (this *AnsiNest) MarshalJSON() ([]byte, error) {

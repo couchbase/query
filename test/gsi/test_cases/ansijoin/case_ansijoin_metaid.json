@@ -71,6 +71,26 @@
     ]
     },
     {
+        "statements":"SELECT p.productId, pu.customerId, pu.purchaseId FROM purchase pu JOIN product p ON meta(p).id IN ARRAY (pd.product || \"_ansijoin\") FOR pd IN pu.lineItems END WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "results": [
+        {
+            "customerId": "customer243",
+            "productId": "product284",
+            "purchaseId": "purchase1000"
+        },
+        {
+            "customerId": "customer243",
+            "productId": "product300",
+            "purchaseId": "purchase1000"
+        },
+        {
+            "customerId": "customer243",
+            "productId": "product621",
+            "purchaseId": "purchase1000"
+        }
+    ]
+    },
+    {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
         "results": [
         {

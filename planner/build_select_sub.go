@@ -290,19 +290,6 @@ func (this *builder) coverExpressions() error {
 	return nil
 }
 
-func (this *builder) coverJoinSpanExpressions(coveringScans []plan.CoveringOperator, secondary plan.SecondaryScan) error {
-	for _, op := range coveringScans {
-		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-
-		err := secondary.CoverJoinSpanExpressions(coverer)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	// Enumerate INNER UNNESTs
 	unnests := _UNNEST_POOL.Get()

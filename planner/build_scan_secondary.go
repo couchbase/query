@@ -315,11 +315,7 @@ func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*inde
 		var exactSpans bool
 		var err error
 
-		if indexHasArrayIndexKey(se.index) {
-			spans, exactSpans, err = SargFor(pred, se.keys, se.minKeys, len(se.keys), baseKeyspace.name)
-		} else {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, len(se.keys), baseKeyspace.name)
-		}
+		spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, len(se.keys), baseKeyspace.name)
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
 				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})

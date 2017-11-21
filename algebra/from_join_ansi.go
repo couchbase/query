@@ -169,6 +169,13 @@ func (this *AnsiJoin) Onclause() expression.Expression {
 }
 
 /*
+Set ON-clause
+*/
+func (this *AnsiJoin) SetOnclause(onclause expression.Expression) {
+	this.onclause = onclause
+}
+
+/*
 Marshals input JOIN terms.
 */
 func (this *AnsiJoin) MarshalJSON() ([]byte, error) {

@@ -70,6 +70,7 @@ func SargForFilters(filters Filters, keys expression.Expressions, min, total int
 
 	sargSpans := make([]SargSpans, min)
 	exactSpan := true
+	arrayKeySpans := make(map[int][]SargSpans)
 
 	sargKeys := keys[0:min]
 
@@ -91,26 +92,40 @@ outer:
 				return nil, flExactSpan, err
 			}
 
+			isArray, _ := sargKeys[pos].IsArrayIndexKey()
+
 			if flSargSpans == nil || flSargSpans.Size() == 0 {
-				for _, sargKey := range sargKeys {
-					if fl.fltrExpr.DependsOn(sargKey) {
-						exactSpan = false
-						break
+				if !isArray {
+					for _, sargKey := range sargKeys {
+						if fl.fltrExpr.DependsOn(sargKey) {
+							exactSpan = false
+							break
+						}
 					}
 				}
 				continue outer
 			}
 
-			if flSargSpans == _EMPTY_SPANS {
-				return _EMPTY_SPANS, true, nil
-			}
-
-			if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
-				sargSpans[pos] = flSargSpans
+			if isArray {
+				if arrayKeySpan, ok := arrayKeySpans[pos]; ok {
+					arrayKeySpan = append(arrayKeySpan, flSargSpans)
+					arrayKeySpans[pos] = arrayKeySpan
+				} else {
+					arrayKeySpans[pos] = make([]SargSpans, 0, len(filters))
+					arrayKeySpans[pos] = append(arrayKeySpans[pos], flSargSpans)
+				}
 			} else {
-				sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
-				if sargSpans[pos] == _EMPTY_SPANS {
+				if flSargSpans == _EMPTY_SPANS {
 					return _EMPTY_SPANS, true, nil
+				}
+
+				if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
+					sargSpans[pos] = flSargSpans
+				} else {
+					sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
+					if sargSpans[pos] == _EMPTY_SPANS {
+						return _EMPTY_SPANS, true, nil
+					}
 				}
 			}
 
@@ -123,6 +138,10 @@ outer:
 				break
 			}
 		}
+	}
+
+	for pos, arrayKeySpan := range arrayKeySpans {
+		sargSpans[pos] = addArrayKeys(arrayKeySpan)
 	}
 
 	return composeSargSpan(sargSpans, exactSpan)

@@ -262,12 +262,6 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		return nil, 0, err
 	}
 
-	if join {
-		for idx, _ := range arrays {
-			delete(sargables, idx)
-		}
-	}
-
 	minimals := minimalIndexes(sargables, false)
 
 	order := this.order

@@ -1,0 +1,102 @@
+[
+    {
+        "statements":"SELECT p.productId, pu.customerId FROM product p JOIN purchase pu ON ANY pd IN pu.lineItems satisfies p.productId = pd.product END WHERE ANY r IN p.reviewList satisfies r = \"review1636\" END ORDER BY pu.customerId LIMIT 5",
+        "results": [
+        {
+            "customerId": "customer115",
+            "productId": "product738"
+        },
+        {
+            "customerId": "customer226",
+            "productId": "product738"
+        },
+        {
+            "customerId": "customer287",
+            "productId": "product738"
+        },
+        {
+            "customerId": "customer305",
+            "productId": "product738"
+        },
+        {
+            "customerId": "customer323",
+            "productId": "product738"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT p.productId, pu.customerId, pu.purchaseId FROM product p JOIN purchase pu ON ANY pd IN pu.lineItems satisfies p.productId = pd.product END WHERE ANY r IN p.reviewList satisfies r = \"review1636\" END ORDER BY pu.customerId LIMIT 5",
+        "results": [
+        {
+            "customerId": "customer115",
+            "productId": "product738",
+            "purchaseId": "purchase8751"
+        },
+        {
+            "customerId": "customer226",
+            "productId": "product738",
+            "purchaseId": "purchase5944"
+        },
+        {
+            "customerId": "customer287",
+            "productId": "product738",
+            "purchaseId": "purchase9308"
+        },
+        {
+            "customerId": "customer305",
+            "productId": "product738",
+            "purchaseId": "purchase2542"
+        },
+        {
+            "customerId": "customer323",
+            "productId": "product738",
+            "purchaseId": "purchase625"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT p.productId, p.color, pu.customerId FROM purchase pu JOIN product p ON p.productId IN ARRAY pd.product FOR pd IN pu.lineItems END WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "results": [
+        {
+            "color": "yellow",
+            "customerId": "customer243",
+            "productId": "product284"
+        },
+        {
+            "color": "silver",
+            "customerId": "customer243",
+            "productId": "product300"
+        },
+        {
+            "color": "black",
+            "customerId": "customer243",
+            "productId": "product621"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT p.productId, p.color, pu.customerId FROM purchase pu UNNEST pu.lineItems as pl JOIN product p ON p.productId = pl.product WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "results": [
+        {
+            "color": "yellow",
+            "customerId": "customer243",
+            "productId": "product284"
+        },
+        {
+            "color": "silver",
+            "customerId": "customer243",
+            "productId": "product300"
+        },
+        {
+            "color": "black",
+            "customerId": "customer243",
+            "productId": "product621"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT p.productId, pu.customerId FROM purchase pu JOIN product p ON ANY pd IN pu.lineItems satisfies pd.product = p.productId END WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "error":"No index available for ANSI join term p"
+    }
+]
+

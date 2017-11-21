@@ -64,15 +64,7 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 
 // MB-21720. Handle array index keys differently.
 func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expression) (SargSpans, error) {
-
-	spans := make([]SargSpans, 0, len(pred.Operands()))
-	emptySpan := false
-	valuedSpan := false
-	exactValuedSpan := false
-	nullSpan := false
-	fullSpan := false
-	exactFullSpan := false
-	size := 1
+	keySpans := make([]SargSpans, 0, len(pred.Operands()))
 
 	for _, child := range pred.Operands() {
 		cspans, err := sargFor(child, key, this.isJoin, this.keyspaceName)
@@ -83,7 +75,24 @@ func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expressi
 		if cspans == nil || cspans.Size() == 0 {
 			continue
 		}
+		keySpans = append(keySpans, cspans)
+	}
 
+	return addArrayKeys(keySpans), nil
+}
+
+func addArrayKeys(keySpans []SargSpans) SargSpans {
+
+	spans := make([]SargSpans, 0, len(keySpans))
+	emptySpan := false
+	valuedSpan := false
+	exactValuedSpan := false
+	nullSpan := false
+	fullSpan := false
+	exactFullSpan := false
+	size := 1
+
+	for _, cspans := range keySpans {
 		if cspans == _EXACT_FULL_SPANS {
 			exactFullSpan = true
 		}
@@ -119,21 +128,21 @@ func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expressi
 	}
 
 	if (exactValuedSpan && nullSpan) || exactFullSpan {
-		return _EXACT_FULL_SPANS, nil
+		return _EXACT_FULL_SPANS
 	}
 
 	if (valuedSpan && nullSpan) || fullSpan {
-		return _FULL_SPANS, nil
+		return _FULL_SPANS
 	}
 
 	if emptySpan && len(spans) == 0 {
-		return _EMPTY_SPANS, nil
+		return _EMPTY_SPANS
 	}
 
 	if spans == nil || len(spans) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	rv := NewIntersectSpans(spans...)
-	return rv.Streamline(), nil
+	return rv.Streamline()
 }
