@@ -69,11 +69,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
 	}
 
-	var pred expression.Expression
+	var pred, pred2 expression.Expression
 	if join {
 		pred = baseKeyspace.dnfPred
 	} else {
 		pred = this.where
+		pred2 = this.pushableOnclause
 		if pred != nil {
 			// Handle constant TRUE predicate
 			cpred := pred.Value()
@@ -95,22 +96,39 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	if pred != nil {
+	if pred != nil || pred2 != nil {
 		// for ANSI JOIN, the following process is already done for ON clause filters
 		if !join {
-			pred = pred.Copy()
+			if pred != nil {
+				pred = pred.Copy()
 
-			pred, err = this.processHostParameters(pred)
-			if err != nil {
-				return nil, nil, err
+				pred, err = this.processHostParameters(pred)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				err = ClassifyExpr(pred, this.baseKeyspaces, false)
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 
-			err = ClassifyExpr(pred, this.baseKeyspaces, false)
-			if err != nil {
-				return nil, nil, err
+			if pred2 != nil {
+				pred2 = pred2.Copy()
+
+				pred2, err = this.processHostParameters(pred2)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				err = ClassifyExpr(pred2, this.baseKeyspaces, true)
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 
-			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, false)
+			// include pushed ON-clause filter
+			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
 			if err != nil {
 				return nil, nil, err
 			}

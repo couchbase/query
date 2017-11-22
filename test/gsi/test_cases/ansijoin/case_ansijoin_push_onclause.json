@@ -1,0 +1,22 @@
+[
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 JOIN shellTest b2 ON b1.c11 = b2.c21 AND b1.c12 = b2.c22 AND b1.c11 < 3 AND b2.type = \"right\" WHERE b1.type = \"left\" ORDER BY b2.c22",
+        "results": [
+        {
+            "c11": 1,
+            "c21": 1,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c21": 2,
+            "c22": 20
+        }
+    ]
+    },
+    {
+        "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 LEFT JOIN shellTest b2 ON b1.c11 = b2.c21 AND b1.c12 = b2.c22 AND b1.c11 < 3 AND b2.type = \"right\" WHERE b1.type = \"left\" ORDER BY b2.c22",
+        "error":"No index available on keyspace shellTest that matches your query. Use CREATE INDEX or CREATE PRIMARY INDEX to create an index, or check that your expected index is online."
+    }
+]
+

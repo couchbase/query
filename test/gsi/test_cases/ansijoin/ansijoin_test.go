@@ -76,6 +76,9 @@ func TestCover(t *testing.T) {
 		// test ANSI JOIN on arrays -- more
 		runMatch("case_ansijoin_array_more.json", qc, t)
 
+		// test ANSI JOIN with ON-clause filters is pushed to left-hand-side
+		runMatch("case_ansijoin_push_onclause.json", qc, t)
+
 		fmt.Println("Dropping indexes")
 		runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 		runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
@@ -90,6 +93,13 @@ func TestCover(t *testing.T) {
 		runStmt(qc, "DROP INDEX shellTest.st_ix21")
 		runStmt(qc, "DROP INDEX shellTest.st_ix22")
 
+		// create primary indexes
+		runStmt(qc, "CREATE PRIMARY INDEX ON customer")
+		runStmt(qc, "CREATE PRIMARY INDEX ON product")
+		runStmt(qc, "CREATE PRIMARY INDEX ON purchase")
+		runStmt(qc, "CREATE PRIMARY INDEX ON orders")
+		runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
+
 		// delete all rows from keyspaces used
 		runStmt(qc, "DELETE FROM customer")
 		runStmt(qc, "DELETE FROM product")
@@ -97,7 +107,7 @@ func TestCover(t *testing.T) {
 		runStmt(qc, "DELETE FROM orders")
 		runStmt(qc, "DELETE FROM shellTest")
 
-		// drop primary indexes (created in insert.json)
+		// drop primary indexes
 		runStmt(qc, "DROP PRIMARY INDEX ON customer")
 		runStmt(qc, "DROP PRIMARY INDEX ON product")
 		runStmt(qc, "DROP PRIMARY INDEX ON purchase")

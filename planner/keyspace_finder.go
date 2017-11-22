@@ -14,11 +14,13 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 )
 
 // gather keyspace references in a FROM clause (by walking the algebra AST tree)
 type keyspaceFinder struct {
-	baseKeyspaces map[string]*baseKeyspace
+	baseKeyspaces    map[string]*baseKeyspace
+	pushableOnclause expression.Expression
 }
 
 func newKeyspaceFinder(baseKeyspaces map[string]*baseKeyspace) *keyspaceFinder {
@@ -35,6 +37,16 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string) error {
 	newBaseKeyspace := newBaseKeyspace(alias)
 	this.baseKeyspaces[alias] = newBaseKeyspace
 	return nil
+}
+
+func (this *keyspaceFinder) addOnclause(onclause expression.Expression) {
+	if onclause != nil {
+		if this.pushableOnclause != nil {
+			this.pushableOnclause = expression.NewAnd(this.pushableOnclause, onclause)
+		} else {
+			this.pushableOnclause = onclause
+		}
+	}
 }
 
 func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.FromTerm) error {
@@ -91,10 +103,10 @@ func (this *keyspaceFinder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}
 }
 
 func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
-	return nil, this.visitJoin(node.Left(), node.Right())
-}
-
-func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+	// if this is inner join, gather ON-clause
+	if !node.Outer() {
+		this.addOnclause(node.Onclause())
+	}
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
@@ -103,6 +115,14 @@ func (this *keyspaceFinder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *keyspaceFinder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+	return nil, this.visitJoin(node.Left(), node.Right())
+}
+
+func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+	// if this is inner nest, gather ON-clause
+	if !node.Outer() {
+		this.addOnclause(node.Onclause())
+	}
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 

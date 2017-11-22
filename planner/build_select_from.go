@@ -42,6 +42,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		if err != nil {
 			return err
 		}
+		this.pushableOnclause = keyspaceFinder.pushableOnclause
 
 		// Use FROM clause in index selection
 		_, err = node.From().Accept(this)

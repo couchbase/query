@@ -90,6 +90,7 @@ type builder struct {
 	namedArgs         map[string]value.Value
 	positionalArgs    value.Values
 	baseKeyspaces     map[string]*baseKeyspace
+	pushableOnclause  expression.Expression // combined ON-clause from all inner joins
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool, namedArgs map[string]value.Value, positionalArgs value.Values) *builder {

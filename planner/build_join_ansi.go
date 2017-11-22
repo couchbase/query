@@ -23,7 +23,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer())
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +68,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer())
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 	}
 }
 
-func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expression.Expression) (
+func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expression.Expression, outer bool) (
 	[]plan.Operator, expression.Expression, expression.Expression, error) {
 
 	children := this.children
@@ -152,18 +152,24 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		return nil, nil, nil, err
 	}
 
-	// For the keyspace as the inner of an ANSI JOIN, the ClassifyExpr() call
-	// will effectively put ON clause filters on top of WHERE clause filters
-	// for each keyspace, as a result, both ON clause filters and WHERE clause
-	// filters will be used for index selection for the inner keyspace, which
-	// is ok, even for outer joins.
-	// Note this will also put ON clause filters on the outer keyspace as well
-	// however since index selection for the outer keyspace is already done,
-	// ON clause filters is NOT used for index selection consideration of
-	// the outer keyspace.
-	err = ClassifyExpr(pred, this.baseKeyspaces, true)
-	if err != nil {
-		return nil, nil, nil, err
+	// for inner join, the following processing is already done as part of
+	// this.pushableOnclause
+	if outer {
+		// For the keyspace as the inner of an ANSI JOIN, the ClassifyExpr() call
+		// will effectively put ON clause filters on top of WHERE clause filters
+		// for each keyspace, as a result, both ON clause filters and WHERE clause
+		// filters will be used for index selection for the inner keyspace, which
+		// is ok for outer joins.
+		// Note this will also put ON clause filters of an outer join on the outer
+		// keyspace as well however since index selection for the outer keyspace
+		// is already done, ON clause filters from an outer join is NOT used for
+		// index selection consideration of the outer keyspace (ON-clause of an
+		// inner join is used for index selection for outer keyspace, as part of
+		// this.pushableOnclause).
+		err = ClassifyExpr(pred, this.baseKeyspaces, true)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
 	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
