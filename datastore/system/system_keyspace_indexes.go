@@ -175,7 +175,7 @@ func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId stri
 			"keyspace_id":  keyspace.Id(),
 			"namespace_id": namespace.Id(),
 			"datastore_id": actualStore.URL(),
-			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
+			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
 			"using":        datastoreObjectToJSONSafe(index.Type()),
 			"state":        string(state),
 		})
@@ -203,12 +203,25 @@ func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId stri
 	return rv, nil
 }
 
-func indexKeyToIndexKeyStringArray(key expression.Expressions) []string {
-	rv := make([]string, len(key))
-	for i, kp := range key {
-		rv[i] = expression.NewStringer().Visit(kp)
+func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
+	if index2, ok2 := index.(datastore.Index2); ok2 {
+		keys := index2.RangeKey2()
+		rv = make([]string, len(keys))
+		for i, kp := range keys {
+			s := expression.NewStringer().Visit(kp.Expr)
+			if kp.Desc {
+				s += " DESC"
+			}
+			rv[i] = s
+		}
+
+	} else {
+		rv = make([]string, len(index.RangeKey()))
+		for i, kp := range index.RangeKey() {
+			rv[i] = expression.NewStringer().Visit(kp)
+		}
 	}
-	return rv
+	return
 }
 
 func datastoreObjectToJSONSafe(catobj interface{}) interface{} {
