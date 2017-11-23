@@ -37,6 +37,11 @@ func useIndex2API(index datastore.Index) bool {
 	return ok && GetMaxIndexAPI() >= datastore.INDEX_API_2
 }
 
+func useIndex3API(index datastore.Index) bool {
+	_, ok := index.(datastore.Index3)
+	return ok && GetMaxIndexAPI() >= datastore.INDEX_API_3
+}
+
 func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {
 	if index2, ok := entry.index.(datastore.Index2); ok {
 		indexKeys = index2.RangeKey2()

@@ -14,6 +14,9 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 // Create primary index
@@ -54,7 +57,18 @@ func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[
 	r := map[string]interface{}{"#operator": "CreatePrimaryIndex"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["node"] = this.node
+	r["index"] = this.node.Name()
+	r["using"] = this.node.Using()
+	if this.node.With() != nil {
+		r["with"] = this.node.With()
+	}
+	if this.node.Partition() != nil && this.node.Partition().Strategy() != datastore.NO_PARTITION {
+		q := make(map[string]interface{}, 2)
+		q["exprs"] = this.node.Partition().Expressions()
+		q["strategy"] = this.node.Partition().Strategy()
+		r["partition"] = q
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -63,10 +77,17 @@ func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[
 
 func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string                      `json:"#operator"`
-		Keys  string                      `json:"keyspace"`
-		Names string                      `json:"namespace"`
-		Node  *algebra.CreatePrimaryIndex `json:"node"`
+		_         string                      `json:"#operator"`
+		Keys      string                      `json:"keyspace"`
+		Names     string                      `json:"namespace"`
+		Node      *algebra.CreatePrimaryIndex `json:"node"`
+		Index     string                      `json:"index"`
+		Using     datastore.IndexType         `json:"using"`
+		With      json.RawMessage             `json:"with"`
+		Partition *struct {
+			Exprs    []string                `json:"exprs"`
+			Strategy datastore.PartitionType `json:"strategy"`
+		} `json:"partition"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -74,6 +95,33 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	var partition *algebra.IndexPartitionTerm
+	if _unmarshalled.Partition != nil {
+		exprs := make(expression.Expressions, len(_unmarshalled.Partition.Exprs))
+		for i, p := range _unmarshalled.Partition.Exprs {
+			exprs[i], err = parser.Parse(p)
+			if err != nil {
+				return err
+			}
+		}
+		partition = algebra.NewIndexPartitionTerm(_unmarshalled.Partition.Strategy, exprs)
+	}
+
+	var with value.Value
+	if len(_unmarshalled.With) > 0 {
+		with = value.NewValue([]byte(_unmarshalled.With))
+	}
+
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	if err != nil {
+		return err
+	}
+
+	if _unmarshalled.Index != "" {
+		ksref := algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, "")
+		this.node = algebra.NewCreatePrimaryIndex(_unmarshalled.Index, ksref,
+			partition, _unmarshalled.Using, with)
+	}
+
 	return err
 }

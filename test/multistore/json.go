@@ -289,15 +289,12 @@ func Start(site, pool, namespace string) *MockServer {
 		os.Exit(1)
 	}
 	server.SetKeepAlive(1 << 10)
+	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 
 	go server.Serve()
 	mockServer.server = server
 	mockServer.acctstore = acctstore
 	return mockServer
-}
-
-func (this *MockServer) SetMaxIndexAPI(l int) {
-	this.server.SetMaxIndexAPI(l)
 }
 
 func dropResultEntry(result interface{}, e string) {

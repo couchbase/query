@@ -184,6 +184,11 @@ func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId stri
 			"id": key,
 		})
 
+		partition := indexPartitionToString(index)
+		if partition != "" {
+			doc.SetField("partition", partition)
+		}
+
 		if msg != "" {
 			doc.SetField("message", msg)
 		}
@@ -221,6 +226,27 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 			rv[i] = expression.NewStringer().Visit(kp)
 		}
 	}
+	return
+}
+
+func indexPartitionToString(index datastore.Index) (rv string) {
+	index3, ok3 := index.(datastore.Index3)
+	if !ok3 {
+		return
+	}
+	partition, _ := index3.PartitionKeys()
+	if partition == nil || partition.Strategy == datastore.NO_PARTITION {
+		return
+	}
+
+	rv = string(partition.Strategy) + "("
+	for i, expr := range partition.Exprs {
+		if i > 0 {
+			rv += ","
+		}
+		rv += expression.NewStringer().Visit(expr)
+	}
+	rv += ")"
 	return
 }
 

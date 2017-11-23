@@ -34,18 +34,21 @@ func NewIntersectSpans(spans ...SargSpans) *IntersectSpans {
 }
 
 func (this *IntersectSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, ordered, overlap,
-	array bool, offset, limit expression.Expression, projection *plan.IndexProjection, covers expression.Covers,
+	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
+	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
+	indexOrder plan.IndexKeyOrders, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
-		return this.spans[0].CreateScan(index, term, reverse, distinct, ordered, overlap, array, offset, limit, projection, covers, filterCovers)
+		return this.spans[0].CreateScan(index, term, reverse, distinct, overlap, array, offset, limit,
+			projection, indexOrder, covers, filterCovers)
 	}
 
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
 		// No LIMIT pushdown
-		scans[i] = s.CreateScan(index, term, reverse, distinct, false, false, array, nil, nil, projection, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, reverse, distinct, false, array, nil, nil, projection,
+			nil, covers, filterCovers)
 	}
 
 	limit = offsetPlusLimit(offset, limit)

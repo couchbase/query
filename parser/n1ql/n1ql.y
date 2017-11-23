@@ -53,6 +53,7 @@ sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
 indexKeyTerm    *algebra.IndexKeyTerm
 indexKeyTerms    algebra.IndexKeyTerms
+partitionTerm   *algebra.IndexPartitionTerm
 
 keyspaceRef      *algebra.KeyspaceRef
 
@@ -141,6 +142,7 @@ tokOffset	 int
 %token GRANT
 %token GROUP
 %token GSI
+%token HASH
 %token HAVING
 %token IF
 %token IGNORE
@@ -376,7 +378,7 @@ tokOffset	 int
 %type <s>                index_name opt_primary_name
 %type <ss>               index_names
 %type <keyspaceRef>      named_keyspace_ref
-%type <exprs>            index_partition
+%type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
 %type <expr>             index_term_expr index_expr index_where
@@ -1901,9 +1903,9 @@ REVOKE role_list ON keyspace_list FROM user_list
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_primary_name ON named_keyspace_ref opt_index_using opt_index_with
+CREATE PRIMARY INDEX opt_primary_name ON named_keyspace_ref index_partition opt_index_using opt_index_with
 {
-    $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8)
+    $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8, $9)
 }
 |
 CREATE INDEX index_name ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_index_with
@@ -1943,9 +1945,9 @@ index_partition:
     $$ = nil
 }
 |
-PARTITION BY exprs
+PARTITION BY HASH LPAREN exprs RPAREN
 {
-    $$ = $3
+    $$ = algebra.NewIndexPartitionTerm(datastore.HASH_PARTITION,$5)
 }
 ;
 

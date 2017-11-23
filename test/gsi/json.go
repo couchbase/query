@@ -261,13 +261,13 @@ as defined in server/server.go.
 func Start(site, pool, namespace string) *MockServer {
 
 	mockServer := &MockServer{}
-	datastore, err := resolver.NewDatastore(site + pool)
+	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
 
-	sys, err := system.NewDatastore(datastore)
+	sys, err := system.NewDatastore(ds)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
@@ -299,7 +299,7 @@ func Start(site, pool, namespace string) *MockServer {
 	// need to do it before NewServer() or server scope's changes to
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
-	server, err := server.NewServer(datastore, sys, configstore, acctstore, namespace,
+	server, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true,
 		server.ProfOff, false)
 	if err != nil {
@@ -307,16 +307,13 @@ func Start(site, pool, namespace string) *MockServer {
 		os.Exit(1)
 	}
 	server.SetKeepAlive(1 << 10)
+	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 
 	go server.Serve()
 	mockServer.server = server
 	mockServer.acctstore = acctstore
 
 	return mockServer
-}
-
-func (this *MockServer) SetMaxIndexAPI(l int) {
-	this.server.SetMaxIndexAPI(l)
 }
 
 func dropResultEntry(result interface{}, e string) {

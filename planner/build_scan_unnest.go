@@ -313,7 +313,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.spans = spans
 	entry.exactSpans = exactSpans
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
-	scan := entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), false, nil, nil, indexProjection, nil, nil)
+	scan := entry.spans.CreateScan(index, node, false, false, pred.MayOverlapSpans(), false, nil, nil,
+		indexProjection, nil, nil, nil)
 	return scan, unnest, 1, nil
 }
 

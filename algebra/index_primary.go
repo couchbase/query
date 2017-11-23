@@ -30,10 +30,11 @@ string.
 type CreatePrimaryIndex struct {
 	statementBase
 
-	name     string              `json:"name"`
-	keyspace *KeyspaceRef        `json:"keyspace"`
-	using    datastore.IndexType `json:"using"`
-	with     value.Value         `json:"with"`
+	name      string              `json:"name"`
+	keyspace  *KeyspaceRef        `json:"keyspace"`
+	partition *IndexPartitionTerm `json:"partition"`
+	using     datastore.IndexType `json:"using"`
+	with      value.Value         `json:"with"`
 }
 
 /*
@@ -41,13 +42,14 @@ The function NewCreatePrimaryIndex returns a pointer
 to the CreatePrimaryIndex struct with the input
 argument values as fields.
 */
-func NewCreatePrimaryIndex(name string, keyspace *KeyspaceRef,
+func NewCreatePrimaryIndex(name string, keyspace *KeyspaceRef, partition *IndexPartitionTerm,
 	using datastore.IndexType, with value.Value) *CreatePrimaryIndex {
 	rv := &CreatePrimaryIndex{
-		name:     name,
-		keyspace: keyspace,
-		using:    using,
-		with:     with,
+		name:      name,
+		keyspace:  keyspace,
+		partition: partition,
+		using:     using,
+		with:      with,
 	}
 
 	rv.stmt = rv
@@ -74,20 +76,31 @@ func (this *CreatePrimaryIndex) Signature() value.Value {
 Returns nil.
 */
 func (this *CreatePrimaryIndex) Formalize() error {
-	return nil
+	f := expression.NewKeyspaceFormalizer(this.keyspace.Keyspace(), nil)
+	return this.MapExpressions(f)
 }
 
 /*
 Returns nil.
 */
-func (this *CreatePrimaryIndex) MapExpressions(mapper expression.Mapper) error {
-	return nil
+func (this *CreatePrimaryIndex) MapExpressions(mapper expression.Mapper) (err error) {
+	if this.partition != nil {
+		err = this.partition.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+	return
 }
 
 /*
 Returns all contained Expressions.
 */
 func (this *CreatePrimaryIndex) Expressions() expression.Expressions {
+	if this.partition != nil && len(this.partition.Expressions()) > 0 {
+		return this.partition.Expressions()
+	}
+
 	return nil
 }
 
@@ -97,6 +110,11 @@ Returns all required privileges.
 func (this *CreatePrimaryIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	privs.Add(this.keyspace.Namespace()+":"+this.keyspace.Keyspace(), auth.PRIV_QUERY_CREATE_INDEX)
+
+	for _, expr := range this.Expressions() {
+		privs.AddAll(expr.Privileges())
+	}
+
 	return privs, nil
 }
 
@@ -112,6 +130,13 @@ Returns the input keyspace.
 */
 func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
+}
+
+/*
+Returns the Partition expression of the create index statement.
+*/
+func (this *CreatePrimaryIndex) Partition() *IndexPartitionTerm {
+	return this.partition
 }
 
 /*
@@ -136,6 +161,9 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	r["name"] = this.name
 	r["keyspaceRef"] = this.keyspace
 	r["using"] = this.using
+	if this.partition != nil {
+		r["partition"] = this.partition
+	}
 	if this.with != nil {
 		r["with"] = this.with
 	}

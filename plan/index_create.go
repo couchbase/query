@@ -72,8 +72,11 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 	r["keys"] = k
 	r["using"] = this.node.Using()
 
-	if this.node.Partition() != nil {
-		r["partition"] = this.node.Partition()
+	if this.node.Partition() != nil && this.node.Partition().Strategy() != datastore.NO_PARTITION {
+		q := make(map[string]interface{}, 2)
+		q["exprs"] = this.node.Partition().Expressions()
+		q["strategy"] = this.node.Partition().Strategy()
+		r["partition"] = q
 	}
 
 	if this.node.Where() != nil {
@@ -101,9 +104,12 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 			Desc bool   `json:"desc"`
 		} `json:"keys"`
 		Using     datastore.IndexType `json:"using"`
-		Partition []string            `json:"partition"`
-		Where     string              `json:"where"`
-		With      json.RawMessage     `json:"with"`
+		Partition *struct {
+			Exprs    []string                `json:"exprs"`
+			Strategy datastore.PartitionType `json:"strategy"`
+		} `json:"partition"`
+		Where string          `json:"where"`
+		With  json.RawMessage `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -139,15 +145,16 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	var partition expression.Expressions
-	if len(_unmarshalled.Partition) > 0 {
-		partition = make(expression.Expressions, len(_unmarshalled.Partition))
-		for i, p := range _unmarshalled.Partition {
-			partition[i], err = parser.Parse(p)
+	var partition *algebra.IndexPartitionTerm
+	if _unmarshalled.Partition != nil {
+		exprs := make(expression.Expressions, len(_unmarshalled.Partition.Exprs))
+		for i, p := range _unmarshalled.Partition.Exprs {
+			exprs[i], err = parser.Parse(p)
 			if err != nil {
 				return err
 			}
 		}
+		partition = algebra.NewIndexPartitionTerm(_unmarshalled.Partition.Strategy, exprs)
 	}
 
 	var where expression.Expression

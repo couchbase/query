@@ -12,9 +12,11 @@ package plan
 type Visitor interface {
 	// Scan
 	VisitPrimaryScan(op *PrimaryScan) (interface{}, error)
+	VisitPrimaryScan3(op *PrimaryScan3) (interface{}, error)
 	VisitParentScan(op *ParentScan) (interface{}, error)
 	VisitIndexScan(op *IndexScan) (interface{}, error)
 	VisitIndexScan2(op *IndexScan2) (interface{}, error)
+	VisitIndexScan3(op *IndexScan3) (interface{}, error)
 	VisitKeyScan(op *KeyScan) (interface{}, error)
 	VisitValueScan(op *ValueScan) (interface{}, error)
 	VisitDummyScan(op *DummyScan) (interface{}, error)

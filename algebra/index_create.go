@@ -35,20 +35,20 @@ index value into the document.
 type CreateIndex struct {
 	statementBase
 
-	name      string                 `json:"name"`
-	keyspace  *KeyspaceRef           `json:"keyspace"`
-	keys      IndexKeyTerms          `json:"keys"`
-	partition expression.Expressions `json:"partition"`
-	where     expression.Expression  `json:"where"`
-	using     datastore.IndexType    `json:"using"`
-	with      value.Value            `json:"with"`
+	name      string                `json:"name"`
+	keyspace  *KeyspaceRef          `json:"keyspace"`
+	keys      IndexKeyTerms         `json:"keys"`
+	partition *IndexPartitionTerm   `json:"partition"`
+	where     expression.Expression `json:"where"`
+	using     datastore.IndexType   `json:"using"`
+	with      value.Value           `json:"with"`
 }
 
 /*
 The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
-func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, partition expression.Expressions,
+func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, partition *IndexPartitionTerm,
 	where expression.Expression, using datastore.IndexType, with value.Value) *CreateIndex {
 	rv := &CreateIndex{
 		name:      name,
@@ -121,8 +121,8 @@ Return expr from the create index statement.
 func (this *CreateIndex) Expressions() expression.Expressions {
 	exprs := this.keys.Expressions()
 
-	if this.partition != nil {
-		exprs = append(exprs, this.partition...)
+	if this.partition != nil && len(this.partition.Expressions()) > 0 {
+		exprs = append(exprs, this.partition.Expressions()...)
 	}
 
 	if this.where != nil {
@@ -170,7 +170,7 @@ func (this *CreateIndex) Keys() IndexKeyTerms {
 /*
 Returns the Partition expression of the create index statement.
 */
-func (this *CreateIndex) Partition() expression.Expressions {
+func (this *CreateIndex) Partition() *IndexPartitionTerm {
 	return this.partition
 }
 
@@ -196,16 +196,11 @@ func (this *CreateIndex) With() value.Value {
 }
 
 func (this *CreateIndex) SeekKeys() expression.Expressions {
-	return this.partition
+	return nil
 }
 
 func (this *CreateIndex) RangeKeys() expression.Expressions {
-	exprs := this.keys.Expressions()
-	if this.partition != nil {
-		return exprs[len(this.partition):]
-	} else {
-		return exprs
-	}
+	return this.keys.Expressions()
 }
 
 /*
@@ -343,4 +338,71 @@ func (this IndexKeyTerms) String() string {
 	}
 
 	return s
+}
+
+/*
+Represents the Partition term in create index.
+*/
+type IndexPartitionTerm struct {
+	strategy datastore.PartitionType `json:"strategy"`
+	exprs    expression.Expressions  `json:"exprs"`
+}
+
+/*
+The function NewIndexPartitionTerm returns a pointer to the IndexPartitionTerm
+struct that has its fields set to the input arguments.
+*/
+func NewIndexPartitionTerm(strategy datastore.PartitionType, exprs expression.Expressions) *IndexPartitionTerm {
+	return &IndexPartitionTerm{
+		strategy: strategy,
+		exprs:    exprs,
+	}
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *IndexPartitionTerm) Expressions() expression.Expressions {
+	return this.exprs
+}
+
+/*
+   Returns Partition Strategy
+*/
+func (this *IndexPartitionTerm) Strategy() datastore.PartitionType {
+	return this.strategy
+}
+
+/*
+   Returns Partition Exprs
+*/
+func (this *IndexPartitionTerm) Exprs() expression.Expressions {
+	return this.exprs
+}
+
+/*
+This method maps the partition expressions
+*/
+func (this *IndexPartitionTerm) MapExpressions(mapper expression.Mapper) (err error) {
+	if len(this.exprs) > 0 {
+		err = this.exprs.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (this *IndexPartitionTerm) String() (s string) {
+	if this.strategy == datastore.HASH_PARTITION {
+		s += " PARTITION BY HASH("
+		for i, expr := range this.exprs {
+			if i > 0 {
+				s += ", "
+			}
+			s += expr.String()
+		}
+		s += ") "
+	}
+	return
 }

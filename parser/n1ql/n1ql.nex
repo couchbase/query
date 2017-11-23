@@ -186,6 +186,7 @@
 /[gG][rR][aA][nN][tT]/				 { yylex.logToken(yylex.Text(), "GRANT"); return GRANT }
 /[gG][rR][oO][uU][pP]/				 { yylex.logToken(yylex.Text(), "GROUP"); return GROUP }
 /[gG][sS][iI]/					 { yylex.logToken(yylex.Text(), "GSI"); return GSI }
+/[hH][aA][sS][hH]/			         { yylex.logToken(yylex.Text(), "HASH"); return HASH }
 /[hH][aA][vV][iI][nN][gG]/			 { yylex.logToken(yylex.Text(), "HAVING"); return HAVING }
 /[iI][fF]/					 { yylex.logToken(yylex.Text(), "IF"); return IF }
 /[iI][gG][nN][oO][rR][eE]/			 { yylex.logToken(yylex.Text(), "IGNORE"); return IGNORE }

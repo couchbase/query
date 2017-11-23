@@ -34,18 +34,21 @@ func NewUnionSpans(spans ...SargSpans) *UnionSpans {
 }
 
 func (this *UnionSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, ordered, overlap,
-	array bool, offset, limit expression.Expression, projection *plan.IndexProjection, covers expression.Covers,
+	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
+	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
+	indexOrder plan.IndexKeyOrders, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
-		return this.spans[0].CreateScan(index, term, reverse, distinct, ordered, overlap, array, offset, limit, projection, covers, filterCovers)
+		return this.spans[0].CreateScan(index, term, reverse, distinct, overlap, array, offset, limit,
+			projection, indexOrder, covers, filterCovers)
 	}
 
 	lim := offsetPlusLimit(offset, limit)
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
-		scans[i] = s.CreateScan(index, term, reverse, distinct, ordered, overlap, array, nil, lim, projection, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, reverse, distinct, overlap, array, nil, lim,
+			projection, nil, covers, filterCovers)
 	}
 
 	return plan.NewUnionScan(limit, offset, scans...)

@@ -148,3 +148,10 @@ func NewNoAnsiJoinError(alias, op string) Error {
 	return &err{level: EXCEPTION, ICode: NO_ANSI_JOIN, IKey: fmt.Sprintf("plan.ansi_%s.no_index", op),
 		InternalMsg: fmt.Sprintf("No index available for ANSI join term %s", alias), InternalCaller: CallerN(1)}
 }
+
+const PARTITION_INDEX_NOT_SUPPORTED = 4340
+
+func NewPartitionIndexNotSupportedError() Error {
+	return &err{level: EXCEPTION, ICode: PARTITION_INDEX_NOT_SUPPORTED, IKey: "plan.partition_index_not_supported",
+		InternalMsg: fmt.Sprintf("PARTITION index is not supported by indexer."), InternalCaller: CallerN(1)}
+}

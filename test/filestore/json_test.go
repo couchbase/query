@@ -217,10 +217,6 @@ func TestAllCaseFiles(t *testing.T) {
 	}
 }
 
-func (this *MockServer) SetMaxIndexAPI(l int) {
-	this.server.SetMaxIndexAPI(l)
-}
-
 func dropResultEntry(result interface{}, e string) {
 	switch v := result.(type) {
 	case map[string]interface{}:

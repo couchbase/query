@@ -32,23 +32,36 @@ func NewTermSpans(spans ...*plan.Span2) *TermSpans {
 }
 
 func (this *TermSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, ordered, overlap,
-	array bool, offset, limit expression.Expression, projection *plan.IndexProjection, covers expression.Covers,
+	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
+	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
+	indexOrder plan.IndexKeyOrders, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, overlap, array)
 
-	if index2, ok := index.(datastore.Index2); ok && useIndex2API(index) {
+	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index) {
+		if distScan {
+			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, nil, nil,
+				projection, nil, covers, filterCovers)
+			return plan.NewDistinctScan(limit, offset, scan)
+		} else {
+			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, offset, limit,
+				projection, indexOrder, covers, filterCovers)
+		}
+
+	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index) {
 		if !this.Exact() {
 			limit = nil
 			offset = nil
 		}
 
 		if distScan {
-			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, false, ordered, nil, nil, projection, covers, filterCovers)
+			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, false, false, nil, nil,
+				projection, covers, filterCovers)
 			return plan.NewDistinctScan(limit, offset, scan)
 		} else {
-			return plan.NewIndexScan2(index2, term, this.spans, reverse, distinct, ordered, offset, limit, projection, covers, filterCovers)
+			return plan.NewIndexScan2(index2, term, this.spans, reverse, distinct, false, offset, limit,
+				projection, covers, filterCovers)
 		}
 	} else {
 		var limitOffset expression.Expression

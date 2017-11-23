@@ -46,9 +46,12 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	// Find ordering index
 	var orderIndex datastore.Index
+	var indexKeyOrders plan.IndexKeyOrders
+	var ok bool
 	if this.order != nil {
 		for index, entry := range indexes {
-			if this.useIndexOrder(entry, entry.keys) {
+			ok, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
+			if ok {
 				orderIndex = index
 				this.maxParallelism = 1
 				break
@@ -126,7 +129,12 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 		}
 
-		scan = entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, nil, nil)
+		indexOrder := indexKeyOrders
+		if len(indexOrder) > 0 && index != orderIndex {
+			indexOrder = nil
+		}
+
+		scan = entry.spans.CreateScan(index, node, false, false, pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, indexOrder, nil, nil)
 
 		if index == orderIndex {
 			scans[0] = scan
@@ -334,7 +342,7 @@ func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*inde
 	return nil
 }
 
-func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
+func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) (bool, plan.IndexKeyOrders) {
 
 	// Force the use of sorts on indexes that we know not to be ordered
 	// (for now system indexes)
@@ -342,7 +350,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	// when GSI starts implementing other types of indexes (eg bitmap)
 	// we will revisit this approach
 	if entry.index.Type() == datastore.SYSTEM || !entry.spans.CanUseIndexOrder() {
-		return false
+		return false, nil
 	}
 
 	var filters map[string]value.Value
@@ -355,6 +363,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 
 	indexKeys := getIndexKeys(entry)
 	i := 0
+	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 outer:
 	for _, orderTerm := range this.order.Terms() {
 		// orderTerm is constant
@@ -368,17 +377,18 @@ outer:
 			if equalConditionFilter(filters, orderTerm.Expression().String()) {
 				continue outer
 			}
-			return false
+			return false, nil
 		}
 
 		if isArray, _ := keys[i].IsArrayIndexKey(); isArray {
-			return false
+			return false, nil
 		}
 
 		for {
 			if indexKeyIsDescCollation(i, indexKeys) == orderTerm.Descending() &&
 				orderTerm.Expression().EquivalentTo(keys[i]) {
 				// orderTerm matched with index key
+				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, orderTerm.Descending()))
 				i++
 				continue outer
 			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
@@ -386,17 +396,18 @@ outer:
 				continue outer
 			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
 				// orderTerm not yet matched, but can skip equivalence range key
+				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, indexKeyIsDescCollation(i, indexKeys)))
 				i++
 				if i >= len(keys) {
-					return false
+					return false, nil
 				}
 			} else {
-				return false
+				return false, nil
 			}
 		}
 	}
 
-	return true
+	return true, indexOrder
 }
 
 func equalConditionFilter(filters map[string]value.Value, str string) bool {

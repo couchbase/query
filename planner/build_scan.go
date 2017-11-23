@@ -50,7 +50,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 }
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (
-	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+	secondary plan.Operator, primary plan.Operator, err error) {
 
 	join := node.IsAnsiJoinOp()
 
@@ -160,7 +160,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	baseKeyspace *baseKeyspace, id expression.Expression, hints []datastore.Index) (
-	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+	secondary plan.Operator, primary plan.Operator, err error) {
 
 	// Handle constant FALSE predicate
 	cpred := baseKeyspace.origPred.Value()
@@ -215,7 +215,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	baseKeyspace *baseKeyspace, id expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
-	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+	secondary plan.Operator, primary plan.Operator, err error) {
 
 	join := node.IsAnsiJoinOp()
 	if join {

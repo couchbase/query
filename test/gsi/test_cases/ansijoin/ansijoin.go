@@ -25,8 +25,6 @@ namespace to Start method for Couchbase Server.
 func start_cs() *gsi.MockServer {
 	ms := gsi.Start(gsi.Site_CBS, gsi.Auth_param+"@"+gsi.Pool_CBS, gsi.Namespace_CBS)
 
-	// we explicitly use Index2
-	ms.SetMaxIndexAPI(2)
 	return ms
 }
 

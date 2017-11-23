@@ -12,6 +12,8 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -63,9 +65,29 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		_, err = indexer.CreatePrimaryIndex(context.RequestId(), node.Name(), node.With())
-		if err != nil {
-			context.Error(err)
+		if indexer3, ok := indexer.(datastore.Indexer3); ok {
+			var indexPartition *datastore.IndexPartition
+
+			if node.Partition() != nil {
+				indexPartition = &datastore.IndexPartition{Strategy: node.Partition().Strategy(),
+					Exprs: node.Partition().Exprs()}
+			}
+
+			_, err = indexer3.CreatePrimaryIndex3(context.RequestId(), node.Name(), indexPartition, node.With())
+			if err != nil {
+				context.Error(err)
+				return
+			}
+		} else {
+			if node.Partition() != nil {
+				context.Error(errors.NewPartitionIndexNotSupportedError())
+				return
+			}
+			_, err = indexer.CreatePrimaryIndex(context.RequestId(), node.Name(), node.With())
+			if err != nil {
+				context.Error(err)
+				return
+			}
 		}
 	})
 }

@@ -233,8 +233,15 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	this.resetCountMinMax()
 
+	var indexKeyOrders plan.IndexKeyOrders
+	var ok bool
+
 	if this.order != nil {
-		if array && this.useIndexOrder(entry, keys) {
+		if array {
+			ok, indexKeyOrders = this.useIndexOrder(entry, keys)
+		}
+
+		if ok {
 			this.maxParallelism = 1
 		} else {
 			this.resetOrderOffsetLimit()
@@ -247,7 +254,8 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	projDistinct := pushDown && canPushDownProjectionDistinct(index, this.projection, keys)
 
-	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, covers, filterCovers)
+	scan := entry.spans.CreateScan(index, node, false, projDistinct, pred.MayOverlapSpans(), array, this.offset, this.limit,
+		indexProjection, indexKeyOrders, covers, filterCovers)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}

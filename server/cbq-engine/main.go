@@ -74,7 +74,7 @@ var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 var PIPELINE_CAP = flag.Int64("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
 var PIPELINE_BATCH = flag.Int("pipeline-batch", 16, "Number of items execution operators can batch")
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
-var MAX_INDEX_API = flag.Int("max-index-api", 2, "Max Index API")
+var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "Max Index API")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")

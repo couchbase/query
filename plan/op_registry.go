@@ -41,9 +41,11 @@ func GetOperator(name string) (Operator, bool) {
 var _OPERATORS = map[string]Operator{
 	// Scan
 	"PrimaryScan":             &PrimaryScan{},
+	"PrimaryScan3":            &PrimaryScan3{},
 	"ParentScan":              &ParentScan{},
 	"IndexScan":               &IndexScan{},
 	"IndexScan2":              &IndexScan2{},
+	"IndexScan3":              &IndexScan3{},
 	"KeyScan":                 &KeyScan{},
 	"ValueScan":               &ValueScan{},
 	"DummyScan":               &DummyScan{},

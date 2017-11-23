@@ -66,6 +66,17 @@ func (this *builder) VisitPrimaryScan(plan *plan.PrimaryScan) (interface{}, erro
 	return NewPrimaryScan(plan, this.context), nil
 }
 
+func (this *builder) VisitPrimaryScan3(plan *plan.PrimaryScan3) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspace := plan.Keyspace()
+		scannedIndex := scannedIndex{keyspace.NamespaceId(), keyspace.Name()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
+	return NewPrimaryScan3(plan, this.context), nil
+}
+
 func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
 	return NewParentScan(plan, this.context), nil
 }
@@ -90,6 +101,17 @@ func (this *builder) VisitIndexScan2(plan *plan.IndexScan2) (interface{}, error)
 	}
 
 	return NewIndexScan2(plan, this.context), nil
+}
+
+func (this *builder) VisitIndexScan3(plan *plan.IndexScan3) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspaceTerm := plan.Term()
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
+	return NewIndexScan3(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}, error) {

@@ -20,12 +20,16 @@ import (
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	indexes []datastore.Index, force, exact bool) (
-	scan *plan.PrimaryScan, err error) {
+	plan.Operator, error) {
 	primary, err := buildPrimaryIndex(keyspace, indexes, force)
 	if primary == nil || err != nil {
 		return nil, err
 	}
 
+	if primary3, ok := primary.(datastore.PrimaryIndex3); ok && useIndex3API(primary) {
+		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
+			plan.NewIndexProjection(0, true), nil), nil
+	}
 	var limit expression.Expression
 	if exact {
 		limit = offsetPlusLimit(this.offset, this.limit)

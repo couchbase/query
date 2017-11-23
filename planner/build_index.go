@@ -25,6 +25,22 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 		return nil, err
 	}
 
+	indexer, er := keyspace.Indexer(stmt.Using())
+	if er != nil {
+		return nil, er
+	}
+
+	er = indexer.Refresh()
+	if er != nil {
+		return nil, er
+	}
+
+	if stmt.Partition() != nil {
+		if _, ok := indexer.(datastore.Indexer3); !ok {
+			return nil, errors.NewPartitionIndexNotSupportedError()
+		}
+	}
+
 	return plan.NewCreatePrimaryIndex(keyspace, stmt), nil
 }
 
@@ -48,6 +64,12 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 	if stmt.Keys().HasDescending() {
 		if _, ok := indexer.(datastore.Indexer2); !ok {
 			return nil, errors.NewIndexerDescCollationError()
+		}
+	}
+
+	if stmt.Partition() != nil {
+		if _, ok := indexer.(datastore.Indexer3); !ok {
+			return nil, errors.NewPartitionIndexNotSupportedError()
 		}
 	}
 

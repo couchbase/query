@@ -12,6 +12,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -65,30 +66,59 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		if indexer2, ok := indexer.(datastore.Indexer2); ok {
-			rangeKey := make(datastore.IndexKeys, len(node.Keys()))
-			for i, term := range node.Keys() {
-				rangeKey[i] = &datastore.IndexKey{Expr: term.Expression(), Desc: term.Descending()}
+		if indexer3, ok := indexer.(datastore.Indexer3); ok {
+			var indexPartition *datastore.IndexPartition
+
+			if node.Partition() != nil {
+				indexPartition = &datastore.IndexPartition{Strategy: node.Partition().Strategy(),
+					Exprs: node.Partition().Exprs()}
 			}
 
-			_, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
-				rangeKey, node.Where(), node.With())
+			rangeKeys := this.getRangeKeys(node.Keys())
+			_, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
+				indexPartition, node.Where(), node.With())
 			if err != nil {
 				context.Error(err)
+				return
 			}
 		} else {
-			if node.Keys().HasDescending() {
-				context.Error(errors.NewIndexerDescCollationError())
+			if node.Partition() != nil {
+				context.Error(errors.NewPartitionIndexNotSupportedError())
 				return
 			}
 
-			_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
-				node.RangeKeys(), node.Where(), node.With())
-			if err != nil {
-				context.Error(err)
+			if indexer2, ok := indexer.(datastore.Indexer2); ok {
+				rangeKeys := this.getRangeKeys(node.Keys())
+				_, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
+					rangeKeys, node.Where(), node.With())
+				if err != nil {
+					context.Error(err)
+					return
+				}
+			} else {
+				if node.Keys().HasDescending() {
+					context.Error(errors.NewIndexerDescCollationError())
+					return
+				}
+
+				_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
+					node.RangeKeys(), node.Where(), node.With())
+				if err != nil {
+					context.Error(err)
+					return
+				}
 			}
 		}
 	})
+}
+
+func (this *CreateIndex) getRangeKeys(terms algebra.IndexKeyTerms) datastore.IndexKeys {
+	rangeKeys := make(datastore.IndexKeys, 0, len(terms))
+	for _, term := range terms {
+		rangeKeys = append(rangeKeys, &datastore.IndexKey{Expr: term.Expression(), Desc: term.Descending()})
+	}
+
+	return rangeKeys
 }
 
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {

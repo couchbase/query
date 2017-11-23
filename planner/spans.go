@@ -25,9 +25,10 @@ type SargSpans interface {
 	json.Marshaler
 
 	// Create index scan
-	CreateScan(index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, ordered, overlap,
+	CreateScan(index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
 		array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
-		covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan
+		indexOrder plan.IndexKeyOrders, covers expression.Covers,
+		filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan
 
 	Compose(prev SargSpans) SargSpans                                  // Apply to previous composite keys
 	ComposeTerm(next *TermSpans) SargSpans                             // Apply next composite keys

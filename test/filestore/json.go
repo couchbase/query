@@ -253,6 +253,7 @@ func Start(site, pool string) *MockServer {
 	}
 
 	server.SetKeepAlive(1 << 10)
+	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 
 	go server.Serve()
 	mockServer.server = server

@@ -155,8 +155,13 @@ outer:
 	}
 
 	this.resetCountMinMax()
+
+	var indexKeyOrders plan.IndexKeyOrders
+	var ok bool
+
 	if this.order != nil {
-		if this.useIndexOrder(entry, keys) {
+		ok, indexKeyOrders = this.useIndexOrder(entry, keys)
+		if ok {
 			this.maxParallelism = 1
 		} else {
 			this.resetOrderOffsetLimit()
@@ -169,8 +174,8 @@ outer:
 
 	projDistinct := pushDown && canPushDownProjectionDistinct(index, this.projection, entry.keys)
 
-	scan := entry.spans.CreateScan(index, node, false, projDistinct, false, pred.MayOverlapSpans(), false,
-		this.offset, this.limit, indexProjection, covers, filterCovers)
+	scan := entry.spans.CreateScan(index, node, false, projDistinct, pred.MayOverlapSpans(), false,
+		this.offset, this.limit, indexProjection, indexKeyOrders, covers, filterCovers)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -210,7 +215,18 @@ func (this *builder) buildCoveringPushdDownScan(index datastore.Index, node *alg
 		(this.maxAgg != nil && canPushDownMax(this.maxAgg, entry, keys)) {
 		this.maxParallelism = 1
 		limit := expression.ONE_EXPR
-		scan := entry.spans.CreateScan(index, node, false, false, false, pred.MayOverlapSpans(), array, nil, limit, indexProjection, covers, filterCovers)
+
+		indexKeyOrders := make(plan.IndexKeyOrders, 1)
+		if this.minAgg != nil {
+			indexKeyOrders[0] = plan.NewIndexKeyOrders(0, false)
+		} else if this.maxAgg != nil {
+			indexKeyOrders[0] = plan.NewIndexKeyOrders(0, true)
+		} else {
+			indexKeyOrders = nil
+		}
+
+		scan := entry.spans.CreateScan(index, node, false, false, pred.MayOverlapSpans(), array, nil,
+			limit, indexProjection, indexKeyOrders, covers, filterCovers)
 		if scan != nil {
 			this.coveringScans = append(this.coveringScans, scan)
 		}
@@ -296,6 +312,15 @@ func canPushDownProjectionDistinct(index datastore.Index, projection *algebra.Pr
 	if projection == nil || !useIndex2API(index) {
 		return false
 	}
+
+	// Disable distinct pushdown for HASH partition
+	if useIndex3API(index) {
+		partition, err := index.(datastore.Index3).PartitionKeys()
+		if err != nil || (partition != nil && partition.Strategy != datastore.NO_PARTITION) {
+			return false
+		}
+	}
+
 	hash := _STRING_BOOL_POOL.Get()
 	defer _STRING_BOOL_POOL.Put(hash)
 
