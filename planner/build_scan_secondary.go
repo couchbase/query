@@ -317,13 +317,28 @@ outer:
 func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*indexEntry) error {
 
 	pred := baseKeyspace.dnfPred
+	isOrPred := false
+	orIsJoin := false
+	if _, ok := pred.(*expression.Or); ok {
+		isOrPred = true
+		for _, fl := range baseKeyspace.filters {
+			if fl.isJoin {
+				orIsJoin = true
+				break
+			}
+		}
+	}
 
 	for _, se := range sargables {
 		var spans SargSpans
 		var exactSpans bool
 		var err error
 
-		spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, len(se.keys), baseKeyspace.name)
+		if isOrPred {
+			spans, exactSpans, err = SargFor(baseKeyspace.dnfPred, se.keys, se.minKeys, orIsJoin, baseKeyspace.name)
+		} else {
+			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, baseKeyspace.name)
+		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
 				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})

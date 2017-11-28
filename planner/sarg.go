@@ -13,19 +13,19 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargFor(pred expression.Expression, keys expression.Expressions, min, total int, keyspaceName string) (
+func SargFor(pred expression.Expression, keys expression.Expressions, min int, isJoin bool, keyspaceName string) (
 	SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
-		return sargForOr(or, keys, min, total, keyspaceName)
+		return sargForOr(or, keys, min, isJoin, keyspaceName)
 	}
 
 	sargKeys := keys[0:min]
 
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
-	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, total, false, keyspaceName)
+	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, isJoin, keyspaceName)
 	if sargSpans == nil || err != nil {
 		return nil, exactSpan, err
 	}
@@ -33,14 +33,14 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 	return composeSargSpan(sargSpans, exactSpan)
 }
 
-func sargForOr(or *expression.Or, keys expression.Expressions, min, total int, keyspaceName string) (
+func sargForOr(or *expression.Or, keys expression.Expressions, min int, isJoin bool, keyspaceName string) (
 	SargSpans, bool, error) {
 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
 		min, _ = SargableFor(c, keys) // Variable length sarging
-		s, ex, err := SargFor(c, keys, min, total, keyspaceName)
+		s, ex, err := SargFor(c, keys, min, isJoin, keyspaceName)
 		if err != nil {
 			return nil, false, err
 		}
@@ -65,7 +65,7 @@ func sargFor(pred, key expression.Expression, isJoin bool, keyspaceName string) 
 	return rs, nil
 }
 
-func SargForFilters(filters Filters, keys expression.Expressions, min, total int, keyspaceName string) (
+func SargForFilters(filters Filters, keys expression.Expressions, min int, keyspaceName string) (
 	SargSpans, bool, error) {
 
 	sargSpans := make([]SargSpans, min)
@@ -74,70 +74,50 @@ func SargForFilters(filters Filters, keys expression.Expressions, min, total int
 
 	sargKeys := keys[0:min]
 
-outer:
 	for _, fl := range filters {
-		isOr := false
-		if _, ok := fl.fltrExpr.(*expression.Or); ok {
-			isOr = true
+		flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, fl.isJoin, keyspaceName)
+		if err != nil {
+			return nil, flExactSpan, err
 		}
 
-		// OR predicate may contains sargable predicates for multiple index keys, thus
-		// a for loop is used to set spans for potentially multiple index keys. However,
-		// note that for an OR predicate to be sargable for an index key, each arm of
-		// the OR clause must be sargable for the same index key.
-		start := 0
-		for start < min {
-			flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, start, total, fl.isJoin, keyspaceName)
-			if err != nil {
-				return nil, flExactSpan, err
-			}
+		isArray, _ := sargKeys[pos].IsArrayIndexKey()
 
-			isArray, _ := sargKeys[pos].IsArrayIndexKey()
-
-			if flSargSpans == nil || flSargSpans.Size() == 0 {
-				if !isArray {
-					for _, sargKey := range sargKeys {
-						if fl.fltrExpr.DependsOn(sargKey) {
-							exactSpan = false
-							break
-						}
+		if flSargSpans == nil || flSargSpans.Size() == 0 {
+			if !isArray {
+				for _, sargKey := range sargKeys {
+					if fl.fltrExpr.DependsOn(sargKey) {
+						exactSpan = false
+						break
 					}
 				}
-				continue outer
+			}
+			continue
+		}
+
+		if isArray {
+			if arrayKeySpan, ok := arrayKeySpans[pos]; ok {
+				arrayKeySpan = append(arrayKeySpan, flSargSpans)
+				arrayKeySpans[pos] = arrayKeySpan
+			} else {
+				arrayKeySpans[pos] = make([]SargSpans, 0, len(filters))
+				arrayKeySpans[pos] = append(arrayKeySpans[pos], flSargSpans)
+			}
+		} else {
+			if flSargSpans == _EMPTY_SPANS {
+				return _EMPTY_SPANS, true, nil
 			}
 
-			if isArray {
-				if arrayKeySpan, ok := arrayKeySpans[pos]; ok {
-					arrayKeySpan = append(arrayKeySpan, flSargSpans)
-					arrayKeySpans[pos] = arrayKeySpan
-				} else {
-					arrayKeySpans[pos] = make([]SargSpans, 0, len(filters))
-					arrayKeySpans[pos] = append(arrayKeySpans[pos], flSargSpans)
-				}
+			if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
+				sargSpans[pos] = flSargSpans
 			} else {
-				if flSargSpans == _EMPTY_SPANS {
+				sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
+				if sargSpans[pos] == _EMPTY_SPANS {
 					return _EMPTY_SPANS, true, nil
 				}
-
-				if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
-					sargSpans[pos] = flSargSpans
-				} else {
-					sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
-					if sargSpans[pos] == _EMPTY_SPANS {
-						return _EMPTY_SPANS, true, nil
-					}
-				}
-			}
-
-			exactSpan = exactSpan && flExactSpan
-
-			// for OR predicate attempt to set span for next index key
-			if isOr {
-				start = pos + 1
-			} else {
-				break
 			}
 		}
+
+		exactSpan = exactSpan && flExactSpan
 	}
 
 	for pos, arrayKeySpan := range arrayKeySpans {
@@ -212,7 +192,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 /*
 Get sarg spans for index sarg keys.
 */
-func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, total int, isJoin bool, keyspaceName string) (
+func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, isJoin bool, keyspaceName string) (
 	[]SargSpans, bool, error) {
 
 	n := len(sargKeys)
@@ -252,7 +232,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 /*
 Get sarg span for one of the index sarg keys. Individual filters are passed in
 */
-func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, start, total int, isJoin bool, keyspaceName string) (
+func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, isJoin bool, keyspaceName string) (
 	SargSpans, bool, int, error) {
 
 	n := len(sargKeys)
@@ -260,7 +240,7 @@ func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, st
 	exactSpan := true
 
 	// Sarg composite indexes left to right
-	for i := start; i < n; i++ {
+	for i := 0; i < n; i++ {
 		s := &sarg{sargKeys[i], keyspaceName, isJoin}
 		r, err := pred.Accept(s)
 		if err != nil {
