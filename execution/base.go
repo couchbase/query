@@ -394,7 +394,7 @@ func (this *base) childrenWait(n int) bool {
 	for n > 0 {
 
 		// no values are actually coming
-		_, child, ok := this.ValueExchange().getItemChildren(this.ValueExchange())
+		child, ok := this.ValueExchange().retrieveChild()
 		if !ok {
 			this.stopped = true
 			this.switchPhase(_EXECTIME)
@@ -413,7 +413,7 @@ func (this *base) childrenWait(n int) bool {
 func (this *base) childrenWaitNoStop(n int) {
 	this.switchPhase(_CHANTIME)
 	for n > 0 {
-		this.ValueExchange().retrieveChild()
+		this.ValueExchange().retrieveChildNoStop()
 		n--
 	}
 	this.switchPhase(_EXECTIME)

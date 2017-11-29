@@ -378,7 +378,7 @@ func (this *valueQueue) close() {
 
 // wait for children without stopping or receiving
 // if there are no more children, this will hang
-func (this *valueExchange) retrieveChild() int {
+func (this *valueExchange) retrieveChildNoStop() int {
 	this.oLock.Lock()
 	for {
 		if len(this.children) > 0 {
@@ -396,6 +396,34 @@ func (this *valueExchange) retrieveChild() int {
 
 	// we never get here
 	return -1
+}
+
+// wait for children without stopping or receiving
+func (this *valueExchange) retrieveChild() (int, bool) {
+	if this.stop {
+		return -1, false
+	}
+	this.oLock.Lock()
+	for {
+		if this.stop {
+			this.oLock.Unlock()
+			return -1, false
+		}
+		if len(this.children) > 0 {
+			child := this.children[0]
+			this.children = this.children[1:]
+			this.oLock.Unlock()
+			return child, true
+		}
+		this.wg.Add(1)
+		this.mustSignal = true
+		this.oLock.Unlock()
+		this.wg.Wait()
+		this.oLock.Lock()
+	}
+
+	// we never get here
+	return -1, true
 }
 
 // child signal
