@@ -453,21 +453,22 @@ data-parallelization and serialization points.
      $ mkdir -p $GOPATH/src/github.com/couchbase/
      $ cd ~/query
      $ mkdir bin pkg
-     $ cd $GOPATH/src/github.com/couchbase/
 
-Clone the git repo into the current working directory, to get the
-source, so as to be able to make a build. This clones it into query:
+Install the required goyacc tool and update the PATH to see it:
 
-     $ git clone https://github.com/couchbase/query query
-
-Go into src/golang.org/x and clone tools here – git clone https://github.com/golang/tools.git
-Go into cmd/goyacc and run go build, go install. 
-Then run export PATH=$PATH:/path/to/query/bin as follows
-
+     $ cd $GOPATH/src/golang.org/x
+     $ git clone https://github.com/golang/tools.git
+     $ cd tools/cmd/goyacc
+     $ go build
+     $ go install
      $ export PATH=$PATH:$GOPATH/bin/
+
+Clone the query repo and build it:
+
+     $ cd $GOPATH/src/github.com/couchbase/
+     $ git clone https://github.com/couchbase/query query
      $ cd query 
      $ ./build.sh
-
 
 By default, this builds the community edition of query. If you want
 the enterprise version (which includes schema inferencing), use:
