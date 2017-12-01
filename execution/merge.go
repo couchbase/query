@@ -186,7 +186,6 @@ func (this *Merge) wrapChild(op Operator, context *Context) (Operator, *Channel)
 	op.SetInput(ch)
 	op.SetOutput(this.output)
 	op.SetParent(this)
-	op.SetStop(this)
 	return op, ch
 }
 

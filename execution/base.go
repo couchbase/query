@@ -347,7 +347,10 @@ func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
 }
 
 func (this *base) getItemEntry(channel datastore.EntryChannel) (*datastore.IndexEntry, bool) {
-	this.switchPhase(_CHANTIME)
+
+	// this is used explictly to get keys from the indexer
+	// so by definition we are tracking service time
+	this.switchPhase(_SERVTIME)
 	defer this.switchPhase(_EXECTIME)
 
 	select {
@@ -361,7 +364,7 @@ func (this *base) getItemEntry(channel datastore.EntryChannel) (*datastore.Index
 	case item, ok := <-channel:
 		if ok {
 
-			// getItemValue does not keep track of
+			// getItemEntry does not keep track of
 			// incoming documents
 			return item, true
 		}
