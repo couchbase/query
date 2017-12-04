@@ -59,6 +59,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		defer this.switchPhase(_NOTIME)
 
 		if !active || !context.assert(this.child != nil, "Parallel has no child") {
+			this.close(context)
 			return
 		}
 		this.children = _PARALLEL_POOL.Get()[0:n]

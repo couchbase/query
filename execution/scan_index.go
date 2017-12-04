@@ -60,9 +60,9 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 
 		if !active || !context.assert(n != 0, "Index scan has no spans") {
+			this.close(context)
 			return
 		}
-		this.trackChildren(n)
 		this.children = _INDEX_SCAN_POOL.Get()
 
 		for i, span := range spans {
