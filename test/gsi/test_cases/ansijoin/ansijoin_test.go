@@ -53,6 +53,8 @@ func TestCover(t *testing.T) {
 		runMatch("case_ansijoin_metaid.json", qc, t)
 
 		// test simple ANSI JOIN
+		// this test case has variations of covering vs non-covering
+		// index scans on both sides of the ANSI JOIN
 		runMatch("case_ansijoin_simple.json", qc, t)
 
 		// test ANSI JOIN with IN and OR clauses
@@ -63,6 +65,9 @@ func TestCover(t *testing.T) {
 
 		// test ANSI OUTER JOIN
 		runMatch("case_ansijoin_outer.json", qc, t)
+
+		// test ANSI JOIN with index hints
+		runMatch("case_ansijoin_hints.json", qc, t)
 
 		// test ANSI NEST on meta().id
 		runMatch("case_ansinest_metaid.json", qc, t)
