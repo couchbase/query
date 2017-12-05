@@ -34,6 +34,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevProjection := this.projection
 	prevBasekeyspaces := this.baseKeyspaces
 	prevPushableOnclause := this.pushableOnclause
+	prevBuilderFlags := this.builderFlags
 	prevMaxParallelism := this.maxParallelism
 
 	defer func() {
@@ -50,6 +51,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.projection = prevProjection
 		this.baseKeyspaces = prevBasekeyspaces
 		this.pushableOnclause = prevPushableOnclause
+		this.builderFlags = prevBuilderFlags
 		this.maxParallelism = prevMaxParallelism
 	}()
 
@@ -60,6 +62,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.projection = nil
 	this.baseKeyspaces = nil
 	this.pushableOnclause = nil
+	this.builderFlags = 0
 	this.maxParallelism = 0
 	this.resetCountMinMax()
 

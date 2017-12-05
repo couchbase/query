@@ -44,6 +44,41 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		}
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
 
+		// Process where clause and pushable on clause
+		if this.where != nil {
+			// Handle constant TRUE predicate
+			cpred := this.where.Value()
+			if cpred != nil && cpred.Truth() {
+				this.setTrueWhereClause()
+			} else {
+				pred := this.where.Copy()
+
+				pred, err = this.processHostParameters(pred)
+				if err != nil {
+					return err
+				}
+
+				err = ClassifyExpr(pred, this.baseKeyspaces, false)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if this.pushableOnclause != nil {
+			pred := this.pushableOnclause.Copy()
+
+			pred, err = this.processHostParameters(pred)
+			if err != nil {
+				return err
+			}
+
+			err = ClassifyExpr(pred, this.baseKeyspaces, true)
+			if err != nil {
+				return err
+			}
+		}
+
 		// Use FROM clause in index selection
 		_, err = node.From().Accept(this)
 		if err != nil {
