@@ -32,7 +32,6 @@ type keyspaceCounter struct {
 
 	baseKeyspaces map[string]bool
 	keyspaces     map[string]bool
-	withinField   bool
 }
 
 func newKeyspaceCounter(baseKeyspaces map[string]bool) *keyspaceCounter {
@@ -46,19 +45,11 @@ func newKeyspaceCounter(baseKeyspaces map[string]bool) *keyspaceCounter {
 }
 
 func (this *keyspaceCounter) VisitField(expr *Field) (interface{}, error) {
-	withinField := this.withinField
-	defer func() { this.withinField = withinField }()
-	this.withinField = true
-
 	err := this.Traverse(expr.First())
 	return nil, err
 }
 
 func (this *keyspaceCounter) VisitIdentifier(expr *Identifier) (interface{}, error) {
-	if !this.withinField {
-		return nil, nil
-	}
-
 	keyspace := expr.String()
 	keyspace = strings.Trim(keyspace, "`")
 	if len(keyspace) == 0 {
