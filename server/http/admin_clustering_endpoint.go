@@ -480,29 +480,38 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, errors.NewAdminDecodingError(err)
 		}
-		for setting, value := range settings {
-			if check_it, ok := _CHECKERS[setting]; !ok {
-				return nil, errors.NewAdminUnknownSettingError(setting)
-			} else {
-				ok, err := check_it(value)
-				if !ok {
-					if err == nil {
-						return nil, errors.NewAdminSettingTypeError(setting, value)
-					} else {
-						return nil, err
-					}
-				}
-			}
+
+		if errP := ProcessSettings(settings, srvr); errP != nil {
+			return nil, errP
 		}
-		for setting, value := range settings {
-			set_it := _SETTERS[setting]
-			set_it(srvr, value)
-			logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
-		}
+
 		return fillSettings(settings, srvr), nil
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
+}
+
+func ProcessSettings(settings map[string]interface{}, srvr *server.Server) errors.Error {
+	for setting, value := range settings {
+		if check_it, ok := _CHECKERS[setting]; !ok {
+			return errors.NewAdminUnknownSettingError(setting)
+		} else {
+			ok, err := check_it(value)
+			if !ok {
+				if err == nil {
+					return errors.NewAdminSettingTypeError(setting, value)
+				} else {
+					return err
+				}
+			}
+		}
+	}
+	for setting, value := range settings {
+		set_it := _SETTERS[setting]
+		set_it(srvr, value)
+		logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
+	}
+	return nil
 }
 
 func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {

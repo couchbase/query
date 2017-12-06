@@ -139,6 +139,18 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 	//	}
 	//
 	//	rv.systemstore = sys
+
+	// Setup callback function for metakv settings changes
+	callb := func(cfg Config) {
+		logging.Infof("Settings notifier from metakv\n")
+
+		// SetParamValuesForAll accepts a full-set or subset of global configuration
+		// and updates those fields.
+		SetParamValuesForAll(cfg, rv)
+	}
+
+	SetupSettingsNotifier(callb, make(chan struct{}))
+
 	return rv, nil
 }
 
