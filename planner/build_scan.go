@@ -69,11 +69,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
 	}
 
-	var pred expression.Expression
+	var pred, pred2 expression.Expression
 	if join {
 		pred = baseKeyspace.dnfPred
 	} else {
 		pred = this.where
+		pred2 = this.pushableOnclause
 		if this.trueWhereClause() {
 			pred = nil
 		}
@@ -83,17 +84,15 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		expression.NewMeta(expression.NewIdentifier(node.Alias())),
 		expression.NewFieldName("id", false))
 
-	// First handle covering primary scan
-	if this.cover != nil && pred == nil && !node.IsAnsiNest() {
-		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, hints)
-		if scan != nil || err != nil {
-			return scan, nil, err
-		}
-	}
-
-	if pred != nil {
+	if pred != nil || pred2 != nil {
 		// for ANSI JOIN, the following process is already done for ON clause filters
 		if !join {
+			// derive IS NOT NULL predicate
+			err = deriveNotNullFilter(keyspace, baseKeyspace)
+			if err != nil {
+				return nil, nil, err
+			}
+
 			// include pushed ON-clause filter
 			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
 			if err != nil {
@@ -115,6 +114,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			op = "nest"
 		}
 		return nil, nil, errors.NewNoAnsiJoinError(node.Alias(), op)
+	} else if this.cover != nil && baseKeyspace.dnfPred == nil {
+		// Handle covering primary scan
+		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, hints)
+		if scan != nil || err != nil {
+			return scan, nil, err
+		}
 	}
 
 	if this.order != nil {

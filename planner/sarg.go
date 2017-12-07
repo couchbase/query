@@ -75,7 +75,7 @@ func SargForFilters(filters Filters, keys expression.Expressions, min int, keysp
 	sargKeys := keys[0:min]
 
 	for _, fl := range filters {
-		flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, fl.isJoin, keyspaceName)
+		flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, fl.isJoin(), keyspaceName)
 		if err != nil {
 			return nil, flExactSpan, err
 		}

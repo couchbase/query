@@ -322,7 +322,7 @@ func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*inde
 	if _, ok := pred.(*expression.Or); ok {
 		isOrPred = true
 		for _, fl := range baseKeyspace.filters {
-			if fl.isJoin {
+			if fl.isJoin() {
 				orIsJoin = true
 				break
 			}

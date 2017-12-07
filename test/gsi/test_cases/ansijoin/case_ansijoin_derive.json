@@ -1,0 +1,45 @@
+[
+    {
+        "statements":"SELECT c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId ORDER BY p.purchaseId LIMIT 4",
+        "results": [
+        {
+            "customerId": "customer515",
+            "purchaseId": "purchase0"
+        },
+        {
+            "customerId": "customer182",
+            "purchaseId": "purchase1"
+        },
+        {
+            "customerId": "customer776",
+            "purchaseId": "purchase10"
+        },
+        {
+            "customerId": "customer632",
+            "purchaseId": "purchase100"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId  || \"1\" = p.customerId ORDER BY p.purchaseId LIMIT 4",
+        "results": [
+        {
+            "customerId": "customer77",
+            "purchaseId": "purchase1001"
+        },
+        {
+            "customerId": "customer88",
+            "purchaseId": "purchase1008"
+        },
+        {
+            "customerId": "customer27",
+            "purchaseId": "purchase1028"
+        },
+        {
+            "customerId": "customer15",
+            "purchaseId": "purchase1043"
+        }
+    ]
+    }
+]
+

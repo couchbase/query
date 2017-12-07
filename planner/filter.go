@@ -12,30 +12,53 @@ package planner
 import (
 	"fmt"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
 
+const (
+	FLTR_IS_JOIN     = 1 << iota // is this originally a join filter
+	FLTR_IS_ONCLAUSE             // is this an ON-clause filter for ANSI JOIN
+	FLTR_IS_DERIVED              // is this a derived filter
+)
+
 type Filter struct {
-	fltrExpr   expression.Expression // filter expression
-	origExpr   expression.Expression // original filter expression
-	keyspaces  map[string]bool       // keyspace references
-	isOnclause bool                  // is this an ON-clause filter for ANSI JOIN
-	isJoin     bool                  // is this originally a join filter
+	fltrExpr  expression.Expression // filter expression
+	origExpr  expression.Expression // original filter expression
+	keyspaces map[string]bool       // keyspace references
+	fltrFlags uint32
 }
 
 type Filters []*Filter
 
 func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bool, isOnclause bool, isJoin bool) *Filter {
 	rv := &Filter{
-		fltrExpr:   fltrExpr,
-		origExpr:   origExpr,
-		keyspaces:  keyspaces,
-		isOnclause: isOnclause,
-		isJoin:     isJoin,
+		fltrExpr:  fltrExpr,
+		origExpr:  origExpr,
+		keyspaces: keyspaces,
+	}
+
+	if isOnclause {
+		rv.fltrFlags |= FLTR_IS_ONCLAUSE
+	}
+	if isJoin {
+		rv.fltrFlags |= FLTR_IS_JOIN
 	}
 
 	return rv
+}
+
+func (this *Filter) isOnclause() bool {
+	return (this.fltrFlags & FLTR_IS_ONCLAUSE) != 0
+}
+
+func (this *Filter) isJoin() bool {
+	return (this.fltrFlags & FLTR_IS_JOIN) != 0
+}
+
+func (this *Filter) isDerived() bool {
+	return (this.fltrFlags & FLTR_IS_DERIVED) != 0
 }
 
 // Combine an array of filters into a single expression by ANDing each filter expression,
@@ -47,7 +70,7 @@ func combineFilters(filters Filters, includeOnclause bool) (expression.Expressio
 	var dnfPred, origPred expression.Expression
 
 	for _, fl := range filters {
-		if !includeOnclause && fl.isOnclause {
+		if !includeOnclause && fl.isOnclause() {
 			continue
 		}
 
@@ -161,4 +184,210 @@ func (this *builder) processKeyspaceDone(keyspace string) error {
 	}
 
 	return nil
+}
+
+type idxKeyDerive struct {
+	keyExpr expression.Expression // index key expression
+	derive  bool                  // need to derive?
+}
+
+func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
+	return &idxKeyDerive{
+		keyExpr: keyExpr,
+		derive:  true,
+	}
+}
+
+// derive IS NOT NULL filters for a keyspace based on join filters in the
+// WHERE clause as well as ON-clause of inner joins
+func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace) error {
+
+	// first gather leading index key from all indexes for this keyspace
+	indexes := _INDEX_POOL.Get()
+	defer _INDEX_POOL.Put(indexes)
+	indexes, err := allIndexes(keyspace, nil, indexes)
+	if err != nil {
+		return err
+	}
+
+	if len(indexes) == 0 {
+		return nil
+	}
+
+	formalizer := expression.NewSelfFormalizer(baseKeyspace.name, nil)
+	keyMap := make(map[string]*idxKeyDerive, len(indexes))
+
+	for _, index := range indexes {
+		if index.IsPrimary() {
+			continue
+		}
+
+		keys := index.RangeKey()
+		if len(keys) > 0 {
+			key := keys[0]
+			isArray, _ := key.IsArrayIndexKey()
+			if isArray {
+				continue
+			}
+
+			key = key.Copy()
+			key, err = formalizer.Map(key)
+			if err != nil {
+				return err
+			}
+
+			val := key.String()
+			if val == "" {
+				continue
+			}
+
+			if _, ok := keyMap[val]; !ok {
+				keyMap[val] = newIdxKeyDerive(key)
+			}
+		}
+	}
+
+	n := len(keyMap)
+
+	// in case only primary index or index with leading array index key exists
+	if n == 0 {
+		return nil
+	}
+
+	// next check existing filters
+	terms := make(expression.Expressions, 0, 3)
+	for _, fl := range baseKeyspace.filters {
+		terms = terms[:0]
+		pred := fl.fltrExpr
+		if not, ok := pred.(*expression.Not); ok {
+			pred = not.Operand()
+		}
+		switch pred := pred.(type) {
+		case *expression.IsNotMissing:
+			terms = append(terms, pred.Operand())
+		case *expression.IsNotNull:
+			terms = append(terms, pred.Operand())
+		case *expression.IsValued:
+			terms = append(terms, pred.Operand())
+		case *expression.Eq:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.LE:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.LT:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.Like:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.Between:
+			terms = append(terms, pred.First(), pred.Second(), pred.Third())
+		}
+
+		for _, term := range terms {
+			val := term.String()
+			if val == "" {
+				continue
+			}
+			if _, ok := keyMap[val]; ok {
+				keyMap[val].derive = false
+				n--
+				if n == 0 {
+					return nil
+				}
+			}
+		}
+	}
+
+	// next check all join filters
+	newFilters := make(Filters, 0, n)
+	keyspaceNames := make(map[string]bool, 1)
+	keyspaceNames[baseKeyspace.name] = true
+	for _, jfl := range baseKeyspace.joinfilters {
+		terms = terms[:0]
+		pred := jfl.fltrExpr
+		if not, ok := pred.(*expression.Not); ok {
+			pred = not.Operand()
+		}
+		switch pred := pred.(type) {
+		case *expression.Eq:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.LE:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.LT:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.Like:
+			terms = append(terms, pred.First(), pred.Second())
+		case *expression.Between:
+			terms = append(terms, pred.First(), pred.Second(), pred.Third())
+		}
+
+		for _, term := range terms {
+			// check whether the expression references current keyspace
+			keyspaces, err := expression.CountKeySpaces(term, keyspaceNames)
+			if err != nil {
+				return err
+			}
+
+			if len(keyspaces) == 0 {
+				continue
+			}
+
+			val := term.String()
+			if val == "" {
+				continue
+			}
+
+			// if the expression is an index leading key, and there is no
+			// filter yet that reference this expression, derive a new
+			// IS NOT NULL expression
+			if _, ok := keyMap[val]; ok {
+				if keyMap[val].derive == false {
+					continue
+				} else {
+					keyMap[val].derive = false
+					newFilters = addDerivedFilter(term, keyspaceNames, jfl.isOnclause(), newFilters)
+				}
+			} else {
+				simple := false
+				if _, ok := term.(*expression.Field); ok {
+					simple = true
+				} else if _, ok := term.(*expression.Identifier); ok {
+					simple = true
+				}
+
+				// if the term expression is a simple expression, no need to check
+				// further for sargable
+				if simple {
+					continue
+				}
+
+				// check all indexes for sargable
+				for val, idxKeyDerive := range keyMap {
+					if idxKeyDerive.derive == false {
+						continue
+					}
+
+					min, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr})
+					if min > 0 {
+						keyMap[val].derive = false
+						newFilters = addDerivedFilter(term, keyspaceNames, jfl.isOnclause(), newFilters)
+					}
+				}
+			}
+		}
+	}
+
+	if len(newFilters) > 0 {
+		baseKeyspace.filters = append(baseKeyspace.filters, newFilters...)
+	}
+
+	return nil
+}
+
+func addDerivedFilter(term expression.Expression, keyspaceNames map[string]bool, isOnclause bool, newFilters Filters) Filters {
+
+	newExpr := expression.NewIsNotNull(term)
+	newFilter := newFilter(newExpr, newExpr, keyspaceNames, isOnclause, false)
+	newFilter.fltrFlags |= FLTR_IS_DERIVED
+	newFilters = append(newFilters, newFilter)
+
+	return newFilters
 }

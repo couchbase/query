@@ -42,13 +42,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 		// if joining on primary key (meta().id) and no secondary index
 		// scan is available, create a "regular" join
-		right.SetDefaultNamespace(this.namespace)
-		namespace, err := this.datastore.NamespaceByName(right.Namespace())
-		if err != nil {
-			return nil, err
-		}
-
-		keyspace, err := namespace.KeyspaceByName(right.Keyspace())
+		keyspace, err := this.getTermKeyspace(right)
 		if err != nil {
 			return nil, err
 		}
@@ -87,13 +81,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 		// if joining on primary key (meta().id) and no secondary index
 		// scan is available, create a "regular" nest
-		right.SetDefaultNamespace(this.namespace)
-		namespace, err := this.datastore.NamespaceByName(right.Namespace())
-		if err != nil {
-			return nil, err
-		}
-
-		keyspace, err := namespace.KeyspaceByName(right.Keyspace())
+		keyspace, err := this.getTermKeyspace(right)
 		if err != nil {
 			return nil, err
 		}
@@ -185,7 +173,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 	var primaryJoinKeys expression.Expression
 
 	for _, fltr := range baseKeyspace.filters {
-		if fltr.isOnclause {
+		if fltr.isOnclause() {
 			if eqFltr, ok := fltr.fltrExpr.(*expression.Eq); ok {
 				if eqFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()

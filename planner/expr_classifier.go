@@ -432,7 +432,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 					}
 				}
 
-				isJoin = isJoin || fl.isJoin
+				isJoin = isJoin || fl.isJoin()
 			}
 		}
 

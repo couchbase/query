@@ -84,6 +84,9 @@ func TestCover(t *testing.T) {
 		// test ANSI JOIN with ON-clause filters is pushed to left-hand-side
 		runMatch("case_ansijoin_push_onclause.json", qc, t)
 
+		// test ANSI JOIN with derived IS NOT NULL predicate
+		runMatch("case_ansijoin_derive.json", qc, t)
+
 		fmt.Println("Dropping indexes")
 		runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 		runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
