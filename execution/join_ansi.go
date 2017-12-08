@@ -153,11 +153,7 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 
 	var joined value.AnnotatedValue
 
-	if item.Covers() != nil {
-		joined = item.CopyWithCovers().(value.AnnotatedValue)
-	} else {
-		joined = item.Copy().(value.AnnotatedValue)
-	}
+	joined = item.Copy().(value.AnnotatedValue)
 
 	// only interested in the value corresponding to "alias"
 	val, ok := right_item.Field(alias)

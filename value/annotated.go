@@ -33,7 +33,6 @@ from covering indexes.
 */
 type AnnotatedValue interface {
 	Value
-	CopyWithCovers() Value
 	GetValue() Value
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
@@ -91,12 +90,17 @@ func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string) error 
 }
 
 func (this *annotatedValue) Copy() Value {
-	return &annotatedValue{
+	rv := &annotatedValue{
 		Value:       this.Value.Copy(),
 		attachments: copyMap(this.attachments, self),
 		covers:      this.covers,
 		bit:         this.bit,
 	}
+	if this.covers != nil {
+		rv.covers = this.covers.Copy()
+	}
+
+	return rv
 }
 
 func (this *annotatedValue) CopyForUpdate() Value {
@@ -104,15 +108,6 @@ func (this *annotatedValue) CopyForUpdate() Value {
 		Value:       this.Value.CopyForUpdate(),
 		attachments: copyMap(this.attachments, self),
 		covers:      this.covers,
-		bit:         this.bit,
-	}
-}
-
-func (this *annotatedValue) CopyWithCovers() Value {
-	return &annotatedValue{
-		Value:       this.Value.Copy(),
-		attachments: copyMap(this.attachments, self),
-		covers:      this.covers.Copy(),
 		bit:         this.bit,
 	}
 }
