@@ -11,6 +11,7 @@ package value
 
 import (
 	"io"
+	"sync"
 )
 
 /*
@@ -23,11 +24,17 @@ type ScopeValue struct {
 	parent Value
 }
 
+var scopePool = sync.Pool{
+	New: func() interface{} {
+		return &ScopeValue{}
+	},
+}
+
 func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
-	return &ScopeValue{
-		Value:  objectValue(val),
-		parent: parent,
-	}
+	rv := scopePool.Get().(*ScopeValue)
+	rv.Value = objectValue(val)
+	rv.parent = parent
+	return rv
 }
 
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
@@ -41,17 +48,17 @@ func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string) error {
 }
 
 func (this *ScopeValue) Copy() Value {
-	return &ScopeValue{
-		Value:  this.Value.Copy(),
-		parent: this.parent,
-	}
+	rv := scopePool.Get().(*ScopeValue)
+	rv.Value = this.Value.Copy()
+	rv.parent = this.parent
+	return rv
 }
 
 func (this *ScopeValue) CopyForUpdate() Value {
-	return &ScopeValue{
-		Value:  this.Value.CopyForUpdate(),
-		parent: this.parent,
-	}
+	rv := scopePool.Get().(*ScopeValue)
+	rv.Value = this.Value.CopyForUpdate()
+	rv.parent = this.parent
+	return rv
 }
 
 /*
@@ -117,4 +124,14 @@ Return the immediate map.
 */
 func (this *ScopeValue) Map() map[string]interface{} {
 	return this.Value.(objectValue)
+}
+
+func (this *ScopeValue) Recycle() {
+	this.Value.Recycle()
+	this.Value = nil
+	if this.parent != nil {
+		this.parent.Recycle()
+		this.parent = nil
+	}
+	scopePool.Put(this)
 }

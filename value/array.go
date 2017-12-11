@@ -335,7 +335,10 @@ func (this sliceValue) Successor() Value {
 }
 
 func (this sliceValue) Recycle() {
-	recycle(this)
+	// the old recycle functionality had never been used
+	// this will be reinstated or removed with the whole
+	// of recycle.go when more investigation has been done
+	//	recycle(this)
 }
 
 func (this sliceValue) Tokens(set *Set, options Value) *Set {

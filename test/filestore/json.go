@@ -175,17 +175,15 @@ func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Erro
 		pretty = value.FALSE
 	}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil, "", "")
-
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
 	}
-
 	query := &MockQuery{
-		BaseRequest: *base,
-		response:    mr,
+		response: mr,
 	}
+	server.NewBaseRequest(&query.BaseRequest, q, nil, nil, nil, "json", 0, 0, 0, 0,
+		value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil, "", "")
+
 	defer mockServer.doStats(query)
 
 	select {

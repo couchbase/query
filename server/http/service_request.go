@@ -264,24 +264,23 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	if cbUserAgent != "" {
 		userAgent = userAgent + " (" + cbUserAgent + ")"
 	}
-	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
+	rv := &httpRequest{
+		resp: resp,
+		req:  req,
+	}
+
+	server.NewBaseRequest(&rv.BaseRequest, statement, prepared, namedArgs, positionalArgs,
 		namespace, max_parallelism, scan_cap, pipeline_cap, pipeline_batch,
 		readonly, metrics, signature, pretty, consistency, client_id, creds,
 		req.RemoteAddr, userAgent)
 
 	var prof server.Profile
 	if err == nil {
-		base.SetControls(controls)
+		rv.SetControls(controls)
 		prof, err = getProfileRequest(httpArgs)
 		if err == nil {
-			base.SetProfile(prof)
+			rv.SetProfile(prof)
 		}
-	}
-
-	rv := &httpRequest{
-		BaseRequest: *base,
-		resp:        resp,
-		req:         req,
 	}
 
 	rv.SetTimeout(timeout)

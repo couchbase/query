@@ -227,17 +227,15 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
-
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
 	}
-
 	query := &MockQuery{
-		BaseRequest: *base,
-		response:    mr,
+		response: mr,
 	}
+	server.NewBaseRequest(&query.BaseRequest, q, nil, nil, nil, namespace, 0, 0, 0, 0,
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
+
 	defer mockServer.doStats(query)
 
 	select {

@@ -11,9 +11,16 @@ package value
 
 import (
 	"io"
+	"sync"
 )
 
 type AnnotatedValues []AnnotatedValue
+
+var annotatedPool = sync.Pool{
+	New: func() interface{} {
+		return &annotatedValue{}
+	},
+}
 
 func (this AnnotatedValues) Append(val AnnotatedValue, pool *AnnotatedPool) AnnotatedValues {
 	if len(this) == cap(this) {
@@ -51,21 +58,17 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 	case AnnotatedValue:
 		return val
 	case *ScopeValue:
-		av := &annotatedValue{
-			Value: val,
-		}
-
+		av := annotatedPool.Get().(*annotatedValue)
+		av.Value = val
 		av.InheritCovers(val.Parent())
 		return av
 	case Value:
-		av := &annotatedValue{
-			Value: val,
-		}
+		av := annotatedPool.Get().(*annotatedValue)
+		av.Value = val
 		return av
 	default:
-		av := &annotatedValue{
-			Value: NewValue(val),
-		}
+		av := annotatedPool.Get().(*annotatedValue)
+		av.Value = NewValue(val)
 		return av
 	}
 }
@@ -90,12 +93,11 @@ func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string) error 
 }
 
 func (this *annotatedValue) Copy() Value {
-	rv := &annotatedValue{
-		Value:       this.Value.Copy(),
-		attachments: copyMap(this.attachments, self),
-		covers:      this.covers,
-		bit:         this.bit,
-	}
+	rv := annotatedPool.Get().(*annotatedValue)
+	rv.Value = this.Value.Copy()
+	rv.attachments = copyMap(this.attachments, self)
+	rv.covers = this.covers
+	rv.bit = this.bit
 	if this.covers != nil {
 		rv.covers = this.covers.Copy()
 	}
@@ -104,12 +106,12 @@ func (this *annotatedValue) Copy() Value {
 }
 
 func (this *annotatedValue) CopyForUpdate() Value {
-	return &annotatedValue{
-		Value:       this.Value.CopyForUpdate(),
-		attachments: copyMap(this.attachments, self),
-		covers:      this.covers,
-		bit:         this.bit,
-	}
+	rv := annotatedPool.Get().(*annotatedValue)
+	rv.Value = this.Value.CopyForUpdate()
+	rv.attachments = copyMap(this.attachments, self)
+	rv.covers = this.covers
+	rv.bit = this.bit
+	return rv
 }
 
 func (this *annotatedValue) GetValue() Value {
@@ -199,4 +201,16 @@ func (this *annotatedValue) Bit() uint8 {
 
 func (this *annotatedValue) SetBit(b uint8) {
 	this.bit = b
+}
+
+func (this *annotatedValue) Recycle() {
+	this.Value.Recycle()
+	this.Value = nil
+	this.attachments = nil
+	if this.covers != nil {
+		this.covers.Recycle()
+		this.covers = nil
+	}
+	this.bit = 0
+	annotatedPool.Put(this)
 }

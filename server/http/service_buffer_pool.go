@@ -21,8 +21,6 @@ type BufferPool interface {
 	BufferCapacity() int
 }
 
-const START_SIZE = 512
-
 // syncPoolBufPool is an implementation of BufferPool
 // that uses a sync.Pool to maintain buffers:
 type syncPoolBufPool struct {
@@ -36,7 +34,11 @@ func NewSyncPool(buf_size int) BufferPool {
 
 	newPool.makeBuffer = func() interface{} {
 		var b bytes.Buffer
-		b.Grow(START_SIZE)
+
+		// the buffer pool will eventually home just
+		// KeepAlive size buffers, so we just as well
+		// start from that
+		b.Grow(buf_size)
 		return &b
 	}
 	newPool.pool = &sync.Pool{}
@@ -46,15 +48,8 @@ func NewSyncPool(buf_size int) BufferPool {
 	return &newPool
 }
 
-func (bp *syncPoolBufPool) GetBuffer() (b *bytes.Buffer) {
-	pool_object := bp.pool.Get()
-
-	b, ok := pool_object.(*bytes.Buffer)
-
-	if !ok {
-		b = bp.makeBuffer().(*bytes.Buffer)
-	}
-	return
+func (bp *syncPoolBufPool) GetBuffer() *bytes.Buffer {
+	return bp.pool.Get().(*bytes.Buffer)
 }
 
 func (bp *syncPoolBufPool) PutBuffer(b *bytes.Buffer) {
@@ -63,48 +58,5 @@ func (bp *syncPoolBufPool) PutBuffer(b *bytes.Buffer) {
 }
 
 func (bp *syncPoolBufPool) BufferCapacity() int {
-	return bp.buf_size
-}
-
-// chanBufferPool is an implementation of BufferPool
-// that uses a channel to maintain buffers:
-type chanBufferPool struct {
-	pool       chan *bytes.Buffer
-	buf_size   int
-	makeBuffer func() *bytes.Buffer
-}
-
-func NewChanPool(max_bufs, buf_size int) BufferPool {
-	return &chanBufferPool{
-		pool:     make(chan *bytes.Buffer, max_bufs),
-		buf_size: buf_size,
-		makeBuffer: func() *bytes.Buffer {
-			var b bytes.Buffer
-			b.Grow(START_SIZE)
-			return &b
-		},
-	}
-}
-
-func (bp *chanBufferPool) GetBuffer() (b *bytes.Buffer) {
-	select {
-	case b = <-bp.pool: // found buffer in pool
-	default:
-		b = bp.makeBuffer()
-	}
-	return
-}
-
-func (bp *chanBufferPool) PutBuffer(b *bytes.Buffer) {
-	b.Reset()
-
-	select {
-	case bp.pool <- b: // put buffer back in pool
-	default:
-		// let b go
-	}
-}
-
-func (bp *chanBufferPool) BufferCapacity() int {
 	return bp.buf_size
 }

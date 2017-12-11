@@ -238,41 +238,38 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 	return &clientContextIDImpl{id: id}
 }
 
-func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
+func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
 	positionalArgs value.Values, namespace string, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
-	client_id string, creds auth.Credentials, remoteAddr string, userAgent string) *BaseRequest {
-
-	rv := &BaseRequest{
-		statement:      statement,
-		prepared:       prepared,
-		namedArgs:      namedArgs,
-		positionalArgs: positionalArgs,
-		namespace:      namespace,
-		timeout:        -1,
-		maxParallelism: maxParallelism,
-		scanCap:        scanCap,
-		pipelineCap:    pipelineCap,
-		pipelineBatch:  pipelineBatch,
-		readonly:       readonly,
-		signature:      signature,
-		metrics:        metrics,
-		pretty:         pretty,
-		consistency:    consistency,
-		credentials:    creds,
-		remoteAddr:     remoteAddr,
-		userAgent:      userAgent,
-		requestTime:    time.Now(),
-		serviceTime:    time.Now(),
-		state:          RUNNING,
-		errors:         make(errors.ErrorChannel, _ERROR_CAP),
-		warnings:       make(errors.ErrorChannel, _ERROR_CAP),
-		closeNotify:    make(chan bool, 1),
-		stopResult:     make(chan bool, 1),
-		stopExecute:    make(chan bool, 1),
-		profile:        ProfUnset,
-		controls:       value.NONE,
-	}
+	client_id string, creds auth.Credentials, remoteAddr string, userAgent string) {
+	rv.statement = statement
+	rv.prepared = prepared
+	rv.namedArgs = namedArgs
+	rv.positionalArgs = positionalArgs
+	rv.namespace = namespace
+	rv.timeout = -1
+	rv.maxParallelism = maxParallelism
+	rv.scanCap = scanCap
+	rv.pipelineCap = pipelineCap
+	rv.pipelineBatch = pipelineBatch
+	rv.readonly = readonly
+	rv.signature = signature
+	rv.metrics = metrics
+	rv.pretty = pretty
+	rv.consistency = consistency
+	rv.credentials = creds
+	rv.remoteAddr = remoteAddr
+	rv.userAgent = userAgent
+	rv.requestTime = time.Now()
+	rv.serviceTime = time.Now()
+	rv.state = RUNNING
+	rv.errors = make(errors.ErrorChannel, _ERROR_CAP)
+	rv.warnings = make(errors.ErrorChannel, _ERROR_CAP)
+	rv.closeNotify = make(chan bool, 1)
+	rv.stopResult = make(chan bool, 1)
+	rv.stopExecute = make(chan bool, 1)
+	rv.profile = ProfUnset
+	rv.controls = value.NONE
 
 	if maxParallelism <= 0 {
 		maxParallelism = runtime.NumCPU()
@@ -283,7 +280,6 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
 	rv.client_id = newClientContextIDImpl(client_id)
-	return rv
 }
 
 func (this *BaseRequest) SetTimeout(timeout time.Duration) {

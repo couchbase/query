@@ -385,7 +385,10 @@ func (this objectValue) Successor() Value {
 }
 
 func (this objectValue) Recycle() {
-	recycle(this)
+	// the old recycle functionality had never been used
+	// this will be reinstated or removed with the whole
+	// of recycle.go when more investigation has been done
+	//	recycle(this)
 }
 
 func (this objectValue) Tokens(set *Set, options Value) *Set {
