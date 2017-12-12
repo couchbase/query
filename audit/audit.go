@@ -10,6 +10,9 @@
 package audit
 
 import (
+	"fmt"
+	"time"
+
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/logging"
 )
@@ -57,6 +60,16 @@ type Auditable interface {
 	EventPositionalArgs() []string
 
 	IsAdHoc() bool
+
+	// Metrics
+	ElapsedTime() time.Duration
+	ExecutionTime() time.Duration
+	EventResultCount() int
+	EventResultSize() int
+	MutationCount() uint64
+	SortCount() uint64
+	EventErrorCount() int
+	EventWarningCount() int
 }
 
 var doAudit = false
@@ -122,6 +135,16 @@ func buildAuditRecord(event Auditable) *n1qlAuditEvent {
 		UserAgent:      event.UserAgent(),
 		Node:           event.EventNodeName(),
 		Status:         event.EventStatus(),
+		Metrics: n1qlMetrics{
+			ElapsedTime:   fmt.Sprintf("%v", event.ElapsedTime()),
+			ExecutionTime: fmt.Sprintf("%v", event.ExecutionTime()),
+			ResultCount:   event.EventResultCount(),
+			ResultSize:    event.EventResultSize(),
+			MutationCount: event.MutationCount(),
+			SortCount:     event.SortCount(),
+			ErrorCount:    event.EventErrorCount(),
+			WarningCount:  event.EventWarningCount(),
+		},
 	}
 }
 
@@ -137,6 +160,9 @@ func logAuditEvent(event Auditable) {
 		event.EventStatus(), event.Statement(), event.EventId(), event.EventType(), event.EventUsers(),
 		event.UserAgent(), event.EventNodeName())
 	logging.Infof("named_args=%v, positional_args=%v, ad_hoc=%v", event.EventNamedArgs(), event.EventPositionalArgs(), event.IsAdHoc())
+	logging.Infof("elapsed_time=%v, execution_time=%v, result_count=%d, result_size=%d, mutation_count=%d, sort_count=%d, error_count=%d, warning_count=%d",
+		event.ElapsedTime(), event.ExecutionTime(), event.EventResultCount(), event.EventResultSize(), event.MutationCount(),
+		event.SortCount(), event.EventErrorCount(), event.EventWarningCount())
 }
 
 // If possible, use whatever field names are used elsewhere in the N1QL system.
@@ -156,4 +182,17 @@ type n1qlAuditEvent struct {
 	Node      string   `json:"node"`
 
 	Status string `json:"status"`
+
+	Metrics n1qlMetrics `json:"metrics"`
+}
+
+type n1qlMetrics struct {
+	ElapsedTime   string `json:"elapsedTime"`
+	ExecutionTime string `json:"executionTime"`
+	ResultCount   int    `json:"resultCount"`
+	ResultSize    int    `json:"resultSize"`
+	MutationCount uint64 `json:"mutationCount,omitempty"`
+	SortCount     uint64 `json:"sortCount,omitempty"`
+	ErrorCount    int    `json:"errorCount,omitempty"`
+	WarningCount  int    `json:"warningCount,omitempty"`
 }

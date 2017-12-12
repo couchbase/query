@@ -13,7 +13,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
@@ -181,8 +180,8 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	// Update metrics:
-	service_time := time.Since(request.ServiceTime())
-	request_time := time.Since(request.RequestTime())
+	service_time := request.executionTime
+	request_time := request.elapsedTime
 	acctstore := this.server.AccountingStore()
 	prepared := request.Prepared() != nil
 

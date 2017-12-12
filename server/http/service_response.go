@@ -107,11 +107,19 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeErrors(prefix, indent)
 	this.writeWarnings(prefix, indent)
 	this.writeState("", prefix)
+
+	this.markTimeOfCompletion()
+
 	this.writeMetrics(srvr.Metrics(), prefix, indent)
 	this.writeProfile(srvr.Profile(), prefix, indent)
 	this.writeControls(srvr.Controls(), prefix, indent)
 	this.writeString("\n}\n")
 	this.writer.noMoreData()
+}
+
+func (this *httpRequest) markTimeOfCompletion() {
+	this.executionTime = time.Since(this.ServiceTime())
+	this.elapsedTime = time.Since(this.RequestTime())
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify execution.Operator) {
@@ -122,6 +130,8 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	this.setHttpCode(http.StatusOK)
 	this.writePrefix(srvr, signature, prefix, indent)
 	stopped := this.writeResults(srvr.Pretty())
+
+	this.markTimeOfCompletion()
 
 	state := this.State()
 	this.writeSuffix(srvr, state, prefix, indent)
@@ -426,11 +436,9 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		newPrefix = "\n" + prefix + indent
 	}
 
-	ts := time.Since(this.ServiceTime())
-	tr := time.Since(this.RequestTime())
 	rv := this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"metrics\": {") &&
-		this.writeString(fmt.Sprintf("%s\"elapsedTime\": \"%v\"", newPrefix, tr)) &&
-		this.writeString(fmt.Sprintf(",%s\"executionTime\": \"%v\"", newPrefix, ts)) &&
+		this.writeString(fmt.Sprintf("%s\"elapsedTime\": \"%v\"", newPrefix, this.elapsedTime)) &&
+		this.writeString(fmt.Sprintf(",%s\"executionTime\": \"%v\"", newPrefix, this.executionTime)) &&
 		this.writeString(fmt.Sprintf(",%s\"resultCount\": %d", newPrefix, this.resultCount)) &&
 		this.writeString(fmt.Sprintf(",%s\"resultSize\": %d", newPrefix, this.resultSize))
 	if !rv {

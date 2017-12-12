@@ -44,6 +44,9 @@ type httpRequest struct {
 	resultSize      int
 	errorCount      int
 	warningCount    int
+
+	elapsedTime   time.Duration
+	executionTime time.Duration
 }
 
 func (r *httpRequest) OriginalHttpRequest() *http.Request {
@@ -295,6 +298,36 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	return rv
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) ElapsedTime() time.Duration {
+	return this.elapsedTime
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) ExecutionTime() time.Duration {
+	return this.executionTime
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventResultCount() int {
+	return this.resultCount
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventResultSize() int {
+	return this.resultSize
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventErrorCount() int {
+	return this.errorCount
+}
+
+// For audit.Auditable interface.
+func (this *httpRequest) EventWarningCount() int {
+	return this.warningCount
 }
 
 // For audit.Auditable interface.
