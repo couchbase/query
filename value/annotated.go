@@ -11,16 +11,9 @@ package value
 
 import (
 	"io"
-	"sync"
 )
 
 type AnnotatedValues []AnnotatedValue
-
-var annotatedPool = sync.Pool{
-	New: func() interface{} {
-		return &annotatedValue{}
-	},
-}
 
 func (this AnnotatedValues) Append(val AnnotatedValue, pool *AnnotatedPool) AnnotatedValues {
 	if len(this) == cap(this) {
@@ -58,16 +51,16 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 	case AnnotatedValue:
 		return val
 	case *ScopeValue:
-		av := annotatedPool.Get().(*annotatedValue)
+		av := &annotatedValue{}
 		av.Value = val
 		av.InheritCovers(val.Parent())
 		return av
 	case Value:
-		av := annotatedPool.Get().(*annotatedValue)
+		av := &annotatedValue{}
 		av.Value = val
 		return av
 	default:
-		av := annotatedPool.Get().(*annotatedValue)
+		av := &annotatedValue{}
 		av.Value = NewValue(val)
 		return av
 	}
@@ -93,7 +86,7 @@ func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string) error 
 }
 
 func (this *annotatedValue) Copy() Value {
-	rv := annotatedPool.Get().(*annotatedValue)
+	rv := &annotatedValue{}
 	rv.Value = this.Value.Copy()
 	rv.attachments = copyMap(this.attachments, self)
 	rv.covers = this.covers
@@ -106,7 +99,7 @@ func (this *annotatedValue) Copy() Value {
 }
 
 func (this *annotatedValue) CopyForUpdate() Value {
-	rv := annotatedPool.Get().(*annotatedValue)
+	rv := &annotatedValue{}
 	rv.Value = this.Value.CopyForUpdate()
 	rv.attachments = copyMap(this.attachments, self)
 	rv.covers = this.covers
@@ -212,5 +205,4 @@ func (this *annotatedValue) Recycle() {
 		this.covers = nil
 	}
 	this.bit = 0
-	annotatedPool.Put(this)
 }

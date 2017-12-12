@@ -11,7 +11,6 @@ package value
 
 import (
 	"io"
-	"sync"
 )
 
 /*
@@ -24,14 +23,8 @@ type ScopeValue struct {
 	parent Value
 }
 
-var scopePool = sync.Pool{
-	New: func() interface{} {
-		return &ScopeValue{}
-	},
-}
-
 func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
-	rv := scopePool.Get().(*ScopeValue)
+	rv := &ScopeValue{}
 	rv.Value = objectValue(val)
 	rv.parent = parent
 	return rv
@@ -48,14 +41,14 @@ func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string) error {
 }
 
 func (this *ScopeValue) Copy() Value {
-	rv := scopePool.Get().(*ScopeValue)
+	rv := &ScopeValue{}
 	rv.Value = this.Value.Copy()
 	rv.parent = this.parent
 	return rv
 }
 
 func (this *ScopeValue) CopyForUpdate() Value {
-	rv := scopePool.Get().(*ScopeValue)
+	rv := &ScopeValue{}
 	rv.Value = this.Value.CopyForUpdate()
 	rv.parent = this.parent
 	return rv
@@ -133,5 +126,4 @@ func (this *ScopeValue) Recycle() {
 		this.parent.Recycle()
 		this.parent = nil
 	}
-	scopePool.Put(this)
 }
