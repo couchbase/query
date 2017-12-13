@@ -11,23 +11,12 @@ package audit
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/logging"
 )
-
-var _AUDIT_SERVICE *adt.AuditSvc
-
-func StartAuditService(server string) {
-	var err error
-	_AUDIT_SERVICE, err = adt.NewAuditSvc(server)
-	if err == nil {
-		logging.Infof("Audit service started.")
-	} else {
-		logging.Errorf("Audit service not started: %v", err)
-	}
-}
 
 type Auditable interface {
 	// Standard fields used for all audit records.
@@ -72,8 +61,50 @@ type Auditable interface {
 	EventWarningCount() int
 }
 
-var doAudit = false
-var doLogAuditEvent = false
+// An auditor is a component that can accept an audit record for processing.
+// We create a formal interface, so we can have two Auditors: the regular one that
+// talks to the audit daemon, and a mock that just stores audit records for testing.
+// The mock is over in the test file.
+type Auditor interface {
+	doAudit() bool
+
+	// In normal processing, we want the call to submit the audit record to
+	// the audit daemon done offline, in a goroutine of its own.
+	// But that makes testing difficult, so we do the submission inline
+	// when testing.
+	submitInline() bool
+
+	submit(eventId uint32, event *n1qlAuditEvent) error
+}
+
+type standardAuditor struct {
+	auditService *adt.AuditSvc
+}
+
+func (sa *standardAuditor) doAudit() bool {
+	return false // for now
+}
+
+func (sa *standardAuditor) submitInline() bool {
+	return false
+}
+
+func (sa *standardAuditor) submit(eventId uint32, event *n1qlAuditEvent) error {
+	return sa.auditService.Write(eventId, *event)
+}
+
+var _AUDITOR Auditor
+
+func StartAuditService(server string) {
+	var err error
+	service, err := adt.NewAuditSvc(server)
+	if err == nil {
+		_AUDITOR = &standardAuditor{auditService: service}
+		logging.Infof("Audit service started.")
+	} else {
+		logging.Errorf("Audit service not started: %v", err)
+	}
+}
 
 // Event types are described in /query/etc/audit_descriptor.json
 var _EVENT_TYPE_MAP = map[string]uint32{
@@ -95,17 +126,19 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"CREATE_PRIMARY_INDEX": 28688,
 }
 
+var doLog bool = false
+
 func Submit(event Auditable) {
-	if !doAudit {
+	if _AUDITOR == nil {
+		return // Nothing configured. Nothing to be done.
+	}
+
+	if !_AUDITOR.doAudit() {
 		return
 	}
 
-	if doLogAuditEvent {
+	if doLog {
 		logAuditEvent(event)
-	}
-
-	if _AUDIT_SERVICE == nil {
-		return
 	}
 
 	eventType := event.EventType()
@@ -119,37 +152,92 @@ func Submit(event Auditable) {
 	// We build the audit record from the request in the main thread
 	// because the request will be destroyed soon after the call to Submit(),
 	// and we don't want to cause a race condition.
-	auditRecord := buildAuditRecord(event)
-	go submitForAudit(eventTypeId, auditRecord)
-}
-
-func buildAuditRecord(event Auditable) *n1qlAuditEvent {
-	return &n1qlAuditEvent{
-		GenericFields:  event.EventGenericFields(),
-		RequestId:      event.EventId(),
-		Statement:      event.Statement(),
-		NamedArgs:      event.EventNamedArgs(),
-		PositionalArgs: event.EventPositionalArgs(),
-		Users:          event.EventUsers(),
-		IsAdHoc:        event.IsAdHoc(),
-		UserAgent:      event.UserAgent(),
-		Node:           event.EventNodeName(),
-		Status:         event.EventStatus(),
-		Metrics: n1qlMetrics{
-			ElapsedTime:   fmt.Sprintf("%v", event.ElapsedTime()),
-			ExecutionTime: fmt.Sprintf("%v", event.ExecutionTime()),
-			ResultCount:   event.EventResultCount(),
-			ResultSize:    event.EventResultSize(),
-			MutationCount: event.MutationCount(),
-			SortCount:     event.SortCount(),
-			ErrorCount:    event.EventErrorCount(),
-			WarningCount:  event.EventWarningCount(),
-		},
+	auditRecords := buildAuditRecords(event)
+	for _, record := range auditRecords {
+		if _AUDITOR.submitInline() {
+			submitForAudit(eventTypeId, record)
+		} else {
+			go submitForAudit(eventTypeId, record)
+		}
 	}
 }
 
+// Returns a list of audit records, because each user credential submitted as part of
+// the requests generates a separate audit record.
+func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
+	// Grab the data from the event, so we don't query the duplicated data
+	// multiple times.
+	genericFields := event.EventGenericFields()
+	requestId := event.EventId()
+	statement := event.Statement()
+	namedArgs := event.EventNamedArgs()
+	positionalArgs := event.EventPositionalArgs()
+	isAdHoc := event.IsAdHoc()
+	userAgent := event.UserAgent()
+	node := event.EventNodeName()
+	status := event.EventStatus()
+	metrics := &n1qlMetrics{
+		ElapsedTime:   fmt.Sprintf("%v", event.ElapsedTime()),
+		ExecutionTime: fmt.Sprintf("%v", event.ExecutionTime()),
+		ResultCount:   event.EventResultCount(),
+		ResultSize:    event.EventResultSize(),
+		MutationCount: event.MutationCount(),
+		SortCount:     event.SortCount(),
+		ErrorCount:    event.EventErrorCount(),
+		WarningCount:  event.EventWarningCount(),
+	}
+
+	// No credentials at all? Generate one record.
+	users := event.EventUsers()
+	if len(users) == 0 {
+		record := &n1qlAuditEvent{
+			GenericFields:  genericFields,
+			RequestId:      requestId,
+			Statement:      statement,
+			NamedArgs:      namedArgs,
+			PositionalArgs: positionalArgs,
+			IsAdHoc:        isAdHoc,
+			UserAgent:      userAgent,
+			Node:           node,
+			Status:         status,
+			Metrics:        metrics,
+		}
+		return []*n1qlAuditEvent{record}
+	}
+
+	// Generate one record per user.
+	records := make([]*n1qlAuditEvent, len(users))
+	for i, user := range users {
+		record := &n1qlAuditEvent{
+			GenericFields:  genericFields,
+			RequestId:      requestId,
+			Statement:      statement,
+			NamedArgs:      namedArgs,
+			PositionalArgs: positionalArgs,
+			IsAdHoc:        isAdHoc,
+			UserAgent:      userAgent,
+			Node:           node,
+			Status:         status,
+			Metrics:        metrics,
+		}
+		source := "local"
+		userName := user
+		// Handle non-local users, e.g. "external:dtrump"
+		if strings.Contains(user, ":") {
+			parts := strings.SplitN(user, ":", 2)
+			source = parts[0]
+			userName = parts[1]
+		}
+		record.GenericFields.RealUserid.Source = source
+		record.GenericFields.RealUserid.Username = userName
+
+		records[i] = record
+	}
+	return records
+}
+
 func submitForAudit(eventId uint32, auditRecord *n1qlAuditEvent) {
-	err := _AUDIT_SERVICE.Write(eventId, *auditRecord)
+	err := _AUDITOR.submit(eventId, auditRecord)
 	if err != nil {
 		logging.Errorf("Unable to submit event %+v for audit: %v", *auditRecord, err)
 	}
@@ -176,14 +264,13 @@ type n1qlAuditEvent struct {
 	NamedArgs      map[string]string `json:"namedArgs,omitempty"`
 	PositionalArgs []string          `json:"positionalArgs,omitempty"`
 
-	Users     []string `json:"users"`
-	IsAdHoc   bool     `json:"isAdHoc"`
-	UserAgent string   `json:"userAgent"`
-	Node      string   `json:"node"`
+	IsAdHoc   bool   `json:"isAdHoc"`
+	UserAgent string `json:"userAgent"`
+	Node      string `json:"node"`
 
 	Status string `json:"status"`
 
-	Metrics n1qlMetrics `json:"metrics"`
+	Metrics *n1qlMetrics `json:"metrics"`
 }
 
 type n1qlMetrics struct {
