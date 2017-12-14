@@ -132,7 +132,14 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 			}
 
 			if baseKeyspace.dnfPred == nil {
-				return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
+				if join {
+					// for ANSI JOIN, it's possible that one subterm of the OR only contains
+					// references to other keyspaces, in which case we cannot use any index
+					// scans on the current keyspace. An error will be returned by caller.
+					return nil, 0, nil
+				} else {
+					return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
+				}
 			}
 
 			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
