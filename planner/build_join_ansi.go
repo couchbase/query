@@ -129,21 +129,17 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 	this.limit = nil
 	this.offset = nil
 
+	var err error
+
 	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
 		return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoinScan: missing baseKeyspace %s", node.Alias()))
 	}
 
-	pred := onclause.Copy()
-	pred, err := this.processHostParameters(pred)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	// for inner join, the following processing is already done as part of
 	// this.pushableOnclause
 	if outer {
-		// For the keyspace as the inner of an ANSI JOIN, the ClassifyExpr() call
+		// For the keyspace as the inner of an ANSI JOIN, the processPredicate() call
 		// will effectively put ON clause filters on top of WHERE clause filters
 		// for each keyspace, as a result, both ON clause filters and WHERE clause
 		// filters will be used for index selection for the inner keyspace, which
@@ -154,7 +150,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		// index selection consideration of the outer keyspace (ON-clause of an
 		// inner join is used for index selection for outer keyspace, as part of
 		// this.pushableOnclause).
-		err = ClassifyExpr(pred, this.baseKeyspaces, true)
+		err = this.processPredicate(onclause, true)
 		if err != nil {
 			return nil, nil, nil, err
 		}

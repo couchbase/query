@@ -43,6 +43,14 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	baseKeyspace := newBaseKeyspace(ksref.Alias())
 	this.baseKeyspaces[baseKeyspace.name] = baseKeyspace
 
+	// Process where clause
+	if this.where != nil {
+		err := this.processWhere(this.where)
+		if err != nil {
+			return err
+		}
+	}
+
 	scan, err := this.selectScan(keyspace, term)
 	if err != nil {
 		return err

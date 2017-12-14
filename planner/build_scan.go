@@ -87,10 +87,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	if pred != nil || pred2 != nil {
 		// for ANSI JOIN, the following process is already done for ON clause filters
 		if !join {
-			// derive IS NOT NULL predicate
-			err = deriveNotNullFilter(keyspace, baseKeyspace)
-			if err != nil {
-				return nil, nil, err
+			if len(baseKeyspace.joinfilters) > 0 {
+				// derive IS NOT NULL predicate
+				err = deriveNotNullFilter(keyspace, baseKeyspace)
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 
 			// include pushed ON-clause filter
@@ -399,12 +401,8 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	return secondary, sargLength, nil
 }
 
-func (this *builder) processHostParameters(pred expression.Expression) (expression.Expression, error) {
-	if len(this.namedArgs) == 0 && len(this.positionalArgs) == 0 {
-		return pred, nil
-	}
-
-	var err error
+func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (err error) {
+	pred = pred.Copy()
 
 	for name, value := range this.namedArgs {
 		nameExpr := algebra.NewNamedParameter(name)
@@ -412,7 +410,7 @@ func (this *builder) processHostParameters(pred expression.Expression) (expressi
 		replacer := expression.NewReplacer(nameExpr, valueExpr)
 		pred, err = replacer.Map(pred)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
@@ -422,11 +420,31 @@ func (this *builder) processHostParameters(pred expression.Expression) (expressi
 		replacer := expression.NewReplacer(posExpr, valueExpr)
 		pred, err = replacer.Map(pred)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
-	return pred, nil
+	err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (this *builder) processWhere(where expression.Expression) (err error) {
+	// Handle constant TRUE predicate
+	cpred := this.where.Value()
+	if cpred != nil && cpred.Truth() {
+		this.setTrueWhereClause()
+	} else {
+		err = this.processPredicate(where, false)
+		if err != nil {
+			return
+		}
+	}
+
+	return
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) (
