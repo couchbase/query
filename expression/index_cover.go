@@ -89,7 +89,12 @@ func (this *Cover) PropagatesNull() bool {
 }
 
 func (this *Cover) EquivalentTo(other Expression) bool {
-	return this.covered.EquivalentTo(other)
+	if this.covered.EquivalentTo(other) {
+		return true
+	}
+
+	oc, ok := other.(*Cover)
+	return ok && this.covered.EquivalentTo(oc.covered)
 }
 
 func (this *Cover) DependsOn(other Expression) bool {

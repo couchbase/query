@@ -52,7 +52,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 	allindexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(allindexes)
-	allindexes, err := allIndexes(keyspace, nil, allindexes)
+	allindexes, err := allIndexes(keyspace, nil, allindexes, this.indexApiVersion)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -120,7 +120,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
-	sargables, _, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
+	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
 	if err != nil {
 		return nil, nil, nil, err
 	}

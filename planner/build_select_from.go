@@ -25,12 +25,8 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 	if count {
 		this.maxParallelism = 1
-		this.resetOrderOffsetLimit()
+		this.resetPushDowns()
 	} else if node.From() != nil {
-		if group != nil {
-			this.resetOrderOffsetLimit()
-		}
-
 		prevFrom := this.from
 		this.from = node.From()
 		defer func() { this.from = prevFrom }()
@@ -66,7 +62,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		}
 	} else {
 		// No FROM clause
-		this.resetOrderOffsetLimit()
+		this.resetPushDowns()
 		scan := plan.NewDummyScan()
 		this.children = append(this.children, scan)
 		this.maxParallelism = 1
@@ -155,8 +151,8 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	this.resetCountMinMax()
 	this.resetProjection()
+	this.resetIndexGroupAggs()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
 		this.resetOffsetLimit()
 	} else {
@@ -198,7 +194,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 	this.resetProjection()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
 		this.resetOffsetLimit()
@@ -240,7 +236,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 
 func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 	this.resetProjection()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
 		this.resetOffsetLimit()
@@ -278,7 +274,7 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 	this.resetProjection()
 
 	if this.hasOffsetOrLimit() && !node.Outer() {
@@ -321,7 +317,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 	this.resetProjection()
 
 	if this.hasOffsetOrLimit() && !node.Outer() {
@@ -362,7 +358,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 	this.resetProjection()
 
 	if this.hasOffsetOrLimit() && !node.Outer() {
@@ -399,7 +395,6 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	this.resetProjection()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); !ok || !term.IsKeyspace() {
 		this.resetPushDowns()
 	}
@@ -510,20 +505,21 @@ func (this *builder) hasOffsetOrLimit() bool {
 	return this.offset != nil || this.limit != nil
 }
 
-func (this *builder) resetCountMinMax() {
-	this.countAgg = nil
-	this.countDistinctAgg = nil
-	this.minAgg = nil
-	this.maxAgg = nil
-}
-
 func (this *builder) resetProjection() {
 	this.projection = nil
 }
 
+func (this *builder) resetIndexGroupAggs() {
+	this.oldAggregates = false
+	this.group = nil
+	this.aggs = nil
+	this.aggConstraint = nil
+}
+
 func (this *builder) resetPushDowns() {
 	this.resetOrderOffsetLimit()
-	this.resetCountMinMax()
+	this.resetProjection()
+	this.resetIndexGroupAggs()
 }
 
 func offsetPlusLimit(offset, limit expression.Expression) expression.Expression {

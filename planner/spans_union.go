@@ -34,21 +34,21 @@ func NewUnionSpans(spans ...SargSpans) *UnionSpans {
 }
 
 func (this *UnionSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
+	index datastore.Index, term *algebra.KeyspaceTerm, indexApiVersion int, reverse, distinct, overlap,
 	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
-	indexOrder plan.IndexKeyOrders, covers expression.Covers,
+	indexOrder plan.IndexKeyOrders, indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
-		return this.spans[0].CreateScan(index, term, reverse, distinct, overlap, array, offset, limit,
-			projection, indexOrder, covers, filterCovers)
+		return this.spans[0].CreateScan(index, term, indexApiVersion, reverse, distinct, overlap, array,
+			offset, limit, projection, indexOrder, indexGroupAggs, covers, filterCovers)
 	}
 
 	lim := offsetPlusLimit(offset, limit)
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
-		scans[i] = s.CreateScan(index, term, reverse, distinct, overlap, array, nil, lim,
-			projection, nil, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, indexApiVersion, reverse, distinct, overlap, array, nil, lim,
+			projection, nil, indexGroupAggs, covers, filterCovers)
 	}
 
 	return plan.NewUnionScan(limit, offset, scans...)
@@ -168,9 +168,9 @@ func (this *UnionSpans) CanPushDownOffset(index datastore.Index, overlap, array 
 	return true
 }
 
-func (this *UnionSpans) CanHaveDuplicates(index datastore.Index, overlap, array bool) bool {
+func (this *UnionSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion int, overlap, array bool) bool {
 	for _, span := range this.spans {
-		if !span.CanHaveDuplicates(index, overlap, array) {
+		if !span.CanHaveDuplicates(index, indexApiVersion, overlap, array) {
 			return false
 		}
 	}

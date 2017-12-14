@@ -90,6 +90,18 @@ func (this *IndexCountDistinctScan2) CoverJoinSpanExpressions(coverer *expressio
 	return nil
 }
 
+func (this *IndexCountDistinctScan2) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *IndexCountDistinctScan2) OrderTerms() IndexKeyOrders {
+	return nil
+}
+
+func (this *IndexCountDistinctScan2) SetCovers(covers expression.Covers) {
+	this.covers = covers
+}
+
 func (this *IndexCountDistinctScan2) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

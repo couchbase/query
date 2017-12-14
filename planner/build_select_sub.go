@@ -24,47 +24,41 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCover := this.cover
 	prevWhere := this.where
 	prevCorrelated := this.correlated
-	prevCountAgg := this.countAgg
-	prevCountDistinctAgg := this.countDistinctAgg
-	prevMinAgg := this.minAgg
-	prevMaxAgg := this.maxAgg
 	prevCoveringScans := this.coveringScans
 	prevCoveredUnnests := this.coveredUnnests
 	prevCountScan := this.countScan
-	prevProjection := this.projection
 	prevBasekeyspaces := this.baseKeyspaces
 	prevPushableOnclause := this.pushableOnclause
 	prevBuilderFlags := this.builderFlags
 	prevMaxParallelism := this.maxParallelism
 
+	indexPushDowns := this.storeIndexPushDowns()
+
 	defer func() {
 		this.cover = prevCover
 		this.where = prevWhere
 		this.correlated = prevCorrelated
-		this.countAgg = prevCountAgg
-		this.countDistinctAgg = prevCountDistinctAgg
-		this.minAgg = prevMinAgg
-		this.maxAgg = prevMaxAgg
 		this.coveringScans = prevCoveringScans
 		this.coveredUnnests = prevCoveredUnnests
 		this.countScan = prevCountScan
-		this.projection = prevProjection
 		this.baseKeyspaces = prevBasekeyspaces
 		this.pushableOnclause = prevPushableOnclause
 		this.builderFlags = prevBuilderFlags
 		this.maxParallelism = prevMaxParallelism
+		this.restoreIndexPushDowns(indexPushDowns, false)
 	}()
 
 	this.coveringScans = make([]plan.CoveringOperator, 0, 4)
 	this.coveredUnnests = nil
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
-	this.projection = nil
 	this.baseKeyspaces = nil
 	this.pushableOnclause = nil
 	this.builderFlags = 0
 	this.maxParallelism = 0
-	this.resetCountMinMax()
+
+	this.projection = node.Projection()
+	this.resetIndexGroupAggs()
 
 	if this.cover == nil {
 		this.cover = node
@@ -96,7 +90,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	group := node.Group()
 	if group == nil && len(aggs) > 0 {
 		group = algebra.NewGroup(nil, nil, nil)
-		this.where = constrainAggregate(this.where, aggs)
+		this.where = this.constrainAggregate(this.where, aggs)
 	}
 
 	// Constrain projection to GROUP keys and aggregates
@@ -156,24 +150,19 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				}
 			}
 		}
+		this.resetProjection()
 	}
 
-	// Identify aggregates for index pushdown
+	// Identify aggregates for index pushdown for old releases
 	if len(aggs) == 1 && group.By() == nil {
 	loop:
 		for _, term := range node.Projection().Terms() {
 			switch expr := term.Expression().(type) {
-			case *algebra.Count:
-				this.countAgg = expr
-			case *algebra.CountDistinct:
-				this.countDistinctAgg = expr
-			case *algebra.Min:
-				this.minAgg = expr
-			case *algebra.Max:
-				this.maxAgg = expr
+			case *algebra.Count, *algebra.CountDistinct, *algebra.Min, *algebra.Max:
+				this.oldAggregates = true
 			default:
 				if expr.Value() == nil {
-					this.resetCountMinMax()
+					this.oldAggregates = false
 					break loop
 				}
 			}
@@ -197,9 +186,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
-	if group == nil && node.Projection().Distinct() {
-		this.projection = node.Projection()
-	}
+	this.setIndexGroupAggs(group, aggs, node.Let())
 
 	err = this.visitFrom(node, group)
 	if err != nil {
@@ -213,8 +200,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
+	if this.aggs != nil {
+		aggs = this.aggs
+	}
+
 	if this.countScan == nil {
-		this.addLetAndPredicate(node.Let(), node.Where())
+		// Add Let and Filter only when group/aggregates are not pushed
+		if this.group == nil {
+			this.addLetAndPredicate(node.Let(), node.Where())
+		}
 
 		if group != nil {
 			this.visitGroup(group, aggs)
@@ -279,23 +273,24 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 	}
 }
 
-func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Aggregate) {
-	aggn := make(sort.StringSlice, 0, len(aggs))
-	for n, _ := range aggs {
-		aggn = append(aggn, n)
+func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
+
+	// If Index aggregates are not partial(i.e full) donot add the group operators
+
+	partial := true
+	if this.group != nil && len(this.coveringScans) == 1 && this.coveringScans[0].GroupAggs() != nil {
+		partial = this.coveringScans[0].GroupAggs().Partial
 	}
 
-	aggn.Sort()
-	aggv := make(algebra.Aggregates, len(aggs))
-	for i, n := range aggn {
-		aggv[i] = aggs[n]
+	if partial {
+		aggv := sortAggregatesSlice(aggs)
+		this.subChildren = append(this.subChildren, plan.NewInitialGroup(group.By(), aggv))
+		this.children = append(this.children,
+			plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
+		this.children = append(this.children, plan.NewIntermediateGroup(group.By(), aggv))
+		this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
+		this.subChildren = make([]plan.Operator, 0, 8)
 	}
-
-	this.subChildren = append(this.subChildren, plan.NewInitialGroup(group.By(), aggv))
-	this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
-	this.children = append(this.children, plan.NewIntermediateGroup(group.By(), aggv))
-	this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
-	this.subChildren = make([]plan.Operator, 0, 8)
 
 	this.addLetAndPredicate(group.Letting(), group.Having())
 }
@@ -317,7 +312,114 @@ func (this *builder) coverExpressions() error {
 		}
 	}
 
+	return this.coverIndexGroupAggs()
+}
+
+func (this *builder) coverIndexGroupAggs() (err error) {
+	if len(this.coveringScans) != 1 || this.coveringScans[0].GroupAggs() == nil {
+		return
+	}
+
+	// Add cover to the index key expressions inside the aggregates used in group Operators
+	op := this.coveringScans[0]
+	var expr expression.Expression
+	keyCoverer := expression.NewCoverer(op.Covers(), nil)
+
+	err = this.coverIndexGroupAggsMap(keyCoverer)
+	if err != nil {
+		return
+	}
+
+	// Add cover to the index key expressions of group keys in the plan
+	// generate new covers for group keys
+	indexGroupAgg := op.GroupAggs()
+	groupCovers := make(expression.Covers, 0, len(indexGroupAgg.Group))
+	for _, indexgroupKey := range indexGroupAgg.Group {
+		if indexgroupKey.Expr != nil {
+			expr, err = keyCoverer.Map(indexgroupKey.Expr)
+			if err != nil {
+				return
+			}
+			indexgroupKey.Expr = expr
+		}
+		if indexgroupKey.KeyPos < 0 {
+			groupCovers = append(groupCovers, expression.NewCover(indexgroupKey.Expr.Copy()))
+		}
+	}
+
+	// Add the new group covers to the existing coverers
+	// replace the all the statement expressions with group covers
+	if len(groupCovers) > 0 {
+		op.SetCovers(append(op.Covers(), groupCovers...))
+		groupCoverer := expression.NewCoverer(groupCovers, nil)
+		err = this.cover.MapExpressions(groupCoverer)
+		if err != nil {
+			return
+		}
+	}
+
+	// Add cover to the index key expressions of aggregates in the plan
+	for _, indexAgg := range indexGroupAgg.Aggregates {
+		if indexAgg.Expr != nil {
+			expr, err = keyCoverer.Map(indexAgg.Expr)
+			if err != nil {
+				return
+			}
+			indexAgg.Expr = expr
+		}
+	}
+
+	// generate new covers for aggregates
+	aggCovers := make(expression.Covers, 0, len(indexGroupAgg.Aggregates))
+	for _, agg := range this.aggs {
+		aggCovers = append(aggCovers, expression.NewCover(agg.Copy()))
+	}
+
+	// replace the all the statement expressions with aggregates
+	// it also changes group operators/aggregates (i.e countn to sum, avg sum/countn)
+	// perform multi level aggregation if the results are partial aggregates
+	if len(aggCovers) > 0 {
+		op.SetCovers(append(op.Covers(), aggCovers...))
+		if indexGroupAgg.Partial {
+			aggPartialCoverer := NewPartialAggCoverer(aggCovers, this.aggs)
+
+			err = this.coverIndexGroupAggsMap(aggPartialCoverer)
+			if err != nil {
+				return
+			}
+
+			aggPartialCoverer = NewPartialAggCoverer(aggCovers, this.aggs)
+			err = this.cover.MapExpressions(aggPartialCoverer)
+			if err != nil {
+				return
+			}
+		} else {
+			aggFullCoverer := NewFullAggCoverer(aggCovers)
+			err = this.cover.MapExpressions(aggFullCoverer)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return
+}
+
+func (this *builder) coverIndexGroupAggsMap(mapper expression.Mapper) error {
+	for i, agg := range this.aggs {
+		expr, err := mapper.Map(agg)
+		if err != nil {
+			return err
+		}
+
+		nagg, ok := expr.(algebra.Aggregate)
+		if !ok {
+			return fmt.Errorf("Error in Aggregates Mapping.")
+		}
+		this.aggs[i] = nagg
+	}
 	return nil
+
 }
 
 func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
@@ -357,7 +459,7 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	this.where = expression.NewAnd(andTerms...)
 }
 
-func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]algebra.Aggregate, error) {
+func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggregates, error) {
 	aggs := make(map[string]algebra.Aggregate)
 
 	if node.Let() != nil {
@@ -428,7 +530,31 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]al
 		}
 	}
 
-	return aggs, nil
+	return sortAggregatesMap(aggs), nil
+}
+
+func sortAggregatesMap(aggs map[string]algebra.Aggregate) algebra.Aggregates {
+	aggn := make(sort.StringSlice, 0, len(aggs))
+	for n, _ := range aggs {
+		aggn = append(aggn, n)
+	}
+
+	aggn.Sort()
+	aggv := make(algebra.Aggregates, len(aggs))
+	for i, n := range aggn {
+		aggv[i] = aggs[n]
+	}
+
+	return aggv
+}
+
+func sortAggregatesSlice(aggSlice algebra.Aggregates) algebra.Aggregates {
+	aggs := make(map[string]algebra.Aggregate)
+	stringer := expression.NewStringer()
+	for _, agg := range aggSlice {
+		aggs[stringer.Visit(agg)] = agg
+	}
+	return sortAggregatesMap(aggs)
 }
 
 func collectAggregates(aggs map[string]algebra.Aggregate, exprs ...expression.Expression) {
@@ -468,7 +594,7 @@ SELECT AVG(v) FROM widget w WHERE v IS NOT NULL;
 This enables the query to use an index on v.
 
 */
-func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggregate) expression.Expression {
+func (this *builder) constrainAggregate(cond expression.Expression, aggs algebra.Aggregates) expression.Expression {
 	var first expression.Expression
 	for _, agg := range aggs {
 		if first == nil {
@@ -490,6 +616,11 @@ func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggr
 		return cond
 	}
 
+	switch first.(type) {
+	case *expression.ArrayConstruct, *expression.ObjectConstruct:
+		return cond
+	}
+
 	var constraint expression.Expression = expression.NewIsNotNull(first)
 
 	if cond == nil {
@@ -497,6 +628,7 @@ func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggr
 	} else if SubsetOf(cond, constraint) {
 		return cond
 	} else {
+		this.aggConstraint = constraint
 		return expression.NewAnd(cond, constraint)
 	}
 }
@@ -537,4 +669,49 @@ func skipFixedOrderTerms(order *algebra.Order, pred expression.Expression) *alge
 	} else {
 		return algebra.NewOrder(sortTerms)
 	}
+}
+
+func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggregates, let expression.Bindings) {
+
+	if group != nil {
+		// Group or Aggregates Depends on LET disable pushdowns
+		for _, expr := range group.By() {
+			if !expr.IndexAggregatable() || dependsOnLet(expr, let) {
+				this.resetIndexGroupAggs()
+				return
+			}
+		}
+
+		for _, agg := range aggs {
+			aggIndexProperties := aggToIndexAgg(agg)
+			if !aggIndexProperties.supported {
+				this.resetIndexGroupAggs()
+				return
+			}
+
+			if agg.Operand() == nil {
+				continue
+			}
+
+			if !agg.Operand().IndexAggregatable() || dependsOnLet(agg.Operand(), let) {
+				this.resetIndexGroupAggs()
+				return
+			}
+
+		}
+		this.group = group
+		this.aggs = aggs
+	}
+}
+
+func dependsOnLet(expr expression.Expression, let expression.Bindings) bool {
+	if let != nil && expr != nil {
+		for _, id := range let.Identifiers() {
+			if expr.DependsOn(id) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

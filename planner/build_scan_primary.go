@@ -19,17 +19,41 @@ import (
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	indexes []datastore.Index, force, exact bool) (
+	indexes []datastore.Index, id expression.Expression, force, exact bool) (
 	plan.Operator, error) {
 	primary, err := buildPrimaryIndex(keyspace, indexes, force)
 	if primary == nil || err != nil {
 		return nil, err
 	}
 
-	if primary3, ok := primary.(datastore.PrimaryIndex3); ok && useIndex3API(primary) {
-		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
-			plan.NewIndexProjection(0, true), nil), nil
+	var indexOrder plan.IndexKeyOrders
+	ok := true
+	order := this.order
+
+	if order != nil {
+		keys := expression.Expressions{id}
+		entry := &indexEntry{primary, keys, keys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, _PUSHDOWN_NONE}
+		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); !ok {
+			this.resetPushDowns()
+		}
 	}
+
+	if exact {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
+
+	} else {
+		this.resetPushDowns()
+		if ok {
+			this.order = order
+		}
+	}
+
+	if primary3, ok := primary.(datastore.PrimaryIndex3); ok && useIndex3API(primary, this.indexApiVersion) {
+		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
+			plan.NewIndexProjection(0, true), indexOrder, nil), nil
+	}
+
 	var limit expression.Expression
 	if exact {
 		limit = offsetPlusLimit(this.offset, this.limit)
@@ -48,7 +72,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	}
 
 	keys := expression.Expressions{id}
-	entry := &indexEntry{primary, keys, keys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true}
+	entry := &indexEntry{primary, keys, keys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true, _PUSHDOWN_NONE}
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)

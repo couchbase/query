@@ -122,6 +122,9 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return cop, sargLength, err
 	}
 
+	// No pushdowns
+	this.resetPushDowns()
+
 	n := 0
 	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
 	for _, unnest := range primaryUnnests {
@@ -313,8 +316,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.spans = spans
 	entry.exactSpans = exactSpans
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
-	scan := entry.spans.CreateScan(index, node, false, false, pred.MayOverlapSpans(), false, nil, nil,
-		indexProjection, nil, nil, nil)
+	scan := entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
+		nil, nil, indexProjection, nil, nil, nil, nil)
 	return scan, unnest, 1, nil
 }
 

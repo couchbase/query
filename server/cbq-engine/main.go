@@ -75,6 +75,7 @@ var PIPELINE_CAP = flag.Int64("pipeline-cap", 512, "Maximum number of items each
 var PIPELINE_BATCH = flag.Int("pipeline-batch", 16, "Number of items execution operators can batch")
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "Max Index API")
+var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -226,6 +227,7 @@ func main() {
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
+	util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
 
 	audit.StartAuditService(*DATASTORE)
 
@@ -245,6 +247,7 @@ func main() {
 		logging.Pair{"request-cap", *REQUEST_CAP},
 		logging.Pair{"request-size-cap", server.RequestSizeCap()},
 		logging.Pair{"max-index-api", server.MaxIndexAPI()},
+		logging.Pair{"n1ql_feat_cntrl", util.GetN1qlFeatureControl()},
 		logging.Pair{"timeout", server.Timeout()},
 	)
 

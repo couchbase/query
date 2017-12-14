@@ -39,6 +39,9 @@ type CoveringOperator interface {
 	Covers() expression.Covers
 	FilterCovers() map[*expression.Cover]value.Value
 	Covering() bool
+	SetCovers(covers expression.Covers)
+
+	GroupAggs() *IndexGroupAggregates
 }
 
 type SecondaryScan interface {
@@ -52,4 +55,6 @@ type SecondaryScan interface {
 	SetOffset(offset expression.Expression)
 
 	CoverJoinSpanExpressions(coverer *expression.Coverer) error
+
+	OrderTerms() IndexKeyOrders
 }

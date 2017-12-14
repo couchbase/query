@@ -24,25 +24,17 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *baseK
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	scan plan.SecondaryScan, sargLength int, err error) {
 
-	prevOrder := this.order
-	prevLimit := this.limit
-	prevOffset := this.offset
-
-	tryPushdowns := this.cover != nil || this.limit != nil
-
-	if tryPushdowns {
-		scan, sargLength, err = this.buildOrScanTryPushdowns(node, baseKeyspace, id, pred, indexes, primaryKey, formalizer)
-	} else {
-		scan, sargLength, err = this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+	indexPushDowns := this.storeIndexPushDowns()
+	if this.cover != nil || this.hasOrderOrOffsetOrLimit() {
+		scan, sargLength, err = this.buildOrScanTryPushdowns(node, baseKeyspace, id, pred,
+			indexes, primaryKey, formalizer)
+		if err != nil || scan != nil {
+			return
+		}
+		this.restoreIndexPushDowns(indexPushDowns, true)
 	}
 
-	if err == nil && scan == nil {
-		this.order = prevOrder
-		this.limit = prevLimit
-		this.offset = prevOffset
-	}
-
-	return
+	return this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
 }
 
 func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
@@ -52,29 +44,17 @@ func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, baseKey
 
 	coveringScans := this.coveringScans
 
-	order := this.order
-	limit := this.limit
-	offset := this.offset
-
 	scan, sargLength, err := this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if scan != nil {
+	if err == nil && scan != nil {
 		foundPushdown := len(this.coveringScans) > len(coveringScans) || this.countScan != nil ||
-			this.order != nil || this.limit != nil
+			this.hasOrderOrOffsetOrLimit()
 
 		if foundPushdown {
 			return scan, sargLength, nil
 		}
 	}
 
-	this.order = order
-	this.limit = limit
-	this.offset = offset
-
-	return this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+	return nil, 0, err
 }
 
 func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
@@ -90,7 +70,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	}()
 
 	this.cover = nil
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 
 	if this.order != nil {
 		this.resetOrderOffsetLimit()

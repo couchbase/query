@@ -397,3 +397,17 @@ func (this *ExpressionBase) Privileges() *auth.Privileges {
 	}
 	return unionPrivileges
 }
+
+/*
+Return FALSE if any child is not IndexAggregatable()
+*/
+
+func (this *ExpressionBase) IndexAggregatable() bool {
+	for _, child := range this.expr.Children() {
+		if !child.IndexAggregatable() {
+			return false
+		}
+	}
+
+	return true
+}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -164,27 +165,17 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, this.plan.Covering(), context)
 	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Keyspace())
 
-	indexProjection, indexOrder := planToScanMapping(plan.Projection(), plan.OrderTerms())
+	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(plan.Index(), plan.Projection(),
+		plan.OrderTerms(), plan.GroupAggs(), plan.Covers())
 
 	plan.Index().Scan3(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
-		indexProjection, offset, limit, nil, indexOrder,
+		indexProjection, offset, limit, indexGroupAggs, indexOrder,
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func (this *IndexScan3) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
-		this.marshalTimes(r)
-	})
-	return json.Marshal(r)
-}
-
-// send a stop
-func (this *IndexScan3) SendStop() {
-	this.chanSendStop()
-}
-
-func planToScanMapping(proj *plan.IndexProjection, indexOrderTerms plan.IndexKeyOrders) (indexProjection *datastore.IndexProjection,
-	indexOrder datastore.IndexKeyOrders) {
+func planToScanMapping(index datastore.Index, proj *plan.IndexProjection, indexOrderTerms plan.IndexKeyOrders,
+	groupAggs *plan.IndexGroupAggregates, covers expression.Covers) (indexProjection *datastore.IndexProjection,
+	indexOrder datastore.IndexKeyOrders, indexGroupAggs *datastore.IndexGroupAggregates) {
 
 	if proj != nil {
 		indexProjection = &datastore.IndexProjection{EntryKeys: proj.EntryKeys, PrimaryKey: proj.PrimaryKey}
@@ -197,5 +188,50 @@ func planToScanMapping(proj *plan.IndexProjection, indexOrderTerms plan.IndexKey
 		}
 	}
 
+	if groupAggs != nil {
+		var group datastore.IndexGroupKeys
+		var aggs datastore.IndexAggregates
+
+		if len(groupAggs.Group) > 0 {
+			group = make(datastore.IndexGroupKeys, 0, len(groupAggs.Group))
+			for _, g := range groupAggs.Group {
+				group = append(group, &datastore.IndexGroupKey{EntryKeyId: g.EntryKeyId,
+					KeyPos: g.KeyPos, Expr: g.Expr})
+			}
+		}
+
+		if len(groupAggs.Aggregates) > 0 {
+			aggs = make(datastore.IndexAggregates, 0, len(groupAggs.Aggregates))
+			for _, a := range groupAggs.Aggregates {
+				aggs = append(aggs, &datastore.IndexAggregate{Operation: a.Operation,
+					EntryKeyId: a.EntryKeyId, KeyPos: a.KeyPos, Expr: a.Expr,
+					Distinct: a.Distinct})
+			}
+		}
+
+		// include META().id which is at nKeys+1
+		nKeys := len(index.RangeKey())
+		IndexKeyNames := make([]string, 0, nKeys+1)
+		for i := 0; i <= nKeys; i++ {
+			IndexKeyNames = append(IndexKeyNames, covers[i].Text())
+		}
+
+		indexGroupAggs = &datastore.IndexGroupAggregates{Name: groupAggs.Name, Group: group,
+			Aggregates: aggs, DependsOnIndexKeys: groupAggs.DependsOnIndexKeys,
+			IndexKeyNames: IndexKeyNames, OneForPrimaryKey: groupAggs.DistinctDocid}
+	}
+
 	return
+}
+
+func (this *IndexScan3) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
+}
+
+// send a stop
+func (this *IndexScan3) SendStop() {
+	this.chanSendStop()
 }

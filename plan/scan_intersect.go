@@ -84,6 +84,9 @@ func (this *IntersectScan) Covering() bool {
 	return true
 }
 
+func (this *IntersectScan) SetCovers(covers expression.Covers) {
+}
+
 func (this *IntersectScan) Scans() []SecondaryScan {
 	return this.scans
 }
@@ -111,6 +114,14 @@ func (this *IntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer)
 		}
 	}
 
+	return nil
+}
+
+func (this *IntersectScan) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *IntersectScan) OrderTerms() IndexKeyOrders {
 	return nil
 }
 

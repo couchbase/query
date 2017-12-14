@@ -133,6 +133,10 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 
+	// set default values
+	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
+	util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL)
+
 	//	sys, err := system.NewDatastore(store)
 	//	if err != nil {
 	//		return nil, err
@@ -279,11 +283,14 @@ func (this *Server) SetPipelineBatch(pipeline_batch int) {
 }
 
 func (this *Server) MaxIndexAPI() int {
-	return planner.GetMaxIndexAPI()
+	return util.GetMaxIndexAPI()
 }
 
 func (this *Server) SetMaxIndexAPI(apiVersion int) {
-	planner.SetMaxIndexAPI(apiVersion)
+	if apiVersion < datastore.INDEX_API_MIN || apiVersion > datastore.INDEX_API_MAX {
+		apiVersion = datastore.INDEX_API_MIN
+	}
+	util.SetMaxIndexAPI(apiVersion)
 }
 
 func (this *Server) Debug() bool {
@@ -512,7 +519,7 @@ func (this *Server) serviceRequest(request Request) {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
-		prepared)
+		prepared, request.IndexApiVersion(), request.FeatureControls())
 
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
@@ -577,7 +584,8 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			namedArgs = nil
 			positionalArgs = nil
 		}
-		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false, namedArgs, positionalArgs)
+		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false,
+			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls())
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}

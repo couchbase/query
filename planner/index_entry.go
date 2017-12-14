@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2017 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -14,30 +14,60 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+type PushDownProperties uint32
+
+const (
+	_PUSHDOWN_NONE     PushDownProperties = iota
+	_PUSHDOWN_DISTINCT PushDownProperties = 1 << iota
+	_PUSHDOWN_EXACTSPANS
+	_PUSHDOWN_LIMIT
+	_PUSHDOWN_OFFSET
+	_PUSHDOWN_ORDER
+	_PUSHDOWN_GROUPAGGS
+	_PUSHDOWN_FULLGROUPAGGS
+)
+
 type indexEntry struct {
-	index      datastore.Index
-	keys       expression.Expressions
-	sargKeys   expression.Expressions
-	minKeys    int
-	sumKeys    int
-	cond       expression.Expression
-	origCond   expression.Expression
-	spans      SargSpans
-	exactSpans bool
+	index            datastore.Index
+	keys             expression.Expressions
+	sargKeys         expression.Expressions
+	minKeys          int
+	sumKeys          int
+	cond             expression.Expression
+	origCond         expression.Expression
+	spans            SargSpans
+	exactSpans       bool
+	pushDownProperty PushDownProperties
 }
 
 func (this *indexEntry) Copy() *indexEntry {
 	rv := &indexEntry{
-		index:      this.index,
-		keys:       expression.CopyExpressions(this.keys),
-		sargKeys:   expression.CopyExpressions(this.sargKeys),
-		minKeys:    this.minKeys,
-		sumKeys:    this.sumKeys,
-		cond:       expression.Copy(this.cond),
-		origCond:   expression.Copy(this.origCond),
-		spans:      CopySpans(this.spans),
-		exactSpans: this.exactSpans,
+		index:            this.index,
+		keys:             expression.CopyExpressions(this.keys),
+		sargKeys:         expression.CopyExpressions(this.sargKeys),
+		minKeys:          this.minKeys,
+		sumKeys:          this.sumKeys,
+		cond:             expression.Copy(this.cond),
+		origCond:         expression.Copy(this.origCond),
+		spans:            CopySpans(this.spans),
+		exactSpans:       this.exactSpans,
+		pushDownProperty: this.pushDownProperty,
 	}
 
 	return rv
+}
+
+func (this *indexEntry) PushDownProperty() PushDownProperties {
+	return this.pushDownProperty
+}
+
+func (this *indexEntry) IsPushDownProperty(property PushDownProperties) bool {
+	return isPushDownProperty(this.pushDownProperty, property)
+}
+
+func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {
+	if property == _PUSHDOWN_NONE {
+		return (pushDownProperty == property)
+	}
+	return (pushDownProperty & property) != 0
 }

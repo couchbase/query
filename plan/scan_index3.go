@@ -27,6 +27,7 @@ type IndexScan3 struct {
 	spans        Spans2
 	reverse      bool
 	distinct     bool
+	groupAggs    *IndexGroupAggregates
 	projection   *IndexProjection
 	orderTerms   IndexKeyOrders
 	offset       expression.Expression
@@ -37,7 +38,8 @@ type IndexScan3 struct {
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
 	reverse, distinct bool, offset, limit expression.Expression,
-	projection *IndexProjection, orderTerms IndexKeyOrders, covers expression.Covers,
+	projection *IndexProjection, orderTerms IndexKeyOrders,
+	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) *IndexScan3 {
 	return &IndexScan3{
 		index:        index,
@@ -45,6 +47,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		spans:        spans,
 		reverse:      reverse,
 		distinct:     distinct,
+		groupAggs:    groupAggs,
 		projection:   projection,
 		orderTerms:   orderTerms,
 		offset:       offset,
@@ -100,6 +103,14 @@ func (this *IndexScan3) Offset() expression.Expression {
 
 func (this *IndexScan3) Limit() expression.Expression {
 	return this.limit
+}
+
+func (this *IndexScan3) GroupAggs() *IndexGroupAggregates {
+	return this.groupAggs
+}
+
+func (this *IndexScan3) SetGroupAggs(groupAggs *IndexGroupAggregates) {
+	this.groupAggs = groupAggs
 }
 
 func (this *IndexScan3) SetLimit(limit expression.Expression) {
@@ -210,6 +221,10 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.groupAggs != nil {
+		r["index_group_aggs"] = this.groupAggs
+	}
+
 	if len(this.covers) > 0 {
 		r["covers"] = this.covers
 	}
@@ -243,6 +258,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Distinct     bool                   `json:"distinct"`
 		AnsiJoin     bool                   `json:"ansi_join"`
 		AnsiNest     bool                   `json:"ansi_nest"`
+		GroupAggs    *IndexGroupAggregates  `json:"index_group_aggs"`
 		Projection   *IndexProjection       `json:"index_projection"`
 		OrderTerms   IndexKeyOrders         `json:"index_order"`
 		Offset       string                 `json:"offset"`
@@ -266,6 +282,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.spans = _unmarshalled.Spans
 	this.reverse = _unmarshalled.Reverse
 	this.distinct = _unmarshalled.Distinct
+	this.groupAggs = _unmarshalled.GroupAggs
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms
 

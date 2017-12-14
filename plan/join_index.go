@@ -94,6 +94,18 @@ func (this *IndexJoin) Covering() bool {
 	return len(this.covers) > 0
 }
 
+func (this *IndexJoin) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *IndexJoin) OrderTerms() IndexKeyOrders {
+	return nil
+}
+
+func (this *IndexJoin) SetCovers(covers expression.Covers) {
+	this.covers = covers
+}
+
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

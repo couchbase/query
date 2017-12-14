@@ -74,6 +74,13 @@ func (this *Subquery) Indexable() bool {
 /*
 Return false.
 */
+func (this *Subquery) IndexAggregatable() bool {
+	return false
+}
+
+/*
+Return false.
+*/
 func (this *Subquery) EquivalentTo(other expression.Expression) bool {
 	return false
 }

@@ -131,6 +131,18 @@ func (this *IndexScan) Covering() bool {
 	return len(this.covers) > 0
 }
 
+func (this *IndexScan) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *IndexScan) OrderTerms() IndexKeyOrders {
+	return nil
+}
+
+func (this *IndexScan) SetCovers(covers expression.Covers) {
+	this.covers = covers
+}
+
 func (this *IndexScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

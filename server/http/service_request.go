@@ -143,12 +143,12 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	var max_parallelism int
+	var param string
 	if err == nil {
-		var maxp string
-		maxp, err = httpArgs.getString(MAX_PARALLELISM, "")
-		if err == nil && maxp != "" {
+		param, err = httpArgs.getString(MAX_PARALLELISM, "")
+		if err == nil && param != "" {
 			var e error
-			max_parallelism, e = strconv.Atoi(maxp)
+			max_parallelism, e = strconv.Atoi(param)
 			if e != nil {
 				err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is invalid"), "max parallelism")
 			}
@@ -157,11 +157,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	var scan_cap int64
 	if err == nil {
-		var scap string
-		scap, err = httpArgs.getString(SCAN_CAP, "")
-		if err == nil && scap != "" {
+		param, err = httpArgs.getString(SCAN_CAP, "")
+		if err == nil && param != "" {
 			var e error
-			scan_cap, e = strconv.ParseInt(scap, 10, 64)
+			scan_cap, e = strconv.ParseInt(param, 10, 64)
 			if e != nil {
 				err = errors.NewServiceErrorBadValue(go_errors.New("scan_cap is invalid"), "scan cap")
 			}
@@ -170,11 +169,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	var pipeline_cap int64
 	if err == nil {
-		var pcap string
-		pcap, err = httpArgs.getString(PIPELINE_CAP, "")
-		if err == nil && pcap != "" {
+		param, err = httpArgs.getString(PIPELINE_CAP, "")
+		if err == nil && param != "" {
 			var e error
-			pipeline_cap, e = strconv.ParseInt(pcap, 10, 64)
+			pipeline_cap, e = strconv.ParseInt(param, 10, 64)
 			if e != nil {
 				err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_cap is invalid"), "pipeline cap")
 			}
@@ -183,11 +181,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	var pipeline_batch int
 	if err == nil {
-		var pbatch string
-		pbatch, err = httpArgs.getString(PIPELINE_BATCH, "")
-		if err == nil && pbatch != "" {
+		param, err = httpArgs.getString(PIPELINE_BATCH, "")
+		if err == nil && param != "" {
 			var e error
-			pipeline_batch, e = strconv.Atoi(pbatch)
+			pipeline_batch, e = strconv.Atoi(param)
 			if e != nil {
 				err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_batch is invalid"), "pipeline batch")
 			}
@@ -286,6 +283,30 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		}
 	}
 
+	if err == nil {
+		param, err = httpArgs.getString(N1QL_FEAT_CTRL, "")
+		if err == nil && param != "" {
+			n1qlFeatureControl, e := strconv.ParseUint(param, 0, 64)
+			if e != nil {
+				err = errors.NewServiceErrorBadValue(go_errors.New("n1ql_feat_ctrl is invalid"), N1QL_FEAT_CTRL)
+			} else {
+				rv.SetFeatureControls(n1qlFeatureControl)
+			}
+		}
+	}
+
+	if err == nil {
+		param, err = httpArgs.getString(MAX_INDEX_API, "")
+		if err == nil && param != "" {
+			indexApiVer, e := strconv.Atoi(param)
+			if e != nil {
+				err = errors.NewServiceErrorBadValue(go_errors.New("max_index_api is invalid"), MAX_INDEX_API)
+			} else {
+				rv.SetIndexApiVersion(indexApiVer)
+			}
+		}
+	}
+
 	rv.SetTimeout(timeout)
 
 	rv.writer = NewBufferedWriter(rv, bp)
@@ -375,6 +396,8 @@ const ( // Request argument names
 	CLIENT_CONTEXT_ID = "client_context_id"
 	PROFILE           = "profile"
 	CONTROLS          = "controls"
+	N1QL_FEAT_CTRL    = "n1ql_feat_ctrl"
+	MAX_INDEX_API     = "max_index_api"
 )
 
 var _PARAMETERS = []string{
@@ -403,6 +426,8 @@ var _PARAMETERS = []string{
 	CLIENT_CONTEXT_ID,
 	PROFILE,
 	CONTROLS,
+	N1QL_FEAT_CTRL,
+	MAX_INDEX_API,
 }
 
 func isValidParameter(a string) bool {

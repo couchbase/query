@@ -24,6 +24,7 @@ type PrimaryScan3 struct {
 	index      datastore.PrimaryIndex3
 	keyspace   datastore.Keyspace
 	term       *algebra.KeyspaceTerm
+	groupAggs  *IndexGroupAggregates
 	projection *IndexProjection
 	orderTerms IndexKeyOrders
 	offset     expression.Expression
@@ -32,11 +33,13 @@ type PrimaryScan3 struct {
 
 func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, offset, limit expression.Expression,
-	projection *IndexProjection, orderTerms IndexKeyOrders) *PrimaryScan3 {
+	projection *IndexProjection, orderTerms IndexKeyOrders,
+	groupAggs *IndexGroupAggregates) *PrimaryScan3 {
 	return &PrimaryScan3{
 		index:      index,
 		keyspace:   keyspace,
 		term:       term,
+		groupAggs:  groupAggs,
 		projection: projection,
 		orderTerms: orderTerms,
 		offset:     offset,
@@ -80,6 +83,14 @@ func (this *PrimaryScan3) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *PrimaryScan3) GroupAggs() *IndexGroupAggregates {
+	return this.groupAggs
+}
+
+func (this *PrimaryScan3) SetGroupAggs(groupAggs *IndexGroupAggregates) {
+	this.groupAggs = groupAggs
+}
+
 func (this *PrimaryScan3) SetLimit(limit expression.Expression) {
 	this.limit = limit
 }
@@ -119,6 +130,10 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.groupAggs != nil {
+		r["index_group_aggs"] = this.groupAggs
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -127,16 +142,17 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_          string              `json:"#operator"`
-		Index      string              `json:"index"`
-		Names      string              `json:"namespace"`
-		Keys       string              `json:"keyspace"`
-		As         string              `json:"as"`
-		Using      datastore.IndexType `json:"using"`
-		Projection *IndexProjection    `json:"index_projection"`
-		OrderTerms IndexKeyOrders      `json:"index_order"`
-		Offset     string              `json:"offset"`
-		Limit      string              `json:"limit"`
+		_          string                `json:"#operator"`
+		Index      string                `json:"index"`
+		Names      string                `json:"namespace"`
+		Keys       string                `json:"keyspace"`
+		As         string                `json:"as"`
+		Using      datastore.IndexType   `json:"using"`
+		GroupAggs  *IndexGroupAggregates `json:"index_group_aggs"`
+		Projection *IndexProjection      `json:"index_projection"`
+		OrderTerms IndexKeyOrders        `json:"index_order"`
+		Offset     string                `json:"offset"`
+		Limit      string                `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -146,6 +162,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms
+	this.groupAggs = _unmarshalled.GroupAggs
 
 	if _unmarshalled.Offset != "" {
 		this.offset, err = parser.Parse(_unmarshalled.Offset)

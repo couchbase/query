@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -326,6 +327,7 @@ const (
 	_PROFILE         = "profile"
 	_CONTROLS        = "controls"
 	_MAXINDEXAPI     = "max-index-api"
+	_N1QLFEATCTRL    = "n1ql-feat-ctrl"
 )
 
 type checker func(interface{}) (bool, errors.Error)
@@ -382,6 +384,7 @@ var _CHECKERS = map[string]checker{
 	_PROFILE:         checkProfileAdmin,
 	_CONTROLS:        checkControlsAdmin,
 	_MAXINDEXAPI:     checkNumber,
+	_N1QLFEATCTRL:    checkNumber,
 }
 
 type setter func(*server.Server, interface{})
@@ -456,6 +459,10 @@ var _SETTERS = map[string]setter{
 	_MAXINDEXAPI: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
 		s.SetMaxIndexAPI(int(value))
+	},
+	_N1QLFEATCTRL: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		util.SetN1qlFeatureControl(uint64(value))
 	},
 }
 
@@ -533,6 +540,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_PRPLIMIT] = plan.PreparedsLimit()
 	settings[_PRETTY] = srvr.Pretty()
 	settings[_MAXINDEXAPI] = srvr.MaxIndexAPI()
+	settings[_N1QLFEATCTRL] = util.GetN1qlFeatureControl()
 	settings = getProfileAdmin(settings, srvr)
 	settings = getControlsAdmin(settings, srvr)
 	return settings

@@ -10,7 +10,6 @@
 package planner
 
 import (
-	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
@@ -18,28 +17,14 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-var MaxIndexApi atomic.AlignedInt64
-
-func SetMaxIndexAPI(apiVersion int) {
-	if apiVersion < datastore.INDEX_API_MIN || apiVersion > datastore.INDEX_API_MAX {
-		apiVersion = datastore.INDEX_API_MIN
-	}
-
-	atomic.StoreInt64(&MaxIndexApi, int64(apiVersion))
-}
-
-func GetMaxIndexAPI() int {
-	return int(atomic.LoadInt64(&MaxIndexApi))
-}
-
-func useIndex2API(index datastore.Index) bool {
+func useIndex2API(index datastore.Index, indexApiVersion int) bool {
 	_, ok := index.(datastore.Index2)
-	return ok && GetMaxIndexAPI() >= datastore.INDEX_API_2
+	return ok && indexApiVersion >= datastore.INDEX_API_2
 }
 
-func useIndex3API(index datastore.Index) bool {
+func useIndex3API(index datastore.Index, indexApiVersion int) bool {
 	_, ok := index.(datastore.Index3)
-	return ok && GetMaxIndexAPI() >= datastore.INDEX_API_3
+	return ok && indexApiVersion >= datastore.INDEX_API_3
 }
 
 func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {
@@ -129,7 +114,7 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 
 	if distinct {
 		countIndex2, ok := countIndex.(datastore.CountIndex2)
-		if ok && useIndex2API(entry.index) && countIndex2.CanCountDistinct() {
+		if ok && useIndex2API(entry.index, this.indexApiVersion) && countIndex2.CanCountDistinct() {
 			this.maxParallelism = 1
 			return plan.NewIndexCountDistinctScan2(countIndex2, node, termSpans.Spans(), covers, filterCovers)
 		}
@@ -137,7 +122,7 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 		return nil
 	}
 
-	if countIndex2, ok := countIndex.(datastore.CountIndex2); ok && useIndex2API(entry.index) {
+	if countIndex2, ok := countIndex.(datastore.CountIndex2); ok && useIndex2API(entry.index, this.indexApiVersion) {
 		this.maxParallelism = 1
 		return plan.NewIndexCountScan2(countIndex2, node, termSpans.Spans(), covers, filterCovers)
 	}
@@ -149,30 +134,4 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 	}
 
 	return nil
-}
-
-func (this *builder) checkPushDowns(entry *indexEntry, pred expression.Expression, alias string, array bool) (bool, error) {
-
-	if !entry.exactSpans {
-		return false, nil
-	}
-
-	// check for non sargable key is in predicate
-	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred, nil)
-	if err != nil {
-		return false, err
-	}
-
-	if !expression.IsCovered(pred, alias, exprs) {
-		return false, err
-	}
-
-	if this.offset != nil {
-		if !useIndex2API(entry.index) || !entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(), array) {
-			this.limit = offsetPlusLimit(this.offset, this.limit)
-			this.resetOffset()
-		}
-	}
-
-	return true, nil
 }

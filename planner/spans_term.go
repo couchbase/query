@@ -32,24 +32,25 @@ func NewTermSpans(spans ...*plan.Span2) *TermSpans {
 }
 
 func (this *TermSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
+	index datastore.Index, term *algebra.KeyspaceTerm, indexApiVersion int, reverse, distinct, overlap,
 	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
-	indexOrder plan.IndexKeyOrders, covers expression.Covers,
+	indexOrder plan.IndexKeyOrders, indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
-	distScan := this.CanHaveDuplicates(index, overlap, array)
+	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
-	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index) {
-		if distScan {
+	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
+		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, nil, nil,
-				projection, nil, covers, filterCovers)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers)
+
 			return plan.NewDistinctScan(limit, offset, scan)
 		} else {
 			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, offset, limit,
-				projection, indexOrder, covers, filterCovers)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers)
 		}
 
-	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index) {
+	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index, indexApiVersion) {
 		if !this.Exact() {
 			limit = nil
 			offset = nil
@@ -138,8 +139,12 @@ func (this *TermSpans) CanPushDownOffset(index datastore.Index, overlap, array b
 	return this.Exact() /* && !this.CanHaveDuplicates(index, overlap, array) */
 }
 
-func (this *TermSpans) CanHaveDuplicates(index datastore.Index, overlap, array bool) bool {
-	return (len(this.spans) > 1 && (overlap || !this.Exact())) || (!array && indexHasArrayIndexKey(index))
+func (this *TermSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion int, overlap, array bool) bool {
+	if useIndex3API(index, indexApiVersion) {
+		return !array && indexHasArrayIndexKey(index)
+	} else {
+		return (len(this.spans) > 1 && (overlap || !this.Exact())) || (!array && indexHasArrayIndexKey(index))
+	}
 }
 
 func (this *TermSpans) SkipsLeadingNulls() bool {

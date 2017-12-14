@@ -58,7 +58,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	if len(node.Indexes()) > 0 {
 		hints = _HINT_POOL.Get()
 		defer _HINT_POOL.Put(hints)
-		hints, err = allHints(keyspace, node.Indexes(), hints)
+		hints, err = allHints(keyspace, node.Indexes(), hints, this.indexApiVersion)
 		if err != nil {
 			return
 		}
@@ -89,7 +89,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		if !join {
 			if len(baseKeyspace.joinfilters) > 0 {
 				// derive IS NOT NULL predicate
-				err = deriveNotNullFilter(keyspace, baseKeyspace)
+				err = deriveNotNullFilter(keyspace, baseKeyspace, this.indexApiVersion)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -124,11 +124,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	if this.order != nil {
-		this.resetOrderOffsetLimit()
-	}
-
-	primary, err = this.buildPrimaryScan(keyspace, node, hints, false, true)
+	primary, err = this.buildPrimaryScan(keyspace, node, hints, id, false, true)
 	return nil, primary, err
 }
 
@@ -160,7 +156,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	others := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(others)
-	others, err = allIndexes(keyspace, hints, others)
+	others, err = allIndexes(keyspace, hints, others, this.indexApiVersion)
 	if err != nil {
 		return
 	}
@@ -195,6 +191,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if join {
 		this.resetPushDowns()
 	}
+	order := this.order
 
 	// Prefer OR scan
 	dnfPred := baseKeyspace.dnfPred
@@ -212,15 +209,11 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	}
 
 	if !join {
-		// No secondary scan, try primary scan
-		primary, err = this.buildPrimaryScan(keyspace, node, indexes, force, false)
+		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
+		this.order = order
+		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, false)
 		if err != nil {
 			return nil, nil, err
-		}
-
-		// Primary scan with predicates -- disable pushdown
-		if primary != nil {
-			this.resetPushDowns()
 		}
 	} else {
 		primary = nil
@@ -249,25 +242,20 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	dnfPred := baseKeyspace.dnfPred
 
-	sargables, all, arrays, err := sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
+	sargables, all, arrays, err := this.sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	minimals := minimalIndexes(sargables, false)
 
-	order := this.order
-	limitExpr := this.limit
-	offsetExpr := this.offset
-	countAgg := this.countAgg
-	countDistinctAgg := this.countDistinctAgg
-	minAgg := this.minAgg
-	maxAgg := this.maxAgg
+	indexPushDowns := this.storeIndexPushDowns()
 	defer func() {
 		if this.orderScan != nil {
-			this.order = order
+			this.order = indexPushDowns.order
 		}
 	}()
+
 	var secOffsetPushed, unnestOffsetPushed, dynamicOffsetPushed bool
 	var limitPushed bool
 
@@ -297,13 +285,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	// Try UNNEST scan
 	if !join && this.from != nil {
 		// Try pushdowns
-		this.order = order
-		this.limit = limitExpr
-		this.offset = offsetExpr
-		this.countAgg = countAgg
-		this.countDistinctAgg = countDistinctAgg
-		this.minAgg = minAgg
-		this.maxAgg = maxAgg
+		this.restoreIndexPushDowns(indexPushDowns, true)
 
 		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, dnfPred, all)
 		if err != nil {
@@ -330,8 +312,8 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	// Try dynamic scan
 	if !join && len(arrays) > 0 {
 		// Try pushdowns
-		this.limit = limitExpr
-		this.offset = offsetExpr
+		this.limit = indexPushDowns.limit
+		this.offset = indexPushDowns.offset
 
 		dynamicPred := baseKeyspace.origPred.Copy()
 		dnf := NewDNF(dynamicPred, false, true)
@@ -362,13 +344,13 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	switch len(scans) {
 	case 0:
-		this.limit = limitExpr
-		this.offset = offsetExpr
+		this.limit = indexPushDowns.limit
+		this.offset = indexPushDowns.offset
 		secondary = nil
 	case 1:
 		this.resetOffset()
 		if secOffsetPushed || unnestOffsetPushed || dynamicOffsetPushed {
-			this.offset = offsetExpr
+			this.offset = indexPushDowns.offset
 		}
 		secondary = scans[0]
 	default:
@@ -376,13 +358,13 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		var limit expression.Expression
 
 		if limitPushed {
-			limit = offsetPlusLimit(offsetExpr, limitExpr)
+			limit = offsetPlusLimit(indexPushDowns.offset, indexPushDowns.limit)
 		}
 
 		if scans[0] == nil {
 			if len(scans) == 2 {
 				if secOffsetPushed || unnestOffsetPushed || dynamicOffsetPushed {
-					this.offset = offsetExpr
+					this.offset = indexPushDowns.offset
 				}
 				secondary = scans[1]
 			} else {
@@ -447,7 +429,7 @@ func (this *builder) processWhere(where expression.Expression) (err error) {
 	return
 }
 
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) (
+func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index, indexApiVersion int) (
 	[]datastore.Index, error) {
 
 	for _, hint := range hints {
@@ -476,7 +458,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 			continue
 		}
 
-		if !useIndex2API(index) && indexHasDesc(index) {
+		if !useIndex2API(index, indexApiVersion) && indexHasDesc(index) {
 			continue
 		}
 
@@ -486,7 +468,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 	return indexes, nil
 }
 
-func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) (
+func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, indexApiVersion int) (
 	[]datastore.Index, error) {
 
 	indexers, err := keyspace.Indexers()
@@ -524,7 +506,7 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) (
 				continue
 			}
 
-			if !useIndex2API(idx) && indexHasDesc(idx) {
+			if !useIndex2API(idx, indexApiVersion) && indexHasDesc(idx) {
 				continue
 			}
 

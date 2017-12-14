@@ -117,6 +117,17 @@ func (this *UnionScan) CoverJoinSpanExpressions(coverer *expression.Coverer) err
 	return nil
 }
 
+func (this *UnionScan) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *UnionScan) OrderTerms() IndexKeyOrders {
+	return nil
+}
+
+func (this *UnionScan) SetCovers(covers expression.Covers) {
+}
+
 func (this *UnionScan) Streamline() SecondaryScan {
 	scans := make([]SecondaryScan, 0, len(this.scans))
 	hash := _STRING_SCANS_POOL.Get()

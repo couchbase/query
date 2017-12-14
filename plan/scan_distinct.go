@@ -45,6 +45,10 @@ func (this *DistinctScan) Covers() expression.Covers {
 	return this.scan.Covers()
 }
 
+func (this *DistinctScan) SetCovers(covers expression.Covers) {
+	this.scan.SetCovers(covers)
+}
+
 func (this *DistinctScan) FilterCovers() map[*expression.Cover]value.Value {
 	return this.scan.FilterCovers()
 }
@@ -77,6 +81,14 @@ func (this *DistinctScan) SetOffset(offset expression.Expression) {
 
 func (this *DistinctScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	return this.scan.CoverJoinSpanExpressions(coverer)
+}
+
+func (this *DistinctScan) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *DistinctScan) OrderTerms() IndexKeyOrders {
+	return nil
 }
 
 func (this *DistinctScan) String() string {

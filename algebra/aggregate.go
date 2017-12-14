@@ -139,10 +139,13 @@ func (this *AggregateBase) Indexable() bool {
 }
 
 /*
-Return false.
+Aggregates are same Return true otherwise Return false.
 */
+
 func (this *AggregateBase) EquivalentTo(other expression.Expression) bool {
-	return false
+	otherAggregate, ok := other.(Aggregate)
+	return ok && !otherAggregate.Distinct() && this.Name() == otherAggregate.Name() &&
+		expression.Equivalents(this.Children(), otherAggregate.Children())
 }
 
 /*
@@ -213,3 +216,9 @@ For distinct functions that have DISTINCT keyword in the
 aggregate functions in the query, return true.
 */
 func (this *DistinctAggregateBase) Distinct() bool { return true }
+
+func (this *DistinctAggregateBase) EquivalentTo(other expression.Expression) bool {
+	otherAggregate, ok := other.(Aggregate)
+	return ok && otherAggregate.Distinct() && this.Name() == otherAggregate.Name() &&
+		expression.Equivalents(this.Children(), otherAggregate.Children())
+}

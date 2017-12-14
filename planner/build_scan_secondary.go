@@ -32,76 +32,68 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 	}
 
-	this.resetCountMinMax()
+	this.resetIndexGroupAggs()
 
 	pred := baseKeyspace.dnfPred
 
 	indexes = minimalIndexes(indexes, true)
 
 	var err error
-	err = sargIndexes(baseKeyspace, indexes)
+	err = this.sargIndexes(baseKeyspace, indexes)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Find ordering index
 	var orderIndex datastore.Index
-	var indexKeyOrders plan.IndexKeyOrders
-	var ok bool
-	if this.order != nil {
-		for index, entry := range indexes {
-			ok, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
-			if ok {
-				orderIndex = index
-				this.maxParallelism = 1
-				break
-			}
+	var limit expression.Expression
+	pushDown := false
+
+	for _, entry := range indexes {
+		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
+
+		if this.order != nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			orderIndex = entry.index
+			this.maxParallelism = 1
 		}
 
-		// No ordering index, disable ORDER and LIMIT pushdown
-		if orderIndex == nil {
-			this.resetOrderOffsetLimit()
+		if !pushDown && entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
+			pushDown = true
 		}
 	}
 
-	var limit expression.Expression
+	// No ordering index, disable ORDER and LIMIT pushdown
+	if this.order != nil && orderIndex == nil {
+		this.resetOrderOffsetLimit()
+	}
 
-	if this.hasOffsetOrLimit() {
-		pushDown := false
-		for _, entry := range indexes {
-			pushDown, err = this.checkPushDowns(entry, pred, node.Alias(), false)
-			if err != nil {
-				return nil, 0, err
-			}
-
-			if pushDown {
-				break
-			}
-		}
-
-		if pushDown && len(indexes) > 1 {
-			limit = offsetPlusLimit(this.offset, this.limit)
-			this.resetOffsetLimit()
-		} else if !pushDown {
-			this.resetOffsetLimit()
-		}
+	if pushDown && len(indexes) > 1 {
+		limit = offsetPlusLimit(this.offset, this.limit)
+		this.resetOffsetLimit()
+	} else if !pushDown {
+		this.resetOffsetLimit()
 	}
 
 	// Ordering scan, if any, will go into scans[0]
 	var scanBuf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan
+	var scan plan.SecondaryScan
+	var indexProjection *plan.IndexProjection
+	sargLength := 0
+
 	if len(indexes) <= len(scanBuf) {
 		scans = scanBuf[0:1]
 	} else {
 		scans = make([]plan.SecondaryScan, 1, len(indexes))
 	}
 
-	sargLength := 0
-	var scan plan.SecondaryScan
-	var indexProjection *plan.IndexProjection
 	if len(indexes) == 1 {
 		for _, entry := range indexes {
 			indexProjection = this.buildIndexProjection(entry, nil, nil, true)
+			if this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+				this.limit = offsetPlusLimit(this.offset, this.limit)
+				this.resetOffset()
+			}
+			break
 		}
 	} else {
 		indexProjection = this.buildIndexProjection(nil, nil, nil, true)
@@ -129,12 +121,13 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 		}
 
-		indexOrder := indexKeyOrders
-		if len(indexOrder) > 0 && index != orderIndex {
-			indexOrder = nil
+		var indexKeyOrders plan.IndexKeyOrders
+		if index == orderIndex {
+			_, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
 		}
 
-		scan = entry.spans.CreateScan(index, node, false, false, pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, indexOrder, nil, nil)
+		scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
+			this.offset, this.limit, indexProjection, indexKeyOrders, nil, nil, nil)
 
 		if index == orderIndex {
 			scans[0] = scan
@@ -161,7 +154,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	}
 }
 
-func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
+func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	sargables, all, arrays map[datastore.Index]*indexEntry, err error) {
 
@@ -235,8 +228,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 		min, sum := SargableFor(pred, keys)
 		entry := &indexEntry{
-			index, keys, keys[0:min], min, sum, cond, origCond, nil, false,
-		}
+			index, keys, keys[0:min], min, sum, cond, origCond, nil, false, _PUSHDOWN_NONE}
 		all[index] = entry
 
 		if min > 0 {
@@ -314,7 +306,7 @@ outer:
 		(shortest && (len(se.keys) <= len(te.keys)))
 }
 
-func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*indexEntry) error {
+func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*indexEntry) error {
 
 	pred := baseKeyspace.dnfPred
 	isOrPred := false
@@ -348,90 +340,13 @@ func sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*inde
 		}
 
 		se.spans = spans
-		if exactSpans && !useIndex2API(se.index) {
+		if exactSpans && !useIndex2API(se.index, this.indexApiVersion) {
 			exactSpans = spans.ExactSpan1(len(se.keys))
 		}
 		se.exactSpans = exactSpans
 	}
 
 	return nil
-}
-
-func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) (bool, plan.IndexKeyOrders) {
-
-	// Force the use of sorts on indexes that we know not to be ordered
-	// (for now system indexes)
-	// for now - if they are of a non descript type, then they aren't sorted
-	// when GSI starts implementing other types of indexes (eg bitmap)
-	// we will revisit this approach
-	if entry.index.Type() == datastore.SYSTEM || !entry.spans.CanUseIndexOrder() {
-		return false, nil
-	}
-
-	var filters map[string]value.Value
-	if entry.cond != nil {
-		filters = _FILTER_COVERS_POOL.Get()
-		defer _FILTER_COVERS_POOL.Put(filters)
-		filters = entry.cond.FilterCovers(filters)
-		filters = entry.origCond.FilterCovers(filters)
-	}
-
-	indexKeys := getIndexKeys(entry)
-	i := 0
-	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
-outer:
-	for _, orderTerm := range this.order.Terms() {
-		// orderTerm is constant
-		if orderTerm.Expression().Static() != nil {
-			continue
-		}
-
-		// non-constant orderTerms are more than index keys
-		if i >= len(keys) {
-			// match with condition EQ terms
-			if equalConditionFilter(filters, orderTerm.Expression().String()) {
-				continue outer
-			}
-			return false, nil
-		}
-
-		if isArray, _ := keys[i].IsArrayIndexKey(); isArray {
-			return false, nil
-		}
-
-		for {
-			if indexKeyIsDescCollation(i, indexKeys) == orderTerm.Descending() &&
-				orderTerm.Expression().EquivalentTo(keys[i]) {
-				// orderTerm matched with index key
-				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, orderTerm.Descending()))
-				i++
-				continue outer
-			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
-				// orderTerm matched with Condition EQ
-				continue outer
-			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
-				// orderTerm not yet matched, but can skip equivalence range key
-				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, indexKeyIsDescCollation(i, indexKeys)))
-				i++
-				if i >= len(keys) {
-					return false, nil
-				}
-			} else {
-				return false, nil
-			}
-		}
-	}
-
-	return true, indexOrder
-}
-
-func equalConditionFilter(filters map[string]value.Value, str string) bool {
-	if filters == nil {
-		return false
-	}
-
-	v, ok := filters[str]
-	return ok && v != nil
 }
 
 func indexHasArrayIndexKey(index datastore.Index) bool {
@@ -441,8 +356,4 @@ func indexHasArrayIndexKey(index datastore.Index) bool {
 		}
 	}
 	return false
-}
-
-func indexKeyIsDescCollation(keypos int, indexKeys datastore.IndexKeys) bool {
-	return len(indexKeys) > 0 && keypos < len(indexKeys) && indexKeys[keypos].Desc
 }

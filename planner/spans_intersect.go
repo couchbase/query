@@ -34,21 +34,21 @@ func NewIntersectSpans(spans ...SargSpans) *IntersectSpans {
 }
 
 func (this *IntersectSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, reverse, distinct, overlap,
+	index datastore.Index, term *algebra.KeyspaceTerm, indexApiVersion int, reverse, distinct, overlap,
 	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
-	indexOrder plan.IndexKeyOrders, covers expression.Covers,
+	indexOrder plan.IndexKeyOrders, indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
-		return this.spans[0].CreateScan(index, term, reverse, distinct, overlap, array, offset, limit,
-			projection, indexOrder, covers, filterCovers)
+		return this.spans[0].CreateScan(index, term, indexApiVersion, reverse, distinct, overlap, array, offset,
+			limit, projection, indexOrder, indexGroupAggs, covers, filterCovers)
 	}
 
 	scans := make([]plan.SecondaryScan, len(this.spans))
 	for i, s := range this.spans {
 		// No LIMIT pushdown
-		scans[i] = s.CreateScan(index, term, reverse, distinct, false, array, nil, nil, projection,
-			nil, covers, filterCovers)
+		scans[i] = s.CreateScan(index, term, indexApiVersion, reverse, distinct, false, array, nil, nil, projection,
+			nil, indexGroupAggs, covers, filterCovers)
 	}
 
 	limit = offsetPlusLimit(offset, limit)
@@ -126,8 +126,8 @@ func (this *IntersectSpans) CanPushDownOffset(index datastore.Index, overlap, ar
 	return len(this.spans) == 1 && this.spans[0].CanPushDownOffset(index, overlap, array)
 }
 
-func (this *IntersectSpans) CanHaveDuplicates(index datastore.Index, overlap, array bool) bool {
-	return len(this.spans) == 1 && this.spans[0].CanHaveDuplicates(index, overlap, array)
+func (this *IntersectSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion int, overlap, array bool) bool {
+	return len(this.spans) == 1 && this.spans[0].CanHaveDuplicates(index, indexApiVersion, overlap, array)
 }
 
 func (this *IntersectSpans) SkipsLeadingNulls() bool {

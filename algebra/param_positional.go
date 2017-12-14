@@ -84,6 +84,13 @@ func (this *PositionalParameter) Indexable() bool {
 }
 
 /*
+Returns false. Not IndexAggregatable.
+*/
+func (this *PositionalParameter) IndexAggregatable() bool {
+	return false
+}
+
+/*
 Checks if receiver and input expression are equivalent. If the input
 expression is a positional parameter check if the two positions are
 equal.

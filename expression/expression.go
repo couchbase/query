@@ -182,6 +182,11 @@ type Expression interface {
 	  Returns a non-nil pointer to a Privileges structure.
 	*/
 	Privileges() *auth.Privileges
+
+	/*
+	   Indicates if this expression can be used in index group/aggregates
+	*/
+	IndexAggregatable() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

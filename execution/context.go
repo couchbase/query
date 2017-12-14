@@ -116,6 +116,8 @@ type Context struct {
 	datastore          datastore.Datastore
 	systemstore        datastore.Datastore
 	namespace          string
+	indexApiVersion    int
+	featureControls    uint64
 	readonly           bool
 	maxParallelism     int
 	scanCap            int64
@@ -142,7 +144,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
 	credentials auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request,
-	prepared *plan.Prepared) *Context {
+	prepared *plan.Prepared, indexApiVersion int, featureControls uint64) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -165,6 +167,8 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		subresults:       nil,
 		httpRequest:      httpRequest,
 		prepared:         prepared,
+		indexApiVersion:  indexApiVersion,
+		featureControls:  featureControls,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -360,7 +364,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
-		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, this.namedArgs, this.positionalArgs)
+		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true,
+			this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
 		if err != nil {
 			return nil, err
 		}

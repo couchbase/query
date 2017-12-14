@@ -91,6 +91,17 @@ func (this *OrderedIntersectScan) Offset() expression.Expression {
 func (this *OrderedIntersectScan) SetOffset(limit expression.Expression) {
 }
 
+func (this *OrderedIntersectScan) GroupAggs() *IndexGroupAggregates {
+	return nil
+}
+
+func (this *OrderedIntersectScan) OrderTerms() IndexKeyOrders {
+	return this.scans[0].OrderTerms()
+}
+
+func (this *OrderedIntersectScan) SetCovers(covers expression.Covers) {
+}
+
 func (this *OrderedIntersectScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

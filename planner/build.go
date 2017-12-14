@@ -21,8 +21,9 @@ import (
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool, namedArgs map[string]value.Value,
-	positionalArgs value.Values) (plan.Operator, error) {
-	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs)
+	positionalArgs value.Values, indexApiVersion int, featureControls uint64) (plan.Operator, error) {
+	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs,
+		indexApiVersion, featureControls)
 	o, err := stmt.Accept(builder)
 
 	if err != nil {
@@ -64,24 +65,19 @@ const (
 )
 
 type builder struct {
+	indexPushDowns
 	datastore         datastore.Datastore
 	systemstore       datastore.Datastore
 	namespace         string
+	indexApiVersion   int
+	featureControls   uint64
 	subquery          bool
 	correlated        bool
 	maxParallelism    int
-	delayProjection   bool                   // Used to allow ORDER BY non-projected expressions
-	from              algebra.FromTerm       // Used for index selection
-	where             expression.Expression  // Used for index selection
-	order             *algebra.Order         // Used to collect aggregates from ORDER BY, and for ORDER pushdown
-	limit             expression.Expression  // Used for LIMIT pushdown
-	offset            expression.Expression  // Used for OFFSET pushdown
-	countAgg          *algebra.Count         // Used for COUNT() pushdown to IndexCountScan
-	countDistinctAgg  *algebra.CountDistinct // Used for COUNT(Distinct expr) pushdown to IndexCountScan2
-	minAgg            *algebra.Min           // Used for MIN() pushdown to IndexScan
-	maxAgg            *algebra.Max           // Used for MAX() pushdown to IndexScan
-	projection        *algebra.Projection    // Used for projection Distinct pushdown to IndexScan
-	setOpDistinct     bool                   // Used for SETOP Distinct to apply DISTINCT on projection
+	delayProjection   bool                  // Used to allow ORDER BY non-projected expressions
+	from              algebra.FromTerm      // Used for index selection
+	where             expression.Expression // Used for index selection
+	setOpDistinct     bool                  // Used for SETOP Distinct to apply DISTINCT on projection
 	children          []plan.Operator
 	subChildren       []plan.Operator
 	cover             expression.HasExpressions
@@ -98,7 +94,47 @@ type builder struct {
 	builderFlags      uint32
 }
 
-func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool, namedArgs map[string]value.Value, positionalArgs value.Values) *builder {
+type indexPushDowns struct {
+	order         *algebra.Order        // Used to collect aggregates from ORDER BY, and for ORDER pushdown
+	limit         expression.Expression // Used for LIMIT pushdown
+	offset        expression.Expression // Used for OFFSET pushdown
+	oldAggregates bool                  // Used for pre-API3 Projection aggregate
+	projection    *algebra.Projection   // Used for ORDER/projection Distinct pushdown to IndexScan2
+	group         *algebra.Group        // Group BY
+	aggs          algebra.Aggregates    // all aggregates in query
+	aggConstraint expression.Expression // aggregate Constraint
+}
+
+func (this *builder) storeIndexPushDowns() *indexPushDowns {
+	idxPushDowns := &indexPushDowns{}
+	idxPushDowns.order = this.order
+	idxPushDowns.limit = this.limit
+	idxPushDowns.offset = this.offset
+	idxPushDowns.oldAggregates = this.oldAggregates
+	idxPushDowns.projection = this.projection
+	idxPushDowns.group = this.group
+	idxPushDowns.aggs = this.aggs
+	idxPushDowns.aggConstraint = this.aggConstraint
+
+	return idxPushDowns
+}
+
+func (this *builder) restoreIndexPushDowns(idxPushDowns *indexPushDowns, pagination bool) {
+	if pagination {
+		this.order = idxPushDowns.order
+		this.limit = idxPushDowns.limit
+		this.offset = idxPushDowns.offset
+	}
+	this.oldAggregates = idxPushDowns.oldAggregates
+	this.projection = idxPushDowns.projection
+	this.group = idxPushDowns.group
+	this.aggs = idxPushDowns.aggs
+	this.aggConstraint = idxPushDowns.aggConstraint
+}
+
+func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool,
+	namedArgs map[string]value.Value, positionalArgs value.Values, indexApiVersion int,
+	featureControls uint64) *builder {
 	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
@@ -107,6 +143,8 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 		delayProjection: false,
 		namedArgs:       namedArgs,
 		positionalArgs:  positionalArgs,
+		indexApiVersion: indexApiVersion,
+		featureControls: featureControls,
 	}
 
 	return rv

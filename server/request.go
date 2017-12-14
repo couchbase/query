@@ -90,6 +90,8 @@ type Request interface {
 	GetTimings() execution.Operator
 	OriginalHttpRequest() *http.Request
 	IsAdHoc() bool
+	IndexApiVersion() int
+	FeatureControls() uint64
 }
 
 type RequestID interface {
@@ -169,42 +171,44 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id             *requestIDImpl
-	client_id      *clientContextIDImpl
-	statement      string
-	prepared       *plan.Prepared
-	reqType        string
-	isPrepare      bool
-	namedArgs      map[string]value.Value
-	positionalArgs value.Values
-	namespace      string
-	timeout        time.Duration
-	timer          *time.Timer
-	maxParallelism int
-	scanCap        int64
-	pipelineCap    int64
-	pipelineBatch  int
-	readonly       value.Tristate
-	signature      value.Tristate
-	metrics        value.Tristate
-	pretty         value.Tristate
-	consistency    ScanConfiguration
-	credentials    auth.Credentials
-	remoteAddr     string
-	userAgent      string
-	requestTime    time.Time
-	serviceTime    time.Time
-	state          State
-	results        value.ValueChannel
-	errors         errors.ErrorChannel
-	warnings       errors.ErrorChannel
-	closeNotify    chan bool          // implement http.CloseNotifier
-	stopResult     chan bool          // stop consuming results
-	stopExecute    chan bool          // stop executing request
-	stopOperator   execution.Operator // notified when request execution stops
-	timings        execution.Operator
-	controls       value.Tristate
-	profile        Profile
+	id              *requestIDImpl
+	client_id       *clientContextIDImpl
+	statement       string
+	prepared        *plan.Prepared
+	reqType         string
+	isPrepare       bool
+	namedArgs       map[string]value.Value
+	positionalArgs  value.Values
+	namespace       string
+	timeout         time.Duration
+	timer           *time.Timer
+	maxParallelism  int
+	scanCap         int64
+	pipelineCap     int64
+	pipelineBatch   int
+	readonly        value.Tristate
+	signature       value.Tristate
+	metrics         value.Tristate
+	pretty          value.Tristate
+	consistency     ScanConfiguration
+	credentials     auth.Credentials
+	remoteAddr      string
+	userAgent       string
+	requestTime     time.Time
+	serviceTime     time.Time
+	state           State
+	results         value.ValueChannel
+	errors          errors.ErrorChannel
+	warnings        errors.ErrorChannel
+	closeNotify     chan bool          // implement http.CloseNotifier
+	stopResult      chan bool          // stop consuming results
+	stopExecute     chan bool          // stop executing request
+	stopOperator    execution.Operator // notified when request execution stops
+	timings         execution.Operator
+	controls        value.Tristate
+	profile         Profile
+	indexApiVersion int    // Index API version
+	featureControls uint64 // feature bit controls
 }
 
 type requestIDImpl struct {
@@ -270,6 +274,8 @@ func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, 
 	rv.stopExecute = make(chan bool, 1)
 	rv.profile = ProfUnset
 	rv.controls = value.NONE
+	rv.indexApiVersion = util.GetMaxIndexAPI()
+	rv.featureControls = util.GetN1qlFeatureControl()
 
 	if maxParallelism <= 0 {
 		maxParallelism = runtime.NumCPU()
@@ -596,6 +602,26 @@ func (this *BaseRequest) SetProfile(p Profile) {
 
 func (this *BaseRequest) Profile() Profile {
 	return this.profile
+}
+
+func (this *BaseRequest) SetIndexApiVersion(ver int) {
+	// By default this.indexApiVersion is Server level. request level needs to be lessthan server level
+	if ver < this.indexApiVersion {
+		this.indexApiVersion = ver
+	}
+}
+
+func (this *BaseRequest) IndexApiVersion() int {
+	return this.indexApiVersion
+}
+
+func (this *BaseRequest) SetFeatureControls(controls uint64) {
+	// By default this.featureControls is Server level. request level can only turn off server level
+	this.featureControls = this.featureControls | controls
+}
+
+func (this *BaseRequest) FeatureControls() uint64 {
+	return this.featureControls
 }
 
 func (this *BaseRequest) Results() value.ValueChannel {

@@ -103,7 +103,9 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	}
 
 	if conn.Timeout() {
-		if this.plan.Offset() != nil || len(this.plan.OrderTerms()) > 0 {
+		// Offset, Aggregates, Order needs to be exact.
+		// On timeout return error because we cann't stitch the output
+		if this.plan.Offset() != nil || len(this.plan.OrderTerms()) > 0 || this.plan.GroupAggs() != nil {
 			context.Error(errors.NewCbIndexScanTimeoutError(nil))
 			return
 		}
@@ -174,9 +176,10 @@ func (this *PrimaryScan3) scanEntries(context *Context, conn *datastore.IndexCon
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
 	offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), false, context)
 	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, false, context)
-	indexProjection, indexOrder := planToScanMapping(this.plan.Projection(), this.plan.OrderTerms())
+	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(index, this.plan.Projection(),
+		this.plan.OrderTerms(), this.plan.GroupAggs(), nil)
 
-	index.ScanEntries3(context.RequestId(), indexProjection, offset, limit, nil, indexOrder,
+	index.ScanEntries3(context.RequestId(), indexProjection, offset, limit, indexGroupAggs, indexOrder,
 		context.ScanConsistency(), scanVector, conn)
 }
 
