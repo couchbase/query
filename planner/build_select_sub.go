@@ -101,17 +101,40 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// Constrain projection to GROUP keys and aggregates
 	if group != nil {
+		proj := node.Projection().Terms()
+		allowed := value.NewScopeValue(make(map[string]interface{}, len(proj)), nil)
+
 		groupKeys := group.By()
 		letting := group.Letting()
+		// Only aggregates and group keys are allowed in LETTING caluse
 		if letting != nil {
+			for _, expr := range letting.Expressions() {
+				if expr != nil {
+					err = constrainGroupTerm(expr, groupKeys, allowed)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
 			identifiers := letting.Identifiers()
 			groupKeys = append(groupKeys, identifiers...)
 		}
 
-		proj := node.Projection().Terms()
-		allowed := value.NewScopeValue(make(map[string]interface{}, len(proj)), nil)
+		// Only aggregates and group keys, LETTING varaiables are allowed in HAVING caluse
+		if group.Having() != nil {
+			err = constrainGroupTerm(group.Having(), groupKeys, allowed)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		for _, p := range proj {
-			err = constrainGroupProjection(p, groupKeys, allowed)
+			expr := p.Expression()
+			if expr == nil {
+				return nil, errors.NewNotGroupKeyOrAggError(p.String())
+			}
+
+			err = constrainGroupTerm(expr, groupKeys, allowed)
 			if err != nil {
 				return nil, err
 			}
@@ -124,6 +147,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				}
 			}
 
+			// ONLY aggregates, group kyes, LETTING varaibles, projection are allowed IN ORDER BY
 			ord := this.order.Expressions()
 			for _, o := range ord {
 				err = constrainGroupTerm(o, groupKeys, allowed)
@@ -354,6 +378,11 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]al
 
 	group := node.Group()
 	if group != nil {
+		collectAggregates(aggs, group.By()...)
+		if len(aggs) > 0 {
+			return nil, fmt.Errorf("Aggregates not allowed in GROUP BY.")
+		}
+
 		letting := group.Letting()
 		for _, binding := range letting {
 			collectAggregates(aggs, binding.Expression())
@@ -383,8 +412,19 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]al
 			}
 		}
 
-		if !allow && len(aggs) > 0 {
+		if !allow && group == nil && len(aggs) > 0 {
 			return nil, fmt.Errorf("Aggregates not available for this ORDER BY.")
+		}
+	}
+
+	if len(aggs) > 0 {
+		// Disallow nested aggregates
+		subAggs := make(map[string]algebra.Aggregate)
+		for _, agg := range aggs {
+			collectAggregates(subAggs, agg.Operand())
+			if len(subAggs) > 0 {
+				return nil, fmt.Errorf("Nested aggregates are not allowed.")
+			}
 		}
 	}
 
@@ -395,6 +435,9 @@ func collectAggregates(aggs map[string]algebra.Aggregate, exprs ...expression.Ex
 	stringer := expression.NewStringer()
 
 	for _, expr := range exprs {
+		if expr == nil {
+			continue
+		}
 		agg, ok := expr.(algebra.Aggregate)
 		if ok {
 			str := stringer.Visit(agg)
@@ -456,16 +499,6 @@ func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggr
 	} else {
 		return expression.NewAnd(cond, constraint)
 	}
-}
-
-func constrainGroupProjection(term *algebra.ResultTerm, groupKeys expression.Expressions,
-	allowed *value.ScopeValue) errors.Error {
-	expr := term.Expression()
-	if expr == nil {
-		return errors.NewNotGroupKeyOrAggError(term.String())
-	}
-
-	return constrainGroupTerm(expr, groupKeys, allowed)
 }
 
 func constrainGroupTerm(expr expression.Expression, groupKeys expression.Expressions,

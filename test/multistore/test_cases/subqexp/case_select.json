@@ -249,16 +249,7 @@
     },
     {
        "statements": "SELECT id, total FROM orders WHERE test_id = 'subqexp' GROUP by id LETTING total = (SELECT RAW SUM(orderlines.price) FROM orders.orderlines)[0] ORDER BY id",
-       "results": [
-        {
-            "id": "1235",
-            "total": 9
-        },
-        {
-            "id": "1236",
-            "total": 7.5
-        }
-        ]    
+       "error": "Expression must be a group key or aggregate"
     },
     {
        "statements": "SELECT id, (SELECT RAW SUM(item.price) FROM items as item)[0] total FROM orders LET items = (SELECT orderlines.* FROM orders.orderlines ORDER BY orderlines.price) WHERE test_id = 'subqexp' ORDER BY id",
