@@ -287,6 +287,7 @@ type IndexGroupAggregates struct {
 	Aggregates         IndexAggregates // aggregates with in the group, nil means no aggregates
 	DependsOnIndexKeys []int           // GROUP and Aggregates Depends on List of index keys positions
 	IndexKeyNames      []string        // Index key names used in expressions
+	OneForPrimaryKey   bool            // Leading Key is ALL ARRAY index key and equality span conside one per META().id
 }
 
 type IndexKeyOrders []*IndexKeyOrder
