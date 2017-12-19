@@ -27,6 +27,7 @@ func NewFinalProject(plan *plan.FinalProject, context *Context) *FinalProject {
 	}
 
 	newBase(&rv.base, context)
+	rv.SetSerializable()
 	rv.output = rv
 	return rv
 }

@@ -55,6 +55,9 @@ type base struct {
 	stop           Operator
 	parent         Operator
 	once           util.Once
+	serializable   bool
+	serialized     bool
+	doSend         func(this *base, op Operator, item value.AnnotatedValue) bool
 	batch          []value.AnnotatedValue
 	timePhase      timePhases
 	startTime      time.Time
@@ -106,6 +109,10 @@ func GetPipelineCap() int64 {
 	}
 }
 
+func (this *base) getBase() *base {
+	return this
+}
+
 // Constructor, (re)opener, closer, destructor
 
 func newBase(base *base, context *Context) {
@@ -113,6 +120,7 @@ func newBase(base *base, context *Context) {
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
 	base.activeCond = sync.NewCond(&base.activeLock)
+	base.doSend = parallelSend
 }
 
 // The output of this operator will be redirected elsewhere, so we
@@ -122,6 +130,7 @@ func newRedirectBase(base *base) {
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
 	base.activeCond = sync.NewCond(&base.activeLock)
+	base.doSend = parallelSend
 }
 
 func (this *base) copy(base *base) {
@@ -135,6 +144,9 @@ func (this *base) copy(base *base) {
 	base.execPhase = this.execPhase
 	base.phaseTimes = this.phaseTimes
 	base.activeCond = sync.NewCond(&base.activeLock)
+	base.serializable = this.serializable
+	base.serialized = false
+	base.doSend = parallelSend
 }
 
 // reset the operator to an initial state
@@ -147,6 +159,12 @@ func (this *base) reopen(context *Context) {
 
 func (this *base) close(context *Context) {
 	this.valueExchange.close()
+	if this.output != nil {
+		base := this.output.getBase()
+		if base.serialized {
+			serializedClose(this.output, base, context)
+		}
+	}
 	this.inactive()
 }
 
@@ -168,6 +186,8 @@ func (this *base) baseReopen(context *Context) {
 	this.childrenLeft = 0
 	this.primed = false
 	this.stopped = false
+	this.serialized = false
+	this.doSend = parallelSend
 	this.activeCond.L.Lock()
 	this.completed = false
 	this.activeCond.L.Unlock()
@@ -206,6 +226,14 @@ func (this *base) Output() Operator {
 
 func (this *base) SetOutput(op Operator) {
 	this.output = op
+	base := op.getBase()
+
+	// propagate inline operators
+	if base != this && base.serialized {
+		this.doSend = serializedSend
+	} else {
+		this.doSend = parallelSend
+	}
 }
 
 func (this *base) Stop() Operator {
@@ -239,6 +267,22 @@ func (this *base) SetRoot() {
 func (this *base) SetKeepAlive(children int, context *Context) {
 	this.contextTracked = context
 	this.childrenLeft = int32(children)
+}
+
+func (this *base) SetSerializable() {
+	this.serializable = true
+}
+
+func (this *base) IsSerializable() bool {
+	return this.serializable
+}
+
+func (this *base) SerializeOutput(op Operator, context *Context) {
+	this.output = op
+	this.doSend = serializedSend
+	base := op.getBase()
+	base.serialized = true
+	base.contextTracked = context
 }
 
 // value and message exchange
@@ -291,9 +335,7 @@ func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 	if this.stopped {
 		return false
 	}
-	this.switchPhase(_CHANTIME)
-	ok := this.ValueExchange().sendItem(op.ValueExchange(), item)
-	this.switchPhase(_EXECTIME)
+	ok := this.doSend(this, op, item)
 	if ok {
 
 		// sendItem tracks outgoing documents for most operators
@@ -301,6 +343,14 @@ func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 	} else {
 		this.stopped = true
 	}
+	return ok
+}
+
+// send data down a channel
+func parallelSend(this *base, op Operator, item value.AnnotatedValue) bool {
+	this.switchPhase(_CHANTIME)
+	ok := this.valueExchange.sendItem(op.ValueExchange(), item)
+	this.switchPhase(_EXECTIME)
 	return ok
 }
 
@@ -433,13 +483,31 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	this.once.Do(func() {
 		defer context.Recover() // Recover from any panic
 		active := this.active()
-		defer this.close(context)
 		if this.execPhase != PHASES {
 			this.setExecPhase(this.execPhase, context)
 		}
 		this.switchPhase(_EXECTIME)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer this.notify()                          // Notify that I have stopped
+		if this.serialized == true {
+			ok := true
+			if !active || (context.Readonly() && !cons.readonly()) {
+				ok = false
+			} else {
+				ok = cons.beforeItems(context, parent)
+			}
+
+			if ok {
+				go this.input.RunOnce(context, parent)
+			}
+
+			if !ok {
+				this.notify()
+				this.close(context)
+			}
+			return
+		}
+		defer this.close(context)
+		defer this.notify() // Notify that I have stopped
 		defer func() { this.batch = nil }()
 
 		if !active || (context.Readonly() && !cons.readonly()) {
@@ -466,9 +534,46 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	})
 }
 
+// fire an operator's processItem
+func serializedSend(this *base, op Operator, item value.AnnotatedValue) bool {
+	rv := false
+	if this.isStopped() {
+		return rv
+	}
+	this.switchPhase(_NOTIME)
+	opBase := op.getBase()
+	opBase.switchPhase(_EXECTIME)
+	if !opBase.stopped {
+		if opBase.isStopped() {
+			this.stopped = true
+		} else {
+			rv = op.processItem(item, opBase.contextTracked)
+		}
+		if !rv {
+			serializedClose(op, opBase, opBase.contextTracked)
+		}
+	}
+	opBase.switchPhase(_NOTIME)
+	this.switchPhase(_EXECTIME)
+	return rv
+}
+
+// mark a serialized operator as closed and inactive
+func serializedClose(op Operator, opBase *base, context *Context) {
+	op.afterItems(context)
+	opBase.notify()
+	op.close(context)
+	opBase.inactive()
+}
+
 // Override if needed
 func (this *base) beforeItems(context *Context, parent value.Value) bool {
 	return true
+}
+
+// Override if needed
+func (this *base) processItem(item value.AnnotatedValue, context *Context) bool {
+	return this.sendItem(item)
 }
 
 // Override if needed
@@ -488,7 +593,7 @@ func (this *base) notify() {
 
 // release parent resources, if necessary
 func (this *base) keepAlive(op Operator) bool {
-	if this.contextTracked == nil {
+	if this.childrenLeft == 0 {
 		return false
 	}
 	if go_atomic.AddInt32(&this.childrenLeft, -1) == 0 {

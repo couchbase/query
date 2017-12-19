@@ -26,29 +26,36 @@ type stopChannel chan int
 type Operator interface {
 	json.Marshaler // used for profiling
 
+	consumer
+
 	Accept(visitor Visitor) (interface{}, error)
-	ValueExchange() *valueExchange                // Closed by this operator
-	Input() Operator                              // Read by this operator
-	SetInput(op Operator)                         // Can be set
-	Output() Operator                             // Written by this operator
-	SetOutput(op Operator)                        // Can be set
-	Stop() Operator                               // Notified when this operator stops
-	SetStop(op Operator)                          // Can be set
-	Parent() Operator                             // Notified when this operator stops
-	SetParent(parent Operator)                    // Can be set
-	Bit() uint8                                   // Child bit
-	SetBit(b uint8)                               // Child bit
-	SetRoot()                                     // Let the root operator know that it is, in fact, root
-	SetKeepAlive(children int, context *Context)  // Sets keep alive
-	Copy() Operator                               // Keep input/output/parent; make new channels
-	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
-	SendStop()                                    // Stops the operator
-	Done()                                        // Frees and pools resources
+	ValueExchange() *valueExchange               // Closed by this operator
+	Input() Operator                             // Read by this operator
+	SetInput(op Operator)                        // Can be set
+	Output() Operator                            // Written by this operator
+	SetOutput(op Operator)                       // Can be set
+	Stop() Operator                              // Notified when this operator stops
+	SetStop(op Operator)                         // Can be set
+	Parent() Operator                            // Notified when this operator stops
+	SetParent(parent Operator)                   // Can be set
+	Bit() uint8                                  // Child bit
+	SetBit(b uint8)                              // Child bit
+	SetRoot()                                    // Let the root operator know that it is, in fact, root
+	SetKeepAlive(children int, context *Context) // Sets keep alive
+	SetSerializable()                            // Flags operator can be run inline
+	IsSerializable() bool
+	SerializeOutput(op Operator, context *Context) // Has the producer run the consumer inline
+	Copy() Operator                                // Keep input/output/parent; make new channels
+	RunOnce(context *Context, parent value.Value)  // Uses Once.Do() to run exactly once; never panics
+	SendStop()                                     // Stops the operator
+	Done()                                         // Frees and pools resources
 
 	reopen(context *Context)    // resets operator to initial state
 	close(context *Context)     // the operator is no longer operating!
 	keepAlive(op Operator) bool // operator was set to terminate early
 	stopCh() stopChannel        // Never closed, just garbage-collected
+
+	getBase() *base
 
 	// local infrastructure to add up times of children of the parallel operator
 	accrueTimes(o Operator)

@@ -74,12 +74,20 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		for i := 0; i < n-1; i++ {
 			curr := this.children[i]
 			next := this.children[i+1]
-			curr.SetOutput(curr)
-			next.SetInput(curr.Output())
+
+			// run the consumer inline, if feasible
+			if next.IsSerializable() {
+				next.SetInput(curr)
+				curr.SerializeOutput(next, context)
+			} else {
+				curr.SetOutput(curr)
+				next.SetInput(curr.Output())
+			}
 			next.SetStop(curr)
 		}
 
 		last_child := this.children[n-1]
+
 		last_child.SetOutput(this.output)
 		last_child.SetParent(this)
 

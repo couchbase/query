@@ -31,6 +31,7 @@ func NewLimit(plan *plan.Limit, context *Context) *Limit {
 	}
 
 	newBase(&rv.base, context)
+	rv.SetSerializable()
 	rv.output = rv
 	return rv
 }
@@ -78,6 +79,7 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 		return false
 	}
 }
+
 func (this *Limit) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)

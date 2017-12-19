@@ -450,3 +450,11 @@ func (this *valueExchange) sendStop() {
 	}
 	this.oLock.Unlock()
 }
+
+// did we get a stop?
+func (this *valueExchange) isStopped() bool {
+	this.oLock.Lock()
+	rv := this.stop
+	this.oLock.Unlock()
+	return rv
+}

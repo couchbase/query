@@ -31,6 +31,7 @@ func NewOffset(plan *plan.Offset, context *Context) *Offset {
 	}
 
 	newBase(&rv.base, context)
+	rv.SetSerializable()
 	rv.output = rv
 	return rv
 }
