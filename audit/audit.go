@@ -81,10 +81,6 @@ type standardAuditor struct {
 	auditService *adt.AuditSvc
 }
 
-func (sa *standardAuditor) doAudit() bool {
-	return false // for now
-}
-
 func (sa *standardAuditor) submitInline() bool {
 	return false
 }
