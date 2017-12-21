@@ -557,6 +557,8 @@ func main() {
 		command.BATCH = batchFlag
 	}
 
+	n1ql.SetCBUserAgentHeader("CBQ/" + command.SHELL_VERSION)
+
 	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.
 	// This is so as to add these to the history.
 
