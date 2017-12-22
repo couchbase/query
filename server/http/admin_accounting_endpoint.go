@@ -11,6 +11,7 @@ package http
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -87,7 +88,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		accountingPrefix + "/{stat}":          {handler: statHandler, methods: []string{"GET", "DELETE"}},
 		vitalsPrefix:                          {handler: vitalsHandler, methods: []string{"GET"}},
 		preparedsPrefix:                       {handler: preparedsHandler, methods: []string{"GET"}},
-		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE"}},
+		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
 		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET"}},
 		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
 		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET"}},
@@ -240,6 +241,31 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, err
 		}
 		return true, nil
+	} else if req.Method == "PUT" {
+		body, err1 := ioutil.ReadAll(req.Body)
+		defer req.Body.Close()
+
+		// http.BasicAuth eats the body, so verify credentials after getting the body.
+		err := verifyCredentialsFromRequest("prepareds", req)
+		if err != nil {
+			return nil, err
+		}
+
+		if err1 != nil {
+			return nil, errors.NewAdminBodyError(err1)
+		}
+
+		prepared, _ := plan.GetPrepared(value.NewValue(name))
+
+		// nothing to do if the prepared is there and the plan matches
+		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
+			return "", nil
+		}
+		_, err = plan.DecodePrepared(name, string(body), false)
+		if err != nil {
+			return nil, err
+		}
+		return "", nil
 	} else if req.Method == "GET" || req.Method == "POST" {
 		err := verifyCredentialsFromRequest("prepareds", req)
 		if err != nil {

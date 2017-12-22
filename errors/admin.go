@@ -153,3 +153,8 @@ func NewAdminBadServicePort(port string) Error {
 	return &err{level: EXCEPTION, ICode: 2210, IKey: "admin.clustering.bad_port",
 		InternalMsg: "Invalid service port: " + port, InternalCaller: CallerN(1)}
 }
+
+func NewAdminBodyError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 2220, IKey: "admin.accounting.bad_body", ICause: e,
+		InternalMsg: "Error getting request body", InternalCaller: CallerN(1)}
+}
