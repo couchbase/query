@@ -275,7 +275,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 		"prepared": name,
 	})
 
-	prepared, _ := plan.GetPrepared(value.NewValue(name))
+	prepared, _ := plan.GetPrepared(value.NewValue(name), 0)
 	if prepared == nil {
 		t.Errorf("Expected to resolve prepared statement with name %v", name)
 		return
@@ -315,7 +315,7 @@ func doPrepare(t *testing.T, name string, stmt string) {
 	})
 
 	// Verify the name is in the prepared cache:
-	prepared, err := plan.GetPrepared(value.NewValue(name))
+	prepared, err := plan.GetPrepared(value.NewValue(name), 0)
 	if err != nil {
 		t.Errorf("Unexpected error looking up prepared: %v", err)
 	}

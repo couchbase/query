@@ -20,9 +20,16 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+)
+
+// prepared statements cache retrieval options
+const (
+	OPT_TRACK  = 1 << iota // track statement in cache
+	OPT_REMOTE             // check with remote node, if available
 )
 
 type Prepared struct {
@@ -277,12 +284,27 @@ func DeletePrepared(name string) errors.Error {
 
 var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
 
-func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Error) {
+func GetPrepared(prepared_stmt value.Value, options uint32) (*Prepared, errors.Error) {
+	track := (options & OPT_TRACK) != 0
+	remote := (options & OPT_REMOTE) != 0
 	switch prepared_stmt.Type() {
 	case value.STRING:
-		prepared := prepareds.get(prepared_stmt, track)
+		host, name := distributed.RemoteAccess().SplitKey(prepared_stmt.Actual().(string))
+		prepared := prepareds.get(value.NewValue(name), track)
+		if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
+			distributed.RemoteAccess().GetRemoteDoc(host, name, "prepareds", "GET",
+				func(doc map[string]interface{}) {
+					encoded_plan, ok := doc["encoded_plan"].(string)
+					if ok {
+						DecodePrepared(name, encoded_plan, false)
+						prepared = prepareds.get(value.NewValue(name), track)
+					}
+				},
+				func(warn errors.Error) {
+				}, distributed.NO_CREDS, "")
+		}
 		if prepared == nil {
-			return nil, errors.NewNoSuchPreparedError(prepared_stmt.Actual().(string))
+			return nil, errors.NewNoSuchPreparedError(name)
 		}
 		return prepared, nil
 	case value.OBJECT:
@@ -300,14 +322,6 @@ func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Err
 	default:
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
-}
-
-func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
-	return doGetPrepared(prepared_stmt, false)
-}
-
-func TrackPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
-	return doGetPrepared(prepared_stmt, true)
 }
 
 func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Duration) {

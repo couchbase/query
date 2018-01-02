@@ -25,5 +25,5 @@ func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
 	if (expr == nil) || expr.Type() != value.STRING && expr.Type() != value.OBJECT {
 		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
 	}
-	return plan.GetPrepared(expr)
+	return plan.GetPrepared(expr, plan.OPT_REMOTE)
 }

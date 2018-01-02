@@ -255,7 +255,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminBodyError(err1)
 		}
 
-		prepared, _ := plan.GetPrepared(value.NewValue(name))
+		prepared, _ := plan.GetPrepared(value.NewValue(name), 0)
 
 		// nothing to do if the prepared is there and the plan matches
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {

@@ -429,7 +429,7 @@ func getPrepared(a httpRequestArgs) (string, *plan.Prepared, errors.Error) {
 	}
 
 	// Monitoring API: track prepared statement access
-	prepared, err := plan.TrackPrepared(prepared_field)
+	prepared, err := plan.GetPrepared(prepared_field, plan.OPT_TRACK|plan.OPT_REMOTE)
 	if err != nil || prepared == nil {
 		return "", nil, err
 	}

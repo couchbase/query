@@ -588,7 +588,9 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		case "EXECUTE":
 			exec, _ := stmt.(*algebra.Execute)
 			if exec.Prepared() != nil {
-				prep, _ := plan.TrackPrepared(exec.Prepared())
+
+				// remote checking is done during plannig
+				prep, _ := plan.GetPrepared(exec.Prepared(), plan.OPT_TRACK)
 				request.SetPrepared(prep)
 
 				// when executing prepared statements, we set the type to that

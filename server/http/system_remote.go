@@ -75,7 +75,7 @@ func (this *systemRemoteHttp) SplitKey(key string) (string, string) {
 	}
 
 	// scan the string and look for the other side
-	for o <= l {
+	for o < l {
 		if bytes[o] == ']' {
 			brackets--
 
