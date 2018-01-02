@@ -15,4 +15,3 @@ func (sa *standardAuditor) doAudit() bool {
 	// Do not audit in CE version.
 	return false
 }
-

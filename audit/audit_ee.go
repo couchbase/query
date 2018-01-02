@@ -15,4 +15,3 @@ func (sa *standardAuditor) doAudit() bool {
 	// Will be true eventually, since audit is enabled for EE.
 	return false
 }
-
