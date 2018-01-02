@@ -12,6 +12,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -59,8 +60,17 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 			context.Fatal(err)
 			return
 		}
-		value := value.NewAnnotatedValue(this.prepared)
-		this.sendItem(value)
+
+		// We are going to amend the prepared name, so make a copy not
+		// to affect the cache
+		val := value.NewValue(this.prepared).Copy()
+		host := distributed.RemoteAccess().WhoAmI()
+		name, ok := val.Actual().(map[string]interface{})["name"].(string)
+		if host != "" && ok {
+			name = distributed.RemoteAccess().MakeKey(host, name)
+			val.Actual().(map[string]interface{})["name"] = name
+		}
+		this.sendItem(value.NewAnnotatedValue(val))
 	})
 }
 
