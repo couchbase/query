@@ -73,7 +73,7 @@ func (this *Field) Indexable() bool {
 	}
 
 	sv, ok := second.Actual().(string)
-	return ok && (sv == "id" || sv == "cas" || sv == "expiration")
+	return ok && (sv == "id" || sv == "cas" || sv == "expiration" || sv == "xattrs")
 }
 
 func (this *Field) EquivalentTo(other Expression) bool {
