@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/clustering"
@@ -267,7 +268,7 @@ func credsAsJSON(creds distributed.Creds) string {
 // helper for the REST op
 func doRemoteOp(node clustering.QueryNode, endpoint string, command string, creds distributed.Creds, authToken string) ([]byte, error) {
 	var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10} //MaxIdleConnsPerHost}
-	var HTTPClient = &http.Client{Transport: HTTPTransport}
+	var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
 
 	if node == nil {
 		return nil, goErr.New("missing remote node")
