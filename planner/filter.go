@@ -64,14 +64,26 @@ func (this *Filter) isDerived() bool {
 // Combine an array of filters into a single expression by ANDing each filter expression,
 // perform transformation on each filter, and if an OR filter is involved, perform DNF
 // transformation on the combined filter
-func combineFilters(filters Filters, includeOnclause bool) (expression.Expression, expression.Expression, error) {
+func combineFilters(baseKeyspace *baseKeyspace, includeOnclause bool) error {
 	var err error
-	var hasOr bool = false
-	var dnfPred, origPred expression.Expression
+	var predHasOr, onHasOr bool
+	var dnfPred, origPred, onclause expression.Expression
 
-	for _, fl := range filters {
-		if !includeOnclause && fl.isOnclause() {
-			continue
+	for _, fl := range baseKeyspace.filters {
+		if fl.isOnclause() {
+			if onclause == nil {
+				onclause = fl.fltrExpr
+			} else {
+				onclause = expression.NewAnd(onclause, fl.fltrExpr)
+			}
+
+			if _, ok := fl.fltrExpr.(*expression.Or); ok {
+				onHasOr = true
+			}
+
+			if !includeOnclause {
+				continue
+			}
 		}
 
 		if dnfPred == nil {
@@ -89,19 +101,31 @@ func combineFilters(filters Filters, includeOnclause bool) (expression.Expressio
 		}
 
 		if _, ok := fl.fltrExpr.(*expression.Or); ok {
-			hasOr = true
+			predHasOr = true
 		}
 	}
 
-	if hasOr {
+	if predHasOr {
 		dnf := NewDNF(dnfPred.Copy(), true, true)
 		dnfPred, err = dnf.Map(dnfPred)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 	}
 
-	return dnfPred, origPred, nil
+	if onHasOr {
+		dnf := NewDNF(onclause.Copy(), true, true)
+		onclause, err = dnf.Map(onclause)
+		if err != nil {
+			return err
+		}
+	}
+
+	baseKeyspace.dnfPred = dnfPred
+	baseKeyspace.origPred = origPred
+	baseKeyspace.onclause = onclause
+
+	return nil
 }
 
 // Once a keyspace has been visited, join filters referring to this keyspace can remove

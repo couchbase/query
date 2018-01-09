@@ -156,7 +156,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		}
 	}
 
-	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
+	err = combineFilters(baseKeyspace, true)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -192,7 +192,22 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 
 	_, err = node.Accept(this)
 	if err != nil {
-		return nil, nil, nil, err
+		switch e := err.(type) {
+		case errors.Error:
+			if e.Code() == errors.NO_ANSI_JOIN &&
+				baseKeyspace.dnfPred != nil && baseKeyspace.onclause != nil {
+
+				// did not find an appropriate index path using both
+				// on clause and where clause filters, try using just
+				// the on clause filters
+				baseKeyspace.SetOnclauseOnly()
+				_, err = node.Accept(this)
+			}
+		}
+
+		if err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
 	// perform cover transformation for ON-clause

@@ -60,7 +60,7 @@ func (this *builder) PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.
 	}
 	baseKeyspace.filters = newKeyspace.filters
 	baseKeyspace.joinfilters = newKeyspace.joinfilters
-	baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
+	err = combineFilters(baseKeyspace, true)
 	if err != nil {
 		return err
 	}

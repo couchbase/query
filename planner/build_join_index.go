@@ -97,7 +97,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	subset := pred
 	if kspace, ok := this.baseKeyspaces[node.Alias()]; ok {
-		kspace.dnfPred, kspace.origPred, err = combineFilters(kspace.filters, false)
+		err = combineFilters(kspace, false)
 		if err != nil {
 			return nil, nil, nil, err
 		}

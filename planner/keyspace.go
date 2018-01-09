@@ -13,13 +13,19 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+const (
+	KS_PLAN_DONE     = 1 << iota // planning is done for this keyspace
+	KS_ONCLAUSE_ONLY             // use ON-clause only for planning
+)
+
 type baseKeyspace struct {
 	name        string
 	filters     Filters
 	joinfilters Filters
 	dnfPred     expression.Expression
 	origPred    expression.Expression
-	planDone    bool
+	onclause    expression.Expression
+	ksFlags     uint32
 }
 
 func newBaseKeyspace(keyspace string) *baseKeyspace {
@@ -31,11 +37,19 @@ func newBaseKeyspace(keyspace string) *baseKeyspace {
 }
 
 func (this *baseKeyspace) PlanDone() bool {
-	return this.planDone
+	return (this.ksFlags & KS_PLAN_DONE) != 0
 }
 
 func (this *baseKeyspace) SetPlanDone() {
-	this.planDone = true
+	this.ksFlags |= KS_PLAN_DONE
+}
+
+func (this *baseKeyspace) OnclauseOnly() bool {
+	return (this.ksFlags & KS_ONCLAUSE_ONLY) != 0
+}
+
+func (this *baseKeyspace) SetOnclauseOnly() {
+	this.ksFlags |= KS_ONCLAUSE_ONLY
 }
 
 func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {
@@ -43,7 +57,7 @@ func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {
 
 	for _, kspace := range src {
 		dest[kspace.name] = newBaseKeyspace(kspace.name)
-		dest[kspace.name].planDone = kspace.planDone
+		dest[kspace.name].ksFlags = kspace.ksFlags
 	}
 
 	return dest

@@ -96,7 +96,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			}
 
 			// include pushed ON-clause filter
-			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, true)
+			err = combineFilters(baseKeyspace, true)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -194,8 +194,11 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	order := this.order
 
 	// Prefer OR scan
-	dnfPred := baseKeyspace.dnfPred
-	if or, ok := dnfPred.(*expression.Or); ok {
+	pred := baseKeyspace.dnfPred
+	if join && baseKeyspace.OnclauseOnly() {
+		pred = baseKeyspace.onclause
+	}
+	if or, ok := pred.(*expression.Or); ok {
 		scan, _, err := this.buildOrScan(node, baseKeyspace, id, or, indexes, primaryKey, formalizer)
 		if scan != nil || err != nil {
 			return scan, nil, err
@@ -240,9 +243,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	dnfPred := baseKeyspace.dnfPred
+	pred := baseKeyspace.dnfPred
+	if join && baseKeyspace.OnclauseOnly() {
+		pred = baseKeyspace.onclause
+	}
 
-	sargables, all, arrays, err := this.sargableIndexes(indexes, dnfPred, dnfPred, primaryKey, formalizer)
+	sargables, all, arrays, err := this.sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -287,7 +293,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		// Try pushdowns
 		this.restoreIndexPushDowns(indexPushDowns, true)
 
-		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, dnfPred, all)
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all)
 		if err != nil {
 			return nil, 0, err
 		}

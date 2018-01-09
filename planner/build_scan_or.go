@@ -106,7 +106,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		}
 
 		if baseKeyspace, ok := baseKeyspaces[node.Alias()]; ok {
-			baseKeyspace.dnfPred, baseKeyspace.origPred, err = combineFilters(baseKeyspace.filters, join)
+			err = combineFilters(baseKeyspace, join)
 			if err != nil {
 				return nil, 0, err
 			}
