@@ -287,13 +287,30 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request)
 	}
 
 	// Auth clear: restart TLS listener to reload the SSL cert.
+
+	// To ensure that we dont indefinitely try to close a closed listener.
+	// Possible scenarios -
+	// Close successful, restarting listener successful
+	// Close successful, but restarting listener errors as close not complete.
+	//                   here we sleep, and on next retry listener is restarted.
+	// Close unsuccesful, so listener restarting unsuccessful - > sleep, same as case 2.
+
 	closeErr := endpoint.CloseTLS()
-	if closeErr != nil {
+	if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
+		// Different error
+		logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
 		return nil, errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
 	}
 
 	tlsErr := endpoint.ListenTLS()
 	if tlsErr != nil {
+		if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address & already in use") {
+			// Here we are trying to restart listener only when close did not complete.
+			// The doSSLCert method is called multiple times until the listener has been restarted.
+			// Adding a sleep here will allow the TLS listener to successfully close before we restart it.
+			time.Sleep(100 * time.Millisecond)
+		}
+		logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
 		return nil, errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
 	}
 
