@@ -8,7 +8,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "index": "ixCover",
                         "index_projection": {
                             "primary_key": true
@@ -75,7 +75,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "f2",
                         "index": "ixCover",
                         "index_projection": {
@@ -144,7 +144,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "f1",
                         "index": "ixCover",
                         "index_projection": {
@@ -211,7 +211,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "covers": [
                             "cover ((`shellTest`.`f1`))",
                             "cover ((`shellTest`.`f2`))",
@@ -281,7 +281,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "d1",
                         "covers": [
                             "cover ((`d1`.`k0`))",
@@ -362,7 +362,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "d",
                         "covers": [
                             "cover ((`d`.`x`))",
@@ -427,7 +427,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "d1",
                         "index": "ixCover2",
                         "index_projection": {
@@ -512,7 +512,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "d1",
                         "covers": [
                             "cover ((`d1`.`k0`))",
@@ -604,7 +604,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "as": "b1",
                         "covers": [
                             "cover ((meta(`b1`).`id`))"
@@ -685,7 +685,7 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan2",
+                        "#operator": "IndexScan3",
                         "covers": [
                             "cover ((`shellTest`.`email`))",
                             "cover ((`shellTest`.`VMs`))",
