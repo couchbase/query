@@ -119,6 +119,26 @@ func (e *err) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
+func (e *err) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		Caller  string `json:"caller"`
+		Code    int32  `json:"code"`
+		Key     string `json:"key"`
+		Message string `json:"message"`
+	}
+
+	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
+	if unmarshalErr != nil {
+		return unmarshalErr
+	}
+
+	e.ICode = _unmarshalled.Code
+	e.IKey = _unmarshalled.Key
+	e.InternalMsg = _unmarshalled.Message
+	e.InternalCaller = _unmarshalled.Caller
+	return nil
+}
+
 func (e *err) Level() int {
 	return e.level
 }

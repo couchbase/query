@@ -35,6 +35,12 @@ type SystemRemoteAccess interface {
 		docFn func(doc map[string]interface{}),
 		warnFn func(warn errors.Error), creds Creds, authToken string)
 
+	// Perform an operation on a key on all nodes in the argument
+	// data is sent to each remote node
+	// warnFn is called on the result of each node, with no warnigs if succesful
+	DoRemoteOps(nodes []string, endpoint string, command string, key string,
+		data string, warnFn func(warn errors.Error), creds Creds, authToken string)
+
 	// local node name, if known
 	WhoAmI() string
 

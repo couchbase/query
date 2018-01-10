@@ -22,6 +22,7 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -271,6 +272,7 @@ func AddPrepared(prepared *Prepared) errors.Error {
 		return errors.NewPreparedNameError(
 			fmt.Sprintf("duplicate name: %s", prepared.Name()))
 	} else {
+		distributePrepared(prepared.Name(), prepared.EncodedPlan())
 		return nil
 	}
 }
@@ -413,6 +415,7 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Pr
 		})
 
 	if added {
+		distributePrepared(prepared.Name(), prepared_stmt)
 		return prepared, nil
 	} else {
 		return nil, errors.NewPreparedEncodingMismatchError(prepared_name)
@@ -426,4 +429,13 @@ func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
 	}
 	return prepared, nil
+}
+
+func distributePrepared(name, plan string) {
+	go distributed.RemoteAccess().DoRemoteOps([]string{}, "prepareds", "PUT", name, plan,
+		func(warn errors.Error) {
+			if warn != nil {
+				logging.Infof("failed to distribute statement %v: %v", name, warn)
+			}
+		}, distributed.NO_CREDS, "")
 }

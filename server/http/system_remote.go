@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -143,10 +144,10 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					continue
 				}
 
-				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS, "")
+				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
 				if opErr != nil {
 					if warnFn != nil {
-						warnFn(errors.NewSystemRemoteWarning(opErr, "scan", endpoint))
+						warnFn(opErr)
 					}
 					continue
 				}
@@ -185,10 +186,10 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", distributed.NO_CREDS, "")
+			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
 			if opErr != nil {
 				if warnFn != nil {
-					warnFn(errors.NewSystemRemoteWarning(opErr, "scan", endpoint))
+					warnFn(opErr)
 				}
 				continue
 			}
@@ -224,10 +225,10 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		return
 	}
 
-	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, creds, authToken)
+	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, "", "fetch", creds, authToken)
 	if opErr != nil {
 		if warnFn != nil {
-			warnFn(errors.NewSystemRemoteWarning(opErr, "fetch", endpoint))
+			warnFn(opErr)
 		}
 		return
 	}
@@ -242,6 +243,79 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 
 	if docFn != nil {
 		docFn(doc)
+	}
+}
+
+// perform operation on key on the specified nodes for the specified endpoint
+func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, command string, key string, data string, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
+
+	// now that the local node name can change, use a consistent one across the scan
+	whoAmI := this.WhoAmI()
+
+	// not part of a cluster, no node to operatre against
+	if len(whoAmI) == 0 {
+		return
+	}
+
+	// no nodes means all nodes
+	if len(nodes) == 0 {
+
+		cm := this.configStore.ConfigurationManager()
+		clusters, err := cm.GetClusters()
+		if err != nil {
+			if warnFn != nil {
+				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+			}
+			return
+		}
+
+		for _, c := range clusters {
+			clm := c.ClusterManager()
+			queryNodes, err := clm.GetQueryNodes()
+			if err != nil {
+				if warnFn != nil {
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+				}
+				continue
+			}
+
+			for _, queryNode := range queryNodes {
+				node := queryNode.Name()
+
+				// skip ourselves, we will be processed locally
+				if node == whoAmI {
+					continue
+				}
+
+				_, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, data, command, creds, authToken)
+				if warnFn != nil {
+					warnFn(opErr)
+				}
+
+			}
+		}
+	} else {
+
+		for _, node := range nodes {
+
+			// skip ourselves, it will be processed locally
+			if node == whoAmI {
+				continue
+			}
+
+			queryNode, err := getQueryNode(this.configStore, node, "scan", endpoint)
+			if err != nil {
+				if warnFn != nil {
+					warnFn(err)
+				}
+				continue
+			}
+
+			_, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, data, command, creds, authToken)
+			if warnFn != nil {
+				warnFn(opErr)
+			}
+		}
 	}
 }
 
@@ -266,12 +340,17 @@ func credsAsJSON(creds distributed.Creds) string {
 }
 
 // helper for the REST op
-func doRemoteOp(node clustering.QueryNode, endpoint string, command string, creds distributed.Creds, authToken string) ([]byte, error) {
+func doRemoteOp(node clustering.QueryNode, endpoint string, command string, op string, data string,
+	creds distributed.Creds, authToken string) ([]byte, errors.Error) {
 	var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10} //MaxIdleConnsPerHost}
 	var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
+	var reader io.Reader
 
 	if node == nil {
-		return nil, goErr.New("missing remote node")
+		return nil, errors.NewSystemRemoteWarning(goErr.New("missing node"), op, endpoint)
+	}
+	if data != "" {
+		reader = strings.NewReader(data)
 	}
 
 	numCredentials := len(creds)
@@ -285,22 +364,33 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, cred
 	// endpoint associated with the node. This is the same hostport pair that allows us
 	// to access the admin creds for that node.
 	u, p, _ := authenticator.GetHTTPServiceAuth(node.Name())
-	request, _ := http.NewRequest(command, fullEndpoint, nil)
+	request, _ := http.NewRequest(command, fullEndpoint, reader)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.SetBasicAuth(u, p)
 
 	resp, err := HTTPClient.Do(request)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
 	}
 
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
+	}
+
+	// we got a response, but the operation failed: extract the error
 	if resp.StatusCode != 200 {
-		_, _ = ioutil.ReadAll(io.LimitReader(resp.Body, 512))
-		return nil, err
+		var opErr errors.Error
+
+		err = json.Unmarshal(body, &opErr)
+		if err != nil {
+			return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
+		}
+		return nil, opErr
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return body, nil
 }
 
 // helper to map a node name to a node
