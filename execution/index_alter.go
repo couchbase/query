@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -59,7 +60,13 @@ func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_SERVTIME)
 		node := this.plan.Node()
 
-		_, err := this.plan.Index().(datastore.AlterIndex).Alter(context.RequestId(), node.With())
+		index, ok := this.plan.Index().(datastore.Index3)
+		if !ok {
+			context.Error(errors.NewAlterIndexError())
+			return
+		}
+
+		_, err := index.Alter(context.RequestId(), node.With())
 		if err != nil {
 			context.Error(err)
 			return

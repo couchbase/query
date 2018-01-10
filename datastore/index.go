@@ -129,11 +129,6 @@ type Index interface {
 		vector timestamp.Vector, conn *IndexConnection)
 }
 
-type AlterIndex interface {
-	Index
-	Alter(requestId string, with value.Value) (Index, errors.Error)
-}
-
 type CountIndex interface {
 	Index
 
@@ -321,6 +316,8 @@ type Index3 interface {
 		projection *IndexProjection, offset, limit int64,
 		groupAggs *IndexGroupAggregates, indexOrders IndexKeyOrders,
 		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
+
+	Alter(requestId string, with value.Value) (Index, errors.Error)
 }
 
 type PrimaryIndex3 interface {

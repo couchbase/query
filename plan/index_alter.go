@@ -122,7 +122,7 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if _, ok := index.(datastore.AlterIndex); !ok {
+	if _, ok := index.(datastore.Index3); !ok {
 		return errors.NewAlterIndexError()
 	}
 

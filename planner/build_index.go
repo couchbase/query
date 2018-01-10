@@ -129,7 +129,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, er
 	}
 
-	if _, ok := index.(datastore.AlterIndex); !ok {
+	if _, ok := index.(datastore.Index3); !ok {
 		return nil, errors.NewAlterIndexError()
 	}
 
