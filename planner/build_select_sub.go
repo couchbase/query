@@ -120,6 +120,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			if err != nil {
 				return nil, err
 			}
+			this.resetOffsetLimit()
 		}
 
 		for _, p := range proj {
