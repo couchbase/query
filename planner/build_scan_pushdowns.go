@@ -226,8 +226,10 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 	}
 
 	// For Partition index the partition keys needs to be in group keys to use DIstinct aggregates
-	if !this.IsPartitionKeysInGroupKeys(entry, groupkeys) {
-		return false, 0
+	for _, pexpr := range entry.partitionKeys {
+		if _, ok := groupkeys[pexpr.String()]; !ok {
+			return false, 0
+		}
 	}
 
 	// no group
@@ -253,29 +255,6 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 
 	// Check all group keys matched with leading index keys
 	return (nGroupMatched == len(groupkeys)), nMatched
-}
-
-func (this *builder) IsPartitionKeysInGroupKeys(entry *indexEntry, groupkeys map[string]bool) bool {
-	// not a partition Index
-
-	index3, ok := entry.index.(datastore.Index3)
-	if !ok {
-		return false
-	}
-	partionKeys, _ := index3.PartitionKeys()
-	if partionKeys == nil || partionKeys.Strategy == datastore.NO_PARTITION {
-		return true
-	} else if len(groupkeys) == 0 {
-		return false
-	}
-
-	for _, pexpr := range partionKeys.Exprs {
-		if _, ok := groupkeys[pexpr.String()]; !ok {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expression, alias string,

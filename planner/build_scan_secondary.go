@@ -226,9 +226,15 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			}
 		}
 
+		var partitionKeys expression.Expressions
+		partitionKeys, err = indexPartitionKeys(index, formalizer)
+		if err != nil {
+			return
+		}
+
 		min, sum := SargableFor(pred, keys)
 		entry := &indexEntry{
-			index, keys, keys[0:min], min, sum, cond, origCond, nil, false, _PUSHDOWN_NONE}
+			index, keys, keys[0:min], partitionKeys, min, sum, cond, origCond, nil, false, _PUSHDOWN_NONE}
 		all[index] = entry
 
 		if min > 0 {
@@ -241,6 +247,36 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 	}
 
 	return sargables, all, arrays, nil
+}
+
+func indexPartitionKeys(index datastore.Index,
+	formalizer *expression.Formalizer) (partitionKeys expression.Expressions, err error) {
+
+	index3, ok := index.(datastore.Index3)
+	if !ok {
+		return
+	}
+
+	partitionInfo, _ := index3.PartitionKeys()
+	if partitionInfo == nil || partitionInfo.Strategy == datastore.NO_PARTITION {
+		return
+	}
+
+	partitionKeys = partitionInfo.Exprs
+	if formalizer == nil {
+		return partitionKeys, err
+	}
+
+	partitionKeys = partitionKeys.Copy()
+	for i, key := range partitionKeys {
+		key = key.Copy()
+
+		partitionKeys[i], err = formalizer.Map(key)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return partitionKeys, err
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {

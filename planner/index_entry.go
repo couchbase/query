@@ -31,6 +31,7 @@ type indexEntry struct {
 	index            datastore.Index
 	keys             expression.Expressions
 	sargKeys         expression.Expressions
+	partitionKeys    expression.Expressions
 	minKeys          int
 	sumKeys          int
 	cond             expression.Expression

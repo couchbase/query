@@ -32,7 +32,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 
 	if order != nil {
 		keys := expression.Expressions{id}
-		entry := &indexEntry{primary, keys, keys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, _PUSHDOWN_NONE}
+		entry := &indexEntry{primary, keys, keys, nil, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, _PUSHDOWN_NONE}
 		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); !ok {
 			this.resetPushDowns()
 		}
@@ -72,7 +72,14 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	}
 
 	keys := expression.Expressions{id}
-	entry := &indexEntry{primary, keys, keys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true, _PUSHDOWN_NONE}
+
+	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
+	partitionKeys, err := indexPartitionKeys(primary, formalizer)
+	if err != nil {
+		return nil, err
+	}
+
+	entry := &indexEntry{primary, keys, keys, partitionKeys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true, _PUSHDOWN_NONE}
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
