@@ -66,7 +66,16 @@ type Auditable interface {
 // talks to the audit daemon, and a mock that just stores audit records for testing.
 // The mock is over in the test file.
 type Auditor interface {
+	// Should we contact the audit demon at all?
 	doAudit() bool
+
+	// Some users are trusted, so their actions do not need to be audited.
+	// Is this action from one such user?
+	userIsWhitelisted(userId string) bool
+
+	// Some events are disabled, and do not need to be audited.
+	// Is this one of them?
+	eventIsDisabled(uint32) bool
 
 	// In normal processing, we want the call to submit the audit record to
 	// the audit daemon done offline, in a goroutine of its own.
@@ -87,6 +96,16 @@ func (sa *standardAuditor) submitInline() bool {
 
 func (sa *standardAuditor) submit(eventId uint32, event *n1qlAuditEvent) error {
 	return sa.auditService.Write(eventId, *event)
+}
+
+func (sa *standardAuditor) userIsWhitelisted(user string) bool {
+	// TODO
+	return false
+}
+
+func (sa *standardAuditor) eventIsDisabled(eventId uint32) bool {
+	// TODO
+	return false
 }
 
 var _AUDITOR Auditor
@@ -145,6 +164,10 @@ func Submit(event Auditable) {
 		eventTypeId = 28687
 	}
 
+	if _AUDITOR.eventIsDisabled(eventTypeId) {
+		return
+	}
+
 	// We build the audit record from the request in the main thread
 	// because the request will be destroyed soon after the call to Submit(),
 	// and we don't want to cause a race condition.
@@ -201,9 +224,17 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 		return []*n1qlAuditEvent{record}
 	}
 
+	// Figure out which users to generate events for.
+	auditableUsers := make([]string, 0, len(users))
+	for _, user := range users {
+		if !_AUDITOR.userIsWhitelisted(user) {
+			auditableUsers = append(auditableUsers, user)
+		}
+	}
+
 	// Generate one record per user.
-	records := make([]*n1qlAuditEvent, len(users))
-	for i, user := range users {
+	records := make([]*n1qlAuditEvent, len(auditableUsers))
+	for i, user := range auditableUsers {
 		record := &n1qlAuditEvent{
 			GenericFields:  genericFields,
 			RequestId:      requestId,
