@@ -180,6 +180,7 @@ func (this *builder) checkResetPaginations(entry *indexEntry,
 	// check order pushdown and reset
 	if this.order != nil {
 		if entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			_, indexKeyOrders = this.useIndexOrder(entry, keys)
 			this.maxParallelism = 1
 		} else {
 			this.resetOrderOffsetLimit()
