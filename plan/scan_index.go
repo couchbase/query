@@ -22,6 +22,7 @@ import (
 type IndexScan struct {
 	readonly
 	index        datastore.Index
+	indexer      datastore.Indexer
 	term         *algebra.KeyspaceTerm
 	spans        Spans
 	distinct     bool
@@ -35,6 +36,7 @@ func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm, spans Spans
 	filterCovers map[*expression.Cover]value.Value) *IndexScan {
 	return &IndexScan{
 		index:        index,
+		indexer:      getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
 		term:         term,
 		spans:        spans,
 		distinct:     distinct,
@@ -270,11 +272,15 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	indexer, err := k.Indexer(_unmarshalled.Using)
+	this.indexer, err = k.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	this.index, err = indexer.IndexById(_unmarshalled.IndexId)
+	this.index, err = this.indexer.IndexById(_unmarshalled.IndexId)
 	return err
+}
+
+func (this *IndexScan) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

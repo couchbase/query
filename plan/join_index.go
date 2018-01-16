@@ -27,6 +27,7 @@ type IndexJoin struct {
 	keyFor       string
 	idExpr       expression.Expression
 	index        datastore.Index
+	indexer      datastore.Indexer
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
 }
@@ -40,6 +41,7 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 		outer:        join.Outer(),
 		keyFor:       join.For(),
 		index:        index,
+		indexer:      getIndexer(keyspace.NamespaceId(), keyspace.Name(), index.Type()),
 		covers:       covers,
 		filterCovers: filterCovers,
 	}
@@ -194,12 +196,12 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	indexer, err := this.keyspace.Indexer(_unmarshalled.Scan.Using)
+	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Scan.Using)
 	if err != nil {
 		return err
 	}
 
-	this.index, err = indexer.IndexById(_unmarshalled.Scan.IndexId)
+	this.index, err = this.indexer.IndexById(_unmarshalled.Scan.IndexId)
 	if err != nil {
 		return err
 	}
@@ -230,4 +232,8 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 	}
 
 	return nil
+}
+
+func (this *IndexJoin) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

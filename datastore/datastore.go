@@ -74,6 +74,7 @@ type Namespace interface {
 	KeyspaceNames() ([]string, errors.Error)             // Names of the keyspaces contained in this namespace
 	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this namespace using the keyspace's id
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this namespace using the keyspace's name
+	MetadataVersion() uint64                             // Current version of the metadata
 }
 
 // Keyspace is a map of key-value entries (typically key-document, but
@@ -81,6 +82,7 @@ type Namespace interface {
 // keyspace.
 type Keyspace interface {
 	NamespaceId() string                              // Id of the namespace that contains this keyspace
+	Namespace() Namespace                             // Backpointer to namespace
 	Id() string                                       // Id of this keyspace
 	Name() string                                     // Name of this keyspace
 	Count(context QueryContext) (int64, errors.Error) // Number of key-value entries in this keyspace

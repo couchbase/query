@@ -22,6 +22,7 @@ import (
 type PrimaryScan3 struct {
 	readonly
 	index      datastore.PrimaryIndex3
+	indexer    datastore.Indexer
 	keyspace   datastore.Keyspace
 	term       *algebra.KeyspaceTerm
 	groupAggs  *IndexGroupAggregates
@@ -37,6 +38,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	groupAggs *IndexGroupAggregates) *PrimaryScan3 {
 	return &PrimaryScan3{
 		index:      index,
+		indexer:    getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
 		keyspace:   keyspace,
 		term:       term,
 		groupAggs:  groupAggs,
@@ -184,12 +186,12 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
-	indexer, err := this.keyspace.Indexer(_unmarshalled.Using)
+	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	index, err := indexer.IndexByName(_unmarshalled.Index)
+	index, err := this.indexer.IndexByName(_unmarshalled.Index)
 	if err != nil {
 		return err
 	}
@@ -200,4 +202,8 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	}
 
 	return fmt.Errorf("Unable to find Primary Index3 for %v", index.Name())
+}
+
+func (this *PrimaryScan3) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

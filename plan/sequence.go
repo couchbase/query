@@ -88,3 +88,13 @@ func (this *Sequence) UnmarshalJSON(body []byte) error {
 
 	return err
 }
+
+func (this *Sequence) verify(prepared *Prepared) bool {
+	for _, child := range this.children {
+		if !child.verify(prepared) {
+			return false
+		}
+	}
+
+	return true
+}

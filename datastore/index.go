@@ -50,6 +50,7 @@ type Indexer interface {
 		where expression.Expression, with value.Value) (Index, errors.Error)
 	BuildIndexes(requestId string, name ...string) errors.Error // Build indexes that were deferred at creation
 	Refresh() errors.Error                                      // Refresh list of indexes from metadata
+	MetadataVersion() uint64                                    // Meta data change counter
 	SetLogLevel(level logging.Level)                            // Set log level for in-process logging
 }
 

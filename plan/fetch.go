@@ -171,3 +171,7 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
 }
+
+func (this *Fetch) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

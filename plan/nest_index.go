@@ -26,6 +26,7 @@ type IndexNest struct {
 	keyFor   string
 	idExpr   expression.Expression
 	index    datastore.Index
+	indexer  datastore.Indexer
 }
 
 func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
@@ -36,6 +37,7 @@ func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
 		outer:    nest.Outer(),
 		keyFor:   nest.For(),
 		index:    index,
+		indexer:  getIndexer(keyspace.NamespaceId(), keyspace.Name(), index.Type()),
 	}
 
 	rv.idExpr = expression.NewField(
@@ -148,11 +150,15 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	indexer, err := this.keyspace.Indexer(_unmarshalled.Scan.Using)
+	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Scan.Using)
 	if err != nil {
 		return err
 	}
 
-	this.index, err = indexer.IndexById(_unmarshalled.Scan.IndexId)
+	this.index, err = this.indexer.IndexById(_unmarshalled.Scan.IndexId)
 	return err
+}
+
+func (this *IndexNest) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

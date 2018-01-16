@@ -96,3 +96,7 @@ func (this *InferKeyspace) UnmarshalJSON(body []byte) error {
 	this.node = algebra.NewInferKeyspace(ksref, _unmarshalled.Using, with)
 	return nil
 }
+
+func (this *InferKeyspace) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

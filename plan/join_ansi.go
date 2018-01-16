@@ -122,3 +122,7 @@ func (this *AnsiJoin) UnmarshalJSON(body []byte) error {
 
 	return nil
 }
+
+func (this *AnsiJoin) verify(prepared *Prepared) bool {
+	return this.child.verify(prepared)
+}

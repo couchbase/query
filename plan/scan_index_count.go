@@ -23,6 +23,7 @@ import (
 type IndexCountScan struct {
 	readonly
 	index        datastore.CountIndex
+	indexer      datastore.Indexer
 	term         *algebra.KeyspaceTerm
 	spans        Spans
 	covers       expression.Covers
@@ -33,6 +34,7 @@ func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm, s
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) *IndexCountScan {
 	return &IndexCountScan{
 		index:        index,
+		indexer:      getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
 		term:         term,
 		spans:        spans,
 		covers:       covers,
@@ -195,12 +197,12 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	indexer, err := k.Indexer(_unmarshalled.Using)
+	this.indexer, err = k.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	index, err := indexer.IndexById(_unmarshalled.IndexId)
+	index, err := this.indexer.IndexById(_unmarshalled.IndexId)
 	if err != nil {
 		return err
 	}
@@ -211,4 +213,8 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 
 	this.index = countIndex
 	return nil
+}
+
+func (this *IndexCountScan) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

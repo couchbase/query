@@ -18,6 +18,34 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+// Keyspace stuff
+
+type keyspaceBase struct {
+	namespace *namespace
+}
+
+func (this *keyspaceBase) Namespace() datastore.Namespace {
+	return this.namespace
+}
+
+func setKeyspaceBase(base *keyspaceBase, namespace *namespace) {
+	base.namespace = namespace
+}
+
+// Index stuff
+
+type indexBase struct {
+	indexer datastore.Indexer
+}
+
+func (this *indexBase) Indexer() datastore.Indexer {
+	return this.indexer
+}
+
+func setIndexBase(base *indexBase, indexer datastore.Indexer) {
+	base.indexer = indexer
+}
+
 type compiledSpan struct {
 	low      string
 	high     string
@@ -138,6 +166,8 @@ func greaterOrEqual(bottom, key string) bool {
 func noop(val, key string) bool {
 	return true
 }
+
+// Credentials
 
 // Return the credentials presented in the context.
 // The second parameter is the ns-server-auth-token value, from the original request,

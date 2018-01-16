@@ -23,6 +23,7 @@ import (
 type IndexScan2 struct {
 	readonly
 	index        datastore.Index2
+	indexer      datastore.Indexer
 	term         *algebra.KeyspaceTerm
 	spans        Spans2
 	reverse      bool
@@ -41,6 +42,7 @@ func NewIndexScan2(index datastore.Index2, term *algebra.KeyspaceTerm, spans Spa
 	filterCovers map[*expression.Cover]value.Value) *IndexScan2 {
 	return &IndexScan2{
 		index:        index,
+		indexer:      getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
 		term:         term,
 		spans:        spans,
 		reverse:      reverse,
@@ -321,12 +323,12 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	indexer, err := k.Indexer(_unmarshalled.Using)
+	this.indexer, err = k.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	index, err := indexer.IndexById(_unmarshalled.IndexId)
+	index, err := this.indexer.IndexById(_unmarshalled.IndexId)
 	if err != nil {
 		return err
 	}
@@ -338,4 +340,8 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 	this.index = index2
 
 	return nil
+}
+
+func (this *IndexScan2) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

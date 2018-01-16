@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -291,6 +292,10 @@ func (view *viewIndexer) Refresh() errors.Error {
 	}
 
 	return nil
+}
+
+func (view *viewIndexer) MetadataVersion() uint64 {
+	return plan.REPREPARE_CHECK
 }
 
 func (view *viewIndexer) SetLogLevel(level logging.Level) {

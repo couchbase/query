@@ -24,9 +24,9 @@ import (
 )
 
 type activeRequestsKeyspace struct {
-	namespace *namespace
-	name      string
-	indexer   datastore.Indexer
+	keyspaceBase
+	name    string
+	indexer datastore.Indexer
 }
 
 func (b *activeRequestsKeyspace) Release() {
@@ -259,7 +259,7 @@ func (b *activeRequestsKeyspace) Delete(deletes []string, context datastore.Quer
 
 func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Error) {
 	b := new(activeRequestsKeyspace)
-	b.namespace = p
+	setKeyspaceBase(&b.keyspaceBase, p)
 	b.name = KEYSPACE_NAME_ACTIVE
 
 	primary := &activeRequestsIndex{
@@ -268,6 +268,7 @@ func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Er
 		primary:  true,
 	}
 	b.indexer = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.indexer)
 
 	// add a secondary index on `node`
 	expr, err := parser.Parse(`node`)
@@ -280,6 +281,7 @@ func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Er
 			primary:  false,
 			idxKey:   key,
 		}
+		setIndexBase(&nodes.indexBase, b.indexer)
 		b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
 	} else {
 		return nil, errors.NewSystemDatastoreError(err, "")
@@ -289,6 +291,7 @@ func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Er
 }
 
 type activeRequestsIndex struct {
+	indexBase
 	name     string
 	keyspace *activeRequestsKeyspace
 	primary  bool

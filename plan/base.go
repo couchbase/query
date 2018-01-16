@@ -16,9 +16,17 @@ func (this *readonly) Readonly() bool {
 	return true
 }
 
+func (this *readonly) verify(prepared *Prepared) bool {
+	return true
+}
+
 type readwrite struct {
 }
 
 func (this *readwrite) Readonly() bool {
 	return false
+}
+
+func (this *readwrite) verify(prepared *Prepared) bool {
+	return true
 }

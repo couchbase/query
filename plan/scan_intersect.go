@@ -202,3 +202,13 @@ func flattenIntersectScans(scans, buf []SecondaryScan) []SecondaryScan {
 
 	return buf
 }
+
+func (this *IntersectScan) verify(prepared *Prepared) bool {
+	for _, scan := range this.scans {
+		if !scan.verify(prepared) {
+			return false
+		}
+	}
+
+	return true
+}

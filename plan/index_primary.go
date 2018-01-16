@@ -125,3 +125,7 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 
 	return err
 }
+
+func (this *CreatePrimaryIndex) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

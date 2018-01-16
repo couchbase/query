@@ -24,9 +24,9 @@ import (
 )
 
 type preparedsKeyspace struct {
-	namespace *namespace
-	name      string
-	indexer   datastore.Indexer
+	keyspaceBase
+	name    string
+	indexer datastore.Indexer
 }
 
 func (b *preparedsKeyspace) Release() {
@@ -190,7 +190,7 @@ func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryCont
 
 func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 	b := new(preparedsKeyspace)
-	b.namespace = p
+	setKeyspaceBase(&b.keyspaceBase, p)
 	b.name = KEYSPACE_NAME_PREPAREDS
 
 	primary := &preparedsIndex{
@@ -199,6 +199,7 @@ func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 		primary:  true,
 	}
 	b.indexer = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.indexer)
 
 	// add a secondary index on `node`
 	expr, err := parser.Parse(`node`)
@@ -211,6 +212,7 @@ func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 			primary:  false,
 			idxKey:   key,
 		}
+		setIndexBase(&nodes.indexBase, b.indexer)
 		b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
 	} else {
 		return nil, errors.NewSystemDatastoreError(err, "")
@@ -220,6 +222,7 @@ func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 }
 
 type preparedsIndex struct {
+	indexBase
 	name     string
 	keyspace *preparedsKeyspace
 	primary  bool

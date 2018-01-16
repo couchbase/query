@@ -15,10 +15,13 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
+
+const REPREPARE_CHECK uint64 = math.MaxUint64
 
 type Operators []Operator
 
@@ -31,6 +34,8 @@ type Operator interface {
 	Accept(visitor Visitor) (interface{}, error) // Visitor pattern
 	Readonly() bool                              // Used to determine read-only compliance
 	New() Operator                               // Dynamic constructor; used for unmarshaling
+
+	verify(prepared *Prepared) bool // Check that the operator can reference keyspaces and indexes
 }
 
 type CoveringOperator interface {

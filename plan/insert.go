@@ -135,3 +135,7 @@ func (this *SendInsert) UnmarshalJSON(body []byte) error {
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
 }
+
+func (this *SendInsert) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

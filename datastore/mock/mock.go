@@ -167,6 +167,10 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 	return
 }
 
+func (p *namespace) MetadataVersion() uint64 {
+	return 0
+}
+
 // keyspace is a mock-based keyspace.
 type keyspace struct {
 	namespace *namespace
@@ -177,6 +181,10 @@ type keyspace struct {
 
 func (b *keyspace) NamespaceId() string {
 	return b.namespace.Id()
+}
+
+func (b *keyspace) Namespace() datastore.Namespace {
+	return b.namespace
 }
 
 func (b *keyspace) Id() string {
@@ -334,6 +342,7 @@ func (mi *mockIndexer) CreatePrimaryIndex(requestId, name string, with value.Val
 		mi.primary = pi
 		pi.keyspace = mi.keyspace
 		pi.name = name
+		pi.indexer = mi
 		mi.indexes[pi.name] = pi
 	}
 
@@ -351,6 +360,10 @@ func (mi *mockIndexer) BuildIndexes(requestId string, names ...string) errors.Er
 
 func (mi *mockIndexer) Refresh() errors.Error {
 	return nil
+}
+
+func (mi *mockIndexer) MetadataVersion() uint64 {
+	return 0
 }
 
 func (mi *mockIndexer) SetLogLevel(level logging.Level) {
@@ -415,6 +428,7 @@ func paramVal(params map[string]int, key string, defaultVal int) int {
 type primaryIndex struct {
 	name     string
 	keyspace *keyspace
+	indexer  *mockIndexer
 }
 
 func (pi *primaryIndex) KeyspaceId() string {
@@ -431,6 +445,10 @@ func (pi *primaryIndex) Name() string {
 
 func (pi *primaryIndex) Type() datastore.IndexType {
 	return datastore.DEFAULT
+}
+
+func (pi *primaryIndex) Indexer() datastore.Indexer {
+	return pi.indexer
 }
 
 func (pi *primaryIndex) SeekKey() expression.Expressions {

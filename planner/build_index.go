@@ -104,7 +104,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 		return nil, er
 	}
 
-	return plan.NewDropIndex(index, stmt), nil
+	return plan.NewDropIndex(index, indexer, stmt), nil
 }
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
@@ -133,7 +133,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, errors.NewAlterIndexError()
 	}
 
-	return plan.NewAlterIndex(index, stmt, keyspace), nil
+	return plan.NewAlterIndex(index, indexer, stmt, keyspace), nil
 }
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {

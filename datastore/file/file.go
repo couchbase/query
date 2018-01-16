@@ -229,6 +229,10 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 	return
 }
 
+func (p *namespace) MetadataVersion() uint64 {
+	return 0
+}
+
 func (p *namespace) path() string {
 	return filepath.Join(p.store.path, p.name)
 }
@@ -283,6 +287,10 @@ type keyspace struct {
 
 func (b *keyspace) NamespaceId() string {
 	return b.namespace.Id()
+}
+
+func (b *keyspace) Namespace() datastore.Namespace {
+	return b.namespace
 }
 
 func (b *keyspace) Id() string {
@@ -563,6 +571,7 @@ func (fi *fileIndexer) CreatePrimaryIndex(requestId, name string, with value.Val
 		fi.primary = pi
 		pi.keyspace = fi.keyspace
 		pi.name = name
+		pi.indexer = fi
 		fi.indexes[pi.name] = pi
 	}
 
@@ -582,6 +591,10 @@ func (b *fileIndexer) Refresh() errors.Error {
 	return nil
 }
 
+func (b *fileIndexer) MetadataVersion() uint64 {
+	return 0
+}
+
 func (b *fileIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
 }
@@ -590,6 +603,7 @@ func (b *fileIndexer) SetLogLevel(level logging.Level) {
 type primaryIndex struct {
 	name     string
 	keyspace *keyspace
+	indexer  *fileIndexer
 }
 
 func (pi *primaryIndex) KeyspaceId() string {
@@ -606,6 +620,10 @@ func (pi *primaryIndex) Name() string {
 
 func (pi *primaryIndex) Type() datastore.IndexType {
 	return datastore.DEFAULT
+}
+
+func (pi *primaryIndex) Indexer() datastore.Indexer {
+	return pi.indexer
 }
 
 func (pi *primaryIndex) SeekKey() expression.Expressions {

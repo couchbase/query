@@ -18,9 +18,9 @@ import (
 )
 
 type storeKeyspace struct {
-	namespace *namespace
-	name      string
-	si        datastore.Indexer
+	keyspaceBase
+	name string
+	si   datastore.Indexer
 }
 
 func (b *storeKeyspace) Release() {
@@ -111,16 +111,18 @@ func (b *storeKeyspace) Delete(deletes []string, context datastore.QueryContext)
 
 func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {
 	b := new(storeKeyspace)
-	b.namespace = p
+	setKeyspaceBase(&b.keyspaceBase, p)
 	b.name = KEYSPACE_NAME_DATASTORES
 
 	primary := &storeIndex{name: "#primary", keyspace: b}
 	b.si = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.si)
 
 	return b, nil
 }
 
 type storeIndex struct {
+	indexBase
 	name     string
 	keyspace *storeKeyspace
 }

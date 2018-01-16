@@ -231,4 +231,14 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
+func (this *UnionScan) verify(prepared *Prepared) bool {
+	for _, scan := range this.scans {
+		if !scan.verify(prepared) {
+			return false
+		}
+	}
+
+	return true
+}
+
 var _STRING_SCANS_POOL = util.NewStringBoolPool(16)

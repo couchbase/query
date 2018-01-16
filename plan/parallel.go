@@ -90,3 +90,7 @@ func (this *Parallel) UnmarshalJSON(body []byte) error {
 	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
 	return err
 }
+
+func (this *Parallel) verify(prepared *Prepared) bool {
+	return this.child.verify(prepared)
+}

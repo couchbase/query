@@ -256,3 +256,7 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
 }
+
+func (this *SendUpdate) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

@@ -19,14 +19,16 @@ import (
 // Drop index
 type DropIndex struct {
 	readwrite
-	index datastore.Index
-	node  *algebra.DropIndex
+	index   datastore.Index
+	indexer datastore.Indexer
+	node    *algebra.DropIndex
 }
 
-func NewDropIndex(index datastore.Index, node *algebra.DropIndex) *DropIndex {
+func NewDropIndex(index datastore.Index, indexer datastore.Indexer, node *algebra.DropIndex) *DropIndex {
 	return &DropIndex{
-		index: index,
-		node:  node,
+		index:   index,
+		indexer: indexer,
+		node:    node,
 	}
 }
 
@@ -96,6 +98,11 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 	this.index = index
+	this.indexer = indexer
 
 	return nil
+}
+
+func (this *DropIndex) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

@@ -22,14 +22,16 @@ import (
 type AlterIndex struct {
 	readwrite
 	index    datastore.Index
+	indexer  datastore.Indexer
 	node     *algebra.AlterIndex
 	keyspace datastore.Keyspace
 }
 
-func NewAlterIndex(index datastore.Index, node *algebra.AlterIndex,
+func NewAlterIndex(index datastore.Index, indexer datastore.Indexer, node *algebra.AlterIndex,
 	keyspace datastore.Keyspace) *AlterIndex {
 	return &AlterIndex{
 		index:    index,
+		indexer:  indexer,
 		node:     node,
 		keyspace: keyspace,
 	}
@@ -127,6 +129,11 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	}
 
 	this.index = index
+	this.indexer = indexer
 
 	return nil
+}
+
+func (this *AlterIndex) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

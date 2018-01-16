@@ -23,9 +23,9 @@ import (
 )
 
 type requestLogKeyspace struct {
-	namespace *namespace
-	name      string
-	indexer   datastore.Indexer
+	keyspaceBase
+	name    string
+	indexer datastore.Indexer
 }
 
 func (b *requestLogKeyspace) Release() {
@@ -225,7 +225,7 @@ func (b *requestLogKeyspace) Delete(deletes []string, context datastore.QueryCon
 
 func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 	b := new(requestLogKeyspace)
-	b.namespace = p
+	setKeyspaceBase(&b.keyspaceBase, p)
 	b.name = KEYSPACE_NAME_REQUESTS
 
 	primary := &requestLogIndex{
@@ -234,6 +234,7 @@ func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 		primary:  true,
 	}
 	b.indexer = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.indexer)
 
 	// add a secondary index on `node`
 	expr, err := parser.Parse(`node`)
@@ -246,6 +247,7 @@ func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 			primary:  false,
 			idxKey:   key,
 		}
+		setIndexBase(&nodes.indexBase, b.indexer)
 		b.indexer.(*systemIndexer).AddIndex(nodes.name, nodes)
 	} else {
 		return nil, errors.NewSystemDatastoreError(err, "")
@@ -255,6 +257,7 @@ func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 }
 
 type requestLogIndex struct {
+	indexBase
 	name     string
 	keyspace *requestLogKeyspace
 	primary  bool

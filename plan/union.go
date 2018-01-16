@@ -84,3 +84,13 @@ func (this *UnionAll) UnmarshalJSON(body []byte) error {
 
 	return err
 }
+
+func (this *UnionAll) verify(prepared *Prepared) bool {
+	for _, child := range this.children {
+		if !child.verify(prepared) {
+			return false
+		}
+	}
+
+	return true
+}

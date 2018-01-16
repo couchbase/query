@@ -18,9 +18,9 @@ import (
 )
 
 type dualKeyspace struct {
-	namespace *namespace
-	name      string
-	di        datastore.Indexer
+	keyspaceBase
+	name string
+	di   datastore.Indexer
 }
 
 func (b *dualKeyspace) Release() {
@@ -100,16 +100,18 @@ func (b *dualKeyspace) Delete(deletes []string, context datastore.QueryContext) 
 
 func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
 	b := new(dualKeyspace)
-	b.namespace = p
+	setKeyspaceBase(&b.keyspaceBase, p)
 	b.name = KEYSPACE_NAME_DUAL
 
 	primary := &dualIndex{name: "#primary", keyspace: b}
 	b.di = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.di)
 
 	return b, nil
 }
 
 type dualIndex struct {
+	indexBase
 	name     string
 	keyspace *dualKeyspace
 }

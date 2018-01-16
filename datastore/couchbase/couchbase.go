@@ -565,6 +565,7 @@ type namespace struct {
 	name          string
 	cbNamespace   cb.Pool
 	keyspaceCache map[string]*keyspaceEntry
+	version       uint64
 	lock          sync.RWMutex // lock to guard the keyspaceCache
 	nslock        sync.RWMutex // lock for this structure
 }
@@ -711,6 +712,10 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 	return p.KeyspaceByName(id)
 }
 
+func (p *namespace) MetadataVersion() uint64 {
+	return p.version
+}
+
 func (p *namespace) setPool(cbpool cb.Pool) {
 	p.nslock.Lock()
 	defer p.nslock.Unlock()
@@ -790,6 +795,7 @@ func (p *namespace) refresh(changed bool) {
 
 	if changed == true {
 		p.setPool(newpool)
+		p.version++
 	}
 }
 
@@ -893,6 +899,10 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 
 func (b *keyspace) NamespaceId() string {
 	return b.namespace.Id()
+}
+
+func (b *keyspace) Namespace() datastore.Namespace {
+	return b.namespace
 }
 
 func (b *keyspace) Id() string {

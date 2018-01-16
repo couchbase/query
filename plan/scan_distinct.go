@@ -163,3 +163,7 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 
 	return nil
 }
+
+func (this *DistinctScan) verify(prepared *Prepared) bool {
+	return this.scan.verify(prepared)
+}

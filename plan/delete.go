@@ -99,3 +99,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 
 	return err
 }
+
+func (this *SendDelete) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

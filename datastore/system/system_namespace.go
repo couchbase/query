@@ -61,6 +61,10 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 	return b, nil
 }
 
+func (p *namespace) MetadataVersion() uint64 {
+	return 0
+}
+
 // newNamespace creates a new namespace.
 func newNamespace(s *store) (*namespace, errors.Error) {
 	p := new(namespace)

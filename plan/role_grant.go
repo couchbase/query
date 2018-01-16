@@ -70,3 +70,18 @@ func (this *GrantRole) UnmarshalJSON(body []byte) error {
 	this.node = algebra.NewGrantRole(_unmarshalled.Roles, _unmarshalled.Keyspaces, _unmarshalled.Users)
 	return nil
 }
+
+/*
+Currently there's no need to verify role statements:
+if a keyspace has been dropped and recreated, execution will succeed
+if a keyspace has been dropped, reprepare will fail anyway
+
+func (this *GrantRole) verify(prepared *Prepared) bool {
+	for _, keyspace := range this.node.Keyspaces() {
+		if !verifyKeyspaceName(keyspace, prepared) {
+			return false
+		}
+	}
+	return true
+}
+*/

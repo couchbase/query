@@ -85,3 +85,7 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
 	return err
 }
+
+func (this *Authorize) verify(prepared *Prepared) bool {
+	return this.child.verify(prepared)
+}

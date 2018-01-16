@@ -20,6 +20,7 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -139,6 +140,14 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 
 func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
 	return this.encoded_plan != encoded_plan
+}
+
+// TODO
+func (this *Prepared) addIndexer(indexer datastore.Indexer) {
+}
+
+// TODO
+func (this *Prepared) addNamespace(namespace datastore.Namespace) {
 }
 
 type preparedCache struct {
@@ -298,7 +307,7 @@ func GetPrepared(prepared_stmt value.Value, options uint32) (*Prepared, errors.E
 				func(doc map[string]interface{}) {
 					encoded_plan, ok := doc["encoded_plan"].(string)
 					if ok {
-						DecodePrepared(name, encoded_plan, false)
+						DecodePrepared(name, encoded_plan, false, false)
 						prepared = prepareds.get(value.NewValue(name), track)
 					}
 				},
@@ -352,7 +361,7 @@ func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Dur
 	})
 }
 
-func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Prepared, errors.Error) {
+func DecodePrepared(prepared_name string, prepared_stmt string, track bool, distribute bool) (*Prepared, errors.Error) {
 	added := true
 
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
@@ -414,7 +423,7 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Pr
 			return added
 		})
 
-	if added {
+	if added && distribute {
 		distributePrepared(prepared.Name(), prepared_stmt)
 		return prepared, nil
 	} else {

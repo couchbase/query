@@ -189,3 +189,13 @@ func flattenOrderedIntersectScans(scan SecondaryScan, buf []SecondaryScan) []Sec
 
 	return buf
 }
+
+func (this *OrderedIntersectScan) verify(prepared *Prepared) bool {
+	for _, scan := range this.scans {
+		if !scan.verify(prepared) {
+			return false
+		}
+	}
+
+	return true
+}

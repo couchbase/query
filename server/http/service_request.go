@@ -105,7 +105,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
-			decoded_plan, plan_err = plan.DecodePrepared(prepared_name, encoded_plan, (prepared == nil))
+			decoded_plan, plan_err = plan.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), true)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {

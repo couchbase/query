@@ -174,3 +174,7 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		keys, partition, where, _unmarshalled.Using, with)
 	return nil
 }
+
+func (this *CreateIndex) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

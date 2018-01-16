@@ -22,6 +22,7 @@ import (
 type PrimaryScan struct {
 	readonly
 	index    datastore.PrimaryIndex
+	indexer  datastore.Indexer
 	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
 	limit    expression.Expression
@@ -31,6 +32,7 @@ func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, limit expression.Expression) *PrimaryScan {
 	return &PrimaryScan{
 		index:    index,
+		indexer:  getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
 		keyspace: keyspace,
 		term:     term,
 		limit:    limit,
@@ -115,12 +117,12 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
-	indexer, err := this.keyspace.Indexer(_unmarshalled.Using)
+	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
 
-	index, err := indexer.IndexByName(_unmarshalled.Index)
+	index, err := this.indexer.IndexByName(_unmarshalled.Index)
 	if err != nil {
 		return err
 	}
@@ -132,4 +134,8 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	}
 
 	return fmt.Errorf("Unable to unmarshal %s as primary index.", _unmarshalled.Index)
+}
+
+func (this *PrimaryScan) verify(prepared *Prepared) bool {
+	return verifyIndex(this.index, this.indexer, prepared)
 }

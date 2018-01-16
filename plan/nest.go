@@ -113,3 +113,7 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 	return err
 
 }
+
+func (this *Nest) verify(prepared *Prepared) bool {
+	return verifyKeyspace(this.keyspace, prepared)
+}

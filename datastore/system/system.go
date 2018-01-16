@@ -146,6 +146,14 @@ func (s *store) loadNamespace() errors.Error {
 	return nil
 }
 
+type systemKeyspaceBase struct {
+	namespace datastore.Namespace
+}
+
+func (this *systemKeyspaceBase) Namespace() datastore.Namespace {
+	return this.namespace
+}
+
 type systemIndexer struct {
 	keyspace datastore.Keyspace
 	primary  datastore.PrimaryIndex
@@ -228,6 +236,10 @@ func (si *systemIndexer) BuildIndexes(requestId string, names ...string) errors.
 
 func (si *systemIndexer) Refresh() errors.Error {
 	return nil
+}
+
+func (si *systemIndexer) MetadataVersion() uint64 {
+	return 0
 }
 
 func (si *systemIndexer) SetLogLevel(level logging.Level) {
