@@ -754,3 +754,8 @@ func (this *BaseRequest) EventPositionalArgs() []string {
 func (this *BaseRequest) IsAdHoc() bool {
 	return this.Prepared() == nil
 }
+
+// For audit.Auditable interface.
+func (this *BaseRequest) ClientContextId() string {
+	return this.ClientID().String()
+}

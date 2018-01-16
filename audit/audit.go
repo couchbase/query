@@ -48,6 +48,10 @@ type Auditable interface {
 	EventNamedArgs() map[string]string
 	EventPositionalArgs() []string
 
+	// From client_context_id input parameter.
+	// Useful for separating system-generated queries from user-issued queries.
+	ClientContextId() string
+
 	IsAdHoc() bool
 
 	// Metrics
@@ -191,6 +195,7 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 	statement := event.Statement()
 	namedArgs := event.EventNamedArgs()
 	positionalArgs := event.EventPositionalArgs()
+	clientContextId := event.ClientContextId()
 	isAdHoc := event.IsAdHoc()
 	userAgent := event.UserAgent()
 	node := event.EventNodeName()
@@ -210,16 +215,17 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 	users := event.EventUsers()
 	if len(users) == 0 {
 		record := &n1qlAuditEvent{
-			GenericFields:  genericFields,
-			RequestId:      requestId,
-			Statement:      statement,
-			NamedArgs:      namedArgs,
-			PositionalArgs: positionalArgs,
-			IsAdHoc:        isAdHoc,
-			UserAgent:      userAgent,
-			Node:           node,
-			Status:         status,
-			Metrics:        metrics,
+			GenericFields:   genericFields,
+			RequestId:       requestId,
+			Statement:       statement,
+			NamedArgs:       namedArgs,
+			PositionalArgs:  positionalArgs,
+			ClientContextId: clientContextId,
+			IsAdHoc:         isAdHoc,
+			UserAgent:       userAgent,
+			Node:            node,
+			Status:          status,
+			Metrics:         metrics,
 		}
 		return []*n1qlAuditEvent{record}
 	}
@@ -236,16 +242,17 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 	records := make([]*n1qlAuditEvent, len(auditableUsers))
 	for i, user := range auditableUsers {
 		record := &n1qlAuditEvent{
-			GenericFields:  genericFields,
-			RequestId:      requestId,
-			Statement:      statement,
-			NamedArgs:      namedArgs,
-			PositionalArgs: positionalArgs,
-			IsAdHoc:        isAdHoc,
-			UserAgent:      userAgent,
-			Node:           node,
-			Status:         status,
-			Metrics:        metrics,
+			GenericFields:   genericFields,
+			RequestId:       requestId,
+			Statement:       statement,
+			NamedArgs:       namedArgs,
+			PositionalArgs:  positionalArgs,
+			ClientContextId: clientContextId,
+			IsAdHoc:         isAdHoc,
+			UserAgent:       userAgent,
+			Node:            node,
+			Status:          status,
+			Metrics:         metrics,
 		}
 		source := "local"
 		userName := user
@@ -274,7 +281,8 @@ func logAuditEvent(event Auditable) {
 	logging.Infof("status=\"%s\", statement=\"%s\", id=\"%s\", type=\"%s\", users=%v, user_agent=\"%s\", user_agent=\"%s\", node_name=\"%s\"",
 		event.EventStatus(), event.Statement(), event.EventId(), event.EventType(), event.EventUsers(),
 		event.UserAgent(), event.EventNodeName())
-	logging.Infof("named_args=%v, positional_args=%v, ad_hoc=%v", event.EventNamedArgs(), event.EventPositionalArgs(), event.IsAdHoc())
+	logging.Infof("named_args=%v, positional_args=%v, ad_hoc=%v, client_context_id=%s",
+		event.EventNamedArgs(), event.EventPositionalArgs(), event.IsAdHoc(), event.ClientContextId())
 	logging.Infof("elapsed_time=%v, execution_time=%v, result_count=%d, result_size=%d, mutation_count=%d, sort_count=%d, error_count=%d, warning_count=%d",
 		event.ElapsedTime(), event.ExecutionTime(), event.EventResultCount(), event.EventResultSize(), event.MutationCount(),
 		event.SortCount(), event.EventErrorCount(), event.EventWarningCount())
@@ -286,10 +294,11 @@ func logAuditEvent(event Auditable) {
 type n1qlAuditEvent struct {
 	adt.GenericFields
 
-	RequestId      string            `json:"requestId"`
-	Statement      string            `json:"statement"`
-	NamedArgs      map[string]string `json:"namedArgs,omitempty"`
-	PositionalArgs []string          `json:"positionalArgs,omitempty"`
+	RequestId       string            `json:"requestId"`
+	Statement       string            `json:"statement"`
+	NamedArgs       map[string]string `json:"namedArgs,omitempty"`
+	PositionalArgs  []string          `json:"positionalArgs,omitempty"`
+	ClientContextId string            `json:"clientContextId,omitempty"`
 
 	IsAdHoc   bool   `json:"isAdHoc"`
 	UserAgent string `json:"userAgent"`

@@ -64,6 +64,7 @@ type simpleAuditable struct {
 	userAgent           string
 	eventNodeName       string
 	eventNamedArgs      map[string]string
+	clientContextId     string
 	eventPositionalArgs []string
 	isAdHoc             bool
 	elapsedTime         time.Duration
@@ -114,6 +115,10 @@ func (sa *simpleAuditable) EventNamedArgs() map[string]string {
 
 func (sa *simpleAuditable) EventPositionalArgs() []string {
 	return sa.eventPositionalArgs
+}
+
+func (sa *simpleAuditable) ClientContextId() string {
+	return sa.clientContextId
 }
 
 func (sa *simpleAuditable) IsAdHoc() bool {
