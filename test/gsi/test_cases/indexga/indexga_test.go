@@ -29,7 +29,7 @@ func TestGroupagg(t *testing.T) {
 }
 
 func case_delete(qc *MockServer, t *testing.T) {
-	runStmt(qc, "CREATE INDEX oprimary ON orders")
+	runStmt(qc, "CREATE PRIMARY INDEX oprimary ON orders")
 	runStmt(qc, "DELETE FROM orders WHERE test_id = 'indexga'")
 	runStmt(qc, "DROP INDEX orders.oprimary")
 }
