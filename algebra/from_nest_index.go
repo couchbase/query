@@ -122,11 +122,11 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 		return nil, err
 	}
 
-	f.Allowed().SetField(alias, alias)
+	f.SetAllowedAlias(alias, true)
 	f.SetKeyspace("")
 
 	p := expression.NewFormalizer("", parent)
-	p.Allowed().SetField(alias, alias)
+	p.SetAllowedAlias(alias, true)
 	this.right.keys, err = p.Map(this.right.keys)
 
 	for ident, val := range p.Identifiers().Fields() {

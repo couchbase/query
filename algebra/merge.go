@@ -197,11 +197,11 @@ func (this *Merge) Formalize() (err error) {
 	f := expression.NewFormalizer("", nil)
 
 	if kf.Keyspace() != "" {
-		f.Allowed().SetField(kf.Keyspace(), kf.Keyspace())
+		f.SetAllowedAlias(kf.Keyspace(), true)
 	}
 
 	if sf.Keyspace() != "" {
-		f.Allowed().SetField(sf.Keyspace(), sf.Keyspace())
+		f.SetAllowedAlias(sf.Keyspace(), true)
 	}
 
 	err = this.actions.MapExpressions(f)

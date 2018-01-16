@@ -197,8 +197,8 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 
 	if this.IsAnsiJoinOp() {
 		f.SetKeyspace("")
-		f.Allowed().SetField(keyspace, keyspace)
-		f.SetAlias(keyspace)
+		f.SetAllowedAlias(keyspace, true)
+		f.SetAlias(this.As())
 	} else {
 		f.SetAlias(this.As())
 		f.SetKeyspace(keyspace)

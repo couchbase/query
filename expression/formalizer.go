@@ -17,6 +17,24 @@ import (
 )
 
 /*
+Bit flags to indicate type of an identifier
+*/
+const (
+	IDENT_IS_UNKNOWN  = 1 << iota // unknown
+	IDENT_IS_KEYSPACE             // keyspace or its alias or equivalent (e.g. subquery term)
+	IDENT_IS_VARIABLE             // binding variable
+)
+
+/*
+Bit flags for formalizer flags
+*/
+const (
+	FORM_MAP_SELF     = 1 << iota // Map SELF to keyspace: used in sarging index
+	FORM_MAP_KEYSPACE             // Map keyspace to SELF: used in creating index
+	FORM_IN_BINDING               // inside a binding scope
+)
+
+/*
 Convert expressions to full form qualified by keyspace aliases.
 */
 type Formalizer struct {
@@ -26,8 +44,7 @@ type Formalizer struct {
 	allowed     *value.ScopeValue
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
-	mapSelf     bool // Map SELF to keyspace: used in sarging index
-	mapKeyspace bool // Map keyspace to SELF: used in creating index
+	flags       uint32
 }
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
@@ -47,8 +64,16 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 	if parent != nil {
 		pv = parent.allowed
 		av = parent.aliases
-		mapSelf = mapSelf || parent.mapSelf
-		mapKeyspace = mapKeyspace || parent.mapKeyspace
+		mapSelf = mapSelf || parent.mapSelf()
+		mapKeyspace = mapKeyspace || parent.mapKeyspace()
+	}
+
+	flags := uint32(0)
+	if mapSelf {
+		flags |= FORM_MAP_SELF
+	}
+	if mapKeyspace {
+		flags |= FORM_MAP_KEYSPACE
 	}
 
 	rv := &Formalizer{
@@ -56,25 +81,36 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
 		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
-		mapSelf:     mapSelf,
-		mapKeyspace: mapKeyspace,
+		flags:       flags,
 	}
 
 	if !mapKeyspace && keyspace != "" {
-		rv.allowed.SetField(keyspace, keyspace)
+		rv.SetAllowedAlias(keyspace, true)
 	}
 
 	rv.mapper = rv
 	return rv
 }
 
+func (this *Formalizer) mapSelf() bool {
+	return (this.flags & FORM_MAP_SELF) != 0
+}
+
+func (this *Formalizer) mapKeyspace() bool {
+	return (this.flags & FORM_MAP_KEYSPACE) != 0
+}
+
+func (this *Formalizer) inBinding() bool {
+	return (this.flags & FORM_IN_BINDING) != 0
+}
+
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings(), true)
+	inBinding, err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings()
+	defer this.PopBindings(inBinding)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -85,12 +121,12 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings(), true)
+	inBinding, err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings()
+	defer this.PopBindings(inBinding)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -101,12 +137,12 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings(), true)
+	inBinding, err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings()
+	defer this.PopBindings(inBinding)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -117,12 +153,12 @@ func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings(), true)
+	inBinding, err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings()
+	defer this.PopBindings(inBinding)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -133,12 +169,12 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings(), true)
+	inBinding, err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings()
+	defer this.PopBindings(inBinding)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -149,12 +185,12 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
-	err := this.PushBindings(expr.Bindings(), true)
+	inBinding, err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings()
+	defer this.PopBindings(inBinding)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -170,17 +206,26 @@ Formalize Identifier.
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	identifier := expr.Identifier()
 
-	_, ok := this.allowed.Field(identifier)
+	ident_val, ok := this.allowed.Field(identifier)
 	if ok {
-		this.identifiers.SetField(identifier, value.TRUE_VALUE)
-		return expr, nil
+		// if sarging for index, and not inside a binding scope,
+		// then don't match with keyspace alias
+		// (i.e., don't match an index key name with a keyspace alias)
+		// however once we are in a binding scope, normal matching rules
+		// apply, i.e., need to match with keyspace alias.
+		ident_flags := uint32(ident_val.ActualForIndex().(int64))
+		tmp_flags := ident_flags & IDENT_IS_KEYSPACE
+		if !this.mapSelf() || this.inBinding() || tmp_flags == 0 {
+			this.identifiers.SetField(identifier, ident_val)
+			return expr, nil
+		}
 	}
 
 	if this.keyspace == "" {
 		return nil, fmt.Errorf("Ambiguous reference to field %v.", identifier)
 	}
 
-	if this.mapKeyspace {
+	if this.mapKeyspace() {
 		if identifier == this.keyspace {
 			return SELF, nil
 		} else {
@@ -197,7 +242,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 Formalize SELF functions defined on indexes.
 */
 func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
-	if this.mapSelf {
+	if this.mapSelf() {
 		return NewIdentifier(this.keyspace), nil
 	} else {
 		return expr, nil
@@ -208,7 +253,7 @@ func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
 Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
-	if !this.mapKeyspace {
+	if !this.mapKeyspace() {
 		meta, ok := expr.(*Meta)
 		if ok && len(meta.Operands()) == 0 {
 			if this.keyspace != "" {
@@ -238,7 +283,9 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 Create new scope containing bindings.
 */
 
-func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
+func (this *Formalizer) PushBindings(bindings Bindings, push bool) (inBinding bool, err error) {
+	inBinding = this.inBinding()
+
 	allowed := this.allowed
 	identifiers := this.identifiers
 	aliases := this.aliases
@@ -247,29 +294,53 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		allowed = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
 		identifiers = value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
 		aliases = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.aliases)
+		this.flags |= FORM_IN_BINDING
 	}
 
 	var expr Expression
+	var ident_flags uint32
 	for _, b := range bindings {
-		if _, ok := allowed.Field(b.Variable()); ok {
-			return fmt.Errorf("Duplicate variable %v already in scope.", b.Variable())
+		if ident_val, ok := allowed.Field(b.Variable()); ok {
+			ident_flags = uint32(ident_val.ActualForIndex().(int64))
+			tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
+			tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
+			// when sarging index keys, allow variables used in index definition
+			// to be the same as a keyspace alias
+			if !this.mapSelf() || tmp_flags1 == 0 || tmp_flags2 != 0 {
+				err = fmt.Errorf("Duplicate variable %v already in scope.", b.Variable())
+				return
+			}
+		} else {
+			ident_flags = 0
 		}
 
-		allowed.SetField(b.Variable(), value.TRUE_VALUE)
-		aliases.SetField(b.Variable(), value.TRUE_VALUE)
+		ident_flags |= IDENT_IS_VARIABLE
+		ident_val := value.NewValue(ident_flags)
+		allowed.SetField(b.Variable(), ident_val)
+		aliases.SetField(b.Variable(), ident_val)
 
 		if b.NameVariable() != "" {
-			if _, ok := allowed.Field(b.NameVariable()); ok {
-				return fmt.Errorf("Duplicate variable %v already in scope.", b.NameVariable())
+			if ident_val, ok := allowed.Field(b.NameVariable()); ok {
+				ident_flags = uint32(ident_val.ActualForIndex().(int64))
+				tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
+				tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
+				if !this.mapSelf() || tmp_flags1 == 0 || tmp_flags2 != 0 {
+					err = fmt.Errorf("Duplicate variable %v already in scope.", b.NameVariable())
+					return
+				}
+			} else {
+				ident_flags = 0
 			}
 
-			allowed.SetField(b.NameVariable(), value.TRUE_VALUE)
-			aliases.SetField(b.NameVariable(), value.TRUE_VALUE)
+			ident_flags |= IDENT_IS_VARIABLE
+			ident_val := value.NewValue(ident_flags)
+			allowed.SetField(b.NameVariable(), ident_val)
+			aliases.SetField(b.NameVariable(), ident_val)
 		}
 
 		expr, err = this.Map(b.Expression())
 		if err != nil {
-			return err
+			return
 		}
 
 		b.SetExpression(expr)
@@ -280,13 +351,13 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		this.identifiers = identifiers
 		this.aliases = aliases
 	}
-	return nil
+	return
 }
 
 /*
 Restore scope to parent's scope.
 */
-func (this *Formalizer) PopBindings() {
+func (this *Formalizer) PopBindings(inBinding bool) {
 
 	currLevelAllowed := this.Allowed().GetValue().Fields()
 	currLevelIndentfiers := this.Identifiers().GetValue().Fields()
@@ -295,11 +366,15 @@ func (this *Formalizer) PopBindings() {
 	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
 	this.aliases = this.aliases.Parent().(*value.ScopeValue)
 
+	if !inBinding {
+		this.flags &^= FORM_IN_BINDING
+	}
+
 	// Identifiers that are used in current level but not defined in the current level scope move to parent
 	for ident, _ := range currLevelIndentfiers {
 		if currLevelAllowed != nil {
-			if _, ok := currLevelAllowed[ident]; !ok {
-				this.identifiers.SetField(ident, value.TRUE_VALUE)
+			if ident_val, ok := currLevelAllowed[ident]; !ok {
+				this.identifiers.SetField(ident, ident_val)
 			}
 		}
 	}
@@ -310,16 +385,15 @@ func (this *Formalizer) Copy() *Formalizer {
 	f.allowed = this.allowed.Copy().(*value.ScopeValue)
 	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
 	f.aliases = this.aliases.Copy().(*value.ScopeValue)
-	f.mapSelf = this.mapSelf
-	f.mapKeyspace = this.mapKeyspace
+	f.flags = this.flags
 	return f
 }
 
 func (this *Formalizer) SetKeyspace(keyspace string) {
 	this.keyspace = keyspace
 
-	if !this.mapKeyspace && keyspace != "" {
-		this.allowed.SetField(keyspace, keyspace)
+	if !this.mapKeyspace() && keyspace != "" {
+		this.SetAllowedAlias(keyspace, true)
 	}
 }
 
@@ -346,6 +420,20 @@ func (this *Formalizer) SetIdentifiers(identifiers *value.ScopeValue) {
 
 func (this *Formalizer) SetAlias(alias string) {
 	if alias != "" {
-		this.aliases.SetField(alias, alias)
+		// we treat alias for keyspace as well as equivalent such as
+		// subquery term, expression term, as same to keyspace
+		var ident_flags uint32 = IDENT_IS_KEYSPACE
+		this.aliases.SetField(alias, value.NewValue(ident_flags))
 	}
+}
+
+// alias must be non-empty
+func (this *Formalizer) SetAllowedAlias(alias string, isKeyspace bool) {
+	var ident_flags uint32
+	if isKeyspace {
+		ident_flags = IDENT_IS_KEYSPACE
+	} else {
+		ident_flags = IDENT_IS_UNKNOWN
+	}
+	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }

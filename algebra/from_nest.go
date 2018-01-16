@@ -121,7 +121,7 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return nil, err
 	}
 
-	f.Allowed().SetField(alias, alias)
+	f.SetAllowedAlias(alias, true)
 	f.SetAlias(this.right.As())
 	return
 }

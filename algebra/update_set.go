@@ -131,12 +131,12 @@ and value expressions in the SET clause.
 func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
 		for _, b := range this.updateFor.bindings {
-			err := f.PushBindings(b, true)
+			inBinding, err := f.PushBindings(b, true)
 			if err != nil {
 				return err
 			}
 
-			defer f.PopBindings()
+			defer f.PopBindings(inBinding)
 		}
 
 		if this.updateFor.when != nil {

@@ -144,24 +144,14 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "IndexScan3",
+                        "#operator": "PrimaryScan3",
                         "as": "f1",
-                        "index": "ixCover",
+                        "index": "#primary",
                         "index_projection": {
                             "primary_key": true
                         },
                         "keyspace": "shellTest",
                         "namespace": "default",
-                        "spans": [
-                            {
-                                "range": [
-                                    {
-                                        "inclusion": 0,
-                                        "low": "null"
-                                    }
-                                ]
-                            }
-                        ],
                         "using": "gsi"
                     },
                     {
