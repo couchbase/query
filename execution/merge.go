@@ -140,7 +140,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	this.switchPhase(_SERVTIME)
 
 	ok = true
-	bvs, errs := this.plan.Keyspace().Fetch([]string{k}, context)
+	bvs, errs := this.plan.Keyspace().Fetch([]string{k}, context, nil)
 
 	this.switchPhase(_EXECTIME)
 

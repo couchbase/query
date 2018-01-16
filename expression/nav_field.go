@@ -224,6 +224,29 @@ func (this *Field) SetCaseInsensitive(insensitive bool) {
 }
 
 /*
+   Get the correct xattr path. For meta().xattr._sync, it gives _sync.
+*/
+func (this *Field) FieldNames(base Expression, names map[string]bool) (present bool) {
+	if Equivalent(base, this.First()) {
+		second := this.Second().Value()
+		if second != nil {
+			if sv, ok := second.Actual().(string); ok {
+				names[sv] = true
+			}
+		}
+		return true
+	}
+
+	for _, child := range this.Children() {
+		if child.FieldNames(base, names) {
+			present = true
+		}
+	}
+
+	return present
+}
+
+/*
 FieldName represents the Field. It implements Constant and has a field
 name as string. This class overrides the Alias() method so that the
 field name is used as the alias.

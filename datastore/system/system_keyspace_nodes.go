@@ -56,7 +56,7 @@ func (b *nodeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.si}, nil
 }
 
-func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	info := b.namespace.store.actualStore.Info()

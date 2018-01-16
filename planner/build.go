@@ -81,6 +81,7 @@ type builder struct {
 	children          []plan.Operator
 	subChildren       []plan.Operator
 	cover             expression.HasExpressions
+	node              expression.HasExpressions
 	coveringScans     []plan.CoveringOperator
 	coveredUnnests    map[*algebra.Unnest]bool
 	countScan         plan.CoveringOperator

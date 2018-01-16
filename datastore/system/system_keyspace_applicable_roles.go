@@ -63,7 +63,7 @@ func (b *applicableRolesKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	pairs := make([]value.AnnotatedPair, len(keys))
 	for i, key := range keys {

@@ -16,6 +16,7 @@ import (
 
 func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	this.where = stmt.Where()
+	this.node = stmt
 
 	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())

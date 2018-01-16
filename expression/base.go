@@ -411,3 +411,52 @@ func (this *ExpressionBase) IndexAggregatable() bool {
 
 	return true
 }
+
+/*
+Used for Xattr paths
+*/
+
+func (this *ExpressionBase) FieldNames(base Expression, names map[string]bool) (present bool) {
+	present = false
+	if Equivalent(base, this.expr) {
+		return true
+	}
+
+	for _, child := range this.expr.Children() {
+		if child.FieldNames(base, names) {
+			present = true
+		}
+	}
+
+	return present
+}
+
+func XattrsNames(exprs Expressions, alias string) (present bool, names []string) {
+	present = false
+	var xattrs Expression
+	if alias == "" {
+		xattrs = NewField(NewMeta(), NewFieldName("xattrs", false))
+	} else {
+		xattrs = NewField(NewMeta(NewIdentifier(alias)),
+			NewFieldName("xattrs", false))
+	}
+
+	mNames := make(map[string]bool, 5)
+	for _, expr := range exprs {
+		if expr.FieldNames(xattrs, mNames) {
+			present = true
+		}
+	}
+	if len(mNames) > 0 {
+		names = make([]string, 0, len(mNames))
+		for s, _ := range mNames {
+			if s == "$document" {
+				names = append([]string{s}, names...)
+			} else {
+				names = append(names, s)
+			}
+		}
+		return present, names
+	}
+	return present, nil
+}

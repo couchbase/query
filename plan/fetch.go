@@ -20,12 +20,14 @@ type Fetch struct {
 	readonly
 	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
+	subPaths []string
 }
 
-func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string) *Fetch {
 	return &Fetch{
 		keyspace: keyspace,
 		term:     term,
+		subPaths: subPaths,
 	}
 }
 
@@ -45,6 +47,10 @@ func (this *Fetch) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
+func (this *Fetch) SubPaths() []string {
+	return this.subPaths
+}
+
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -53,6 +59,10 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	r := map[string]interface{}{"#operator": "Fetch"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
+	if len(this.subPaths) > 0 {
+		r["subpaths"] = this.subPaths
+	}
+
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
@@ -70,18 +80,21 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string `json:"#operator"`
-		Names    string `json:"namespace"`
-		Keys     string `json:"keyspace"`
-		As       string `json:"as"`
-		AnsiJoin bool   `json:"ansi_join"`
-		AnsiNest bool   `json:"ansi_nest"`
+		_        string   `json:"#operator"`
+		Names    string   `json:"namespace"`
+		Keys     string   `json:"keyspace"`
+		As       string   `json:"as"`
+		AnsiJoin bool     `json:"ansi_join"`
+		AnsiNest bool     `json:"ansi_nest"`
+		SubPaths []string `json:"subpaths"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
+
+	this.subPaths = _unmarshalled.SubPaths
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
 	if _unmarshalled.AnsiJoin {

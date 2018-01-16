@@ -77,7 +77,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, keyCount map[string
 	}
 
 	this.switchPhase(_SERVTIME)
-	pairs, errs := keyspace.Fetch(fetchKeys, context)
+	pairs, errs := keyspace.Fetch(fetchKeys, context, nil)
 	this.switchPhase(_EXECTIME)
 
 	fetchOk := true

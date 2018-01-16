@@ -16,6 +16,7 @@ import (
 
 func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	this.cover = stmt
+	this.node = stmt
 	this.where = stmt.Where()
 
 	ksref := stmt.KeyspaceRef()

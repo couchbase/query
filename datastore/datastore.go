@@ -90,8 +90,7 @@ type Keyspace interface {
 	Indexers() ([]Indexer, errors.Error)              // List of index providers
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string, context QueryContext) ([]value.AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
-	//Fetch(keys []string, projection, filter expression.Expression) ([]value.AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
+	Fetch(keys []string, context QueryContext, subPath []string) ([]value.AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys

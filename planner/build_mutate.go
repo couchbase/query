@@ -66,7 +66,11 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	} else {
 		var fetch plan.Operator
 		if mustFetch || this.where != nil || !isKeyScan(scan) {
-			fetch = plan.NewFetch(keyspace, term)
+			names, err := this.GetSubPaths(keyspace.Id())
+			if err != nil {
+				return err
+			}
+			fetch = plan.NewFetch(keyspace, term, names)
 		} else {
 			fetch = plan.NewDummyFetch(keyspace, term)
 		}

@@ -10,6 +10,8 @@
 package planner
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -71,6 +73,24 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 	return nil
 }
 
+func isValidXattrs(names []string) bool {
+	if len(names) > 2 {
+		return false
+	}
+	return len(names) <= 1 || (strings.HasPrefix(names[0], "$") && !strings.HasPrefix(names[1], "$")) ||
+		(!strings.HasPrefix(names[0], "$") && strings.HasPrefix(names[1], "$"))
+}
+
+func (this *builder) GetSubPaths(keyspace string) (names []string, err error) {
+	if this.node != nil {
+		_, names = expression.XattrsNames(this.node.Expressions(), keyspace)
+		if ok := isValidXattrs(names); !ok {
+			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr or virtual xattr and system xattr")
+		}
+	}
+	return names, nil
+}
+
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
 	node.SetDefaultNamespace(this.namespace)
 	keyspace, err := this.getTermKeyspace(node)
@@ -97,7 +117,12 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	this.children = append(this.children, scan)
 
 	if len(this.coveringScans) == 0 && this.countScan == nil {
-		fetch := plan.NewFetch(keyspace, node)
+		names, err := this.GetSubPaths(keyspace.Id())
+		if err != nil {
+			return nil, err
+		}
+
+		fetch := plan.NewFetch(keyspace, node, names)
 		this.children = append(this.children, fetch)
 	}
 

@@ -50,7 +50,7 @@ func (b *dualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.di}, nil
 }
 
-func (b *dualKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+func (b *dualKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {

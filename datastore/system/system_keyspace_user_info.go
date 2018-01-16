@@ -74,7 +74,7 @@ func (b *userInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *userInfoKeyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+func (b *userInfoKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
 	sliceOfUsers, err := getUserInfoList(b.namespace.store)
 	if err != nil {
 		return nil, []errors.Error{err}

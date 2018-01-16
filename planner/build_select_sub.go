@@ -64,6 +64,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.cover = node
 	}
 
+	this.node = node
+
 	// Inline LET expressions for index selection
 	if node.Let() != nil && node.Where() != nil {
 		var err error

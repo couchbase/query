@@ -973,11 +973,19 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, nil
 }
 
-func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
 	var bulkResponse map[string]*gomemcached.MCResponse
 	var mcr *gomemcached.MCResponse
 	var keyCount map[string]int
 	var err error
+
+	_subPaths := subPaths
+	noVirtualDocAttr := false
+
+	if len(_subPaths) > 0 && _subPaths[0] != "$document" {
+		_subPaths = append([]string{"$document"}, _subPaths...)
+		noVirtualDocAttr = true
+	}
 
 	l := len(keys)
 	if l == 0 {
@@ -985,9 +993,9 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 	}
 
 	if l == 1 {
-		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline())
+		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline(), _subPaths)
 	} else {
-		bulkResponse, keyCount, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline())
+		bulkResponse, keyCount, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), _subPaths)
 		defer b.cbbucket.ReleaseGetBulkPools(keyCount, bulkResponse)
 	}
 
@@ -1005,16 +1013,30 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 	rv := make([]value.AnnotatedPair, 0, l)
 	if l == 1 {
 		if mcr != nil && err == nil {
-			rv = append(rv, doFetch(keys[0], mcr))
+			if len(_subPaths) > 0 {
+				rv = append(rv, getSubDocFetchResults(keys[0], mcr, _subPaths, noVirtualDocAttr))
+			} else {
+				rv = append(rv, doFetch(keys[0], mcr))
+			}
 			i = 1
 		}
 	} else {
-		for k, v := range bulkResponse {
-			for j := 0; j < keyCount[k]; j++ {
-				rv = append(rv, doFetch(k, v))
-				i++
+		if len(_subPaths) > 0 {
+			for k, v := range bulkResponse {
+				for j := 0; j < keyCount[k]; j++ {
+					rv = append(rv, getSubDocFetchResults(k, v, _subPaths, noVirtualDocAttr))
+					i++
+				}
+			}
+		} else {
+			for k, v := range bulkResponse {
+				for j := 0; j < keyCount[k]; j++ {
+					rv = append(rv, doFetch(k, v))
+					i++
+				}
 			}
 		}
+
 	}
 
 	logging.Debugf("Fetched %d keys ", i)
@@ -1023,10 +1045,11 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext) ([]value
 }
 
 func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedPair {
+
 	var doc value.AnnotatedPair
 	doc.Name = k
 
-	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
+	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, false))
 	flags := binary.BigEndian.Uint32(v.Extras[0:4])
 
 	expiration := uint32(0)
@@ -1049,6 +1072,85 @@ func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedPair {
 
 	// Uncomment when needed
 	//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
+
+	doc.Value = val
+	return doc
+}
+
+func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool) value.AnnotatedPair {
+	var doc value.AnnotatedPair
+	doc.Name = k
+
+	responseIter := 0
+	i := 0
+	xVal := map[string]interface{}{}
+
+	for i < len(subPaths) {
+		// For the xattr contents - $document
+		xattrError := gomemcached.Status(binary.BigEndian.Uint16(v.Body[responseIter+0:]))
+		xattrValueLen := int(binary.BigEndian.Uint32(v.Body[responseIter+2:]))
+
+		xattrValue := v.Body[responseIter+6 : responseIter+6+xattrValueLen]
+
+		// When xattr value not defined for a doc, set missing
+		tmpVal := value.NewValue(xattrValue)
+
+		if xattrError != gomemcached.SUBDOC_PATH_NOT_FOUND {
+			xVal[subPaths[i]] = tmpVal.Actual()
+		}
+
+		// Calculate actual doc value
+		responseIter = responseIter + 6 + xattrValueLen
+		i = i + 1
+	}
+
+	// For the actual document contents -
+	respError := gomemcached.Status(binary.BigEndian.Uint16(v.Body[responseIter+0:]))
+	respValueLen := int(binary.BigEndian.Uint32(v.Body[responseIter+2:]))
+
+	respValue := v.Body[responseIter+6 : responseIter+6+respValueLen]
+
+	// For deleted documents with respError path not found set to null
+	var val value.AnnotatedValue
+
+	// For non deleted documents
+	if respError == gomemcached.SUBDOC_PATH_NOT_FOUND {
+		// Final Doc value
+		val = value.NewAnnotatedValue(nil)
+	} else {
+		val = value.NewAnnotatedValue(value.NewParsedValue(respValue, false))
+	}
+
+	// type
+	meta_type := "json"
+	if val.Type() == value.BINARY {
+		meta_type = "base64"
+	}
+
+	// Get flags and expiration from the $document virtual xattrs
+	docMeta := xVal["$document"].(map[string]interface{})
+
+	// Convert unmarshalled int64 values to uint32
+	flags := uint32(value.NewValue(docMeta["flags"]).(value.NumberValue).Int64())
+	exptime := uint32(value.NewValue(docMeta["exptime"]).(value.NumberValue).Int64())
+
+	if noVirtualDocAttr {
+		delete(xVal, "$document")
+	}
+
+	a := map[string]interface{}{
+		"id":         k,
+		"cas":        v.Cas,
+		"type":       meta_type,
+		"flags":      flags,
+		"expiration": exptime,
+	}
+
+	if len(xVal) > 0 {
+		a["xattrs"] = xVal
+	}
+
+	val.SetAttachment("meta", a)
 
 	doc.Value = val
 	return doc
