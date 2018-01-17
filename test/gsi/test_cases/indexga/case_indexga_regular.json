@@ -128,6 +128,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND ((v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING) OR v.`index` = 'ixgatp') END"
         },
         "statements": "SELECT c0, c1, c2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c0, c1, c2 ORDER BY c0,c1,c2 OFFSET 1 LIMIT 2",
+        "ordered": true,
         "results": [
             {
                 "c2": 600,
@@ -250,6 +251,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING AND v.index_order IS MISSING AND v.`limit` IS MISSING AND v.`offset` IS MISSING END"
         },
         "statements": "SELECT c0, c1+c2 AS c1plusc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c0, c1+c2 ORDER BY c0, c1+c2 OFFSET 1 LIMIT 2",
+        "ordered": true,
         "results": [
             {
                 "c0": 1,
@@ -317,6 +319,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND ((v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING) OR v.`index` = 'ixgatp') END"
         },
         "statements": "SELECT c0, SUM(c2) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c0 ORDER BY c0",
+        "ordered": true,
         "results": [
             {
                 "s": 10802,
@@ -341,6 +344,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND ((v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING AND v.`offset` IS NOT MISSING AND v.`limit` IS NOT MISSING) OR v.`index` = 'ixgatp') END"
         },
         "statements": "SELECT c0, SUM(c2) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c0 ORDER BY c0 OFFSET 1 LIMIT 2",
+        "ordered": true,
         "results": [
             {
                 "s": 11002,
@@ -477,6 +481,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING AND v.index_order IS MISSING AND v.`offset` IS MISSING AND v.`limit` IS MISSING END"
         },
         "statements": "SELECT c0, c1+c2 AS c1plusc2, SUM(c2) AS sumc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c0, c1+c2 ORDER BY c0, c1plusc2 OFFSET 1 LIMIT 2",
+        "ordered": true,
         "results": [
             {
                 "c0": 1,
@@ -1095,6 +1100,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND (v.`index` = 'ixgatp' OR (v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING AND v.`offset` IS MISSING AND v.`limit` IS MISSING)) END"
         },
         "statements": "SELECT c0,c1,c2, MIN(meta().id) AS minid, MAX(ABS(c2)) AS maxac2, MAX(c2) AS maxc2, MAX([c2,{c1,c2}])[1] AS maxc1c2, ABS(MAX(c2)) AS absmaxc2, AVG(c1+c3) AS avgc1c2, AVG ( DISTINCT c1) AS avgdc1, SUM ( DISTINCT c2) AS sumdc2, COUNT ( DISTINCT c3) AS sumdc3, cnt AS countc1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c1,c2,c0 LETTING cnt = COUNT(c1) HAVING SUM(c1) > 5 AND cnt > 1 ORDER BY c0,c1,c2 OFFSET 1 LIMIT 5",
+        "ordered": true,
         "results": [
             {
                 "maxc2": 600,
@@ -1201,6 +1207,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING END"
         },
         "statements": "SELECT  c0, c2+c4 AS c2plusc4, MIN(meta().id) AS minid, MAX(ABS(c2)) AS maxac2, MAX(c2) AS maxc2, MAX([c2,{c1,c2}])[1] AS maxc1c2, ABS(MAX(c2)) AS absmaxc2, AVG(c3) AS avgc2, AVG ( (c1+c2)) AS avgc1c2, SUM ( c2) AS sumc2, COUNT ( c3) AS countc3, cnt AS countc1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY c2+c4,c0 LETTING cnt = COUNT(c1) HAVING SUM(c1) >= 0 AND cnt >= 0 ORDER BY c0, c2+c4 OFFSET 1 LIMIT 5",
+        "ordered": true,
         "results": [
             {
                 "maxc2": 100,

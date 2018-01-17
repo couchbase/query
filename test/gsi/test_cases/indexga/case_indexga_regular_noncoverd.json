@@ -1,0 +1,243 @@
+[
+    {
+        "testcase": "Non covered. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements": "SELECT c0, cx FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 1",
+        "results": [
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            },
+            {
+                "c0": 2
+            }
+        ]
+    },
+    {
+        "testcase": "Non covered. PushDowns: OFFSET, LIMIT.Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING AND v.`offset` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "statements": "SELECT 1 AS cons, cx FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 OFFSET 10 LIMIT 2",
+        "results": [
+            {
+                "cons": 1
+            },
+            {
+                "cons": 1
+            }
+        ]
+    },
+    {
+        "testcase": "Non covered. PushDowns: ORDER, OFFSET, LIMIT.Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING AND v.index_order IS NOT MISSING AND v.`offset` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "statements": "SELECT c0, cx FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 ORDER BY c0 OFFSET 10 LIMIT 2",
+        "ordered": true,
+        "results": [
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            }
+        ]
+    },
+    {
+        "testcase": "Non covered. No-PushDowns: ORDER, OFFSET, LIMIT.Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING AND v.index_order IS MISSING AND v.`offset` IS MISSING AND v.`limit` IS MISSING END"
+        },
+        "statements": "SELECT c1, cx FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 ORDER BY c1 OFFSET 1 LIMIT 2",
+        "results": [
+            {
+                "c1": 10
+            },
+            {
+                "c1": 10
+            }
+        ]
+    },
+    {
+        "testcase": "No group/aggregate PushDowns. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING AND v.index_group_aggs IS MISSING END"
+        },
+        "statements": "SELECT SUM(cx) AS sumcx FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0",
+        "results": [
+            {
+                "sumcx": null
+            }
+        ]
+    },
+    {
+        "testcase": "No group/aggregate PushDowns. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING AND v.index_group_aggs IS MISSING END"
+        },
+        "statements": "SELECT SUM(c0) AS sumc0 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0 GROUP BY cx",
+        "results": [
+            {
+                "sumc0": 60
+            }
+        ]
+    },
+    {
+        "testcase": "No group/aggregate PushDowns. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING AND v.index_group_aggs IS MISSING END"
+        },
+        "statements": "SELECT SUM(c0) AS sumc0 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 0  AND cx IS MISSING GROUP BY c0",
+        "results": [
+            {
+                "sumc0": 40
+            },
+            {
+                "sumc0": 20
+            }
+        ]
+    },
+    {
+        "testcase": "No group/aggregate PushDowns. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING AND v.index_group_aggs IS MISSING END"
+        },
+        "statements": "SELECT COUNT(test_id) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 1",
+        "results": [
+            {
+                "cnt": 20
+            }
+        ]
+    },
+    {
+        "testcase": "No group/aggregate PushDowns. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING AND v.index_group_aggs IS MISSING END"
+        },
+        "statements": "SELECT COUNT(1) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 1 GROUP BY test_id",
+        "results": [
+            {
+                "cnt": 20
+            }
+        ]
+    }
+]

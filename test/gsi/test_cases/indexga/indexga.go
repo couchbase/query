@@ -237,6 +237,44 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	return mr.results, mr.warnings, mr.err
 }
 
+func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
+	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
+	var metrics value.Tristate
+	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
+
+	mr := &MockResponse{
+		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
+	}
+	query := &MockQuery{
+		response: mr,
+	}
+
+	prepared, err := PrepareStmt(mockServer, namespace, q)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	server.NewBaseRequest(&query.BaseRequest, "", prepared, namedArgs, positionalArgs, namespace, 0, 0, 0, 0,
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
+
+	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
+	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
+	defer mockServer.doStats(query)
+
+	select {
+	case mockServer.server.Channel() <- query:
+		// Wait until the request exits.
+		<-query.CloseNotify()
+	default:
+		// Timeout.
+		return nil, nil, errors.NewError(nil, "Query timed out")
+	}
+
+	// wait till all the results are ready
+	<-mr.done
+	return mr.results, mr.warnings, mr.err
+}
+
 /*
 Used to specify the N1QL nodes options using the method NewServer
 as defined in server/server.go.
@@ -249,12 +287,14 @@ func Start(site, pool, namespace string) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	datastore.SetDatastore(ds)
 
 	sys, err := system.NewDatastore(ds)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	datastore.SetSystemstore(sys)
 
 	configstore, err := config_resolver.NewConfigstore("stub:")
 	if err != nil {
@@ -332,7 +372,7 @@ func addResultsEntry(newResults, results []interface{}, entry interface{}) {
 	}
 }
 
-func FtestCaseFile(fname string, explain bool, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
+func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
 	/* Reads the input file and returns its contents in the form
@@ -380,7 +420,13 @@ func FtestCaseFile(fname string, explain bool, qc *MockServer, namespace string)
 		}
 
 		fin_stmt = strconv.Itoa(i) + ": " + statements
-		resultsActual, _, errActual := Run(qc, statements, namespace, nil, nil)
+		var resultsActual []interface{}
+		var errActual errors.Error
+		if prepared {
+			resultsActual, _, errActual = RunPrepared(qc, statements, namespace, nil, nil)
+		} else {
+			resultsActual, _, errActual = Run(qc, statements, namespace, nil, nil)
+		}
 
 		errExpected := ""
 		v, ok = c["error"]
@@ -432,8 +478,8 @@ func FtestCaseFile(fname string, explain bool, qc *MockServer, namespace string)
 			newResults := make([]interface{}, len(resultsActual))
 			switch accept.(type) {
 			case []interface{}:
-				for i, _ := range resultsActual {
-					newResults[i] = make(map[string]interface{}, len(accept.([]interface{})))
+				for j, _ := range resultsActual {
+					newResults[j] = make(map[string]interface{}, len(accept.([]interface{})))
 				}
 				for _, v := range accept.([]interface{}) {
 					switch v.(type) {
@@ -445,8 +491,8 @@ func FtestCaseFile(fname string, explain bool, qc *MockServer, namespace string)
 				}
 			case map[string]interface{}:
 			default:
-				for i, _ := range resultsActual {
-					newResults[i] = make(map[string]interface{}, 1)
+				for j, _ := range resultsActual {
+					newResults[j] = make(map[string]interface{}, 1)
 				}
 				addResultsEntry(newResults, resultsActual, accept)
 			}
@@ -455,7 +501,7 @@ func FtestCaseFile(fname string, explain bool, qc *MockServer, namespace string)
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, ordered, fname, i)
+			okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i)
 			if okres != nil {
 				errstring = okres
 				return
@@ -469,23 +515,23 @@ func FtestCaseFile(fname string, explain bool, qc *MockServer, namespace string)
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, fname string, i int) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int) (errstring error) {
 	if len(resultsActual) != len(resultsExpected) {
 		return go_er.New(fmt.Sprintf("results len don't match, %v vs %v, %v vs %v"+
-			", for case file: %v, index: %v",
+			", (%v)for case file: %v, index: %v",
 			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, fname, i))
+			resultsActual, resultsExpected, stmt, fname, i))
 	}
 
 	if ordered {
 		if !reflect.DeepEqual(resultsActual, resultsExpected) {
 			return go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
-				", for case file: %v, index: %v",
-				resultsActual, resultsExpected, fname, i))
+				", (%v) for case file: %v, index: %v",
+				resultsActual, resultsExpected, stmt, fname, i))
 		}
 	} else {
 	nextresult:
-		for i, re := range resultsExpected {
+		for _, re := range resultsExpected {
 			for j, ra := range resultsActual {
 				if ra != nil && reflect.DeepEqual(ra, re) {
 					resultsActual[j] = nil
@@ -493,8 +539,8 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 				}
 			}
 			return go_er.New(fmt.Sprintf("results don't match: %#v is not present in : %#v"+
-				", for case file: %v, index: %v",
-				re, resultsActual, fname, i))
+				", (%v) for case file: %v, index: %v",
+				re, resultsActual, stmt, fname, i))
 		}
 
 	}
@@ -542,8 +588,8 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	explainStmt := "EXPLAIN " + statement
 	resultsActual, _, errActual := Run(qc, explainStmt, namespace, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
-		return go_er.New(fmt.Sprintf("EXPLAIN error actual: %#v"+
-			", for case file: %v, index: %v", resultsActual, fname, i))
+		return go_er.New(fmt.Sprintf("(%v) error actual: %#v"+
+			", for case file: %v, index: %v", explainStmt, resultsActual, fname, i))
 	}
 
 	namedParams := make(map[string]value.Value, 1)
@@ -552,14 +598,25 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	resultsActual, _, errActual = Run(qc, eStmt, namespace, namedParams, nil)
 	if errActual != nil {
 		return go_er.New(fmt.Sprintf("unexpected err: %v, statement: %v"+
-			", for case file: %v, index: %v", errActual, statement, fname, i))
+			", for case file: %v, index: %v", errActual, eStmt, fname, i))
 	}
 
 	if rok {
-		return doResultsMatch(resultsActual, erExpected, ordered, fname, i)
+		return doResultsMatch(resultsActual, erExpected, ordered, eStmt, fname, i)
 	}
 
 	return
+}
+
+func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, errors.Error) {
+	prepareStmt := "PREPARE " + statement
+	resultsActual, _, errActual := Run(qc, prepareStmt, namespace, nil, nil)
+	if errActual != nil || len(resultsActual) != 1 {
+		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
+	}
+	runStmt(qc, "DELETE FROM system:prepareds")
+	ra := resultsActual[0].(map[string]interface{})
+	return plan.DecodePrepared("", ra["encoded_plan"].(string), true, true)
 }
 
 /*
@@ -573,7 +630,7 @@ func start_cs() *MockServer {
 	return ms
 }
 
-func runMatch(filename string, explain bool, qc *MockServer, t *testing.T) {
+func runMatch(filename string, prepared, explain bool, qc *MockServer, t *testing.T) {
 
 	matches, err := filepath.Glob(filename)
 	if err != nil {
@@ -582,7 +639,7 @@ func runMatch(filename string, explain bool, qc *MockServer, t *testing.T) {
 
 	for _, m := range matches {
 		t.Logf("TestCaseFile: %v\n", m)
-		stmt, errcs := FtestCaseFile(m, explain, qc, Namespace_CBS)
+		stmt, errcs := FtestCaseFile(m, prepared, explain, qc, Namespace_CBS)
 
 		if errcs != nil {
 			t.Errorf("Error : %s", errcs.Error())
