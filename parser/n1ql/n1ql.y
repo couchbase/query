@@ -2432,9 +2432,9 @@ collection_expr
 paren_expr
 |
 /* For covering indexes */
-COVER expr
+COVER LPAREN expr RPAREN
 {
-    $$ = expression.NewCover($2)
+    $$ = expression.NewCover($3)
 }
 ;
 
