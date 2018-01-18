@@ -110,8 +110,7 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 }
 
 func (this *SimpleCase) DependsOn(other Expression) bool {
-	return this.searchTerm.DependsOn(other) &&
-		(this.elseTerm == nil || this.elseTerm.DependsOn(other))
+	return this.dependsOn(other)
 }
 
 func (this *SimpleCase) Children() Expressions {

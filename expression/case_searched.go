@@ -100,14 +100,7 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 }
 
 func (this *SearchedCase) DependsOn(other Expression) bool {
-	for _, w := range this.whenTerms {
-		if !w.When.DependsOn(other) {
-			return false
-		}
-	}
-
-	return this.elseTerm == nil ||
-		this.elseTerm.DependsOn(other)
+	return this.dependsOn(other)
 }
 
 func (this *SearchedCase) Children() Expressions {
