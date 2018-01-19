@@ -35,14 +35,18 @@ func main() {
 	HandleInteractiveMode(*tiServer, filepath.Base(os.Args[0]))
 }
 
+var transport = &http.Transport{MaxIdleConnsPerHost: 1}
+
+// FIXME we really need a timeout here
+var client = &http.Client{Transport: transport}
+
 func execute_internal(tiServer, line string, w *os.File) error {
 
 	url := tiServer + "query"
-	tr := &http.Transport{}
 	if strings.HasPrefix(url, "https") {
-		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
-	client := &http.Client{Transport: tr}
+
 	resp, err := client.Post(url, "text/plain", strings.NewReader(line))
 	if err != nil {
 		return err

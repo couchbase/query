@@ -339,11 +339,12 @@ func credsAsJSON(creds distributed.Creds) string {
 	return buf.String()
 }
 
+var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10}
+var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
+
 // helper for the REST op
 func doRemoteOp(node clustering.QueryNode, endpoint string, command string, op string, data string,
 	creds distributed.Creds, authToken string) ([]byte, errors.Error) {
-	var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10} //MaxIdleConnsPerHost}
-	var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
 	var reader io.Reader
 
 	if node == nil {
@@ -369,10 +370,10 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, op s
 	request.SetBasicAuth(u, p)
 
 	resp, err := HTTPClient.Do(request)
-
 	if err != nil {
 		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
 	}
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
