@@ -612,6 +612,26 @@
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
+    },
+    {
+      "id" : 28689,
+      "name" : "/admin/stats API request",
+      "description" : "An HTTP request was made the API at /admin/stats.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "stat" : ""
+      }
     }
   ]
 }
