@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/clustering"
@@ -228,11 +229,11 @@ func credsAsJSON(creds distributed.Creds) string {
 	return buf.String()
 }
 
+var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10}
+var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
+
 // helper for the REST op
 func doRemoteOp(node clustering.QueryNode, endpoint string, command string, creds distributed.Creds, authToken string) ([]byte, error) {
-	var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10} //MaxIdleConnsPerHost}
-	var HTTPClient = &http.Client{Transport: HTTPTransport}
-
 	if node == nil {
 		return nil, goErr.New("missing remote node")
 	}
@@ -257,6 +258,7 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, cred
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		_, _ = ioutil.ReadAll(io.LimitReader(resp.Body, 512))
