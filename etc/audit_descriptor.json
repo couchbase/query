@@ -884,7 +884,7 @@
       "optional_fields" : {
 	"cluster" : "",
 	"node" : "",
-        "body" : {"val1" : "", "val2" : ""},
+        "body" : {"val1" : "", "val2" : ""}
       }
     }
   ]
