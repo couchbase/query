@@ -616,7 +616,7 @@
     {
       "id" : 28689,
       "name" : "/admin/stats API request",
-      "description" : "An HTTP request was made the API at /admin/stats.",
+      "description" : "An HTTP request was made to the API at /admin/stats.",
       "sync" : false,
       "enabled" : true,
       "mandatory_fields" : {
@@ -631,6 +631,260 @@
       },
       "optional_fields" : {
         "stat" : ""
+      }
+    },
+    {
+      "id" : 28690,
+      "name" : "/admin/vitals API request",
+      "description" : "An HTTP request was made to the API at /admin/vitals.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28691,
+      "name" : "/admin/prepareds API request",
+      "description" : "An HTTP request was made to the API at /admin/prepareds.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "name" : ""
+      }
+    },
+    {
+      "id" : 28692,
+      "name" : "/admin/active_requests API request",
+      "description" : "An HTTP request was made to the API at /admin/active_requests.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
+      }
+    },
+    {
+      "id" : 28692,
+      "name" : "/admin/completed_requests API request",
+      "description" : "An HTTP request was made to the API at /admin/completed_requests.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
+      }
+    },
+    {
+      "id" : 28693,
+      "name" : "/admin/indexes/prepareds API request",
+      "description" : "An HTTP request was made to the API at /admin/indexes/prepareds.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28694,
+      "name" : "/admin/indexes/active_requests API request",
+      "description" : "An HTTP request was made to the API at /admin/indexes/active_requests.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28695,
+      "name" : "/admin/indexes/completed_requests API request",
+      "description" : "An HTTP request was made to the API at /admin/indexes/completed_requests.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28696,
+      "name" : "/debug/vars API request",
+      "description" : "An HTTP request was made to the API at /debug/vars.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28697,
+      "name" : "/admin/ping API request",
+      "description" : "An HTTP request was made to the API at /admin/ping.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28698,
+      "name" : "/admin/config API request",
+      "description" : "An HTTP request was made to the API at /admin/config.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28699,
+      "name" : "/admin/ssl_cert API request",
+      "description" : "An HTTP request was made to the API at /admin/ssl_cert.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28700,
+      "name" : "/admin/settings API request",
+      "description" : "An HTTP request was made to the API at /admin/settings.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "values" : {"val1" : "", "val2" : ""}
+      }
+    },
+    {
+      "id" : 28701,
+      "name" : "/admin/clusters API request",
+      "description" : "An HTTP request was made to the API at /admin/clusters.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+	"cluster" : "",
+	"node" : "",
+        "body" : {"val1" : "", "val2" : ""},
       }
     }
   ]
