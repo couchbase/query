@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -132,7 +133,7 @@ var pingStatus = struct {
 	"ok",
 }
 
-func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	return &pingStatus, nil
 }
 
@@ -142,7 +143,7 @@ var localConfig struct {
 	myConfig clustering.QueryNode
 }
 
-func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	var self clustering.QueryNode
 
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -184,7 +185,7 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 	return localConfig.myConfig, nil
 }
 
-func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
@@ -204,7 +205,7 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -226,7 +227,7 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -251,7 +252,7 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (
 	}
 }
 
-func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	node := vars["node"]
 	name := vars["cluster"]
@@ -277,7 +278,7 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 // reload the ssl certificate. Only performed if the server is running https and
 // the request contains basic authorization credentials that can be successfully
 // authorized against the configuration store.
-func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	if endpoint.httpsAddr == "" {
 		return nil, errors.NewAdminNotSSLEnabledError()
 	}
@@ -466,7 +467,7 @@ var _SETTERS = map[string]setter{
 	},
 }
 
-func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	// Admin auth required
 	err := endpoint.hasAdminAuth(req)
 	if err != nil {

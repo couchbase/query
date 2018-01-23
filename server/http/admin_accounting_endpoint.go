@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -107,9 +108,11 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	this.mux.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 }
 
-func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
+
+	af.EventTypeId = audit.API_ADMIN_STATS
 
 	switch req.Method {
 	case "GET":
@@ -143,11 +146,14 @@ func addMetricData(name string, stats map[string]interface{}, metrics map[string
 	}
 }
 
-func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["stat"]
 	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
+
+	af.EventTypeId = audit.API_ADMIN_STATS
+	af.Stat = name
 
 	switch req.Method {
 	case "GET":
@@ -164,7 +170,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 	}
 }
 
-func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
 	if reg == nil {
@@ -176,7 +182,7 @@ func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	return nil, nil
 }
 
-func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	switch req.Method {
 	case "GET":
 		acctStore := endpoint.server.AccountingStore()
@@ -227,7 +233,7 @@ func verifyCredentialsFromRequest(api string, req *http.Request) errors.Error {
 	return err
 }
 
-func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["name"]
 
@@ -302,7 +308,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	switch req.Method {
 	case "GET":
 		err := verifyCredentialsFromRequest("prepareds", req)
@@ -340,7 +346,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	}
 }
 
-func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	requestId := vars["request"]
 
@@ -447,7 +453,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 	return reqMap
 }
 
-func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	err := verifyCredentialsFromRequest("actives", req)
 	if err != nil {
 		return nil, err
@@ -507,7 +513,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return requests, nil
 }
 
-func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	requestId := vars["request"]
 
@@ -589,7 +595,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 	return reqMap
 }
 
-func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	err := verifyCredentialsFromRequest("completed_requests", req)
 	if err != nil {
 		return nil, err
@@ -643,11 +649,11 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	return requests, nil
 }
 
-func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	return plan.NamePrepareds(), nil
 }
 
-func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	numEntries, err := endpoint.actives.Count()
 	if err != nil {
 		return nil, err
@@ -667,7 +673,7 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	return requests, nil
 }
 
-func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	numEntries := server.RequestsCount()
 	completed := make([]string, numEntries)
 	i := 0

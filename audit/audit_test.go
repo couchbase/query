@@ -35,6 +35,10 @@ func (ma *mockAuditor) submit(eventId uint32, event *n1qlAuditEvent) error {
 	return nil
 }
 
+func (ma *mockAuditor) submitApiRequest(eventId uint32, event *n1qlAuditApiRequestEvent) error {
+	return nil
+}
+
 func (ma *mockAuditor) userIsWhitelisted(user string) bool {
 	for _, u := range ma.whitelistedUsers {
 		if user == u {

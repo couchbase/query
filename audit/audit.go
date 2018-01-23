@@ -65,6 +65,18 @@ type Auditable interface {
 	EventWarningCount() int
 }
 
+type ApiAuditFields struct {
+	GenericFields  adt.GenericFields
+	EventTypeId    uint32
+	Users          []string
+	HttpMethod     string
+	HttpResultCode int
+	ErrorCode      int
+	ErrorMessage   string
+
+	Stat string
+}
+
 // An auditor is a component that can accept an audit record for processing.
 // We create a formal interface, so we can have two Auditors: the regular one that
 // talks to the audit daemon, and a mock that just stores audit records for testing.
@@ -88,6 +100,8 @@ type Auditor interface {
 	submitInline() bool
 
 	submit(eventId uint32, event *n1qlAuditEvent) error
+
+	submitApiRequest(eventId uint32, event *n1qlAuditApiRequestEvent) error
 }
 
 type standardAuditor struct {
@@ -102,6 +116,10 @@ func (sa *standardAuditor) submit(eventId uint32, event *n1qlAuditEvent) error {
 	return sa.auditService.Write(eventId, *event)
 }
 
+func (sa *standardAuditor) submitApiRequest(eventId uint32, event *n1qlAuditApiRequestEvent) error {
+	return sa.auditService.Write(eventId, *event)
+}
+
 func (sa *standardAuditor) userIsWhitelisted(user string) bool {
 	// TODO
 	return false
@@ -109,6 +127,11 @@ func (sa *standardAuditor) userIsWhitelisted(user string) bool {
 
 func (sa *standardAuditor) eventIsDisabled(eventId uint32) bool {
 	// TODO
+	if eventId == API_ADMIN_STATS {
+		// The /admin/stats API gets a lot of requests.
+		// Disable them for now so the log doesn't get too crowded.
+		return true
+	}
 	return false
 }
 
@@ -145,8 +168,6 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"CREATE_PRIMARY_INDEX": 28688,
 }
 
-var doLog bool = false
-
 func Submit(event Auditable) {
 	if _AUDITOR == nil {
 		return // Nothing configured. Nothing to be done.
@@ -154,10 +175,6 @@ func Submit(event Auditable) {
 
 	if !_AUDITOR.doAudit() {
 		return
-	}
-
-	if doLog {
-		logAuditEvent(event)
 	}
 
 	eventType := event.EventType()
@@ -181,6 +198,36 @@ func Submit(event Auditable) {
 			submitForAudit(eventTypeId, record)
 		} else {
 			go submitForAudit(eventTypeId, record)
+		}
+	}
+}
+
+const API_ADMIN_STATS = 28689
+
+func SubmitApiRequest(event *ApiAuditFields) {
+	if _AUDITOR == nil {
+		return // Nothing configured. Nothing to be done.
+	}
+
+	if !_AUDITOR.doAudit() {
+		return
+	}
+
+	eventTypeId := event.EventTypeId
+
+	if _AUDITOR.eventIsDisabled(eventTypeId) {
+		return
+	}
+
+	// We build the audit record from the request in the main thread
+	// because the request will be destroyed soon after the call to Submit(),
+	// and we don't want to cause a race condition.
+	auditRecords := buildApiRequestAuditRecords(event)
+	for _, record := range auditRecords {
+		if _AUDITOR.submitInline() {
+			submitApiRequestForAudit(eventTypeId, record)
+		} else {
+			go submitApiRequestForAudit(eventTypeId, record)
 		}
 	}
 }
@@ -270,6 +317,58 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 	return records
 }
 
+// Returns a list of audit records, because each user credential submitted as part of
+// the requests generates a separate audit record.
+func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEvent {
+	// No credentials at all? Generate one record.
+	users := event.Users
+	if len(users) == 0 {
+		record := &n1qlAuditApiRequestEvent{
+			GenericFields:  event.GenericFields,
+			HttpMethod:     event.HttpMethod,
+			HttpResultCode: event.HttpResultCode,
+			ErrorCode:      event.ErrorCode,
+			ErrorMessage:   event.ErrorMessage,
+			Stat:           event.Stat,
+		}
+		return []*n1qlAuditApiRequestEvent{record}
+	}
+
+	// Figure out which users to generate events for.
+	auditableUsers := make([]string, 0, len(users))
+	for _, user := range users {
+		if !_AUDITOR.userIsWhitelisted(user) {
+			auditableUsers = append(auditableUsers, user)
+		}
+	}
+
+	// Generate one record per user.
+	records := make([]*n1qlAuditApiRequestEvent, len(auditableUsers))
+	for i, user := range auditableUsers {
+		record := &n1qlAuditApiRequestEvent{
+			GenericFields:  event.GenericFields,
+			HttpMethod:     event.HttpMethod,
+			HttpResultCode: event.HttpResultCode,
+			ErrorCode:      event.ErrorCode,
+			ErrorMessage:   event.ErrorMessage,
+			Stat:           event.Stat,
+		}
+		source := "local"
+		userName := user
+		// Handle non-local users, e.g. "external:dtrump"
+		if strings.Contains(user, ":") {
+			parts := strings.SplitN(user, ":", 2)
+			source = parts[0]
+			userName = parts[1]
+		}
+		record.GenericFields.RealUserid.Source = source
+		record.GenericFields.RealUserid.Username = userName
+
+		records[i] = record
+	}
+	return records
+}
+
 func submitForAudit(eventId uint32, auditRecord *n1qlAuditEvent) {
 	err := _AUDITOR.submit(eventId, auditRecord)
 	if err != nil {
@@ -277,15 +376,11 @@ func submitForAudit(eventId uint32, auditRecord *n1qlAuditEvent) {
 	}
 }
 
-func logAuditEvent(event Auditable) {
-	logging.Infof("status=\"%s\", statement=\"%s\", id=\"%s\", type=\"%s\", users=%v, user_agent=\"%s\", user_agent=\"%s\", node_name=\"%s\"",
-		event.EventStatus(), event.Statement(), event.EventId(), event.EventType(), event.EventUsers(),
-		event.UserAgent(), event.EventNodeName())
-	logging.Infof("named_args=%v, positional_args=%v, ad_hoc=%v, client_context_id=%s",
-		event.EventNamedArgs(), event.EventPositionalArgs(), event.IsAdHoc(), event.ClientContextId())
-	logging.Infof("elapsed_time=%v, execution_time=%v, result_count=%d, result_size=%d, mutation_count=%d, sort_count=%d, error_count=%d, warning_count=%d",
-		event.ElapsedTime(), event.ExecutionTime(), event.EventResultCount(), event.EventResultSize(), event.MutationCount(),
-		event.SortCount(), event.EventErrorCount(), event.EventWarningCount())
+func submitApiRequestForAudit(eventId uint32, auditRecord *n1qlAuditApiRequestEvent) {
+	err := _AUDITOR.submitApiRequest(eventId, auditRecord)
+	if err != nil {
+		logging.Errorf("Unable to submit API request event %+v for audit: %v", *auditRecord, err)
+	}
 }
 
 // If possible, use whatever field names are used elsewhere in the N1QL system.
@@ -318,4 +413,15 @@ type n1qlMetrics struct {
 	SortCount     uint64 `json:"sortCount,omitempty"`
 	ErrorCount    int    `json:"errorCount,omitempty"`
 	WarningCount  int    `json:"warningCount,omitempty"`
+}
+
+type n1qlAuditApiRequestEvent struct {
+	adt.GenericFields
+
+	HttpMethod     string `json:"httpMethod"`
+	HttpResultCode int    `json:"httpResultCode"`
+	ErrorCode      int    `json:"errorCode,omitempty"`
+	ErrorMessage   string `json:"errorMessage",omitempty"`
+
+	Stat string `json:"stat,omitempty"`
 }
