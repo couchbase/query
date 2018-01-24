@@ -22,6 +22,7 @@ type Identifier struct {
 	identifier      string
 	caseInsensitive bool
 	parenthesis     bool
+	keyspaceAlias   bool
 }
 
 func NewIdentifier(identifier string) *Identifier {
@@ -163,4 +164,12 @@ func (this *Identifier) Parenthesis() bool {
 
 func (this *Identifier) SetParenthesis(parenthesis bool) {
 	this.parenthesis = parenthesis
+}
+
+func (this *Identifier) IsKeyspaceAlias() bool {
+	return this.keyspaceAlias
+}
+
+func (this *Identifier) SetKeyspaceAlias(keyspaceAlias bool) {
+	this.keyspaceAlias = keyspaceAlias
 }

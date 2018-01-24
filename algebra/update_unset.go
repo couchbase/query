@@ -125,12 +125,12 @@ expression in the unset clause.
 func (this *UnsetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
 		for _, b := range this.updateFor.bindings {
-			inBinding, err := f.PushBindings(b, true)
+			err := f.PushBindings(b, true)
 			if err != nil {
 				return err
 			}
 
-			defer f.PopBindings(inBinding)
+			defer f.PopBindings()
 		}
 
 		if this.updateFor.when != nil {

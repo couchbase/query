@@ -180,7 +180,9 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			for i, key := range keys {
 				key = key.Copy()
 
+				formalizer.SetIndexScope()
 				key, err = formalizer.Map(key)
+				formalizer.ClearIndexScope()
 				if err != nil {
 					return
 				}
@@ -208,7 +210,9 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 			cond = cond.Copy()
 
+			formalizer.SetIndexScope()
 			cond, err = formalizer.Map(cond)
+			formalizer.ClearIndexScope()
 			if err != nil {
 				return
 			}

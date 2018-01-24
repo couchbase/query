@@ -31,7 +31,7 @@ Bit flags for formalizer flags
 const (
 	FORM_MAP_SELF     = 1 << iota // Map SELF to keyspace: used in sarging index
 	FORM_MAP_KEYSPACE             // Map keyspace to SELF: used in creating index
-	FORM_IN_BINDING               // inside a binding scope
+	FORM_INDEX_SCOPE              // formalizing index key or index condition
 )
 
 /*
@@ -100,17 +100,25 @@ func (this *Formalizer) mapKeyspace() bool {
 	return (this.flags & FORM_MAP_KEYSPACE) != 0
 }
 
-func (this *Formalizer) inBinding() bool {
-	return (this.flags & FORM_IN_BINDING) != 0
+func (this *Formalizer) indexScope() bool {
+	return (this.flags & FORM_INDEX_SCOPE) != 0
+}
+
+func (this *Formalizer) SetIndexScope() {
+	this.flags |= FORM_INDEX_SCOPE
+}
+
+func (this *Formalizer) ClearIndexScope() {
+	this.flags &^= FORM_INDEX_SCOPE
 }
 
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
-	inBinding, err := this.PushBindings(expr.Bindings(), true)
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(inBinding)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -121,12 +129,12 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
-	inBinding, err := this.PushBindings(expr.Bindings(), true)
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(inBinding)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -137,12 +145,12 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
-	inBinding, err := this.PushBindings(expr.Bindings(), true)
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(inBinding)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -153,12 +161,12 @@ func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
-	inBinding, err := this.PushBindings(expr.Bindings(), true)
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(inBinding)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -169,12 +177,12 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
-	inBinding, err := this.PushBindings(expr.Bindings(), true)
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(inBinding)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -185,12 +193,12 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
-	inBinding, err := this.PushBindings(expr.Bindings(), true)
+	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(inBinding)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -208,14 +216,14 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 
 	ident_val, ok := this.allowed.Field(identifier)
 	if ok {
-		// if sarging for index, and not inside a binding scope,
-		// then don't match with keyspace alias
+		// if sarging for index, for index keys or index conditions,
+		// don't match with keyspace alias
 		// (i.e., don't match an index key name with a keyspace alias)
-		// however once we are in a binding scope, normal matching rules
-		// apply, i.e., need to match with keyspace alias.
+		// however if this is a keyspace alias added in previous formalization
+		// process then treat it as a keyspace alias
 		ident_flags := uint32(ident_val.ActualForIndex().(int64))
 		tmp_flags := ident_flags & IDENT_IS_KEYSPACE
-		if !this.mapSelf() || this.inBinding() || tmp_flags == 0 {
+		if !this.mapSelf() || !this.indexScope() || tmp_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			return expr, nil
 		}
@@ -232,8 +240,9 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			return expr, nil
 		}
 	} else {
-		return NewField(NewIdentifier(this.keyspace),
-				NewFieldName(identifier, expr.CaseInsensitive())),
+		keyspaceIdent := NewIdentifier(this.keyspace)
+		keyspaceIdent.SetKeyspaceAlias(true)
+		return NewField(keyspaceIdent, NewFieldName(identifier, expr.CaseInsensitive())),
 			nil
 	}
 }
@@ -283,9 +292,7 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 Create new scope containing bindings.
 */
 
-func (this *Formalizer) PushBindings(bindings Bindings, push bool) (inBinding bool, err error) {
-	inBinding = this.inBinding()
-
+func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 	allowed := this.allowed
 	identifiers := this.identifiers
 	aliases := this.aliases
@@ -294,7 +301,6 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (inBinding bo
 		allowed = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
 		identifiers = value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
 		aliases = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.aliases)
-		this.flags |= FORM_IN_BINDING
 	}
 
 	var expr Expression
@@ -357,7 +363,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (inBinding bo
 /*
 Restore scope to parent's scope.
 */
-func (this *Formalizer) PopBindings(inBinding bool) {
+func (this *Formalizer) PopBindings() {
 
 	currLevelAllowed := this.Allowed().GetValue().Fields()
 	currLevelIndentfiers := this.Identifiers().GetValue().Fields()
@@ -365,10 +371,6 @@ func (this *Formalizer) PopBindings(inBinding bool) {
 	this.allowed = this.allowed.Parent().(*value.ScopeValue)
 	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
 	this.aliases = this.aliases.Parent().(*value.ScopeValue)
-
-	if !inBinding {
-		this.flags &^= FORM_IN_BINDING
-	}
 
 	// Identifiers that are used in current level but not defined in the current level scope move to parent
 	for ident, _ := range currLevelIndentfiers {
