@@ -693,26 +693,6 @@
       }
     },
     {
-      "id" : 28692,
-      "name" : "/admin/completed_requests API request",
-      "description" : "An HTTP request was made to the API at /admin/completed_requests.",
-      "sync" : false,
-      "enabled" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"source" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-
-        "httpMethod": "",
-        "httpResultCode": 1,
-        "errorCode": 1,
-        "errorMessage": ""
-      },
-      "optional_fields" : {
-        "request" : ""
-      }
-    },
-    {
       "id" : 28693,
       "name" : "/admin/indexes/prepareds API request",
       "description" : "An HTTP request was made to the API at /admin/indexes/prepareds.",
@@ -754,25 +734,6 @@
       "id" : 28695,
       "name" : "/admin/indexes/completed_requests API request",
       "description" : "An HTTP request was made to the API at /admin/indexes/completed_requests.",
-      "sync" : false,
-      "enabled" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"source" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-
-        "httpMethod": "",
-        "httpResultCode": 1,
-        "errorCode": 1,
-        "errorMessage": ""
-      },
-      "optional_fields" : {
-      }
-    },
-    {
-      "id" : 28696,
-      "name" : "/debug/vars API request",
-      "description" : "An HTTP request was made to the API at /debug/vars.",
       "sync" : false,
       "enabled" : true,
       "mandatory_fields" : {
@@ -885,6 +846,26 @@
 	"cluster" : "",
 	"node" : "",
         "body" : {"val1" : "", "val2" : ""}
+      }
+    },
+    {
+      "id" : 28702,
+      "name" : "/admin/completed_requests API request",
+      "description" : "An HTTP request was made to the API at /admin/completed_requests.",
+      "sync" : false,
+      "enabled" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
       }
     }
   ]

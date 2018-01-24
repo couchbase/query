@@ -74,7 +74,13 @@ type ApiAuditFields struct {
 	ErrorCode      int
 	ErrorMessage   string
 
-	Stat string
+	Stat    string
+	Name    string
+	Request string
+	Cluster string
+	Node    string
+	Values  interface{}
+	Body    interface{}
 }
 
 // An auditor is a component that can accept an audit record for processing.
@@ -126,6 +132,11 @@ func (sa *standardAuditor) userIsWhitelisted(user string) bool {
 }
 
 func (sa *standardAuditor) eventIsDisabled(eventId uint32) bool {
+	// No real event number?
+	if eventId == API_DO_NOT_AUDIT {
+		return true
+	}
+
 	// TODO
 	if eventId == API_ADMIN_STATS {
 		// The /admin/stats API gets a lot of requests.
@@ -202,7 +213,22 @@ func Submit(event Auditable) {
 	}
 }
 
-const API_ADMIN_STATS = 28689
+const (
+	API_DO_NOT_AUDIT                     = 0
+	API_ADMIN_STATS                      = 28689
+	API_ADMIN_VITALS                     = 28690
+	API_ADMIN_PREPAREDS                  = 28691
+	API_ADMIN_ACTIVE_REQUESTS            = 28692
+	API_ADMIN_INDEXES_PREPAREDS          = 28693
+	API_ADMIN_INDEXES_ACTIVE_REQUESTS    = 28694
+	API_ADMIN_INDEXES_COMPLETED_REQUESTS = 28695
+	API_ADMIN_PING                       = 28697
+	API_ADMIN_CONFIG                     = 28698
+	API_ADMIN_SSL_CERT                   = 28699
+	API_ADMIN_SETTINGS                   = 28700
+	API_ADMIN_CLUSTERS                   = 28701
+	API_ADMIN_COMPLETED_REQUESTS         = 28702
+)
 
 func SubmitApiRequest(event *ApiAuditFields) {
 	if _AUDITOR == nil {
@@ -330,6 +356,12 @@ func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEv
 			ErrorCode:      event.ErrorCode,
 			ErrorMessage:   event.ErrorMessage,
 			Stat:           event.Stat,
+			Name:           event.Name,
+			Request:        event.Request,
+			Values:         event.Values,
+			Cluster:        event.Cluster,
+			Node:           event.Node,
+			Body:           event.Body,
 		}
 		return []*n1qlAuditApiRequestEvent{record}
 	}
@@ -352,6 +384,12 @@ func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEv
 			ErrorCode:      event.ErrorCode,
 			ErrorMessage:   event.ErrorMessage,
 			Stat:           event.Stat,
+			Name:           event.Name,
+			Request:        event.Request,
+			Values:         event.Values,
+			Cluster:        event.Cluster,
+			Node:           event.Node,
+			Body:           event.Body,
 		}
 		source := "local"
 		userName := user
@@ -423,5 +461,11 @@ type n1qlAuditApiRequestEvent struct {
 	ErrorCode      int    `json:"errorCode,omitempty"`
 	ErrorMessage   string `json:"errorMessage",omitempty"`
 
-	Stat string `json:"stat,omitempty"`
+	Stat    string      `json:"stat,omitempty"`
+	Name    string      `json:"name,omitempty"`
+	Request string      `json:"request,omitempty"`
+	Cluster string      `json:"cluster,omitempty"`
+	Node    string      `json:"node,omitempty"`
+	Values  interface{} `json:"values,omitempty"`
+	Body    interface{} `json:"body,omitempty"`
 }

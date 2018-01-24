@@ -134,6 +134,7 @@ var pingStatus = struct {
 }
 
 func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_PING
 	return &pingStatus, nil
 }
 
@@ -144,6 +145,7 @@ var localConfig struct {
 }
 
 func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_CONFIG
 	var self clustering.QueryNode
 
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -186,6 +188,7 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 }
 
 func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
@@ -199,6 +202,7 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, err
 		}
+		af.Body = cluster
 		return cfgStore.ConfigurationManager().AddCluster(cluster)
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
@@ -206,8 +210,10 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	vars := mux.Vars(req)
 	name := vars["cluster"]
+	af.Cluster = name
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
@@ -228,8 +234,10 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 }
 
 func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	vars := mux.Vars(req)
 	name := vars["cluster"]
+	af.Cluster = name
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
@@ -246,6 +254,7 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		if err != nil {
 			return nil, err
 		}
+		af.Body = node
 		return cluster.ClusterManager().AddQueryNode(node)
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
@@ -256,6 +265,11 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	vars := mux.Vars(req)
 	node := vars["node"]
 	name := vars["cluster"]
+
+	af.EventTypeId = audit.API_ADMIN_CLUSTERS
+	af.Node = node
+	af.Cluster = name
+
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
@@ -279,6 +293,7 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 // the request contains basic authorization credentials that can be successfully
 // authorized against the configuration store.
 func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_SSL_CERT
 	if endpoint.httpsAddr == "" {
 		return nil, errors.NewAdminNotSSLEnabledError()
 	}
@@ -468,6 +483,8 @@ var _SETTERS = map[string]setter{
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_SETTINGS
+
 	// Admin auth required
 	err := endpoint.hasAdminAuth(req)
 	if err != nil {
@@ -488,6 +505,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, errors.NewAdminDecodingError(err)
 		}
+		af.Values = settings
 
 		if errP := ProcessSettings(settings, srvr); errP != nil {
 			return nil, errP

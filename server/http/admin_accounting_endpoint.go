@@ -38,6 +38,8 @@ const (
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
+	// Do not audit directly.
+	// Will be handled and audited by /admin/stats auditing.
 	http.Redirect(w, req, accountingPrefix, http.StatusFound)
 }
 
@@ -183,6 +185,7 @@ func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_VITALS
 	switch req.Method {
 	case "GET":
 		acctStore := endpoint.server.AccountingStore()
@@ -237,6 +240,9 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	vars := mux.Vars(req)
 	name := vars["name"]
 
+	af.EventTypeId = audit.API_ADMIN_PREPAREDS
+	af.Name = name
+
 	if req.Method == "DELETE" {
 		err := verifyCredentialsFromRequest("prepareds", req)
 		if err != nil {
@@ -273,6 +279,12 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		}
 		return "", nil
 	} else if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:prepareds, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
 		err := verifyCredentialsFromRequest("prepareds", req)
 		if err != nil {
 			return nil, err
@@ -309,6 +321,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
 	case "GET":
 		err := verifyCredentialsFromRequest("prepareds", req)
@@ -350,7 +363,16 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	vars := mux.Vars(req)
 	requestId := vars["request"]
 
+	af.EventTypeId = audit.API_ADMIN_ACTIVE_REQUESTS
+	af.Request = requestId
+
 	if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:prepareds, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
 		err := verifyCredentialsFromRequest("actives", req)
 		if err != nil {
 			return nil, err
@@ -454,6 +476,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 }
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	err := verifyCredentialsFromRequest("actives", req)
 	if err != nil {
 		return nil, err
@@ -517,7 +540,16 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	vars := mux.Vars(req)
 	requestId := vars["request"]
 
+	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
+	af.Request = requestId
+
 	if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:prepareds, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
 		err := verifyCredentialsFromRequest("completed_requests", req)
 		if err != nil {
 			return nil, err
@@ -596,6 +628,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
 	err := verifyCredentialsFromRequest("completed_requests", req)
 	if err != nil {
 		return nil, err
@@ -650,10 +683,12 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 }
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_PREPAREDS
 	return plan.NamePrepareds(), nil
 }
 
 func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_ACTIVE_REQUESTS
 	numEntries, err := endpoint.actives.Count()
 	if err != nil {
 		return nil, err
@@ -674,6 +709,7 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 }
 
 func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_COMPLETED_REQUESTS
 	numEntries := server.RequestsCount()
 	completed := make([]string, numEntries)
 	i := 0
