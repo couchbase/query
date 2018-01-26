@@ -26,7 +26,9 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -56,6 +58,7 @@ func (r *httpRequest) OriginalHttpRequest() *http.Request {
 func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
 	var httpArgs httpRequestArgs
 	var err errors.Error
+	var phaseTime time.Duration
 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
@@ -86,7 +89,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		var decoded_plan *plan.Prepared
 		var prepared_name string
 
-		prepared_name, prepared, err = getPrepared(httpArgs)
+		prepared_name, prepared, err = getPrepared(httpArgs, &phaseTime)
 		encoded_plan, plan_err := getEncodedPlan(httpArgs)
 
 		// MB-18841 (encoded_plan processing affects latency)
@@ -105,7 +108,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
-			decoded_plan, plan_err = plan.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), true)
+			// Distributed plans: we don't propagate on encoded_plan parameter
+			// because the client will be using it across all nodes anyway, and
+			// we want to avoid a plan distribution stampede
+			decoded_plan, plan_err = prepareds.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), false, &phaseTime)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {
@@ -273,6 +279,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		namespace, max_parallelism, scan_cap, pipeline_cap, pipeline_batch,
 		readonly, metrics, signature, pretty, consistency, client_id, creds,
 		req.RemoteAddr, userAgent)
+
+	if phaseTime != 0 {
+		rv.Output().AddPhaseTime(execution.REPREPARE, phaseTime)
+	}
 
 	var prof server.Profile
 	if err == nil {
@@ -447,14 +457,14 @@ func isValidParameter(a string) bool {
 	return false
 }
 
-func getPrepared(a httpRequestArgs) (string, *plan.Prepared, errors.Error) {
+func getPrepared(a httpRequestArgs, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
 	prepared_field, err := a.getValue(PREPARED)
 	if err != nil || prepared_field == nil {
 		return "", nil, err
 	}
 
 	// Monitoring API: track prepared statement access
-	prepared, err := plan.GetPrepared(prepared_field, plan.OPT_TRACK|plan.OPT_REMOTE)
+	prepared, err := prepareds.GetPrepared(prepared_field, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
 	if err != nil || prepared == nil {
 		return "", nil, err
 	}

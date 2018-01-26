@@ -20,10 +20,14 @@ import (
 
 var errBadFormat = fmt.Errorf("prepared must be a json string or object")
 
+// Just a checker. The plan gets retrieved at request instantiation time, anyway
+// and getting it here was just doubling effort, plus introduced a circular dependency
+// VisitExecute is still part of the Visitor pattern because it will be used for
+// the Execute syntax enhancements (MB-22574)
 func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
 	expr := stmt.Prepared()
 	if (expr == nil) || expr.Type() != value.STRING && expr.Type() != value.OBJECT {
 		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
 	}
-	return plan.GetPrepared(expr, plan.OPT_REMOTE)
+	return plan.NewDiscard(), nil
 }

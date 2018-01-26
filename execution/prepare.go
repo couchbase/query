@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/value"
 )
 
@@ -55,7 +56,7 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
-		err := plan.AddPrepared(this.plan.Plan())
+		err := prepareds.AddPrepared(this.plan.Plan())
 		if err != nil {
 			context.Fatal(err)
 			return

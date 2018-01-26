@@ -13,7 +13,7 @@ import (
 	"fmt"
 )
 
-// Plan errors - errors that are created in the plan and algebra packages
+// Plan errors - errors that are created in the prepared, planner and plan packages
 
 func NewPlanError(e error, msg string) Error {
 	switch e := e.(type) {
@@ -22,6 +22,10 @@ func NewPlanError(e error, msg string) Error {
 	default:
 		return &err{level: EXCEPTION, ICode: 4000, IKey: "plan_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
 	}
+}
+
+func NewReprepareError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 4001, IKey: "reprepare_error", ICause: e, InternalMsg: "Reprepare error", InternalCaller: CallerN(1)}
 }
 
 const NO_TERM_NAME = 4010

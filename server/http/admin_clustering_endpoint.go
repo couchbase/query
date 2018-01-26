@@ -21,7 +21,7 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
@@ -464,7 +464,7 @@ var _SETTERS = map[string]setter{
 	},
 	_PRPLIMIT: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
-		plan.PreparedsSetLimit(int(value))
+		prepareds.PreparedsSetLimit(int(value))
 	},
 	_PRETTY: func(s *server.Server, o interface{}) {
 		value, _ := o.(bool)
@@ -556,7 +556,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	threshold, _ := server.RequestsGetQualifier("threshold")
 	settings[_CMPTHRESHOLD] = threshold
 	settings[_CMPLIMIT] = server.RequestsLimit()
-	settings[_PRPLIMIT] = plan.PreparedsLimit()
+	settings[_PRPLIMIT] = prepareds.PreparedsLimit()
 	settings[_PRETTY] = srvr.Pretty()
 	settings[_MAXINDEXAPI] = srvr.MaxIndexAPI()
 	settings[_N1QLFEATCTRL] = util.GetN1qlFeatureControl()

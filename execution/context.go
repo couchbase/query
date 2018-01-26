@@ -56,6 +56,7 @@ const (
 	INSTANTIATE
 	PARSE
 	PLAN
+	REPREPARE
 	RUN
 	PHASES // Sizer
 )
@@ -88,6 +89,7 @@ var _PHASE_NAMES = []string{
 	INSTANTIATE: "instantiate",
 	PARSE:       "parse",
 	PLAN:        "plan",
+	REPREPARE:   "reprepare",
 	RUN:         "run",
 }
 

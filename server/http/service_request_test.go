@@ -25,7 +25,7 @@ import (
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 
@@ -63,8 +63,10 @@ func init() {
 		os.Exit(1)
 	}
 	logging.SetLogger(logger)
-	plan.PreparedsInit(1024)
+	prepareds.PreparedsInit(1024)
 	test_server = newTestServer()
+	prepareds.PreparedsReprepareInit(test_server.query_server.Datastore(), test_server.query_server.Systemstore(),
+		test_server.query_server.Namespace())
 }
 
 func verifyEntry(t *testing.T, e timestamp.Entry, position uint32, guard string, value uint64) {
@@ -275,7 +277,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 		"prepared": name,
 	})
 
-	prepared, _ := plan.GetPrepared(value.NewValue(name), 0)
+	prepared, _ := prepareds.GetPrepared(value.NewValue(name), 0, nil)
 	if prepared == nil {
 		t.Errorf("Expected to resolve prepared statement with name %v", name)
 		return
@@ -315,7 +317,7 @@ func doPrepare(t *testing.T, name string, stmt string) {
 	})
 
 	// Verify the name is in the prepared cache:
-	prepared, err := plan.GetPrepared(value.NewValue(name), 0)
+	prepared, err := prepareds.GetPrepared(value.NewValue(name), 0, nil)
 	if err != nil {
 		t.Errorf("Unexpected error looking up prepared: %v", err)
 	}

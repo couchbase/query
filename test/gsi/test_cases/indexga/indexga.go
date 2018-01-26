@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
@@ -314,7 +315,7 @@ func Start(site, pool, namespace string) *MockServer {
 	server.RequestsInit(0, 8)
 
 	// Start the prepared statement cache
-	plan.PreparedsInit(1024)
+	prepareds.PreparedsInit(1024)
 
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
@@ -329,6 +330,7 @@ func Start(site, pool, namespace string) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	prepareds.PreparedsReprepareInit(ds, sys, namespace)
 	server.SetKeepAlive(1 << 10)
 
 	go server.Serve()
@@ -616,7 +618,7 @@ func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, e
 	}
 	runStmt(qc, "DELETE FROM system:prepareds")
 	ra := resultsActual[0].(map[string]interface{})
-	return plan.DecodePrepared("", ra["encoded_plan"].(string), true, true)
+	return prepareds.DecodePrepared("", ra["encoded_plan"].(string), true, false, nil)
 }
 
 /*

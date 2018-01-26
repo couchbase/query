@@ -21,7 +21,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
@@ -255,7 +255,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, err
 		}
-		err = plan.DeletePrepared(name)
+		err = prepareds.DeletePrepared(name)
 		if err != nil {
 			return nil, err
 		}
@@ -274,13 +274,13 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminBodyError(err1)
 		}
 
-		prepared, _ := plan.GetPrepared(value.NewValue(name), 0)
+		prepared, _ := prepareds.GetPrepared(value.NewValue(name), 0, nil)
 
 		// nothing to do if the prepared is there and the plan matches
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err = plan.DecodePrepared(name, string(body), false, false)
+		_, err = prepareds.DecodePrepared(name, string(body), false, false, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -299,12 +299,14 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 		var itemMap map[string]interface{}
 
-		plan.PreparedDo(name, func(entry *plan.CacheEntry) {
+		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
 			itemMap = map[string]interface{}{
-				"name":         name,
-				"uses":         entry.Uses,
-				"statement":    entry.Prepared.Text(),
-				"encoded_plan": entry.Prepared.EncodedPlan(),
+				"name":            name,
+				"uses":            entry.Uses,
+				"statement":       entry.Prepared.Text(),
+				"encoded_plan":    entry.Prepared.EncodedPlan(),
+				"indexApiVersion": entry.Prepared.IndexApiVersion(),
+				"featureControls": entry.Prepared.FeatureControls(),
 			}
 			if req.Method == "POST" {
 				itemMap["plan"] = entry.Prepared.Operator
@@ -336,11 +338,11 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			return nil, err
 		}
 
-		numPrepareds := plan.CountPrepareds()
+		numPrepareds := prepareds.CountPrepareds()
 		data := make([]map[string]interface{}, numPrepareds)
 		i := 0
 
-		snapshot := func(name string, d *plan.CacheEntry) bool {
+		snapshot := func(name string, d *prepareds.CacheEntry) bool {
 
 			// FIXME quick hack to avoid overruns
 			if i >= numPrepareds {
@@ -358,7 +360,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			return true
 		}
 
-		plan.PreparedsForeach(snapshot, nil)
+		prepareds.PreparedsForeach(snapshot, nil)
 		return data, nil
 
 	default:
@@ -691,7 +693,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_INDEXES_PREPAREDS
-	return plan.NamePrepareds(), nil
+	return prepareds.NamePrepareds(), nil
 }
 
 func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {

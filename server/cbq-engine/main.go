@@ -32,7 +32,7 @@ import (
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
@@ -195,7 +195,7 @@ func main() {
 			logging.Pair{"value", *PREPARED_LIMIT})
 		*PREPARED_LIMIT = 16384
 	}
-	plan.PreparedsInit(*PREPARED_LIMIT)
+	prepareds.PreparedsInit(*PREPARED_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 	channel := make(server.RequestChannel, *REQUEST_CAP*numProcs)
@@ -217,6 +217,7 @@ func main() {
 	}
 
 	datastore_package.SetSystemstore(server.Systemstore())
+	prepareds.PreparedsReprepareInit(datastore, sys, *NAMESPACE)
 
 	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)

@@ -20,7 +20,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
@@ -185,7 +185,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	acctstore := this.server.AccountingStore()
 	prepared := request.Prepared() != nil
 
-	plan.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
+	prepareds.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Type(),
 		prepared, (request.State() != server.COMPLETED),

@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -54,7 +54,7 @@ func (b *preparedsKeyspace) Count(context datastore.QueryContext) (int64, errors
 	}, func(warn errors.Error) {
 		context.Warning(warn)
 	})
-	return int64(plan.CountPrepareds() + count), nil
+	return int64(prepareds.CountPrepareds() + count), nil
 }
 
 func (b *preparedsKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -101,12 +101,14 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext,
 		} else {
 
 			// local entry
-			plan.PreparedDo(localKey, func(entry *plan.CacheEntry) {
+			prepareds.PreparedDo(localKey, func(entry *prepareds.CacheEntry) {
 				itemMap := map[string]interface{}{
-					"name":         localKey,
-					"uses":         entry.Uses,
-					"statement":    entry.Prepared.Text(),
-					"encoded_plan": entry.Prepared.EncodedPlan(),
+					"name":            localKey,
+					"uses":            entry.Uses,
+					"statement":       entry.Prepared.Text(),
+					"encoded_plan":    entry.Prepared.EncodedPlan(),
+					"indexApiVersion": entry.Prepared.IndexApiVersion(),
+					"featuresControl": entry.Prepared.FeatureControls(),
 				}
 				if node != "" {
 					itemMap["node"] = node
@@ -175,7 +177,7 @@ func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryCont
 
 			// local entry
 		} else {
-			err = plan.DeletePrepared(localKey)
+			err = prepareds.DeletePrepared(localKey)
 		}
 		if err != nil {
 			deleted := make([]string, i)
@@ -297,7 +299,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 			// now that the node name can change in flight, use a consistent one across the scan
 			whoAmI := distributed.RemoteAccess().WhoAmI()
 			if spanEvaluator.key() == whoAmI {
-				plan.PreparedsForeach(func(name string, prepared *plan.CacheEntry) bool {
+				prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
 					entry = &datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -329,7 +331,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 				if spanEvaluator.evaluate(node) {
 					if node == whoAmI {
 
-						plan.PreparedsForeach(func(name string, prepared *plan.CacheEntry) bool {
+						prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
 							entry = &datastore.IndexEntry{
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 								EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -367,7 +369,7 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 
 	// now that the node name can change in flight, use a consistent one across the scan
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	plan.PreparedsForeach(func(name string, prepared *plan.CacheEntry) bool {
+	prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
 		entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
 		return true
 	}, func() bool {

@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -164,6 +165,10 @@ func (this *Server) Datastore() datastore.Datastore {
 
 func (this *Server) Systemstore() datastore.Datastore {
 	return this.systemstore
+}
+
+func (this *Server) Namespace() string {
+	return this.namespace
 }
 
 func (this *Server) ConfigurationStore() clustering.ConfigurationStore {
@@ -568,6 +573,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	if prepared == nil {
 		parse := time.Now()
 		stmt, err := n1ql.ParseStatement(request.Statement())
+		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
 		}
@@ -580,30 +586,45 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		prep := time.Now()
 		namedArgs := request.NamedArgs()
 		positionalArgs := request.PositionalArgs()
+
+		// No args for a prepared statement - should we throw an error?
 		if isprepare {
 			namedArgs = nil
 			positionalArgs = nil
 		}
+
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false,
 			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls())
+		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}
 
-		// In order to allow monitoring to track prepared statement executed through
-		// N1QL "EXECUTE", set request.prepared - because, as of yet, it isn't!
+		// EXECUTE doesn't get a plan. Get the plan from the cache.
 		switch stmt.Type() {
 		case "EXECUTE":
+			var reprepTime time.Duration
+			var err errors.Error
+
 			exec, _ := stmt.(*algebra.Execute)
 			if exec.Prepared() != nil {
 
-				// remote checking is done during plannig
-				prep, _ := plan.GetPrepared(exec.Prepared(), plan.OPT_TRACK)
-				request.SetPrepared(prep)
+				prepared, err = prepareds.GetPrepared(exec.Prepared(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
+				if reprepTime > 0 {
+					request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
+				}
+				if err != nil {
+					return nil, err
+				}
+				request.SetPrepared(prepared)
 
 				// when executing prepared statements, we set the type to that
 				// of the prepared statement
-				request.SetType(prep.Type())
+				request.SetType(prepared.Type())
+			} else {
+
+				// this never happens, but for completeness
+				errors.NewPlanError(nil, "prepared not specified")
 			}
 		default:
 
@@ -621,9 +642,6 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			// output the text in case of crashes
 			prepared.SetText(request.Statement())
 		}
-
-		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
-		request.Output().AddPhaseTime(execution.PARSE, prep.Sub(parse))
 	} else {
 
 		// ditto
