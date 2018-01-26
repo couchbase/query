@@ -396,8 +396,10 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 			return added
 		})
 
-	if added && distribute {
-		distributePrepared(prepared.Name(), prepared_stmt)
+	if added {
+		if distribute {
+			distributePrepared(prepared.Name(), prepared_stmt)
+		}
 		return prepared, nil
 	} else {
 		return nil, errors.NewPreparedEncodingMismatchError(prepared_name)
