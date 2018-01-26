@@ -559,7 +559,7 @@ func serializedSend(this *base, op Operator, item value.AnnotatedValue) bool {
 		} else {
 			rv = op.processItem(item, opBase.contextTracked)
 			if rv {
-				this.addInDocs(1)
+				opBase.addInDocs(1)
 			}
 		}
 
