@@ -225,11 +225,18 @@ func getCredentialsFromRequest(req *http.Request) (auth.Credentials, errors.Erro
 	return creds, nil
 }
 
-func verifyCredentialsFromRequest(api string, req *http.Request) errors.Error {
+func verifyCredentialsFromRequest(api string, req *http.Request, af *audit.ApiAuditFields) errors.Error {
 	creds, err := getCredentialsFromRequest(req)
 	if err != nil {
 		return err
 	}
+
+	users := make([]string, 0, len(creds))
+	for user := range creds {
+		users = append(users, user)
+	}
+	af.Users = users
+
 	privs := auth.NewPrivileges()
 	privs.Add("system:"+api, auth.PRIV_SYSTEM_READ)
 	_, err = datastore.GetDatastore().Authorize(privs, creds, req)
@@ -244,7 +251,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("prepareds", req)
+		err := verifyCredentialsFromRequest("prepareds", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +265,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		defer req.Body.Close()
 
 		// http.BasicAuth eats the body, so verify credentials after getting the body.
-		err := verifyCredentialsFromRequest("prepareds", req)
+		err := verifyCredentialsFromRequest("prepareds", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +292,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("prepareds", req)
+		err := verifyCredentialsFromRequest("prepareds", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +331,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("prepareds", req)
+		err := verifyCredentialsFromRequest("prepareds", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -373,7 +380,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("actives", req)
+		err := verifyCredentialsFromRequest("actives", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -381,7 +388,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("actives", req)
+		err := verifyCredentialsFromRequest("actives", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -477,7 +484,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
-	err := verifyCredentialsFromRequest("actives", req)
+	err := verifyCredentialsFromRequest("actives", req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -550,14 +557,14 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("completed_requests", req)
+		err := verifyCredentialsFromRequest("completed_requests", req, af)
 		if err != nil {
 			return nil, err
 		}
 		reqMap := completedRequestWorkHorse(requestId, (req.Method == "POST"))
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("completed_requests", req)
+		err := verifyCredentialsFromRequest("completed_requests", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -629,7 +636,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
-	err := verifyCredentialsFromRequest("completed_requests", req)
+	err := verifyCredentialsFromRequest("completed_requests", req, af)
 	if err != nil {
 		return nil, err
 	}
