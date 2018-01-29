@@ -106,7 +106,7 @@ loop:
 		if cont {
 			if right_item != nil {
 				var match bool
-				match, ok, _ = processNLExec(item, right_item, this.plan.Onclause(),
+				match, ok, _ = processAnsiExec(item, right_item, this.plan.Onclause(),
 					this.plan.Alias(), this.ansiFlags, context, "nest")
 				if ok && match {
 					right_items = append(right_items, right_item)
@@ -131,10 +131,10 @@ loop:
 		return false
 	}
 
-	return this.processNLNest(item, right_items, context)
+	return this.processAnsiNest(item, right_items, context)
 }
 
-func (this *NLNest) processNLNest(item value.AnnotatedValue, right_items value.AnnotatedValues, context *Context) bool {
+func (this *NLNest) processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValues, context *Context) bool {
 
 	joined := item
 	alias := this.plan.Alias()
@@ -154,7 +154,7 @@ func (this *NLNest) processNLNest(item value.AnnotatedValue, right_items value.A
 		// only interested in the value corresponding to "alias"
 		val, ok := right_item.Field(alias)
 		if !ok {
-			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processNLNest: annotated value not found for %s", alias)))
+			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiNest: annotated value not found for %s", alias)))
 			return false
 		}
 

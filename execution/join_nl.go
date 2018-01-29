@@ -114,7 +114,7 @@ loop:
 			if right_item != nil {
 				var match bool
 				var joined value.AnnotatedValue
-				match, ok, joined = processNLExec(item, right_item, this.plan.Onclause(),
+				match, ok, joined = processAnsiExec(item, right_item, this.plan.Onclause(),
 					this.plan.Alias(), this.ansiFlags, context, "join")
 				if ok && match {
 					matched = true
@@ -147,7 +147,7 @@ loop:
 	return true
 }
 
-func processNLExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
+func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	onclause expression.Expression, alias string, ansiFlags uint32, context *Context, op string) (
 	bool, bool, value.AnnotatedValue) {
 
@@ -158,7 +158,7 @@ func processNLExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	// only interested in the value corresponding to "alias"
 	val, ok := right_item.Field(alias)
 	if !ok {
-		context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processNLExec: annotated value not found for %s", alias)))
+		context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
 		return false, false, nil
 	}
 
