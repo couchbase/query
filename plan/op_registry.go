@@ -64,13 +64,13 @@ var _OPERATORS = map[string]Operator{
 	"DummyFetch": &DummyFetch{},
 
 	// Join
-	"Join":      &Join{},
-	"IndexJoin": &IndexJoin{},
-	"AnsiJoin":  &AnsiJoin{},
-	"Nest":      &Nest{},
-	"IndexNest": &IndexNest{},
-	"AnsiNest":  &AnsiNest{},
-	"Unnest":    &Unnest{},
+	"Join":           &Join{},
+	"IndexJoin":      &IndexJoin{},
+	"NestedLoopJoin": &NLJoin{},
+	"Nest":           &Nest{},
+	"IndexNest":      &IndexNest{},
+	"NestedLoopNest": &NLNest{},
+	"Unnest":         &Unnest{},
 
 	// Let + Letting
 	"Let": &Let{},

@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/query/expression/parser"
 )
 
-type AnsiNest struct {
+type NLNest struct {
 	readonly
 	outer    bool
 	alias    string
@@ -25,8 +25,8 @@ type AnsiNest struct {
 	child    Operator
 }
 
-func NewAnsiNest(join *algebra.AnsiNest, child Operator) *AnsiNest {
-	rv := &AnsiNest{
+func NewNLNest(join *algebra.AnsiNest, child Operator) *NLNest {
+	rv := &NLNest{
 		outer:    join.Outer(),
 		alias:    join.Alias(),
 		onclause: join.Onclause(),
@@ -36,36 +36,36 @@ func NewAnsiNest(join *algebra.AnsiNest, child Operator) *AnsiNest {
 	return rv
 }
 
-func (this *AnsiNest) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAnsiNest(this)
+func (this *NLNest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNLNest(this)
 }
 
-func (this *AnsiNest) New() Operator {
-	return &AnsiNest{}
+func (this *NLNest) New() Operator {
+	return &NLNest{}
 }
 
-func (this *AnsiNest) Outer() bool {
+func (this *NLNest) Outer() bool {
 	return this.outer
 }
 
-func (this *AnsiNest) Alias() string {
+func (this *NLNest) Alias() string {
 	return this.alias
 }
 
-func (this *AnsiNest) Onclause() expression.Expression {
+func (this *NLNest) Onclause() expression.Expression {
 	return this.onclause
 }
 
-func (this *AnsiNest) Child() Operator {
+func (this *NLNest) Child() Operator {
 	return this.child
 }
 
-func (this *AnsiNest) MarshalJSON() ([]byte, error) {
+func (this *NLNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *AnsiNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "AnsiNest"}
+func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+	r := map[string]interface{}{"#operator": "NestedLoopNest"}
 	r["alias"] = this.alias
 	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
 
@@ -81,7 +81,7 @@ func (this *AnsiNest) MarshalBase(f func(map[string]interface{})) map[string]int
 	return r
 }
 
-func (this *AnsiNest) UnmarshalJSON(body []byte) error {
+func (this *NLNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_        string          `json:"#operator"`
 		Onclause string          `json:"on_clause"`
@@ -123,6 +123,6 @@ func (this *AnsiNest) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *AnsiNest) verify(prepared *Prepared) bool {
+func (this *NLNest) verify(prepared *Prepared) bool {
 	return this.child.verify(prepared)
 }

@@ -240,14 +240,14 @@ func (this *builder) VisitIndexJoin(plan *plan.IndexJoin) (interface{}, error) {
 	return NewIndexJoin(plan, this.context), nil
 }
 
-func (this *builder) VisitAnsiJoin(plan *plan.AnsiJoin) (interface{}, error) {
+func (this *builder) VisitNLJoin(plan *plan.NLJoin) (interface{}, error) {
 	child := plan.Child()
 	c, e := child.Accept(this)
 	if e != nil {
 		return nil, e
 	}
 
-	return NewAnsiJoin(plan, this.context, c.(Operator)), nil
+	return NewNLJoin(plan, this.context, c.(Operator)), nil
 }
 
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
@@ -258,14 +258,14 @@ func (this *builder) VisitIndexNest(plan *plan.IndexNest) (interface{}, error) {
 	return NewIndexNest(plan, this.context), nil
 }
 
-func (this *builder) VisitAnsiNest(plan *plan.AnsiNest) (interface{}, error) {
+func (this *builder) VisitNLNest(plan *plan.NLNest) (interface{}, error) {
 	child := plan.Child()
 	c, e := child.Accept(this)
 	if e != nil {
 		return nil, e
 	}
 
-	return NewAnsiNest(plan, this.context, c.(Operator)), nil
+	return NewNLNest(plan, this.context, c.(Operator)), nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {

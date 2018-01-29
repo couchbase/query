@@ -33,7 +33,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		}
 
 		if len(scans) > 0 {
-			return plan.NewAnsiJoin(node, plan.NewSequence(scans...)), nil
+			return plan.NewNLJoin(node, plan.NewSequence(scans...)), nil
 		}
 
 		if !right.IsPrimaryJoin() {
@@ -72,7 +72,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		}
 
 		if len(scans) > 0 {
-			return plan.NewAnsiNest(node, plan.NewSequence(scans...)), nil
+			return plan.NewNLNest(node, plan.NewSequence(scans...)), nil
 		}
 
 		if !right.IsPrimaryJoin() {

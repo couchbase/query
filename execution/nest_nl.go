@@ -18,32 +18,32 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type AnsiNest struct {
+type NLNest struct {
 	base
-	plan      *plan.AnsiNest
+	plan      *plan.NLNest
 	child     Operator
 	ansiFlags uint32
 }
 
-func NewAnsiNest(plan *plan.AnsiNest, context *Context, child Operator) *AnsiNest {
-	rv := &AnsiNest{
+func NewNLNest(plan *plan.NLNest, context *Context, child Operator) *NLNest {
+	rv := &NLNest{
 		plan:  plan,
 		child: child,
 	}
 
 	newBase(&rv.base, context)
 	rv.trackChildren(1)
-	rv.execPhase = ANSI_NEST
+	rv.execPhase = NL_NEST
 	rv.output = rv
 	return rv
 }
 
-func (this *AnsiNest) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAnsiNest(this)
+func (this *NLNest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNLNest(this)
 }
 
-func (this *AnsiNest) Copy() Operator {
-	rv := &AnsiNest{
+func (this *NLNest) Copy() Operator {
+	rv := &NLNest{
 		plan:  this.plan,
 		child: this.child.Copy(),
 	}
@@ -51,12 +51,12 @@ func (this *AnsiNest) Copy() Operator {
 	return rv
 }
 
-func (this *AnsiNest) RunOnce(context *Context, parent value.Value) {
+func (this *NLNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *AnsiNest) beforeItems(context *Context, parent value.Value) bool {
-	if !context.assert(this.child != nil, "ANSI NEST has no child") {
+func (this *NLNest) beforeItems(context *Context, parent value.Value) bool {
+	if !context.assert(this.child != nil, "Nested Loop Nest has no child") {
 		return false
 	}
 	if !context.assert(this.plan.Onclause() != nil, "ANSI NEST does not have onclause") {
@@ -76,7 +76,7 @@ func (this *AnsiNest) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
-func (this *AnsiNest) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *NLNest) processItem(item value.AnnotatedValue, context *Context) bool {
 	defer this.switchPhase(_EXECTIME)
 
 	if (this.ansiFlags & ANSI_REOPEN_CHILD) != 0 {
@@ -106,7 +106,7 @@ loop:
 		if cont {
 			if right_item != nil {
 				var match bool
-				match, ok, _ = processAnsiExec(item, right_item, this.plan.Onclause(),
+				match, ok, _ = processNLExec(item, right_item, this.plan.Onclause(),
 					this.plan.Alias(), this.ansiFlags, context, "nest")
 				if ok && match {
 					right_items = append(right_items, right_item)
@@ -131,10 +131,10 @@ loop:
 		return false
 	}
 
-	return this.processAnsiNest(item, right_items, context)
+	return this.processNLNest(item, right_items, context)
 }
 
-func (this *AnsiNest) processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValues, context *Context) bool {
+func (this *NLNest) processNLNest(item value.AnnotatedValue, right_items value.AnnotatedValues, context *Context) bool {
 
 	joined := item
 	alias := this.plan.Alias()
@@ -154,7 +154,7 @@ func (this *AnsiNest) processAnsiNest(item value.AnnotatedValue, right_items val
 		// only interested in the value corresponding to "alias"
 		val, ok := right_item.Field(alias)
 		if !ok {
-			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiNest: annotated value not found for %s", alias)))
+			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processNLNest: annotated value not found for %s", alias)))
 			return false
 		}
 
@@ -166,7 +166,7 @@ func (this *AnsiNest) processAnsiNest(item value.AnnotatedValue, right_items val
 	return this.sendItem(joined)
 }
 
-func (this *AnsiNest) MarshalJSON() ([]byte, error) {
+func (this *NLNest) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 		r["~child"] = this.child
@@ -174,14 +174,14 @@ func (this *AnsiNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *AnsiNest) SendStop() {
+func (this *NLNest) SendStop() {
 	this.baseSendStop()
 	if this.child != nil {
 		this.child.SendStop()
 	}
 }
 
-func (this *AnsiNest) reopen(context *Context) {
+func (this *NLNest) reopen(context *Context) {
 	this.baseReopen(context)
 	this.ansiFlags &^= ANSI_REOPEN_CHILD
 	if this.child != nil {
@@ -189,7 +189,7 @@ func (this *AnsiNest) reopen(context *Context) {
 	}
 }
 
-func (this *AnsiNest) Done() {
+func (this *NLNest) Done() {
 	this.baseDone()
 	if this.child != nil {
 		this.child.Done()

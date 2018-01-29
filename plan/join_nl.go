@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/query/expression/parser"
 )
 
-type AnsiJoin struct {
+type NLJoin struct {
 	readonly
 	outer    bool
 	alias    string
@@ -25,8 +25,8 @@ type AnsiJoin struct {
 	child    Operator
 }
 
-func NewAnsiJoin(join *algebra.AnsiJoin, child Operator) *AnsiJoin {
-	rv := &AnsiJoin{
+func NewNLJoin(join *algebra.AnsiJoin, child Operator) *NLJoin {
+	rv := &NLJoin{
 		outer:    join.Outer(),
 		alias:    join.Alias(),
 		onclause: join.Onclause(),
@@ -36,36 +36,36 @@ func NewAnsiJoin(join *algebra.AnsiJoin, child Operator) *AnsiJoin {
 	return rv
 }
 
-func (this *AnsiJoin) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAnsiJoin(this)
+func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNLJoin(this)
 }
 
-func (this *AnsiJoin) New() Operator {
-	return &AnsiJoin{}
+func (this *NLJoin) New() Operator {
+	return &NLJoin{}
 }
 
-func (this *AnsiJoin) Outer() bool {
+func (this *NLJoin) Outer() bool {
 	return this.outer
 }
 
-func (this *AnsiJoin) Alias() string {
+func (this *NLJoin) Alias() string {
 	return this.alias
 }
 
-func (this *AnsiJoin) Onclause() expression.Expression {
+func (this *NLJoin) Onclause() expression.Expression {
 	return this.onclause
 }
 
-func (this *AnsiJoin) Child() Operator {
+func (this *NLJoin) Child() Operator {
 	return this.child
 }
 
-func (this *AnsiJoin) MarshalJSON() ([]byte, error) {
+func (this *NLJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *AnsiJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "AnsiJoin"}
+func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+	r := map[string]interface{}{"#operator": "NestedLoopJoin"}
 	r["alias"] = this.alias
 	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
 
@@ -81,7 +81,7 @@ func (this *AnsiJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 	return r
 }
 
-func (this *AnsiJoin) UnmarshalJSON(body []byte) error {
+func (this *NLJoin) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_        string          `json:"#operator"`
 		Onclause string          `json:"on_clause"`
@@ -123,6 +123,6 @@ func (this *AnsiJoin) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *AnsiJoin) verify(prepared *Prepared) bool {
+func (this *NLJoin) verify(prepared *Prepared) bool {
 	return this.child.verify(prepared)
 }

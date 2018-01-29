@@ -40,8 +40,8 @@ type Visitor interface {
 	VisitNest(op *Nest) (interface{}, error)
 	VisitIndexNest(op *IndexNest) (interface{}, error)
 	VisitUnnest(op *Unnest) (interface{}, error)
-	VisitAnsiJoin(op *AnsiJoin) (interface{}, error)
-	VisitAnsiNest(op *AnsiNest) (interface{}, error)
+	VisitNLJoin(op *NLJoin) (interface{}, error)
+	VisitNLNest(op *NLNest) (interface{}, error)
 
 	// Let + Letting
 	VisitLet(op *Let) (interface{}, error)

@@ -25,32 +25,32 @@ const (
 	ANSI_ONCLAUSE_FALSE             // on-clause is FALSE
 )
 
-type AnsiJoin struct {
+type NLJoin struct {
 	base
-	plan      *plan.AnsiJoin
+	plan      *plan.NLJoin
 	child     Operator
 	ansiFlags uint32
 }
 
-func NewAnsiJoin(plan *plan.AnsiJoin, context *Context, child Operator) *AnsiJoin {
-	rv := &AnsiJoin{
+func NewNLJoin(plan *plan.NLJoin, context *Context, child Operator) *NLJoin {
+	rv := &NLJoin{
 		plan:  plan,
 		child: child,
 	}
 
 	newBase(&rv.base, context)
 	rv.trackChildren(1)
-	rv.execPhase = ANSI_JOIN
+	rv.execPhase = NL_JOIN
 	rv.output = rv
 	return rv
 }
 
-func (this *AnsiJoin) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAnsiJoin(this)
+func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNLJoin(this)
 }
 
-func (this *AnsiJoin) Copy() Operator {
-	rv := &AnsiJoin{
+func (this *NLJoin) Copy() Operator {
+	rv := &NLJoin{
 		plan:  this.plan,
 		child: this.child.Copy(),
 	}
@@ -58,12 +58,12 @@ func (this *AnsiJoin) Copy() Operator {
 	return rv
 }
 
-func (this *AnsiJoin) RunOnce(context *Context, parent value.Value) {
+func (this *NLJoin) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *AnsiJoin) beforeItems(context *Context, parent value.Value) bool {
-	if !context.assert(this.child != nil, "ANSI JOIN has no child") {
+func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
+	if !context.assert(this.child != nil, "Nested Loop Join has no child") {
 		return false
 	}
 	if !context.assert(this.plan.Onclause() != nil, "ANSI JOIN does not have onclause") {
@@ -83,7 +83,7 @@ func (this *AnsiJoin) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
-func (this *AnsiJoin) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *NLJoin) processItem(item value.AnnotatedValue, context *Context) bool {
 	defer this.switchPhase(_EXECTIME)
 
 	if (this.ansiFlags & ANSI_REOPEN_CHILD) != 0 {
@@ -114,7 +114,7 @@ loop:
 			if right_item != nil {
 				var match bool
 				var joined value.AnnotatedValue
-				match, ok, joined = processAnsiExec(item, right_item, this.plan.Onclause(),
+				match, ok, joined = processNLExec(item, right_item, this.plan.Onclause(),
 					this.plan.Alias(), this.ansiFlags, context, "join")
 				if ok && match {
 					matched = true
@@ -147,7 +147,7 @@ loop:
 	return true
 }
 
-func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
+func processNLExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	onclause expression.Expression, alias string, ansiFlags uint32, context *Context, op string) (
 	bool, bool, value.AnnotatedValue) {
 
@@ -158,7 +158,7 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	// only interested in the value corresponding to "alias"
 	val, ok := right_item.Field(alias)
 	if !ok {
-		context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
+		context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processNLExec: annotated value not found for %s", alias)))
 		return false, false, nil
 	}
 
@@ -198,7 +198,7 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	return match, true, joined
 }
 
-func (this *AnsiJoin) MarshalJSON() ([]byte, error) {
+func (this *NLJoin) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 		r["~child"] = this.child
@@ -206,14 +206,14 @@ func (this *AnsiJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *AnsiJoin) SendStop() {
+func (this *NLJoin) SendStop() {
 	this.baseSendStop()
 	if this.child != nil {
 		this.child.SendStop()
 	}
 }
 
-func (this *AnsiJoin) reopen(context *Context) {
+func (this *NLJoin) reopen(context *Context) {
 	this.baseReopen(context)
 	this.ansiFlags &^= ANSI_REOPEN_CHILD
 	if this.child != nil {
@@ -221,7 +221,7 @@ func (this *AnsiJoin) reopen(context *Context) {
 	}
 }
 
-func (this *AnsiJoin) Done() {
+func (this *NLJoin) Done() {
 	this.baseDone()
 	if this.child != nil {
 		this.child.Done()
