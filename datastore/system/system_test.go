@@ -178,7 +178,7 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the keyspaces keyspace - expect to find a value for this key:
-	vals, errs := bb.Fetch([]string{"p0/b1"}, datastore.NULL_QUERY_CONTEXT)
+	vals, errs := bb.Fetch([]string{"p0/b1"}, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
@@ -188,7 +188,7 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the user_info keyspace - expect to find a value for this key:
-	vals, errs = ui.Fetch([]string{"ivanivanov"}, datastore.NULL_QUERY_CONTEXT)
+	vals, errs = ui.Fetch([]string{"ivanivanov"}, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
@@ -198,7 +198,7 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the indexes keyspace - expect to find a value for this key:
-	vals, errs = ib.Fetch([]string{"p0/b1/#primary"}, datastore.NULL_QUERY_CONTEXT)
+	vals, errs = ib.Fetch([]string{"p0/b1/#primary"}, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
@@ -208,7 +208,7 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the keyspaces keyspace - expect to not find a value for this key:
-	vals, errs = bb.Fetch([]string{"p0/b5"}, datastore.NULL_QUERY_CONTEXT)
+	vals, errs = bb.Fetch([]string{"p0/b5"}, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs == nil {
 		t.Fatalf("Expected not found error for key fetch on %s", "p0/b5")
 	}
