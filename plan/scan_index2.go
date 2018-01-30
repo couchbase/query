@@ -200,12 +200,8 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["ordered"] = this.ordered
 	}
 
-	if this.term.IsAnsiJoin() {
-		r["ansi_join"] = this.term.IsAnsiJoin()
-	}
-
-	if this.term.IsAnsiNest() {
-		r["ansi_nest"] = this.term.IsAnsiNest()
+	if this.term.IsUnderNL() {
+		r["nested_loop"] = this.term.IsUnderNL()
 	}
 
 	if this.projection != nil {
@@ -252,8 +248,7 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 		Reverse      bool                   `json:"reverse"`
 		Distinct     bool                   `json:"distinct"`
 		Ordered      bool                   `json:"ordered"`
-		AnsiJoin     bool                   `json:"ansi_join"`
-		AnsiNest     bool                   `json:"ansi_nest"`
+		UnderNL      bool                   `json:"nested_loop"`
 		Projection   *IndexProjection       `json:"index_projection"`
 		Offset       string                 `json:"offset"`
 		Limit        string                 `json:"limit"`
@@ -272,11 +267,8 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
-	if _unmarshalled.AnsiJoin {
-		this.term.SetAnsiJoin()
-	}
-	if _unmarshalled.AnsiNest {
-		this.term.SetAnsiNest()
+	if _unmarshalled.UnderNL {
+		this.term.SetUnderNL()
 	}
 	this.spans = _unmarshalled.Spans
 	this.reverse = _unmarshalled.Reverse

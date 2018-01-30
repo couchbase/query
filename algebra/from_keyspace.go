@@ -21,6 +21,7 @@ const (
 	KS_ANSI_JOIN    = 1 << iota // right-hand side of ANSI JOIN
 	KS_ANSI_NEST                // right-hand side of ANSI NEST
 	KS_PRIMARY_JOIN             // join on primary key (meta().id)
+	KS_UNDER_NL                 // inner side of nested-loop join
 )
 
 /*
@@ -309,6 +310,13 @@ func (this *KeyspaceTerm) IsPrimaryJoin() bool {
 }
 
 /*
+Returns whether under inner of nested-loop join
+*/
+func (this *KeyspaceTerm) IsUnderNL() bool {
+	return (this.property & KS_UNDER_NL) != 0
+}
+
+/*
 Set join keys
 */
 func (this *KeyspaceTerm) SetJoinKeys(keys expression.Expression) {
@@ -346,6 +354,20 @@ func (this *KeyspaceTerm) SetPrimaryJoin() {
 	if this.IsAnsiJoinOp() {
 		this.property |= KS_PRIMARY_JOIN
 	}
+}
+
+/*
+Set UNDER NL property
+*/
+func (this *KeyspaceTerm) SetUnderNL() {
+	this.property |= KS_UNDER_NL
+}
+
+/*
+Unset UNDER NL property
+*/
+func (this *KeyspaceTerm) UnsetUnderNL() {
+	this.property &^= KS_UNDER_NL
 }
 
 /*

@@ -199,12 +199,8 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["distinct"] = this.distinct
 	}
 
-	if this.term.IsAnsiJoin() {
-		r["ansi_join"] = this.term.IsAnsiJoin()
-	}
-
-	if this.term.IsAnsiNest() {
-		r["ansi_nest"] = this.term.IsAnsiNest()
+	if this.term.IsUnderNL() {
+		r["nested_loop"] = this.term.IsUnderNL()
 	}
 
 	if this.projection != nil {
@@ -258,8 +254,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Spans        Spans2                 `json:"spans"`
 		Reverse      bool                   `json:"reverse"`
 		Distinct     bool                   `json:"distinct"`
-		AnsiJoin     bool                   `json:"ansi_join"`
-		AnsiNest     bool                   `json:"ansi_nest"`
+		UnderNL      bool                   `json:"nested_loop"`
 		GroupAggs    *IndexGroupAggregates  `json:"index_group_aggs"`
 		Projection   *IndexProjection       `json:"index_projection"`
 		OrderTerms   IndexKeyOrders         `json:"index_order"`
@@ -288,12 +283,8 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms
 
-	if _unmarshalled.AnsiJoin {
-		this.term.SetAnsiJoin()
-	}
-
-	if _unmarshalled.AnsiNest {
-		this.term.SetAnsiNest()
+	if _unmarshalled.UnderNL {
+		this.term.SetUnderNL()
 	}
 
 	if _unmarshalled.Offset != "" {

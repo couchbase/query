@@ -23,6 +23,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
+		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer())
 		if err != nil {
 			return nil, err
@@ -35,6 +36,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		if len(scans) > 0 {
 			return plan.NewNLJoin(node, plan.NewSequence(scans...)), nil
 		}
+
+		right.UnsetUnderNL()
 
 		if !right.IsPrimaryJoin() {
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: no plan built for %s", node.Alias()))
@@ -62,6 +65,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
+		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer())
 		if err != nil {
 			return nil, err
@@ -74,6 +78,8 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		if len(scans) > 0 {
 			return plan.NewNLNest(node, plan.NewSequence(scans...)), nil
 		}
+
+		right.UnsetUnderNL()
 
 		if !right.IsPrimaryJoin() {
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: no plan built for %s", node.Alias()))

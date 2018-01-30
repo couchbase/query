@@ -66,11 +66,8 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
-	if this.term.IsAnsiJoin() {
-		r["ansi_join"] = this.term.IsAnsiJoin()
-	}
-	if this.term.IsAnsiNest() {
-		r["ansi_nest"] = this.term.IsAnsiNest()
+	if this.term.IsUnderNL() {
+		r["nested_loop"] = this.term.IsUnderNL()
 	}
 	if f != nil {
 		f(r)
@@ -84,8 +81,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		Names    string   `json:"namespace"`
 		Keys     string   `json:"keyspace"`
 		As       string   `json:"as"`
-		AnsiJoin bool     `json:"ansi_join"`
-		AnsiNest bool     `json:"ansi_nest"`
+		UnderNL  bool     `json:"nested_loop"`
 		SubPaths []string `json:"subpaths"`
 	}
 
@@ -97,11 +93,8 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	this.subPaths = _unmarshalled.SubPaths
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
-	if _unmarshalled.AnsiJoin {
-		this.term.SetAnsiJoin()
-	}
-	if _unmarshalled.AnsiNest {
-		this.term.SetAnsiNest()
+	if _unmarshalled.UnderNL {
+		this.term.SetUnderNL()
 	}
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
@@ -147,11 +140,8 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
-	if this.term.IsAnsiJoin() {
-		r["ansi_join"] = this.term.IsAnsiJoin()
-	}
-	if this.term.IsAnsiNest() {
-		r["ansi_nest"] = this.term.IsAnsiNest()
+	if this.term.IsUnderNL() {
+		r["nested_loop"] = this.term.IsUnderNL()
 	}
 	if f != nil {
 		f(r)
@@ -161,12 +151,11 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string `json:"#operator"`
-		Names    string `json:"namespace"`
-		Keys     string `json:"keyspace"`
-		As       string `json:"as"`
-		AnsiJoin bool   `json:"ansi_join"`
-		AnsiNest bool   `json:"ansi_nest"`
+		_       string `json:"#operator"`
+		Names   string `json:"namespace"`
+		Keys    string `json:"keyspace"`
+		As      string `json:"as"`
+		UnderNL bool   `json:"nested_loop"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -175,11 +164,8 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
-	if _unmarshalled.AnsiJoin {
-		this.term.SetAnsiJoin()
-	}
-	if _unmarshalled.AnsiNest {
-		this.term.SetAnsiNest()
+	if _unmarshalled.UnderNL {
+		this.term.SetUnderNL()
 	}
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err

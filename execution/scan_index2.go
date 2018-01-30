@@ -73,10 +73,10 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 		}
 		defer countDocs()
 
-		// for right hand side of ANSI JOIN we don't want to include parent values
+		// for right hand side of nested-loop join we don't want to include parent values
 		// in the returned scope value
 		scope_value := parent
-		if this.plan.Term().IsAnsiJoinOp() {
+		if this.plan.Term().IsUnderNL() {
 			scope_value = nil
 		}
 
@@ -144,10 +144,10 @@ func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection, 
 
 	plan := this.plan
 
-	// for ANSI JOIN we need to pass in values from left-hand-side (outer) of the join
+	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
 	outer_values := parent
-	if !this.plan.Term().IsAnsiJoinOp() {
+	if !this.plan.Term().IsUnderNL() {
 		outer_values = nil
 	}
 	dspans, empty, err := evalSpan2(plan.Spans(), outer_values, context)

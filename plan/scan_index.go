@@ -171,12 +171,8 @@ func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["distinct"] = this.distinct
 	}
 
-	if this.term.IsAnsiJoin() {
-		r["ansi_join"] = this.term.IsAnsiJoin()
-	}
-
-	if this.term.IsAnsiNest() {
-		r["ansi_nest"] = this.term.IsAnsiNest()
+	if this.term.IsUnderNL() {
+		r["nested_loop"] = this.term.IsUnderNL()
 	}
 
 	if this.limit != nil {
@@ -213,8 +209,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		Using        datastore.IndexType    `json:"using"`
 		Spans        Spans                  `json:"spans"`
 		Distinct     bool                   `json:"distinct"`
-		AnsiJoin     bool                   `json:"ansi_join"`
-		AnsiNest     bool                   `json:"ansi_nest"`
+		UnderNL      bool                   `json:"nested_loop"`
 		Limit        string                 `json:"limit"`
 		Covers       []string               `json:"covers"`
 		FilterCovers map[string]interface{} `json:"filter_covers"`
@@ -231,11 +226,8 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
-	if _unmarshalled.AnsiJoin {
-		this.term.SetAnsiJoin()
-	}
-	if _unmarshalled.AnsiNest {
-		this.term.SetAnsiNest()
+	if _unmarshalled.UnderNL {
+		this.term.SetUnderNL()
 	}
 	this.spans = _unmarshalled.Spans
 	this.distinct = _unmarshalled.Distinct
