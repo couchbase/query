@@ -1,4 +1,4 @@
-//  Copyright (c) 2017 Couchbase, Inc.
+//  Copyright (c) 2018 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -9,28 +9,31 @@
 
 // +build enterprise
 
-package http
+package server
 
 import (
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/value"
 )
 
-func getProfileRequest(a httpRequestArgs) (server.Profile, errors.Error) {
-	profile, err := a.getString(PROFILE, "")
-	if err == nil && profile != "" {
-		prof, ok := server.ParseProfile(profile)
-		if ok {
-			return prof, nil
-		} else {
-			err = errors.NewServiceErrorUnrecognizedValue(PROFILE, profile)
-		}
-
+func setProfileAdmin(s *Server, o interface{}) {
+	value, _ := o.(string)
+	prof, ok := ParseProfile(value)
+	if ok {
+		s.SetProfile(prof)
 	}
-	return server.ProfUnset, err
 }
 
-func getControlsRequest(a httpRequestArgs) (value.Tristate, errors.Error) {
-	return a.getTristate(CONTROLS)
+func setControlsAdmin(s *Server, o interface{}) {
+	value, _ := o.(bool)
+	s.SetControls(value)
+}
+
+func GetProfileAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+	settings[_PROFILE] = srvr.Profile().String()
+	return settings
+}
+
+func GetControlsAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+	settings[_CONTROLS] = srvr.Controls()
+	return settings
 }

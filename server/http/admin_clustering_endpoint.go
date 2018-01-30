@@ -15,14 +15,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
+	paramSettings "github.com/couchbase/query/server/settings"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
@@ -323,165 +322,6 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	return sslStatus, nil
 }
 
-const (
-	_CPUPROFILE      = "cpuprofile"
-	_DEBUG           = "debug"
-	_KEEPALIVELENGTH = "keep-alive-length"
-	_LOGLEVEL        = "loglevel"
-	_MAXPARALLELISM  = "max-parallelism"
-	_MEMPROFILE      = "memprofile"
-	_REQUESTSIZECAP  = "request-size-cap"
-	_PIPELINEBATCH   = "pipeline-batch"
-	_PIPELINECAP     = "pipeline-cap"
-	_SCANCAP         = "scan-cap"
-	_SERVICERS       = "servicers"
-	_TIMEOUT         = "timeout"
-	_CMPTHRESHOLD    = "completed-threshold"
-	_CMPLIMIT        = "completed-limit"
-	_PRPLIMIT        = "prepared-limit"
-	_PRETTY          = "pretty"
-	_PROFILE         = "profile"
-	_CONTROLS        = "controls"
-	_MAXINDEXAPI     = "max-index-api"
-	_N1QLFEATCTRL    = "n1ql-feat-ctrl"
-)
-
-type checker func(interface{}) (bool, errors.Error)
-
-func checkBool(val interface{}) (bool, errors.Error) {
-	_, ok := val.(bool)
-	return ok, nil
-}
-
-func checkNumber(val interface{}) (bool, errors.Error) {
-	_, ok := val.(float64)
-	return ok, nil
-}
-
-func checkPositiveInteger(val interface{}) (bool, errors.Error) {
-	v, ok := val.(float64)
-
-	// we are getting floats here - val doesn't cast to ints
-	// and we want a cache, however small
-	return ok && (v > 1), nil
-}
-
-func checkString(val interface{}) (bool, errors.Error) {
-	_, ok := val.(string)
-	return ok, nil
-}
-
-func checkLogLevel(val interface{}) (bool, errors.Error) {
-	level, is_string := val.(string)
-	if !is_string {
-		return false, nil
-	}
-	_, ok := logging.ParseLevel(level)
-	return ok, nil
-}
-
-var _CHECKERS = map[string]checker{
-	_CPUPROFILE:      checkString,
-	_DEBUG:           checkBool,
-	_KEEPALIVELENGTH: checkNumber,
-	_LOGLEVEL:        checkLogLevel,
-	_MAXPARALLELISM:  checkNumber,
-	_MEMPROFILE:      checkString,
-	_REQUESTSIZECAP:  checkNumber,
-	_PIPELINEBATCH:   checkNumber,
-	_PIPELINECAP:     checkNumber,
-	_SCANCAP:         checkNumber,
-	_SERVICERS:       checkNumber,
-	_TIMEOUT:         checkNumber,
-	_CMPTHRESHOLD:    checkNumber,
-	_CMPLIMIT:        checkNumber,
-	_PRPLIMIT:        checkPositiveInteger,
-	_PRETTY:          checkBool,
-	_PROFILE:         checkProfileAdmin,
-	_CONTROLS:        checkControlsAdmin,
-	_MAXINDEXAPI:     checkNumber,
-	_N1QLFEATCTRL:    checkNumber,
-}
-
-type setter func(*server.Server, interface{})
-
-var _SETTERS = map[string]setter{
-	_CPUPROFILE: func(s *server.Server, o interface{}) {
-		value, _ := o.(string)
-		s.SetCpuProfile(value)
-	},
-	_DEBUG: func(s *server.Server, o interface{}) {
-		value, _ := o.(bool)
-		s.SetDebug(value)
-	},
-	_KEEPALIVELENGTH: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetKeepAlive(int(value))
-	},
-	_LOGLEVEL: func(s *server.Server, o interface{}) {
-		value, _ := o.(string)
-		s.SetLogLevel(value)
-	},
-	_MAXPARALLELISM: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetMaxParallelism(int(value))
-	},
-	_MEMPROFILE: func(s *server.Server, o interface{}) {
-		value, _ := o.(string)
-		s.SetMemProfile(value)
-	},
-	_PIPELINECAP: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetPipelineCap(int64(value))
-	},
-	_PIPELINEBATCH: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetPipelineBatch(int(value))
-	},
-	_REQUESTSIZECAP: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetRequestSizeCap(int(value))
-	},
-	_SCANCAP: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetScanCap(int64(value))
-	},
-	_SERVICERS: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetServicers(int(value))
-	},
-	_TIMEOUT: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetTimeout(time.Duration(value))
-	},
-	_CMPTHRESHOLD: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		_ = server.RequestsUpdateQualifier("threshold", int(value))
-	},
-	_CMPLIMIT: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		server.RequestsSetLimit(int(value))
-	},
-	_PRPLIMIT: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		prepareds.PreparedsSetLimit(int(value))
-	},
-	_PRETTY: func(s *server.Server, o interface{}) {
-		value, _ := o.(bool)
-		s.SetPretty(value)
-	},
-	_PROFILE:  setProfileAdmin,
-	_CONTROLS: setControlsAdmin,
-	_MAXINDEXAPI: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		s.SetMaxIndexAPI(int(value))
-	},
-	_N1QLFEATCTRL: func(s *server.Server, o interface{}) {
-		value, _ := o.(float64)
-		util.SetN1qlFeatureControl(uint64(value))
-	},
-}
-
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_SETTINGS
 
@@ -507,7 +347,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		}
 		af.Values = settings
 
-		if errP := ProcessSettings(settings, srvr); errP != nil {
+		if errP := server.ProcessSettings(settings, srvr); errP != nil {
 			return nil, errP
 		}
 
@@ -517,51 +357,28 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func ProcessSettings(settings map[string]interface{}, srvr *server.Server) errors.Error {
-	for setting, value := range settings {
-		if check_it, ok := _CHECKERS[setting]; !ok {
-			return errors.NewAdminUnknownSettingError(setting)
-		} else {
-			ok, err := check_it(value)
-			if !ok {
-				if err == nil {
-					return errors.NewAdminSettingTypeError(setting, value)
-				} else {
-					return err
-				}
-			}
-		}
-	}
-	for setting, value := range settings {
-		set_it := _SETTERS[setting]
-		set_it(srvr, value)
-		logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
-	}
-	return nil
-}
-
 func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {
-	settings[_CPUPROFILE] = srvr.CpuProfile()
-	settings[_MEMPROFILE] = srvr.MemProfile()
-	settings[_SERVICERS] = srvr.Servicers()
-	settings[_SCANCAP] = srvr.ScanCap()
-	settings[_REQUESTSIZECAP] = srvr.RequestSizeCap()
-	settings[_DEBUG] = srvr.Debug()
-	settings[_PIPELINEBATCH] = srvr.PipelineBatch()
-	settings[_PIPELINECAP] = srvr.PipelineCap()
-	settings[_MAXPARALLELISM] = srvr.MaxParallelism()
-	settings[_TIMEOUT] = srvr.Timeout()
-	settings[_KEEPALIVELENGTH] = srvr.KeepAlive()
-	settings[_LOGLEVEL] = srvr.LogLevel()
+	settings[paramSettings.CPUPROFILE] = srvr.CpuProfile()
+	settings[paramSettings.MEMPROFILE] = srvr.MemProfile()
+	settings[paramSettings.SERVICERS] = srvr.Servicers()
+	settings[paramSettings.SCANCAP] = srvr.ScanCap()
+	settings[paramSettings.REQUESTSIZECAP] = srvr.RequestSizeCap()
+	settings[paramSettings.DEBUG] = srvr.Debug()
+	settings[paramSettings.PIPELINEBATCH] = srvr.PipelineBatch()
+	settings[paramSettings.PIPELINECAP] = srvr.PipelineCap()
+	settings[paramSettings.MAXPARALLELISM] = srvr.MaxParallelism()
+	settings[paramSettings.TIMEOUTSETTING] = srvr.Timeout()
+	settings[paramSettings.KEEPALIVELENGTH] = srvr.KeepAlive()
+	settings[paramSettings.LOGLEVEL] = srvr.LogLevel()
 	threshold, _ := server.RequestsGetQualifier("threshold")
-	settings[_CMPTHRESHOLD] = threshold
-	settings[_CMPLIMIT] = server.RequestsLimit()
-	settings[_PRPLIMIT] = prepareds.PreparedsLimit()
-	settings[_PRETTY] = srvr.Pretty()
-	settings[_MAXINDEXAPI] = srvr.MaxIndexAPI()
-	settings[_N1QLFEATCTRL] = util.GetN1qlFeatureControl()
-	settings = getProfileAdmin(settings, srvr)
-	settings = getControlsAdmin(settings, srvr)
+	settings[paramSettings.CMPTHRESHOLD] = threshold
+	settings[paramSettings.CMPLIMIT] = server.RequestsLimit()
+	settings[paramSettings.PRPLIMIT] = prepareds.PreparedsLimit()
+	settings[paramSettings.PRETTY] = srvr.Pretty()
+	settings[paramSettings.MAXINDEXAPI] = srvr.MaxIndexAPI()
+	settings[paramSettings.N1QLFEATCTRL] = util.GetN1qlFeatureControl()
+	settings = server.GetProfileAdmin(settings, srvr)
+	settings = server.GetControlsAdmin(settings, srvr)
 	return settings
 }
 

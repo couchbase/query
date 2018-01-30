@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2018 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package server
+package couchbase
 
 import (
 	"fmt"
@@ -15,8 +15,6 @@ import (
 
 	"github.com/couchbase/cbauth/metakv"
 	"github.com/couchbase/indexing/secondary/common"
-	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -30,9 +28,13 @@ const (
 )
 
 // List of parameters to be sent to the indexer
-var _INDEXERPARAM = map[string]string{
+var INDEXERPARAM = map[string]string{
 	"query.settings.tmp_space_dir":  "query_tmpspace_dir",
 	"query.settings.tmp_space_size": "query_tmpspace_limit",
+}
+
+var GLOBALQUERYPARAM = map[string]string{
+	"query.settings.curl_whitelist": "curl_whitelist",
 }
 
 type Config value.Value
@@ -100,48 +102,4 @@ func valConvert(val []byte) (Config, error) {
 		return nil, fmt.Errorf(" ERROR: Invalid value type. Expected OBJECT, actual %v", nval.Type().String())
 	}
 	return nval, nil
-}
-
-func SetParamValuesForAll(cfg Config, srvr *Server) {
-	// Convert value.Value - type OBJECT to map[string]interface{}
-	// Range through the config changes and put together 2 lists.
-	// List 1 : Indexer settings
-	var idxrSettings = map[string]interface{}{}
-
-	// List 2 : Query settings
-	var querySettings = map[string]interface{}{}
-
-	configValues := cfg.Fields()
-	for key, val := range configValues {
-		// INDEXER PARAM
-		paramName, ok := _INDEXERPARAM[key]
-		if ok {
-			idxrSettings[paramName] = val
-		} else {
-			// QUERY PARAM
-			querySettings[key] = val
-		}
-	}
-
-	if len(idxrSettings) > 0 {
-		// Call a global function defined by indexer
-		var idxConfig datastore.IndexConfig
-		var err error
-		if idxConfig, err = gsi.GetIndexConfig(); err == nil {
-			err = idxConfig.SetConfig(idxrSettings)
-			if err != nil {
-				//log failure to set values
-				logging.Infof(" ERROR: Could not set indexer settings :: %v", idxrSettings)
-			}
-			logging.Infof(" Indexer settings have been updated %v", idxrSettings)
-		} else {
-			logging.Infof(" ERROR: Cannot get index config :: %v", err.Error())
-
-		}
-	}
-
-	if len(querySettings) > 0 {
-		// Set the query values
-		//http.ProcessSettings(querySettings, srvr)
-	}
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/prepareds"
+	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -146,7 +147,7 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 	//	rv.systemstore = sys
 
 	// Setup callback function for metakv settings changes
-	callb := func(cfg Config) {
+	callb := func(cfg queryMetakv.Config) {
 		logging.Infof("Settings notifier from metakv\n")
 
 		// SetParamValuesForAll accepts a full-set or subset of global configuration
@@ -154,7 +155,7 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 		SetParamValuesForAll(cfg, rv)
 	}
 
-	SetupSettingsNotifier(callb, make(chan struct{}))
+	queryMetakv.SetupSettingsNotifier(callb, make(chan struct{}))
 
 	return rv, nil
 }

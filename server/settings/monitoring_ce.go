@@ -1,4 +1,4 @@
-//  Copyright (c) 2017 Couchbase, Inc.
+//  Copyright (c) 2018 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -9,18 +9,16 @@
 
 // +build !enterprise
 
-package http
+package settings
 
 import (
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/value"
 )
 
-func getProfileRequest(a httpRequestArgs) (server.Profile, errors.Error) {
-	return server.ProfUnset, nil
+func checkProfileAdmin(val interface{}) (bool, errors.Error) {
+	return false, errors.NewNotImplemented("Profiling is an EE only feature")
 }
 
-func getControlsRequest(a httpRequestArgs) (value.Tristate, errors.Error) {
-	return value.NONE, nil
+func checkControlsAdmin(val interface{}) (bool, errors.Error) {
+	return false, errors.NewNotImplemented("Controls is an EE only feature")
 }
