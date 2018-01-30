@@ -12,7 +12,7 @@
 package server
 
 import (
-	"github.com/couchbase/query/errors"
+	paramSettings "github.com/couchbase/query/server/settings"
 )
 
 func setProfileAdmin(s *Server, o interface{}) {
@@ -29,11 +29,11 @@ func setControlsAdmin(s *Server, o interface{}) {
 }
 
 func GetProfileAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
-	settings[_PROFILE] = srvr.Profile().String()
+	settings[paramSettings.PROFILE] = srvr.Profile().String()
 	return settings
 }
 
 func GetControlsAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
-	settings[_CONTROLS] = srvr.Controls()
+	settings[paramSettings.CONTROLS] = srvr.Controls()
 	return settings
 }

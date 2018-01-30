@@ -13,7 +13,6 @@ package settings
 
 import (
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/value"
 )
 
 func checkProfileAdmin(val interface{}) (bool, errors.Error) {
