@@ -1,0 +1,1299 @@
+[
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND (v.index_group_aggs.partial IS MISSING OR v.`index` = 'ixgatp') END"
+        },
+        "statements": "SELECT c0, c1, c2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0, c1, c2",
+        "results": [
+            {
+                "c2": 100,
+                "c1": 10,
+                "c0": 1
+            },
+            {
+                "c2": 600,
+                "c1": 10,
+                "c0": 1
+            },
+            {
+                "c2": 200,
+                "c1": 20,
+                "c0": 1
+            },
+            {
+                "c2": 700,
+                "c1": 20,
+                "c0": 1
+            },
+            {
+                "c2": 300,
+                "c1": 30,
+                "c0": 1
+            },
+            {
+                "c2": 800,
+                "c1": 30,
+                "c0": 1
+            },
+            {
+                "c2": 400,
+                "c1": 40,
+                "c0": 1
+            },
+            {
+                "c2": 900,
+                "c1": 40,
+                "c0": 1
+            },
+            {
+                "c2": 500,
+                "c1": 50,
+                "c0": 1
+            },
+            {
+                "c2": 901,
+                "c1": 50,
+                "c0": 1
+            },
+            {
+                "c2": 110,
+                "c1": 11,
+                "c0": 2
+            },
+            {
+                "c2": 610,
+                "c1": 11,
+                "c0": 2
+            },
+            {
+                "c2": 210,
+                "c1": 21,
+                "c0": 2
+            },
+            {
+                "c2": 710,
+                "c1": 21,
+                "c0": 2
+            },
+            {
+                "c2": 310,
+                "c1": 31,
+                "c0": 2
+            },
+            {
+                "c2": 810,
+                "c1": 31,
+                "c0": 2
+            },
+            {
+                "c2": 410,
+                "c1": 41,
+                "c0": 2
+            },
+            {
+                "c2": 910,
+                "c1": 41,
+                "c0": 2
+            },
+            {
+                "c2": 510,
+                "c1": 51,
+                "c0": 2
+            },
+            {
+                "c2": 911,
+                "c1": 51,
+                "c0": 2
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation, ORDER, OFFSET, LIMIT. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND ((v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING) OR v.`index` = 'ixgatp') END"
+        },
+        "statements": "SELECT c0, c1, c2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0, c1, c2 ORDER BY c0,c1,c2 OFFSET 1 LIMIT 2",
+        "ordered": true,
+        "results": [
+            {
+                "c2": 600,
+                "c1": 10,
+                "c0": 1
+            },
+            {
+                "c2": 200,
+                "c1": 20,
+                "c0": 1
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 2-step aggregation, Group Expression. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING END"
+        },
+        "statements": "SELECT c0, c1+c2 AS c1plusc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0, c1+c2",
+        "results": [
+            {
+                "c0": 2,
+                "c1plusc2": 951
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 231
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 341
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 451
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 621
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 962
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 110
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 220
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 330
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 550
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 610
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 561
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 731
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 121
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 720
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 830
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 940
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 440
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 841
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 951
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 2-step aggregation, Group Expression. No-PushDowns: Order, LIMIT, OFFSET. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING AND v.index_order IS MISSING AND v.`limit` IS MISSING AND v.`offset` IS MISSING END"
+        },
+        "statements": "SELECT c0, c1+c2 AS c1plusc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0, c1+c2 ORDER BY c0, c1+c2 OFFSET 1 LIMIT 2",
+        "ordered": true,
+        "results": [
+            {
+                "c0": 1,
+                "c1plusc2": 220
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 330
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Aggregates, 1-step aggregation",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND (v.index_group_aggs.partial IS MISSING OR v.`index` IN ['ixgap100','ixgatp']) END"
+        },
+        "statements": "SELECT SUM(c0) AS sumc0 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric')",
+        "results": [
+            {
+                "sumc0": 60
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND (v.index_group_aggs.partial IS MISSING OR v.`index` IN ['ixgatp']) END"
+        },
+        "statements": "SELECT c0, SUM(c2) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0",
+        "results": [
+            {
+                "s": 10802,
+                "c0": 1
+            },
+            {
+                "s": 11002,
+                "c0": 2
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation, ORDER. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND ((v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING) OR v.`index` = 'ixgatp') END"
+        },
+        "statements": "SELECT c0, SUM(c2) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0 ORDER BY c0",
+        "ordered": true,
+        "results": [
+            {
+                "s": 10802,
+                "c0": 1
+            },
+            {
+                "s": 11002,
+                "c0": 2
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation, ORDER, OFFSET, LIMIT. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND ((v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING AND v.`offset` IS NOT MISSING AND v.`limit` IS NOT MISSING) OR v.`index` = 'ixgatp') END"
+        },
+        "statements": "SELECT c0, SUM(c2) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0 ORDER BY c0 OFFSET 1 LIMIT 2",
+        "ordered": true,
+        "results": [
+            {
+                "s": 11002,
+                "c0": 2
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 2-step aggregation. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING END"
+        },
+        "statements": "SELECT c0, c1+c2 AS c1plusc2, SUM(c2) AS sumc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0, c1+c2",
+        "results": [
+            {
+                "c0": 1,
+                "c1plusc2": 110,
+                "sumc2": 200
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 341,
+                "sumc2": 620
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 231,
+                "sumc2": 420
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 731,
+                "sumc2": 1420
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 440,
+                "sumc2": 800
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 220,
+                "sumc2": 400
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 940,
+                "sumc2": 1800
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 121,
+                "sumc2": 220
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 621,
+                "sumc2": 1220
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 720,
+                "sumc2": 1400
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 962,
+                "sumc2": 1822
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 951,
+                "sumc2": 1820
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 610,
+                "sumc2": 1200
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 951,
+                "sumc2": 1802
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 330,
+                "sumc2": 600
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 830,
+                "sumc2": 1600
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 561,
+                "sumc2": 1020
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 451,
+                "sumc2": 820
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 550,
+                "sumc2": 1000
+            },
+            {
+                "c0": 2,
+                "c1plusc2": 841,
+                "sumc2": 1620
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 2-step aggregation. No-PushDowns: ORDER, OFFSET,LIMIT. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING AND v.index_order IS MISSING AND v.`offset` IS MISSING AND v.`limit` IS MISSING END"
+        },
+        "statements": "SELECT c0, c1+c2 AS c1plusc2, SUM(c2) AS sumc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c0, c1+c2 ORDER BY c0, c1plusc2 OFFSET 1 LIMIT 2",
+        "ordered": true,
+        "results": [
+            {
+                "c0": 1,
+                "c1plusc2": 220,
+                "sumc2": 400
+            },
+            {
+                "c0": 1,
+                "c1plusc2": 330,
+                "sumc2": 600
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 2-step aggregation. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING END"
+        },
+        "statements": "SELECT c0, c1+c2 AS c1plusc2, MIN(META().id) AS minid , MAX(ABS(c2)) AS maxac2, MAX(c2) AS c2, MAX(c2) AS sc2, ABS(MAX(c2)) AS amaxc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c1+c2,c0",
+        "results": [
+            {
+                "c1plusc2": 841,
+                "amaxc2": 810,
+                "maxac2": 810,
+                "minid": "ga2007",
+                "c2": 810,
+                "c0": 2,
+                "sc2": 810
+            },
+            {
+                "c1plusc2": 951,
+                "amaxc2": 901,
+                "maxac2": 901,
+                "minid": "ga0009",
+                "c2": 901,
+                "c0": 1,
+                "sc2": 901
+            },
+            {
+                "c1plusc2": 621,
+                "amaxc2": 610,
+                "maxac2": 610,
+                "minid": "ga2005",
+                "c2": 610,
+                "c0": 2,
+                "sc2": 610
+            },
+            {
+                "c1plusc2": 830,
+                "amaxc2": 800,
+                "maxac2": 800,
+                "minid": "ga0007",
+                "c2": 800,
+                "c0": 1,
+                "sc2": 800
+            },
+            {
+                "c1plusc2": 231,
+                "amaxc2": 210,
+                "maxac2": 210,
+                "minid": "ga2001",
+                "c2": 210,
+                "c0": 2,
+                "sc2": 210
+            },
+            {
+                "c1plusc2": 451,
+                "amaxc2": 410,
+                "maxac2": 410,
+                "minid": "ga2003",
+                "c2": 410,
+                "c0": 2,
+                "sc2": 410
+            },
+            {
+                "c1plusc2": 720,
+                "amaxc2": 700,
+                "maxac2": 700,
+                "minid": "ga0006",
+                "c2": 700,
+                "c0": 1,
+                "sc2": 700
+            },
+            {
+                "c1plusc2": 610,
+                "amaxc2": 600,
+                "maxac2": 600,
+                "minid": "ga0005",
+                "c2": 600,
+                "c0": 1,
+                "sc2": 600
+            },
+            {
+                "c1plusc2": 962,
+                "amaxc2": 911,
+                "maxac2": 911,
+                "minid": "ga2009",
+                "c2": 911,
+                "c0": 2,
+                "sc2": 911
+            },
+            {
+                "c1plusc2": 550,
+                "amaxc2": 500,
+                "maxac2": 500,
+                "minid": "ga0004",
+                "c2": 500,
+                "c0": 1,
+                "sc2": 500
+            },
+            {
+                "c1plusc2": 110,
+                "amaxc2": 100,
+                "maxac2": 100,
+                "minid": "ga0000",
+                "c2": 100,
+                "c0": 1,
+                "sc2": 100
+            },
+            {
+                "c1plusc2": 341,
+                "amaxc2": 310,
+                "maxac2": 310,
+                "minid": "ga2002",
+                "c2": 310,
+                "c0": 2,
+                "sc2": 310
+            },
+            {
+                "c1plusc2": 951,
+                "amaxc2": 910,
+                "maxac2": 910,
+                "minid": "ga2008",
+                "c2": 910,
+                "c0": 2,
+                "sc2": 910
+            },
+            {
+                "c1plusc2": 220,
+                "amaxc2": 200,
+                "maxac2": 200,
+                "minid": "ga0001",
+                "c2": 200,
+                "c0": 1,
+                "sc2": 200
+            },
+            {
+                "c1plusc2": 440,
+                "amaxc2": 400,
+                "maxac2": 400,
+                "minid": "ga0003",
+                "c2": 400,
+                "c0": 1,
+                "sc2": 400
+            },
+            {
+                "c1plusc2": 940,
+                "amaxc2": 900,
+                "maxac2": 900,
+                "minid": "ga0008",
+                "c2": 900,
+                "c0": 1,
+                "sc2": 900
+            },
+            {
+                "c1plusc2": 121,
+                "amaxc2": 110,
+                "maxac2": 110,
+                "minid": "ga2000",
+                "c2": 110,
+                "c0": 2,
+                "sc2": 110
+            },
+            {
+                "c1plusc2": 561,
+                "amaxc2": 510,
+                "maxac2": 510,
+                "minid": "ga2004",
+                "c2": 510,
+                "c0": 2,
+                "sc2": 510
+            },
+            {
+                "c1plusc2": 330,
+                "amaxc2": 300,
+                "maxac2": 300,
+                "minid": "ga0002",
+                "c2": 300,
+                "c0": 1,
+                "sc2": 300
+            },
+            {
+                "c1plusc2": 731,
+                "amaxc2": 710,
+                "maxac2": 710,
+                "minid": "ga2006",
+                "c2": 710,
+                "c0": 2,
+                "sc2": 710
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND (v.index_group_aggs.partial IS MISSING OR v.`index` = 'ixgatp') END"
+        },
+        "statements": "SELECT c0, AVG(c2) AS avgc2 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  c0 > 1 GROUP BY c0",
+        "results": [
+            {
+                "c0": 2,
+                "avgc2": 550.1
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation. HAVING. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND (v.`index` = 'ixgatp' OR (v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS MISSING )) END"
+        },
+        "statements": "SELECT c0,c1,c2, MIN(meta().id) AS minid, MAX(ABS(c2)) AS maxac2, MAX(c2) AS maxc2, MAX([c2,{c1,c2}])[1] AS maxc1c2, ABS(MAX(c2)) AS absmaxc2, AVG(c1+c3) AS avgc1c2, AVG ( DISTINCT c1) AS avgdc1, SUM ( DISTINCT c2) AS sumdc2, COUNT ( DISTINCT c3) AS sumdc3, cnt AS countc1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c1,c2,c0 LETTING cnt = COUNT(c1) HAVING SUM(c1) > 5 AND cnt > 1",
+        "results": [
+            {
+                "maxc2": 100,
+                "avgdc1": 10,
+                "maxc1c2": {
+                    "c2": 100,
+                    "c1": 10
+                },
+                "avgc1c2": 3010,
+                "maxac2": 100,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0000",
+                "sumdc2": 100,
+                "c2": 100,
+                "c1": 10,
+                "c0": 1,
+                "absmaxc2": 100
+            },
+            {
+                "maxc2": 600,
+                "avgdc1": 10,
+                "maxc1c2": {
+                    "c2": 600,
+                    "c1": 10
+                },
+                "avgc1c2": 5010,
+                "maxac2": 600,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0005",
+                "sumdc2": 600,
+                "c2": 600,
+                "c1": 10,
+                "c0": 1,
+                "absmaxc2": 600
+            },
+            {
+                "maxc2": 200,
+                "avgdc1": 20,
+                "maxc1c2": {
+                    "c2": 200,
+                    "c1": 20
+                },
+                "avgc1c2": 4020,
+                "maxac2": 200,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0001",
+                "sumdc2": 200,
+                "c2": 200,
+                "c1": 20,
+                "c0": 1,
+                "absmaxc2": 200
+            },
+            {
+                "maxc2": 700,
+                "avgdc1": 20,
+                "maxc1c2": {
+                    "c2": 700,
+                    "c1": 20
+                },
+                "avgc1c2": 3020,
+                "maxac2": 700,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0006",
+                "sumdc2": 700,
+                "c2": 700,
+                "c1": 20,
+                "c0": 1,
+                "absmaxc2": 700
+            },
+            {
+                "maxc2": 300,
+                "avgdc1": 30,
+                "maxc1c2": {
+                    "c2": 300,
+                    "c1": 30
+                },
+                "avgc1c2": 2030,
+                "maxac2": 300,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0002",
+                "sumdc2": 300,
+                "c2": 300,
+                "c1": 30,
+                "c0": 1,
+                "absmaxc2": 300
+            },
+            {
+                "maxc2": 800,
+                "avgdc1": 30,
+                "maxc1c2": {
+                    "c2": 800,
+                    "c1": 30
+                },
+                "avgc1c2": 4030,
+                "maxac2": 800,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0007",
+                "sumdc2": 800,
+                "c2": 800,
+                "c1": 30,
+                "c0": 1,
+                "absmaxc2": 800
+            },
+            {
+                "maxc2": 400,
+                "avgdc1": 40,
+                "maxc1c2": {
+                    "c2": 400,
+                    "c1": 40
+                },
+                "avgc1c2": 3040,
+                "maxac2": 400,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0003",
+                "sumdc2": 400,
+                "c2": 400,
+                "c1": 40,
+                "c0": 1,
+                "absmaxc2": 400
+            },
+            {
+                "maxc2": 900,
+                "avgdc1": 40,
+                "maxc1c2": {
+                    "c2": 900,
+                    "c1": 40
+                },
+                "avgc1c2": 2040,
+                "maxac2": 900,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0008",
+                "sumdc2": 900,
+                "c2": 900,
+                "c1": 40,
+                "c0": 1,
+                "absmaxc2": 900
+            },
+            {
+                "maxc2": 500,
+                "avgdc1": 50,
+                "maxc1c2": {
+                    "c2": 500,
+                    "c1": 50
+                },
+                "avgc1c2": 4050,
+                "maxac2": 500,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0004",
+                "sumdc2": 500,
+                "c2": 500,
+                "c1": 50,
+                "c0": 1,
+                "absmaxc2": 500
+            },
+            {
+                "maxc2": 901,
+                "avgdc1": 50,
+                "maxc1c2": {
+                    "c2": 901,
+                    "c1": 50
+                },
+                "avgc1c2": 3050,
+                "maxac2": 901,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0009",
+                "sumdc2": 901,
+                "c2": 901,
+                "c1": 50,
+                "c0": 1,
+                "absmaxc2": 901
+            },
+            {
+                "maxc2": 110,
+                "avgdc1": 11,
+                "maxc1c2": {
+                    "c2": 110,
+                    "c1": 11
+                },
+                "avgc1c2": 3111,
+                "maxac2": 110,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2000",
+                "sumdc2": 110,
+                "c2": 110,
+                "c1": 11,
+                "c0": 2,
+                "absmaxc2": 110
+            },
+            {
+                "maxc2": 610,
+                "avgdc1": 11,
+                "maxc1c2": {
+                    "c2": 610,
+                    "c1": 11
+                },
+                "avgc1c2": 5111,
+                "maxac2": 610,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2005",
+                "sumdc2": 610,
+                "c2": 610,
+                "c1": 11,
+                "c0": 2,
+                "absmaxc2": 610
+            },
+            {
+                "maxc2": 210,
+                "avgdc1": 21,
+                "maxc1c2": {
+                    "c2": 210,
+                    "c1": 21
+                },
+                "avgc1c2": 4121,
+                "maxac2": 210,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2001",
+                "sumdc2": 210,
+                "c2": 210,
+                "c1": 21,
+                "c0": 2,
+                "absmaxc2": 210
+            },
+            {
+                "maxc2": 710,
+                "avgdc1": 21,
+                "maxc1c2": {
+                    "c2": 710,
+                    "c1": 21
+                },
+                "avgc1c2": 3121,
+                "maxac2": 710,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2006",
+                "sumdc2": 710,
+                "c2": 710,
+                "c1": 21,
+                "c0": 2,
+                "absmaxc2": 710
+            },
+            {
+                "maxc2": 310,
+                "avgdc1": 31,
+                "maxc1c2": {
+                    "c2": 310,
+                    "c1": 31
+                },
+                "avgc1c2": 2131,
+                "maxac2": 310,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2002",
+                "sumdc2": 310,
+                "c2": 310,
+                "c1": 31,
+                "c0": 2,
+                "absmaxc2": 310
+            },
+            {
+                "maxc2": 810,
+                "avgdc1": 31,
+                "maxc1c2": {
+                    "c2": 810,
+                    "c1": 31
+                },
+                "avgc1c2": 4131,
+                "maxac2": 810,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2007",
+                "sumdc2": 810,
+                "c2": 810,
+                "c1": 31,
+                "c0": 2,
+                "absmaxc2": 810
+            },
+            {
+                "maxc2": 410,
+                "avgdc1": 41,
+                "maxc1c2": {
+                    "c2": 410,
+                    "c1": 41
+                },
+                "avgc1c2": 3141,
+                "maxac2": 410,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2003",
+                "sumdc2": 410,
+                "c2": 410,
+                "c1": 41,
+                "c0": 2,
+                "absmaxc2": 410
+            },
+            {
+                "maxc2": 910,
+                "avgdc1": 41,
+                "maxc1c2": {
+                    "c2": 910,
+                    "c1": 41
+                },
+                "avgc1c2": 2141,
+                "maxac2": 910,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2008",
+                "sumdc2": 910,
+                "c2": 910,
+                "c1": 41,
+                "c0": 2,
+                "absmaxc2": 910
+            },
+            {
+                "maxc2": 510,
+                "avgdc1": 51,
+                "maxc1c2": {
+                    "c2": 510,
+                    "c1": 51
+                },
+                "avgc1c2": 4151,
+                "maxac2": 510,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2004",
+                "sumdc2": 510,
+                "c2": 510,
+                "c1": 51,
+                "c0": 2,
+                "absmaxc2": 510
+            },
+            {
+                "maxc2": 911,
+                "avgdc1": 51,
+                "maxc1c2": {
+                    "c2": 911,
+                    "c1": 51
+                },
+                "avgc1c2": 2651,
+                "maxac2": 911,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga2009",
+                "sumdc2": 911,
+                "c2": 911,
+                "c1": 51,
+                "c0": 2,
+                "absmaxc2": 911
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 1-step aggregation, ORDER. HAVING. NO-PushDowns: OFFSET, LIMIT. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND (v.`index` = 'ixgatp' OR (v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS MISSING AND v.index_order IS NOT MISSING AND v.`offset` IS MISSING AND v.`limit` IS MISSING)) END"
+        },
+        "statements": "SELECT c0,c1,c2, MIN(meta().id) AS minid, MAX(ABS(c2)) AS maxac2, MAX(c2) AS maxc2, MAX([c2,{c1,c2}])[1] AS maxc1c2, ABS(MAX(c2)) AS absmaxc2, AVG(c1+c3) AS avgc1c2, AVG ( DISTINCT c1) AS avgdc1, SUM ( DISTINCT c2) AS sumdc2, COUNT ( DISTINCT c3) AS sumdc3, cnt AS countc1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c1,c2,c0 LETTING cnt = COUNT(c1) HAVING SUM(c1) > 5 AND cnt > 1 ORDER BY c0,c1,c2 OFFSET 1 LIMIT 5",
+        "ordered": true,
+        "results": [
+            {
+                "maxc2": 600,
+                "avgdc1": 10,
+                "maxc1c2": {
+                    "c2": 600,
+                    "c1": 10
+                },
+                "avgc1c2": 5010,
+                "maxac2": 600,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0005",
+                "sumdc2": 600,
+                "c2": 600,
+                "c1": 10,
+                "c0": 1,
+                "absmaxc2": 600
+            },
+            {
+                "maxc2": 200,
+                "avgdc1": 20,
+                "maxc1c2": {
+                    "c2": 200,
+                    "c1": 20
+                },
+                "avgc1c2": 4020,
+                "maxac2": 200,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0001",
+                "sumdc2": 200,
+                "c2": 200,
+                "c1": 20,
+                "c0": 1,
+                "absmaxc2": 200
+            },
+            {
+                "maxc2": 700,
+                "avgdc1": 20,
+                "maxc1c2": {
+                    "c2": 700,
+                    "c1": 20
+                },
+                "avgc1c2": 3020,
+                "maxac2": 700,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0006",
+                "sumdc2": 700,
+                "c2": 700,
+                "c1": 20,
+                "c0": 1,
+                "absmaxc2": 700
+            },
+            {
+                "maxc2": 300,
+                "avgdc1": 30,
+                "maxc1c2": {
+                    "c2": 300,
+                    "c1": 30
+                },
+                "avgc1c2": 2030,
+                "maxac2": 300,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0002",
+                "sumdc2": 300,
+                "c2": 300,
+                "c1": 30,
+                "c0": 1,
+                "absmaxc2": 300
+            },
+            {
+                "maxc2": 800,
+                "avgdc1": 30,
+                "maxc1c2": {
+                    "c2": 800,
+                    "c1": 30
+                },
+                "avgc1c2": 4030,
+                "maxac2": 800,
+                "sumdc3": 2,
+                "countc1": 2,
+                "minid": "ga0007",
+                "sumdc2": 800,
+                "c2": 800,
+                "c1": 30,
+                "c0": 1,
+                "absmaxc2": 800
+            }
+        ]
+    },
+    {
+        "testcase": "PushDowns: Group, 2-step aggregation. HAVING. NO-PushDowns: ORDER, OFFSET, LIMIT. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING AND v.index_group_aggs.partial IS NOT MISSING END"
+        },
+        "statements": "SELECT  c0, c2+c4 AS c2plusc4, MIN(meta().id) AS minid, MAX(ABS(c2)) AS maxac2, MAX(c2) AS maxc2, MAX([c2,{c1,c2}])[1] AS maxc1c2, ABS(MAX(c2)) AS absmaxc2, AVG(c3) AS avgc2, AVG ( (c1+c2)) AS avgc1c2, SUM ( c2) AS sumc2, COUNT ( c3) AS countc3, cnt AS countc1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND  (c0 = 1 OR c0 >= 2) GROUP BY c2+c4,c0 LETTING cnt = COUNT(c1) HAVING SUM(c1) >= 0 AND cnt >= 0 ORDER BY c0, c2+c4 OFFSET 1 LIMIT 5",
+        "ordered": true,
+        "results": [
+            {
+                "maxc2": 100,
+                "maxc1c2": {
+                    "c2": 100,
+                    "c1": 10
+                },
+                "c2plusc4": 10110,
+                "avgc1c2": 110,
+                "maxac2": 100,
+                "countc3": 1,
+                "countc1": 1,
+                "minid": "ga0010",
+                "avgc2": 5000,
+                "c0": 1,
+                "absmaxc2": 100,
+                "sumc2": 100
+            },
+            {
+                "maxc2": 200,
+                "maxc1c2": {
+                    "c2": 200,
+                    "c1": 20
+                },
+                "c2plusc4": 10201,
+                "avgc1c2": 220,
+                "maxac2": 200,
+                "countc3": 1,
+                "countc1": 1,
+                "minid": "ga0001",
+                "avgc2": 2000,
+                "c0": 1,
+                "absmaxc2": 200,
+                "sumc2": 200
+            },
+            {
+                "maxc2": 200,
+                "maxc1c2": {
+                    "c2": 200,
+                    "c1": 20
+                },
+                "c2plusc4": 10211,
+                "avgc1c2": 220,
+                "maxac2": 200,
+                "countc3": 1,
+                "countc1": 1,
+                "minid": "ga0011",
+                "avgc2": 6000,
+                "c0": 1,
+                "absmaxc2": 200,
+                "sumc2": 200
+            },
+            {
+                "maxc2": 300,
+                "maxc1c2": {
+                    "c2": 300,
+                    "c1": 30
+                },
+                "c2plusc4": 10302,
+                "avgc1c2": 330,
+                "maxac2": 300,
+                "countc3": 1,
+                "countc1": 1,
+                "minid": "ga0002",
+                "avgc2": 3000,
+                "c0": 1,
+                "absmaxc2": 300,
+                "sumc2": 300
+            },
+            {
+                "maxc2": 300,
+                "maxc1c2": {
+                    "c2": 300,
+                    "c1": 30
+                },
+                "c2plusc4": 10312,
+                "avgc1c2": 330,
+                "maxac2": 300,
+                "countc3": 1,
+                "countc1": 1,
+                "minid": "ga0012",
+                "avgc2": 1000,
+                "c0": 1,
+                "absmaxc2": 300,
+                "sumc2": 300
+            }
+        ]
+    }
+]

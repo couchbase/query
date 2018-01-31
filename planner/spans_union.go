@@ -154,8 +154,8 @@ func (this *UnionSpans) Streamline() SargSpans {
 	}
 }
 
-func (this *UnionSpans) CanUseIndexOrder() bool {
-	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder()
+func (this *UnionSpans) CanUseIndexOrder(allowMultipleSpans bool) bool {
+	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder(allowMultipleSpans)
 }
 
 func (this *UnionSpans) CanPushDownOffset(index datastore.Index, overlap, array bool) bool {

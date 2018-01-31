@@ -118,8 +118,8 @@ func (this *IntersectSpans) Streamline() SargSpans {
 	}
 }
 
-func (this *IntersectSpans) CanUseIndexOrder() bool {
-	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder()
+func (this *IntersectSpans) CanUseIndexOrder(allowMultipleSpans bool) bool {
+	return len(this.spans) == 1 && this.spans[0].CanUseIndexOrder(allowMultipleSpans)
 }
 
 func (this *IntersectSpans) CanPushDownOffset(index datastore.Index, overlap, array bool) bool {

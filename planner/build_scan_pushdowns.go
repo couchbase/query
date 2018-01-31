@@ -335,10 +335,10 @@ func (this *builder) canPushDownMinMax(entry *indexEntry, op expression.Expressi
 	descCollation := indexKeyIsDescCollation(0, getIndexKeys(entry))
 	if max {
 		// MAX() can be pushdown when leading index key is DESC collation
-		return descCollation && entry.spans.CanUseIndexOrder()
+		return descCollation && entry.spans.CanUseIndexOrder(false)
 	} else {
 		// MIN() can be pushdown when leading index key is ASC collation and NULLS are not included
-		return !descCollation && entry.spans.CanUseIndexOrder() && entry.spans.SkipsLeadingNulls()
+		return !descCollation && entry.spans.CanUseIndexOrder(false) && entry.spans.SkipsLeadingNulls()
 	}
 }
 
@@ -385,7 +385,8 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	// when GSI starts implementing other types of indexes (eg bitmap)
 	// we will revisit this approach
 
-	if entry.index.Type() == datastore.SYSTEM || !entry.spans.CanUseIndexOrder() {
+	if entry.index.Type() == datastore.SYSTEM ||
+		!entry.spans.CanUseIndexOrder(useIndex3API(entry.index, this.indexApiVersion)) {
 		return false, nil
 	}
 

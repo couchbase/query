@@ -30,15 +30,15 @@ type SargSpans interface {
 		indexOrder plan.IndexKeyOrders, indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 		filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan
 
-	Compose(prev SargSpans) SargSpans         // Apply to previous composite keys
-	ComposeTerm(next *TermSpans) SargSpans    // Apply next composite keys
-	Constrain(other SargSpans) SargSpans      // Apply AND constraint
-	ConstrainTerm(spans *TermSpans) SargSpans // Apply AND constraint
-	Streamline() SargSpans                    // Dedup and discard empty spans
-	Exact() bool                              // Are all spans exact
-	ExactSpan1(nkeys int) bool                // Are all spans exact - Api1
-	SetExact(exact bool)                      // Set exact on spans
-	CanUseIndexOrder() bool                   // Can use index ORDER
+	Compose(prev SargSpans) SargSpans              // Apply to previous composite keys
+	ComposeTerm(next *TermSpans) SargSpans         // Apply next composite keys
+	Constrain(other SargSpans) SargSpans           // Apply AND constraint
+	ConstrainTerm(spans *TermSpans) SargSpans      // Apply AND constraint
+	Streamline() SargSpans                         // Dedup and discard empty spans
+	Exact() bool                                   // Are all spans exact
+	ExactSpan1(nkeys int) bool                     // Are all spans exact - Api1
+	SetExact(exact bool)                           // Set exact on spans
+	CanUseIndexOrder(allowMultipleSpans bool) bool // Can use index ORDER
 	CanHaveDuplicates(index datastore.Index, indexApiVersion int,
 		overlap, array bool) bool // Can have duplicates
 	CanPushDownOffset(index datastore.Index, overlap, array bool) bool // Can offset pushdown index

@@ -131,8 +131,8 @@ func (this *TermSpans) SetExact(exact bool) {
 	}
 }
 
-func (this *TermSpans) CanUseIndexOrder() bool {
-	return len(this.spans) == 1
+func (this *TermSpans) CanUseIndexOrder(allowMultipleSpans bool) bool {
+	return len(this.spans) == 1 || allowMultipleSpans
 }
 
 func (this *TermSpans) CanPushDownOffset(index datastore.Index, overlap, array bool) bool {

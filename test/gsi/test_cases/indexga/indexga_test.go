@@ -40,6 +40,7 @@ func TestGroupagg(t *testing.T) {
 func run_test(qc *MockServer, t *testing.T, prepare bool) {
 	cases := []string{"case_indexga_regular.json",
 		"case_indexga_regular_noncoverd.json",
+		"case_indexga_regular_or.json",
 	}
 	indexes := []string{
 		"CREATE PRIMARY INDEX oprimary ON orders",
@@ -53,16 +54,18 @@ func run_test(qc *MockServer, t *testing.T, prepare bool) {
 
 	var primary int
 	var testcases []string
-	// Run positive pushdwons on regular index
 
+	// Run positive pushdwons on regular index
 	primary, testcases = buildtestcase(cases, indexes, 0, 0, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
 
 	// Run negative non covered queries on regular index
-
 	primary, testcases = buildtestcase(cases, indexes, 1, 0, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
 
+	// Run positive pushdwons on regular index with OR
+	primary, testcases = buildtestcase(cases, indexes, 2, 0, 7)
+	run_testcase(primary, prepare, qc, t, testcases)
 }
 
 func case_delete(qc *MockServer, t *testing.T) {
