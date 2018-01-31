@@ -49,6 +49,8 @@ and the namespace.
 */
 var Site_CBS = "http://"
 var Auth_param = "Administrator:password"
+var Username = "Administrator"
+var Password = "password"
 var Pool_CBS = "127.0.0.1:8091/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
@@ -459,10 +461,15 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			}
 			resultsActual = newResults
 		}
+		var ordered = true
+		if o, ook := c["ordered"]; ook {
+			ordered = o.(bool)
+		}
+
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, fname, i)
+			okres := doResultsMatch(resultsActual, resultsExpected, fname, i, ordered)
 			if okres != nil {
 				errstring = okres
 				return
@@ -476,7 +483,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int, ordered bool) (errstring error) {
 	if len(resultsActual) != len(resultsExpected) {
 		errstring = go_er.New(fmt.Sprintf("results len don't match, %v vs %v, %v vs %v"+
 			", for case file: %v, index: %v",
@@ -485,12 +492,28 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, 
 		return
 	}
 
-	if !reflect.DeepEqual(resultsActual, resultsExpected) {
-		errstring = go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
-			", for case file: %v, index: %v",
-			resultsActual, resultsExpected, fname, i))
+	if ordered {
+		if !reflect.DeepEqual(resultsActual, resultsExpected) {
+			errstring = go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
+				", for case file: %v, index: %v",
+				resultsActual, resultsExpected, fname, i))
 
-		return
+			return
+		}
+	} else {
+	nextresult:
+		for _, re := range resultsExpected {
+			for j, ra := range resultsActual {
+				if ra != nil && reflect.DeepEqual(ra, re) {
+					resultsActual[j] = nil
+					continue nextresult
+				}
+			}
+			return go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
+				", for case file: %v, index: %v",
+				resultsActual, resultsExpected, fname, i))
+		}
 	}
+
 	return nil
 }
