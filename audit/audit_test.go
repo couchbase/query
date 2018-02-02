@@ -7,15 +7,10 @@ import (
 	adt "github.com/couchbase/goutils/go-cbaudit"
 )
 
-type auditSubmission struct {
-	eventId uint32
-	event   *n1qlAuditEvent
-}
-
 // An auditor the just records the audit events that would be sent to the audit daemon,
 // nothing more.
 type mockAuditor struct {
-	recordedEvents   []auditSubmission
+	recordedEvents   []auditQueueEntry
 	disabledAudit    bool
 	whitelistedUsers []string
 	disabledEvents   []uint32
@@ -25,18 +20,8 @@ func (ma *mockAuditor) doAudit() bool {
 	return !ma.disabledAudit
 }
 
-func (ma *mockAuditor) submitInline() bool {
-	return true // To simplify testing.
-}
-
-func (ma *mockAuditor) submit(eventId uint32, event *n1qlAuditEvent) error {
-	submission := auditSubmission{eventId: eventId, event: event}
-	ma.recordedEvents = append(ma.recordedEvents, submission)
-	return nil
-}
-
-func (ma *mockAuditor) submitApiRequest(eventId uint32, event *n1qlAuditApiRequestEvent) error {
-	return nil
+func (ma *mockAuditor) submit(entry auditQueueEntry) {
+	ma.recordedEvents = append(ma.recordedEvents, entry)
 }
 
 func (ma *mockAuditor) userIsWhitelisted(user string) bool {
@@ -216,7 +201,7 @@ func TestMultiUserRequest(t *testing.T) {
 	}
 
 	for i, expected := range expectedEventRealUserIds {
-		found := mockAuditor.recordedEvents[i].event.RealUserid
+		found := mockAuditor.recordedEvents[i].queryAuditRecord.RealUserid
 		if expected != found {
 			t.Fatalf("Expected user %v but found user %v", expected, found)
 		}
@@ -301,7 +286,7 @@ func TestWhitelistedUsers(t *testing.T) {
 	}
 
 	for i, expected := range expectedEventRealUserIds {
-		found := mockAuditor.recordedEvents[i].event.RealUserid
+		found := mockAuditor.recordedEvents[i].queryAuditRecord.RealUserid
 		if expected != found {
 			t.Fatalf("Expected user %v but found user %v", expected, found)
 		}

@@ -230,7 +230,7 @@ func main() {
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
 	util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
 
-	audit.StartAuditService(*DATASTORE)
+	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 
 	go server.Serve()
 	go server.PlusServe()

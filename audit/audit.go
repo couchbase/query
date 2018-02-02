@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	mcc "github.com/couchbase/gomemcached/client"
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/logging"
 )
@@ -99,31 +100,19 @@ type Auditor interface {
 	// Is this one of them?
 	eventIsDisabled(uint32) bool
 
-	// In normal processing, we want the call to submit the audit record to
-	// the audit daemon done offline, in a goroutine of its own.
-	// But that makes testing difficult, so we do the submission inline
-	// when testing.
-	submitInline() bool
-
-	submit(eventId uint32, event *n1qlAuditEvent) error
-
-	submitApiRequest(eventId uint32, event *n1qlAuditApiRequestEvent) error
+	submit(entry auditQueueEntry)
 }
 
 type standardAuditor struct {
-	auditService *adt.AuditSvc
+	auditService     *adt.AuditSvc
+	auditRecordQueue chan auditQueueEntry
 }
 
-func (sa *standardAuditor) submitInline() bool {
-	return false
-}
-
-func (sa *standardAuditor) submit(eventId uint32, event *n1qlAuditEvent) error {
-	return sa.auditService.Write(eventId, *event)
-}
-
-func (sa *standardAuditor) submitApiRequest(eventId uint32, event *n1qlAuditApiRequestEvent) error {
-	return sa.auditService.Write(eventId, *event)
+type auditQueueEntry struct {
+	eventId          uint32
+	isQueryType      bool
+	queryAuditRecord *n1qlAuditEvent
+	apiAuditRecord   *n1qlAuditApiRequestEvent
 }
 
 func (sa *standardAuditor) userIsWhitelisted(user string) bool {
@@ -146,16 +135,78 @@ func (sa *standardAuditor) eventIsDisabled(eventId uint32) bool {
 	return false
 }
 
+func (sa *standardAuditor) submit(entry auditQueueEntry) {
+	// Put the audit entry on the queue for processing.
+	// If the queue is full, block until it clears.
+	sa.auditRecordQueue <- entry
+}
+
 var _AUDITOR Auditor
 
-func StartAuditService(server string) {
+// numServicers is the number of worker threads we expect to see
+// accessing the audit functionality. It is NOT the number of worker threads
+// the audit system itself has.
+func StartAuditService(server string, numServicers int) {
 	var err error
 	service, err := adt.NewAuditSvc(server)
 	if err == nil {
-		_AUDITOR = &standardAuditor{auditService: service}
+		// The queue should be of finite length, but ample,
+		// to smooth out any bumps in service. The servicers
+		// should be able to leave an audit entry and continue
+		// unimpeded, with high probability.
+		queue := make(chan auditQueueEntry, numServicers*25)
+		auditor := &standardAuditor{auditService: service, auditRecordQueue: queue}
+		_AUDITOR = auditor
+
+		for i := 1; i <= 5; i++ {
+			go auditWorker(auditor, i)
+		}
 		logging.Infof("Audit service started.")
 	} else {
 		logging.Errorf("Audit service not started: %v", err)
+	}
+}
+
+func auditWorker(auditor *standardAuditor, num int) {
+	logging.Infof("Starting audit worker %d", num)
+
+	// If this audit worker panics, start up a replacement.
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Errorf("Audit worker %d: Panic: %v. Starting a replacement.", num, r)
+			go auditWorker(auditor, num)
+		}
+	}()
+
+	var client *mcc.Client // The audit worker holds on to one client.
+	var err error
+
+	// Main processing loop
+	for {
+		entry := <-auditor.auditRecordQueue
+
+		// Refresh the client if necessary.
+		for client == nil || !client.IsHealthy() {
+			client, err = auditor.auditService.GetNonPoolClient()
+			if err != nil {
+				logging.Errorf("Audit worker %d: unable to get connection: %v. Will sleep and retry.", num, err)
+				time.Sleep(time.Second * 2)
+			}
+		}
+
+		// Send the audit record using the client.
+		if entry.isQueryType {
+			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.queryAuditRecord)
+			if err != nil {
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, *entry.queryAuditRecord, err)
+			}
+		} else {
+			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.apiAuditRecord)
+			if err != nil {
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, *entry.apiAuditRecord, err)
+			}
+		}
 	}
 }
 
@@ -203,13 +254,13 @@ func Submit(event Auditable) {
 	// We build the audit record from the request in the main thread
 	// because the request will be destroyed soon after the call to Submit(),
 	// and we don't want to cause a race condition.
-	auditRecords := buildAuditRecords(event)
-	for _, record := range auditRecords {
-		if _AUDITOR.submitInline() {
-			submitForAudit(eventTypeId, record)
-		} else {
-			go submitForAudit(eventTypeId, record)
-		}
+	auditEntries := buildAuditEntries(eventTypeId, event)
+	submitAuditEntries(auditEntries)
+}
+
+func submitAuditEntries(entries []auditQueueEntry) {
+	for _, entry := range entries {
+		_AUDITOR.submit(entry)
 	}
 }
 
@@ -245,22 +296,16 @@ func SubmitApiRequest(event *ApiAuditFields) {
 		return
 	}
 
-	// We build the audit record from the request in the main thread
-	// because the request will be destroyed soon after the call to Submit(),
+	// We build the audit entry from the request in the main thread
+	// because the request will be destroyed soon after the call to SubmitApiRequest(),
 	// and we don't want to cause a race condition.
-	auditRecords := buildApiRequestAuditRecords(event)
-	for _, record := range auditRecords {
-		if _AUDITOR.submitInline() {
-			submitApiRequestForAudit(eventTypeId, record)
-		} else {
-			go submitApiRequestForAudit(eventTypeId, record)
-		}
-	}
+	auditEntries := buildApiRequestAuditEntries(eventTypeId, event)
+	submitAuditEntries(auditEntries)
 }
 
-// Returns a list of audit records, because each user credential submitted as part of
+// Returns a list of audit entries, because each user credential submitted as part of
 // the requests generates a separate audit record.
-func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
+func buildAuditEntries(eventTypeId uint32, event Auditable) []auditQueueEntry {
 	// Grab the data from the event, so we don't query the duplicated data
 	// multiple times.
 	genericFields := event.EventGenericFields()
@@ -300,7 +345,12 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 			Status:          status,
 			Metrics:         metrics,
 		}
-		return []*n1qlAuditEvent{record}
+		entry := auditQueueEntry{
+			eventId:          eventTypeId,
+			isQueryType:      true,
+			queryAuditRecord: record,
+		}
+		return []auditQueueEntry{entry}
 	}
 
 	// Figure out which users to generate events for.
@@ -312,7 +362,7 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 	}
 
 	// Generate one record per user.
-	records := make([]*n1qlAuditEvent, len(auditableUsers))
+	entries := make([]auditQueueEntry, len(auditableUsers))
 	for i, user := range auditableUsers {
 		record := &n1qlAuditEvent{
 			GenericFields:   genericFields,
@@ -338,14 +388,18 @@ func buildAuditRecords(event Auditable) []*n1qlAuditEvent {
 		record.GenericFields.RealUserid.Source = source
 		record.GenericFields.RealUserid.Username = userName
 
-		records[i] = record
+		entries[i] = auditQueueEntry{
+			eventId:          eventTypeId,
+			isQueryType:      true,
+			queryAuditRecord: record,
+		}
 	}
-	return records
+	return entries
 }
 
-// Returns a list of audit records, because each user credential submitted as part of
+// Returns a list of audit entries, because each user credential submitted as part of
 // the requests generates a separate audit record.
-func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEvent {
+func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields) []auditQueueEntry {
 	// No credentials at all? Generate one record.
 	users := event.Users
 	if len(users) == 0 {
@@ -363,7 +417,12 @@ func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEv
 			Node:           event.Node,
 			Body:           event.Body,
 		}
-		return []*n1qlAuditApiRequestEvent{record}
+		entry := auditQueueEntry{
+			eventId:        eventTypeId,
+			isQueryType:    false,
+			apiAuditRecord: record,
+		}
+		return []auditQueueEntry{entry}
 	}
 
 	// Figure out which users to generate events for.
@@ -374,8 +433,8 @@ func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEv
 		}
 	}
 
-	// Generate one record per user.
-	records := make([]*n1qlAuditApiRequestEvent, len(auditableUsers))
+	// Generate one entry per user.
+	entries := make([]auditQueueEntry, len(auditableUsers))
 	for i, user := range auditableUsers {
 		record := &n1qlAuditApiRequestEvent{
 			GenericFields:  event.GenericFields,
@@ -402,23 +461,13 @@ func buildApiRequestAuditRecords(event *ApiAuditFields) []*n1qlAuditApiRequestEv
 		record.GenericFields.RealUserid.Source = source
 		record.GenericFields.RealUserid.Username = userName
 
-		records[i] = record
+		entries[i] = auditQueueEntry{
+			eventId:        eventTypeId,
+			isQueryType:    false,
+			apiAuditRecord: record,
+		}
 	}
-	return records
-}
-
-func submitForAudit(eventId uint32, auditRecord *n1qlAuditEvent) {
-	err := _AUDITOR.submit(eventId, auditRecord)
-	if err != nil {
-		logging.Errorf("Unable to submit event %+v for audit: %v", *auditRecord, err)
-	}
-}
-
-func submitApiRequestForAudit(eventId uint32, auditRecord *n1qlAuditApiRequestEvent) {
-	err := _AUDITOR.submitApiRequest(eventId, auditRecord)
-	if err != nil {
-		logging.Errorf("Unable to submit API request event %+v for audit: %v", *auditRecord, err)
-	}
+	return entries
 }
 
 // If possible, use whatever field names are used elsewhere in the N1QL system.
