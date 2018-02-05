@@ -1285,7 +1285,18 @@ func (this *DateTruncStr) Apply(context Context, first, second value.Value) (val
 
 	str := first.Actual().(string)
 	part := second.Actual().(string)
-	t, err := strToTime(str)
+
+	// For date trunc we do not consider the timezone.
+	// This messes up the result of the golang time functions.
+	// To avoid this remove it before processing
+	_, tzComponent, _ := strToTimeforTrunc(str)
+
+	if tzComponent != "" {
+		str = str[:len(str)-len(tzComponent)]
+	}
+
+	t, _, err := strToTimeforTrunc(str)
+
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -1295,7 +1306,7 @@ func (this *DateTruncStr) Apply(context Context, first, second value.Value) (val
 		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(timeToStr(t, str)), nil
+	return value.NewValue(timeToStr(t, str) + tzComponent), nil
 }
 
 /*
@@ -2359,6 +2370,27 @@ func strToTime(s string) (time.Time, error) {
 	}
 
 	return t, err
+}
+
+func strToTimeforTrunc(s string) (time.Time, string, error) {
+	var t time.Time
+	var err error
+	newloc, _ := time.LoadLocation("UTC")
+	for _, f := range _DATE_FORMATS {
+		// Check if the format has a timezone
+		t, err = time.ParseInLocation(f, s, newloc)
+		if err == nil {
+			// Calculate the timezone component for input string
+			pos := strings.Index(f, "Z")
+			tz := ""
+			if pos > 0 {
+				tz = s[len(s)-6:]
+			}
+			return t, tz, nil
+		}
+	}
+
+	return t, "", err
 }
 
 /*

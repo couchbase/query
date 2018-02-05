@@ -121,7 +121,7 @@
         {
             "$1": "2016-01-22T00:00:00Z"
         }
-    ]    
+    ]
     },
     {
        "statements":"select DATE_TRUNC_STR(\"2006-03-01\",\"year\")",
@@ -137,7 +137,7 @@
         {
             "$1": "2016-01-22"
         }
-    ]    
+    ]
     },
     {
        "statements":"select STR_TO_MILLIS(\"2015-01-01T16:00:00-08:00\")",
@@ -204,7 +204,7 @@
    },
    {
      "description":"date not in correct format gives null",
-     "statements":"select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",    
+     "statements":"select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",
      "results": [
         {},
         {
@@ -819,6 +819,46 @@
                 "9998-01-01",
                 "9999-01-01"
             ]
+        }
+    ]
+    },
+    {
+      "statements":"select DATE_TRUNC_STR(\"2017-05-06 16:33:44+08:00\",\"hour\") as test1",
+      "results": [
+        {
+            "test1": "2017-05-06 16:00:00+08:00"
+        }
+    ]
+    },
+    {
+      "statements":"select DATE_TRUNC_STR(\"2017-05-06 16:33:44+08:00\",\"month\") as test1",
+      "results": [
+        {
+            "test1": "2017-05-01 00:00:00+08:00"
+        }
+    ]
+    },
+    {
+      "statements":"select DATE_TRUNC_STR(\"2017-01-01 16:33:44-08:00\",\"month\") as test1",
+      "results": [
+        {
+            "test1": "2017-01-01 00:00:00-08:00"
+        }
+    ]
+    },
+    {
+      "statements":"select DATE_TRUNC_STR(\"2017-01-01 16:33:44\",\"month\") as test1",
+      "results": [
+        {
+            "test1": "2017-01-01 00:00:00"
+        }
+    ]
+    },
+    {
+      "statements":"select DATE_TRUNC_STR(\"2017-01-01 15:00:00\",\"year\") as test1",
+      "results": [
+        {
+            "test1": "2017-01-01 00:00:00"
         }
     ]
     }
