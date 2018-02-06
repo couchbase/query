@@ -40,6 +40,7 @@ subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
 keyspaceTerm     *algebra.KeyspaceTerm
 use              *algebra.Use
+joinHint         algebra.JoinHint
 indexRefs        algebra.IndexRefs
 indexRef         *algebra.IndexRef
 subqueryTerm     *algebra.SubqueryTerm
@@ -179,6 +180,7 @@ tokOffset	 int
 %token MISSING
 %token NAMESPACE
 %token NEST
+%token NL
 %token NOT
 %token NOT_A_TOKEN
 %token NULL
@@ -200,6 +202,7 @@ tokOffset	 int
 %token PRIMARY
 %token PRIVATE
 %token PRIVILEGE
+%token PROBE
 %token PROCEDURE
 %token PUBLIC
 %token RAW
@@ -331,9 +334,10 @@ tokOffset	 int
 %type <b>                opt_join_type
 %type <path>             path
 %type <s>                namespace_name keyspace_name namespace_term
-%type <use>              opt_use
-%type <expr>             use_keys on_keys on_key
-%type <indexRefs>        use_index index_refs
+%type <use>              opt_use opt_use_del_upd use_options use_keys use_index join_hint
+%type <joinHint>         use_hash_option
+%type <expr>             on_keys on_key
+%type <indexRefs>        index_refs
 %type <indexRef>         index_ref
 %type <bindings>         opt_let let
 %type <expr>             opt_where where
@@ -813,6 +817,23 @@ FROM from_term
 
 from_term:
 simple_from_term
+{
+    var ksterm *algebra.KeyspaceTerm = nil
+    switch first := $1.(type) {
+        case *algebra.KeyspaceTerm:
+             ksterm = first
+        case *algebra.ExpressionTerm:
+             if first.IsKeyspace() {
+                 ksterm = first.KeyspaceTerm()
+             }
+    }
+
+    if ksterm != nil && ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first keyspace %s", ksterm.Alias()))
+    }
+
+    $$ = $1
+}
 |
 from_term opt_join_type JOIN simple_from_join_term on_keys
 {
@@ -823,7 +844,9 @@ from_term opt_join_type JOIN simple_from_join_term on_keys
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and non ANSI JOIN on %s.", first.Alias(), $4.Alias()))
     }
     if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.Indexes() != nil || second.Keys() != nil {
+        if second.JoinHint() != algebra.JOIN_HINT_NONE {
+            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in JOIN on %s.", second.Alias()))
+        } else if second.Indexes() != nil || second.Keys() != nil {
             yylex.Error(fmt.Sprintf("JOIN on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
         }
         second.SetJoinKeys($5)
@@ -842,7 +865,9 @@ from_term opt_join_type JOIN simple_from_join_term on_key FOR IDENT
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and non ANSI JOIN on %s.", first.Alias(), $4.Alias()))
     }
     if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.Indexes() != nil || second.Keys() != nil {
+        if second.JoinHint() != algebra.JOIN_HINT_NONE {
+            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in JOIN on %s.", second.Alias()))
+        } else if second.Indexes() != nil || second.Keys() != nil {
             yylex.Error(fmt.Sprintf("JOIN on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
         }
         second.SetJoinKeys($5)
@@ -861,7 +886,9 @@ from_term opt_join_type NEST simple_from_join_term on_keys
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and NEST on %s.", first.Alias(), $4.Alias()))
     }
     if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.Indexes() != nil || second.Keys() != nil {
+        if second.JoinHint() != algebra.JOIN_HINT_NONE {
+            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in NEST on %s.", second.Alias()))
+        } else if second.Indexes() != nil || second.Keys() != nil {
             yylex.Error(fmt.Sprintf("NEST on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
         }
         second.SetJoinKeys($5)
@@ -880,7 +907,9 @@ from_term opt_join_type NEST simple_from_join_term on_key FOR IDENT
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and NEST on %s.", first.Alias(), $4.Alias()))
     }
     if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.Indexes() != nil || second.Keys() != nil {
+        if second.JoinHint() != algebra.JOIN_HINT_NONE {
+            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in NEST on %s.", second.Alias()))
+        } else if second.Indexes() != nil || second.Keys() != nil {
             yylex.Error(fmt.Sprintf("NEST on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
         }
         second.SetJoinKeys($5)
@@ -961,15 +990,18 @@ expr opt_as_alias opt_use
                    yylex.Error("Subquery in FROM clause must have an alias.")
               }
               if $3 != algebra.EMPTY_USE {
-                   yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
+                   yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX or join hint (USE HASH or USE NL).")
               }
               $$ = algebra.NewSubqueryTerm(other.Select(), $2)
          case *expression.Identifier:
               ksterm := algebra.NewKeyspaceTerm("", other.Alias(), $2, $3.Keys(), $3.Indexes())
+              if $3.JoinHint() != algebra.JOIN_HINT_NONE {
+                  ksterm.SetJoinHint($3.JoinHint())
+              }
               $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false)
          default:
               if $3 != algebra.EMPTY_USE {
-                  yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
+                  yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX or join hint (USE HASH or USE NL).")
               }
               $$ = algebra.NewExpressionTerm(other,$2, nil, false)
      }
@@ -1006,7 +1038,11 @@ FLATTEN
 keyspace_term:
 namespace_term COLON keyspace_name opt_as_alias opt_use
 {
-     $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5.Keys(), $5.Indexes())
+    ksterm := algebra.NewKeyspaceTerm($1, $3, $4, $5.Keys(), $5.Indexes())
+    if $5.JoinHint() != algebra.JOIN_HINT_NONE {
+        ksterm.SetJoinHint($5.JoinHint())
+    }
+    $$ = ksterm
 }
 ;
 
@@ -1033,21 +1069,55 @@ opt_use:
     $$ = algebra.EMPTY_USE
 }
 |
-use_keys
+USE use_options
 {
-    $$ = algebra.NewUse($1, nil)
+    $$ = $2
 }
+;
+
+use_options:
+use_keys
 |
 use_index
+|
+join_hint
+|
+use_index join_hint
 {
-    $$ = algebra.NewUse(nil, $1)
+    $1.SetJoinHint($2.JoinHint())
+    $$ = $1
+}
+|
+join_hint use_index
+{
+    $1.SetIndexes($2.Indexes())
+    $$ = $1
 }
 ;
 
 use_keys:
-USE opt_primary KEYS expr
+opt_primary KEYS expr
 {
-    $$ = $4
+    $$ = algebra.NewUse($3, nil, algebra.JOIN_HINT_NONE)
+}
+;
+
+use_index:
+INDEX LPAREN index_refs RPAREN
+{
+    $$ = algebra.NewUse(nil, $3, algebra.JOIN_HINT_NONE)
+}
+;
+
+join_hint:
+HASH LPAREN use_hash_option RPAREN
+{
+    $$ = algebra.NewUse(nil, nil, $3)
+}
+|
+NL
+{
+    $$ = algebra.NewUse(nil, nil, algebra.USE_NL)
 }
 ;
 
@@ -1057,13 +1127,6 @@ opt_primary:
 }
 |
 PRIMARY
-;
-
-use_index:
-USE INDEX LPAREN index_refs RPAREN
-{
-    $$ = $4
-}
 ;
 
 index_refs:
@@ -1083,6 +1146,28 @@ index_name opt_index_using
 {
     $$ = algebra.NewIndexRef($1, $2)
 }
+
+use_hash_option:
+BUILD
+{
+    $$ = algebra.USE_HASH_BUILD
+}
+|
+PROBE
+{
+    $$ = algebra.USE_HASH_PROBE
+}
+;
+
+opt_use_del_upd:
+opt_use
+{
+    if $1.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL) in DELETE or UPDATE statement")
+    }
+    $$ = $1
+}
+;
 
 opt_join_type:
 /* empty */
@@ -1516,7 +1601,7 @@ UPSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_re
  *************************************************/
 
 delete:
-DELETE FROM keyspace_ref opt_use opt_where opt_limit opt_returning
+DELETE FROM keyspace_ref opt_use_del_upd opt_where opt_limit opt_returning
 {
     $$ = algebra.NewDelete($3, $4.Keys(), $4.Indexes(), $5, $6, $7)
 }
@@ -1530,17 +1615,17 @@ DELETE FROM keyspace_ref opt_use opt_where opt_limit opt_returning
  *************************************************/
 
 update:
-UPDATE keyspace_ref opt_use set unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use_del_upd set unset opt_where opt_limit opt_returning
 {
     $$ = algebra.NewUpdate($2, $3.Keys(), $3.Indexes(), $4, $5, $6, $7, $8)
 }
 |
-UPDATE keyspace_ref opt_use set opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use_del_upd set opt_where opt_limit opt_returning
 {
     $$ = algebra.NewUpdate($2, $3.Keys(), $3.Indexes(), $4, nil, $5, $6, $7)
 }
 |
-UPDATE keyspace_ref opt_use unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use_del_upd unset opt_where opt_limit opt_returning
 {
     $$ = algebra.NewUpdate($2, $3.Keys(), $3.Indexes(), nil, $4, $5, $6, $7)
 }
@@ -2072,7 +2157,7 @@ WHERE index_expr
 drop_index:
 DROP PRIMARY INDEX ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($5, "#primary", $6) 
+    $$ = algebra.NewDropIndex($5, "#primary", $6)
 }
 |
 DROP INDEX named_keyspace_ref DOT index_name opt_index_using

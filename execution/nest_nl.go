@@ -106,8 +106,9 @@ loop:
 		if cont {
 			if right_item != nil {
 				var match bool
+				aliases := []string{this.plan.Alias()}
 				match, ok, _ = processAnsiExec(item, right_item, this.plan.Onclause(),
-					this.plan.Alias(), this.ansiFlags, context, "nest")
+					aliases, this.ansiFlags, context, "nest")
 				if ok && match {
 					right_items = append(right_items, right_item)
 				}
@@ -131,20 +132,29 @@ loop:
 		return false
 	}
 
-	return this.processAnsiNest(item, right_items, context)
+	var joined value.AnnotatedValue
+	joined, ok = processAnsiNest(item, right_items, this.plan.Alias(), this.plan.Outer(), context)
+	if !ok {
+		return false
+	}
+	if joined != nil {
+		return this.sendItem(joined)
+	}
+
+	return true
 }
 
-func (this *NLNest) processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValues, context *Context) bool {
+func processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValues, alias string,
+	outer bool, context *Context) (value.AnnotatedValue, bool) {
 
 	joined := item
-	alias := this.plan.Alias()
 
 	if len(right_items) == 0 {
-		if this.plan.Outer() {
+		if outer {
 			joined.SetField(alias, value.EMPTY_ARRAY_VALUE)
-			return this.sendItem(joined)
+			return joined, true
 		} else {
-			return true
+			return nil, true
 		}
 	}
 
@@ -155,7 +165,7 @@ func (this *NLNest) processAnsiNest(item value.AnnotatedValue, right_items value
 		val, ok := right_item.Field(alias)
 		if !ok {
 			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiNest: annotated value not found for %s", alias)))
-			return false
+			return nil, false
 		}
 
 		vals = append(vals, val)
@@ -163,7 +173,7 @@ func (this *NLNest) processAnsiNest(item value.AnnotatedValue, right_items value
 
 	joined.SetField(alias, vals)
 
-	return this.sendItem(joined)
+	return joined, true
 }
 
 func (this *NLNest) MarshalJSON() ([]byte, error) {

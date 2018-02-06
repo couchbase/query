@@ -13,21 +13,47 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-var EMPTY_USE = NewUse(nil, nil)
+const (
+	JOIN_HINT_NONE = iota
+	USE_HASH_BUILD
+	USE_HASH_PROBE
+	USE_NL
+)
+
+var EMPTY_USE = NewUse(nil, nil, JOIN_HINT_NONE)
+
+type JoinHint int
 
 type Use struct {
-	keys    expression.Expression
-	indexes IndexRefs
+	keys     expression.Expression
+	indexes  IndexRefs
+	joinHint JoinHint
 }
 
-func NewUse(keys expression.Expression, indexes IndexRefs) *Use {
-	return &Use{keys, indexes}
+func NewUse(keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *Use {
+	return &Use{keys, indexes, joinHint}
 }
 
 func (this *Use) Keys() expression.Expression {
 	return this.keys
 }
 
+func (this *Use) SetKeys(keys expression.Expression) {
+	this.keys = keys
+}
+
 func (this *Use) Indexes() IndexRefs {
 	return this.indexes
+}
+
+func (this *Use) SetIndexes(indexes IndexRefs) {
+	this.indexes = indexes
+}
+
+func (this *Use) JoinHint() JoinHint {
+	return this.joinHint
+}
+
+func (this *Use) SetJoinHint(joinHint JoinHint) {
+	this.joinHint = joinHint
 }

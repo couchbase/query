@@ -186,3 +186,21 @@ func NewUserWithNoRoles(user string) Error {
 		InternalMsg:    fmt.Sprintf("User %s has no roles. Connecting with this user may not be possible", user),
 		InternalCaller: CallerN(1)}
 }
+
+func NewHashTableMaxSizeExceeded() Error {
+	return &err{level: EXCEPTION, ICode: 5290, IKey: "execution.hash_table_max_size_exceeded",
+		InternalMsg:    fmt.Sprintf("Maximum hash table size exceeded"),
+		InternalCaller: CallerN(1)}
+}
+
+func NewHashTablePutError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 5300, IKey: "execution.hash_table_put_error", ICause: e,
+		InternalMsg:    fmt.Sprintf("Hash Table Put failed"),
+		InternalCaller: CallerN(1)}
+}
+
+func NewHashTableGetError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 5310, IKey: "execution.hash_table_get_error", ICause: e,
+		InternalMsg:    fmt.Sprintf("Hash Table Get failed"),
+		InternalCaller: CallerN(1)}
+}

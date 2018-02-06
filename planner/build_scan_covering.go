@@ -49,7 +49,7 @@ outer:
 		}
 
 		// Sarg to set spans
-		err := this.sargIndexes(baseKeyspace, map[datastore.Index]*indexEntry{index: entry})
+		err := this.sargIndexes(baseKeyspace, node.IsUnderHash(), map[datastore.Index]*indexEntry{index: entry})
 		if err != nil {
 			return nil, 0, err
 		}

@@ -22,6 +22,7 @@ const (
 	KS_ANSI_NEST                // right-hand side of ANSI NEST
 	KS_PRIMARY_JOIN             // join on primary key (meta().id)
 	KS_UNDER_NL                 // inner side of nested-loop join
+	KS_UNDER_HASH               // right-hand side of Hash Join
 )
 
 /*
@@ -44,12 +45,13 @@ type KeyspaceTerm struct {
 	as        string
 	keys      expression.Expression
 	indexes   IndexRefs
+	joinHint  JoinHint
 	property  uint32
 }
 
 func NewKeyspaceTerm(namespace, keyspace string, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes, 0}
+	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes, JOIN_HINT_NONE, 0}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -147,6 +149,16 @@ func (this *KeyspaceTerm) toString(join bool) string {
 		} else {
 			s += " use keys " + this.keys.String()
 		}
+	}
+
+	// since use keys cannot be mixed with join hints, we can safely add the "use" keyword
+	switch this.joinHint {
+	case USE_HASH_BUILD:
+		s += " use hash(build)"
+	case USE_HASH_PROBE:
+		s += " use hash(probe)"
+	case USE_NL:
+		s += " use nl"
 	}
 
 	return s
@@ -271,6 +283,27 @@ func (this *KeyspaceTerm) Indexes() IndexRefs {
 }
 
 /*
+Returns the join hint (USE HASH or USE NL).
+*/
+func (this *KeyspaceTerm) JoinHint() JoinHint {
+	return this.joinHint
+}
+
+/*
+Join hint prefers hash join
+*/
+func (this *KeyspaceTerm) PreferHash() bool {
+	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE
+}
+
+/*
+Join hint prefers nested loop join
+*/
+func (this *KeyspaceTerm) PreferNL() bool {
+	return this.joinHint == USE_NL
+}
+
+/*
 Returns the property.
 */
 func (this *KeyspaceTerm) Property() uint32 {
@@ -317,11 +350,24 @@ func (this *KeyspaceTerm) IsUnderNL() bool {
 }
 
 /*
+Returns whether this keyspace is being considered for Hash Join
+*/
+func (this *KeyspaceTerm) IsUnderHash() bool {
+	return (this.property & KS_UNDER_HASH) != 0
+}
+
+/*
 Set join keys
 */
 func (this *KeyspaceTerm) SetJoinKeys(keys expression.Expression) {
 	this.keys = keys
-	return
+}
+
+/*
+Set join hint
+*/
+func (this *KeyspaceTerm) SetJoinHint(joinHint JoinHint) {
+	this.joinHint = joinHint
 }
 
 /*
@@ -336,7 +382,6 @@ Set ANSI JOIN property
 */
 func (this *KeyspaceTerm) SetAnsiJoin() {
 	this.property |= KS_ANSI_JOIN
-	return
 }
 
 /*
@@ -344,7 +389,6 @@ Set ANSI NEST property
 */
 func (this *KeyspaceTerm) SetAnsiNest() {
 	this.property |= KS_ANSI_NEST
-	return
 }
 
 /*
@@ -368,6 +412,20 @@ Unset UNDER NL property
 */
 func (this *KeyspaceTerm) UnsetUnderNL() {
 	this.property &^= KS_UNDER_NL
+}
+
+/*
+Set UNDER HASH property
+*/
+func (this *KeyspaceTerm) SetUnderHash() {
+	this.property |= KS_UNDER_HASH
+}
+
+/*
+Unset UNDER HASH property
+*/
+func (this *KeyspaceTerm) UnsetUnderHash() {
+	this.property &^= KS_UNDER_HASH
 }
 
 /*

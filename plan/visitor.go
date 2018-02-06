@@ -42,6 +42,8 @@ type Visitor interface {
 	VisitUnnest(op *Unnest) (interface{}, error)
 	VisitNLJoin(op *NLJoin) (interface{}, error)
 	VisitNLNest(op *NLNest) (interface{}, error)
+	VisitHashJoin(op *HashJoin) (interface{}, error)
+	VisitHashNest(op *HashNest) (interface{}, error)
 
 	// Let + Letting
 	VisitLet(op *Let) (interface{}, error)

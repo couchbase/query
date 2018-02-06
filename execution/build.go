@@ -250,6 +250,16 @@ func (this *builder) VisitNLJoin(plan *plan.NLJoin) (interface{}, error) {
 	return NewNLJoin(plan, this.context, c.(Operator)), nil
 }
 
+func (this *builder) VisitHashJoin(plan *plan.HashJoin) (interface{}, error) {
+	child := plan.Child()
+	c, e := child.Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewHashJoin(plan, this.context, c.(Operator)), nil
+}
+
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
 	return NewNest(plan, this.context), nil
 }
@@ -266,6 +276,16 @@ func (this *builder) VisitNLNest(plan *plan.NLNest) (interface{}, error) {
 	}
 
 	return NewNLNest(plan, this.context, c.(Operator)), nil
+}
+
+func (this *builder) VisitHashNest(plan *plan.HashNest) (interface{}, error) {
+	child := plan.Child()
+	c, e := child.Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewHashNest(plan, this.context, c.(Operator)), nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {

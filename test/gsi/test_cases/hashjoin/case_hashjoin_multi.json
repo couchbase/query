@@ -1,0 +1,175 @@
+[
+    {
+        "testcase": "Unnest --> Hash Join, build outer (unnest on build side). Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "statements":"SELECT pc.purchaseId, l.product, pd.name FROM purchase pc UNNEST pc.lineItems as l JOIN product pd USE HASH(probe) ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
+        "results": [
+        {
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    },
+    {
+        "testcase": "NL Join --> Unnest --> Hash Join, build outer (NL Join and Unnest on build side). Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ARRAY_LENGTH(v.`build_aliases`) = 3 AND ANY v2 WITHIN v.`~child`.`~children` SATISFIES v2.`#operator` = 'NestedLoopJoin' END END"
+        },
+        "statements":"SELECT pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd USE HASH(probe) ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    },
+    {
+        "testcase": "Hash Join --> Unnest --> NL Join, build inner. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END AND ANY v2 WITHIN p.plan.`~children` SATISFIES v2.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c USE HASH(build) ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    },
+    {
+        "testcase": "Hash Join --> Unnest --> Hash Join, first build outer, second build inner. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND v.`build_aliases`[0] = 'pd' END AND ANY v2 WITHIN p.plan.`~children` SATISFIES v2.`#operator` = 'HashJoin' AND v2.`build_aliases`[0] = 'pc' END"
+        },
+        "statements":"SELECT pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c USE HASH(probe) ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd USE HASH(build) ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    }
+]
+

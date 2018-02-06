@@ -223,6 +223,7 @@
 /[mM][iI][sS][sS][iI][nN][gG]/			 { yylex.logToken(yylex.Text(), "MISSING"); return MISSING }
 /[nN][aA][mM][eE][sS][pP][aA][cC][eE]/		 { yylex.logToken(yylex.Text(), "NAMESPACE"); return NAMESPACE }
 /[nN][eE][sS][tT]/				 { yylex.logToken(yylex.Text(), "NEST"); return NEST }
+/[nN][lL]/					 { yylex.logToken(yylex.Text(), "NL"); return NL }
 /[nN][oO][tT]/					 { yylex.logToken(yylex.Text(), "NOT"); return NOT }
 /[nN][uU][lL][lL]/				 { yylex.logToken(yylex.Text(), "NULL"); return NULL }
 /[nN][uN][mM][bB][eE][rR]/			 { yylex.logToken(yylex.Text(), "NUMBER"); return NUMBER }
@@ -247,7 +248,8 @@
 /[pP][rR][iI][mM][aA][rR][yY]/			 { yylex.logToken(yylex.Text(), "PRIMARY"); return PRIMARY }
 /[pP][rR][iI][vV][aA][tT][eE]/			 { yylex.logToken(yylex.Text(), "PRIVATE"); return PRIVATE }
 /[pP][rR][iI][vV][iI][lL][eE][gG][eE]/		 { yylex.logToken(yylex.Text(), "PRIVILEGE"); return PRIVILEGE }
-/[pP][rR][oO][cC][eE][dE][uU][rR][eE]/		 { yylex.logToken(yylex.Text(), "PROCEDURE"); return PROCEDURE }
+/[pP][rR][oO][cC][eE][dD][uU][rR][eE]/		 { yylex.logToken(yylex.Text(), "PROCEDURE"); return PROCEDURE }
+/[pP][rR][oO][bB][eE]/				 { yylex.logToken(yylex.Text(), "PROBE"); return PROBE }
 /[pP][uU][bB][lL][iI][cC]/			 { yylex.logToken(yylex.Text(), "PUBLIC"); return PUBLIC }
 /[rR][aA][wW]/					 { yylex.logToken(yylex.Text(), "RAW"); return RAW }
 /[rR][eE][aA][lL][mM]/				 { yylex.logToken(yylex.Text(), "REALM"); return REALM }

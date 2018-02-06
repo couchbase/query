@@ -1,0 +1,163 @@
+[
+    {
+        "testcase": "Hash Join build inner on expression (corresponds to meta.id of outer). Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p JOIN customer c USE HASH(build) ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE p.purchaseId LIKE \"purchase655%\" AND c.customerId IS NOT NULL ORDER BY p.purchaseId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer494",
+            "firstName": "Nicolette",
+            "lastName": "Wilderman",
+            "purchaseId": "purchase655"
+        },
+        {
+            "customerId": "customer721",
+            "firstName": "Asia",
+            "lastName": "Hilpert",
+            "purchaseId": "purchase6550"
+        },
+        {
+            "customerId": "customer295",
+            "firstName": "Edmund",
+            "lastName": "Kertzmann",
+            "purchaseId": "purchase6551"
+        },
+        {
+            "customerId": "customer629",
+            "firstName": "Coralie",
+            "lastName": "O'Kon",
+            "purchaseId": "purchase6552"
+        },
+        {
+            "customerId": "customer451",
+            "firstName": "Bridie",
+            "lastName": "Daugherty",
+            "purchaseId": "purchase6553"
+        },
+        {
+            "customerId": "customer77",
+            "firstName": "Jett",
+            "lastName": "Brown",
+            "purchaseId": "purchase6554"
+        },
+        {
+            "customerId": "customer905",
+            "firstName": "Angelina",
+            "lastName": "Tillman",
+            "purchaseId": "purchase6555"
+        },
+        {
+            "customerId": "customer388",
+            "firstName": "Arnaldo",
+            "lastName": "Bosco",
+            "purchaseId": "purchase6556"
+        },
+        {
+            "customerId": "customer963",
+            "firstName": "Ronny",
+            "lastName": "Hackett",
+            "purchaseId": "purchase6557"
+        },
+        {
+            "customerId": "customer648",
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "customerId": "customer931",
+            "firstName": "Karelle",
+            "lastName": "Konopelski",
+            "purchaseId": "purchase6559"
+        }
+    ]
+    },
+    {
+        "testcase": "Hash Join build outer on meta.id. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p USE HASH(probe) ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE c.lastName = \"Champlin\" AND p.customerId IS NOT NULL ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    }
+]
+

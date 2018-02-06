@@ -1,0 +1,119 @@
+[
+    {
+        "testcase": "Hash Nest build inner. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashNest' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY {\"ordersId\": o1.ordersId, \"productId\": o1.productId } FOR o1 in o END as orders FROM customer c NEST orders o USE HASH(build) ON c.customerId = o.customerId WHERE c.customerId IN [ \"customer736\", \"customer950\", \"customer947\" ] ORDER BY c.customerId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer736",
+            "firstName": "Rashawn",
+            "lastName": "Quitzon",
+            "orders": [
+                {
+                    "ordersId": "orders1",
+                    "productId": "product477"
+                },
+                {
+                    "ordersId": "orders2",
+                    "productId": "product10"
+                },
+                {
+                    "ordersId": "orders3",
+                    "productId": "product26"
+                },
+                {
+                    "ordersId": "orders4",
+                    "productId": "product363"
+                }
+            ]
+        },
+        {
+            "customerId": "customer947",
+            "firstName": "Israel",
+            "lastName": "Gibson",
+            "orders": [
+                {
+                    "ordersId": "orders5",
+                    "productId": "product414"
+                },
+                {
+                    "ordersId": "orders6",
+                    "productId": "product586"
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "testcase": "Left Outer Hash Nest, build inner. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashNest' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY {\"ordersId\": o1.ordersId, \"productId\": o1.productId } FOR o1 in o END as orders FROM customer c LEFT OUTER NEST orders o USE HASH(build) ON c.customerId = o.customerId WHERE c.customerId IN [ \"customer736\", \"customer950\", \"customer947\" ] ORDER BY c.customerId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer736",
+            "firstName": "Rashawn",
+            "lastName": "Quitzon",
+            "orders": [
+                {
+                    "ordersId": "orders1",
+                    "productId": "product477"
+                },
+                {
+                    "ordersId": "orders2",
+                    "productId": "product10"
+                },
+                {
+                    "ordersId": "orders3",
+                    "productId": "product26"
+                },
+                {
+                    "ordersId": "orders4",
+                    "productId": "product363"
+                }
+            ]
+        },
+        {
+            "customerId": "customer947",
+            "firstName": "Israel",
+            "lastName": "Gibson",
+            "orders": [
+                {
+                    "ordersId": "orders5",
+                    "productId": "product414"
+                },
+                {
+                    "ordersId": "orders6",
+                    "productId": "product586"
+                }
+            ]
+        },
+        {
+            "customerId": "customer950",
+            "firstName": "Michele",
+            "lastName": "Fadel",
+            "orders": []
+        }
+    ]
+    }
+]
+

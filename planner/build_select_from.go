@@ -108,7 +108,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	}
 
 	if scan == nil {
-		if node.IsPrimaryJoin() {
+		// if a primary join is being performed, or if hash join is being considered,
+		// just return nil, and let the caller consider alternatives:
+		//   primary join --> use lookup join instead of nested-loop join
+		//   hash join --> use nested-loop join instead of hash join
+		if node.IsPrimaryJoin() || node.IsUnderHash() {
 			return nil, nil
 		} else {
 			return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: no plan generated")
@@ -279,15 +283,16 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 		return nil, err
 	}
 
-	if njoin, ok := join.(*plan.Join); ok {
+	switch join := join.(type) {
+	case *plan.NLJoin:
+		this.subChildren = append(this.subChildren, join)
+	case *plan.Join, *plan.HashJoin:
 		if len(this.subChildren) > 0 {
 			parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
 			this.children = append(this.children, parallel)
 			this.subChildren = make([]plan.Operator, 0, 16)
 		}
-		this.children = append(this.children, njoin)
-	} else {
-		this.subChildren = append(this.subChildren, join)
+		this.children = append(this.children, join)
 	}
 
 	err = this.processKeyspaceDone(node.Alias())
@@ -400,15 +405,16 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 		return nil, err
 	}
 
-	if nnest, ok := nest.(*plan.Nest); ok {
+	switch nest := nest.(type) {
+	case *plan.NLNest:
+		this.subChildren = append(this.subChildren, nest)
+	case *plan.Nest, *plan.HashNest:
 		if len(this.subChildren) > 0 {
 			parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
 			this.children = append(this.children, parallel)
 			this.subChildren = make([]plan.Operator, 0, 16)
 		}
-		this.children = append(this.children, nnest)
-	} else {
-		this.subChildren = append(this.subChildren, nest)
+		this.children = append(this.children, nest)
 	}
 
 	err = this.processKeyspaceDone(node.Alias())

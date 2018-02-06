@@ -1,0 +1,42 @@
+[
+    {
+        "testcase": "Hash Nest build inner on meta.id. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashNest' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY {\"ordersId\": o1.ordersId, \"productId\": o1.productId } FOR o1 in o END as orders FROM customer c NEST orders o USE HASH(build) ON meta(o).id = \"orders1_\" || c.test_id AND o.customerId IS NOT NULL WHERE c.customerId IN [ \"customer736\", \"customer950\" ] ORDER BY c.customerId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer736",
+            "firstName": "Rashawn",
+            "lastName": "Quitzon",
+            "orders": [
+                {
+                    "ordersId": "orders1",
+                    "productId": "product477"
+                }
+            ]
+        },
+        {
+            "customerId": "customer950",
+            "firstName": "Michele",
+            "lastName": "Fadel",
+            "orders": [
+                {
+                    "ordersId": "orders1",
+                    "productId": "product477"
+                }
+            ]
+        }
+    ]
+    }
+]
+

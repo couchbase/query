@@ -25,11 +25,11 @@ type NLNest struct {
 	child    Operator
 }
 
-func NewNLNest(join *algebra.AnsiNest, child Operator) *NLNest {
+func NewNLNest(nest *algebra.AnsiNest, child Operator) *NLNest {
 	rv := &NLNest{
-		outer:    join.Outer(),
-		alias:    join.Alias(),
-		onclause: join.Onclause(),
+		outer:    nest.Outer(),
+		alias:    nest.Alias(),
+		onclause: nest.Onclause(),
 		child:    child,
 	}
 

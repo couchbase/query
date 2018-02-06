@@ -53,6 +53,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	join := node.IsAnsiJoinOp()
+	hash := node.IsUnderHash()
 
 	var hints []datastore.Index
 	if len(node.Indexes()) > 0 {
@@ -110,7 +111,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	if join {
+	if join && !hash {
 		op := "join"
 		if node.IsAnsiNest() {
 			op = "nest"
@@ -168,7 +169,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	if node.IsAnsiJoinOp() {
-		if node.IsPrimaryJoin() {
+		if node.IsPrimaryJoin() || node.IsUnderHash() {
 			return nil, nil, nil
 		} else {
 			op := "join"

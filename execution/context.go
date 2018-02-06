@@ -39,9 +39,11 @@ const (
 	JOIN
 	INDEX_JOIN
 	NL_JOIN
+	HASH_JOIN
 	NEST
 	INDEX_NEST
 	NL_NEST
+	HASH_NEST
 	COUNT
 	INDEX_COUNT
 	SORT
@@ -73,9 +75,11 @@ var _PHASE_NAMES = []string{
 	JOIN:         "join",
 	INDEX_JOIN:   "indexJoin",
 	NL_JOIN:      "nestedLoopJoin",
+	HASH_JOIN:    "hashJoin",
 	NEST:         "nest",
 	INDEX_NEST:   "indexNest",
 	NL_NEST:      "nestedLoopNest",
+	HASH_NEST:    "hashNest",
 	COUNT:        "count",
 	INDEX_COUNT:  "indexCount",
 	SORT:         "sort",

@@ -42,7 +42,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	indexes = minimalIndexes(indexes, true)
 
 	var err error
-	err = this.sargIndexes(baseKeyspace, indexes)
+	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -349,17 +349,19 @@ outer:
 		(shortest && (len(se.keys) <= len(te.keys)))
 }
 
-func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, sargables map[datastore.Index]*indexEntry) error {
+func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, underHash bool, sargables map[datastore.Index]*indexEntry) error {
 
 	pred := baseKeyspace.dnfPred
 	isOrPred := false
 	orIsJoin := false
-	if _, ok := pred.(*expression.Or); ok {
-		isOrPred = true
-		for _, fl := range baseKeyspace.filters {
-			if fl.isJoin() {
-				orIsJoin = true
-				break
+	if !underHash {
+		if _, ok := pred.(*expression.Or); ok {
+			isOrPred = true
+			for _, fl := range baseKeyspace.filters {
+				if fl.isJoin() {
+					orIsJoin = true
+					break
+				}
 			}
 		}
 	}
@@ -372,7 +374,7 @@ func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, sargables map[datas
 		if isOrPred {
 			spans, exactSpans, err = SargFor(baseKeyspace.dnfPred, se.keys, se.minKeys, orIsJoin, baseKeyspace.name)
 		} else {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, baseKeyspace.name)
+			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, underHash, baseKeyspace.name)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},

@@ -114,8 +114,9 @@ loop:
 			if right_item != nil {
 				var match bool
 				var joined value.AnnotatedValue
+				aliases := []string{this.plan.Alias()}
 				match, ok, joined = processAnsiExec(item, right_item, this.plan.Onclause(),
-					this.plan.Alias(), this.ansiFlags, context, "join")
+					aliases, this.ansiFlags, context, "join")
 				if ok && match {
 					matched = true
 					ok = this.sendItem(joined)
@@ -148,21 +149,23 @@ loop:
 }
 
 func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
-	onclause expression.Expression, alias string, ansiFlags uint32, context *Context, op string) (
+	onclause expression.Expression, aliases []string, ansiFlags uint32, context *Context, op string) (
 	bool, bool, value.AnnotatedValue) {
 
 	var joined value.AnnotatedValue
 
 	joined = item.Copy().(value.AnnotatedValue)
 
-	// only interested in the value corresponding to "alias"
-	val, ok := right_item.Field(alias)
-	if !ok {
-		context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
-		return false, false, nil
-	}
+	// only interested in the value corresponding to "aliases"
+	for _, alias := range aliases {
+		val, ok := right_item.Field(alias)
+		if !ok {
+			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
+			return false, false, nil
+		}
 
-	joined.SetField(alias, val)
+		joined.SetField(alias, val)
+	}
 
 	if op == "join" {
 		covers := right_item.Covers()
