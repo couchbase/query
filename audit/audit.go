@@ -11,6 +11,7 @@ package audit
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -158,7 +159,7 @@ func StartAuditService(server string, numServicers int) {
 		auditor := &standardAuditor{auditService: service, auditRecordQueue: queue}
 		_AUDITOR = auditor
 
-		for i := 1; i <= 5; i++ {
+		for i := 1; i <= runtime.NumCPU(); i++ {
 			go auditWorker(auditor, i)
 		}
 		logging.Infof("Audit service started.")
