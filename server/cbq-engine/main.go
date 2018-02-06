@@ -228,7 +228,11 @@ func main() {
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
-	util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
+	if *ENTERPRISE {
+		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
+	} else {
+		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
+	}
 
 	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 

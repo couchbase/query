@@ -97,7 +97,11 @@ var _SETTERS = map[string]Setter{
 	paramSettings.CONTROLS: setControlsAdmin,
 	paramSettings.N1QLFEATCTRL: func(s *Server, o interface{}) {
 		value, _ := o.(float64)
-		util.SetN1qlFeatureControl(uint64(value))
+		if s.enterprise {
+			util.SetN1qlFeatureControl(uint64(value))
+		} else {
+			util.SetN1qlFeatureControl(uint64(value) | util.CE_N1QL_FEAT_CTRL)
+		}
 	},
 }
 

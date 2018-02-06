@@ -137,7 +137,11 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 
 	// set default values
 	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
-	util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL)
+	if rv.enterprise {
+		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL)
+	} else {
+		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
+	}
 
 	//	sys, err := system.NewDatastore(store)
 	//	if err != nil {

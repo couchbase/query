@@ -30,6 +30,7 @@ const (
 )
 
 const DEF_N1QL_FEAT_CTRL = 0
+const CE_N1QL_FEAT_CTRL = (N1QL_GROUPAGG_PUSHDOWN)
 
 func SetN1qlFeatureControl(control uint64) {
 	atomic.StoreInt64(&N1qlFeatureControl, int64(control))
