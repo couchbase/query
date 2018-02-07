@@ -375,11 +375,11 @@ func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, sargables map[datas
 			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, baseKeyspace.name)
 		}
 		if err != nil || spans.Size() == 0 {
-			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
-				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
+			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},
+				logging.Pair{"sarg_keys", fmt.Sprintf("<ud>%v</ud>", se.sargKeys)}, logging.Pair{"error", err})
+
 			return errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
 				pred.String(), se.sargKeys.String(), err))
-			return err
 		}
 
 		se.spans = spans

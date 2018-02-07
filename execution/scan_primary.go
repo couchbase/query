@@ -11,6 +11,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 
 	"github.com/couchbase/query/datastore"
@@ -56,6 +57,12 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 
 		this.scanPrimary(context, parent)
 	})
+}
+
+func stringifyIndexEntry(lastEntry *datastore.IndexEntry) string {
+	str := fmt.Sprintf("EntryKey : <ud>%v</ud>\n", lastEntry.EntryKey)
+	str += fmt.Sprintf("Primary Key : <ud>%v</ud>\n", lastEntry.PrimaryKey)
+	return str
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
@@ -105,7 +112,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	if conn.Timeout() {
 		logging.Errorp("Primary index scan timeout - resorting to chunked scan",
 			logging.Pair{"chunkSize", nitems},
-			logging.Pair{"startingEntry", lastEntry})
+			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
 		if lastEntry == nil {
 			// no key for chunked scans (primary scan returned 0 items)
 			context.Error(errors.NewCbIndexScanTimeoutError(nil))
@@ -157,7 +164,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 			return nil
 		}
 	}
-	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", lastEntry})
+	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", stringifyIndexEntry(lastEntry)})
 	return lastEntry
 }
 

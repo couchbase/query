@@ -472,7 +472,7 @@ func (this *Context) assert(test bool, what string) bool {
 	if test {
 		return true
 	}
-	logging.Severef("assert failure: %v\n\nrequest text:\n%v\n",
+	logging.Severef("assert failure: %v\n\nrequest text:\n<ud>%v</ud>\n",
 		what, this.prepared.Text())
 	this.Fatal(errors.NewExecutionInternalError(what))
 	return false
@@ -484,7 +484,7 @@ func (this *Context) Recover() {
 		buf := make([]byte, 1<<16)
 		n := runtime.Stack(buf, false)
 		s := string(buf[0:n])
-		logging.Severef("panic: %v\n\nrequest text:\n%v\n\nstack:\n%v",
+		logging.Severef("panic: %v\n\nrequest text:\n<ud>%v</ud>\n\nstack:\n%v",
 			err, this.prepared.Text(), s)
 
 		// TODO - this may very well be a duplicate, if the orchestrator is redirecting

@@ -118,7 +118,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, stop chan
 			ok = false
 		}
 	}
-	logging.Debugf("WalkViewInBatches %s: %d rows fetched, %d rows sent", view, numRead, numSent)
+	logging.Debugf("WalkViewInBatches <ud>%s</ud>: %d rows fetched, %d rows sent", view, numRead, numSent)
 }
 
 func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span, isPrimary bool) map[string]interface{} {
@@ -126,7 +126,7 @@ func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span, i
 
 	if span != nil {
 
-		logging.Debugf("Scan range. %v", span)
+		logging.Debugf("Scan range. <ud>%v</ud>", span)
 		low := span.Range.Low
 		high := span.Range.High
 		inclusion := span.Range.Inclusion

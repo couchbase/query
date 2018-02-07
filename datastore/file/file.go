@@ -697,7 +697,7 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 	var n int64 = 0
 	for _, dirEntry := range dirEntries {
 
-		logging.Debugf("Dir entry being scanned %v \n", dirEntry.Name())
+		logging.Debugf("Dir entry being scanned <ud>%v</ud> \n", dirEntry.Name())
 		if limit > 0 && n > limit {
 			break
 		}

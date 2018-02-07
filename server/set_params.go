@@ -157,11 +157,11 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 			err = idxConfig.SetConfig(idxrSettings)
 			if err != nil {
 				//log failure to set values
-				logging.Infof(" ERROR: Could not set indexer settings :: %v", idxrSettings)
+				logging.Errorf(" Could not set indexer settings :: %v", idxrSettings)
 			}
 			logging.Infof(" Indexer settings have been updated %v", idxrSettings)
 		} else {
-			logging.Infof(" ERROR: Cannot get index config :: %v", err.Error())
+			logging.Errorf(" Cannot get index config :: %v", err.Error())
 
 		}
 	}

@@ -112,7 +112,7 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 
 		logging.Errorp("Primary index scan timeout - resorting to chunked scan",
 			logging.Pair{"chunkSize", nitems},
-			logging.Pair{"startingEntry", lastEntry})
+			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
 		if lastEntry == nil {
 			// no key for chunked scans (primary scan returned 0 items)
 			context.Error(errors.NewCbIndexScanTimeoutError(nil))
@@ -164,7 +164,7 @@ func (this *PrimaryScan3) scanPrimaryChunk(context *Context, parent value.Value,
 			return nil
 		}
 	}
-	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", lastEntry})
+	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", stringifyIndexEntry(lastEntry)})
 	return lastEntry
 }
 

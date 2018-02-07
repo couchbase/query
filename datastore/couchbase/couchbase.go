@@ -432,10 +432,10 @@ func parseUrl(u string) (host string, username string, password string, err erro
 	}
 	password, _ = url.User.Password()
 	if password == "" {
-		logging.Warnf("No password found in url %s.", u)
+		logging.Warnf("No password found in url <ud>%s</ud>.", u)
 	}
 	if url.User.Username() == "" {
-		logging.Warnf("No username found in url %s.", u)
+		logging.Warnf("No username found in url <ud>%s</ud>.", u)
 	}
 	return url.Host, url.User.Username(), password, nil
 }
@@ -456,10 +456,8 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		// intialize cb_auth variables manually
 		host, username, password, err := parseUrl(u)
 		if err != nil {
-			logging.Warnf("Unable to parse url %s: %v", u, e)
+			logging.Warnf("Unable to parse url <ud>%s</ud>: %v", u, err)
 		} else {
-			logging.Infof("Trying to init cbauth with credentials %s, %s, %s",
-				host, username, password)
 			set, err := cbauth.InternalRetryDefaultInit(host, username, password)
 			if set == false || err != nil {
 				logging.Errorf("Unable to initialize cbauth variables. Error %v", err)
@@ -757,7 +755,7 @@ func (p *namespace) refresh(changed bool) {
 		// check if the default pool exists
 		newpool, err = client.GetPool(p.name)
 		if err != nil {
-			logging.Errorf("Retry Failed Error updating pool name %s: Error %v", p.name, err)
+			logging.Errorf("Retry Failed Error updating pool name <ud>%s</ud>: Error %v", p.name, err)
 			return
 		}
 		p.store.client = client
@@ -1251,10 +1249,10 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 			cas, flags, err = getMeta(key, meta)
 			if err != nil {
 				// Don't perform the update if the meta values are not found
-				logging.Errorf("Failed to get meta values for key %v, error %v", key, err)
+				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
 			} else {
 
-				logging.Debugf("CAS Value (Update) for key %v is %v flags %v value %v", key, uint64(cas), flags, val)
+				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>", key, uint64(cas), flags, val)
 				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), 0, uint64(cas), val)
 			}
 
@@ -1264,9 +1262,9 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 
 		if err != nil {
 			if isEExistError(err) {
-				logging.Errorf("Failed to perform update on key %s. CAS mismatch due to concurrent modifications", key)
+				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications", key)
 			} else {
-				logging.Errorf("Failed to perform %s on key %s for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
+				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
 			}
 		} else {
 			insertedKeys = append(insertedKeys, kv)
@@ -1302,7 +1300,7 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 	for _, key := range deletes {
 		if err = b.cbbucket.Delete(key); err != nil {
 			if !isNotFoundError(err) {
-				logging.Infof("Failed to delete key %s Error %s", key, err)
+				logging.Infof("Failed to delete key <ud>%s</ud> Error %s", key, err)
 				failedDeletes = append(failedDeletes, key)
 			}
 		} else {

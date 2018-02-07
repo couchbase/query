@@ -11,6 +11,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"runtime"
@@ -669,7 +670,7 @@ func logExplain(prepared *plan.Prepared) {
 		return
 	}
 
-	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
+	logging.Tracep("Explain ", logging.Pair{"explain", fmt.Sprintf("<ud>%v</ud>", string(explain))})
 }
 
 // API for tracking server options

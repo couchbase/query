@@ -45,7 +45,7 @@ func newViewIndex(name string, on expression.Expressions, where expression.Expre
 		keyspace: view.keyspace,
 	}
 
-	logging.Infof("Created index %s on %s with key %v on where %v", name, view.keyspace.Name(), on, where)
+	logging.Infof("Created index <ud>%s</ud> on %s with key <ud>%v</ud> on where <ud>%v</ud>", name, view.keyspace.Name(), on, where)
 
 	err = inst.putDesignDoc()
 	if err != nil {
@@ -112,7 +112,7 @@ func newViewIndexFromExistingMap(name, ddName string, on expression.Expressions,
 		keyspace: view.keyspace,
 	}
 
-	logging.Infof("Created index %s on %s with key %v", name, view.keyspace.Name(), on)
+	logging.Infof("Created index <ud>%s</ud> on %s with key <ud>%v</ud>", name, view.keyspace.Name(), on)
 
 	err = inst.putDesignDoc()
 	if err != nil {
@@ -194,7 +194,7 @@ func loadViewIndexes(v *viewIndexer) (indexes []datastore.Index, nonUsableIndexe
 		jview, ok := jdoc.Views[iname]
 		if !ok {
 			nonUsableIndexes = append(nonUsableIndexes, iname)
-			logging.Errorf("Missing view for index %v ", iname)
+			logging.Errorf("Missing view for index <ud>%v</ud> ", iname)
 			continue
 		}
 
@@ -210,7 +210,7 @@ func loadViewIndexes(v *viewIndexer) (indexes []datastore.Index, nonUsableIndexe
 				expr, err := parser.Parse(ser)
 				if err != nil {
 					nonUsableIndexes = append(nonUsableIndexes, iname)
-					logging.Errorf("Cannot unmarshal expression for index  %v", iname)
+					logging.Errorf("Cannot unmarshal expression for index <ud>%v</ud>", iname)
 					continue
 				}
 				exprlist = append(exprlist, expr)
@@ -238,7 +238,7 @@ func loadViewIndexes(v *viewIndexer) (indexes []datastore.Index, nonUsableIndexe
 
 		if ddoc.checksum() != jdoc.IndexChecksum {
 			nonUsableIndexes = append(nonUsableIndexes, iname)
-			logging.Warnf("Warning - checksum failed on index  %v", iname)
+			logging.Warnf("Warning - checksum failed on index  <ud>%v</ud>", iname)
 			continue
 		}
 
@@ -414,7 +414,7 @@ func (idx *viewIndex) putDesignDoc() error {
 	}
 
 	if err := idx.keyspace.cbbucket.PutDDoc(idx.DDocName(), &put); err != nil {
-		logging.Errorf("Unable to store view definition. Map function is: %v", view.Map)
+		logging.Errorf("Unable to store view definition. Map function is: <ud>%v</ud>", view.Map)
 		return qerrors.NewCbViewDefError(err)
 	}
 

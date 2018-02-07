@@ -146,7 +146,7 @@ func (view *viewIndexer) CreatePrimaryIndex(requestId, name string, with value.V
 		return nil, errors.NewCbViewsWithNotAllowedError(nil, "")
 	}
 
-	logging.Debugf("Creating primary index %s", name)
+	logging.Debugf("Creating primary index <ud>%s</ud>", name)
 
 	idx, err := newViewPrimaryIndex(view, name)
 	if err != nil {
@@ -176,7 +176,7 @@ func (view *viewIndexer) CreateIndex(requestId, name string, seekKey, rangeKey e
 		}
 	}
 
-	logging.Debugf("Creating index %s with equal key %v range key %v", name, seekKey, rangeKey)
+	logging.Debugf("Creating index <ud>%s</ud> with equal key <ud>%v</ud> range key <ud>%v</ud>", name, seekKey, rangeKey)
 
 	var idx datastore.Index
 	var err error

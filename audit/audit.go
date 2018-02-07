@@ -200,15 +200,48 @@ func auditWorker(auditor *standardAuditor, num int) {
 		if entry.isQueryType {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.queryAuditRecord)
 			if err != nil {
-				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, *entry.queryAuditRecord, err)
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, stringifyQueryAR(*entry.queryAuditRecord), err)
 			}
 		} else {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.apiAuditRecord)
 			if err != nil {
-				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, *entry.apiAuditRecord, err)
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, stringifyAPIAR(*entry.apiAuditRecord), err)
 			}
 		}
 	}
+}
+
+func stringifyQueryAR(entry n1qlAuditEvent) string {
+
+	str := fmt.Sprintf("RequestID: <ud>%v</ud>\n", entry.RequestId)
+	str += fmt.Sprintf("Statement: <ud>%v</ud>\n", entry.Statement)
+	str += fmt.Sprintf("NamedArgs: %v\n", entry.NamedArgs)
+	str += fmt.Sprintf("PositionalArgs: %v\n", entry.PositionalArgs)
+	str += fmt.Sprintf("ClientContextId: <ud>%v</ud>\n", entry.ClientContextId)
+	str += fmt.Sprintf("IsAdHoc: %v\n", entry.IsAdHoc)
+	str += fmt.Sprintf("UserAgent: %v\n", entry.UserAgent)
+	str += fmt.Sprintf("Node: %v\n", entry.Node)
+	str += fmt.Sprintf("Status: %v\n", entry.Status)
+	str += fmt.Sprintf("Metrics: %v\n", entry.Metrics)
+	return str
+
+}
+
+func stringifyAPIAR(entry n1qlAuditApiRequestEvent) string {
+
+	str := fmt.Sprintf("HttpMethod: %v\n", entry.HttpMethod)
+	str += fmt.Sprintf("HttpResultCode: %v\n", entry.HttpResultCode)
+	str += fmt.Sprintf("ErrorCode: %v\n", entry.ErrorCode)
+	str += fmt.Sprintf("ErrorMessage: %v\n", entry.ErrorMessage)
+	str += fmt.Sprintf("Stat: %v\n", entry.Stat)
+	str += fmt.Sprintf("Name: <ud>%v</ud>\n", entry.Name)
+	str += fmt.Sprintf("Request: <ud>%v</ud>\n", entry.Request)
+	str += fmt.Sprintf("Cluster: %v\n", entry.Cluster)
+	str += fmt.Sprintf("Node: %v\n", entry.Node)
+	str += fmt.Sprintf("Values: <ud>%v</ud>\n", entry.Values)
+	str += fmt.Sprintf("Body: <ud>%v</ud>\n", entry.Body)
+
+	return str
 }
 
 // Event types are described in /query/etc/audit_descriptor.json

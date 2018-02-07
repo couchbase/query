@@ -419,7 +419,7 @@ func distributePrepared(name, plan string) {
 	go distributed.RemoteAccess().DoRemoteOps([]string{}, "prepareds", "PUT", name, plan,
 		func(warn errors.Error) {
 			if warn != nil {
-				logging.Infof("failed to distribute statement %v: %v", name, warn)
+				logging.Infof("failed to distribute statement <ud>%v</ud>: %v", name, warn)
 			}
 		}, distributed.NO_CREDS, "")
 }
