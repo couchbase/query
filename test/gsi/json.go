@@ -1,4 +1,4 @@
-//  Copyright (c) 2013 Couchbase, Inc.
+//  Copyright (c) 2017 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"testing"
 	"time"
 
 	"github.com/couchbase/query/accounting"
@@ -33,10 +34,12 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
+	//	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -48,9 +51,9 @@ parameters the ip of the couchbase server instance
 and the namespace.
 */
 var Site_CBS = "http://"
-var Auth_param = "Administrator:password"
 var Username = "Administrator"
 var Password = "password"
+var Auth_param = "Administrator:password"
 var Pool_CBS = "127.0.0.1:8091/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
@@ -225,7 +228,8 @@ This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
-func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.Error, errors.Error) {
+func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
+	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
@@ -235,9 +239,49 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	query := &MockQuery{
 		response: mr,
 	}
-	server.NewBaseRequest(&query.BaseRequest, q, nil, nil, nil, namespace, 0, 0, 0, 0,
+	server.NewBaseRequest(&query.BaseRequest, q, nil, namedArgs, positionalArgs, namespace, 0, 0, 0, 0,
 		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
 
+	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
+	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
+	defer mockServer.doStats(query)
+
+	select {
+	case mockServer.server.Channel() <- query:
+		// Wait until the request exits.
+		<-query.CloseNotify()
+	default:
+		// Timeout.
+		return nil, nil, errors.NewError(nil, "Query timed out")
+	}
+
+	// wait till all the results are ready
+	<-mr.done
+	return mr.results, mr.warnings, mr.err
+}
+
+func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
+	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
+	var metrics value.Tristate
+	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
+
+	mr := &MockResponse{
+		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
+	}
+	query := &MockQuery{
+		response: mr,
+	}
+
+	prepared, err := PrepareStmt(mockServer, namespace, q)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	server.NewBaseRequest(&query.BaseRequest, "", prepared, namedArgs, positionalArgs, namespace, 0, 0, 0, 0,
+		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
+
+	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
+	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
 
 	select {
@@ -258,7 +302,7 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 Used to specify the N1QL nodes options using the method NewServer
 as defined in server/server.go.
 */
-func Start(site, pool, namespace string) *MockServer {
+func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 
 	mockServer := &MockServer{}
 	ds, err := resolver.NewDatastore(site + pool)
@@ -271,6 +315,11 @@ func Start(site, pool, namespace string) *MockServer {
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
+	}
+
+	if setGlobals {
+		datastore.SetDatastore(ds)
+		datastore.SetSystemstore(sys)
 	}
 
 	configstore, err := config_resolver.NewConfigstore("stub:")
@@ -300,16 +349,14 @@ func Start(site, pool, namespace string) *MockServer {
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
-		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true,
+		false, channel, plusChannel, 1, 1, 1, 0, false, false, true, true,
 		server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
 	prepareds.PreparedsReprepareInit(ds, sys, namespace)
-
 	server.SetKeepAlive(1 << 10)
-	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 
 	go server.Serve()
 	mockServer.server = server
@@ -352,7 +399,7 @@ func addResultsEntry(newResults, results []interface{}, entry interface{}) {
 	}
 }
 
-func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
+func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
 	/* Reads the input file and returns its contents in the form
@@ -387,9 +434,26 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			return
 		}
 		statements := v.(string)
-		//t.Logf("  %d: %v\n", i, statements)
+
+		var ordered bool
+		if o, ook := c["ordered"]; ook {
+			ordered = o.(bool)
+		}
+
+		if explain {
+			if errstring = checkExplain(qc, namespace, statements, c, ordered, fname, i); errstring != nil {
+				return
+			}
+		}
+
 		fin_stmt = strconv.Itoa(i) + ": " + statements
-		resultsActual, _, errActual := Run(qc, statements, namespace)
+		var resultsActual []interface{}
+		var errActual errors.Error
+		if prepared {
+			resultsActual, _, errActual = RunPrepared(qc, statements, namespace, nil, nil)
+		} else {
+			resultsActual, _, errActual = Run(qc, statements, namespace, nil, nil)
+		}
 
 		errExpected := ""
 		v, ok = c["error"]
@@ -441,8 +505,8 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			newResults := make([]interface{}, len(resultsActual))
 			switch accept.(type) {
 			case []interface{}:
-				for i, _ := range resultsActual {
-					newResults[i] = make(map[string]interface{}, len(accept.([]interface{})))
+				for j, _ := range resultsActual {
+					newResults[j] = make(map[string]interface{}, len(accept.([]interface{})))
 				}
 				for _, v := range accept.([]interface{}) {
 					switch v.(type) {
@@ -454,22 +518,17 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 				}
 			case map[string]interface{}:
 			default:
-				for i, _ := range resultsActual {
-					newResults[i] = make(map[string]interface{}, 1)
+				for j, _ := range resultsActual {
+					newResults[j] = make(map[string]interface{}, 1)
 				}
 				addResultsEntry(newResults, resultsActual, accept)
 			}
 			resultsActual = newResults
 		}
-		var ordered = true
-		if o, ook := c["ordered"]; ook {
-			ordered = o.(bool)
-		}
-
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, fname, i, ordered)
+			okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i)
 			if okres != nil {
 				errstring = okres
 				return
@@ -483,22 +542,19 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int, ordered bool) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int) (errstring error) {
 	if len(resultsActual) != len(resultsExpected) {
-		errstring = go_er.New(fmt.Sprintf("results len don't match, %v vs %v, %v vs %v"+
-			", for case file: %v, index: %v",
+		return go_er.New(fmt.Sprintf("results len don't match, %v vs %v, %v vs %v"+
+			", (%v)for case file: %v, index: %v",
 			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, fname, i))
-		return
+			resultsActual, resultsExpected, stmt, fname, i))
 	}
 
 	if ordered {
 		if !reflect.DeepEqual(resultsActual, resultsExpected) {
-			errstring = go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
-				", for case file: %v, index: %v",
-				resultsActual, resultsExpected, fname, i))
-
-			return
+			return go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
+				", (%v) for case file: %v, index: %v",
+				resultsActual, resultsExpected, stmt, fname, i))
 		}
 	} else {
 	nextresult:
@@ -509,11 +565,124 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, 
 					continue nextresult
 				}
 			}
-			return go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
-				", for case file: %v, index: %v",
-				resultsActual, resultsExpected, fname, i))
+			return go_er.New(fmt.Sprintf("results don't match: %#v is not present in : %#v"+
+				", (%v) for case file: %v, index: %v",
+				re, resultsActual, stmt, fname, i))
 		}
+
 	}
 
 	return nil
+}
+
+func checkExplain(qc *MockServer, namespace string, statement string, c map[string]interface{}, ordered bool,
+	fname string, i int) (errstring error) {
+	var ev map[string]interface{}
+
+	e, ok := c["explain"]
+	if ok {
+		ev, ok = e.(map[string]interface{})
+	}
+
+	if !ok {
+		return
+	}
+
+	var eStmt string
+	var erExpected []interface{}
+
+	ed, dok := ev["disabled"]
+	es, sok := ev["statement"]
+	er, rok := ev["results"]
+
+	if dok {
+		if disabled := ed.(bool); disabled {
+			return
+		}
+	}
+
+	if sok {
+		eStmt, sok = es.(string)
+	}
+
+	if !sok {
+		return
+	}
+
+	if rok {
+		erExpected, rok = er.([]interface{})
+	}
+
+	explainStmt := "EXPLAIN " + statement
+	resultsActual, _, errActual := Run(qc, explainStmt, namespace, nil, nil)
+	if errActual != nil || len(resultsActual) != 1 {
+		return go_er.New(fmt.Sprintf("(%v) error actual: %#v"+
+			", for case file: %v, index: %v", explainStmt, resultsActual, fname, i))
+	}
+
+	namedParams := make(map[string]value.Value, 1)
+	namedParams["explan"] = value.NewValue(resultsActual[0])
+
+	resultsActual, _, errActual = Run(qc, eStmt, namespace, namedParams, nil)
+	if errActual != nil {
+		return go_er.New(fmt.Sprintf("unexpected err: %v, statement: %v"+
+			", for case file: %v, index: %v", errActual, eStmt, fname, i))
+	}
+
+	if rok {
+		return doResultsMatch(resultsActual, erExpected, ordered, eStmt, fname, i)
+	}
+
+	return
+}
+
+func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, errors.Error) {
+	prepareStmt := "PREPARE " + statement
+	resultsActual, _, errActual := Run(qc, prepareStmt, namespace, nil, nil)
+	if errActual != nil || len(resultsActual) != 1 {
+		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
+	}
+	RunStmt(qc, "DELETE FROM system:prepareds")
+	ra := resultsActual[0].(map[string]interface{})
+	return prepareds.DecodePrepared("", ra["encoded_plan"].(string), true, false, nil)
+}
+
+/*
+Method to pass in parameters for site, pool and
+namespace to Start method for Couchbase Server.
+*/
+
+func Start_cs(setGlobals bool) *MockServer {
+	ms := Start(Site_CBS, Auth_param+"@"+Pool_CBS, Namespace_CBS, setGlobals)
+
+	return ms
+}
+
+func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testing.T) {
+
+	matches, err := filepath.Glob(filename)
+	if err != nil {
+		t.Errorf("glob failed: %v", err)
+	}
+
+	for _, m := range matches {
+		t.Logf("TestCaseFile: %v\n", m)
+		stmt, errcs := FtestCaseFile(m, prepared, explain, qc, Namespace_CBS)
+
+		if errcs != nil {
+			t.Errorf("Error : %s", errcs.Error())
+			return
+		}
+
+		if stmt != "" {
+			t.Logf(" %v\n", stmt)
+		}
+
+		fmt.Println("\nQuery : ", m, "\n\n")
+	}
+
+}
+
+func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+	return Run(mockServer, q, Namespace_CBS, nil, nil)
 }

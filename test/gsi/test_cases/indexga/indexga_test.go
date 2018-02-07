@@ -13,6 +13,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/couchbase/query/test/gsi"
 )
 
 func TestGroupagg(t *testing.T) {
@@ -33,11 +35,11 @@ func TestGroupagg(t *testing.T) {
 	run_test(qc, t, true) // prepare statements
 
 	// Delete the test specific data
-	//	case_delete(qc, t)
+	case_delete(qc, t)
 
 }
 
-func run_test(qc *MockServer, t *testing.T, prepare bool) {
+func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 	cases := []string{"case_indexga_regular.json",
 		"case_indexga_regular_noncoverd.json",
 		"case_indexga_regular_or.json",
@@ -68,7 +70,7 @@ func run_test(qc *MockServer, t *testing.T, prepare bool) {
 	run_testcase(primary, prepare, qc, t, testcases)
 }
 
-func case_delete(qc *MockServer, t *testing.T) {
+func case_delete(qc *gsi.MockServer, t *testing.T) {
 	runStmt(qc, "CREATE PRIMARY INDEX oprimary ON orders")
 	runStmt(qc, "DELETE FROM orders WHERE test_id = 'indexga'")
 	runStmt(qc, "DROP INDEX orders.oprimary")
@@ -86,7 +88,7 @@ func buildtestcase(cases, indexes []string, cid, istart, iend int) (primary int,
 	return
 }
 
-func run_testcase(primarycase int, prepared bool, qc *MockServer, t *testing.T, testcases []string) {
+func run_testcase(primarycase int, prepared bool, qc *gsi.MockServer, t *testing.T, testcases []string) {
 	var i int
 
 	// Repeat for

@@ -18,8 +18,8 @@ import (
 // Basic test on cobering indexes
 func TestCover(t *testing.T) {
 
-	val := os.Getenv("GSI_TEST")
-	if strings.ToLower(val) == "true" {
-		runMatch("case_curl.json", start_cs(), t)
+	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
+		return
 	}
+	runMatch("case_curl.json", false, false, start_cs(), t)
 }

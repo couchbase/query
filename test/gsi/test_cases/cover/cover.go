@@ -10,49 +10,20 @@
 package cover
 
 import (
-	"fmt"
-	"path/filepath"
 	"testing"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 )
 
-/*
-Method to pass in parameters for site, pool and
-namespace to Start method for Couchbase Server.
-*/
-func start_cs() *gsi.MockServer {
-	ms := gsi.Start(gsi.Site_CBS, gsi.Auth_param+"@"+gsi.Pool_CBS, gsi.Namespace_CBS)
-
-	return ms
-}
-
-func runMatch(filename string, qc *gsi.MockServer, t *testing.T) {
-
-	matches, err := filepath.Glob(filename)
-	if err != nil {
-		t.Errorf("glob failed: %v", err)
-	}
-
-	for _, m := range matches {
-		t.Logf("TestCaseFile: %v\n", m)
-		stmt, errcs := gsi.FtestCaseFile(m, qc, gsi.Namespace_CBS)
-
-		if errcs != nil {
-			t.Errorf("Error : %s", errcs.Error())
-			return
-		}
-
-		if stmt != "" {
-			t.Logf(" %v\n", stmt)
-		}
-
-		fmt.Println("\nQuery : ", m, "\n\n")
-	}
-
-}
-
 func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
-	return gsi.Run(mockServer, q, gsi.Namespace_CBS)
+	return gsi.RunStmt(mockServer, q)
+}
+
+func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {
+	gsi.RunMatch(filename, prepared, explain, qc, t)
+}
+
+func start_cs() *gsi.MockServer {
+	return gsi.Start_cs(true)
 }
