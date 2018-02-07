@@ -32,7 +32,10 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 	}
 
-	this.resetIndexGroupAggs()
+	this.resetProjection()
+	if this.group != nil {
+		this.resetPushDowns()
+	}
 
 	pred := baseKeyspace.dnfPred
 
