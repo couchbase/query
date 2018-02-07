@@ -303,8 +303,6 @@ nextgroup:
 			}
 		}
 
-		var idxExprGroup *plan.IndexGroupKey
-
 		for indexKeyPos, indexKey := range indexKeys {
 			if groupKey.EquivalentTo(indexKey) {
 				if indexPosGroup[indexKeyPos] == nil {
@@ -318,7 +316,12 @@ nextgroup:
 						groupKey.Copy(), []int{indexKeyPos})
 				}
 				continue nextgroup
-			} else if groupKey.DependsOn(indexKey) {
+			}
+		}
+
+		var idxExprGroup *plan.IndexGroupKey
+		for indexKeyPos, indexKey := range indexKeys {
+			if groupKey.DependsOn(indexKey) {
 				if idxExprGroup == nil {
 					indexProjection.EntryKeys = checkAndAdd(indexProjection.EntryKeys, idNum)
 					idxExprGroup = plan.NewIndexGroupKey(idNum, -1, groupKey.Copy(), []int{indexKeyPos})
@@ -376,7 +379,6 @@ nextagg:
 			continue
 		}
 
-		var idxAgg *plan.IndexAggregate
 		for indexKeyPos, indexKey := range indexKeys {
 			if aggExpr.EquivalentTo(indexKey) {
 				dependsOnIndexKeys = checkAndAdd(dependsOnIndexKeys, indexKeyPos)
@@ -389,7 +391,12 @@ nextagg:
 					exprId, aggExpr.Copy(), aggProprties.distinct, []int{indexKeyPos}))
 				idNum++
 				continue nextagg
-			} else if aggExpr.DependsOn(indexKey) {
+			}
+		}
+
+		var idxAgg *plan.IndexAggregate
+		for indexKeyPos, indexKey := range indexKeys {
+			if aggExpr.DependsOn(indexKey) {
 				if idxAgg == nil {
 					indexProjection.EntryKeys = checkAndAdd(indexProjection.EntryKeys, idNum)
 					idxAgg = plan.NewIndexAggregate(aggProprties.aggtype, idNum,
