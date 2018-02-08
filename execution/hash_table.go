@@ -72,11 +72,12 @@ const (
 )
 
 type HashTable struct {
-	entries []*hashEntry // the hash table
-	count   int          // number of entries in hash table so far
-	mode    int          // hash table mode
-	bucket  int          // when iterate or get, bucket position
-	vector  int          // when iterate or get, vector position
+	entries  []*hashEntry // the hash table
+	count    int          // number of entries in hash table so far
+	distinct int          // number of distinct values in hash table so far
+	mode     int          // hash table mode
+	bucket   int          // when iterate or get, bucket position
+	vector   int          // when iterate or get, vector position
 }
 
 func NewHashTable() *HashTable {
@@ -100,9 +101,6 @@ func (this *HashTable) Put(hashVal, inputVal value.Value) error {
 		}
 	}
 
-	// we don't expect count to overflow since we would have max out on hash table size
-	this.count++
-
 	hashKey, err := this.getHashKey(hashVal)
 	if err != nil {
 		return err
@@ -119,6 +117,7 @@ func (this *HashTable) putEntry(entry *hashEntry) error {
 	// achieved by bitwise and
 	size_minus_one := uint64(len(this.entries) - 1)
 	idx := int(entry.hashKey & size_minus_one)
+	this.count += len(entry.inputVals)
 	found := false
 	for i := 0; i < len(this.entries); i++ {
 		e := this.entries[idx]
@@ -137,6 +136,7 @@ func (this *HashTable) putEntry(entry *hashEntry) error {
 			}
 		} else {
 			this.entries[idx] = entry
+			this.distinct++
 			found = true
 			break
 		}
@@ -241,7 +241,7 @@ func (this *HashTable) Iterate() value.Value {
 }
 
 func (this *HashTable) loadFactor() float64 {
-	return float64(this.count) / float64(len(this.entries))
+	return float64(this.distinct) / float64(len(this.entries))
 }
 
 func (this *HashTable) Grow() error {
@@ -254,6 +254,8 @@ func (this *HashTable) Grow() error {
 		return errors.NewHashTableMaxSizeExceeded()
 	}
 
+	this.count = 0
+	this.distinct = 0
 	oldEntries := this.entries
 	this.entries = make([]*hashEntry, newSize)
 
@@ -283,4 +285,5 @@ func (this *HashTable) Drop() {
 		}
 	}
 	this.count = 0
+	this.distinct = 0
 }
