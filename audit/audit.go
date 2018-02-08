@@ -13,10 +13,12 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	mcc "github.com/couchbase/gomemcached/client"
 	adt "github.com/couchbase/goutils/go-cbaudit"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
 )
 
@@ -90,16 +92,12 @@ type ApiAuditFields struct {
 // talks to the audit daemon, and a mock that just stores audit records for testing.
 // The mock is over in the test file.
 type Auditor interface {
-	// Should we contact the audit demon at all?
+	// Should we audit at all?
 	doAudit() bool
 
-	// Some users are trusted, so their actions do not need to be audited.
-	// Is this action from one such user?
-	userIsWhitelisted(userId string) bool
+	auditInfo() *datastore.AuditInfo
 
-	// Some events are disabled, and do not need to be audited.
-	// Is this one of them?
-	eventIsDisabled(uint32) bool
+	setAuditInfo(info *datastore.AuditInfo)
 
 	submit(entry auditQueueEntry)
 }
@@ -107,6 +105,9 @@ type Auditor interface {
 type standardAuditor struct {
 	auditService     *adt.AuditSvc
 	auditRecordQueue chan auditQueueEntry
+
+	auditInfoLock sync.RWMutex // get read or write lock before modifying reference to
+	info          *datastore.AuditInfo
 }
 
 type auditQueueEntry struct {
@@ -116,12 +117,20 @@ type auditQueueEntry struct {
 	apiAuditRecord   *n1qlAuditApiRequestEvent
 }
 
-func (sa *standardAuditor) userIsWhitelisted(user string) bool {
-	// TODO
-	return false
+func (sa *standardAuditor) auditInfo() *datastore.AuditInfo {
+	sa.auditInfoLock.RLock()
+	ret := sa.info
+	sa.auditInfoLock.RUnlock()
+	return ret
 }
 
-func (sa *standardAuditor) eventIsDisabled(eventId uint32) bool {
+func (sa *standardAuditor) setAuditInfo(info *datastore.AuditInfo) {
+	sa.auditInfoLock.Lock()
+	sa.info = info
+	sa.auditInfoLock.Unlock()
+}
+
+func eventIsDisabled(au *datastore.AuditInfo, eventId uint32) bool {
 	// No real event number?
 	if eventId == API_DO_NOT_AUDIT {
 		return true
@@ -133,7 +142,8 @@ func (sa *standardAuditor) eventIsDisabled(eventId uint32) bool {
 		// Disable them for now so the log doesn't get too crowded.
 		return true
 	}
-	return false
+
+	return au.EventDisabled[eventId]
 }
 
 func (sa *standardAuditor) submit(entry auditQueueEntry) {
@@ -148,37 +158,94 @@ var _AUDITOR Auditor
 // accessing the audit functionality. It is NOT the number of worker threads
 // the audit system itself has.
 func StartAuditService(server string, numServicers int) {
+	auditor := &standardAuditor{}
+
+	// Will we actually do any auditing?
+	// We can make this call safely here with a partially initialized
+	// standardAuditor, because it just checks whether we are in EE or CE.
+	if !auditor.doAudit() {
+		_AUDITOR = auditor
+		return
+	}
+
 	var err error
 	service, err := adt.NewAuditSvc(server)
-	if err == nil {
-		// The queue should be of finite length, but ample,
-		// to smooth out any bumps in service. The servicers
-		// should be able to leave an audit entry and continue
-		// unimpeded, with high probability.
-		queue := make(chan auditQueueEntry, numServicers*25)
-		auditor := &standardAuditor{auditService: service, auditRecordQueue: queue}
-		_AUDITOR = auditor
-
-		for i := 1; i <= runtime.NumCPU(); i++ {
-			go auditWorker(auditor, i)
-		}
-		logging.Infof("Audit service started.")
-	} else {
+	if err != nil {
 		logging.Errorf("Audit service not started: %v", err)
+		return
+	}
+	auditor.auditService = service
+
+	ds := datastore.GetDatastore()
+	if ds == nil {
+		logging.Errorf("Audit service not started: no data store available")
+		return
+	}
+
+	// Fetch initial audit settings now. These will be refreshed periodically
+	// by the auditSettings worker.
+	auditInfo, err := ds.AuditInfo()
+	if err != nil {
+		logging.Errorf("Audit service not started: audit settings not available: %v", err)
+		return
+	}
+	auditor.info = auditInfo
+
+	// The queue should be of finite length, but ample,
+	// to smooth out any bumps in service. The servicers
+	// should be able to leave an audit entry and continue
+	// unimpeded, with high probability.
+	auditor.auditRecordQueue = make(chan auditQueueEntry, numServicers*25)
+
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		go auditWorker(auditor, i)
+	}
+
+	go auditSettingsWorker(auditor, 1)
+
+	_AUDITOR = auditor
+}
+
+func auditSettingsWorker(auditor *standardAuditor, num int) {
+	// If this audit worker panics, start up a replacement.
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Errorf("Audit settings worker %d: Panic: %v. Starting a replacement.", num, r)
+			go auditSettingsWorker(auditor, num+1)
+		}
+	}()
+	logging.Infof("Starting audit settings worker %d.", num)
+
+	auditInfo := auditor.auditInfo()
+	curUid := auditInfo.Uid
+	ds := datastore.GetDatastore()
+
+	for {
+		time.Sleep(time.Second * 2)
+		auditInfo, err := ds.AuditInfo()
+		if err != nil {
+			logging.Errorf("Audit settings worker %d: Unable to get audit settings: %v", num, err)
+			continue
+		}
+		if curUid != auditInfo.Uid {
+			logging.Infof("Audit settings worker %d: Got updated audit settings: %+v", num, *auditInfo)
+			curUid = auditInfo.Uid
+			auditor.setAuditInfo(auditInfo)
+		}
 	}
 }
 
 func auditWorker(auditor *standardAuditor, num int) {
-	logging.Infof("Starting audit worker %d", num)
-
 	// If this audit worker panics, start up a replacement.
 	defer func() {
 		r := recover()
 		if r != nil {
 			logging.Errorf("Audit worker %d: Panic: %v. Starting a replacement.", num, r)
-			go auditWorker(auditor, num)
+			go auditWorker(auditor, num+1)
 		}
 	}()
+	logging.Infof("Starting audit worker %d", num)
 
 	var client *mcc.Client // The audit worker holds on to one client.
 	var err error
@@ -273,6 +340,16 @@ func Submit(event Auditable) {
 		return
 	}
 
+	auditInfo := _AUDITOR.auditInfo()
+	if auditInfo == nil {
+		logging.Errorf("Unable to audit. Audit specification is not available.")
+		return
+	}
+
+	if !auditInfo.AuditEnabled {
+		return
+	}
+
 	eventType := event.EventType()
 	eventTypeId := _EVENT_TYPE_MAP[eventType]
 
@@ -281,14 +358,14 @@ func Submit(event Auditable) {
 		eventTypeId = 28687
 	}
 
-	if _AUDITOR.eventIsDisabled(eventTypeId) {
+	if eventIsDisabled(auditInfo, eventTypeId) {
 		return
 	}
 
 	// We build the audit record from the request in the main thread
 	// because the request will be destroyed soon after the call to Submit(),
 	// and we don't want to cause a race condition.
-	auditEntries := buildAuditEntries(eventTypeId, event)
+	auditEntries := buildAuditEntries(eventTypeId, event, auditInfo)
 	submitAuditEntries(auditEntries)
 }
 
@@ -324,22 +401,32 @@ func SubmitApiRequest(event *ApiAuditFields) {
 		return
 	}
 
+	auditInfo := _AUDITOR.auditInfo()
+	if auditInfo == nil {
+		logging.Errorf("Unable to audit. Audit specification is not available.")
+		return
+	}
+
+	if !auditInfo.AuditEnabled {
+		return
+	}
+
 	eventTypeId := event.EventTypeId
 
-	if _AUDITOR.eventIsDisabled(eventTypeId) {
+	if eventIsDisabled(auditInfo, eventTypeId) {
 		return
 	}
 
 	// We build the audit entry from the request in the main thread
 	// because the request will be destroyed soon after the call to SubmitApiRequest(),
 	// and we don't want to cause a race condition.
-	auditEntries := buildApiRequestAuditEntries(eventTypeId, event)
+	auditEntries := buildApiRequestAuditEntries(eventTypeId, event, auditInfo)
 	submitAuditEntries(auditEntries)
 }
 
 // Returns a list of audit entries, because each user credential submitted as part of
 // the requests generates a separate audit record.
-func buildAuditEntries(eventTypeId uint32, event Auditable) []auditQueueEntry {
+func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore.AuditInfo) []auditQueueEntry {
 	// Grab the data from the event, so we don't query the duplicated data
 	// multiple times.
 	genericFields := event.EventGenericFields()
@@ -390,7 +477,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable) []auditQueueEntry {
 	// Figure out which users to generate events for.
 	auditableUsers := make([]string, 0, len(users))
 	for _, user := range users {
-		if !_AUDITOR.userIsWhitelisted(user) {
+		if !auditInfo.UserWhitelisted[user] {
 			auditableUsers = append(auditableUsers, user)
 		}
 	}
@@ -433,7 +520,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable) []auditQueueEntry {
 
 // Returns a list of audit entries, because each user credential submitted as part of
 // the requests generates a separate audit record.
-func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields) []auditQueueEntry {
+func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, auditInfo *datastore.AuditInfo) []auditQueueEntry {
 	// No credentials at all? Generate one record.
 	users := event.Users
 	if len(users) == 0 {
@@ -462,7 +549,7 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields) []au
 	// Figure out which users to generate events for.
 	auditableUsers := make([]string, 0, len(users))
 	for _, user := range users {
-		if !_AUDITOR.userIsWhitelisted(user) {
+		if !auditInfo.UserWhitelisted[user] {
 			auditableUsers = append(auditableUsers, user)
 		}
 	}

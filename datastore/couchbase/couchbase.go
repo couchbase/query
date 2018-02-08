@@ -349,6 +349,31 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return []datastore.Inferencer{s.inferencer}, nil
 }
 
+func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
+	auditSpec, err := s.client.GetAuditSpec()
+	if err != nil {
+		return nil, errors.NewSystemUnableToRetrieveError(err)
+	}
+
+	users := make(map[string]bool, len(auditSpec.DisabledUsers))
+	for _, u := range auditSpec.DisabledUsers {
+		users[u] = true
+	}
+
+	events := make(map[uint32]bool, len(auditSpec.Disabled))
+	for _, e := range auditSpec.Disabled {
+		events[e] = true
+	}
+
+	ret := &datastore.AuditInfo{
+		EventDisabled:   events,
+		UserWhitelisted: users,
+		AuditEnabled:    auditSpec.AuditdEnabled,
+		Uid:             auditSpec.Uid,
+	}
+	return ret, nil
+}
+
 func (s *store) UserInfo() (value.Value, errors.Error) {
 	data, err := s.client.GetUserRoles()
 	if err != nil {

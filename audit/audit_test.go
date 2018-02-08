@@ -5,15 +5,15 @@ import (
 	"time"
 
 	adt "github.com/couchbase/goutils/go-cbaudit"
+	"github.com/couchbase/query/datastore"
 )
 
 // An auditor the just records the audit events that would be sent to the audit daemon,
 // nothing more.
 type mockAuditor struct {
-	recordedEvents   []auditQueueEntry
-	disabledAudit    bool
-	whitelistedUsers []string
-	disabledEvents   []uint32
+	disabledAudit  bool
+	info           *datastore.AuditInfo
+	recordedEvents []auditQueueEntry
 }
 
 func (ma *mockAuditor) doAudit() bool {
@@ -24,22 +24,12 @@ func (ma *mockAuditor) submit(entry auditQueueEntry) {
 	ma.recordedEvents = append(ma.recordedEvents, entry)
 }
 
-func (ma *mockAuditor) userIsWhitelisted(user string) bool {
-	for _, u := range ma.whitelistedUsers {
-		if user == u {
-			return true
-		}
-	}
-	return false
+func (ma *mockAuditor) setAuditInfo(info *datastore.AuditInfo) {
+	ma.info = info
 }
 
-func (ma *mockAuditor) eventIsDisabled(eventId uint32) bool {
-	for _, e := range ma.disabledEvents {
-		if eventId == e {
-			return true
-		}
-	}
-	return false
+func (ma *mockAuditor) auditInfo() *datastore.AuditInfo {
+	return ma.info
 }
 
 // A fixed structure that implements the Auditable interface
@@ -147,7 +137,13 @@ func (sa *simpleAuditable) EventWarningCount() int {
 }
 
 func TestEventIdGeneration(t *testing.T) {
-	mockAuditor := &mockAuditor{}
+	mockAuditor := &mockAuditor{
+		info: &datastore.AuditInfo{
+			AuditEnabled:    true,
+			EventDisabled:   make(map[uint32]bool),
+			UserWhitelisted: make(map[string]bool),
+		},
+	}
 	_AUDITOR = mockAuditor
 
 	auditable := &simpleAuditable{eventType: "SELECT"}
@@ -182,7 +178,13 @@ func TestEventIdGeneration(t *testing.T) {
 // One submitted auditable request with three separate credentials should result in
 // three separate audit records, one for each user.
 func TestMultiUserRequest(t *testing.T) {
-	mockAuditor := &mockAuditor{}
+	mockAuditor := &mockAuditor{
+		info: &datastore.AuditInfo{
+			AuditEnabled:    true,
+			EventDisabled:   make(map[uint32]bool),
+			UserWhitelisted: make(map[string]bool),
+		},
+	}
 	_AUDITOR = mockAuditor
 
 	auditable := &simpleAuditable{eventType: "SELECT", eventUsers: []string{"bill", "bob", "external:james"}}
@@ -209,7 +211,14 @@ func TestMultiUserRequest(t *testing.T) {
 }
 
 func TestAuditDisabled(t *testing.T) {
-	mockAuditor := &mockAuditor{disabledAudit: true}
+	mockAuditor := &mockAuditor{
+		disabledAudit: true,
+		info: &datastore.AuditInfo{
+			AuditEnabled:    true,
+			EventDisabled:   make(map[uint32]bool),
+			UserWhitelisted: make(map[string]bool),
+		},
+	}
 	_AUDITOR = mockAuditor
 
 	auditable := &simpleAuditable{eventType: "SELECT"}
@@ -222,7 +231,13 @@ func TestAuditDisabled(t *testing.T) {
 }
 
 func TestDisabledEvents(t *testing.T) {
-	mockAuditor := &mockAuditor{disabledEvents: []uint32{28678, 28679}}
+	mockAuditor := &mockAuditor{
+		info: &datastore.AuditInfo{
+			AuditEnabled:    true,
+			EventDisabled:   map[uint32]bool{28678: true, 28679: true},
+			UserWhitelisted: make(map[string]bool),
+		},
+	}
 	_AUDITOR = mockAuditor
 
 	auditable := &simpleAuditable{eventType: "SELECT"}
@@ -255,7 +270,13 @@ func TestDisabledEvents(t *testing.T) {
 }
 
 func TestWhitelistedUsers(t *testing.T) {
-	mockAuditor := &mockAuditor{whitelistedUsers: []string{"nina", "nick", "neil"}}
+	mockAuditor := &mockAuditor{
+		info: &datastore.AuditInfo{
+			AuditEnabled:    true,
+			EventDisabled:   make(map[uint32]bool),
+			UserWhitelisted: map[string]bool{"nina": true, "nick": true, "neil": true},
+		},
+	}
 	_AUDITOR = mockAuditor
 
 	auditable := &simpleAuditable{eventType: "SELECT", eventUsers: []string{"bill"}}

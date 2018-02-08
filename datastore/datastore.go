@@ -52,6 +52,15 @@ type Datastore interface {
 	GetUserInfoAll() ([]User, errors.Error)                                                              // Get information about all the users.
 	PutUserInfo(u *User) errors.Error                                                                    // Set information for a specific user.
 	GetRolesAll() ([]Role, errors.Error)                                                                 // Get all roles that exist in the system.
+
+	AuditInfo() (*AuditInfo, errors.Error)
+}
+
+type AuditInfo struct {
+	AuditEnabled    bool
+	EventDisabled   map[uint32]bool
+	UserWhitelisted map[string]bool
+	Uid             string
 }
 
 // Secondary information about this datastore. None of these methods
