@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT p.productId, pu.customerId FROM product p JOIN purchase pu ON ANY pd IN pu.lineItems satisfies p.productId = pd.product END WHERE ANY r IN p.reviewList satisfies r = \"review1636\" END ORDER BY pu.customerId LIMIT 5",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer115",
@@ -26,6 +27,7 @@
     },
     {
         "statements":"SELECT p.productId, pu.customerId, pu.purchaseId FROM product p JOIN purchase pu ON ANY pd IN pu.lineItems satisfies p.productId = pd.product END WHERE ANY r IN p.reviewList satisfies r = \"review1636\" END ORDER BY pu.customerId LIMIT 5",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer115",
@@ -56,6 +58,7 @@
     },
     {
         "statements":"SELECT p.productId, p.color, pu.customerId FROM purchase pu JOIN product p ON p.productId IN ARRAY pd.product FOR pd IN pu.lineItems END WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "ordered": true,
         "results": [
         {
             "color": "yellow",
@@ -76,6 +79,7 @@
     },
     {
         "statements":"SELECT p.productId, p.color, pu.customerId FROM purchase pu UNNEST pu.lineItems as pl JOIN product p ON p.productId = pl.product WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "ordered": true,
         "results": [
         {
             "color": "yellow",

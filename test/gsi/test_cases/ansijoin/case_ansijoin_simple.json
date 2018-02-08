@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer60",
@@ -66,6 +67,7 @@
     },
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer60",
@@ -131,6 +133,7 @@
     },
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer60",
@@ -196,6 +199,7 @@
     },
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer60",

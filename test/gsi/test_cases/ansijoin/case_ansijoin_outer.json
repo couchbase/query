@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c LEFT OUTER JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Wyman\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer112",
@@ -65,6 +66,7 @@
     },
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p RIGHT OUTER JOIN customer c ON c.customerId = p.customerId WHERE c.lastName = \"Wyman\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer112",

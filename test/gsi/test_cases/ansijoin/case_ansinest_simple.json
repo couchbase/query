@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY {\"ordersId\": o1.ordersId, \"productId\": o1.productId } FOR o1 in o END as orders FROM customer c NEST orders o ON c.customerId = o.customerId WHERE c.customerId IN [ \"customer736\", \"customer950\", \"customer947\" ] ORDER BY c.customerId",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer736",
@@ -44,6 +45,7 @@
     },
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY {\"ordersId\": o1.ordersId, \"productId\": o1.productId } FOR o1 in o END as orders FROM customer c LEFT OUTER NEST orders o ON c.customerId = o.customerId WHERE c.customerId IN [ \"customer736\", \"customer950\", \"customer947\" ] ORDER BY c.customerId",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer736",

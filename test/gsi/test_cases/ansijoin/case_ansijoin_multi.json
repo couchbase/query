@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT pc.purchaseId, l.product, pd.name FROM purchase pc UNNEST pc.lineItems as l JOIN product pd ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
         "results": [
         {
             "name": "Brother CP-6500 Computerized Sewing Machine",
@@ -26,6 +27,7 @@
     },
     {
         "statements":"SELECT pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
         "results": [
         {
             "firstName": "Ruthe",

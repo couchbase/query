@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p JOIN customer c ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE p.purchaseId LIKE \"purchase655%\" ORDER BY p.purchaseId",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer494",
@@ -72,6 +73,7 @@
     },
     {
         "statements":"SELECT p.productId, pu.customerId, pu.purchaseId FROM purchase pu JOIN product p ON meta(p).id IN ARRAY (pd.product || \"_ansijoin\") FOR pd IN pu.lineItems END WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer243",
@@ -92,6 +94,7 @@
     },
     {
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
         "results": [
         {
             "customerId": "customer60",

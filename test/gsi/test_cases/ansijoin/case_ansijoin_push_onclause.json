@@ -1,6 +1,7 @@
 [
     {
         "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 JOIN shellTest b2 ON b1.c11 = b2.c21 AND b1.c12 = b2.c22 AND b1.c11 < 3 AND b2.type = \"right\" WHERE b1.type = \"left\" ORDER BY b2.c22",
+        "ordered": true,
         "results": [
         {
             "c11": 1,
