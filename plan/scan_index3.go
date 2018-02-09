@@ -44,7 +44,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	filterCovers map[*expression.Cover]value.Value) *IndexScan3 {
 	return &IndexScan3{
 		index:        index,
-		indexer:      getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
+		indexer:      index.Indexer(),
 		term:         term,
 		spans:        spans,
 		reverse:      reverse,

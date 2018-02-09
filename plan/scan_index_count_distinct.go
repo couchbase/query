@@ -34,7 +34,7 @@ func NewIndexCountDistinctScan2(index datastore.CountIndex2, term *algebra.Keysp
 	spans Spans2, covers expression.Covers, filterCovers map[*expression.Cover]value.Value) *IndexCountDistinctScan2 {
 	return &IndexCountDistinctScan2{
 		index:        index,
-		indexer:      getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
+		indexer:      index.Indexer(),
 		term:         term,
 		spans:        spans,
 		covers:       covers,

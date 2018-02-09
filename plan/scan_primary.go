@@ -32,7 +32,7 @@ func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, limit expression.Expression) *PrimaryScan {
 	return &PrimaryScan{
 		index:    index,
-		indexer:  getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
+		indexer:  index.Indexer(),
 		keyspace: keyspace,
 		term:     term,
 		limit:    limit,

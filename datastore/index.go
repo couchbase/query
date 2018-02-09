@@ -117,6 +117,7 @@ type Index interface {
 	Id() string                                                         // Id of this index
 	Name() string                                                       // Name of this index
 	Type() IndexType                                                    // Type of this index
+	Indexer() Indexer                                                   // Indexer this index hangs from
 	SeekKey() expression.Expressions                                    // Seek keys
 	RangeKey() expression.Expressions                                   // Range keys
 	Condition() expression.Expression                                   // Condition, if any

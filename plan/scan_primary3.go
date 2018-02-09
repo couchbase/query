@@ -38,7 +38,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	groupAggs *IndexGroupAggregates) *PrimaryScan3 {
 	return &PrimaryScan3{
 		index:      index,
-		indexer:    getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
+		indexer:    index.Indexer(),
 		keyspace:   keyspace,
 		term:       term,
 		groupAggs:  groupAggs,

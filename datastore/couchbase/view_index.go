@@ -337,6 +337,10 @@ func (vi *viewIndex) Type() datastore.IndexType {
 	return vi.using
 }
 
+func (vi *viewIndex) Indexer() datastore.Indexer {
+	return vi.view
+}
+
 func (vi *viewIndex) Key() expression.Expressions {
 	return vi.on
 }

@@ -41,7 +41,7 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 		outer:        join.Outer(),
 		keyFor:       join.For(),
 		index:        index,
-		indexer:      getIndexer(keyspace.NamespaceId(), keyspace.Name(), index.Type()),
+		indexer:      index.Indexer(),
 		covers:       covers,
 		filterCovers: filterCovers,
 	}

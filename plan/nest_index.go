@@ -37,7 +37,7 @@ func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
 		outer:    nest.Outer(),
 		keyFor:   nest.For(),
 		index:    index,
-		indexer:  getIndexer(keyspace.NamespaceId(), keyspace.Name(), index.Type()),
+		indexer:  index.Indexer(),
 	}
 
 	rv.idExpr = expression.NewField(

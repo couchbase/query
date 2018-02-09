@@ -15,15 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 )
 
-func getIndexer(namespace, keyspace string, using datastore.IndexType) datastore.Indexer {
-	ks, _ := datastore.GetKeyspace(namespace, keyspace)
-	if ks != nil {
-		idx, _ := ks.Indexer(using)
-		return idx
-	}
-	return nil
-}
-
 func verifyIndex(index datastore.Index, indexer datastore.Indexer, prepared *Prepared) bool {
 	if indexer == nil {
 		return false

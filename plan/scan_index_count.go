@@ -34,7 +34,7 @@ func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm, s
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) *IndexCountScan {
 	return &IndexCountScan{
 		index:        index,
-		indexer:      getIndexer(term.Namespace(), term.Keyspace(), index.Type()),
+		indexer:      index.Indexer(),
 		term:         term,
 		spans:        spans,
 		covers:       covers,
