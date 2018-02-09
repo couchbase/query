@@ -39,7 +39,9 @@ func TestHashJoin(t *testing.T) {
 	fmt.Println("Running HASH JOIN test cases")
 
 	// test HASH JOIN on meta().id
+	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
 	runMatch("case_hashjoin_metaid.json", false, true, qc, t)
+	runStmt(qc, "DROP PRIMARY INDEX ON customer")
 
 	// test simple HASH JOIN
 	// this test case has variations of covering vs non-covering

@@ -11,7 +11,7 @@
             ],
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
         },
-        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p JOIN customer c USE HASH(build) ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE p.purchaseId LIKE \"purchase655%\" AND c.customerId IS NOT NULL ORDER BY p.purchaseId",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p JOIN customer c USE HASH(build) ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE p.purchaseId LIKE \"purchase655%\" ORDER BY p.purchaseId",
         "ordered": true,
         "results": [
         {

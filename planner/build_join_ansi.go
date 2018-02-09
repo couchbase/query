@@ -32,12 +32,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		var hjoin *plan.HashJoin
 		if right.PreferHash() {
 			hjoin, err = this.buildHashJoin(node)
-			if err != nil {
-				return nil, err
-			}
-
-			if hjoin != nil {
-				return hjoin, nil
+			if hjoin != nil || err != nil {
+				return hjoin, err
 			}
 		}
 
@@ -93,12 +89,8 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		var hnest *plan.HashNest
 		if right.PreferHash() {
 			hnest, err = this.buildHashNest(node)
-			if err != nil {
-				return nil, err
-			}
-
-			if hnest != nil {
-				return hnest, nil
+			if hnest != nil || err != nil {
+				return hnest, err
 			}
 		}
 
@@ -476,6 +468,11 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 	_, err = right.Accept(this)
 	if err != nil {
 		return nil, nil, nil, nil, err
+	}
+
+	// if no plan generated, bail out
+	if len(this.children) == 0 {
+		return nil, nil, nil, nil, nil
 	}
 
 	if buildRight {
