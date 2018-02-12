@@ -933,9 +933,6 @@ from_term opt_join_type JOIN simple_from_join_term ON expr
              yylex.Error(fmt.Sprintf("Cannot mix non ANSI NEST on %s and ANSI JOIN on %s.", first.Alias(), $4.Alias()))
     }
     if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("ANSI JOIN on %s cannot have USE KEYS.", second.Alias()))
-        }
 	second.SetAnsiJoin()
         $$ = algebra.NewAnsiJoin($1, $2, second, $6)
     } else {
@@ -952,9 +949,6 @@ from_term opt_join_type NEST simple_from_join_term ON expr
              yylex.Error(fmt.Sprintf("Cannot mix non ANSI NEST on %s and ANSI NEST on %s.", first.Alias(), $4.Alias()))
     }
     if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("ANSI NEST on %s cannot have USE KEYS.", second.Alias()))
-        }
 	second.SetAnsiNest()
         $$ = algebra.NewAnsiNest($1, $2, second, $6)
     } else {
@@ -965,9 +959,6 @@ from_term opt_join_type NEST simple_from_join_term ON expr
 simple_from_join_term RIGHT opt_outer JOIN simple_from_term ON expr
 {
     if second, ok := $1.(*algebra.KeyspaceTerm); ok {
-        if second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("ANSI JOIN on %s cannot have USE KEYS.", second.Alias()))
-        }
 	second.SetAnsiJoin()
         $$ = algebra.NewAnsiJoin($5, true, second, $7)
     } else {
@@ -1091,6 +1082,18 @@ use_index join_hint
 join_hint use_index
 {
     $1.SetIndexes($2.Indexes())
+    $$ = $1
+}
+|
+use_keys join_hint
+{
+    $1.SetJoinHint($2.JoinHint())
+    $$ = $1
+}
+|
+join_hint use_keys
+{
+    $1.SetKeys($2.Keys())
     $$ = $1
 }
 ;

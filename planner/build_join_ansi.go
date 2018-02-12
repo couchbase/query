@@ -351,6 +351,13 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 		}
 	}
 
+	// if USE HASH and USE KEYS are specified together, make sure the document key
+	// expressions does not reference any keyspaces, otherwise hash join cannot be
+	// used.
+	if right.Keys() != nil && right.Keys().Static() == nil {
+		return nil, nil, nil, nil, nil
+	}
+
 	alias := right.Alias()
 
 	keyspaceNames := make(map[string]bool, 1)
