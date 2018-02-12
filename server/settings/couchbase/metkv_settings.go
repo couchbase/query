@@ -33,7 +33,7 @@ var INDEXERPARAM = map[string]string{
 	"query.settings.tmp_space_size": "query_tmpspace_limit",
 }
 
-var GLOBALQUERYPARAM = map[string]string{
+var GLOBALPARAM = map[string]string{
 	"query.settings.curl_whitelist": "curl_whitelist",
 }
 

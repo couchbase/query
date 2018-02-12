@@ -145,7 +145,14 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 			idxrSettings[paramName] = val
 		} else {
 			// QUERY PARAM
-			querySettings[key] = val
+			paramName, ok := queryMetakv.GLOBALPARAM[key]
+			if ok && paramName == "curl_whitelist" {
+				// Set the whitelist value to pass to context
+				srvr.SetWhitelist(val.(map[string]interface{}))
+				logging.Infof("New Value for curl whitelist <ud>%v</ud>", val)
+			} else {
+				querySettings[key] = val
+			}
 		}
 	}
 

@@ -98,6 +98,7 @@ type Server struct {
 	pretty      bool
 	srvprofile  Profile
 	srvcontrols bool
+	whitelist   map[string]interface{}
 }
 
 // Default Keep Alive Length
@@ -175,6 +176,14 @@ func (this *Server) Systemstore() datastore.Datastore {
 
 func (this *Server) Namespace() string {
 	return this.namespace
+}
+
+func (this *Server) SetWhitelist(val map[string]interface{}) {
+	this.whitelist = val
+}
+
+func (this *Server) GetWhitelist() map[string]interface{} {
+	return this.whitelist
 }
 
 func (this *Server) ConfigurationStore() clustering.ConfigurationStore {
@@ -531,6 +540,8 @@ func (this *Server) serviceRequest(request Request) {
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
 		prepared, request.IndexApiVersion(), request.FeatureControls())
+
+	context.SetWhitelist(this.whitelist)
 
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)

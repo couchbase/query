@@ -24,3 +24,8 @@ type Context interface {
 	AuthenticatedUsers() []string
 	DatastoreVersion() string
 }
+
+type CurlContext interface {
+	Context
+	GetWhitelist() map[string]interface{}
+}

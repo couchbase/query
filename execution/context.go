@@ -143,6 +143,7 @@ type Context struct {
 	httpRequest        *http.Request
 	authenticatedUsers auth.AuthenticatedUsers
 	mutex              sync.RWMutex
+	whitelist          map[string]interface{}
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
@@ -194,6 +195,14 @@ func (this *Context) RequestId() string {
 
 func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
+}
+
+func (this *Context) SetWhitelist(val map[string]interface{}) {
+	this.whitelist = val
+}
+
+func (this *Context) GetWhitelist() map[string]interface{} {
+	return this.whitelist
 }
 
 func (this *Context) DatastoreVersion() string {

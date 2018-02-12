@@ -16,7 +16,6 @@ import (
 	"io/ioutil"
 	http_base "net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -57,6 +56,7 @@ var Auth_param = "Administrator:password"
 var Pool_CBS = "127.0.0.1:8091/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
+var curlWhitelist = map[string]interface{}{"all_access": true}
 
 func init() {
 
@@ -64,25 +64,6 @@ func init() {
 
 	logger, _ := log_resolver.NewLogger("golog")
 	logging.SetLogger(logger)
-
-	// Create dir n1qlcers and curl_whitelist.json for curl tests
-	a, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	b := a + "/../var/lib/couchbase/n1qlcerts/"
-
-	cmd := exec.Command("/bin/sh", "-c", "mkdir -p "+b)
-	ok := cmd.Run()
-	if ok != nil {
-		logging.Errorp(ok.Error())
-		os.Exit(1)
-	}
-
-	d1 := []byte("{\"all_access\":true}")
-	err := ioutil.WriteFile(b+"curl_whitelist.json", d1, 0644)
-
-	if err != nil {
-		logging.Errorp(err.Error())
-		os.Exit(1)
-	}
 }
 
 type MockQuery struct {
@@ -355,6 +336,9 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+
+	server.SetWhitelist(curlWhitelist)
+
 	prepareds.PreparedsReprepareInit(ds, sys, namespace)
 	server.SetKeepAlive(1 << 10)
 
