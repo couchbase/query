@@ -1,0 +1,93 @@
+[
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND v.`limit` IS NOT MISSING END"
+        },
+        "statements": "SELECT c0, c1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND (c0 > 0 OR c1 > 1) OFFSET 2 LIMIT 3"
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND v.`limit` IS MISSING END"
+        },
+        "ordered": true,
+        "statements": "SELECT c0, c1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND (c0 > 0 OR c1 > 1) ORDER BY c0, c1 OFFSET 2 LIMIT 3",
+        "results": [
+            {
+                "c0": 1,
+                "c1": 10
+            },
+            {
+                "c0": 1,
+                "c1": 10
+            },
+            {
+                "c0": 1,
+                "c1": 20
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND v.index_group_aggs IS MISSING AND v.index_order IS MISSING AND v.`limit` IS MISSING END"
+        },
+        "ordered": true,
+        "statements": "SELECT c0, c1 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND (c0 > 0 OR c1 > 1) GROUP BY c0, c1 ORDER BY c0, c1 OFFSET 2 LIMIT 3",
+        "results": [
+            {
+                "c0": 1,
+                "c1": 30
+            },
+            {
+                "c0": 1,
+                "c1": 40
+            },
+            {
+                "c0": 1,
+                "c1": 50
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND v.index_group_aggs IS MISSING AND v.index_order IS MISSING AND v.`limit` IS MISSING END"
+        },
+        "statements": "SELECT SUM(1) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND (c0 > 0 OR c1 > 1)",
+        "results": [
+            {
+                "s": 40
+            }
+        ]
+    }
+]

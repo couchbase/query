@@ -1,0 +1,492 @@
+[
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'CountScan%' END"
+        },
+        "statements": "SELECT COUNT(1) AS cnt FROM orders",
+        "results": [
+            {
+                "cnt": 47
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'CountScan%' END"
+        },
+        "statements": "SELECT COUNT(*) AS cnt FROM orders",
+        "results": [
+            {
+                "cnt": 47
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' END"
+        },
+        "statements": "SELECT COUNT(c0) AS cnt FROM orders",
+        "results": [
+            {
+                "cnt": 46
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+        "ordered": true,
+        "statements": "SELECT META().id FROM orders ORDER BY META().id LIMIT 10 OFFSET 20",
+        "results": [
+            {
+                "id": "ga2000"
+            },
+            {
+                "id": "ga2001"
+            },
+            {
+                "id": "ga2002"
+            },
+            {
+                "id": "ga2003"
+            },
+            {
+                "id": "ga2004"
+            },
+            {
+                "id": "ga2005"
+            },
+            {
+                "id": "ga2006"
+            },
+            {
+                "id": "ga2007"
+            },
+            {
+                "id": "ga2008"
+            },
+            {
+                "id": "ga2009"
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+        "ordered": false,
+        "statements": "SELECT META().id,x1 FROM orders LIMIT 10 OFFSET 20",
+        "results": [
+            {
+                "id": "ga2000"
+            },
+            {
+                "id": "ga2001"
+            },
+            {
+                "id": "ga2002"
+            },
+            {
+                "id": "ga2003"
+            },
+            {
+                "id": "ga2004"
+            },
+            {
+                "id": "ga2005"
+            },
+            {
+                "id": "ga2006"
+            },
+            {
+                "id": "ga2007"
+            },
+            {
+                "id": "ga2008"
+            },
+            {
+                "id": "ga2009"
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+        "ordered": true,
+        "statements": "SELECT META().id,x1 FROM orders ORDER BY META().id LIMIT 10 OFFSET 20",
+        "results": [
+            {
+                "id": "ga2000"
+            },
+            {
+                "id": "ga2001"
+            },
+            {
+                "id": "ga2002"
+            },
+            {
+                "id": "ga2003"
+            },
+            {
+                "id": "ga2004"
+            },
+            {
+                "id": "ga2005"
+            },
+            {
+                "id": "ga2006"
+            },
+            {
+                "id": "ga2007"
+            },
+            {
+                "id": "ga2008"
+            },
+            {
+                "id": "ga2009"
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+        "ordered": true,
+        "statements": "SELECT META().id,x1 FROM orders WHERE xx IS MISSING ORDER BY META().id LIMIT 10 OFFSET 20",
+        "results": [
+            {
+                "id": "ga2000"
+            },
+            {
+                "id": "ga2001"
+            },
+            {
+                "id": "ga2002"
+            },
+            {
+                "id": "ga2003"
+            },
+            {
+                "id": "ga2004"
+            },
+            {
+                "id": "ga2005"
+            },
+            {
+                "id": "ga2006"
+            },
+            {
+                "id": "ga2007"
+            },
+            {
+                "id": "ga2008"
+            },
+            {
+                "id": "ga2009"
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING END"
+        },
+        "statements": "SELECT COUNT(META().id) AS cnt, SUM(TONUMBER(SUBSTR(META().id,2,4))) AS s FROM orders",
+        "results": [
+            {
+                "cnt": 47,
+                "s": 61757
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING END"
+        },
+        "statements": "SELECT COUNT(META().id) AS a, AVG(TONUMBER(SUBSTR(META().id,2,4))) AS s FROM orders",
+        "results": [
+            {
+                "a": 47,
+                "s": 1313.9787234042553
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS NOT MISSING END"
+        },
+        "statements": "SELECT COUNT(META().id) AS cnt, SUM(TONUMBER(SUBSTR(META().id,2,4))) AS s FROM orders GROUP BY META().id",
+        "ordered": false,
+        "results": [
+            {
+                "cnt": 1,
+                "s": 0
+            },
+            {
+                "cnt": 1,
+                "s": 1
+            },
+            {
+                "cnt": 1,
+                "s": 2
+            },
+            {
+                "cnt": 1,
+                "s": 3
+            },
+            {
+                "cnt": 1,
+                "s": 4
+            },
+            {
+                "cnt": 1,
+                "s": 5
+            },
+            {
+                "cnt": 1,
+                "s": 6
+            },
+            {
+                "cnt": 1,
+                "s": 7
+            },
+            {
+                "cnt": 1,
+                "s": 8
+            },
+            {
+                "cnt": 1,
+                "s": 9
+            },
+            {
+                "cnt": 1,
+                "s": 10
+            },
+            {
+                "cnt": 1,
+                "s": 11
+            },
+            {
+                "cnt": 1,
+                "s": 12
+            },
+            {
+                "cnt": 1,
+                "s": 13
+            },
+            {
+                "cnt": 1,
+                "s": 14
+            },
+            {
+                "cnt": 1,
+                "s": 15
+            },
+            {
+                "cnt": 1,
+                "s": 16
+            },
+            {
+                "cnt": 1,
+                "s": 17
+            },
+            {
+                "cnt": 1,
+                "s": 18
+            },
+            {
+                "cnt": 1,
+                "s": 19
+            },
+            {
+                "cnt": 1,
+                "s": 2000
+            },
+            {
+                "cnt": 1,
+                "s": 2001
+            },
+            {
+                "cnt": 1,
+                "s": 2002
+            },
+            {
+                "cnt": 1,
+                "s": 2003
+            },
+            {
+                "cnt": 1,
+                "s": 2004
+            },
+            {
+                "cnt": 1,
+                "s": 2005
+            },
+            {
+                "cnt": 1,
+                "s": 2006
+            },
+            {
+                "cnt": 1,
+                "s": 2007
+            },
+            {
+                "cnt": 1,
+                "s": 2008
+            },
+            {
+                "cnt": 1,
+                "s": 2009
+            },
+            {
+                "cnt": 1,
+                "s": 2010
+            },
+            {
+                "cnt": 1,
+                "s": 2011
+            },
+            {
+                "cnt": 1,
+                "s": 2012
+            },
+            {
+                "cnt": 1,
+                "s": 2013
+            },
+            {
+                "cnt": 1,
+                "s": 2014
+            },
+            {
+                "cnt": 1,
+                "s": 2015
+            },
+            {
+                "cnt": 1,
+                "s": 2016
+            },
+            {
+                "cnt": 1,
+                "s": 2017
+            },
+            {
+                "cnt": 1,
+                "s": 2018
+            },
+            {
+                "cnt": 1,
+                "s": 2019
+            },
+            {
+                "cnt": 1,
+                "s": 3050
+            },
+            {
+                "cnt": 1,
+                "s": 3051
+            },
+            {
+                "cnt": 1,
+                "s": 3052
+            },
+            {
+                "cnt": 1,
+                "s": 3053
+            },
+            {
+                "cnt": 1,
+                "s": 3056
+            },
+            {
+                "cnt": 1,
+                "s": 3057
+            },
+            {
+                "cnt": 1,
+                "s": 3058
+            }
+        ]
+    }
+]

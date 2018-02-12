@@ -1,0 +1,171 @@
+[
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' END"
+        },
+        "ordered": false,
+        "statements": "SELECT c0 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND c0 = 1 AND c10 >= 50",
+        "results": [
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND v.`offset` IS MISSING AND v.`limit` IS MISSING END"
+        },
+        "ordered": false,
+        "statements": "SELECT c0 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND c0 = 1 AND c10 >= 50 OFFSET 2 LIMIT 3",
+        "results": [
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'OrderedIntersectScan' AND v.`offset` IS MISSING AND v.`limit` IS MISSING AND v.scans[0].index_order IS NOT MISSING  END"
+        },
+        "ordered": true,
+        "statements": "SELECT c0 FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND c0 = 1 AND c10 >= 50 ORDER BY c10 OFFSET 2 LIMIT 3",
+        "results": [
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            },
+            {
+                "c0": 1
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND v.`index_group_aggs` IS MISSING END"
+        },
+        "ordered": false,
+        "statements": "SELECT SUM(1) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND c0 = 1 AND c10 >= 50",
+        "results": [
+            {
+                "s": 20
+            }
+        ]
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND v.`index_group_aggs` IS MISSING END"
+        },
+        "ordered": false,
+        "statements": "SELECT SUM(1) AS s FROM orders WHERE (test_id = 'indexga' AND type = 'numeric') AND c0 = 1 AND c10 >= 50 GROUP BY c0",
+        "results": [
+            {
+                "s": 20
+            }
+        ]
+    }
+]

@@ -43,6 +43,9 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 	cases := []string{"case_indexga_regular.json",
 		"case_indexga_regular_noncoverd.json",
 		"case_indexga_regular_or.json",
+		"case_indexga_primary.json",
+		"case_indexga_unionscan.json",
+		"case_indexga_intersectscan.json",
 	}
 	indexes := []string{
 		"CREATE PRIMARY INDEX oprimary ON orders",
@@ -52,12 +55,16 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 		"CREATE INDEX ixgap100 ON orders(c0,c1,c2,c3,c4) PARTITION BY HASH(c0) WHERE test_id = 'indexga' AND type = 'numeric'",
 		"DROP INDEX orders.ixgap100",
 		"CREATE INDEX ixgatp ON orders(c0,c1,c2,c3,c4) PARTITION BY HASH(c4) WHERE test_id = 'indexga' AND type = 'numeric'",
-		"DROP INDEX orders.ixgatp"}
+		"DROP INDEX orders.ixgatp",
+		"CREATE INDEX ixgar101 ON orders(c1,c0) WHERE test_id = 'indexga' AND type = 'numeric'",
+		"DROP INDEX orders.ixgar101",
+		"CREATE INDEX ixgar102 ON orders(c10) WHERE test_id = 'indexga' AND type = 'numeric'",
+		"DROP INDEX orders.ixgar102"}
 
 	var primary int
 	var testcases []string
 
-	// Run positive pushdwons on regular index
+	// Run positive pushdowns on regular index
 	primary, testcases = buildtestcase(cases, indexes, 0, 0, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
 
@@ -65,9 +72,25 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 	primary, testcases = buildtestcase(cases, indexes, 1, 0, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
 
-	// Run positive pushdwons on regular index with OR
+	// Run positive pushdowns on regular index with OR
 	primary, testcases = buildtestcase(cases, indexes, 2, 0, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
+
+	// Run positive pushdowns on primary index
+	primary, testcases = buildtestcase(cases, indexes, 3, 0, 1)
+	run_testcase(primary, prepare, qc, t, testcases)
+
+	// Run negative pushdowns on Union Scan
+	runStmt(qc, indexes[8])
+	primary, testcases = buildtestcase(cases, indexes, 4, 2, 7)
+	run_testcase(primary, prepare, qc, t, testcases)
+	runStmt(qc, indexes[9])
+
+	// Run negative pushdowns on Intersect Scan
+	runStmt(qc, indexes[10])
+	primary, testcases = buildtestcase(cases, indexes, 5, 2, 7)
+	run_testcase(primary, prepare, qc, t, testcases)
+	runStmt(qc, indexes[11])
 }
 
 func case_delete(qc *gsi.MockServer, t *testing.T) {
