@@ -11,8 +11,13 @@ package http
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
@@ -62,6 +67,7 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	server.SetActives(rv.actives)
 	server.SetOptions(rv.options)
 
+	rv.setupSSL()
 	rv.registerHandlers(staticPath)
 	return rv
 }
@@ -83,20 +89,39 @@ func (this *HttpEndpoint) ListenTLS() error {
 		return err
 	}
 
+	clientAuthType, err := cbauth.GetClientCertAuthType()
+	if err != nil {
+		return fmt.Errorf("Failed to get client cert auth type from cbauth")
+
+	}
+
 	ln, err := net.Listen("tcp", this.httpsAddr)
+
 	if err == nil {
 		cfg := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
-			ClientAuth:   tls.NoClientCert,
+			ClientAuth:   clientAuthType,
 			MinVersion:   cbauth.MinTLSVersion(),
 			CipherSuites: cbauth.CipherSuites(),
 			NextProtos:   []string{"h2", "http/1.1"},
 		}
+
+		if clientAuthType != tls.NoClientCert {
+			caCert, err := ioutil.ReadFile(this.certFile)
+			if err != nil {
+				return fmt.Errorf(" Error in reading cacert file, err: %v", err)
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			cfg.ClientCAs = caCertPool
+		}
+
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
 		go http.Serve(tls_ln, this.mux)
 		logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
 	}
+
 	return err
 }
 
@@ -175,6 +200,31 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 	pathValue := staticPath + pathPrefix
 	this.mux.PathPrefix(pathPrefix).Handler(http.StripPrefix(pathPrefix,
 		http.FileServer(http.Dir(pathValue))))
+}
+
+func (this *HttpEndpoint) setupSSL() {
+
+	err := cbauth.RegisterTLSRefreshCallback(func() error {
+		logging.Infof(" Certificates have been refreshed by ns server ")
+		closeErr := this.CloseTLS()
+		if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
+			logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
+			return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
+		}
+
+		tlsErr := this.ListenTLS()
+		if tlsErr != nil {
+			if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address & already in use") {
+				time.Sleep(100 * time.Millisecond)
+			}
+			logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
+			return errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
+		}
+		return nil
+	})
+	if err != nil {
+		logging.Infof("Error with refreshing client certificate : %v", err.Error())
+	}
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
