@@ -187,11 +187,12 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		f = parent
 	} else {
 		f = expression.NewFormalizer("", parent)
-		if this.keys != nil {
-			_, err = this.keys.Accept(f)
-			if err != nil {
-				return
-			}
+	}
+
+	if this.keys != nil {
+		_, err = this.keys.Accept(f)
+		if err != nil {
+			return
 		}
 	}
 
