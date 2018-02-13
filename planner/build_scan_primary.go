@@ -33,7 +33,9 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	if order != nil {
 		keys := expression.Expressions{id}
 		entry := &indexEntry{primary, keys, keys, nil, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, _PUSHDOWN_NONE}
-		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); !ok {
+		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); ok {
+			this.maxParallelism = 1
+		} else {
 			this.resetPushDowns()
 		}
 	}
