@@ -55,7 +55,6 @@ func (this *HashJoin) Copy() Operator {
 }
 
 func (this *HashJoin) RunOnce(context *Context, parent value.Value) {
-	defer this.dropHashTable()
 	this.runConsumer(this, context, parent)
 }
 

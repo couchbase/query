@@ -54,7 +54,6 @@ func (this *HashNest) Copy() Operator {
 }
 
 func (this *HashNest) RunOnce(context *Context, parent value.Value) {
-	defer this.dropHashTable()
 	this.runConsumer(this, context, parent)
 }
 
