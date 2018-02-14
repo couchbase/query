@@ -1,5 +1,5 @@
 {
-  "version" : 1,
+  "version" : 2,
   "module" : "n1ql",
   "events" : [
     {
@@ -8,6 +8,7 @@
       "description" : "A N1QL SELECT statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -44,6 +45,7 @@
       "description" : "A N1QL EXPLAIN statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -80,6 +82,7 @@
       "description" : "A N1QL PREPARE statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -116,6 +119,7 @@
       "description" : "A N1QL INFER statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -152,6 +156,7 @@
       "description" : "A N1QL INSERT statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -188,6 +193,7 @@
       "description" : "A N1QL UPSERT statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -224,6 +230,7 @@
       "description" : "A N1QL DELETE statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -260,6 +267,7 @@
       "description" : "A N1QL UPDATE statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -296,6 +304,7 @@
       "description" : "A N1QL MERGE statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -332,6 +341,7 @@
       "description" : "A N1QL CREATE INDEX statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -368,6 +378,7 @@
       "description" : "A N1QL DROP INDEX statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -404,6 +415,7 @@
       "description" : "A N1QL ALTER INDEX statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -439,6 +451,7 @@
       "description" : "A N1QL BUILD INDEX statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -475,6 +488,7 @@
       "description" : "A N1QL GRANT ROLE statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -511,6 +525,7 @@
       "description" : "A N1QL REVOKE ROLE statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -547,6 +562,7 @@
       "description" : "An unrecognized statement was received by the N1QL query engine",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -583,6 +599,7 @@
       "description" : "A N1QL CREATE PRIMARY INDEX statement was executed",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -619,6 +636,7 @@
       "description" : "An HTTP request was made to the API at /admin/stats.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -639,6 +657,7 @@
       "description" : "An HTTP request was made to the API at /admin/vitals.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -658,6 +677,7 @@
       "description" : "An HTTP request was made to the API at /admin/prepareds.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -678,6 +698,7 @@
       "description" : "An HTTP request was made to the API at /admin/active_requests.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -698,6 +719,7 @@
       "description" : "An HTTP request was made to the API at /admin/indexes/prepareds.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -717,6 +739,7 @@
       "description" : "An HTTP request was made to the API at /admin/indexes/active_requests.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -736,6 +759,7 @@
       "description" : "An HTTP request was made to the API at /admin/indexes/completed_requests.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -755,6 +779,7 @@
       "description" : "An HTTP request was made to the API at /admin/ping.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -774,6 +799,7 @@
       "description" : "An HTTP request was made to the API at /admin/config.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -793,6 +819,7 @@
       "description" : "An HTTP request was made to the API at /admin/ssl_cert.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -812,6 +839,7 @@
       "description" : "An HTTP request was made to the API at /admin/settings.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -832,6 +860,7 @@
       "description" : "An HTTP request was made to the API at /admin/clusters.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -854,6 +883,7 @@
       "description" : "An HTTP request was made to the API at /admin/completed_requests.",
       "sync" : false,
       "enabled" : true,
+      "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
         "real_userid" : {"source" : "", "user" : ""},
@@ -867,6 +897,20 @@
       "optional_fields" : {
         "request" : ""
       }
+    },
+    {
+      "id" : 28703,
+      "name" : "N1QL configuration",
+      "description" : "States that N1QL is using audit configuration with specified uuid",
+      "sync" : false,
+      "enabled" : true,
+      "filtering_permitted" : false,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"source" : "", "user" : ""},
+        "uuid" : ""
+      },
+      "optional_fields" : {}
     }
   ]
 }
