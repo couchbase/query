@@ -268,6 +268,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	// Try secondary scan
 	if len(minimals) > 0 {
+		if len(this.baseKeyspaces) > 1 {
+			this.resetOffsetLimit()
+			this.resetProjection()
+			this.resetIndexGroupAggs()
+		}
+
 		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, baseKeyspace, id)
 		if err != nil {
 			return nil, 0, err
