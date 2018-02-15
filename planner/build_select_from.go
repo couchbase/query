@@ -121,7 +121,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	this.children = append(this.children, scan)
 
 	if len(this.coveringScans) == 0 && this.countScan == nil {
-		names, err := this.GetSubPaths(keyspace.Id())
+		names, err := this.GetSubPaths(node.Alias())
 		if err != nil {
 			return nil, err
 		}
