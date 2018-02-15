@@ -84,6 +84,10 @@ func (this *HttpEndpoint) Listen() error {
 
 func (this *HttpEndpoint) ListenTLS() error {
 	// create tls configuration
+	if this.certFile == "" {
+		logging.Errorf("No certificate passed. Secure listener not brought up.")
+		return nil
+	}
 	tlsCert, err := tls.LoadX509KeyPair(this.certFile, this.keyFile)
 	if err != nil {
 		return err
