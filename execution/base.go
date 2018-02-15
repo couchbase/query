@@ -560,6 +560,9 @@ func serializedSend(this *base, op Operator, item value.AnnotatedValue) bool {
 			rv = op.processItem(item, opBase.contextTracked)
 			if rv {
 				opBase.addInDocs(1)
+			} else {
+				opBase.stopped = true
+				opBase.notifyStop()
 			}
 		}
 
@@ -573,7 +576,10 @@ func serializedSend(this *base, op Operator, item value.AnnotatedValue) bool {
 
 // mark a serialized operator as closed and inactive
 func serializedClose(op Operator, opBase *base, context *Context) {
-	opBase.notifyStop()
+	if !opBase.stopped {
+		opBase.stopped = true
+		opBase.notifyStop()
+	}
 	op.afterItems(context)
 	opBase.notifyParent()
 	op.close(context)
