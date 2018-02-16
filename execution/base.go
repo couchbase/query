@@ -187,6 +187,13 @@ func (this *base) baseDone() {
 // reopen for the terminal operator case
 func (this *base) baseReopen(context *Context) {
 	this.wait()
+	if this.stopChannel != nil {
+		// drain the stop channel
+		select {
+		case <-this.stopChannel:
+		default:
+		}
+	}
 	this.valueExchange.reset()
 	this.once.Reset()
 	this.contextTracked = nil
