@@ -54,13 +54,19 @@ type Datastore interface {
 	GetRolesAll() ([]Role, errors.Error)                                                                 // Get all roles that exist in the system.
 
 	AuditInfo() (*AuditInfo, errors.Error)
+	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error
 }
 
 type AuditInfo struct {
 	AuditEnabled    bool
 	EventDisabled   map[uint32]bool
-	UserWhitelisted map[string]bool
+	UserWhitelisted map[UserInfo]bool
 	Uid             string
+}
+
+type UserInfo struct {
+	Name   string `json:"name"`
+	Domain string `json:"domain"`
 }
 
 // Secondary information about this datastore. None of these methods

@@ -11,7 +11,5 @@
 
 package audit
 
-func (sa *standardAuditor) doAudit() bool {
-	// Do not audit in CE version.
-	return false
-}
+// Do not audit in CE version.
+var VERSION_SUPPORTS_AUDIT = true

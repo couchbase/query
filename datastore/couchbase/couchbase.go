@@ -355,14 +355,15 @@ func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 		return nil, errors.NewSystemUnableToRetrieveError(err)
 	}
 
-	users := make(map[string]bool, len(auditSpec.DisabledUsers))
+	users := make(map[datastore.UserInfo]bool, len(auditSpec.DisabledUsers))
 	for _, u := range auditSpec.DisabledUsers {
-		users[u] = true
+		ui := datastore.UserInfo{Name: u.Name, Domain: u.Domain}
+		users[ui] = true
 	}
 
 	events := make(map[uint32]bool, len(auditSpec.Disabled))
-	for _, e := range auditSpec.Disabled {
-		events[e] = true
+	for _, eid := range auditSpec.Disabled {
+		events[eid] = true
 	}
 
 	ret := &datastore.AuditInfo{
@@ -372,6 +373,26 @@ func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 		Uid:             auditSpec.Uid,
 	}
 	return ret, nil
+}
+
+func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Error {
+	f := func(data interface{}) error {
+		d, ok := data.(*DefaultObject)
+		if !ok {
+			return fmt.Errorf("Unable to convert received object to proper type: %T", data)
+		}
+		return callb(d.Uid)
+	}
+	do := DefaultObject{}
+	err := s.client.ProcessStream("/poolsStreaming/default", f, &do)
+	if err != nil {
+		return errors.NewAuditStreamHandlerFailed(err)
+	}
+	return nil
+}
+
+type DefaultObject struct {
+	Uid string `json:"audit_uid"`
 }
 
 func (s *store) UserInfo() (value.Value, errors.Error) {

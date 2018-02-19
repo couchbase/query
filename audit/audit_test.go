@@ -11,13 +11,8 @@ import (
 // An auditor the just records the audit events that would be sent to the audit daemon,
 // nothing more.
 type mockAuditor struct {
-	disabledAudit  bool
 	info           *datastore.AuditInfo
 	recordedEvents []auditQueueEntry
-}
-
-func (ma *mockAuditor) doAudit() bool {
-	return !ma.disabledAudit
 }
 
 func (ma *mockAuditor) submit(entry auditQueueEntry) {
@@ -141,7 +136,7 @@ func TestEventIdGeneration(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    true,
 			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: make(map[string]bool),
+			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
 	}
 	_AUDITOR = mockAuditor
@@ -182,7 +177,7 @@ func TestMultiUserRequest(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    true,
 			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: make(map[string]bool),
+			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
 	}
 	_AUDITOR = mockAuditor
@@ -212,11 +207,10 @@ func TestMultiUserRequest(t *testing.T) {
 
 func TestAuditDisabled(t *testing.T) {
 	mockAuditor := &mockAuditor{
-		disabledAudit: true,
 		info: &datastore.AuditInfo{
-			AuditEnabled:    true,
+			AuditEnabled:    false,
 			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: make(map[string]bool),
+			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
 	}
 	_AUDITOR = mockAuditor
@@ -235,7 +229,7 @@ func TestDisabledEvents(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    true,
 			EventDisabled:   map[uint32]bool{28678: true, 28679: true},
-			UserWhitelisted: make(map[string]bool),
+			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
 	}
 	_AUDITOR = mockAuditor
@@ -272,9 +266,12 @@ func TestDisabledEvents(t *testing.T) {
 func TestWhitelistedUsers(t *testing.T) {
 	mockAuditor := &mockAuditor{
 		info: &datastore.AuditInfo{
-			AuditEnabled:    true,
-			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: map[string]bool{"nina": true, "nick": true, "neil": true},
+			AuditEnabled:  true,
+			EventDisabled: make(map[uint32]bool),
+			UserWhitelisted: map[datastore.UserInfo]bool{
+				datastore.UserInfo{Name: "nina", Domain: "local"}: true,
+				datastore.UserInfo{Name: "nick", Domain: "local"}: true,
+				datastore.UserInfo{Name: "neil", Domain: "local"}: true},
 		},
 	}
 	_AUDITOR = mockAuditor

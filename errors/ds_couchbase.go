@@ -113,3 +113,8 @@ func NewUnableToInitCbAuthError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 12018, IKey: "datastore.couchbase.unable_to_init_cbauth_error", ICause: e,
 		InternalMsg: "Unable to initialize authorization system as required", InternalCaller: CallerN(1)}
 }
+
+func NewAuditStreamHandlerFailed(e error) Error {
+	return &err{level: EXCEPTION, ICode: 12019, IKey: "datastore.couchbase.audit_stream_failed event id", ICause: e,
+		InternalMsg: "Audit stream handler failed", InternalCaller: CallerN(1)}
+}

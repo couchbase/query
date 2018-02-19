@@ -92,9 +92,6 @@ type ApiAuditFields struct {
 // talks to the audit daemon, and a mock that just stores audit records for testing.
 // The mock is over in the test file.
 type Auditor interface {
-	// Should we audit at all?
-	doAudit() bool
-
 	auditInfo() *datastore.AuditInfo
 
 	setAuditInfo(info *datastore.AuditInfo)
@@ -158,13 +155,10 @@ var _AUDITOR Auditor
 // accessing the audit functionality. It is NOT the number of worker threads
 // the audit system itself has.
 func StartAuditService(server string, numServicers int) {
-	auditor := &standardAuditor{}
-
-	// Will we actually do any auditing?
-	// We can make this call safely here with a partially initialized
-	// standardAuditor, because it just checks whether we are in EE or CE.
-	if !auditor.doAudit() {
-		_AUDITOR = auditor
+	// No support for auditing?
+	// Set auditor to NIL for no auditing work at all.
+	if !VERSION_SUPPORTS_AUDIT {
+		_AUDITOR = nil
 		return
 	}
 
@@ -174,6 +168,7 @@ func StartAuditService(server string, numServicers int) {
 		logging.Errorf("Audit service not started: %v", err)
 		return
 	}
+	auditor := &standardAuditor{}
 	auditor.auditService = service
 
 	ds := datastore.GetDatastore()
@@ -222,16 +217,43 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 	ds := datastore.GetDatastore()
 
 	for {
-		time.Sleep(time.Second * 2)
-		auditInfo, err := ds.AuditInfo()
-		if err != nil {
-			logging.Errorf("Audit settings worker %d: Unable to get audit settings: %v", num, err)
-			continue
+		time.Sleep(time.Second * 1)
+
+		f := func(uid string) error {
+			if uid == curUid {
+				// No change. Do nothing.
+				return nil
+			}
+			auditInfo, err := ds.AuditInfo()
+			if err != nil {
+				return fmt.Errorf("Audit update handler function %d: Unable to get audit settings: %v", num, err)
+			}
+			if curUid != auditInfo.Uid {
+				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, *auditInfo)
+				change := n1qlConfigurationChangeEvent{
+					Timestamp:  time.Now().Format("2006-01-02T15:04:05.000Z07:00"),
+					RealUserid: adt.RealUserId{Source: "", Username: ""},
+					Uuid:       auditInfo.Uid,
+				}
+
+				e := auditor.auditService.Write(28703, &change)
+				if e != nil {
+					return fmt.Errorf("Audit settings worker %d: Unable to send configuration change message: %v", num, err)
+				}
+				logging.Infof("Audit update handler function %d: wrote config change message.", num)
+
+				curUid = auditInfo.Uid
+				auditor.setAuditInfo(auditInfo)
+			}
+			return nil
 		}
-		if curUid != auditInfo.Uid {
-			logging.Infof("Audit settings worker %d: Got updated audit settings: %+v", num, *auditInfo)
-			curUid = auditInfo.Uid
-			auditor.setAuditInfo(auditInfo)
+
+		logging.Infof("Starting audit update stream")
+		err := ds.ProcessAuditUpdateStream(f)
+		if err != nil {
+			logging.Errorf("Audit update stream failed: %v", err)
+		} else {
+			logging.Infof("Audit update stream terminated normally.")
 		}
 	}
 }
@@ -336,10 +358,6 @@ func Submit(event Auditable) {
 		return // Nothing configured. Nothing to be done.
 	}
 
-	if !_AUDITOR.doAudit() {
-		return
-	}
-
 	auditInfo := _AUDITOR.auditInfo()
 	if auditInfo == nil {
 		logging.Errorf("Unable to audit. Audit specification is not available.")
@@ -397,10 +415,6 @@ func SubmitApiRequest(event *ApiAuditFields) {
 		return // Nothing configured. Nothing to be done.
 	}
 
-	if !_AUDITOR.doAudit() {
-		return
-	}
-
 	auditInfo := _AUDITOR.auditInfo()
 	if auditInfo == nil {
 		logging.Errorf("Unable to audit. Audit specification is not available.")
@@ -451,8 +465,8 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	}
 
 	// No credentials at all? Generate one record.
-	users := event.EventUsers()
-	if len(users) == 0 {
+	usernames := event.EventUsers()
+	if len(usernames) == 0 {
 		record := &n1qlAuditEvent{
 			GenericFields:   genericFields,
 			RequestId:       requestId,
@@ -475,8 +489,9 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	}
 
 	// Figure out which users to generate events for.
-	auditableUsers := make([]string, 0, len(users))
-	for _, user := range users {
+	auditableUsers := make([]datastore.UserInfo, 0, len(usernames))
+	for _, username := range usernames {
+		user := userInfoFromUsername(username)
 		if !auditInfo.UserWhitelisted[user] {
 			auditableUsers = append(auditableUsers, user)
 		}
@@ -498,16 +513,8 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			Status:          status,
 			Metrics:         metrics,
 		}
-		source := "local"
-		userName := user
-		// Handle non-local users, e.g. "external:dtrump"
-		if strings.Contains(user, ":") {
-			parts := strings.SplitN(user, ":", 2)
-			source = parts[0]
-			userName = parts[1]
-		}
-		record.GenericFields.RealUserid.Source = source
-		record.GenericFields.RealUserid.Username = userName
+		record.GenericFields.RealUserid.Source = user.Domain
+		record.GenericFields.RealUserid.Username = user.Name
 
 		entries[i] = auditQueueEntry{
 			eventId:          eventTypeId,
@@ -518,12 +525,24 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	return entries
 }
 
+func userInfoFromUsername(user string) datastore.UserInfo {
+	source := "local"
+	userName := user
+	// Handle non-local users, e.g. "external:dtrump"
+	if strings.Contains(user, ":") {
+		parts := strings.SplitN(user, ":", 2)
+		source = parts[0]
+		userName = parts[1]
+	}
+	return datastore.UserInfo{Name: userName, Domain: source}
+}
+
 // Returns a list of audit entries, because each user credential submitted as part of
 // the requests generates a separate audit record.
 func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, auditInfo *datastore.AuditInfo) []auditQueueEntry {
 	// No credentials at all? Generate one record.
-	users := event.Users
-	if len(users) == 0 {
+	usernames := event.Users
+	if len(usernames) == 0 {
 		record := &n1qlAuditApiRequestEvent{
 			GenericFields:  event.GenericFields,
 			HttpMethod:     event.HttpMethod,
@@ -547,8 +566,9 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 	}
 
 	// Figure out which users to generate events for.
-	auditableUsers := make([]string, 0, len(users))
-	for _, user := range users {
+	auditableUsers := make([]datastore.UserInfo, 0, len(usernames))
+	for _, username := range usernames {
+		user := userInfoFromUsername(username)
 		if !auditInfo.UserWhitelisted[user] {
 			auditableUsers = append(auditableUsers, user)
 		}
@@ -571,16 +591,8 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 			Node:           event.Node,
 			Body:           event.Body,
 		}
-		source := "local"
-		userName := user
-		// Handle non-local users, e.g. "external:dtrump"
-		if strings.Contains(user, ":") {
-			parts := strings.SplitN(user, ":", 2)
-			source = parts[0]
-			userName = parts[1]
-		}
-		record.GenericFields.RealUserid.Source = source
-		record.GenericFields.RealUserid.Username = userName
+		record.GenericFields.RealUserid.Source = user.Domain
+		record.GenericFields.RealUserid.Username = user.Name
 
 		entries[i] = auditQueueEntry{
 			eventId:        eventTypeId,
@@ -638,4 +650,10 @@ type n1qlAuditApiRequestEvent struct {
 	Node    string      `json:"node,omitempty"`
 	Values  interface{} `json:"values,omitempty"`
 	Body    interface{} `json:"body,omitempty"`
+}
+
+type n1qlConfigurationChangeEvent struct {
+	Timestamp  string         `json:"timestamp"`
+	RealUserid adt.RealUserId `json:"real_userid"`
+	Uuid       string         `json:"uuid"`
 }
