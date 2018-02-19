@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
-	cbauthi "github.com/couchbase/cbauth/cbauthimpl"
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
@@ -291,10 +290,6 @@ func (s *store) auth(user, pwd string) (cbauth.Creds, error) {
 	return cbauth.Auth(user, pwd)
 }
 
-func (s *store) isAuthTokenPresent(req *http.Request) bool {
-	return cbauthi.IsAuthTokenPresent(req)
-}
-
 func (s *store) authWebCreds(req *http.Request) (cbauth.Creds, error) {
 	return cbauth.AuthWebCreds(req)
 }
@@ -311,7 +306,7 @@ func (s *store) Authorize(privileges *auth.Privileges, credentials auth.Credenti
 }
 
 func (s *store) CredsString(req *http.Request) string {
-	if req != nil && cbauthi.IsAuthTokenPresent(req) {
+	if req != nil {
 		creds, err := cbauth.AuthWebCreds(req)
 		if err == nil {
 			return creds.Name()

@@ -38,10 +38,6 @@ func (asi *authSourceImpl) auth(id, pwd string) (cbauth.Creds, error) {
 	return nil, fmt.Errorf("Could not find user %s.", id)
 }
 
-func (asi *authSourceImpl) isAuthTokenPresent(req *http.Request) bool {
-	return false
-}
-
 func (asi *authSourceImpl) authWebCreds(req *http.Request) (cbauth.Creds, error) {
 	return nil, fmt.Errorf("authWebCreds is not implemented")
 }

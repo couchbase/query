@@ -10,6 +10,7 @@
 package couchbase
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -93,7 +94,6 @@ func doAuthByCreds(creds cbauth.Creds, namespace string, bucket string, requeste
 type authSource interface {
 	adminIsOpen() bool
 	auth(user, pwd string) (cbauth.Creds, error)
-	isAuthTokenPresent(req *http.Request) bool
 	authWebCreds(req *http.Request) (cbauth.Creds, error)
 }
 
@@ -189,46 +189,88 @@ func userKeyString(c cbauth.Creds) string {
 	return fmt.Sprintf("%s:%s", c.Domain(), c.Name())
 }
 
+func isClientCertPresent(req *http.Request) bool {
+	return req != nil && req.TLS != nil && req.TLS.PeerCertificates != nil
+}
+
 func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Credentials,
 	req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
 
+	// Create credentials - list and authenticated users to use for auth calls
 	if credentials == nil {
 		credentials = make(auth.Credentials)
 	}
-
 	authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials))
-
-	// Build the credentials list.
 	credentialsList := make([]cbauth.Creds, 0, 2)
-	for username, password := range credentials {
-		var un string
-		userCreds := strings.Split(username, ":")
-		if len(userCreds) == 1 {
-			un = userCreds[0]
-		} else {
-			un = userCreds[1]
-		}
 
-		logging.Debugf(" Credentials for user <ud>%v</ud>", un)
-		creds, err := s.auth(un, password)
-		if err != nil {
-			logging.Debugf("Unable to authorize <ud>%s</ud>", username)
-		} else {
+	// Query allows 4 kinds of authorization methods -
+	// 		 1. Basic Auth
+	//		 2. Auth Header/Token
+	//		 3. Certificates
+	//		 4. Creds query parameter
+
+	// The call to AuthWebCreds takes care of the first 3 checks.
+	// This needs to be performed first. The following is taken care of by authwebcreds -
+
+	// X509 - mandatory
+	// Only certs can be used to authorize. No other method.
+
+	// X509 - disable
+	// 		1. Certificates,Basic Auth or Auth header can be used to authorize
+
+	// X509 - enable
+	// 		1. Cert needs to be used to authorize if present
+	//		2. If cert not present then we need to use other methods
+	//		   (partially done by auth web creds)
+
+	if req != nil {
+		creds, err := s.authWebCreds(req)
+		if err == nil {
 			credentialsList = append(credentialsList, creds)
-			if un != "" {
-				authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+			authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+		} else {
+			clientAuthType, err1 := cbauth.GetClientCertAuthType()
+			if err1 != nil {
+				return nil, errors.NewDatastoreAuthorizationError(err1)
+			}
+
+			// If enable or mandatory and client cert is present, and you see an error
+			// Then return the error.
+			if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
+				return nil, errors.NewDatastoreAuthorizationError(err)
 			}
 		}
 	}
 
-	// Check for credentials from auth token in request
-	if req != nil && s.isAuthTokenPresent(req) {
-		creds, err := s.authWebCreds(req)
-		if err != nil {
-			logging.Debugf("Token auth error: %v", err)
-		} else {
-			credentialsList = append(credentialsList, creds)
-			authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+	// Either error isn't nil and mode is disable and error is nil
+
+	// If we could not successfully authorize above, and
+	//  - if x509 is disable or
+	//  - if x509 is enable and cert is not present
+	// we need to check if creds can be used to authorize
+
+	// request could be nil - in which case we handle credentials only
+
+	if len(credentialsList) == 0 {
+		for username, password := range credentials {
+			var un string
+			userCreds := strings.Split(username, ":")
+			if len(userCreds) == 1 {
+				un = userCreds[0]
+			} else {
+				un = userCreds[1]
+			}
+
+			logging.Debugf(" Credentials for user <ud>%v</ud>", un)
+			creds, err := s.auth(un, password)
+			if err != nil {
+				logging.Debugf("Unable to authorize <ud>%s</ud>", username)
+			} else {
+				credentialsList = append(credentialsList, creds)
+				if un != "" {
+					authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+				}
+			}
 		}
 	}
 
