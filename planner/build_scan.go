@@ -254,7 +254,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		return nil, 0, err
 	}
 
-	minimals := minimalIndexes(sargables, false)
+	minimals := minimalIndexes(sargables, false, pred)
 
 	indexPushDowns := this.storeIndexPushDowns()
 	defer func() {

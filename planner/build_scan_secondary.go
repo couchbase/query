@@ -39,7 +39,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	pred := baseKeyspace.dnfPred
 
-	indexes = minimalIndexes(indexes, true)
+	indexes = minimalIndexes(indexes, true, pred)
 
 	var err error
 	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
@@ -286,7 +286,8 @@ func indexPartitionKeys(index datastore.Index,
 	return partitionKeys, err
 }
 
-func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {
+func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
+	pred expression.Expression) map[datastore.Index]*indexEntry {
 
 	for s, se := range sargables {
 		for t, te := range sargables {
@@ -294,7 +295,7 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) ma
 				continue
 			}
 
-			if narrowerOrEquivalent(se, te, shortest) {
+			if narrowerOrEquivalent(se, te, shortest, pred) {
 				delete(sargables, t)
 			}
 		}
@@ -306,7 +307,7 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) ma
 /*
 Is se narrower or equivalent to te.
 */
-func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
+func narrowerOrEquivalent(se, te *indexEntry, shortest bool, pred expression.Expression) bool {
 	if len(te.sargKeys) > len(se.sargKeys) {
 		return false
 	}
@@ -316,10 +317,17 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 	}
 
 	var fc map[string]value.Value
+	var predFc map[string]value.Value
 	if se.cond != nil {
 		fc = _FILTER_COVERS_POOL.Get()
 		defer _FILTER_COVERS_POOL.Put(fc)
 		fc = se.cond.FilterCovers(fc)
+	}
+
+	if shortest && pred != nil {
+		predFc = _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(predFc)
+		predFc = pred.FilterCovers(predFc)
 	}
 
 	nfcmatch := 0
@@ -335,12 +343,21 @@ outer:
 			return false
 		}
 
-		if _, ok := fc[tk.String()]; !ok {
-			return false
-		} else {
+		/* Count number of matches
+		 * Indexkey is part of other index condition as equality predicate
+		 * If trying to determine shortest index(For: IntersectScan)
+		 *     indexkey is not equality predicate and indexkey is part of other index condition
+		 *     (In case of equality predicate keeping IntersectScan might be better)
+		 */
+		_, condEq := fc[tk.String()]
+		_, predEq := predFc[tk.String()]
+		if condEq || (shortest && !predEq && se.cond.DependsOn(tk)) {
 			nfcmatch++
+		} else {
+			return false
 		}
 	}
+
 	if len(te.sargKeys) == nfcmatch {
 		return true
 	}
