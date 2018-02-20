@@ -343,7 +343,7 @@ var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10}
 var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
 
 // helper for the REST op
-func doRemoteOp(node clustering.QueryNode, endpoint string, command string, op string, data string,
+func doRemoteOp(node clustering.QueryNode, endpoint string, command string, data string, op string,
 	creds distributed.Creds, authToken string) ([]byte, errors.Error) {
 	var reader io.Reader
 
@@ -386,7 +386,10 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, op s
 
 		err = json.Unmarshal(body, &opErr)
 		if err != nil {
-			return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
+
+			// MB-28264 we could not unmarshal an error from a remote node
+			// just create an error from th body
+			return nil, errors.NewSystemRemoteWarning(goErr.New(string(body)), op, endpoint)
 		}
 		return nil, opErr
 	}
