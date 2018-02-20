@@ -26,11 +26,12 @@ func GetMaxIndexAPI() int {
 
 const (
 	N1QL_GROUPAGG_PUSHDOWN uint64 = 1 << iota
-	N1QL_ALL_BITS                 // Add anything above this. This needs to be last one
+	N1QL_HASH_JOIN
+	N1QL_ALL_BITS // Add anything above this. This needs to be last one
 )
 
 const DEF_N1QL_FEAT_CTRL = 0
-const CE_N1QL_FEAT_CTRL = (N1QL_GROUPAGG_PUSHDOWN)
+const CE_N1QL_FEAT_CTRL = (N1QL_GROUPAGG_PUSHDOWN | N1QL_HASH_JOIN)
 
 func SetN1qlFeatureControl(control uint64) {
 	atomic.StoreInt64(&N1qlFeatureControl, int64(control))

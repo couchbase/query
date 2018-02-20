@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, err error) {
@@ -28,12 +29,14 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			return nil, err
 		}
 
-		// currently only consider hash join when USE HASH join hint is specified
-		var hjoin *plan.HashJoin
-		if right.PreferHash() {
-			hjoin, err = this.buildHashJoin(node)
-			if hjoin != nil || err != nil {
-				return hjoin, err
+		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+			// currently only consider hash join when USE HASH join hint is specified
+			var hjoin *plan.HashJoin
+			if right.PreferHash() {
+				hjoin, err = this.buildHashJoin(node)
+				if hjoin != nil || err != nil {
+					return hjoin, err
+				}
 			}
 		}
 
@@ -85,12 +88,14 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 			return nil, err
 		}
 
-		// currently only consider hash nest when USE HASH join hint is specified
-		var hnest *plan.HashNest
-		if right.PreferHash() {
-			hnest, err = this.buildHashNest(node)
-			if hnest != nil || err != nil {
-				return hnest, err
+		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+			// currently only consider hash nest when USE HASH join hint is specified
+			var hnest *plan.HashNest
+			if right.PreferHash() {
+				hnest, err = this.buildHashNest(node)
+				if hnest != nil || err != nil {
+					return hnest, err
+				}
 			}
 		}
 
