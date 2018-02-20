@@ -12,4 +12,4 @@
 package audit
 
 // Do not audit in CE version.
-var VERSION_SUPPORTS_AUDIT = true
+var VERSION_SUPPORTS_AUDIT = false

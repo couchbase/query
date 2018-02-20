@@ -11,5 +11,4 @@
 
 package audit
 
-// Will be true eventually, since audit is enabled for EE.
-var VERSION_SUPPORTS_AUDIT = false
+var VERSION_SUPPORTS_AUDIT = true
