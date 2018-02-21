@@ -83,15 +83,16 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 	}
 
 	// Check aggregate pushdowns using API3
-	pushDownProperty |= this.indexAggPushDownProperty(entry, indexKeys, alias, unnest, pushDownProperty)
+	aggProperty, tryApi2 := this.indexAggPushDownProperty(entry, indexKeys, alias, unnest, pushDownProperty)
+	pushDownProperty |= aggProperty
 
 	// Exploiting IndexScan for aggregates using API2/API1.
 	//          * COUNT(), COUNT(DISTINCT op ), MIN(), MAX(),
 	//          * Requires single aggregate in projection
 	//          * NO Group By
 
-	if !isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) && this.oldAggregates &&
-		len(this.aggs) == 1 && len(this.group.By()) == 0 {
+	if !isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) && this.oldAggregates && tryApi2 &&
+		len(this.aggs) == 1 && len(this.group.By()) == 0 && !indexHasArrayIndexKey(entry.index) {
 		for _, ag := range this.aggs {
 			switch agg := ag.(type) {
 
@@ -129,19 +130,19 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 }
 
 func (this *builder) indexAggPushDownProperty(entry *indexEntry, indexKeys expression.Expressions,
-	alias string, unnest bool, pushDownProperty PushDownProperties) PushDownProperties {
+	alias string, unnest bool, pushDownProperty PushDownProperties) (PushDownProperties, bool) {
 
 	if this.group == nil || !useIndex3API(entry.index, this.indexApiVersion) ||
 		!isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) ||
 		isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) ||
 		!util.IsFeatureEnabled(this.featureControls, util.N1QL_GROUPAGG_PUSHDOWN) {
-		return pushDownProperty
+		return pushDownProperty, true
 	}
 
 	// Group keys needs to be covered by index keys (including document key)
 	for _, gexpr := range this.group.By() {
 		if !expression.IsCovered(gexpr, alias, indexKeys) {
-			return pushDownProperty
+			return pushDownProperty, false
 		}
 	}
 
@@ -170,37 +171,41 @@ func (this *builder) indexAggPushDownProperty(entry *indexEntry, indexKeys expre
 nextagg:
 	for _, agg := range this.aggs {
 		op := agg.Operand()
-		// skip constant aggregate expressions
-		if op != nil && op.Value() == nil {
-			// aggregate expression needs to be covered by index keys (including document key)
-			if !expression.IsCovered(op, alias, indexKeys) {
-				return pushDownProperty
-			}
 
-			switch agg.(type) {
-			case *algebra.Min, *algebra.Max:
-				continue nextagg
-			default:
-				// Distinct aggregates argument can be any key in the matched leading keys + 0|1
-				// 0 for partition index and 1 for non partition index
-				if agg.Distinct() {
-					if groupMatch {
-						for i, key := range indexKeys {
-							if i <= maxKeyPos && op.EquivalentTo(key) {
-								continue nextagg
-							}
+		constOp := (op == nil || op.Value() != nil)
+
+		// aggregate expression needs to be covered by index keys (including document key)
+		if !constOp && !expression.IsCovered(op, alias, indexKeys) {
+			return pushDownProperty, false
+		}
+
+		switch agg.(type) {
+		case *algebra.Min, *algebra.Max:
+			continue nextagg
+		default:
+			// Distinct aggregates argument can be any key in the matched leading keys + 0|1
+			// 0 for partition index and 1 for non partition index
+			if agg.Distinct() {
+				if groupMatch {
+					if constOp {
+						continue nextagg
+					}
+
+					for i, key := range indexKeys {
+						if i <= maxKeyPos && op.EquivalentTo(key) {
+							continue nextagg
 						}
 					}
+				}
 
-					// Distinct key not matched leading keys + 0+1
-					return pushDownProperty
-				} else {
-					// non Unnest IndexScan can only use DISTINCT array index with eqaulity preidicate
-					// Unnest IndexScan can only use DISTINCT array with Distinct aggregates
+				// Distinct key not matched leading keys + 0+1
+				return pushDownProperty, false
+			} else {
+				// non Unnest IndexScan can only use DISTINCT array index with eqaulity preidicate
+				// Unnest IndexScan can only use DISTINCT array with Distinct aggregates
 
-					if !arrayIndexIsOK {
-						return pushDownProperty
-					}
+				if !arrayIndexIsOK {
+					return pushDownProperty, false
 				}
 			}
 		}
@@ -210,7 +215,7 @@ nextagg:
 	if groupMatch {
 		pushDownProperty |= _PUSHDOWN_FULLGROUPAGGS
 	}
-	return pushDownProperty
+	return pushDownProperty, false
 }
 
 func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKeys expression.Expressions) (bool, int) {
