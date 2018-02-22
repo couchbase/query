@@ -20,6 +20,7 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
@@ -289,7 +290,7 @@ func GetPrepared(prepared_stmt value.Value, options uint32, phaseTime *time.Dura
 		if err != nil {
 			return nil, errors.NewUnrecognizedPreparedError(err)
 		}
-		return unmarshalPrepared(prepared_bytes)
+		return unmarshalPrepared(prepared_bytes, phaseTime)
 	default:
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
@@ -338,7 +339,7 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
-	prepared, err := unmarshalPrepared(prepared_bytes)
+	prepared, err := unmarshalPrepared(prepared_bytes, phaseTime)
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
@@ -406,10 +407,21 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 	}
 }
 
-func unmarshalPrepared(bytes []byte) (*plan.Prepared, errors.Error) {
+func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	prepared := plan.NewPrepared(nil, nil)
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
+
+		// if we failed to unmarshall, we find  the statement
+		// and try preparing from scratch
+		text, err1 := json.Find(bytes, "statement")
+		if text != nil && err1 == nil {
+			prepared.SetText(string(text))
+			pl, _ := reprepare(prepared, phaseTime)
+			if pl != nil {
+				return pl, nil
+			}
+		}
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
 	}
 	return prepared, nil
