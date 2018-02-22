@@ -7,7 +7,7 @@
       "name" : "SELECT statement",
       "description" : "A N1QL SELECT statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -44,7 +44,7 @@
       "name" : "EXPLAIN statement",
       "description" : "A N1QL EXPLAIN statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -81,7 +81,7 @@
       "name" : "PREPARE statement",
       "description" : "A N1QL PREPARE statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -118,7 +118,7 @@
       "name" : "INFER statement",
       "description" : "A N1QL INFER statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -155,7 +155,7 @@
       "name" : "INSERT statement",
       "description" : "A N1QL INSERT statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -192,7 +192,7 @@
       "name" : "UPSERT statement",
       "description" : "A N1QL UPSERT statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -229,7 +229,7 @@
       "name" : "DELETE statement",
       "description" : "A N1QL DELETE statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -266,7 +266,7 @@
       "name" : "UPDATE statement",
       "description" : "A N1QL UPDATE statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -303,7 +303,7 @@
       "name" : "MERGE statement",
       "description" : "A N1QL MERGE statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -340,7 +340,7 @@
       "name" : "CREATE INDEX statement",
       "description" : "A N1QL CREATE INDEX statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -377,7 +377,7 @@
       "name" : "DROP INDEX statement",
       "description" : "A N1QL DROP INDEX statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -414,7 +414,7 @@
       "name" : "ALTER INDEX statement",
       "description" : "A N1QL ALTER INDEX statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -450,7 +450,7 @@
       "name" : "BUILD INDEX statement",
       "description" : "A N1QL BUILD INDEX statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -487,7 +487,7 @@
       "name" : "GRANT ROLE statement",
       "description" : "A N1QL GRANT ROLE statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -524,7 +524,7 @@
       "name" : "REVOKE ROLE statement",
       "description" : "A N1QL REVOKE ROLE statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -561,7 +561,7 @@
       "name" : "UNRECOGNIZED statement",
       "description" : "An unrecognized statement was received by the N1QL query engine",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -598,7 +598,7 @@
       "name" : "CREATE PRIMARY INDEX statement",
       "description" : "A N1QL CREATE PRIMARY INDEX statement was executed",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -635,7 +635,7 @@
       "name" : "/admin/stats API request",
       "description" : "An HTTP request was made to the API at /admin/stats.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -656,7 +656,7 @@
       "name" : "/admin/vitals API request",
       "description" : "An HTTP request was made to the API at /admin/vitals.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -676,7 +676,7 @@
       "name" : "/admin/prepareds API request",
       "description" : "An HTTP request was made to the API at /admin/prepareds.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -697,7 +697,7 @@
       "name" : "/admin/active_requests API request",
       "description" : "An HTTP request was made to the API at /admin/active_requests.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -718,7 +718,7 @@
       "name" : "/admin/indexes/prepareds API request",
       "description" : "An HTTP request was made to the API at /admin/indexes/prepareds.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -738,7 +738,7 @@
       "name" : "/admin/indexes/active_requests API request",
       "description" : "An HTTP request was made to the API at /admin/indexes/active_requests.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -758,7 +758,7 @@
       "name" : "/admin/indexes/completed_requests API request",
       "description" : "An HTTP request was made to the API at /admin/indexes/completed_requests.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -778,7 +778,7 @@
       "name" : "/admin/ping API request",
       "description" : "An HTTP request was made to the API at /admin/ping.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -798,7 +798,7 @@
       "name" : "/admin/config API request",
       "description" : "An HTTP request was made to the API at /admin/config.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -818,7 +818,7 @@
       "name" : "/admin/ssl_cert API request",
       "description" : "An HTTP request was made to the API at /admin/ssl_cert.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -838,7 +838,7 @@
       "name" : "/admin/settings API request",
       "description" : "An HTTP request was made to the API at /admin/settings.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -859,7 +859,7 @@
       "name" : "/admin/clusters API request",
       "description" : "An HTTP request was made to the API at /admin/clusters.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
@@ -882,7 +882,7 @@
       "name" : "/admin/completed_requests API request",
       "description" : "An HTTP request was made to the API at /admin/completed_requests.",
       "sync" : false,
-      "enabled" : true,
+      "enabled" : false,
       "filtering_permitted" : true,
       "mandatory_fields" : {
         "timestamp" : "",
