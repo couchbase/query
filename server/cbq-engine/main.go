@@ -267,16 +267,12 @@ func main() {
 		)
 		os.Exit(1)
 	}
-	if server.Enterprise() && *CERT_FILE != "" && *KEY_FILE != "" {
-		er := endpoint.ListenTLS()
-		if er != nil {
-			logging.Errorp("cbq-engine exiting with error",
-				logging.Pair{"error", er},
-				logging.Pair{"HTTPS_ADDR", *HTTPS_ADDR},
-			)
-			os.Exit(1)
-		}
-	}
+
+	// Since TLS listener has already been started by NewServiceEndpoint
+	// So not starting here
+	// Check later for enterprise -
+	// server.Enterprise() && *CERT_FILE != "" && *KEY_FILE != ""
+
 	signalCatcher(server, endpoint)
 }
 
