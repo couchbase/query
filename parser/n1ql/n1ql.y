@@ -960,7 +960,7 @@ simple_from_join_term RIGHT opt_outer JOIN simple_from_term ON expr
 {
     if second, ok := $1.(*algebra.KeyspaceTerm); ok {
 	second.SetAnsiJoin()
-        $$ = algebra.NewAnsiJoin($5, true, second, $7)
+        $$ = algebra.NewAnsiRightJoin(second, $5, $7)
     } else {
         yylex.Error("Left hand side of an ANSI RIGHT OUTER JOIN must be a keyspace.")
     }

@@ -66,3 +66,21 @@ type JoinTerm interface {
 	Right() *KeyspaceTerm
 	Outer() bool
 }
+
+func GetKeyspaceTerm(term FromTerm) *KeyspaceTerm {
+	if term == nil {
+		return nil
+	}
+
+	switch term := term.(type) {
+	case *KeyspaceTerm:
+		return term
+	case *ExpressionTerm:
+		if term.IsKeyspace() {
+			return term.KeyspaceTerm()
+		}
+		return nil
+	default:
+		return nil
+	}
+}

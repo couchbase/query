@@ -32,6 +32,28 @@ func NewAnsiJoin(left FromTerm, outer bool, right FromTerm, onclause expression.
 	return &AnsiJoin{left, right, outer, onclause}
 }
 
+func NewAnsiRightJoin(left FromTerm, right FromTerm, onclause expression.Expression) *AnsiJoin {
+	// transfer join hint from right-hand side to left-hand side
+	first := GetKeyspaceTerm(right)
+	second := GetKeyspaceTerm(left)
+	if first != nil && second != nil {
+		joinHint := first.JoinHint()
+		if joinHint != JOIN_HINT_NONE {
+			// swith build and probe side of USE HASH hint
+			switch joinHint {
+			case USE_HASH_BUILD:
+				joinHint = USE_HASH_PROBE
+			case USE_HASH_PROBE:
+				joinHint = USE_HASH_BUILD
+			}
+			second.SetJoinHint(joinHint)
+			first.SetJoinHint(JOIN_HINT_NONE)
+		}
+	}
+
+	return &AnsiJoin{right, left, true, onclause}
+}
+
 func (this *AnsiJoin) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitAnsiJoin(this)
 }

@@ -76,6 +76,82 @@
     ]
     },
     {
+        "testcase": "Right outer Hash Join, join hint transferred. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p RIGHT OUTER JOIN customer c USE HASH(probe) ON c.customerId = p.customerId WHERE c.lastName = \"Wyman\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer112",
+            "firstName": "Sherwood",
+            "lastName": "Wyman"
+        },
+        {
+            "customerId": "customer729",
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "purchaseId": "purchase1537"
+        },
+        {
+            "customerId": "customer729",
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "purchaseId": "purchase1829"
+        },
+        {
+            "customerId": "customer729",
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "purchaseId": "purchase2308"
+        },
+        {
+            "customerId": "customer605",
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "purchaseId": "purchase2408"
+        },
+        {
+            "customerId": "customer605",
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "purchaseId": "purchase2635"
+        },
+        {
+            "customerId": "customer729",
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "purchaseId": "purchase2933"
+        },
+        {
+            "customerId": "customer729",
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "purchaseId": "purchase336"
+        },
+        {
+            "customerId": "customer729",
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "purchaseId": "purchase3990"
+        },
+        {
+            "customerId": "customer605",
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "purchaseId": "purchase4530"
+        }
+    ]
+    },
+    {
         "testcase": "Right outer join, Hash Join build dominant, USE HASH hint ignored. Explain",
         "ignore": "index_id",
         "explain": {
