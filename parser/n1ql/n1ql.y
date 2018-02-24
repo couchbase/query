@@ -329,7 +329,7 @@ tokOffset	 int
 %type <subselect>        subselect
 %type <subselect>        select_from
 %type <subselect>        from_select
-%type <fromTerm>         from_term from opt_from simple_from_term simple_from_join_term
+%type <fromTerm>         from_term from opt_from simple_from_term
 %type <keyspaceTerm>     keyspace_term
 %type <b>                opt_join_type
 %type <path>             path
@@ -818,16 +818,7 @@ FROM from_term
 from_term:
 simple_from_term
 {
-    var ksterm *algebra.KeyspaceTerm = nil
-    switch first := $1.(type) {
-        case *algebra.KeyspaceTerm:
-             ksterm = first
-        case *algebra.ExpressionTerm:
-             if first.IsKeyspace() {
-                 ksterm = first.KeyspaceTerm()
-             }
-    }
-
+    ksterm := algebra.GetKeyspaceTerm($1)
     if ksterm != nil && ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
         yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first keyspace %s", ksterm.Alias()))
     }
@@ -835,7 +826,7 @@ simple_from_term
     $$ = $1
 }
 |
-from_term opt_join_type JOIN simple_from_join_term on_keys
+from_term opt_join_type JOIN simple_from_term on_keys
 {
     switch first := $1.(type) {
         case *algebra.AnsiJoin:
@@ -843,20 +834,20 @@ from_term opt_join_type JOIN simple_from_join_term on_keys
         case *algebra.AnsiNest:
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and non ANSI JOIN on %s.", first.Alias(), $4.Alias()))
     }
-    if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.JoinHint() != algebra.JOIN_HINT_NONE {
-            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in JOIN on %s.", second.Alias()))
-        } else if second.Indexes() != nil || second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("JOIN on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
-        }
-        second.SetJoinKeys($5)
-        $$ = algebra.NewJoin($1, $2, second)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($4)
+    if ksterm == nil {
         yylex.Error("JOIN must be done on a keyspace.")
     }
+    if ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in JOIN on %s.", ksterm.Alias()))
+    } else if ksterm.Indexes() != nil || ksterm.Keys() != nil {
+        yylex.Error(fmt.Sprintf("JOIN on %s cannot have USE KEYS or USE INDEX.", ksterm.Alias()))
+    }
+    ksterm.SetJoinKeys($5)
+    $$ = algebra.NewJoin($1, $2, ksterm)
 }
 |
-from_term opt_join_type JOIN simple_from_join_term on_key FOR IDENT
+from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
 {
     switch first := $1.(type) {
         case *algebra.AnsiJoin:
@@ -864,20 +855,20 @@ from_term opt_join_type JOIN simple_from_join_term on_key FOR IDENT
         case *algebra.AnsiNest:
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and non ANSI JOIN on %s.", first.Alias(), $4.Alias()))
     }
-    if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.JoinHint() != algebra.JOIN_HINT_NONE {
-            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in JOIN on %s.", second.Alias()))
-        } else if second.Indexes() != nil || second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("JOIN on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
-        }
-        second.SetJoinKeys($5)
-        $$ = algebra.NewIndexJoin($1, $2, second, $7)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($4)
+    if ksterm == nil {
         yylex.Error("JOIN must be done on a keyspace.")
     }
+    if ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in JOIN on %s.", ksterm.Alias()))
+    } else if ksterm.Indexes() != nil || ksterm.Keys() != nil {
+        yylex.Error(fmt.Sprintf("JOIN on %s cannot have USE KEYS or USE INDEX.", ksterm.Alias()))
+    }
+    ksterm.SetJoinKeys($5)
+    $$ = algebra.NewIndexJoin($1, $2, ksterm, $7)
 }
 |
-from_term opt_join_type NEST simple_from_join_term on_keys
+from_term opt_join_type NEST simple_from_term on_keys
 {
     switch first := $1.(type) {
         case *algebra.AnsiJoin:
@@ -885,20 +876,20 @@ from_term opt_join_type NEST simple_from_join_term on_keys
         case *algebra.AnsiNest:
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and NEST on %s.", first.Alias(), $4.Alias()))
     }
-    if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.JoinHint() != algebra.JOIN_HINT_NONE {
-            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in NEST on %s.", second.Alias()))
-        } else if second.Indexes() != nil || second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("NEST on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
-        }
-        second.SetJoinKeys($5)
-        $$ = algebra.NewNest($1, $2, second)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($4)
+    if ksterm == nil {
         yylex.Error("NEST must be done on a keyspace.")
     }
+    if ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in NEST on %s.", ksterm.Alias()))
+    } else if ksterm.Indexes() != nil || ksterm.Keys() != nil {
+        yylex.Error(fmt.Sprintf("NEST on %s cannot have USE KEYS or USE INDEX.", ksterm.Alias()))
+    }
+    ksterm.SetJoinKeys($5)
+    $$ = algebra.NewNest($1, $2, ksterm)
 }
 |
-from_term opt_join_type NEST simple_from_join_term on_key FOR IDENT
+from_term opt_join_type NEST simple_from_term on_key FOR IDENT
 {
     switch first := $1.(type) {
         case *algebra.AnsiJoin:
@@ -906,17 +897,17 @@ from_term opt_join_type NEST simple_from_join_term on_key FOR IDENT
         case *algebra.AnsiNest:
              yylex.Error(fmt.Sprintf("Cannot mix ANSI NEST on %s and NEST on %s.", first.Alias(), $4.Alias()))
     }
-    if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-        if second.JoinHint() != algebra.JOIN_HINT_NONE {
-            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in NEST on %s.", second.Alias()))
-        } else if second.Indexes() != nil || second.Keys() != nil {
-            yylex.Error(fmt.Sprintf("NEST on %s cannot have USE KEYS or USE INDEX.", second.Alias()))
-        }
-        second.SetJoinKeys($5)
-        $$ = algebra.NewIndexNest($1, $2, second, $7)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($4)
+    if ksterm == nil {
         yylex.Error("NEST must be done on a keyspace.")
     }
+    if ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified in NEST on %s.", ksterm.Alias()))
+    } else if ksterm.Indexes() != nil || ksterm.Keys() != nil {
+        yylex.Error(fmt.Sprintf("NEST on %s cannot have USE KEYS or USE INDEX.", ksterm.Alias()))
+    }
+    ksterm.SetJoinKeys($5)
+    $$ = algebra.NewIndexNest($1, $2, ksterm, $7)
 }
 |
 from_term opt_join_type unnest expr opt_as_alias
@@ -924,7 +915,7 @@ from_term opt_join_type unnest expr opt_as_alias
     $$ = algebra.NewUnnest($1, $2, $4, $5)
 }
 |
-from_term opt_join_type JOIN simple_from_join_term ON expr
+from_term opt_join_type JOIN simple_from_term ON expr
 {
     switch first := $1.(type) {
         case *algebra.Join, *algebra.IndexJoin:
@@ -932,15 +923,15 @@ from_term opt_join_type JOIN simple_from_join_term ON expr
         case *algebra.Nest, *algebra.IndexNest:
              yylex.Error(fmt.Sprintf("Cannot mix non ANSI NEST on %s and ANSI JOIN on %s.", first.Alias(), $4.Alias()))
     }
-    if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-	second.SetAnsiJoin()
-        $$ = algebra.NewAnsiJoin($1, $2, second, $6)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($4)
+    if ksterm == nil {
         yylex.Error("ANSI JOIN must be done on a keyspace.")
     }
+    ksterm.SetAnsiJoin()
+    $$ = algebra.NewAnsiJoin($1, $2, ksterm, $6)
 }
 |
-from_term opt_join_type NEST simple_from_join_term ON expr
+from_term opt_join_type NEST simple_from_term ON expr
 {
     switch first := $1.(type) {
         case *algebra.Join, *algebra.IndexJoin:
@@ -948,22 +939,22 @@ from_term opt_join_type NEST simple_from_join_term ON expr
         case *algebra.Nest, *algebra.IndexNest:
              yylex.Error(fmt.Sprintf("Cannot mix non ANSI NEST on %s and ANSI NEST on %s.", first.Alias(), $4.Alias()))
     }
-    if second, ok := $4.(*algebra.KeyspaceTerm); ok {
-	second.SetAnsiNest()
-        $$ = algebra.NewAnsiNest($1, $2, second, $6)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($4)
+    if ksterm == nil {
         yylex.Error("ANSI NEST must be done on a keyspace.")
     }
+    ksterm.SetAnsiNest()
+    $$ = algebra.NewAnsiNest($1, $2, ksterm, $6)
 }
 |
-simple_from_join_term RIGHT opt_outer JOIN simple_from_term ON expr
+simple_from_term RIGHT opt_outer JOIN simple_from_term ON expr
 {
-    if second, ok := $1.(*algebra.KeyspaceTerm); ok {
-	second.SetAnsiJoin()
-        $$ = algebra.NewAnsiRightJoin(second, $5, $7)
-    } else {
+    ksterm := algebra.GetKeyspaceTerm($1)
+    if ksterm == nil {
         yylex.Error("Left hand side of an ANSI RIGHT OUTER JOIN must be a keyspace.")
     }
+    ksterm.SetAnsiJoin()
+    $$ = algebra.NewAnsiRightJoin(ksterm, $5, $7)
 }
 ;
 
@@ -996,27 +987,6 @@ expr opt_as_alias opt_use
               }
               $$ = algebra.NewExpressionTerm(other,$2, nil, false)
      }
-}
-;
-
-simple_from_join_term:
-simple_from_term
-{
-    var ksterm *algebra.KeyspaceTerm = nil
-    switch first := $1.(type) {
-        case *algebra.KeyspaceTerm:
-             ksterm = first
-        case *algebra.ExpressionTerm:
-             if first.IsKeyspace() {
-                 ksterm = first.KeyspaceTerm()
-             }
-    }
-
-    if ksterm == nil {
-        $$ = $1
-    } else {
-        $$ = ksterm
-    }
 }
 ;
 
