@@ -15,15 +15,15 @@ Replacer is used to replace one expr with another
 
 func ReplaceExpr(origExpr, oldExpr, newExpr Expression) (Expression, error) {
 	replacer := newReplacer(oldExpr, newExpr)
-	newExpr, err := replacer.Map(origExpr)
+	replaceExpr, err := replacer.Map(origExpr)
 	if err != nil {
 		return nil, err
 	}
 
 	// reset the value field since expr might have changed
-	newExpr.ResetValue()
+	replaceExpr.ResetValue()
 
-	return newExpr, nil
+	return replaceExpr, nil
 }
 
 type Replacer struct {
