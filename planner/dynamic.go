@@ -77,8 +77,7 @@ func (this *dynamic) VisitAny(expr *expression.Any) (rv interface{}, err error) 
 
 	for _, binding := range expr.Bindings() {
 		id := expression.NewIdentifier(binding.Variable())
-		replacer := expression.NewReplacer(id, binding.Expression())
-		rsat, err = replacer.Map(rsat)
+		rsat, err = expression.ReplaceExpr(rsat, id, binding.Expression())
 		if err != nil {
 			return nil, err
 		}
@@ -92,8 +91,7 @@ func (this *dynamic) VisitAnyEvery(expr *expression.AnyEvery) (rv interface{}, e
 
 	for _, binding := range expr.Bindings() {
 		id := expression.NewIdentifier(binding.Variable())
-		replacer := expression.NewReplacer(id, binding.Expression())
-		rsat, err = replacer.Map(rsat)
+		rsat, err = expression.ReplaceExpr(rsat, id, binding.Expression())
 		if err != nil {
 			return nil, err
 		}

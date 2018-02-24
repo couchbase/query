@@ -402,8 +402,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 	for name, value := range this.namedArgs {
 		nameExpr := algebra.NewNamedParameter(name)
 		valueExpr := expression.NewConstant(value)
-		replacer := expression.NewReplacer(nameExpr, valueExpr)
-		pred, err = replacer.Map(pred)
+		pred, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
 		if err != nil {
 			return
 		}
@@ -412,8 +411,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 	for pos, value := range this.positionalArgs {
 		posExpr := algebra.NewPositionalParameter(pos + 1)
 		valueExpr := expression.NewConstant(value)
-		replacer := expression.NewReplacer(posExpr, valueExpr)
-		pred, err = replacer.Map(pred)
+		pred, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
 		if err != nil {
 			return
 		}

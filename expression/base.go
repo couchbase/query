@@ -460,3 +460,10 @@ func XattrsNames(exprs Expressions, alias string) (present bool, names []string)
 	}
 	return present, nil
 }
+
+func (this *ExpressionBase) ResetValue() {
+	this.value = nil
+	for _, child := range this.expr.Children() {
+		child.ResetValue()
+	}
+}

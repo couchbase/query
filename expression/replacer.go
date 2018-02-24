@@ -10,9 +10,22 @@
 package expression
 
 /*
-Replacer is used to rename binding variables, but is a generic
-expression replacer.
+Replacer is used to replace one expr with another
 */
+
+func ReplaceExpr(origExpr, oldExpr, newExpr Expression) (Expression, error) {
+	replacer := newReplacer(oldExpr, newExpr)
+	newExpr, err := replacer.Map(origExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	// reset the value field since expr might have changed
+	newExpr.ResetValue()
+
+	return newExpr, nil
+}
+
 type Replacer struct {
 	MapperBase
 
@@ -20,7 +33,7 @@ type Replacer struct {
 	newExpr Expression
 }
 
-func NewReplacer(oldExpr, newExpr Expression) *Replacer {
+func newReplacer(oldExpr, newExpr Expression) *Replacer {
 	rv := &Replacer{
 		oldExpr: oldExpr,
 		newExpr: newExpr,

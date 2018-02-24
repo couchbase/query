@@ -192,6 +192,11 @@ type Expression interface {
 	   Gets the xattr parent path. For meta().xattr._sync, it gives _sync.
 	*/
 	FieldNames(base Expression, names map[string]bool) (present bool)
+
+	/*
+	   Reset the value field of the expression
+	*/
+	ResetValue()
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {
