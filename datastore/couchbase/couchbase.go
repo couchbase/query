@@ -59,6 +59,10 @@ type cbPoolServices struct {
 var _POOLMAP cbPoolMap
 
 func init() {
+
+	// MB-27415 use a larger connection pool
+	cb.SetConnectionPoolParams(128, 1)
+
 	val, err := strconv.ParseBool(os.Getenv("REQUIRE_CBAUTH"))
 	if err != nil {
 		REQUIRE_CBAUTH = val
