@@ -488,5 +488,22 @@
                 "s": 3058
             }
         ]
-    }
+    },
+    {
+        "testcase": "",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.index_group_aggs IS MISSING AND v.`limit` IS MISSING AND v.`offset` IS MISSING END"
+        },
+        "statements": "SELECT c20, ARRAY_AGG(c21) AS a FROM orders GROUP BY c20 LIMIT 4 OFFSET 2",
+        "ordered": false,
+        "results": [
+        ]
+     }
 ]

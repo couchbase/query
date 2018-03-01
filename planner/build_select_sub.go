@@ -680,7 +680,7 @@ func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggreg
 		// Group or Aggregates Depends on LET disable pushdowns
 		for _, expr := range group.By() {
 			if !expr.IndexAggregatable() || dependsOnLet(expr, let) {
-				this.resetIndexGroupAggs()
+				this.resetPushDowns()
 				return
 			}
 		}
@@ -688,7 +688,7 @@ func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggreg
 		for _, agg := range aggs {
 			aggIndexProperties := aggToIndexAgg(agg)
 			if !aggIndexProperties.supported {
-				this.resetIndexGroupAggs()
+				this.resetPushDowns()
 				return
 			}
 
@@ -697,7 +697,7 @@ func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggreg
 			}
 
 			if !agg.Operand().IndexAggregatable() || dependsOnLet(agg.Operand(), let) {
-				this.resetIndexGroupAggs()
+				this.resetPushDowns()
 				return
 			}
 

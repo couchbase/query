@@ -26,28 +26,23 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 		return nil, err
 	}
 
-	var indexOrder plan.IndexKeyOrders
-	ok := true
-	order := this.order
+	this.resetProjection()
+	if this.group != nil {
+		this.resetPushDowns()
+	} else if !exact {
+		this.resetOffsetLimit()
+	}
 
-	if order != nil {
+	var indexOrder plan.IndexKeyOrders
+
+	if this.order != nil {
 		keys := expression.Expressions{id}
 		entry := &indexEntry{primary, keys, keys, nil, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, _PUSHDOWN_NONE}
+		ok := true
 		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); ok {
 			this.maxParallelism = 1
 		} else {
 			this.resetPushDowns()
-		}
-	}
-
-	if exact {
-		this.resetProjection()
-		this.resetIndexGroupAggs()
-
-	} else {
-		this.resetPushDowns()
-		if ok {
-			this.order = order
 		}
 	}
 
