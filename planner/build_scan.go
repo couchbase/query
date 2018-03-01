@@ -325,8 +325,10 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	// Try dynamic scan
 	if !join && len(arrays) > 0 {
 		// Try pushdowns
-		this.limit = indexPushDowns.limit
-		this.offset = indexPushDowns.offset
+		if indexPushDowns.order == nil || this.orderScan != nil {
+			this.limit = indexPushDowns.limit
+			this.offset = indexPushDowns.offset
+		}
 
 		dynamicPred := baseKeyspace.origPred.Copy()
 		dnf := NewDNF(dynamicPred, false, true)
