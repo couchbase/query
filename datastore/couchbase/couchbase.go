@@ -60,9 +60,8 @@ var _POOLMAP cbPoolMap
 
 func init() {
 
-	// MB-27415 have a larger overflow pool and close overflow connections asynchronously
-	cb.SetConnectionPoolParams(64, 64)
-	cb.EnableAsynchronousCloser(true)
+	// MB-27415 use a larger connection pool
+	cb.SetConnectionPoolParams(128, 1)
 
 	val, err := strconv.ParseBool(os.Getenv("REQUIRE_CBAUTH"))
 	if err != nil {
