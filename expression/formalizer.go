@@ -223,8 +223,13 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		// process then treat it as a keyspace alias
 		ident_flags := uint32(ident_val.ActualForIndex().(int64))
 		tmp_flags := ident_flags & IDENT_IS_KEYSPACE
-		if !this.mapSelf() || !this.indexScope() || tmp_flags == 0 || expr.IsKeyspaceAlias() {
+		if !this.indexScope() || tmp_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
+			// for user specified keyspace alias (such as alias.c1)
+			// set flag to indicate it's keyspace
+			if tmp_flags != 0 && !expr.IsKeyspaceAlias() {
+				expr.SetKeyspaceAlias(true)
+			}
 			return expr, nil
 		}
 	}
@@ -252,7 +257,9 @@ Formalize SELF functions defined on indexes.
 */
 func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
 	if this.mapSelf() {
-		return NewIdentifier(this.keyspace), nil
+		keyspaceIdent := NewIdentifier(this.keyspace)
+		keyspaceIdent.SetKeyspaceAlias(true)
+		return keyspaceIdent, nil
 	} else {
 		return expr, nil
 	}
@@ -266,7 +273,9 @@ func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 		meta, ok := expr.(*Meta)
 		if ok && len(meta.Operands()) == 0 {
 			if this.keyspace != "" {
-				return NewMeta(NewIdentifier(this.keyspace)), nil
+				keyspaceIdent := NewIdentifier(this.keyspace)
+				keyspaceIdent.SetKeyspaceAlias(true)
+				return NewMeta(keyspaceIdent), nil
 			} else {
 				return nil, errors.NewAmbiguousMetaError()
 			}
@@ -312,7 +321,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 			tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
 			// when sarging index keys, allow variables used in index definition
 			// to be the same as a keyspace alias
-			if !this.mapSelf() || tmp_flags1 == 0 || tmp_flags2 != 0 {
+			if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
 				err = fmt.Errorf("Duplicate variable %v already in scope.", b.Variable())
 				return
 			}
@@ -330,7 +339,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				ident_flags = uint32(ident_val.ActualForIndex().(int64))
 				tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
 				tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
-				if !this.mapSelf() || tmp_flags1 == 0 || tmp_flags2 != 0 {
+				if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
 					err = fmt.Errorf("Duplicate variable %v already in scope.", b.NameVariable())
 					return
 				}
