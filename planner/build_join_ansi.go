@@ -371,8 +371,8 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 
 	// expressions for building and probing
-	buildExprs = make(expression.Expressions, 0, 4)
-	probeExprs = make(expression.Expressions, 0, 4)
+	leftExprs := make(expression.Expressions, 0, 4)
+	rightExprs := make(expression.Expressions, 0, 4)
 
 	// look for equality join predicates
 	for _, fltr := range baseKeyspace.filters {
@@ -407,26 +407,16 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 			}
 
 			if firstRef && !secondRef {
-				if buildRight {
-					buildExprs = append(buildExprs, eqFltr.First())
-					probeExprs = append(probeExprs, eqFltr.Second())
-				} else {
-					probeExprs = append(probeExprs, eqFltr.First())
-					buildExprs = append(buildExprs, eqFltr.Second())
-				}
+				rightExprs = append(rightExprs, eqFltr.First())
+				leftExprs = append(leftExprs, eqFltr.Second())
 			} else if !firstRef && secondRef {
-				if buildRight {
-					probeExprs = append(probeExprs, eqFltr.First())
-					buildExprs = append(buildExprs, eqFltr.Second())
-				} else {
-					buildExprs = append(buildExprs, eqFltr.First())
-					probeExprs = append(probeExprs, eqFltr.Second())
-				}
+				leftExprs = append(leftExprs, eqFltr.First())
+				rightExprs = append(rightExprs, eqFltr.Second())
 			}
 		}
 	}
 
-	if len(buildExprs) == 0 || len(probeExprs) == 0 {
+	if len(leftExprs) == 0 || len(rightExprs) == 0 {
 		return nil, nil, nil, nil, nil
 	}
 
@@ -501,15 +491,7 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 		}
 	}
 
-	// perform cover transformation of buildExprs and probeExprs
-	var leftExprs, rightExprs expression.Expressions
-	if buildRight {
-		leftExprs = probeExprs
-		rightExprs = buildExprs
-	} else {
-		leftExprs = buildExprs
-		rightExprs = probeExprs
-	}
+	// perform cover transformation of leftExprs and rightExprs
 
 	if len(this.coveringScans) > 0 {
 		for _, op := range this.coveringScans {
@@ -535,6 +517,14 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 				}
 			}
 		}
+	}
+
+	if buildRight {
+		probeExprs = leftExprs
+		buildExprs = rightExprs
+	} else {
+		buildExprs = leftExprs
+		probeExprs = rightExprs
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, nil
