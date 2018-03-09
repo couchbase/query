@@ -141,8 +141,13 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 			}
 		}
 
+		av := value.NewAnnotatedValue(cv)
+		if ai, ok := item.(value.AnnotatedValue); ok {
+			av.SetAnnotations(ai)
+		}
+
 		if this.when != nil {
-			wv, e := this.when.Evaluate(cv, context)
+			wv, e := this.when.Evaluate(av, context)
 			if e != nil {
 				return nil, nil, e
 			}
@@ -152,7 +157,7 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 			}
 		}
 
-		mv, mvs, e := this.valueMapping.EvaluateForIndex(cv, context)
+		mv, mvs, e := this.valueMapping.EvaluateForIndex(av, context)
 		if e != nil {
 			return nil, nil, e
 		}
