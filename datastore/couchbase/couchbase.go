@@ -1310,7 +1310,7 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 			if isEExistError(err) {
 				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications", key)
 			} else {
-				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
+				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s.", opToString(op), key, b.Name())
 			}
 		} else {
 			insertedKeys = append(insertedKeys, kv)
