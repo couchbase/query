@@ -93,4 +93,8 @@ func (q *Queue) Clear() {
 	for i := q.head; i <= q.tail; i++ {
 		q.nodes[i%n] = nil
 	}
+
+	q.head = 0
+	q.tail = 0
+	q.count = 0
 }
