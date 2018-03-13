@@ -199,8 +199,7 @@ func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 func (this *IfNull) DependsOn(other Expression) bool {
-	return len(this.operands) > 0 &&
-		this.operands[0].DependsOn(other)
+	return this.dependsOn(other)
 }
 
 /*
