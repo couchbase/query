@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
 
@@ -77,6 +78,12 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 	index, _ := indexer.IndexByName(stmt.Name())
 	if index != nil {
 		return nil, errors.NewIndexAlreadyExistsError(stmt.Name())
+	}
+
+	// Make sure you dont have multiple xattrs
+	_, names := expression.XattrsNames(stmt.Expressions(), "")
+	if ok := isValidXattrs(names); !ok {
+		return nil, errors.NewPlanInternalError("Only a single user or system xattribute can be indexed.")
 	}
 
 	return plan.NewCreateIndex(keyspace, stmt), nil
