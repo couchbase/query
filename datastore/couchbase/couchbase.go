@@ -392,7 +392,7 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 }
 
 type DefaultObject struct {
-	Uid string `json:"audit_uid"`
+	Uid string `json:"auditUid"`
 }
 
 func (s *store) UserInfo() (value.Value, errors.Error) {
