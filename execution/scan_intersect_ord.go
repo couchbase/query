@@ -115,8 +115,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)
-		sendBits := int64(0)
-		finalScan := false
+		firstStopped := false
 		stopped := false
 		ok := true
 
@@ -133,6 +132,9 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 						}
 						childBits |= int64(0x01) << uint(childBit)
 					}
+					if childBit == 0 {
+						firstStopped = true
+					}
 					n--
 
 					// now that all children are gone, flag that there's
@@ -143,13 +145,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 				} else if item != nil {
 					this.addInDocs(1)
 
-					if finalScan {
-						sendBits = childBits
-					} else {
-						sendBits = fullBits
-					}
-
-					ok = this.processKey(item, context, fullBits, sendBits, limit, finalScan)
+					ok = this.processKey(item, context, fullBits, fullBits, limit, false)
 					if ok && limit > 0 && this.fullCount >= limit {
 						childBits |= int64(0x01)
 						break loop
@@ -172,9 +168,9 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 				break loop
 			}
 
-			finalScan = finalScan || (n == 1 && (childBits&0x01 == 0))
-			if finalScan && len(this.bits) == 0 {
+			if n == 1 && !firstStopped && len(this.bits) == 0 {
 				notifyChildren(this.scans[0])
+				firstStopped = true
 			}
 		}
 
