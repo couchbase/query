@@ -61,6 +61,19 @@ func (this *Filter) isDerived() bool {
 	return (this.fltrFlags & FLTR_IS_DERIVED) != 0
 }
 
+// check whether the join filter is a single join filter involving the two keyspaces provided
+func (this *Filter) singleJoinFilter(keyspace1, keyspace2 string) bool {
+	if len(this.keyspaces) != 2 {
+		return false
+	}
+	_, ok1 := this.keyspaces[keyspace1]
+	_, ok2 := this.keyspaces[keyspace2]
+	if ok1 && ok2 {
+		return true
+	}
+	return false
+}
+
 // Combine an array of filters into a single expression by ANDing each filter expression,
 // perform transformation on each filter, and if an OR filter is involved, perform DNF
 // transformation on the combined filter

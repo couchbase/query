@@ -89,10 +89,19 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	// Add INNER UNNESTs predicates for index selection
 	var andBuf [16]expression.Expression
 	var andTerms []expression.Expression
-	if 1+len(unnests) <= len(andBuf) {
+
+	nlen := 1 + len(unnests)
+	for _, unnest := range unnests {
+		unnestKeyspace, ok := this.baseKeyspaces[unnest.Alias()]
+		if !ok {
+			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildUnnestScan: missing baseKeyspace %s", unnest.Alias()))
+		}
+		nlen += len(unnestKeyspace.filters) + len(unnestKeyspace.joinfilters)
+	}
+	if nlen <= len(andBuf) {
 		andTerms = andBuf[0:0]
 	} else {
-		andTerms = make(expression.Expressions, 0, 1+len(unnests))
+		andTerms = make(expression.Expressions, 0, nlen)
 	}
 
 	if pred != nil {
@@ -101,12 +110,16 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 
 	for _, unnest := range unnests {
 		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
-		unnestKeyspace, ok := this.baseKeyspaces[unnest.Alias()]
-		if !ok {
-			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildUnnestScan: missing baseKeyspace %s", unnest.Alias()))
-		}
+		unnestKeyspace, _ := this.baseKeyspaces[unnest.Alias()]
+		// MB-25949, includes predicates on the unnested alias
 		for _, fl := range unnestKeyspace.filters {
 			andTerms = append(andTerms, fl.fltrExpr)
+		}
+		// MB-28720, includes join predicates that only refer to primary term
+		for _, jfl := range unnestKeyspace.joinfilters {
+			if jfl.singleJoinFilter(node.Alias(), unnest.Alias()) {
+				andTerms = append(andTerms, jfl.fltrExpr)
+			}
 		}
 	}
 
