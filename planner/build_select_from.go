@@ -436,15 +436,13 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	}
 
 	_, found := this.coveredUnnests[node]
-	if found {
-		return nil, nil
+	if !found {
+		unnest := plan.NewUnnest(node)
+		this.subChildren = append(this.subChildren, unnest)
+		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+		this.children = append(this.children, parallel)
+		this.subChildren = make([]plan.Operator, 0, 16)
 	}
-
-	unnest := plan.NewUnnest(node)
-	this.subChildren = append(this.subChildren, unnest)
-	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-	this.children = append(this.children, parallel)
-	this.subChildren = make([]plan.Operator, 0, 16)
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
