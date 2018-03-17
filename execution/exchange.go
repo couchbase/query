@@ -132,6 +132,17 @@ func (this *valueExchange) reset() {
 
 // ditch the slices
 func (this *valueExchange) dispose() {
+
+	// MB-28710 ditch values before pooling
+	for this.itemsCount > 0 {
+		this.items[this.itemsTail] = nil
+		this.itemsCount--
+		this.itemsTail++
+		if this.itemsTail >= cap(this.items) {
+			this.itemsTail = 0
+		}
+	}
+
 	c := cap(this.items)
 	if c == 1 {
 		smallSlicePool.Put(this.items[0:0])
