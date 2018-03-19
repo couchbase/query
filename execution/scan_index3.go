@@ -218,7 +218,8 @@ func planToScanMapping(index datastore.Index, proj *plan.IndexProjection, indexO
 
 		indexGroupAggs = &datastore.IndexGroupAggregates{Name: groupAggs.Name, Group: group,
 			Aggregates: aggs, DependsOnIndexKeys: groupAggs.DependsOnIndexKeys,
-			IndexKeyNames: IndexKeyNames, OneForPrimaryKey: groupAggs.DistinctDocid}
+			IndexKeyNames: IndexKeyNames, OneForPrimaryKey: groupAggs.DistinctDocid,
+			AllowPartialAggr: groupAggs.Partial}
 	}
 
 	return
