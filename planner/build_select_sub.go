@@ -326,7 +326,10 @@ func (this *builder) coverIndexGroupAggs() (err error) {
 	// Add cover to the index key expressions inside the aggregates used in group Operators
 	op := this.coveringScans[0]
 	var expr expression.Expression
-	keyCoverer := expression.NewCoverer(op.Covers(), nil)
+
+	indexKeyCovers := op.Covers()
+	idCover := indexKeyCovers[len(indexKeyCovers)-1]
+	keyCoverer := expression.NewCoverer(indexKeyCovers, nil)
 
 	err = this.coverIndexGroupAggsMap(keyCoverer)
 	if err != nil {
@@ -345,7 +348,7 @@ func (this *builder) coverIndexGroupAggs() (err error) {
 			}
 			indexgroupKey.Expr = expr
 		}
-		if indexgroupKey.KeyPos < 0 {
+		if indexgroupKey.KeyPos < 0 && !expression.Equivalent(idCover, indexgroupKey.Expr) {
 			groupCovers = append(groupCovers, expression.NewCover(indexgroupKey.Expr.Copy()))
 		}
 	}
