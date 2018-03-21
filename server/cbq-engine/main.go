@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"time"
 
-	go_http "net/http"
-	_ "net/http/pprof"
+	//	go_http "net/http"
+	//	_ "net/http/pprof"
 
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
@@ -90,15 +90,14 @@ var PREPARED_LIMIT = flag.Int("prepared-limit", 16384, "maximum number of prepar
 // GOGC
 var _GOGC_PERCENT = 200
 
-// profiler
-var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
+// profiler, to use instead of the REST endpoint if needed
+// var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
 
 func init() {
 	debug.SetGCPercent(_GOGC_PERCENT)
 }
 
 func main() {
-	var profilerPort string
 
 	HideConsole(true)
 	defer HideConsole(false)
@@ -109,14 +108,16 @@ func main() {
 
 	// useful for getting list of go-routines
 	// localhost needs to refer to either 127.0.0.1 or [::1]
-	if *PROFILER_PORT <= 0 || *PROFILER_PORT > 65535 {
-		profilerPort = ":6060"
-	} else {
-		profilerPort = fmt.Sprintf(":%d", *PROFILER_PORT)
-	}
-
-	urlV := server.GetIP(true) + profilerPort
-	go go_http.ListenAndServe(urlV, nil)
+	// to be used instead of the REST endpoint if ever needed
+	// var profilerPort string
+	//
+	// if *PROFILER_PORT <= 0 || *PROFILER_PORT > 65535 {
+	// 	profilerPort = ":6060"
+	// } else {
+	// 	profilerPort = fmt.Sprintf(":%d", *PROFILER_PORT)
+	// }
+	// urlV := server.GetIP(true) + profilerPort
+	// go go_http.ListenAndServe(urlV, nil)
 
 	if *LOGGER != "" {
 		logger, _ := log_resolver.NewLogger(*LOGGER)

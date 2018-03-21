@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -69,11 +70,17 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 		clustersPrefix + "/{cluster}":              {handler: clusterHandler, methods: []string{"GET", "PUT", "DELETE"}},
 		clustersPrefix + "/{cluster}/nodes":        {handler: nodesHandler, methods: []string{"GET", "POST"}},
 		clustersPrefix + "/{cluster}/nodes/{node}": {handler: nodeHandler, methods: []string{"GET", "PUT", "DELETE"}},
+		"/debug/pprof/":                            {handler: pprof.Index, methods: []string{"GET"}},
+		"/debug/pprof/profile":                     {handler: pprof.Profile, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
 		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
+	this.mux.Handle("/debug/pprof/block", pprof.Handler("block"))
+	this.mux.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	this.mux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+	this.mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 
 }
 
