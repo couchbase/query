@@ -189,6 +189,10 @@ func (this *testingContext) GetScanCap() int64 {
 	return 16
 }
 
+func (this *testingContext) MaxParallelism() int {
+	return 1
+}
+
 func (this *testingContext) Error(err errors.Error) {
 	this.t.Logf("Scan error: %v", err)
 }

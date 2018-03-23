@@ -440,6 +440,10 @@ func (this *IndexConnection) Fatal(err errors.Error) {
 	this.context.Fatal(err)
 }
 
+func (this *IndexConnection) MaxParallelism() int {
+	return this.context.MaxParallelism()
+}
+
 func (this *IndexConnection) Error(err errors.Error) {
 	if this.primary && err.Code() == errors.INDEX_SCAN_TIMEOUT {
 		this.timeout = true

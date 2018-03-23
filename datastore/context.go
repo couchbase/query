@@ -23,6 +23,7 @@ var NULL_QUERY_CONTEXT QueryContext = &queryContextImpl{}
 
 type Context interface {
 	GetScanCap() int64
+	MaxParallelism() int
 	Fatal(errors.Error)
 	Error(errors.Error)
 	Warning(errors.Error)
@@ -33,6 +34,10 @@ type contextImpl struct {
 
 func (ci *contextImpl) GetScanCap() int64 {
 	return GetScanCap()
+}
+
+func (ci *contextImpl) MaxParallelism() int {
+	return 1
 }
 
 func (ci *contextImpl) Fatal(err errors.Error) {
