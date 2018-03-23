@@ -17,15 +17,22 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+/* expression flags */
+const (
+	EXPR_IS_CONDITIONAL = 1 << iota
+	EXPR_IS_VOLATILE
+	EXPR_IS_COLL_VAR
+	EXPR_VALUE_MISSING
+	EXPR_VALUE_NULL
+)
+
 /*
 ExpressionBase is a base class for all expressions.
 */
 type ExpressionBase struct {
-	expr        Expression
-	value       *value.Value
-	conditional bool
-	volatile    bool
-	isVar       bool
+	expr      Expression
+	value     *value.Value
+	exprFlags uint32
 }
 
 var _NIL_VALUE value.Value
@@ -76,15 +83,59 @@ func (this *ExpressionBase) IsArrayIndexKey() (bool, bool) {
 	return false, false
 }
 
+func (this *ExpressionBase) volatile() bool {
+	return (this.exprFlags & EXPR_IS_VOLATILE) != 0
+}
+
+func (this *ExpressionBase) setVolatile() {
+	this.exprFlags |= EXPR_IS_VOLATILE
+}
+
+func (this *ExpressionBase) unsetVolatile() {
+	this.exprFlags &^= EXPR_IS_VOLATILE
+}
+
+func (this *ExpressionBase) conditional() bool {
+	return (this.exprFlags & EXPR_IS_CONDITIONAL) != 0
+}
+
+func (this *ExpressionBase) setConditional() {
+	this.exprFlags |= EXPR_IS_CONDITIONAL
+}
+
 /*
 This method indicates if the expression is a collection variable
 */
 func (this *ExpressionBase) IsCollectionVariable() bool {
-	return this.isVar
+	return (this.exprFlags & EXPR_IS_COLL_VAR) != 0
 }
 
 func (this *ExpressionBase) SetCollectionVariable() {
-	this.isVar = true
+	this.exprFlags |= EXPR_IS_COLL_VAR
+}
+
+/*
+This method returns if the expression evaluates to MISSING
+Needs to be called after Value() call on the expression
+*/
+func (this *ExpressionBase) IsValueMissing() bool {
+	return (this.exprFlags & EXPR_VALUE_MISSING) != 0
+}
+
+func (this *ExpressionBase) SetValueMissing() {
+	this.exprFlags |= EXPR_VALUE_MISSING
+}
+
+/*
+This method returns if the expression evaluates to NULL
+Needs to be called after Value() call on the expression
+*/
+func (this *ExpressionBase) IsValueNull() bool {
+	return (this.exprFlags & EXPR_VALUE_NULL) != 0
+}
+
+func (this *ExpressionBase) SetValueNull() {
+	this.exprFlags |= EXPR_VALUE_NULL
 }
 
 /*
@@ -97,7 +148,7 @@ func (this *ExpressionBase) Value() value.Value {
 		return *this.value
 	}
 
-	if this.volatile {
+	if this.volatile() {
 		this.value = &_NIL_VALUE
 		return nil
 	}
@@ -116,11 +167,13 @@ func (this *ExpressionBase) Value() value.Value {
 		}
 
 		if propMissing && cv.Type() == value.MISSING {
+			this.SetValueMissing()
 			this.value = &cv
 			return *this.value
 		}
 
 		if propNull && cv.Type() == value.NULL {
+			this.SetValueNull()
 			this.value = &cv
 		}
 	}
@@ -184,7 +237,7 @@ func (this *ExpressionBase) Indexable() bool {
 Returns false if any child's PropagatesMissing() returns false.
 */
 func (this *ExpressionBase) PropagatesMissing() bool {
-	if this.conditional {
+	if this.conditional() {
 		return false
 	}
 
@@ -201,7 +254,7 @@ func (this *ExpressionBase) PropagatesMissing() bool {
 Returns false if any child's PropagatesNull() returns false.
 */
 func (this *ExpressionBase) PropagatesNull() bool {
-	if this.conditional {
+	if this.conditional() {
 		return false
 	}
 
@@ -248,7 +301,7 @@ Indicates if this expression depends on the other expression.  False
 negatives are allowed. Used in index selection.
 */
 func (this *ExpressionBase) DependsOn(other Expression) bool {
-	if this.conditional || other.Value() != nil {
+	if this.conditional() || other.Value() != nil {
 		return false
 	}
 	return this.dependsOn(other)

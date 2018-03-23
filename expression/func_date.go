@@ -41,7 +41,7 @@ func NewClockMillis() Function {
 		*NewNullaryFunctionBase("clock_millis"),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -96,7 +96,7 @@ func NewClockStr(operands ...Expression) Function {
 		*NewFunctionBase("clock_str", operands...),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -174,7 +174,7 @@ func NewClockTZ(operands ...Expression) Function {
 		*NewFunctionBase("clock_tz", operands...),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -273,7 +273,7 @@ func NewClockUTC(operands ...Expression) Function {
 		*NewFunctionBase("clock_utc", operands...),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -1574,7 +1574,7 @@ func NewNowMillis() Function {
 		*NewNullaryFunctionBase("now_millis"),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -1624,7 +1624,7 @@ func NewNowStr(operands ...Expression) Function {
 		*NewFunctionBase("now_str", operands...),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -1704,7 +1704,7 @@ func NewNowTZ(operands ...Expression) Function {
 		*NewFunctionBase("now_tz", operands...),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -1801,7 +1801,7 @@ func NewNowUTC(operands ...Expression) Function {
 		*NewFunctionBase("now_utc", operands...),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }

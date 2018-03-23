@@ -34,7 +34,7 @@ func NewIfMissing(operands ...Expression) Function {
 		*NewFunctionBase("ifmissing", operands...),
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -108,7 +108,7 @@ func NewIfMissingOrNull(operands ...Expression) Function {
 		*NewFunctionBase("ifmissingornull", operands...),
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -180,7 +180,7 @@ func NewIfNull(operands ...Expression) Function {
 		*NewFunctionBase("ifnull", operands...),
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }

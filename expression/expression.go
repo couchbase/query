@@ -197,6 +197,16 @@ type Expression interface {
 	   Reset the value field of the expression
 	*/
 	ResetValue()
+
+	/*
+	   Does Value() call generate a MISSING value
+	*/
+	IsValueMissing() bool
+
+	/*
+	   Does Value() call generate a NULL value
+	*/
+	IsValueNull() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

@@ -35,7 +35,7 @@ func NewIfInf(operands ...Expression) Function {
 		*NewFunctionBase("ifinf", operands...),
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -115,7 +115,7 @@ func NewIfNaN(operands ...Expression) Function {
 		*NewFunctionBase("ifnan", operands...),
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -191,7 +191,7 @@ func NewIfNaNOrInf(operands ...Expression) Function {
 		*NewFunctionBase("ifnanorinf", operands...),
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }

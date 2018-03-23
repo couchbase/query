@@ -38,7 +38,7 @@ func NewNodeName() Function {
 	// for nodes that start their lives as "127.0.0.1:8091"
 	// but that's a once in a lifetime event, and is going
 	// to happen pre production work, so...
-	rv.volatile = false
+	rv.unsetVolatile()
 	rv.expr = rv
 	return rv
 }

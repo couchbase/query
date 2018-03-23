@@ -75,6 +75,44 @@ func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) 
 	return expr, nil
 }
 
+func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
+
+	newExpr := false
+	trueExpr := false
+	orTerms := make(expression.Expressions, 0, len(expr.Operands()))
+	for _, op := range expr.Operands() {
+		skip := false
+		cop := op.Value()
+		if op.IsValueMissing() || op.IsValueNull() {
+			skip = true
+		} else if cop != nil {
+			if cop.Truth() {
+				// entire OR clause is TRUE if one subterm is TRUE
+				trueExpr = true
+				break
+			} else {
+				// FALSE subterm can be skipped
+				skip = true
+			}
+		}
+		if skip {
+			newExpr = true
+		} else {
+			orTerms = append(orTerms, op)
+		}
+	}
+
+	if trueExpr {
+		return expression.TRUE_EXPR, nil
+	}
+
+	if newExpr && len(orTerms) > 0 {
+		return this.visitDefault(expression.NewOr(orTerms...))
+	}
+
+	return this.visitDefault(expr)
+}
+
 // Arithmetic
 
 func (this *exprClassifier) VisitAdd(pred *expression.Add) (interface{}, error) {
@@ -223,10 +261,6 @@ func (this *exprClassifier) VisitObjectConstruct(pred *expression.ObjectConstruc
 // Logic
 
 func (this *exprClassifier) VisitNot(pred *expression.Not) (interface{}, error) {
-	return this.visitDefault(pred)
-}
-
-func (this *exprClassifier) VisitOr(pred *expression.Or) (interface{}, error) {
 	return this.visitDefault(pred)
 }
 

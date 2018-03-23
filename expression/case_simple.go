@@ -32,7 +32,7 @@ func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expressi
 		elseTerm:   elseTerm,
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }

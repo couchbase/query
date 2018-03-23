@@ -1181,7 +1181,7 @@ func NewRandom(operands ...Expression) Function {
 		nil,
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 
 	if len(operands) < 1 {

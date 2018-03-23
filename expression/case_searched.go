@@ -29,7 +29,7 @@ func NewSearchedCase(whenTerms WhenTerms, elseTerm Expression) Expression {
 		elseTerm:  elseTerm,
 	}
 
-	rv.conditional = true
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }

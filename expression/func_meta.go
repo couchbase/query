@@ -310,7 +310,7 @@ func NewUuid() Function {
 		*NewNullaryFunctionBase("uuid"),
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }

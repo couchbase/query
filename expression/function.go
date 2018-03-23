@@ -42,12 +42,6 @@ type Function interface {
 	Distinct() bool
 
 	/*
-	   True if this function depends on non-arguments. For
-	   e.g. randomness or clock
-	*/
-	Volatile() bool
-
-	/*
 	   Returns the operands of the function.
 	*/
 	Operands() Expressions
@@ -155,7 +149,7 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 }
 
 func (this *FunctionBase) Indexable() bool {
-	if this.volatile {
+	if this.volatile() {
 		return false
 	}
 
@@ -169,7 +163,7 @@ func (this *FunctionBase) Indexable() bool {
 }
 
 func (this *FunctionBase) EquivalentTo(other Expression) bool {
-	return !this.volatile && this.ExpressionBase.EquivalentTo(other)
+	return !this.volatile() && this.ExpressionBase.EquivalentTo(other)
 }
 
 /*
@@ -225,11 +219,6 @@ func (this *FunctionBase) Name() string { return this.name }
 Default return value is false.
 */
 func (this *FunctionBase) Distinct() bool { return false }
-
-/*
-Return the volatile setting of the function.
-*/
-func (this *FunctionBase) Volatile() bool { return this.volatile }
 
 /*
 Return the operands of the function.

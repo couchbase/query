@@ -86,7 +86,7 @@ func NewCurl(operands ...Expression) Function {
 		nil,
 	}
 
-	rv.volatile = true
+	rv.setVolatile()
 	rv.expr = rv
 	return rv
 }

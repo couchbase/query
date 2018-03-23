@@ -43,6 +43,82 @@ func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error)
 	return this.Eval(this, item, context)
 }
 
+func (this *Or) Value() value.Value {
+	if this.value != nil {
+		return *this.value
+	}
+
+	if this.volatile() {
+		this.value = &_NIL_VALUE
+		return nil
+	}
+
+	var valMissing, valNull value.Value
+	foundOther := false
+	hasValue := true
+
+	for _, child := range this.Children() {
+		cv := child.Value()
+		if child.IsValueMissing() {
+			valMissing = cv
+		} else if child.IsValueNull() {
+			valNull = cv
+		} else {
+			if cv == nil {
+				hasValue = false
+			}
+			foundOther = true
+		}
+	}
+
+	// MB-28605 if one subterm of OR has MISSING or NULL value, check
+	// other subterms if available
+	if valMissing != nil && !foundOther {
+		this.value = &valMissing
+		return *this.value
+	}
+	if valNull != nil && !foundOther {
+		this.value = &valNull
+		return *this.value
+	}
+
+	if hasValue {
+		var orExpr Expression
+		orExpr = this
+		if valMissing != nil || valNull != nil {
+			subterms := make(Expressions, 0, len(this.Children()))
+			for _, child := range this.Children() {
+				if !child.IsValueMissing() && !child.IsValueNull() {
+					subterms = append(subterms, child)
+				}
+			}
+			if len(subterms) == 0 {
+				orExpr = FALSE_EXPR
+			} else {
+				orExpr = NewOr(subterms...)
+			}
+		}
+
+		defer func() {
+			err := recover()
+			if err != nil {
+				this.value = &_NIL_VALUE
+			}
+		}()
+
+		val, err := orExpr.Evaluate(nil, nil)
+		if err != nil {
+			this.value = &_NIL_VALUE
+			return nil
+		}
+		this.value = &val
+	} else {
+		this.value = &_NIL_VALUE
+	}
+
+	return *this.value
+}
+
 /*
 If this expression is in the WHERE clause of a partial index, lists
 the Expressions that are implicitly covered.
