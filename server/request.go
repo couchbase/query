@@ -731,21 +731,21 @@ func (this *BaseRequest) EventNodeName() string {
 }
 
 // For audit.Auditable interface.
-func (this *BaseRequest) EventNamedArgs() map[string]string {
+func (this *BaseRequest) EventNamedArgs() map[string]interface{} {
 	argsMap := this.NamedArgs()
-	ret := make(map[string]string, len(argsMap))
+	ret := make(map[string]interface{}, len(argsMap))
 	for name, argValue := range argsMap {
-		ret[name] = argValue.String()
+		ret[name] = argValue.Actual()
 	}
 	return ret
 }
 
 // For audit.Auditable interface.
-func (this *BaseRequest) EventPositionalArgs() []string {
+func (this *BaseRequest) EventPositionalArgs() []interface{} {
 	args := this.PositionalArgs()
-	ret := make([]string, len(args))
+	ret := make([]interface{}, len(args))
 	for i, v := range args {
-		ret[i] = v.String()
+		ret[i] = v.Actual()
 	}
 	return ret
 }

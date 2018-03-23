@@ -37,9 +37,9 @@ type simpleAuditable struct {
 	eventUsers          []string
 	userAgent           string
 	eventNodeName       string
-	eventNamedArgs      map[string]string
+	eventNamedArgs      map[string]interface{}
 	clientContextId     string
-	eventPositionalArgs []string
+	eventPositionalArgs []interface{}
 	isAdHoc             bool
 	elapsedTime         time.Duration
 	executionTime       time.Duration
@@ -83,11 +83,11 @@ func (sa *simpleAuditable) EventNodeName() string {
 	return sa.eventNodeName
 }
 
-func (sa *simpleAuditable) EventNamedArgs() map[string]string {
+func (sa *simpleAuditable) EventNamedArgs() map[string]interface{} {
 	return sa.eventNamedArgs
 }
 
-func (sa *simpleAuditable) EventPositionalArgs() []string {
+func (sa *simpleAuditable) EventPositionalArgs() []interface{} {
 	return sa.eventPositionalArgs
 }
 

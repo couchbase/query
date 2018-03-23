@@ -49,8 +49,8 @@ type Auditable interface {
 	EventNodeName() string
 
 	// Query parameters.
-	EventNamedArgs() map[string]string
-	EventPositionalArgs() []string
+	EventNamedArgs() map[string]interface{}
+	EventPositionalArgs() []interface{}
 
 	// From client_context_id input parameter.
 	// Useful for separating system-generated queries from user-issued queries.
@@ -602,11 +602,11 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 type n1qlAuditEvent struct {
 	adt.GenericFields
 
-	RequestId       string            `json:"requestId"`
-	Statement       string            `json:"statement"`
-	NamedArgs       map[string]string `json:"namedArgs,omitempty"`
-	PositionalArgs  []string          `json:"positionalArgs,omitempty"`
-	ClientContextId string            `json:"clientContextId,omitempty"`
+	RequestId       string                 `json:"requestId"`
+	Statement       string                 `json:"statement"`
+	NamedArgs       map[string]interface{} `json:"namedArgs,omitempty"`
+	PositionalArgs  []interface{}          `json:"positionalArgs,omitempty"`
+	ClientContextId string                 `json:"clientContextId,omitempty"`
 
 	IsAdHoc   bool   `json:"isAdHoc"`
 	UserAgent string `json:"userAgent"`
