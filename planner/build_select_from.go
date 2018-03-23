@@ -51,9 +51,22 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		}
 
 		if this.pushableOnclause != nil {
-			err = this.processPredicate(this.pushableOnclause, true)
-			if err != nil {
-				return err
+			if this.falseWhereClause() {
+				this.pushableOnclause = nil
+			} else {
+				constant, err := this.processPredicate(this.pushableOnclause, true)
+				if err != nil {
+					return err
+				}
+				if constant != nil {
+					if constant.Truth() {
+						this.pushableOnclause = nil
+					} else {
+						// pushable on clause behaves like where clause
+						this.unsetTrueWhereClause()
+						this.setFalseWhereClause()
+					}
+				}
 			}
 		}
 

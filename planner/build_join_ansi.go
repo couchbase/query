@@ -157,7 +157,7 @@ func (this *builder) processOnclause(node *algebra.KeyspaceTerm, onclause expres
 		// index selection consideration of the outer keyspace (ON-clause of an
 		// inner join is used for index selection for outer keyspace, as part of
 		// this.pushableOnclause).
-		err = this.processPredicate(onclause, true)
+		_, err = this.processPredicate(onclause, true)
 		if err != nil {
 			return err
 		}

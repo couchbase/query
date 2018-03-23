@@ -61,7 +61,8 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 var _MAP_KEYSPACE_CAP = 4
 
 const (
-	BUILDER_WHERE_IS_TRUE = 1 << iota // WHERE clause is TRUE
+	BUILDER_WHERE_IS_TRUE  = 1 << iota // WHERE clause is TRUE
+	BUILDER_WHERE_IS_FALSE             // WHERE clause is FALSE
 )
 
 type builder struct {
@@ -157,6 +158,18 @@ func (this *builder) trueWhereClause() bool {
 
 func (this *builder) setTrueWhereClause() {
 	this.builderFlags |= BUILDER_WHERE_IS_TRUE
+}
+
+func (this *builder) unsetTrueWhereClause() {
+	this.builderFlags &^= BUILDER_WHERE_IS_TRUE
+}
+
+func (this *builder) falseWhereClause() bool {
+	return (this.builderFlags & BUILDER_WHERE_IS_FALSE) != 0
+}
+
+func (this *builder) setFalseWhereClause() {
+	this.builderFlags |= BUILDER_WHERE_IS_FALSE
 }
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {

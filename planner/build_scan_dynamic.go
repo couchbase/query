@@ -67,7 +67,7 @@ outer:
 	}
 
 	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-	err = ClassifyExpr(newPred, baseKeyspaces, false)
+	_, err = ClassifyExpr(newPred, baseKeyspaces, false)
 	if err != nil {
 		return nil, 0, err
 	}

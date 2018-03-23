@@ -14,22 +14,24 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
-func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeyspace, isOnclause bool) error {
+func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeyspace, isOnclause bool) (
+	value.Value, error) {
 
 	if len(baseKeyspaces) == 0 {
-		return errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
+		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
 	classifier := newExprClassifier(baseKeyspaces, isOnclause)
 	_, err := expr.Accept(classifier)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return classifier.constant, nil
 }
 
 type exprClassifier struct {
@@ -40,6 +42,7 @@ type exprClassifier struct {
 	recursionJoin   bool
 	recurseJoinExpr expression.Expression
 	isOnclause      bool
+	constant        value.Value
 }
 
 func newExprClassifier(baseKeyspaces map[string]*baseKeyspace, isOnclause bool) *exprClassifier {
@@ -55,6 +58,23 @@ func newExprClassifier(baseKeyspaces map[string]*baseKeyspace, isOnclause bool) 
 	}
 
 	return rv
+}
+
+func (this *exprClassifier) addConstant(result bool) {
+	if this.constant == nil {
+		if result {
+			this.constant = value.TRUE_VALUE
+		} else {
+			this.constant = value.FALSE_VALUE
+		}
+	} else {
+		// true AND true is true, true AND false is false, false AND false is false
+		// thus if result is true, no change to existing value
+		// if result is false, change existing constant to FALSE
+		if !result {
+			this.constant = value.FALSE_VALUE
+		}
+	}
 }
 
 func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) {
@@ -77,20 +97,22 @@ func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) 
 
 func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 
+	or, truth := flattenOr(expr)
+	if truth {
+		this.addConstant(true)
+		return expression.TRUE_EXPR, nil
+	}
+
 	newExpr := false
-	trueExpr := false
-	orTerms := make(expression.Expressions, 0, len(expr.Operands()))
-	for _, op := range expr.Operands() {
+	orTerms := make(expression.Expressions, 0, len(or.Operands()))
+	for _, op := range or.Operands() {
 		skip := false
 		cop := op.Value()
 		if op.IsValueMissing() || op.IsValueNull() {
 			skip = true
 		} else if cop != nil {
-			if cop.Truth() {
-				// entire OR clause is TRUE if one subterm is TRUE
-				trueExpr = true
-				break
-			} else {
+			// TRUE subterm should have been handled above
+			if !cop.Truth() {
 				// FALSE subterm can be skipped
 				skip = true
 			}
@@ -102,15 +124,17 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 		}
 	}
 
-	if trueExpr {
-		return expression.TRUE_EXPR, nil
+	if newExpr {
+		if len(orTerms) == 0 {
+			// expr is FALSE if all subterms skipped
+			this.addConstant(false)
+			return expression.FALSE_EXPR, nil
+		} else {
+			return this.visitDefault(expression.NewOr(orTerms...))
+		}
 	}
 
-	if newExpr && len(orTerms) > 0 {
-		return this.visitDefault(expression.NewOr(orTerms...))
-	}
-
-	return this.visitDefault(expr)
+	return this.visitDefault(or)
 }
 
 // Arithmetic
@@ -320,7 +344,12 @@ func (this *exprClassifier) VisitAll(pred *expression.All) (interface{}, error) 
 func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{}, error) {
 
 	cpred := expr.Value()
-	if cpred != nil && cpred.Truth() {
+	if cpred != nil {
+		if cpred.Truth() {
+			this.addConstant(true)
+		} else {
+			this.addConstant(false)
+		}
 		return expr, nil
 	}
 
@@ -444,7 +473,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-		err := ClassifyExpr(op, baseKeyspaces, this.isOnclause)
+		_, err := ClassifyExpr(op, baseKeyspaces, this.isOnclause)
 		if err != nil {
 			return nil, nil, false, err
 		}

@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (op plan.Operator, err error) {
@@ -76,6 +77,10 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	} else {
 		pred = this.where
 		pred2 = this.pushableOnclause
+
+		if this.falseWhereClause() {
+			return _EMPTY_PLAN, nil, nil
+		}
 		if this.trueWhereClause() {
 			pred = nil
 		}
@@ -398,7 +403,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	return secondary, sargLength, nil
 }
 
-func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (err error) {
+func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (
+	constant value.Value, err error) {
+
 	pred = pred.Copy()
 
 	for name, value := range this.namedArgs {
@@ -419,23 +426,22 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 		}
 	}
 
-	err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause)
-	if err != nil {
-		return
-	}
-
+	constant, err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause)
 	return
 }
 
 func (this *builder) processWhere(where expression.Expression) (err error) {
-	// Handle constant TRUE predicate
-	cpred := this.where.Value()
-	if cpred != nil && cpred.Truth() {
-		this.setTrueWhereClause()
-	} else {
-		err = this.processPredicate(where, false)
-		if err != nil {
-			return
+	var constant value.Value
+	constant, err = this.processPredicate(where, false)
+	if err != nil {
+		return
+	}
+	// Handle constant TRUE/FALSE predicate
+	if constant != nil {
+		if constant.Truth() {
+			this.setTrueWhereClause()
+		} else {
+			this.setFalseWhereClause()
 		}
 	}
 
