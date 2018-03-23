@@ -133,13 +133,6 @@ func eventIsDisabled(au *datastore.AuditInfo, eventId uint32) bool {
 		return true
 	}
 
-	// TODO
-	if eventId == API_ADMIN_STATS {
-		// The /admin/stats API gets a lot of requests.
-		// Disable them for now so the log doesn't get too crowded.
-		return true
-	}
-
 	return au.EventDisabled[eventId]
 }
 
@@ -641,7 +634,7 @@ type n1qlAuditApiRequestEvent struct {
 	HttpMethod     string `json:"httpMethod"`
 	HttpResultCode int    `json:"httpResultCode"`
 	ErrorCode      int    `json:"errorCode,omitempty"`
-	ErrorMessage   string `json:"errorMessage",omitempty"`
+	ErrorMessage   string `json:"errorMessage,omitempty"`
 
 	Stat    string      `json:"stat,omitempty"`
 	Name    string      `json:"name,omitempty"`
