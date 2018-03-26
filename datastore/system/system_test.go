@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/datastore/mock"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 type queryContextImpl struct {
@@ -178,42 +179,51 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the keyspaces keyspace - expect to find a value for this key:
-	vals, errs := bb.Fetch([]string{"p0/b1"}, datastore.NULL_QUERY_CONTEXT, nil)
+	vals := make(map[string]value.AnnotatedValue, 1)
+	key := "p0/b1"
+
+	errs := bb.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
 
-	if vals == nil || (len(vals) == 1 && vals[0].Value == nil) {
+	if vals == nil || (len(vals) == 1 && vals[key] == nil) {
 		t.Fatalf("failed to fetch expected key from keyspaces keyspace")
 	}
 
 	// Fetch on the user_info keyspace - expect to find a value for this key:
-	vals, errs = ui.Fetch([]string{"ivanivanov"}, datastore.NULL_QUERY_CONTEXT, nil)
+	vals = make(map[string]value.AnnotatedValue, 1)
+	key = "ivanivanov"
+	errs = ui.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
 
-	if vals == nil || (len(vals) == 1 && vals[0].Value == nil) {
+	if vals == nil || (len(vals) == 1 && vals[key] == nil) {
 		t.Fatalf("failed to fetch expected key from keyspaces keyspace")
 	}
 
 	// Fetch on the indexes keyspace - expect to find a value for this key:
-	vals, errs = ib.Fetch([]string{"p0/b1/#primary"}, datastore.NULL_QUERY_CONTEXT, nil)
+	vals = make(map[string]value.AnnotatedValue, 1)
+	key = "p0/b1/#primary"
+	errs = ib.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
 
-	if vals == nil || (len(vals) == 1 && vals[0].Value == nil) {
+	if vals == nil || (len(vals) == 1 && vals[key] == nil) {
 		t.Fatalf("failed to fetch expected key from indexes keyspace")
 	}
 
 	// Fetch on the keyspaces keyspace - expect to not find a value for this key:
-	vals, errs = bb.Fetch([]string{"p0/b5"}, datastore.NULL_QUERY_CONTEXT, nil)
+	vals = make(map[string]value.AnnotatedValue, 1)
+	key = "p0/b5"
+	errs = bb.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs == nil {
 		t.Fatalf("Expected not found error for key fetch on %s", "p0/b5")
 	}
 
-	if vals == nil || (len(vals) == 1 && vals[0].Value != nil) {
+	if vals == nil || (len(vals) == 1 && vals[key] == nil) {
 		t.Fatalf("Found unexpected key in keyspaces keyspace")
 	}
 

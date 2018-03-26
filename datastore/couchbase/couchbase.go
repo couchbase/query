@@ -1017,10 +1017,10 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, nil
 }
 
-func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) []errors.Error {
 	var bulkResponse map[string]*gomemcached.MCResponse
 	var mcr *gomemcached.MCResponse
-	var keyCount map[string]int
 	var err error
 
 	_subPaths := subPaths
@@ -1033,14 +1033,14 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths
 
 	l := len(keys)
 	if l == 0 {
-		return nil, nil
+		return nil
 	}
 
 	if l == 1 {
 		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline(), _subPaths)
 	} else {
-		bulkResponse, keyCount, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), _subPaths)
-		defer b.cbbucket.ReleaseGetBulkPools(keyCount, bulkResponse)
+		bulkResponse, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), _subPaths)
+		defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 	}
 
 	if err != nil {
@@ -1049,35 +1049,30 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths
 			if cb.IsReadTimeOutError(err) {
 				logging.Errorf(err.Error())
 			}
-			return nil, []errors.Error{errors.NewCbBulkGetError(err, "")}
+			return []errors.Error{errors.NewCbBulkGetError(err, "")}
 		}
 	}
 
 	i := 0
-	rv := make([]value.AnnotatedPair, 0, l)
 	if l == 1 {
 		if mcr != nil && err == nil {
 			if len(_subPaths) > 0 {
-				rv = append(rv, getSubDocFetchResults(keys[0], mcr, _subPaths, noVirtualDocAttr))
+				fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, _subPaths, noVirtualDocAttr)
 			} else {
-				rv = append(rv, doFetch(keys[0], mcr))
+				fetchMap[keys[0]] = doFetch(keys[0], mcr)
 			}
-			i = 1
+			i++
 		}
 	} else {
 		if len(_subPaths) > 0 {
 			for k, v := range bulkResponse {
-				for j := 0; j < keyCount[k]; j++ {
-					rv = append(rv, getSubDocFetchResults(k, v, _subPaths, noVirtualDocAttr))
-					i++
-				}
+				fetchMap[k] = getSubDocFetchResults(k, v, _subPaths, noVirtualDocAttr)
+				i++
 			}
 		} else {
 			for k, v := range bulkResponse {
-				for j := 0; j < keyCount[k]; j++ {
-					rv = append(rv, doFetch(k, v))
-					i++
-				}
+				fetchMap[k] = doFetch(k, v)
+				i++
 			}
 		}
 
@@ -1085,14 +1080,10 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths
 
 	logging.Debugf("Fetched %d keys ", i)
 
-	return rv, nil
+	return nil
 }
 
-func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedPair {
-
-	var doc value.AnnotatedPair
-	doc.Name = k
-
+func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedValue {
 	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, false))
 	flags := binary.BigEndian.Uint32(v.Extras[0:4])
 
@@ -1117,14 +1108,10 @@ func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedPair {
 	// Uncomment when needed
 	//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
 
-	doc.Value = val
-	return doc
+	return val
 }
 
-func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool) value.AnnotatedPair {
-	var doc value.AnnotatedPair
-	doc.Name = k
-
+func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool) value.AnnotatedValue {
 	responseIter := 0
 	i := 0
 	xVal := map[string]interface{}{}
@@ -1196,8 +1183,7 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 
 	val.SetAttachment("meta", a)
 
-	doc.Value = val
-	return doc
+	return val
 }
 
 const (

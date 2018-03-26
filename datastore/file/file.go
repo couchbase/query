@@ -325,9 +325,10 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.fi}, nil
 }
 
-func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) []errors.Error {
 	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
+
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 
@@ -349,13 +350,10 @@ func (b *keyspace) Fetch(keys []string, context datastore.QueryContext, subPaths
 			})
 		}
 
-		rv = append(rv, value.AnnotatedPair{
-			Name:  k,
-			Value: item,
-		})
+		keysMap[k] = item
 	}
 
-	return rv, errs
+	return errs
 }
 
 func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {

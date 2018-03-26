@@ -56,9 +56,8 @@ func (b *nodeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.si}, nil
 }
 
-func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
+func (b *nodeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 	info := b.namespace.store.actualStore.Info()
 
 	for _, k := range keys {
@@ -70,11 +69,7 @@ func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext, subP
 			item.SetAttachment("meta", map[string]interface{}{
 				"id": k,
 			})
-
-			rv = append(rv, value.AnnotatedPair{
-				Name:  k,
-				Value: item,
-			})
+			keysMap[k] = item
 			continue
 		} else if errList != nil {
 			for _, err := range errList {
@@ -85,7 +80,7 @@ func (b *nodeKeyspace) Fetch(keys []string, context datastore.QueryContext, subP
 		}
 	}
 
-	return rv, errs
+	return
 }
 
 func appendError(errs []errors.Error, err errors.Error) []errors.Error {

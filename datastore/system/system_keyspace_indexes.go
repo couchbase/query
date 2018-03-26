@@ -106,9 +106,8 @@ func (b *indexKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys)*2)
+func (b *indexKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 
 	for _, key := range keys {
 		ids := strings.SplitN(key, "/", 3)
@@ -124,7 +123,8 @@ func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext, sub
 			context.Warning(errors.NewSystemFilteredRowsWarning("system:indexes"))
 			continue
 		}
-		pairs, err := b.fetchOne(key, namespaceId, keyspaceId, indexId)
+
+		err := b.fetchOne(key, keysMap, namespaceId, keyspaceId, indexId)
 		if err != nil {
 			if errs == nil {
 				errs = make([]errors.Error, 0, 1)
@@ -132,31 +132,29 @@ func (b *indexKeyspace) Fetch(keys []string, context datastore.QueryContext, sub
 			errs = append(errs, err)
 			continue
 		}
-
-		rv = append(rv, pairs...)
 	}
 
-	return rv, errs
+	return
 }
 
-func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId string, indexId string) ([]value.AnnotatedPair, errors.Error) {
-	rv := make([]value.AnnotatedPair, 0, 2)
+func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedValue,
+	namespaceId string, keyspaceId string, indexId string) errors.Error {
 
 	actualStore := b.namespace.store.actualStore
 	namespace, err := actualStore.NamespaceById(namespaceId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	keyspace, err := namespace.KeyspaceById(keyspaceId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
 		logging.Infof("Indexer returned error %v", err)
-		return nil, err
+		return err
 	}
 
 	for _, indexer := range indexers {
@@ -167,7 +165,7 @@ func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId stri
 
 		state, msg, err := index.State()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		doc := value.NewAnnotatedValue(map[string]interface{}{
 			"id":           index.Id(),
@@ -202,10 +200,10 @@ func (b *indexKeyspace) fetchOne(key string, namespaceId string, keyspaceId stri
 			doc.SetField("is_primary", true)
 		}
 
-		rv = append(rv, value.AnnotatedPair{key, doc})
+		keysMap[key] = doc
 	}
 
-	return rv, nil
+	return nil
 }
 
 func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {

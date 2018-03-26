@@ -63,10 +63,10 @@ func (b *applicableRolesKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	pairs := make([]value.AnnotatedPair, len(keys))
-	for i, key := range keys {
+func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+
+	for _, key := range keys {
 		err, grantee, role, bucketName := splitAppRolesKey(key)
 		if err != nil {
 			errs = append(errs, err)
@@ -83,12 +83,10 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, context datastore.QueryCo
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": key,
 		})
-		pairs[i] = value.AnnotatedPair{
-			Name:  key,
-			Value: item,
-		}
+
+		keysMap[key] = item
 	}
-	return pairs, errs
+	return
 }
 
 func (b *applicableRolesKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {

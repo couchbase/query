@@ -76,7 +76,8 @@ func (b *myUserInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *myUserInfoKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *myUserInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 	authUsers := context.AuthenticatedUsers()
 	approverFunc := func(id string) bool {
 		for _, v := range authUsers {
@@ -89,15 +90,13 @@ func (b *myUserInfoKeyspace) Fetch(keys []string, context datastore.QueryContext
 
 	sliceOfUsers, err := getUserInfoList(b.namespace.store)
 	if err != nil {
-		return nil, []errors.Error{err}
+		return []errors.Error{err}
 	}
 	newMap, err := userInfoListToMap(sliceOfUsers)
 	if err != nil {
-		return nil, []errors.Error{err}
+		return []errors.Error{err}
 	}
 
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		if !approverFunc(k) {
 			continue
@@ -112,13 +111,10 @@ func (b *myUserInfoKeyspace) Fetch(keys []string, context datastore.QueryContext
 			"id": k,
 		})
 
-		rv = append(rv, value.AnnotatedPair{
-			Name:  k,
-			Value: item,
-		})
+		keysMap[k] = item
 	}
 
-	return rv, errs
+	return
 }
 
 func (b *myUserInfoKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {

@@ -64,9 +64,8 @@ func (b *requestLogKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
+func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 
 	creds, authToken := credsFromContext(context)
 
@@ -92,10 +91,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", meta)
-					rv = append(rv, value.AnnotatedPair{
-						Name:  key,
-						Value: remoteValue,
-					})
+					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
 					context.Warning(warn)
@@ -161,14 +157,11 @@ func (b *requestLogKeyspace) Fetch(keys []string, context datastore.QueryContext
 					meta["plan"] = bytes
 				}
 				item.SetAttachment("meta", meta)
-				rv = append(rv, value.AnnotatedPair{
-					Name:  key,
-					Value: item,
-				})
+				keysMap[key] = item
 			})
 		}
 	}
-	return rv, errs
+	return
 }
 
 func (b *requestLogKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {

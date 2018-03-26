@@ -109,12 +109,13 @@ func TestMock(t *testing.T) {
 	}
 
 	f := []string{"123"}
-	vs, errs := b.Fetch(f, datastore.NULL_QUERY_CONTEXT, nil)
+	vs := make(map[string]value.AnnotatedValue, 1)
+	errs := b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil || len(vs) == 0 {
 		t.Fatalf("expected item 123")
 	}
 
-	v := vs[0].Value
+	v := vs[f[0]]
 	x, has_x := v.Field("id")
 	if has_x != true || x == nil {
 		t.Fatalf("expected item.id")
@@ -130,12 +131,16 @@ func TestMock(t *testing.T) {
 		t.Fatalf("expected not-a-valid-path to err")
 	}
 
-	vs, errs = b.Fetch([]string{"not-an-item"}, datastore.NULL_QUERY_CONTEXT, nil)
+	f = []string{"not-an-item"}
+	vs = make(map[string]value.AnnotatedValue, 1)
+	errs = b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs == nil || len(vs) > 0 {
 		t.Fatalf("expected not-an-item")
 	}
 
-	vs, errs = b.Fetch([]string{strconv.Itoa(DEFAULT_NUM_ITEMS)}, datastore.NULL_QUERY_CONTEXT, nil)
+	f = []string{strconv.Itoa(DEFAULT_NUM_ITEMS)}
+	vs = make(map[string]value.AnnotatedValue, 1)
+	errs = b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs == nil || len(vs) > 0 {
 		t.Fatalf("expected not-an-item")
 	}

@@ -29,11 +29,11 @@ func (this *joinBase) copy(joinBase *joinBase) {
 	this.base.copy(&joinBase.base)
 }
 
-func (this *joinBase) allocateBatch(context *Context) {
-	if context.PipelineBatch() == 0 {
+func (this *joinBase) allocateBatch(context *Context, size int) {
+	if size <= context.PipelineBatch() {
 		this.joinBatch = getJoinBatchPool().Get()
 	} else {
-		this.joinBatch = make(value.AnnotatedJoinPairs, 0, context.PipelineBatch())
+		this.joinBatch = make(value.AnnotatedJoinPairs, 0, size)
 	}
 }
 
@@ -51,7 +51,7 @@ func (this *joinBase) joinEnbatch(item value.AnnotatedJoinPair, b batcher, conte
 	}
 
 	if this.joinBatch == nil {
-		this.allocateBatch(context)
+		this.allocateBatch(context, cap(this.joinBatch))
 	}
 
 	this.joinBatch = append(this.joinBatch, item)
@@ -77,7 +77,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, keyCount map[string
 	}
 
 	this.switchPhase(_SERVTIME)
-	pairs, errs := keyspace.Fetch(fetchKeys, context, nil)
+	errs := keyspace.Fetch(fetchKeys, pairMap, context, nil)
 	this.switchPhase(_EXECTIME)
 
 	fetchOk := true
@@ -85,12 +85,6 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, keyCount map[string
 		context.Error(err)
 		if err.IsFatal() {
 			fetchOk = false
-		}
-	}
-
-	if fetchOk {
-		for _, pair := range pairs {
-			pairMap[pair.Name] = pair.Value
 		}
 	}
 

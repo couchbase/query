@@ -140,7 +140,8 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	this.switchPhase(_SERVTIME)
 
 	ok = true
-	bvs, errs := this.plan.Keyspace().Fetch([]string{k}, context, nil)
+	bvs := make(map[string]value.AnnotatedValue, 1)
+	errs := this.plan.Keyspace().Fetch([]string{k}, bvs, context, nil)
 
 	this.switchPhase(_EXECTIME)
 
@@ -156,8 +157,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	}
 
 	if len(bvs) > 0 {
-		bv := bvs[0]
-		item.SetField(this.plan.KeyspaceRef().Alias(), bv.Value)
+		item.SetField(this.plan.KeyspaceRef().Alias(), bvs[k])
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {

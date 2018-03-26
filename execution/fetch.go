@@ -11,9 +11,7 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -81,40 +79,33 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		return true
 	}
 
-	keys := _STRING_POOL.Get()
-	defer _STRING_POOL.Put(keys)
+	fetchKeys := _STRING_POOL.Get()
+	defer _STRING_POOL.Put(fetchKeys)
 
-	batchMap := _STRING_ANNOTATED_POOL.Get()
-	defer _STRING_ANNOTATED_POOL.Put(batchMap)
+	keyCount := _STRING_KEYCOUNT_POOL.Get()
+	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
+
+	fetchMap := _STRING_ANNOTATED_POOL.Get()
+	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 
 	for _, av := range this.batch {
-		meta := av.GetAttachment("meta")
-
-		switch meta := meta.(type) {
-		case map[string]interface{}:
-			key := meta["id"]
-			act := value.NewValue(key).Actual()
-			switch act := act.(type) {
-			case string:
-				keys = append(keys, act)
-				batchMap[act] = av
-			default:
-				context.Error(errors.NewInvalidValueError(fmt.Sprintf(
-					"Missing or invalid primary key %v of type %T.",
-					act, act)))
-				return false
-			}
-		default:
-			context.Error(errors.NewInvalidValueError(
-				"Missing or invalid meta for primary key."))
+		key, ok := this.requireKey(av, context)
+		if !ok {
 			return false
 		}
+
+		v, ok := keyCount[key]
+		if !ok {
+			fetchKeys = append(fetchKeys, key)
+			v = 0
+		}
+		keyCount[key] = v + 1
 	}
 
 	this.switchPhase(_SERVTIME)
 
 	// Fetch
-	pairs, errs := this.plan.Keyspace().Fetch(keys, context, this.plan.SubPaths())
+	errs := this.plan.Keyspace().Fetch(fetchKeys, fetchMap, context, this.plan.SubPaths())
 
 	this.switchPhase(_EXECTIME)
 
@@ -126,26 +117,25 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
-	fetchMap := _STRING_ANNOTATED_POOL.Get()
-	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
-
-	// Attach meta
-	for _, pair := range pairs {
-		fetchMap[pair.Name] = pair.Value
-	}
-
 	// Preserve order of keys
-	for _, key := range keys {
-		fv := fetchMap[key]
-		if fv == nil {
-			continue
+	for _, av := range this.batch {
+		key, ok := this.requireKey(av, context)
+		if !ok {
+			return false
 		}
 
-		item := batchMap[key]
-		item.SetField(this.plan.Term().Alias(), fv)
+		fv := fetchMap[key]
+		if fv != nil {
+			if keyCount[key] > 1 {
+				fv = value.NewAnnotatedValue(fv.Copy())
+				keyCount[key]--
+			}
 
-		if !this.sendItem(item) {
-			return false
+			av.SetField(this.plan.Term().Alias(), fv)
+
+			if !this.sendItem(av) {
+				return false
+			}
 		}
 	}
 

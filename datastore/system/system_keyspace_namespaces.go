@@ -54,9 +54,8 @@ func (b *namespaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *namespaceKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
+func (b *namespaceKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 
@@ -74,13 +73,10 @@ func (b *namespaceKeyspace) Fetch(keys []string, context datastore.QueryContext,
 			})
 		}
 
-		rv = append(rv, value.AnnotatedPair{
-			Name:  k,
-			Value: item,
-		})
+		keysMap[k] = item
 	}
 
-	return rv, errs
+	return
 }
 
 func (b *namespaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {

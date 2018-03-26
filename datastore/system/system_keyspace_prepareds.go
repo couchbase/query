@@ -65,9 +65,8 @@ func (b *preparedsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
+func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 
 	creds, authToken := credsFromContext(context)
 
@@ -90,10 +89,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext,
 						"id":   key,
 						"plan": plan,
 					})
-					rv = append(rv, value.AnnotatedPair{
-						Name:  key,
-						Value: remoteValue,
-					})
+					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
 					context.Warning(warn)
@@ -130,14 +126,11 @@ func (b *preparedsKeyspace) Fetch(keys []string, context datastore.QueryContext,
 					"id":   key,
 					"plan": bytes,
 				})
-				rv = append(rv, value.AnnotatedPair{
-					Name:  key,
-					Value: item,
-				})
+				keysMap[key] = item
 			})
 		}
 	}
-	return rv, errs
+	return
 }
 
 func (b *preparedsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {

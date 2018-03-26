@@ -99,9 +99,8 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
+func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
 		err, ns, ks := splitId(k)
@@ -126,13 +125,10 @@ func (b *keyspaceKeyspace) Fetch(keys []string, context datastore.QueryContext, 
 			})
 		}
 
-		rv = append(rv, value.AnnotatedPair{
-			Name:  k,
-			Value: item,
-		})
+		keysMap[k] = item
 	}
 
-	return rv, errs
+	return
 }
 
 func (b *keyspaceKeyspace) fetchOne(ns string, ks string) (value.AnnotatedValue, errors.Error) {

@@ -117,14 +117,16 @@ func TestFile(t *testing.T) {
 		}
 	}
 
-	freds, errs := keyspace.Fetch([]string{"fred"}, datastore.NULL_QUERY_CONTEXT, nil)
+	freds := make(map[string]value.AnnotatedValue, 1)
+	key := "fred"
+	errs := keyspace.Fetch([]string{key}, freds, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil || len(freds) == 0 {
 		t.Errorf("failed to fetch fred: %v", errs)
 	}
 
 	// DML test cases
 
-	fred := freds[0].Value
+	fred := freds[key]
 	var dmlKey value.Pair
 	dmlKey.Name = "fred2"
 	dmlKey.Value = fred

@@ -74,18 +74,17 @@ func (b *userInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *userInfoKeyspace) Fetch(keys []string, context datastore.QueryContext, subPaths []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *userInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 	sliceOfUsers, err := getUserInfoList(b.namespace.store)
 	if err != nil {
-		return nil, []errors.Error{err}
+		return []errors.Error{err}
 	}
 	newMap, err := userInfoListToMap(sliceOfUsers)
 	if err != nil {
-		return nil, []errors.Error{err}
+		return []errors.Error{err}
 	}
 
-	var errs []errors.Error
-	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		val := newMap[k]
 		if val == nil {
@@ -96,14 +95,10 @@ func (b *userInfoKeyspace) Fetch(keys []string, context datastore.QueryContext, 
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": k,
 		})
-
-		rv = append(rv, value.AnnotatedPair{
-			Name:  k,
-			Value: item,
-		})
+		keysMap[k] = item
 	}
 
-	return rv, errs
+	return
 }
 
 func (b *userInfoKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {

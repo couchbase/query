@@ -93,7 +93,8 @@ func TestServer(t *testing.T) {
 		fmt.Printf("primary index created %v", index)
 	}
 
-	pair, errs := ks.Fetch([]string{"357", "aass_brewery"}, datastore.NULL_QUERY_CONTEXT, nil)
+	pair := make(map[string]value.AnnotatedValue, 1)
+	errs := ks.Fetch([]string{"357", "aass_brewery"}, pair, datastore.NULL_QUERY_CONTEXT, nil)
 	if errs != nil {
 		t.Fatalf(" Cannot fetch keys errors %v", errs)
 

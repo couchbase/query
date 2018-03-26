@@ -653,7 +653,7 @@ func (this *base) notifyStop() {
 }
 
 type batcher interface {
-	allocateBatch(context *Context)
+	allocateBatch(context *Context, size int)
 	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool
 	enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool
 	flushBatch(context *Context) bool
@@ -688,11 +688,11 @@ func getJoinBatchPool() *value.AnnotatedJoinPairPool {
 	return _JOIN_BATCH_POOL.Load().(*value.AnnotatedJoinPairPool)
 }
 
-func (this *base) allocateBatch(context *Context) {
-	if context.PipelineBatch() == 0 {
+func (this *base) allocateBatch(context *Context, size int) {
+	if size <= context.PipelineBatch() {
 		this.batch = getBatchPool().Get()
 	} else {
-		this.batch = make(value.AnnotatedValues, 0, context.PipelineBatch())
+		this.batch = make(value.AnnotatedValues, 0, size)
 	}
 }
 
@@ -709,7 +709,7 @@ func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize in
 	}
 
 	if this.batch == nil {
-		this.allocateBatch(context)
+		this.allocateBatch(context, batchSize)
 	}
 
 	this.batch = append(this.batch, item)
