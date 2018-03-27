@@ -41,6 +41,7 @@ type simpleAuditable struct {
 	clientContextId     string
 	eventPositionalArgs []interface{}
 	isAdHoc             bool
+	preparedId          string
 	elapsedTime         time.Duration
 	executionTime       time.Duration
 	eventResultCount    int
@@ -59,7 +60,7 @@ func (sa *simpleAuditable) EventStatus() string {
 	return sa.status
 }
 
-func (sa *simpleAuditable) Statement() string {
+func (sa *simpleAuditable) EventStatement() string {
 	return sa.statement
 }
 
@@ -97,6 +98,10 @@ func (sa *simpleAuditable) ClientContextId() string {
 
 func (sa *simpleAuditable) IsAdHoc() bool {
 	return sa.isAdHoc
+}
+
+func (sa *simpleAuditable) PreparedId() string {
+	return sa.preparedId
 }
 
 func (sa *simpleAuditable) ElapsedTime() time.Duration {

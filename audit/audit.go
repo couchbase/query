@@ -30,7 +30,7 @@ type Auditable interface {
 	EventStatus() string
 
 	// The N1QL statement executed.
-	Statement() string
+	EventStatement() string
 
 	// Statement id.
 	EventId() string
@@ -57,6 +57,7 @@ type Auditable interface {
 	ClientContextId() string
 
 	IsAdHoc() bool
+	PreparedId() string
 
 	// Metrics
 	ElapsedTime() time.Duration
@@ -301,6 +302,7 @@ func stringifyQueryAR(entry n1qlAuditEvent) string {
 	str += fmt.Sprintf("PositionalArgs: %v\n", entry.PositionalArgs)
 	str += fmt.Sprintf("ClientContextId: <ud>%v</ud>\n", entry.ClientContextId)
 	str += fmt.Sprintf("IsAdHoc: %v\n", entry.IsAdHoc)
+	str += fmt.Sprintf("PreparedId: %v\n", entry.PreparedId)
 	str += fmt.Sprintf("UserAgent: %v\n", entry.UserAgent)
 	str += fmt.Sprintf("Node: %v\n", entry.Node)
 	str += fmt.Sprintf("Status: %v\n", entry.Status)
@@ -438,11 +440,12 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	// multiple times.
 	genericFields := event.EventGenericFields()
 	requestId := event.EventId()
-	statement := event.Statement()
+	statement := event.EventStatement()
 	namedArgs := event.EventNamedArgs()
 	positionalArgs := event.EventPositionalArgs()
 	clientContextId := event.ClientContextId()
 	isAdHoc := event.IsAdHoc()
+	preparedId := event.PreparedId()
 	userAgent := event.UserAgent()
 	node := event.EventNodeName()
 	status := event.EventStatus()
@@ -468,6 +471,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			PositionalArgs:  positionalArgs,
 			ClientContextId: clientContextId,
 			IsAdHoc:         isAdHoc,
+			PreparedId:      preparedId,
 			UserAgent:       userAgent,
 			Node:            node,
 			Status:          status,
@@ -501,6 +505,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			PositionalArgs:  positionalArgs,
 			ClientContextId: clientContextId,
 			IsAdHoc:         isAdHoc,
+			PreparedId:      preparedId,
 			UserAgent:       userAgent,
 			Node:            node,
 			Status:          status,
@@ -608,9 +613,10 @@ type n1qlAuditEvent struct {
 	PositionalArgs  []interface{}          `json:"positionalArgs,omitempty"`
 	ClientContextId string                 `json:"clientContextId,omitempty"`
 
-	IsAdHoc   bool   `json:"isAdHoc"`
-	UserAgent string `json:"userAgent"`
-	Node      string `json:"node"`
+	IsAdHoc    bool   `json:"isAdHoc"`
+	PreparedId string `json:"preparedId,omitempty"`
+	UserAgent  string `json:"userAgent"`
+	Node       string `json:"node"`
 
 	Status string `json:"status"`
 

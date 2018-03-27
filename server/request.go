@@ -696,6 +696,24 @@ func sendStop(ch chan bool) {
 }
 
 // For audit.Auditable interface.
+func (this *BaseRequest) EventStatement() string {
+	prep := this.Prepared()
+	if prep != nil {
+		return prep.Text()
+	}
+	return this.Statement()
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) PreparedId() string {
+	prep := this.Prepared()
+	if prep != nil {
+		return prep.Name()
+	}
+	return ""
+}
+
+// For audit.Auditable interface.
 func (this *BaseRequest) EventId() string {
 	return this.Id().String()
 }
