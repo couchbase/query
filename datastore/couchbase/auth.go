@@ -228,7 +228,10 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 		if err == nil {
 			credentialsList = append(credentialsList, creds)
 			authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+		} else if err.Error() == "No web credentials found in request." {
+			// Do nothing.
 		} else {
+
 			clientAuthType, err1 := cbauth.GetClientCertAuthType()
 			if err1 != nil {
 				return nil, errors.NewDatastoreAuthorizationError(err1)
