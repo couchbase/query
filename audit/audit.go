@@ -223,7 +223,7 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 				return fmt.Errorf("Audit update handler function %d: Unable to get audit settings: %v", num, err)
 			}
 			if curUid != auditInfo.Uid {
-				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, *auditInfo)
+				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, stringifyauditInfo(*auditInfo))
 				change := n1qlConfigurationChangeEvent{
 					Timestamp:  time.Now().Format("2006-01-02T15:04:05.000Z07:00"),
 					RealUserid: adt.RealUserId{Source: "", Username: ""},
@@ -292,6 +292,14 @@ func auditWorker(auditor *standardAuditor, num int) {
 			}
 		}
 	}
+}
+
+func stringifyauditInfo(entry datastore.AuditInfo) string {
+	str := fmt.Sprintf("AuditEnabled: %v", entry.AuditEnabled)
+	str += fmt.Sprintf("EventDisabled: %v", entry.EventDisabled)
+	str += fmt.Sprintf("UserWhitelisted: <ud>%v</ud>", entry.UserWhitelisted)
+	str += fmt.Sprintf("Uid: <ud>%v</ud>", entry.Uid)
+	return str
 }
 
 func stringifyQueryAR(entry n1qlAuditEvent) string {
