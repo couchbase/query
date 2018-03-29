@@ -152,8 +152,13 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 		outer_values = nil
 	}
 
+	groupAggs := plan.GroupAggs()
 	dspans, empty, err := evalSpan2(plan.Spans(), outer_values, context)
-	if err != nil || empty {
+
+	// empty span with Index aggregation is present and no group by requies produce default row.
+	// Therefore, do IndexScan
+
+	if err != nil || (empty && (groupAggs == nil || len(groupAggs.Group) > 0)) {
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "span"))
 		}

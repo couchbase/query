@@ -19,6 +19,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+var _EMPTY_SPAN2 *datastore.Span2 = &datastore.Span2{nil, datastore.Ranges2{&datastore.Range2{value.NULL_VALUE, value.NULL_VALUE, 0}}}
+
 type IndexScan2 struct {
 	base
 	plan     *plan.IndexScan2
@@ -219,7 +221,10 @@ func evalSpan2(pspans plan.Spans2, parent value.Value, context *Context) (datast
 		}
 	}
 
-	empty = len(dspans) == 0
+	if len(dspans) == 0 {
+		empty = true
+		dspans = append(dspans, _EMPTY_SPAN2)
+	}
 
 	return dspans, empty, nil
 }
