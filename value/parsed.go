@@ -36,6 +36,10 @@ type parsedValue struct {
 }
 
 func NewParsedValue(bytes []byte, isValidated bool) Value {
+	return NewParsedValueWithOptions(bytes, isValidated, len(bytes) > _THRESHOLD)
+}
+
+func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 	parsedType := identifyType(bytes)
 
 	// Atomic types
@@ -62,7 +66,7 @@ func NewParsedValue(bytes []byte, isValidated bool) Value {
 	return &parsedValue{
 		raw:        bytes,
 		parsedType: parsedType,
-		useState:   len(bytes) > _THRESHOLD,
+		useState:   useState,
 	}
 }
 
