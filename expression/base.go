@@ -349,7 +349,7 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 		case CoveredSkip:
 			options.skip = true
 
-		// MB-25650: this subexpression is already covered, no need to check subsequent terms
+		// MB-25560: this subexpression is already covered, no need to check subsequent terms
 		case CoveredEquiv:
 			options.skip = true
 

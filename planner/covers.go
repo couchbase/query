@@ -19,25 +19,48 @@ import (
 func CoversFor(pred, origPred expression.Expression, keys expression.Expressions) (
 	map[*expression.Cover]value.Value, error) {
 
+	var fv, ofv map[string]*expression.Cover
+	var err error
+
+	fv, err = coversFor(pred, keys)
+	if err != nil {
+		return nil, err
+	}
+	if origPred != nil {
+		ofv, err = coversFor(origPred, keys)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(fv)+len(ofv) == 0 {
+		return nil, nil
+	}
+
+	fc := make(map[*expression.Cover]value.Value, len(fv)+len(ofv))
+	for _, v := range fv {
+		fc[v] = value.TRUE_VALUE
+	}
+	for c, ov := range ofv {
+		if _, ok := fv[c]; !ok {
+			fc[ov] = value.TRUE_VALUE
+		}
+	}
+
+	return fc, nil
+
+}
+
+func coversFor(pred expression.Expression, keys expression.Expressions) (
+	map[string]*expression.Cover, error) {
+
 	cov := &covers{keys}
 	rv, err := pred.Accept(cov)
 	if rv == nil || err != nil {
 		return nil, err
 	}
 
-	fc := rv.(map[*expression.Cover]value.Value)
-
-	if origPred != nil {
-		rv, err = origPred.Accept(cov)
-		if rv == nil || err != nil {
-			return nil, err
-		}
-
-		ofc := rv.(map[*expression.Cover]value.Value)
-		for c, v := range ofc {
-			fc[c] = v
-		}
-	}
+	fc := rv.(map[string]*expression.Cover)
 
 	return fc, nil
 }
@@ -89,8 +112,8 @@ func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 	for _, k := range this.keys {
 		if all, ok := k.(*expression.All); ok {
 			if min, _ := SargableFor(expr, expression.Expressions{all}); min > 0 {
-				return map[*expression.Cover]value.Value{
-					expression.NewCover(expr): value.TRUE_VALUE,
+				return map[string]*expression.Cover{
+					expr.String(): expression.NewCover(expr),
 				}, nil
 			}
 		}
@@ -206,10 +229,10 @@ func (this *covers) VisitObjectConstruct(expr *expression.ObjectConstruct) (inte
 
 // For AND, return the union over the children
 func (this *covers) VisitAnd(expr *expression.And) (interface{}, error) {
-	var fc map[*expression.Cover]value.Value
+	var fc map[string]*expression.Cover
 
 	for _, op := range expr.Operands() {
-		oc, err := CoversFor(op, nil, this.keys)
+		oc, err := coversFor(op, this.keys)
 		if err != nil {
 			return nil, err
 		}
@@ -232,10 +255,10 @@ func (this *covers) VisitNot(expr *expression.Not) (interface{}, error) {
 
 // For OR, return the intersection over the children
 func (this *covers) VisitOr(expr *expression.Or) (interface{}, error) {
-	var fc map[*expression.Cover]value.Value
+	var fc map[string]*expression.Cover
 
 	for _, op := range expr.Operands() {
-		oc, err := CoversFor(op, nil, this.keys)
+		oc, err := coversFor(op, this.keys)
 		if err != nil {
 			return nil, err
 		}
