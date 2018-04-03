@@ -94,7 +94,9 @@ func (this *IndexScan) accrueTimes(o Operator) {
 func (this *IndexScan) SendStop() {
 	this.baseSendStop()
 	for _, child := range this.children {
-		child.SendStop()
+		if child != nil {
+			child.SendStop()
+		}
 	}
 }
 

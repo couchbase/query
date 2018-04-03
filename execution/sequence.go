@@ -115,7 +115,9 @@ func (this *Sequence) accrueTimes(o Operator) {
 func (this *Sequence) SendStop() {
 	this.baseSendStop()
 	for _, child := range this.children {
-		child.SendStop()
+		if child != nil {
+			child.SendStop()
+		}
 	}
 }
 

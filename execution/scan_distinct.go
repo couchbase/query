@@ -173,8 +173,9 @@ func (this *DistinctScan) accrueTimes(o Operator) {
 
 func (this *DistinctScan) SendStop() {
 	this.baseSendStop()
-	if this.scan != nil {
-		this.scan.SendStop()
+	scan := this.scan
+	if scan != nil {
+		scan.SendStop()
 	}
 }
 

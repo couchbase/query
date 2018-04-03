@@ -163,8 +163,9 @@ func (this *HashNest) MarshalJSON() ([]byte, error) {
 
 func (this *HashNest) SendStop() {
 	this.baseSendStop()
-	if this.child != nil {
-		this.child.SendStop()
+	child := this.child
+	if child != nil {
+		child.SendStop()
 	}
 }
 

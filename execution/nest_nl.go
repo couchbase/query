@@ -186,8 +186,9 @@ func (this *NLNest) MarshalJSON() ([]byte, error) {
 
 func (this *NLNest) SendStop() {
 	this.baseSendStop()
-	if this.child != nil {
-		this.child.SendStop()
+	child := this.child
+	if child != nil {
+		child.SendStop()
 	}
 }
 

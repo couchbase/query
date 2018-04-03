@@ -186,7 +186,9 @@ func (this *UnionScan) accrueTimes(o Operator) {
 func (this *UnionScan) SendStop() {
 	this.baseSendStop()
 	for _, scan := range this.scans {
-		scan.SendStop()
+		if scan != nil {
+			scan.SendStop()
+		}
 	}
 }
 

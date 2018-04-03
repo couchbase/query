@@ -233,7 +233,9 @@ func (this *IntersectScan) accrueTimes(o Operator) {
 func (this *IntersectScan) SendStop() {
 	this.baseSendStop()
 	for _, scan := range this.scans {
-		scan.SendStop()
+		if scan != nil {
+			scan.SendStop()
+		}
 	}
 }
 

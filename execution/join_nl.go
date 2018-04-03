@@ -211,8 +211,9 @@ func (this *NLJoin) MarshalJSON() ([]byte, error) {
 
 func (this *NLJoin) SendStop() {
 	this.baseSendStop()
-	if this.child != nil {
-		this.child.SendStop()
+	child := this.child
+	if child != nil {
+		child.SendStop()
 	}
 }
 

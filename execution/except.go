@@ -108,11 +108,13 @@ func (this *ExceptAll) accrueTimes(o Operator) {
 
 func (this *ExceptAll) SendStop() {
 	this.baseSendStop()
-	if this.first != nil {
-		this.first.SendStop()
+	first := this.first
+	second := this.second
+	if first != nil {
+		first.SendStop()
 	}
-	if this.second != nil {
-		this.second.SendStop()
+	if second != nil {
+		second.SendStop()
 	}
 }
 

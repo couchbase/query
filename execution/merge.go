@@ -223,14 +223,17 @@ func (this *Merge) accrueTimes(o Operator) {
 
 func (this *Merge) SendStop() {
 	this.baseSendStop()
-	if this.update != nil {
-		this.update.SendStop()
+	update := this.update
+	delete := this.delete
+	insert := this.insert
+	if update != nil {
+		update.SendStop()
 	}
-	if this.delete != nil {
-		this.delete.SendStop()
+	if delete != nil {
+		delete.SendStop()
 	}
-	if this.insert != nil {
-		this.insert.SendStop()
+	if insert != nil {
+		insert.SendStop()
 	}
 }
 

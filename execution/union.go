@@ -104,7 +104,9 @@ func (this *UnionAll) accrueTimes(o Operator) {
 func (this *UnionAll) SendStop() {
 	this.baseSendStop()
 	for _, child := range this.children {
-		child.SendStop()
+		if child != nil {
+			child.SendStop()
+		}
 	}
 }
 

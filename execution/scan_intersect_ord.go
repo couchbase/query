@@ -277,7 +277,9 @@ func (this *OrderedIntersectScan) accrueTimes(o Operator) {
 func (this *OrderedIntersectScan) SendStop() {
 	this.baseSendStop()
 	for _, scan := range this.scans {
-		scan.SendStop()
+		if scan != nil {
+			scan.SendStop()
+		}
 	}
 }
 

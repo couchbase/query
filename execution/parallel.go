@@ -125,7 +125,9 @@ func (this *Parallel) accrueTimes(o Operator) {
 func (this *Parallel) SendStop() {
 	this.baseSendStop()
 	for _, child := range this.children {
-		child.SendStop()
+		if child != nil {
+			child.SendStop()
+		}
 	}
 }
 
