@@ -970,7 +970,6 @@ func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	if err != nil {
 		return 0, errors.NewCbKeyspaceNotFoundError(nil, b.Name())
 	}
-	defer cbBucket.Close()
 
 	statsMap := cbBucket.GetStats("")
 	for _, stats := range statsMap {
