@@ -690,7 +690,7 @@ func getJoinBatchPool() *value.AnnotatedJoinPairPool {
 }
 
 func (this *base) allocateBatch(context *Context, size int) {
-	if size <= context.PipelineBatch() {
+	if size <= PipelineBatchSize() {
 		this.batch = getBatchPool().Get()
 	} else {
 		this.batch = make(value.AnnotatedValues, 0, size)

@@ -30,7 +30,7 @@ func (this *joinBase) copy(joinBase *joinBase) {
 }
 
 func (this *joinBase) allocateBatch(context *Context, size int) {
-	if size <= context.PipelineBatch() {
+	if size <= PipelineBatchSize() {
 		this.joinBatch = getJoinBatchPool().Get()
 	} else {
 		this.joinBatch = make(value.AnnotatedJoinPairs, 0, size)

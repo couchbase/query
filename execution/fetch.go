@@ -26,7 +26,7 @@ type Fetch struct {
 func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv := &Fetch{
 		plan:      plan,
-		batchSize: PipelineBatchSize(),
+		batchSize: context.GetPipelineBatch(),
 	}
 
 	newBase(&rv.base, context)
