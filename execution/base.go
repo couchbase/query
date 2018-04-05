@@ -537,8 +537,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			go this.input.RunOnce(context, parent)
 		}
 
+		var item value.AnnotatedValue
 		for ok {
-			item, ok := this.getItem()
+			item, ok = this.getItem()
 			if !ok || item == nil {
 				break
 			}
