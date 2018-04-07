@@ -414,7 +414,7 @@ func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, 
 
 		// if we failed to unmarshall, we find  the statement
 		// and try preparing from scratch
-		text, err1 := json.Find(bytes, "statement")
+		text, err1 := json.Find(bytes, "text")
 		if text != nil && err1 == nil {
 			prepared.SetText(string(text))
 			pl, _ := reprepare(prepared, phaseTime)
