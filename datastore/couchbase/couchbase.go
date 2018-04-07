@@ -74,6 +74,9 @@ func init() {
 	// enable data type response
 	cb.EnableDataType = true
 
+	// enable xattrs
+	cb.EnableXattr = true
+
 	// start the fetch workers for servicing the BulkGet operations
 	cb.InitBulkGet()
 	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
