@@ -226,7 +226,7 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, stringifyauditInfo(*auditInfo))
 				change := n1qlConfigurationChangeEvent{
 					Timestamp:  time.Now().Format("2006-01-02T15:04:05.000Z07:00"),
-					RealUserid: adt.RealUserId{Source: "", Username: ""},
+					RealUserid: adt.RealUserId{Domain: "", Username: ""},
 					Uuid:       auditInfo.Uid,
 				}
 
@@ -519,7 +519,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			Status:          status,
 			Metrics:         metrics,
 		}
-		record.GenericFields.RealUserid.Source = user.Domain
+		record.GenericFields.RealUserid.Domain = user.Domain
 		record.GenericFields.RealUserid.Username = user.Name
 
 		entries[i] = auditQueueEntry{
@@ -597,7 +597,7 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 			Node:           event.Node,
 			Body:           event.Body,
 		}
-		record.GenericFields.RealUserid.Source = user.Domain
+		record.GenericFields.RealUserid.Domain = user.Domain
 		record.GenericFields.RealUserid.Username = user.Name
 
 		entries[i] = auditQueueEntry{
