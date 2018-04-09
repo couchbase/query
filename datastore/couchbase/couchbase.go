@@ -961,38 +961,11 @@ func (b *keyspace) Name() string {
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-
-	var staterr error
-	var totalCount int64
-
-	// this is not an ideal implementation. We will change this when
-	// gocouchbase implements a mechanism to detect cluster changes
-
-	ns := b.namespace.getPool()
-	cbBucket, err := ns.GetBucket(b.Name())
+	totalCount, err := b.cbbucket.GetCount(true)
 	if err != nil {
-		return 0, errors.NewCbKeyspaceNotFoundError(nil, b.Name())
+		return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+err.Error())
 	}
-
-	statsMap := cbBucket.GetStats("")
-	for _, stats := range statsMap {
-
-		itemCount := stats["curr_items"]
-		count, err := strconv.Atoi(itemCount)
-		if err != nil {
-			staterr = err
-			break
-		} else {
-			totalCount = totalCount + int64(count)
-		}
-	}
-
-	if staterr == nil {
-		return totalCount, nil
-	}
-
-	return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+staterr.Error())
-
+	return totalCount, nil
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {

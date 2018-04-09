@@ -68,12 +68,15 @@ func stringifyIndexEntry(lastEntry *datastore.IndexEntry) string {
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	this.switchPhase(_EXECTIME)
 	defer this.switchPhase(_NOTIME)
-	conn := this.newIndexConnection(context)
+	conn := datastore.NewIndexConnection(context)
+	conn.SetPrimary()
 	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
-	go this.scanEntries(context, conn)
+	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, false, context)
 
-	nitems := 0
+	go this.scanEntries(context, conn, limit)
+
+	nitems := uint64(0)
 
 	var docs uint64 = 0
 	defer func() {
@@ -109,31 +112,35 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		}
 	}
 
-	if conn.Timeout() {
-		logging.Errorp("Primary index scan timeout - resorting to chunked scan",
-			logging.Pair{"chunkSize", nitems},
-			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
+	emsg := "Primary index scan timeout - resorting to chunked scan"
+	for conn.Timeout() {
 		if lastEntry == nil {
 			// no key for chunked scans (primary scan returned 0 items)
 			context.Error(errors.NewCbIndexScanTimeoutError(nil))
+			return
 		}
-		// do chunked scans; nitems gives the chunk size, and lastEntry the starting point
-		for lastEntry != nil {
-			lastEntry = this.scanPrimaryChunk(context, parent, nitems, lastEntry)
-		}
+
+		logging.Errorp(emsg, logging.Pair{"chunkSize", nitems},
+			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
+
+		// do chunked scans; lastEntry the starting point
+		conn = datastore.NewIndexConnection(context)
+		conn.SetPrimary()
+		lastEntry, nitems = this.scanPrimaryChunk(context, parent, conn, lastEntry, limit)
+		emsg = "Primary index chunked scan"
 	}
 }
 
-func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, chunkSize int, indexEntry *datastore.IndexEntry) *datastore.IndexEntry {
+func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, conn *datastore.IndexConnection,
+	indexEntry *datastore.IndexEntry, limit int64) (*datastore.IndexEntry, uint64) {
+
 	this.switchPhase(_EXECTIME)
 	defer this.switchPhase(_NOTIME)
-	conn, _ := datastore.NewSizedIndexConnection(int64(chunkSize), context)
-	conn.SetPrimary()
 	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
-	go this.scanChunk(context, conn, chunkSize, indexEntry)
+	go this.scanChunk(context, conn, limit, indexEntry)
 
-	nitems := 0
+	nitems := uint64(0)
 	var docs uint64 = 0
 	defer func() {
 		if nitems > 0 {
@@ -161,33 +168,23 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 				break
 			}
 		} else {
-			return nil
+			return nil, nitems
 		}
 	}
-	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", stringifyIndexEntry(lastEntry)})
-	return lastEntry
+	return lastEntry, nitems
 }
 
-func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection) {
+func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection, limit int64) {
 	defer context.Recover() // Recover from any panic
-
-	limit := int64(math.MaxInt64)
-	if this.plan.Limit() != nil {
-		lv, err := this.plan.Limit().Evaluate(nil, context)
-		if err == nil && lv.Type() == value.NUMBER {
-			limit = int64(lv.Actual().(float64))
-		}
-	}
 
 	keyspace := this.plan.Keyspace()
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
 
 	index := this.plan.Index()
-	index.ScanEntries(context.RequestId(), limit,
-		context.ScanConsistency(), scanVector, conn)
+	index.ScanEntries(context.RequestId(), limit, context.ScanConsistency(), scanVector, conn)
 }
 
-func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, chunkSize int, indexEntry *datastore.IndexEntry) {
+func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, limit int64, indexEntry *datastore.IndexEntry) {
 	defer context.Recover() // Recover from any panic
 	ds := &datastore.Span{}
 	// do the scan starting from, but not including, the given index entry:
@@ -197,33 +194,8 @@ func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnec
 	}
 	keyspace := this.plan.Keyspace()
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
-	this.plan.Index().Scan(context.RequestId(), ds, true, int64(chunkSize),
+	this.plan.Index().Scan(context.RequestId(), ds, true, limit,
 		context.ScanConsistency(), scanVector, conn)
-}
-
-func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexConnection {
-	var conn *datastore.IndexConnection
-
-	// Use keyspace count to create a sized index connection
-	keyspace := this.plan.Keyspace()
-	size, err := keyspace.Count(context)
-	if err == nil {
-		if size <= 0 {
-			size = 1
-		}
-
-		conn, err = datastore.NewSizedIndexConnection(size, context)
-		conn.SetPrimary()
-	}
-
-	// Use non-sized API and log error
-	if err != nil {
-		conn = datastore.NewIndexConnection(context)
-		conn.SetPrimary()
-		logging.Errorp("PrimaryScan.newIndexConnection ", logging.Pair{"error", err})
-	}
-
-	return conn
 }
 
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
