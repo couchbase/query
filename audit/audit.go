@@ -532,15 +532,15 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 }
 
 func userInfoFromUsername(user string) datastore.UserInfo {
-	source := "local"
+	domain := "local"
 	userName := user
 	// Handle non-local users, e.g. "external:dtrump"
 	if strings.Contains(user, ":") {
 		parts := strings.SplitN(user, ":", 2)
-		source = parts[0]
+		domain = parts[0]
 		userName = parts[1]
 	}
-	return datastore.UserInfo{Name: userName, Domain: source}
+	return datastore.UserInfo{Name: userName, Domain: domain}
 }
 
 // Returns a list of audit entries, because each user credential submitted as part of

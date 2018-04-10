@@ -191,9 +191,9 @@ func TestMultiUserRequest(t *testing.T) {
 	Submit(auditable)
 
 	expectedEventRealUserIds := []adt.RealUserId{
-		adt.RealUserId{Source: "local", Username: "bill"},
-		adt.RealUserId{Source: "local", Username: "bob"},
-		adt.RealUserId{Source: "external", Username: "james"},
+		adt.RealUserId{Domain: "local", Username: "bill"},
+		adt.RealUserId{Domain: "local", Username: "bob"},
+		adt.RealUserId{Domain: "external", Username: "james"},
 	}
 
 	numExpected := len(expectedEventRealUserIds)
@@ -297,9 +297,9 @@ func TestWhitelistedUsers(t *testing.T) {
 	Submit(auditable)
 
 	expectedEventRealUserIds := []adt.RealUserId{
-		adt.RealUserId{Source: "local", Username: "bill"},
-		adt.RealUserId{Source: "", Username: ""},
-		adt.RealUserId{Source: "local", Username: "bob"},
+		adt.RealUserId{Domain: "local", Username: "bill"},
+		adt.RealUserId{Domain: "", Username: ""},
+		adt.RealUserId{Domain: "local", Username: "bob"},
 	}
 
 	numExpected := len(expectedEventRealUserIds)
