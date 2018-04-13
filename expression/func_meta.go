@@ -163,6 +163,10 @@ func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
 func (this *Meta) Type() value.Type { return value.OBJECT }
 
 func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if item == nil {
+		return value.MISSING_VALUE, nil
+	}
+
 	val := item
 
 	if len(this.operands) > 0 {
