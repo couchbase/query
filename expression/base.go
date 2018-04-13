@@ -195,6 +195,14 @@ func (this *ExpressionBase) Value() value.Value {
 		return nil
 	}
 
+	if val != nil {
+		if val.Type() == value.MISSING {
+			this.SetValueMissing()
+		} else if val.Type() == value.NULL {
+			this.SetValueNull()
+		}
+	}
+
 	this.value = &val
 	return *this.value
 }
