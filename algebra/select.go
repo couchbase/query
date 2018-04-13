@@ -289,6 +289,10 @@ func (this *Select) IsCorrelated() bool {
 	return this.correlated
 }
 
+func (this *Select) SetCorrelated() {
+	this.correlated = true
+}
+
 /*
 The Subresult interface represents the intermediate result of a
 select statement. It inherits from Node.

@@ -106,7 +106,7 @@ tokOffset	 int
 %token COMMIT
 %token CONNECT
 %token CONTINUE
-%token CORRELATE
+%token CORRELATED
 %token COVER
 %token CREATE
 %token DATABASE
@@ -2490,9 +2490,15 @@ collection_expr
 paren_expr
 |
 /* For covering indexes */
-COVER LPAREN expr RPAREN
+COVER
 {
-    $$ = expression.NewCover($3)
+   if yylex.(*lexer).parsingStatement() {
+	yylex.Error("syntax error")
+   }
+}
+LPAREN expr RPAREN
+{
+    $$ = expression.NewCover($4)
 }
 ;
 
@@ -2969,12 +2975,23 @@ subquery_expr
 ;
 
 subquery_expr:
+CORRELATED
+{
+    if yylex.(*lexer).parsingStatement() {
+        yylex.Error("syntax error")
+    }
+}
 LPAREN fullselect RPAREN
 {
-    $$ = algebra.NewSubquery($2);
+    $$ = algebra.NewSubquery($4)
+    $$.Select().SetCorrelated()
+}
+|
+LPAREN fullselect RPAREN
+{
+    $$ = algebra.NewSubquery($2)
 }
 ;
-
 
 /*************************************************
  *

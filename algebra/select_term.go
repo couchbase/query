@@ -102,6 +102,10 @@ func (this *SelectTerm) IsCorrelated() bool {
 	return true // FIXME
 }
 
+func (this *SelectTerm) SetCorrelated() {
+	// FIXME is empty
+}
+
 /*
 Accessor.
 */

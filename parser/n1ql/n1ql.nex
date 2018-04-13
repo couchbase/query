@@ -141,7 +141,7 @@
 /[cC][oO][mM][mM][iI][tT]/			 { yylex.logToken(yylex.Text(), "COMMIT"); return COMMIT }
 /[cC][oO][nN][nN][eE][cC][tT]/			 { yylex.logToken(yylex.Text(), "CONNECT"); return CONNECT }
 /[cC][oO][nN][tT][iI][nN][uU][eE]/		 { yylex.logToken(yylex.Text(), "CONTINUE"); return CONTINUE }
-/[cC][oO][rR][rR][eE][lL][aA][tT][eE]/		 { yylex.logToken(yylex.Text(), "CORRELATE"); return CORRELATE }
+/[cC][oO][rR][rR][eE][lL][aA][tT][eE][dD]/	 { yylex.logToken(yylex.Text(), "CORRELATED"); return CORRELATED }
 /[cC][oO][vV][eE][rR]/				 { yylex.logToken(yylex.Text(), "COVER"); return COVER }
 /[cC][rR][eE][aA][tT][eE]/			 { yylex.logToken(yylex.Text(), "CREATE"); return CREATE }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/		 { yylex.logToken(yylex.Text(), "DATABASE"); return DATABASE }

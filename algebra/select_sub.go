@@ -255,6 +255,10 @@ func (this *Subselect) IsCorrelated() bool {
 	return this.correlated
 }
 
+func (this *Subselect) SetCorrelated() {
+	this.correlated = true
+}
+
 /*
 Returns a FromTerm that represents the From clause
 in the subselect statement.

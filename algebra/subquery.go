@@ -146,3 +146,7 @@ query.
 func (this *Subquery) Select() *Select {
 	return this.query
 }
+
+func (this *Subquery) IsCorrelated() bool {
+	return this.query.IsCorrelated()
+}
