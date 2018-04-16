@@ -392,6 +392,8 @@ func NewValue(val interface{}) Value {
 		return sliceValue(val)
 	case map[string]interface{}:
 		return objectValue(val)
+	case *parsedValue:
+		return val
 	case int:
 		return intValue(val)
 	case Values:

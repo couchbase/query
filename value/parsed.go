@@ -30,6 +30,7 @@ type parsedValue struct {
 	raw        []byte
 	parsedType Type
 	parsed     Value
+	fields     map[string]Value
 	useState   bool
 	state      *json.FindState
 	used       int32
@@ -46,7 +47,13 @@ func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 	switch parsedType {
 	case NUMBER, STRING, BOOLEAN, NULL:
 		var p interface{}
-		err := json.Unmarshal(bytes, &p)
+		var err error
+
+		if isValidated {
+			err = json.UnmarshalNoValidate(bytes, &p)
+		} else {
+			err = json.Unmarshal(bytes, &p)
+		}
 		if err != nil {
 			return binaryValue(bytes)
 		}
@@ -169,6 +176,13 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		return missingField(field), false
 	}
 
+	if this.fields != nil {
+		result, ok := this.fields[field]
+		if ok {
+			return NewValue(result), true
+		}
+	}
+
 	raw := this.raw
 	if raw != nil {
 		var res []byte
@@ -188,7 +202,8 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		// the slow route
 		// For small documents manipulating the state is constly,
 		// so we do a scan anyway
-		if this.useState && goahead == 1 {
+		useState := this.useState && goahead == 1
+		if useState {
 			if this.state == nil {
 				this.state = json.NewFindState(this.raw)
 			}
@@ -203,7 +218,15 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 
 			// since this field was part of a validated value,
 			// we don't need to validate it again
-			return NewParsedValue(res, true), true
+			val := NewParsedValueWithOptions(res, true, this.useState)
+
+			if useState {
+				if this.fields == nil {
+					this.fields = make(map[string]Value)
+				}
+				this.fields[field] = val
+			}
+			return val, true
 		}
 	}
 
@@ -345,6 +368,14 @@ func (this *parsedValue) Successor() Value {
 func (this *parsedValue) Recycle() {
 	if this.parsed != nil {
 		this.parsed.Recycle()
+		this.parsed = nil
+	}
+	if this.fields != nil {
+		for i, field := range this.fields {
+			this.fields[i] = nil
+			field.Recycle()
+		}
+		this.fields = nil
 	}
 }
 
@@ -364,7 +395,7 @@ func (this *parsedValue) ContainsMatchingToken(matcher MatchFunc, options Value)
 Delayed parse.
 */
 func (this *parsedValue) unwrap() Value {
-	if this.parsed == nil {
+	if this.raw != nil {
 		if this.parsedType == BINARY {
 			this.parsed = binaryValue(this.raw)
 		} else {
@@ -382,6 +413,13 @@ func (this *parsedValue) unwrap() Value {
 		// Release raw memory when no longer needed
 		this.raw = nil
 		this.state = nil
+		if this.fields != nil {
+			for i, field := range this.fields {
+				this.fields[i] = nil
+				field.Recycle()
+			}
+			this.fields = nil
+		}
 	}
 
 	return this.parsed
