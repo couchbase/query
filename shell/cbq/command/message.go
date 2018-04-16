@@ -37,6 +37,9 @@ const (
 	ULOG        = " File to log commands into. \n\t For example : -logfile temp.txt"
 	USSLVERIFY  = " Skip verification of Certificates. "
 	UBATCH      = " Batch mode for sending queries to the Analytics service. Values : on/off"
+	UCACERT     = " Path to root ca certificate to verify identity of server. \n\t For example : -cacert ./root/ca.pem"
+	UCERTFILE   = " Path to chain certificate. \n\t For example : -cert ./client/client/chain.pem"
+	UKEYFILE    = " Path to client key file. \n\t For example : -key ./client/client/client.key"
 
 	//Shorthand message for flags
 	SHORTHAND = " Shorthand for "

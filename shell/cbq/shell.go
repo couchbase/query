@@ -285,6 +285,54 @@ func init() {
 
 }
 
+/*
+   Option        : -cacert
+   Args : <path to root ca certificate>
+   Pass path to root ca certificate to verify identity of server.
+*/
+
+var rootFile string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = command.UCACERT
+	)
+	flag.StringVar(&rootFile, "cacert", defaultval, usage)
+}
+
+/*
+   Option        : -cert
+   Args : <path to chain certificate>
+   Pass path to chain certificate.
+*/
+
+var certFile string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = command.UCERTFILE
+	)
+	flag.StringVar(&certFile, "cert", defaultval, usage)
+}
+
+/*
+   Option        : -key
+   Args : <path to client key>
+   Pass path to client key file.
+*/
+
+var keyFile string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = command.UKEYFILE
+	)
+	flag.StringVar(&keyFile, "key", defaultval, usage)
+}
+
 /* Define credentials as user/pass and convert into
    JSON object credentials
 */
@@ -441,7 +489,7 @@ func main() {
 		// un-authenticated servers.
 		// Dont output the statement if we are running in single command
 		// mode.
-		if len(scriptFlag) == 0 {
+		if len(scriptFlag) == 0 && rootFile == "" && certFile == "" && keyFile == "" {
 			_, werr := io.WriteString(command.W, command.STARTUPCREDS)
 
 			if werr != nil {
@@ -484,8 +532,18 @@ func main() {
 
 	n1ql.SetSkipVerify(noSSLVerify)
 	command.SKIPVERIFY = noSSLVerify
+	if certFile != "" {
+		n1ql.SetCertFile(certFile)
+	}
+	if keyFile != "" {
+		n1ql.SetKeyFile(keyFile)
+	}
 
-	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") {
+	if rootFile != "" {
+		n1ql.SetRootFile(rootFile)
+	}
+
+	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") && rootFile == "" && certFile == "" && keyFile == "" {
 		if noSSLVerify == false {
 			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
 		} else {
