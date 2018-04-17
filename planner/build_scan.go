@@ -194,6 +194,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	join := node.IsAnsiJoinOp()
+	hash := node.IsUnderHash()
 	if join {
 		this.resetPushDowns()
 	}
@@ -217,7 +218,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		return secondary, nil, err
 	}
 
-	if !join {
+	if !join || hash {
 		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
 		this.order = order
 		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, false)
