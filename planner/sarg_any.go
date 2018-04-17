@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
@@ -45,7 +46,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		}
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
-		return sargFor(pred.Satisfies(), variable)
+		return anySargFor(pred.Satisfies(), variable, nil, variable.Alias())
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -62,5 +63,32 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
-	return sargFor(satisfies, array.ValueMapping())
+	// Array Index key can have only single binding
+	return anySargFor(satisfies, array.ValueMapping(), array.When(), array.Bindings()[0].Variable())
+}
+
+func anySargFor(pred, key, cond expression.Expression, alias string) (SargSpans, error) {
+
+	sp, err := sargFor(pred, key)
+	if err != nil || !sp.Exact() {
+		return sp, err
+	}
+
+	exprs := expression.Expressions{key}
+	if cond != nil {
+		fc := make(map[string]value.Value, 4)
+		fc = cond.FilterCovers(fc)
+		filterCovers, err := mapFilterCovers(fc)
+		if err == nil {
+			for c, _ := range filterCovers {
+				exprs = append(exprs, c.Covered())
+			}
+		}
+	}
+
+	if err != nil || !expression.IsCovered(pred, alias, exprs) {
+		sp.SetExact(false)
+	}
+
+	return sp, nil
 }
