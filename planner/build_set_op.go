@@ -18,8 +18,14 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	// Inject DISTINCT into both terms
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
-	defer func() { this.setOpDistinct = setOpDistinct }()
+	prevCover := this.cover
 
+	defer func() {
+		this.cover = prevCover
+		this.setOpDistinct = setOpDistinct
+	}()
+
+	this.cover = node.First()
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
@@ -28,6 +34,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 		return nil, err
 	}
 
+	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
@@ -42,11 +49,18 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
+	prevCover := this.cover
+	defer func() {
+		this.cover = prevCover
+	}()
+	this.cover = node.First()
+
 	first, err := node.First().Accept(this)
 	if err != nil {
 		return nil, err
 	}
 
+	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
@@ -60,8 +74,12 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	// Inject DISTINCT into both terms
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
-	defer func() { this.setOpDistinct = setOpDistinct }()
-
+	prevCover := this.cover
+	defer func() {
+		this.cover = prevCover
+		this.setOpDistinct = setOpDistinct
+	}()
+	this.cover = node.First()
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
@@ -70,6 +88,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 		return nil, err
 	}
 
+	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
@@ -83,6 +102,12 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
+	prevCover := this.cover
+	defer func() {
+		this.cover = prevCover
+	}()
+	this.cover = node.First()
+
 	first, err := node.First().Accept(this)
 	if err != nil {
 		return nil, err
@@ -93,6 +118,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	this.setOpDistinct = true
 	defer func() { this.setOpDistinct = setOpDistinct }()
 
+	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
@@ -106,7 +132,12 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	// Inject DISTINCT into both terms
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
-	defer func() { this.setOpDistinct = setOpDistinct }()
+	prevCover := this.cover
+	defer func() {
+		this.cover = prevCover
+		this.setOpDistinct = setOpDistinct
+	}()
+	this.cover = node.First()
 
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
@@ -116,6 +147,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 		return nil, err
 	}
 
+	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
@@ -129,6 +161,12 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
+	prevCover := this.cover
+	defer func() {
+		this.cover = prevCover
+	}()
+	this.cover = node.First()
+
 	first, err := node.First().Accept(this)
 	if err != nil {
 		return nil, err
@@ -139,6 +177,7 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	this.setOpDistinct = true
 	defer func() { this.setOpDistinct = setOpDistinct }()
 
+	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
