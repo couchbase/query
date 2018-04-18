@@ -721,7 +721,7 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 	return this.enbatchSize(item, b, cap(this.batch), context)
 }
 
-func (this *base) requireKey(item value.AnnotatedValue, context *Context) (string, bool) {
+func (this *base) getDocumentKey(item value.AnnotatedValue, context *Context) (string, bool) {
 	mv := item.GetAttachment("meta")
 	if mv == nil {
 		context.Error(errors.NewInvalidValueError(
@@ -729,7 +729,13 @@ func (this *base) requireKey(item value.AnnotatedValue, context *Context) (strin
 		return "", false
 	}
 
-	meta := mv.(map[string]interface{})
+	meta, ok := mv.(map[string]interface{})
+	if !ok {
+		context.Error(errors.NewInvalidValueError(
+			fmt.Sprintf("Missing or invalid meta %v of type %T.", mv, mv)))
+		return "", false
+	}
+
 	key, ok := meta["id"]
 	if !ok {
 		context.Error(errors.NewInvalidValueError(

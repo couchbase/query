@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,6 +25,7 @@ type Merge struct {
 	update   Operator
 	delete   Operator
 	insert   Operator
+	matched  map[string]bool
 	children []Operator
 }
 
@@ -78,7 +80,16 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		this.children = _MERGE_OPERATOR_POOL.Get()
 		inputs := _MERGE_CHANNEL_POOL.Get()
-		defer _MERGE_CHANNEL_POOL.Put(inputs)
+		if update != nil || delete != nil {
+			this.matched = _MERGE_KEY_POOL.Get()
+		}
+		defer func() {
+			_MERGE_CHANNEL_POOL.Put(inputs)
+			if this.matched != nil {
+				_MERGE_KEY_POOL.Put(this.matched)
+				this.matched = nil
+			}
+		}()
 
 		if update != nil {
 			this.children = append(this.children, update)
@@ -158,6 +169,20 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 
 	if len(bvs) > 0 {
 		item.SetField(this.plan.KeyspaceRef().Alias(), bvs[k])
+
+		if update != nil || delete != nil {
+			key, ok1 := this.getDocumentKey(bvs[k], context)
+			if !ok1 {
+				return false
+			}
+
+			// make sure document is not updated multiple times
+			if _, ok1 = this.matched[key]; ok1 {
+				context.Error(errors.NewMergeMultiUpdateError(key))
+				return false
+			}
+			this.matched[key] = true
+		}
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
@@ -270,3 +295,4 @@ func (this *Merge) Done() {
 
 var _MERGE_OPERATOR_POOL = NewOperatorPool(3)
 var _MERGE_CHANNEL_POOL = NewChannelPool(3)
+var _MERGE_KEY_POOL = util.NewStringBoolPool(1024)

@@ -11,9 +11,7 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -132,19 +130,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 func (this *UnionScan) processKey(item value.AnnotatedValue,
 	context *Context, limit, offset int64) bool {
 
-	m := item.GetAttachment("meta")
-	meta, ok := m.(map[string]interface{})
+	key, ok := this.getDocumentKey(item, context)
 	if !ok {
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("Missing or invalid meta %v of type %T.", m, m)))
-		return false
-	}
-
-	k := meta["id"]
-	key, ok := k.(string)
-	if !ok {
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("Missing or invalid primary key %v of type %T.", k, k)))
 		return false
 	}
 

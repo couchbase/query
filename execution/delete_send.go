@@ -109,7 +109,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 			return false
 		}
 
-		key, ok := this.requireKey(av, context)
+		key, ok := this.getDocumentKey(av, context)
 		if !ok {
 			return false
 		}

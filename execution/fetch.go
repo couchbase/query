@@ -89,7 +89,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 
 	for _, av := range this.batch {
-		key, ok := this.requireKey(av, context)
+		key, ok := this.getDocumentKey(av, context)
 		if !ok {
 			return false
 		}
@@ -119,7 +119,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	// Preserve order of keys
 	for _, av := range this.batch {
-		key, ok := this.requireKey(av, context)
+		key, ok := this.getDocumentKey(av, context)
 		if !ok {
 			return false
 		}

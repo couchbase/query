@@ -11,9 +11,7 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -183,19 +181,8 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 	context *Context, fullBits, sendBits, limit int64, finalScan bool) bool {
 
-	m := item.GetAttachment("meta")
-	meta, ok := m.(map[string]interface{})
+	key, ok := this.getDocumentKey(item, context)
 	if !ok {
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("Missing or invalid meta %v of type %T.", m, m)))
-		return false
-	}
-
-	k := meta["id"]
-	key, ok := k.(string)
-	if !ok {
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("Missing or invalid primary key %v of type %T.", k, k)))
 		return false
 	}
 

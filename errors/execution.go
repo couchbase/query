@@ -204,3 +204,9 @@ func NewHashTableGetError(e error) Error {
 		InternalMsg:    fmt.Sprintf("Hash Table Get failed"),
 		InternalCaller: CallerN(1)}
 }
+
+func NewMergeMultiUpdateError(key string) Error {
+	return &err{level: EXCEPTION, ICode: 5320, IKey: "execution.merge_multiple_update",
+		InternalMsg:    fmt.Sprintf("Multiple UPDATE/DELETE of the same document (document key '%s') in a MERGE statement", key),
+		InternalCaller: CallerN(1)}
+}
