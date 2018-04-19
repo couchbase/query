@@ -414,12 +414,17 @@ func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, 
 
 		// if we failed to unmarshall, we find  the statement
 		// and try preparing from scratch
-		text, err1 := json.Find(bytes, "text")
+		text, err1 := json.FirstFind(bytes, "text")
 		if text != nil && err1 == nil {
-			prepared.SetText(string(text))
-			pl, _ := reprepare(prepared, phaseTime)
-			if pl != nil {
-				return pl, nil
+			var stmt string
+
+			err1 = json.Unmarshal(text, &stmt)
+			if err1 == nil {
+				prepared.SetText(stmt)
+				pl, _ := reprepare(prepared, phaseTime)
+				if pl != nil {
+					return pl, nil
+				}
 			}
 		}
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
