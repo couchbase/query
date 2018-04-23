@@ -26,6 +26,7 @@ type Merge struct {
 	delete   Operator
 	insert   Operator
 	matched  map[string]bool
+	inserted map[string]bool
 	children []Operator
 }
 
@@ -83,11 +84,18 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		if update != nil || delete != nil {
 			this.matched = _MERGE_KEY_POOL.Get()
 		}
+		if insert != nil {
+			this.inserted = _MERGE_KEY_POOL.Get()
+		}
 		defer func() {
 			_MERGE_CHANNEL_POOL.Put(inputs)
 			if this.matched != nil {
 				_MERGE_KEY_POOL.Put(this.matched)
 				this.matched = nil
+			}
+			if this.inserted != nil {
+				_MERGE_KEY_POOL.Put(this.inserted)
+				this.inserted = nil
 			}
 		}()
 
@@ -167,15 +175,28 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
+	var key string
+	match := false
+	ok1 := true
 	if len(bvs) > 0 {
 		item.SetField(this.plan.KeyspaceRef().Alias(), bvs[k])
 
-		if update != nil || delete != nil {
-			key, ok1 := this.getDocumentKey(bvs[k], context)
-			if !ok1 {
-				return false
-			}
+		key, ok1 = this.getDocumentKey(bvs[k], context)
+		if !ok1 {
+			return false
+		}
 
+		// check whether the matched document was inserted as part of
+		// INSERT action of this MERGE statement, if so, treat it as unmatched
+		if insert == nil {
+			match = true
+		} else if _, ok1 = this.inserted[key]; !ok1 {
+			match = true
+		}
+	}
+
+	if match {
+		if update != nil || delete != nil {
 			// make sure document is not updated multiple times
 			if _, ok1 = this.matched[key]; ok1 {
 				context.Error(errors.NewMergeMultiUpdateError(key))
@@ -195,6 +216,16 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	} else {
 		// Not matched; INSERT
 		if insert != nil {
+			// INSERT just uses the ON KEY expression as document key
+			// (see builder.VisitMerge()), and the ON KEY expression
+			// is already evaluated above
+			key = k
+			if _, ok1 = this.inserted[key]; ok1 {
+				context.Error(errors.NewMergeMultiInsertError(key))
+				return false
+			}
+			this.inserted[key] = true
+
 			ok = this.sendItemOp(insert.Input(), item)
 		}
 	}

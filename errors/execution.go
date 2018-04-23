@@ -210,3 +210,9 @@ func NewMergeMultiUpdateError(key string) Error {
 		InternalMsg:    fmt.Sprintf("Multiple UPDATE/DELETE of the same document (document key '%s') in a MERGE statement", key),
 		InternalCaller: CallerN(1)}
 }
+
+func NewMergeMultiInsertError(key string) Error {
+	return &err{level: EXCEPTION, ICode: 5330, IKey: "execution.merge_multiple_insert",
+		InternalMsg:    fmt.Sprintf("Multiple INSERT of the same document (document key '%s') in a MERGE statement", key),
+		InternalCaller: CallerN(1)}
+}
