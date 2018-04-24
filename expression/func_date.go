@@ -2383,8 +2383,9 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 			// Calculate the timezone component for input string
 			pos := strings.Index(f, "Z")
 			tz := ""
-			if pos > 0 {
-				tz = s[len(s)-6:]
+			spos := strings.LastIndexAny(s, "Z+-")
+			if pos > 0 && spos > 0 {
+				tz = s[spos:]
 			}
 			return t, tz, nil
 		}
