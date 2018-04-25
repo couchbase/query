@@ -270,8 +270,17 @@ func auditWorker(auditor *standardAuditor, num int) {
 	for {
 		entry := <-auditor.auditRecordQueue
 
+		// Dispose of an unhealthy client.
+		if client != nil && !client.IsHealthy() {
+			err = client.Close()
+			if err != nil {
+				logging.Warnf("Audit worker %d: closing unhealthy client produced error: %v", err)
+			}
+			client = nil
+		}
+
 		// Refresh the client if necessary.
-		for client == nil || !client.IsHealthy() {
+		for client == nil {
 			client, err = auditor.auditService.GetNonPoolClient()
 			if err != nil {
 				logging.Errorf("Audit worker %d: unable to get connection: %v. Will sleep and retry.", num, err)
