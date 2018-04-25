@@ -304,43 +304,43 @@ func auditWorker(auditor *standardAuditor, num int) {
 }
 
 func stringifyauditInfo(entry datastore.AuditInfo) string {
-	str := fmt.Sprintf("AuditEnabled: %v", entry.AuditEnabled)
-	str += fmt.Sprintf("EventDisabled: %v", entry.EventDisabled)
-	str += fmt.Sprintf("UserWhitelisted: <ud>%v</ud>", entry.UserWhitelisted)
-	str += fmt.Sprintf("Uid: <ud>%v</ud>", entry.Uid)
+	str := fmt.Sprintf("AuditEnabled: %v ", entry.AuditEnabled)
+	str += fmt.Sprintf("EventDisabled: %v ", entry.EventDisabled)
+	str += fmt.Sprintf("UserWhitelisted: <ud>%v</ud> ", entry.UserWhitelisted)
+	str += fmt.Sprintf("Uid: <ud>%v</ud> ", entry.Uid)
 	return str
 }
 
 func stringifyQueryAR(entry n1qlAuditEvent) string {
 
-	str := fmt.Sprintf("RequestID: <ud>%v</ud>\n", entry.RequestId)
-	str += fmt.Sprintf("Statement: <ud>%v</ud>\n", entry.Statement)
-	str += fmt.Sprintf("NamedArgs: %v\n", entry.NamedArgs)
-	str += fmt.Sprintf("PositionalArgs: %v\n", entry.PositionalArgs)
-	str += fmt.Sprintf("ClientContextId: <ud>%v</ud>\n", entry.ClientContextId)
-	str += fmt.Sprintf("IsAdHoc: %v\n", entry.IsAdHoc)
-	str += fmt.Sprintf("PreparedId: %v\n", entry.PreparedId)
-	str += fmt.Sprintf("UserAgent: %v\n", entry.UserAgent)
-	str += fmt.Sprintf("Node: %v\n", entry.Node)
-	str += fmt.Sprintf("Status: %v\n", entry.Status)
-	str += fmt.Sprintf("Metrics: %v\n", entry.Metrics)
+	str := fmt.Sprintf("RequestID: <ud>%v</ud> ", entry.RequestId)
+	str += fmt.Sprintf("Statement: <ud>%v</ud> ", entry.Statement)
+	str += fmt.Sprintf("NamedArgs: %v ", entry.NamedArgs)
+	str += fmt.Sprintf("PositionalArgs: %v ", entry.PositionalArgs)
+	str += fmt.Sprintf("ClientContextId: <ud>%v</ud> ", entry.ClientContextId)
+	str += fmt.Sprintf("IsAdHoc: %v ", entry.IsAdHoc)
+	str += fmt.Sprintf("PreparedId: %v ", entry.PreparedId)
+	str += fmt.Sprintf("UserAgent: %v ", entry.UserAgent)
+	str += fmt.Sprintf("Node: %v ", entry.Node)
+	str += fmt.Sprintf("Status: %v ", entry.Status)
+	str += fmt.Sprintf("Metrics: %v ", entry.Metrics)
 	return str
 
 }
 
 func stringifyAPIAR(entry n1qlAuditApiRequestEvent) string {
 
-	str := fmt.Sprintf("HttpMethod: %v\n", entry.HttpMethod)
-	str += fmt.Sprintf("HttpResultCode: %v\n", entry.HttpResultCode)
-	str += fmt.Sprintf("ErrorCode: %v\n", entry.ErrorCode)
-	str += fmt.Sprintf("ErrorMessage: %v\n", entry.ErrorMessage)
-	str += fmt.Sprintf("Stat: %v\n", entry.Stat)
-	str += fmt.Sprintf("Name: <ud>%v</ud>\n", entry.Name)
-	str += fmt.Sprintf("Request: <ud>%v</ud>\n", entry.Request)
-	str += fmt.Sprintf("Cluster: %v\n", entry.Cluster)
-	str += fmt.Sprintf("Node: %v\n", entry.Node)
-	str += fmt.Sprintf("Values: <ud>%v</ud>\n", entry.Values)
-	str += fmt.Sprintf("Body: <ud>%v</ud>\n", entry.Body)
+	str := fmt.Sprintf("HttpMethod: %v ", entry.HttpMethod)
+	str += fmt.Sprintf("HttpResultCode: %v ", entry.HttpResultCode)
+	str += fmt.Sprintf("ErrorCode: %v ", entry.ErrorCode)
+	str += fmt.Sprintf("ErrorMessage: %v ", entry.ErrorMessage)
+	str += fmt.Sprintf("Stat: %v ", entry.Stat)
+	str += fmt.Sprintf("Name: <ud>%v</ud> ", entry.Name)
+	str += fmt.Sprintf("Request: <ud>%v</ud> ", entry.Request)
+	str += fmt.Sprintf("Cluster: %v ", entry.Cluster)
+	str += fmt.Sprintf("Node: %v ", entry.Node)
+	str += fmt.Sprintf("Values: <ud>%v</ud> ", entry.Values)
+	str += fmt.Sprintf("Body: <ud>%v</ud> ", entry.Body)
 
 	return str
 }
