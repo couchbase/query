@@ -77,10 +77,9 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 
-			// not necessary, but for completeness...
-			subcount, ok := val.Actual().(int64)
-			if !ok {
-				subcount = 0
+			subcount := int64(0)
+			if val.Type() == value.NUMBER {
+				subcount = val.(value.NumberValue).Int64()
 			}
 
 			// current policy is to only count 'in' documents
