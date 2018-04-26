@@ -91,6 +91,12 @@ func (this *MockQuery) Fail(err errors.Error) {
 	close(this.response.done)
 }
 
+func (this *MockQuery) Error(err errors.Error) {
+	if this.response.err == nil {
+		this.response.err = err
+	}
+}
+
 func (this *MockQuery) Execute(srvr *server.Server, signature value.Value, stopNotify execution.Operator) {
 	defer this.stopAndClose(server.COMPLETED)
 
@@ -451,7 +457,13 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 					", for case file: %v, index: %v", errActual, statements, fname, i))
 				return
 			}
-			// TODO: Check that the actual err matches the expected err.
+
+			if errExpected != errActual.Error() {
+				errstring = go_er.New(fmt.Sprintf("Mismatched error - expected '%s' actual '%s'"+
+					", for case file: %v, index: %v", errExpected, errActual.Error(), fname, i))
+				return
+			}
+
 			continue
 		}
 
