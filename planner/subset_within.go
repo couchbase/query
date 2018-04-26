@@ -14,14 +14,5 @@ import (
 )
 
 func (this *subset) VisitWithin(expr *expression.Within) (interface{}, error) {
-	switch expr2 := this.expr2.(type) {
-	case *expression.IsNotMissing:
-		return expr2.Operand().DependsOn(expr.First()), nil
-	case *expression.IsNotNull:
-		return expr2.Operand().DependsOn(expr.First()), nil
-	case *expression.IsValued:
-		return expr2.Operand().DependsOn(expr.First()), nil
-	default:
-		return this.visitDefault(expr)
-	}
+	return this.visitDefault(expr)
 }

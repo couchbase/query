@@ -22,7 +22,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		return _SELF_SPANS, nil
 	}
 
-	if !SubsetOf(pred.First(), this.key) {
+	if !pred.First().EquivalentTo(this.key) {
 		if pred.DependsOn(this.key) {
 			return _VALUED_SPANS, nil
 		} else {
