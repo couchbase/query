@@ -71,7 +71,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 func anySargFor(pred, key, cond expression.Expression, isJoin bool, keyspaceName, alias string) (SargSpans, error) {
 
 	sp, err := sargFor(pred, key, isJoin, keyspaceName)
-	if err != nil || !sp.Exact() {
+	if err != nil || sp == nil || !sp.Exact() {
 		return sp, err
 	}
 
