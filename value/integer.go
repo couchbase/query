@@ -267,8 +267,8 @@ func (this intValue) Add(n NumberValue) NumberValue {
 	switch n := n.(type) {
 	case intValue:
 		rv := intValue(uint64(this) + uint64(n))
-		if (this >= 0 && n >= 0 && rv >= 0) ||
-			(this < 0 && n < 0 && rv < 0) {
+		overFlow := (this < 0 && n < 0 && rv >= 0) || (this >= 0 && n >= 0 && rv < 0)
+		if !overFlow {
 			return rv
 		}
 	}
