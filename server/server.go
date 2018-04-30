@@ -577,11 +577,10 @@ func (this *Server) serviceRequest(request Request) {
 		context.SetReqDeadline(time.Time{})
 	}
 
-	go request.Execute(this, prepared.Signature(), operator)
+	go operator.RunOnce(context, nil)
 
 	run := time.Now()
-	operator.RunOnce(context, nil)
-
+	request.Execute(this, prepared.Signature(), operator)
 	request.Output().AddPhaseTime(execution.RUN, time.Since(run))
 }
 
