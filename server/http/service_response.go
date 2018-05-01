@@ -130,6 +130,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	this.setHttpCode(http.StatusOK)
 	this.writePrefix(srvr, signature, prefix, indent)
 	stopped := this.writeResults(srvr.Pretty())
+	this.Output().AddPhaseTime(execution.RUN, time.Since(this.ExecTime()))
 
 	this.markTimeOfCompletion()
 

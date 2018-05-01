@@ -60,6 +60,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	var err errors.Error
 	var phaseTime time.Duration
 
+	// This is literally when we become aware of the request
+	reqTime := time.Now()
+
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
 
@@ -280,6 +283,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		readonly, metrics, signature, pretty, consistency, client_id, creds,
 		req.RemoteAddr, userAgent)
 
+	rv.SetRequestTime(reqTime)
 	if phaseTime != 0 {
 		rv.Output().AddPhaseTime(execution.REPREPARE, phaseTime)
 	}

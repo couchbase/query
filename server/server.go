@@ -579,9 +579,8 @@ func (this *Server) serviceRequest(request Request) {
 
 	go operator.RunOnce(context, nil)
 
-	run := time.Now()
+	request.SetExecTime(time.Now())
 	request.Execute(this, prepared.Signature(), operator)
-	request.Output().AddPhaseTime(execution.RUN, time.Since(run))
 }
 
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {

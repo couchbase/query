@@ -71,6 +71,7 @@ type Request interface {
 	Profile() Profile
 	ScanConsistency() datastore.ScanConsistency
 	ScanVectorSource() timestamp.ScanVectorSource
+	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
@@ -196,6 +197,7 @@ type BaseRequest struct {
 	userAgent       string
 	requestTime     time.Time
 	serviceTime     time.Time
+	execTime        time.Time
 	state           State
 	results         value.ValueChannel
 	errors          errors.ErrorChannel
@@ -264,7 +266,6 @@ func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, 
 	rv.credentials = creds
 	rv.remoteAddr = remoteAddr
 	rv.userAgent = userAgent
-	rv.requestTime = time.Now()
 	rv.serviceTime = time.Now()
 	rv.state = RUNNING
 	rv.errors = make(errors.ErrorChannel, _ERROR_CAP)
@@ -286,6 +287,14 @@ func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, 
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
 	rv.client_id = newClientContextIDImpl(client_id)
+}
+
+func (this *BaseRequest) SetRequestTime(time time.Time) {
+	this.requestTime = time
+}
+
+func (this *BaseRequest) SetExecTime(time time.Time) {
+	this.execTime = time
 }
 
 func (this *BaseRequest) SetTimeout(timeout time.Duration) {
@@ -388,6 +397,10 @@ func (this *BaseRequest) RequestTime() time.Time {
 
 func (this *BaseRequest) ServiceTime() time.Time {
 	return this.serviceTime
+}
+
+func (this *BaseRequest) ExecTime() time.Time {
+	return this.execTime
 }
 
 func (this *BaseRequest) SetPrepared(prepared *plan.Prepared) {
