@@ -246,9 +246,17 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 	nGroupMatched := 0
 	for nMatched < len(indexKeys) {
 		if _, ok := groupkeys[indexKeys[nMatched].String()]; ok {
-			// index key matched with group key
+			// index key matched with group key, check duplicate index keys
+			duplicate := false
+			for k := 0; !duplicate && k <= nMatched-1; k++ {
+				if indexKeys[nMatched].EquivalentTo(indexKeys[k]) {
+					duplicate = true
+				}
+			}
 			nMatched++
-			nGroupMatched++
+			if !duplicate {
+				nGroupMatched++
+			}
 		} else if eq, _ := entry.spans.EquivalenceRangeAt(nMatched); eq {
 			// index key is equality predicate, skip it
 			nMatched++
