@@ -67,4 +67,9 @@ func TestCleanupData(t *testing.T) {
 	if errfs != nil {
 		t.Errorf("did not expect err %s", errfs.Error())
 	}
+
+	_, _, errfs1 := Run_test(qc, "delete from customer where test_id = \"cond_unkn_func\"")
+	if errfs1 != nil {
+		t.Errorf("did not expect err %s", errfs1.Error())
+	}
 }

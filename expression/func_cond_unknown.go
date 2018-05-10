@@ -365,3 +365,120 @@ func (this *NullIf) Constructor() FunctionConstructor {
 		return NewNullIf(operands[0], operands[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// NVL
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Conditional function NVL (expr1, expr2).
+Cases:
+Expr1 is Null: return expr2;
+Expr1 is Missing: return expr2;
+For all other values of Expr1: return Expr1.
+*/
+
+type NVL struct {
+	BinaryFunctionBase
+}
+
+func NewNVL(first, second Expression) Function {
+	rv := &NVL{
+		*NewBinaryFunctionBase("nvl", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *NVL) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NVL) Type() value.Type { return value.JSON }
+
+func (this *NVL) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+/*
+Cases:
+Expr1 is Null: return expr2;
+Expr1 is Missing: return expr2;
+For all other values of Expr1: return Expr1.
+*/
+func (this *NVL) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() > value.NULL {
+		return first, nil
+	}
+	return second, nil
+}
+
+func (this *NVL) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
+}
+
+/*
+Factory method pattern.
+*/
+func (this *NVL) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewNVL(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// NVL2
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Conditional function NVL2 (expr1, expr2, expr3).
+Case expr1 is neither missing nor NULL: return expr2
+Case expr1 is missing or NULL: return expr3
+*/
+
+type NVL2 struct {
+	TernaryFunctionBase
+}
+
+func NewNVL2(first, second, third Expression) Function {
+	rv := &NVL2{
+		*NewTernaryFunctionBase("nvl2", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *NVL2) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NVL2) Type() value.Type { return value.JSON }
+
+func (this *NVL2) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *NVL2) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	if first.Type() > value.NULL {
+		return second, nil
+	}
+	return third, nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *NVL2) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewNVL2(operands[0], operands[1], operands[2])
+	}
+}

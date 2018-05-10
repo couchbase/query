@@ -63,9 +63,14 @@ func TestAllCaseFiles(t *testing.T) {
 func TestCleanupData(t *testing.T) {
 	qc := Start_test()
 
-	_, _, errcs := Run_test(qc, "delete from orders where test_id = \"cond_unkn_func\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	_, _, errcs1 := Run_test(qc, "delete from orders where test_id = \"cond_unkn_func\"")
+	if errcs1 != nil {
+		t.Errorf("did not expect err %s", errcs1.Error())
+	}
+
+	_, _, errcs2 := Run_test(qc, "delete from customer where test_id = \"cond_unkn_func\"")
+	if errcs2 != nil {
+		t.Errorf("did not expect err %s", errcs2.Error())
 	}
 
 }

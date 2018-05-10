@@ -138,6 +138,50 @@
             "$1": 12
         }
     ]
+  },
+  {
+    "statements":"SELECT COALESCE(NULL, `lastName`, `firstName`) as firstNonNull FROM customer WHERE test_id=\"cond_unkn_func\" ORDER BY id DESC",
+    "results": [
+        {
+            "firstNonNull": "Brown"
+        },
+        {
+            "firstNonNull": null
+        }
+    ]
+
+  },
+  {
+    "statements":"SELECT NVL(`lastName`, \"not applicable\") as LastName FROM customer WHERE test_id=\"cond_unkn_func\" ORDER BY id",
+    "results": [
+        {
+            "LastName": "not applicable"
+        },
+        {
+            "LastName": "Brown"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL(`firstName`, \"not applicable\") as FirstName FROM customer WHERE test_id=\"cond_unkn_func\" ",
+    "results": [
+        {
+            "FirstName": "not applicable"
+        },
+        {
+            "FirstName": "not applicable"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL2(`lastName`, `lastName`, `firstName`) as Name FROM customer WHERE test_id=\"cond_unkn_func\" ORDER BY id DESC",
+    "results": [
+        {
+            "Name": "Brown"
+        },
+        {
+            "Name": null
+        }
+    ]
   }
-  
 ]

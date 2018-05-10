@@ -323,6 +323,9 @@ var _FUNCTIONS = map[string]Function{
 	"ifnull":             &IfNull{},
 	"missingif":          &MissingIf{},
 	"nullif":             &NullIf{},
+	"coalesce":           &IfMissingOrNull{},
+	"nvl":                &NVL{},
+	"nvl2":               &NVL2{},
 
 	// Conditional for numbers
 	"if_inf":        &IfInf{},

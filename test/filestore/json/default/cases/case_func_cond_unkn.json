@@ -144,6 +144,59 @@
             "$1": 12
         }
     ]
+  },
+  {
+    "statements":"SELECT COALESCE(null, missing, \"n1ql\") ",
+    "results": [
+        {
+            "$1": "n1ql"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT COALESCE(missing, null, missing) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL(null, \"n1ql\") ",
+     "results": [
+        {
+            "$1": "n1ql"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL(12, \"n1ql\") ",
+    "results": [
+        {
+            "$1": 12
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL2(12, \"positive\", \"negative\") ",
+    "results": [
+        {
+            "$1": "positive"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL2(missing, \"exist\", null) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL2(null, \"exist\", missing) ",
+    "results": [
+        {}
+    ]
   }
-  
 ]
