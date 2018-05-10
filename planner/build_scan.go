@@ -25,7 +25,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 	keys := node.Keys()
 	if keys != nil {
-		this.resetOrderOffsetLimit()
+		this.resetPushDowns()
 		switch keys.(type) {
 		case *expression.ArrayConstruct, *algebra.NamedParameter, *algebra.PositionalParameter:
 			this.maxParallelism = 0
