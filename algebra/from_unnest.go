@@ -153,13 +153,6 @@ func (this *Unnest) Left() FromTerm {
 }
 
 /*
-Implements JoinTerm interface. Returns nil for UNNEST.
-*/
-func (this *Unnest) Right() *KeyspaceTerm {
-	return nil
-}
-
-/*
 Returns the source array object path expression for
 the UNNEST clause.
 */

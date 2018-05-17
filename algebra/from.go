@@ -63,7 +63,7 @@ type FromTerm interface {
 type JoinTerm interface {
 	FromTerm
 	Left() FromTerm
-	Right() *KeyspaceTerm
+	// Right() function returns different type for ANSI JOIN and non-ANSI JOIN
 	Outer() bool
 }
 

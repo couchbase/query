@@ -81,6 +81,9 @@ func TestAnsiJoin(t *testing.T) {
 	// test ANSI JOIN with derived IS NOT NULL predicate
 	runMatch("case_ansijoin_derive.json", false, false, qc, t)
 
+	// test ANSI JOIN with UNNEST scan
+	runMatch("case_ansijoin_unnest.json", false, false, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")

@@ -1,0 +1,11 @@
+[
+    {
+        "statements":"SELECT count(*) FROM purchase p UNNEST p.lineItems AS pd JOIN product pt ON pd.product = pt.productId WHERE pd.product = \"product334\"",
+        "results": [
+        {
+            "$1": 24
+        }
+    ]
+    }
+]
+
