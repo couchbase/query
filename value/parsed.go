@@ -12,6 +12,7 @@ package value
 import (
 	"io"
 	"strconv"
+	"sync"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	json "github.com/couchbase/go_json"
@@ -27,13 +28,14 @@ const _THRESHOLD = 2560
 A Value with delayed parsing.
 */
 type parsedValue struct {
-	raw        []byte
-	parsedType Type
-	parsed     Value
-	fields     map[string]Value
-	useState   bool
-	state      *json.FindState
-	used       int32
+	raw          []byte
+	parsedType   Type
+	parsed       Value
+	sync.RWMutex // to access fields
+	fields       map[string]Value
+	useState     bool
+	state        *json.FindState
+	used         int32 // to access state
 }
 
 func NewParsedValue(bytes []byte, isValidated bool) Value {
@@ -177,7 +179,9 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 	}
 
 	if this.fields != nil {
+		this.RLock()
 		result, ok := this.fields[field]
+		this.RUnlock()
 		if ok {
 			return NewValue(result), true
 		}
@@ -221,10 +225,12 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 			val := NewParsedValueWithOptions(res, true, this.useState)
 
 			if useState {
+				this.Lock()
 				if this.fields == nil {
 					this.fields = make(map[string]Value)
 				}
 				this.fields[field] = val
+				this.Unlock()
 			}
 			return val, true
 		}
