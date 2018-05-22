@@ -18,11 +18,12 @@ import (
 )
 
 const (
-	KS_ANSI_JOIN    = 1 << iota // right-hand side of ANSI JOIN
-	KS_ANSI_NEST                // right-hand side of ANSI NEST
-	KS_PRIMARY_JOIN             // join on primary key (meta().id)
-	KS_UNDER_NL                 // inner side of nested-loop join
-	KS_UNDER_HASH               // right-hand side of Hash Join
+	KS_ANSI_JOIN       = 1 << iota // right-hand side of ANSI JOIN
+	KS_ANSI_NEST                   // right-hand side of ANSI NEST
+	KS_PRIMARY_JOIN                // join on primary key (meta().id)
+	KS_UNDER_NL                    // inner side of nested-loop join
+	KS_UNDER_HASH                  // right-hand side of Hash Join
+	KS_INDEX_JOIN_NEST             // right-hand side of index join/nest
 )
 
 /*
@@ -45,13 +46,14 @@ type KeyspaceTerm struct {
 	as        string
 	keys      expression.Expression
 	indexes   IndexRefs
+	joinKeys  expression.Expression
 	joinHint  JoinHint
 	property  uint32
 }
 
 func NewKeyspaceTerm(namespace, keyspace string, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes, JOIN_HINT_NONE, 0}
+	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -63,7 +65,12 @@ This method maps all the constituent terms, namely keys in the FROM
 clause.
 */
 func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
-	if this.keys != nil {
+	if this.joinKeys != nil {
+		this.joinKeys, err = mapper.Map(this.joinKeys)
+		if err != nil {
+			return err
+		}
+	} else if this.keys != nil {
 		this.keys, err = mapper.Map(this.keys)
 		if err != nil {
 			return err
@@ -78,7 +85,9 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *KeyspaceTerm) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 1)
-	if this.keys != nil {
+	if this.joinKeys != nil {
+		exprs = append(exprs, this.joinKeys)
+	} else if this.keys != nil {
 		exprs = append(exprs, this.keys)
 	}
 
@@ -93,7 +102,9 @@ func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
 	if err != nil {
 		return privs, err
 	}
-	if this.keys != nil {
+	if this.joinKeys != nil {
+		privs.AddAll(this.joinKeys.Privileges())
+	} else if this.keys != nil {
 		privs.AddAll(this.keys.Privileges())
 	}
 	return privs, nil
@@ -124,13 +135,6 @@ func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, error
    Representation as a N1QL string.
 */
 func (this *KeyspaceTerm) String() string {
-	return this.toString(false)
-}
-
-/*
-   Representation as a N1QL string.
-*/
-func (this *KeyspaceTerm) toString(join bool) string {
 	s := ""
 
 	if this.namespace != "" {
@@ -143,12 +147,14 @@ func (this *KeyspaceTerm) toString(join bool) string {
 		s += " as `" + this.as + "`"
 	}
 
-	if this.keys != nil {
-		if join {
-			s += " on keys " + this.keys.String()
+	if this.joinKeys != nil {
+		if this.IsIndexJoinNest() {
+			s += " on key " + this.joinKeys.String()
 		} else {
-			s += " use keys " + this.keys.String()
+			s += " on keys " + this.joinKeys.String()
 		}
+	} else if this.keys != nil {
+		s += " use keys " + this.keys.String()
 	}
 
 	// since use keys cannot be mixed with join hints, we can safely add the "use" keyword
@@ -179,7 +185,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		} else {
 			errString = "FROM"
 		}
-		err = errors.NewNoTermNameError(errString, "plan.keyspace.requires_name_or_alias")
+		err = errors.NewNoTermNameError(errString, "semantics.keyspace.requires_name_or_alias")
 		return
 	}
 
@@ -189,7 +195,12 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		f = expression.NewFormalizer("", parent)
 	}
 
-	if this.keys != nil {
+	if this.joinKeys != nil {
+		_, err = this.joinKeys.Accept(f)
+		if err != nil {
+			return
+		}
+	} else if this.keys != nil {
 		_, err = this.keys.Accept(f)
 		if err != nil {
 			return
@@ -205,7 +216,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		} else {
 			errString = "subquery"
 		}
-		err = errors.NewDuplicateAliasError(errString, keyspace, "plan.keyspace.duplicate_alias")
+		err = errors.NewDuplicateAliasError(errString, keyspace, "semantics.keyspace.duplicate_alias")
 		return nil, err
 	}
 
@@ -284,6 +295,14 @@ func (this *KeyspaceTerm) Indexes() IndexRefs {
 }
 
 /*
+Returns the join keys expression defined by the ON KEYS
+or ON KEY ... FOR ... clause.
+*/
+func (this *KeyspaceTerm) JoinKeys() expression.Expression {
+	return this.joinKeys
+}
+
+/*
 Returns the join hint (USE HASH or USE NL).
 */
 func (this *KeyspaceTerm) JoinHint() JoinHint {
@@ -358,10 +377,17 @@ func (this *KeyspaceTerm) IsUnderHash() bool {
 }
 
 /*
+Returns whether it's right-hand side of index join/nest
+*/
+func (this *KeyspaceTerm) IsIndexJoinNest() bool {
+	return (this.property & KS_INDEX_JOIN_NEST) != 0
+}
+
+/*
 Set join keys
 */
 func (this *KeyspaceTerm) SetJoinKeys(keys expression.Expression) {
-	this.keys = keys
+	this.joinKeys = keys
 }
 
 /*
@@ -430,12 +456,21 @@ func (this *KeyspaceTerm) UnsetUnderHash() {
 }
 
 /*
+Set INDEX JOIN/NEST property
+*/
+func (this *KeyspaceTerm) SetIndexJoinNest() {
+	this.property |= KS_INDEX_JOIN_NEST
+}
+
+/*
 Marshals the input keyspace into a byte array.
 */
 func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "keyspaceTerm"}
 	r["as"] = this.as
-	if this.keys != nil {
+	if this.joinKeys != nil {
+		r["keys"] = expression.NewStringer().Visit(this.joinKeys)
+	} else if this.keys != nil {
 		r["keys"] = expression.NewStringer().Visit(this.keys)
 	}
 	r["namespace"] = this.namespace

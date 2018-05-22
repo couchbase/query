@@ -1,0 +1,103 @@
+//  Copyright (c) 2018 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+package errors
+
+import (
+	"fmt"
+)
+
+// semantics errors
+// note the error number range here shares the same range (3000) as parser errors
+
+func NewSemanticsError(e error, msg string) Error {
+	switch e := e.(type) {
+	case Error: // if given error is already an Error, just return it:
+		return e
+	default:
+		return &err{level: EXCEPTION, ICode: 3100, IKey: "semantics_error", ICause: e,
+			InternalMsg: msg, InternalCaller: CallerN(1)}
+	}
+}
+
+const JOIN_NEST_NO_JOIN_HINT = 3110
+
+func NewJoinNestNoJoinHintError(op string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: JOIN_NEST_NO_JOIN_HINT, IKey: iKey,
+		InternalMsg:    fmt.Sprintf("%s on %s cannot have join hint (USE HASH or USE NL).", op, alias),
+		InternalCaller: CallerN(1)}
+}
+
+const JOIN_NEST_NO_USE_KEYS = 3120
+
+func NewJoinNestNoUseKeysError(op string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: JOIN_NEST_NO_USE_KEYS, IKey: iKey,
+		InternalMsg:    fmt.Sprintf("%s on %s cannot have USE KEYS.", op, alias),
+		InternalCaller: CallerN(1)}
+}
+
+const JOIN_NEST_NO_USE_INDEX = 3130
+
+func NewJoinNestNoUseIndexError(op string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: JOIN_NEST_NO_USE_INDEX, IKey: iKey,
+		InternalMsg:    fmt.Sprintf("%s on %s cannot have USE INDEX.", op, alias),
+		InternalCaller: CallerN(1)}
+}
+
+const ANSI_MIXED_JOIN = 3200
+
+func NewMixedJoinError(op1 string, alias1 string, op2 string, alias2 string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: ANSI_MIXED_JOIN, IKey: iKey,
+		InternalMsg:    fmt.Sprintf("Cannot mix %s on %s with %s on %s.", op1, alias1, op2, alias2),
+		InternalCaller: CallerN(1)}
+}
+
+const ANSI_KEYSPACE_ONLY = 3210
+
+func NewAnsiKeyspaceOnlyError(op string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: ANSI_KEYSPACE_ONLY, IKey: iKey,
+		InternalMsg:    fmt.Sprintf("ANSI %s (on %s) must be done on a keyspace.", op, alias),
+		InternalCaller: CallerN(1)}
+}
+
+/* ---- BEGIN MOVED error numbers ----
+   The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
+   although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.
+*/
+const NO_TERM_NAME = 4010
+
+func NewNoTermNameError(termType string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: NO_TERM_NAME, IKey: iKey,
+		InternalMsg: fmt.Sprintf("%s term must have a name or alias", termType), InternalCaller: CallerN(1)}
+}
+
+const DUPLICATE_ALIAS = 4020
+
+func NewDuplicateAliasError(termType string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: DUPLICATE_ALIAS, IKey: iKey,
+		InternalMsg: fmt.Sprintf("Duplicate %s alias %s", termType, alias), InternalCaller: CallerN(1)}
+}
+
+const UNKNOWN_FOR = 4025
+
+func NewUnknownForError(termType string, keyFor string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: UNKNOWN_FOR, IKey: iKey,
+		InternalMsg: fmt.Sprintf("Unknown %s for alias %s", termType, keyFor), InternalCaller: CallerN(1)}
+}
+
+const EXPR_NO_USE_KEYS_INDEX = 4110
+
+func NewUseKeysUseIndexesError(termType string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: EXPR_NO_USE_KEYS_INDEX, IKey: iKey,
+		InternalMsg: fmt.Sprintf("%s term should not have USE KEYS or USE INDEX", termType), InternalCaller: CallerN(1)}
+}
+
+/* ---- END MOVED error numbers ----
+   Please add new semantics error numbers in the 3000 number range above
+*/

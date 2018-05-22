@@ -90,7 +90,8 @@ func (this *IndexNest) String() string {
 		s += " nest "
 	}
 
-	s += this.right.toString(true)
+	s += this.right.String()
+	s += " for " + this.keyFor
 	return s
 }
 
@@ -106,19 +107,19 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	_, ok := f.Allowed().Field(this.keyFor)
 	if !ok {
-		err = errors.NewUnknownForError("NEST", this.keyFor, "plan.nest.unknown_for")
+		err = errors.NewUnknownForError("NEST", this.keyFor, "semantics.nest.unknown_for")
 		return nil, err
 	}
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("NEST", "plan.nest.requires_name_or_alias")
+		err = errors.NewNoTermNameError("NEST", "semantics.nest.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok = f.Allowed().Field(alias)
 	if ok {
-		err = errors.NewDuplicateAliasError("NEST", alias, "plan.nest.duplicate_alias")
+		err = errors.NewDuplicateAliasError("NEST", alias, "semantics.nest.duplicate_alias")
 		return nil, err
 	}
 
@@ -127,7 +128,7 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	p := expression.NewFormalizer("", parent)
 	p.SetAllowedAlias(alias, true)
-	this.right.keys, err = p.Map(this.right.keys)
+	this.right.joinKeys, err = p.Map(this.right.joinKeys)
 
 	for ident, val := range p.Identifiers().Fields() {
 		f.Identifiers().SetField(ident, val)

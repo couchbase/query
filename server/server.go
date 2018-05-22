@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/semantics"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -591,6 +592,12 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
+		}
+
+		semChecker := semantics.NewSemChecker()
+		_, err = stmt.Accept(semChecker)
+		if err != nil {
+			return nil, errors.NewSemanticsError(err, "")
 		}
 
 		isprepare := false

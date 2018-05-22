@@ -452,6 +452,9 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 		// this should never happen: the statement parsed to start with
 		return nil, errors.NewReprepareError(err)
 	}
+
+	// since this is a reprepare, no need to check semantics again after parsing.
+
 	prep := time.Now()
 	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, namespace, false,
 

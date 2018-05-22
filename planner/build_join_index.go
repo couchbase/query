@@ -57,7 +57,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		return nil, nil, nil, err
 	}
 
-	onkey := node.Keys()
+	onkey := node.JoinKeys()
 	indexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(indexes)
 	for _, index := range allindexes {
@@ -88,7 +88,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	}
 
 	var pred expression.Expression
-	pred = expression.NewIsNotNull(node.Keys().Copy())
+	pred = expression.NewIsNotNull(node.JoinKeys().Copy())
 	dnf := NewDNF(pred, true, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {

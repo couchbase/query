@@ -10,8 +10,6 @@
 package algebra
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -189,9 +187,8 @@ func (this *Merge) Formalize() (err error) {
 		return err
 	}
 
-	if kf.Keyspace() != "" &&
-		kf.Keyspace() == sf.Keyspace() {
-		return fmt.Errorf("Duplicate alias %s.", kf.Keyspace())
+	if kf.Keyspace() != "" && kf.Keyspace() == sf.Keyspace() {
+		return errors.NewDuplicateAliasError("MERGE", kf.Keyspace(), "semantics.merge.duplicate_alias")
 	}
 
 	f := expression.NewFormalizer("", nil)
@@ -402,7 +399,7 @@ func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 
 	keyspace := this.Alias()
 	if keyspace == "" {
-		err = errors.NewNoTermNameError("MergeSource", "plan.mergesource.requires_name_or_alias")
+		err = errors.NewNoTermNameError("MergeSource", "semantics.mergesource.requires_name_or_alias")
 		return nil, err
 	}
 

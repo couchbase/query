@@ -69,7 +69,7 @@ func (this *Nest) MarshalBase(f func(map[string]interface{})) map[string]interfa
 	r := map[string]interface{}{"#operator": "Nest"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
-	r["on_keys"] = expression.NewStringer().Visit(this.term.Keys())
+	r["on_keys"] = expression.NewStringer().Visit(this.term.JoinKeys())
 
 	if this.outer {
 		r["outer"] = this.outer

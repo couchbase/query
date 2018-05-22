@@ -84,7 +84,7 @@ func (this *Join) String() string {
 		s += " join "
 	}
 
-	s += this.right.toString(true)
+	s += this.right.String()
 	return s
 }
 
@@ -99,20 +99,20 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 	}
 
 	f.SetKeyspace("")
-	this.right.keys, err = f.Map(this.right.keys)
+	this.right.joinKeys, err = f.Map(this.right.joinKeys)
 	if err != nil {
 		return
 	}
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("JOIN", "plan.join.requires_name_or_alias")
+		err = errors.NewNoTermNameError("JOIN", "semantics.join.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := f.Allowed().Field(alias)
 	if ok {
-		err = errors.NewDuplicateAliasError("JOIN", alias, "plan.join.duplicate_alias")
+		err = errors.NewDuplicateAliasError("JOIN", alias, "semantics.join.duplicate_alias")
 		return nil, err
 	}
 

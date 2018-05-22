@@ -111,18 +111,18 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("FROM expression", "plan.fromExpr.requires_name_or_alias")
+		err = errors.NewNoTermNameError("FROM expression", "semantics.fromExpr.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := parent.Allowed().Field(alias)
 	if ok {
-		err = errors.NewDuplicateAliasError("FROM expression", alias, "plan.fromExpr.duplicate_alias")
+		err = errors.NewDuplicateAliasError("FROM expression", alias, "semantics.fromExpr.duplicate_alias")
 		return nil, err
 	}
 
-	if this.keyspaceTerm != nil && this.KeyspaceTerm().Keys() != nil {
-		err = errors.NewUseKeysError("FROM expression", "plan.fromExpr.usekeys_are_not_alllowed")
+	if this.keyspaceTerm != nil && (this.keyspaceTerm.Keys() != nil || this.keyspaceTerm.Indexes() != nil) {
+		err = errors.NewUseKeysUseIndexesError("FROM expression", "semantics.fromExpr.no_usekeys_or_useindex")
 		return nil, err
 	}
 

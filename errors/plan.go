@@ -28,26 +28,7 @@ func NewReprepareError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 4001, IKey: "reprepare_error", ICause: e, InternalMsg: "Reprepare error", InternalCaller: CallerN(1)}
 }
 
-const NO_TERM_NAME = 4010
-
-func NewNoTermNameError(termType string, iKey string) Error {
-	return &err{level: EXCEPTION, ICode: NO_TERM_NAME, IKey: iKey,
-		InternalMsg: fmt.Sprintf("%s term must have a name or alias", termType), InternalCaller: CallerN(1)}
-}
-
-const DUPLICATE_ALIAS = 4020
-
-func NewDuplicateAliasError(termType string, alias string, iKey string) Error {
-	return &err{level: EXCEPTION, ICode: DUPLICATE_ALIAS, IKey: iKey,
-		InternalMsg: fmt.Sprintf("Duplicate %s alias %s", termType, alias), InternalCaller: CallerN(1)}
-}
-
-const UNKNOWN_FOR = 4025
-
-func NewUnknownForError(termType string, keyFor string, iKey string) Error {
-	return &err{level: EXCEPTION, ICode: UNKNOWN_FOR, IKey: iKey,
-		InternalMsg: fmt.Sprintf("Unknown %s for alias %s", termType, keyFor), InternalCaller: CallerN(1)}
-}
+/* error numbers 4010, 4020, 4025 moved to semantics.go */
 
 const SUBQUERY_MISSING_KEYS = 4030
 
@@ -97,10 +78,7 @@ func NewNoIndexJoinError(alias, op string) Error {
 		InternalMsg: fmt.Sprintf("No index available for join term %s", alias), InternalCaller: CallerN(1)}
 }
 
-func NewUseKeysError(termType string, iKey string) Error {
-	return &err{level: EXCEPTION, ICode: 4110, IKey: iKey,
-		InternalMsg: fmt.Sprintf("%s term should not have USE KEYS", termType), InternalCaller: CallerN(1)}
-}
+/* error number 4110 moved to semantics.go */
 
 const NOT_GROUP_KEY_OR_AGG = 4210
 
@@ -150,7 +128,7 @@ const NO_ANSI_JOIN = 4330
 
 func NewNoAnsiJoinError(alias, op string) Error {
 	return &err{level: EXCEPTION, ICode: NO_ANSI_JOIN, IKey: fmt.Sprintf("plan.ansi_%s.no_index", op),
-		InternalMsg: fmt.Sprintf("No index available for ANSI join term %s", alias), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("No index available for ANSI %s term %s", op, alias), InternalCaller: CallerN(1)}
 }
 
 const PARTITION_INDEX_NOT_SUPPORTED = 4340

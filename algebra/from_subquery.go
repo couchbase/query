@@ -74,13 +74,13 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("FROM Subquery", "plan.subquery.requires_name_or_alias")
+		err = errors.NewNoTermNameError("FROM Subquery", "semantics.subquery.requires_name_or_alias")
 		return
 	}
 
 	_, ok := parent.Allowed().Field(alias)
 	if ok {
-		err = errors.NewDuplicateAliasError("subquery", alias, "plan.subquery.duplicate_alias")
+		err = errors.NewDuplicateAliasError("subquery", alias, "semantics.subquery.duplicate_alias")
 		return nil, err
 	}
 

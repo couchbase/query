@@ -22,6 +22,10 @@ import (
 func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, err error) {
 	right := node.Right()
 
+	if ksterm := algebra.GetKeyspaceTerm(right); ksterm != nil {
+		right = ksterm
+	}
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		err := this.processOnclause(right, node.Onclause(), node.Outer())
@@ -69,9 +73,9 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 		// make a copy of the original KeyspaceTerm with the extra
 		// primaryJoinKeys and construct a JOIN operator
-		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(),
-			primaryJoinKeys, right.Indexes())
+		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
+		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: ANSI JOIN on %s must be a keyspace", node.Alias()))
@@ -80,6 +84,10 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, err error) {
 	right := node.Right()
+
+	if ksterm := algebra.GetKeyspaceTerm(right); ksterm != nil {
+		right = ksterm
+	}
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
@@ -128,9 +136,9 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 		// make a copy of the original KeyspaceTerm with the extra
 		// primaryJoinKeys and construct a NEST operator
-		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(),
-			primaryJoinKeys, right.Indexes())
+		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
+		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: ANSI NEST on %s must be a keyspace", node.Alias()))
@@ -309,6 +317,10 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 func (this *builder) buildHashJoin(node *algebra.AnsiJoin) (hjoin *plan.HashJoin, err error) {
 	right := node.Right()
 
+	if ksterm := algebra.GetKeyspaceTerm(right); ksterm != nil {
+		right = ksterm
+	}
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(right, node.Outer(), "join")
@@ -324,6 +336,10 @@ func (this *builder) buildHashJoin(node *algebra.AnsiJoin) (hjoin *plan.HashJoin
 
 func (this *builder) buildHashNest(node *algebra.AnsiNest) (hnest *plan.HashNest, err error) {
 	right := node.Right()
+
+	if ksterm := algebra.GetKeyspaceTerm(right); ksterm != nil {
+		right = ksterm
+	}
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:

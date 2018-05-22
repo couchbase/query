@@ -89,7 +89,7 @@ func (this *Nest) String() string {
 		s += " nest "
 	}
 
-	s += this.right.toString(true)
+	s += this.right.String()
 	return s
 }
 
@@ -104,20 +104,20 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 	}
 
 	f.SetKeyspace("")
-	this.right.keys, err = f.Map(this.right.keys)
+	this.right.joinKeys, err = f.Map(this.right.joinKeys)
 	if err != nil {
 		return
 	}
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("NEST", "plan.nest.requires_name_or_alias")
+		err = errors.NewNoTermNameError("NEST", "semantics.nest.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := f.Allowed().Field(alias)
 	if ok {
-		err = errors.NewDuplicateAliasError("NEST", alias, "plan.nest.duplicate_alias")
+		err = errors.NewDuplicateAliasError("NEST", alias, "semantics.nest.duplicate_alias")
 		return nil, err
 	}
 
