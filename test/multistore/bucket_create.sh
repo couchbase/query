@@ -6,13 +6,11 @@ Site=http://127.0.0.1:8091/pools/default/buckets
 Auth=Administrator:password
 bucket=(customer orders product purchase review shellTest)
 q=${1:-250}
-port=11224
 
 for i in "${bucket[@]}"
 do
-echo curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=sasl -d saslPassword=donotuse -d proxyPort=$port -d bucketType=couchbase $Site
-curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=sasl -d saslPassword=donotuse -d proxyPort=$port -d bucketType=couchbase $Site
-let port\+=1
+echo curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=sasl -d saslPassword=donotuse -d bucketType=couchbase $Site
+curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=sasl -d saslPassword=donotuse -d bucketType=couchbase $Site
 done
 
 echo mkdir -p data/dimestore/product
