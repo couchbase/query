@@ -21,14 +21,17 @@ type ExpressionTerm struct {
 	as           string
 	keyspaceTerm *KeyspaceTerm
 	isKeyspace   bool
+	correlated   bool
+	joinHint     JoinHint
+	property     uint32
 }
 
 /*
 Constructor.
 */
 func NewExpressionTerm(fromExpr expression.Expression, as string,
-	keyspaceTerm *KeyspaceTerm, isKeyspace bool) *ExpressionTerm {
-	return &ExpressionTerm{fromExpr: fromExpr, as: as, keyspaceTerm: keyspaceTerm, isKeyspace: isKeyspace}
+	keyspaceTerm *KeyspaceTerm, isKeyspace bool, joinHint JoinHint) *ExpressionTerm {
+	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, joinHint, 0}
 }
 
 /*
@@ -106,6 +109,8 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	if this.isKeyspace {
+		this.keyspaceTerm.SetProperty(this.property)
+		this.keyspaceTerm.SetJoinHint(this.joinHint)
 		return this.keyspaceTerm.Formalize(parent)
 	}
 
@@ -130,6 +135,15 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	this.fromExpr, err = f.Map(this.fromExpr)
 	if err != nil {
 		return
+	}
+
+	// Determine if this expression contains any correlated references
+	immediate := f.Allowed().GetValue().Fields()
+	for ident, _ := range f.Identifiers().Fields() {
+		if _, ok := immediate[ident]; !ok {
+			this.correlated = true
+			break
+		}
 	}
 
 	f.SetAllowedAlias(alias, true)
@@ -179,11 +193,99 @@ func (this *ExpressionTerm) IsKeyspace() bool {
 }
 
 /*
+Returns if Expression is (lateral) correlated
+i.e., refers to any keyspace before the expression term in FROM clause
+*/
+func (this *ExpressionTerm) IsCorrelated() bool {
+	return this.correlated
+}
+
+/*
+Returns the join hint
+*/
+func (this *ExpressionTerm) JoinHint() JoinHint {
+	return this.joinHint
+}
+
+/*
+Join hint prefers hash join
+*/
+func (this *ExpressionTerm) PreferHash() bool {
+	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE
+}
+
+/*
+Join hint prefers nested loop join
+*/
+func (this *ExpressionTerm) PreferNL() bool {
+	return this.joinHint == USE_NL
+}
+
+/*
+Returns the property.
+*/
+func (this *ExpressionTerm) Property() uint32 {
+	return this.property
+}
+
+/*
+Returns whether this expression term is for an ANSI JOIN
+*/
+func (this *ExpressionTerm) IsAnsiJoin() bool {
+	return (this.property & TERM_ANSI_JOIN) != 0
+}
+
+/*
+Returns whether this expression term is for an ANSI NEST
+*/
+func (this *ExpressionTerm) IsAnsiNest() bool {
+	return (this.property & TERM_ANSI_NEST) != 0
+}
+
+/*
+Returns whether this expression term is for an ANSI JOIN or ANSI NEST
+*/
+func (this *ExpressionTerm) IsAnsiJoinOp() bool {
+	return (this.property & (TERM_ANSI_JOIN | TERM_ANSI_NEST)) != 0
+}
+
+/*
+Set the from Expression
+*/
+func (this *ExpressionTerm) SetExpressionTerm(fromExpr expression.Expression) {
+	this.fromExpr = fromExpr
+}
+
+/*
+Set join hint
+*/
+func (this *ExpressionTerm) SetJoinHint(joinHint JoinHint) {
+	this.joinHint = joinHint
+}
+
+/*
+Set ANSI JOIN property
+*/
+func (this *ExpressionTerm) SetAnsiJoin() {
+	this.property |= TERM_ANSI_JOIN
+}
+
+/*
+Set ANSI NEST property
+*/
+func (this *ExpressionTerm) SetAnsiNest() {
+	this.property |= TERM_ANSI_NEST
+}
+
+/*
 Marshals input ExpressionTerm.
 */
 func (this *ExpressionTerm) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "ExpressionTerm"}
 	r["as"] = this.as
 	r["fromexpr"] = this.fromExpr
+	if this.correlated {
+		r["correlated"] = this.correlated
+	}
 	return json.Marshal(r)
 }

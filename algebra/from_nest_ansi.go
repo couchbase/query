@@ -27,12 +27,12 @@ array-valued field in the result object.
 */
 type AnsiNest struct {
 	left     FromTerm
-	right    FromTerm
+	right    SimpleFromTerm
 	outer    bool
 	onclause expression.Expression
 }
 
-func NewAnsiNest(left FromTerm, outer bool, right FromTerm, onclause expression.Expression) *AnsiNest {
+func NewAnsiNest(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiNest {
 	return &AnsiNest{left, right, outer, onclause}
 }
 
@@ -153,7 +153,7 @@ func (this *AnsiNest) Left() FromTerm {
 /*
 Returns the right term in the NEST clause.
 */
-func (this *AnsiNest) Right() FromTerm {
+func (this *AnsiNest) Right() SimpleFromTerm {
 	return this.right
 }
 

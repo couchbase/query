@@ -1,0 +1,267 @@
+[
+    {
+        "testcase": "ANSI JOIN on expr, LEFT JOIN with USE HASH(probe) hint, ignored, using NestedLoop Join. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT t.c11, t.c12, t2.c22 FROM shellTest t LEFT JOIN [ {\"c21\": 1, \"c22\": 10}, {\"c21\": 2, \"c22\": 20}, {\"c21\": 2, \"c22\": 21} ] t2 USE HASH(probe) ON t.c11 = t2.c21 WHERE t.type = \"left\" AND t.c11 > 0 ORDER BY t.c11, t2.c22",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 20
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 21
+        },
+        {
+            "c11": 3,
+            "c12": 30
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN on expr, RIGHT JOIN with USE HASH(build) hint, ignored, using NestedLoop Join. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT t.c11, t.c12, t2.c22 FROM [ {\"c21\": 1, \"c22\": 10}, {\"c21\": 2, \"c22\": 20}, {\"c21\": 2, \"c22\": 21} ] t2 RIGHT JOIN shellTest t USE HASH(build) ON t.c11 = t2.c21 WHERE t.type = \"left\" AND t.c11 > 0 ORDER BY t.c11, t2.c22",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 20
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 21
+        },
+        {
+            "c11": 3,
+            "c12": 30
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI LEFT JOIN on expr, correlated, use NestedLoopJoin. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT t.c11, t.c12, t2 FROM shellTest t LEFT JOIN t.a11 t2 ON t.c11 = t2 WHERE t.type = \"left\" AND t.c11 > 0 ORDER BY t.c11, t2",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10,
+            "t2": 1
+        },
+        {
+            "c11": 2,
+            "c12": 20
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "t2": 3
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI LEFT JOIN on expr, correlated, use NestedLoopJoin, left-hand side covered. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT t.c11, t2 FROM shellTest t LEFT JOIN t.a11 t2 ON t.c11 = t2 WHERE t.type = \"left\" AND t.c11 > 0 ORDER BY t.c11, t2",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "t2": 1
+        },
+        {
+            "c11": 2,
+        },
+        {
+            "c11": 3,
+            "t2": 3
+        },
+        {
+            "c11": 4,
+        }
+    ]
+    },
+    {
+        "testcase": "NestedLoop join on empty expr with LEFT JOIN and USE NL hint. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT t.c11, t.c12, t2.c22 FROM shellTest t LEFT JOIN [ ] t2 USE NL ON t.c11 = t2.c21 WHERE t.type = \"left\" AND t.c11 > 0 ORDER BY t.c11",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20
+        },
+        {
+            "c11": 3,
+            "c12": 30
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "NestedLoop join on empty expr with RIGHT JOIN and USE NL hint. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT t.c11, t.c12, t2.c22 FROM [ ] t2 RIGHT JOIN shellTest t USE NL ON t.c11 = t2.c21 WHERE t.type = \"left\" AND t.c11 > 0 ORDER BY t.c11",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20
+        },
+        {
+            "c11": 3,
+            "c12": 30
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "Ansi Join on correlated subquery, error.",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN (SELECT customerId, purchaseId FROM purchase WHERE type = \"purchase\" AND customerId = c.customerId) p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
+        "error": "FROM clause subquery term (p) cannot be correlated."
+    },
+    {
+        "testcase": "Nested Loop Join on (non-correlated) subq with USE NL hint. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN (SELECT customerId, purchaseId FROM purchase WHERE type = \"purchase\" AND purchaseId LIKE "purchase4%") p USE NL ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase436"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4534"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4627"
+        }
+    ]
+    }
+]
+

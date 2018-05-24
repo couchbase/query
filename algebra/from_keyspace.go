@@ -17,13 +17,14 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+/* property flags shared among SimpleFromTerm, not all terms use all flags */
 const (
-	KS_ANSI_JOIN       = 1 << iota // right-hand side of ANSI JOIN
-	KS_ANSI_NEST                   // right-hand side of ANSI NEST
-	KS_PRIMARY_JOIN                // join on primary key (meta().id)
-	KS_UNDER_NL                    // inner side of nested-loop join
-	KS_UNDER_HASH                  // right-hand side of Hash Join
-	KS_INDEX_JOIN_NEST             // right-hand side of index join/nest
+	TERM_ANSI_JOIN       = 1 << iota // right-hand side of ANSI JOIN
+	TERM_ANSI_NEST                   // right-hand side of ANSI NEST
+	TERM_PRIMARY_JOIN                // join on primary key (meta().id)
+	TERM_UNDER_NL                    // inner side of nested-loop join
+	TERM_UNDER_HASH                  // right-hand side of Hash Join
+	TERM_INDEX_JOIN_NEST             // right-hand side of index join/nest
 )
 
 /*
@@ -334,21 +335,21 @@ func (this *KeyspaceTerm) Property() uint32 {
 Returns whether this keyspace is for an ANSI JOIN
 */
 func (this *KeyspaceTerm) IsAnsiJoin() bool {
-	return (this.property & KS_ANSI_JOIN) != 0
+	return (this.property & TERM_ANSI_JOIN) != 0
 }
 
 /*
 Returns whether this keyspace is for an ANSI NEST
 */
 func (this *KeyspaceTerm) IsAnsiNest() bool {
-	return (this.property & KS_ANSI_NEST) != 0
+	return (this.property & TERM_ANSI_NEST) != 0
 }
 
 /*
 Returns whether this keyspace is for an ANSI JOIN or ANSI NEST
 */
 func (this *KeyspaceTerm) IsAnsiJoinOp() bool {
-	return (this.property & (KS_ANSI_JOIN | KS_ANSI_NEST)) != 0
+	return (this.property & (TERM_ANSI_JOIN | TERM_ANSI_NEST)) != 0
 }
 
 /*
@@ -356,7 +357,7 @@ Returns whether joining on primary key (meta().id)
 */
 func (this *KeyspaceTerm) IsPrimaryJoin() bool {
 	if this.IsAnsiJoinOp() {
-		return (this.property & KS_PRIMARY_JOIN) != 0
+		return (this.property & TERM_PRIMARY_JOIN) != 0
 	} else {
 		return false
 	}
@@ -366,21 +367,21 @@ func (this *KeyspaceTerm) IsPrimaryJoin() bool {
 Returns whether under inner of nested-loop join
 */
 func (this *KeyspaceTerm) IsUnderNL() bool {
-	return (this.property & KS_UNDER_NL) != 0
+	return (this.property & TERM_UNDER_NL) != 0
 }
 
 /*
 Returns whether this keyspace is being considered for Hash Join
 */
 func (this *KeyspaceTerm) IsUnderHash() bool {
-	return (this.property & KS_UNDER_HASH) != 0
+	return (this.property & TERM_UNDER_HASH) != 0
 }
 
 /*
 Returns whether it's right-hand side of index join/nest
 */
 func (this *KeyspaceTerm) IsIndexJoinNest() bool {
-	return (this.property & KS_INDEX_JOIN_NEST) != 0
+	return (this.property & TERM_INDEX_JOIN_NEST) != 0
 }
 
 /*
@@ -408,14 +409,14 @@ func (this *KeyspaceTerm) SetProperty(property uint32) {
 Set ANSI JOIN property
 */
 func (this *KeyspaceTerm) SetAnsiJoin() {
-	this.property |= KS_ANSI_JOIN
+	this.property |= TERM_ANSI_JOIN
 }
 
 /*
 Set ANSI NEST property
 */
 func (this *KeyspaceTerm) SetAnsiNest() {
-	this.property |= KS_ANSI_NEST
+	this.property |= TERM_ANSI_NEST
 }
 
 /*
@@ -423,7 +424,7 @@ Set PRIMARY JOIN property
 */
 func (this *KeyspaceTerm) SetPrimaryJoin() {
 	if this.IsAnsiJoinOp() {
-		this.property |= KS_PRIMARY_JOIN
+		this.property |= TERM_PRIMARY_JOIN
 	}
 }
 
@@ -431,35 +432,35 @@ func (this *KeyspaceTerm) SetPrimaryJoin() {
 Set UNDER NL property
 */
 func (this *KeyspaceTerm) SetUnderNL() {
-	this.property |= KS_UNDER_NL
+	this.property |= TERM_UNDER_NL
 }
 
 /*
 Unset UNDER NL property
 */
 func (this *KeyspaceTerm) UnsetUnderNL() {
-	this.property &^= KS_UNDER_NL
+	this.property &^= TERM_UNDER_NL
 }
 
 /*
 Set UNDER HASH property
 */
 func (this *KeyspaceTerm) SetUnderHash() {
-	this.property |= KS_UNDER_HASH
+	this.property |= TERM_UNDER_HASH
 }
 
 /*
 Unset UNDER HASH property
 */
 func (this *KeyspaceTerm) UnsetUnderHash() {
-	this.property &^= KS_UNDER_HASH
+	this.property &^= TERM_UNDER_HASH
 }
 
 /*
 Set INDEX JOIN/NEST property
 */
 func (this *KeyspaceTerm) SetIndexJoinNest() {
-	this.property |= KS_INDEX_JOIN_NEST
+	this.property |= TERM_INDEX_JOIN_NEST
 }
 
 /*

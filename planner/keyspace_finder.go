@@ -49,7 +49,7 @@ func (this *keyspaceFinder) addOnclause(onclause expression.Expression) {
 	}
 }
 
-func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.FromTerm) error {
+func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.SimpleFromTerm) error {
 	_, err := left.Accept(this)
 	if err != nil {
 		return err

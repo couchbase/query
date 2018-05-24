@@ -181,7 +181,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	scan := plan.NewExpressionScan(node.ExpressionTerm(), node.Alias())
+	scan := plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated())
 	this.children = append(this.children, scan)
 
 	err := this.processKeyspaceDone(node.Alias())

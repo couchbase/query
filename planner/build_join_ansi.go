@@ -28,7 +28,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		err := this.processOnclause(right, node.Onclause(), node.Outer())
+		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
 		if err != nil {
 			return nil, err
 		}
@@ -77,8 +77,35 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
+	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
+		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
+		if err != nil {
+			return nil, err
+		}
+
+		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+			// for expression term and subquery term, consider hash join
+			// even without USE HASH hint, as long as USE NL is not specified
+			if !right.PreferNL() {
+				hjoin, err := this.buildHashJoin(node)
+				if hjoin != nil || err != nil {
+					return hjoin, err
+				}
+			}
+		}
+
+		scans, newOnclause, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
+		if err != nil {
+			return nil, err
+		}
+
+		if newOnclause != nil {
+			node.SetOnclause(newOnclause)
+		}
+
+		return plan.NewNLJoin(node, plan.NewSequence(scans...)), nil
 	default:
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: ANSI JOIN on %s must be a keyspace", node.Alias()))
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: Unexpected right-hand side node type"))
 	}
 }
 
@@ -91,7 +118,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		err := this.processOnclause(right, node.Onclause(), node.Outer())
+		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
 		if err != nil {
 			return nil, err
 		}
@@ -140,15 +167,37 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
+	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
+		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+			// for expression term and subquery term, consider hash join
+			// even without USE HASH hint, as long as USE NL is not specified
+			if !right.PreferNL() {
+				hnest, err := this.buildHashNest(node)
+				if hnest != nil || err != nil {
+					return hnest, err
+				}
+			}
+		}
+
+		scans, newOnclause, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
+		if err != nil {
+			return nil, err
+		}
+
+		if newOnclause != nil {
+			node.SetOnclause(newOnclause)
+		}
+
+		return plan.NewNLNest(node, plan.NewSequence(scans...)), nil
 	default:
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: ANSI NEST on %s must be a keyspace", node.Alias()))
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: Unexpected right-hand side node type"))
 	}
 }
 
-func (this *builder) processOnclause(node *algebra.KeyspaceTerm, onclause expression.Expression, outer bool) (err error) {
-	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+func (this *builder) processOnclause(alias string, onclause expression.Expression, outer bool) (err error) {
+	baseKeyspace, ok := this.baseKeyspaces[alias]
 	if !ok {
-		return errors.NewPlanInternalError(fmt.Sprintf("processOnclause: missing baseKeyspace %s", node.Alias()))
+		return errors.NewPlanInternalError(fmt.Sprintf("processOnclause: missing baseKeyspace %s", alias))
 	}
 
 	// for inner join, the following processing is already done as part of
@@ -315,50 +364,61 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 }
 
 func (this *builder) buildHashJoin(node *algebra.AnsiJoin) (hjoin *plan.HashJoin, err error) {
-	right := node.Right()
-
-	if ksterm := algebra.GetKeyspaceTerm(right); ksterm != nil {
-		right = ksterm
+	child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(node.Right(), node.Outer(), "join")
+	if err != nil || child == nil {
+		// cannot do hash join
+		return nil, err
 	}
-
-	switch right := right.(type) {
-	case *algebra.KeyspaceTerm:
-		child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(right, node.Outer(), "join")
-		if err != nil || child == nil {
-			// cannot do hash join
-			return nil, err
-		}
-		return plan.NewHashJoin(node, child, buildExprs, probeExprs, aliases), nil
-	default:
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoin: Hash JOIN on %s must be a keyspace", node.Alias()))
-	}
+	return plan.NewHashJoin(node, child, buildExprs, probeExprs, aliases), nil
 }
 
 func (this *builder) buildHashNest(node *algebra.AnsiNest) (hnest *plan.HashNest, err error) {
-	right := node.Right()
+	child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(node.Right(), node.Outer(), "nest")
+	if err != nil || child == nil {
+		// cannot do hash nest
+		return nil, err
+	}
+	if len(aliases) != 1 {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashNest: multiple (%d) build aliases", len(aliases)))
+	}
+	return plan.NewHashNest(node, child, buildExprs, probeExprs, aliases[0]), nil
+}
 
-	if ksterm := algebra.GetKeyspaceTerm(right); ksterm != nil {
+func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool, op string) (
+	child plan.Operator, buildExprs expression.Expressions, probeExprs expression.Expressions, buildAliases []string, err error) {
+
+	var ksterm *algebra.KeyspaceTerm
+	var defaultBuildRight bool
+
+	if ksterm = algebra.GetKeyspaceTerm(right); ksterm != nil {
 		right = ksterm
 	}
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(right, node.Outer(), "nest")
-		if err != nil || child == nil {
-			// cannot do hash nest
-			return nil, err
+		// if USE HASH and USE KEYS are specified together, make sure the document key
+		// expressions does not reference any keyspaces, otherwise hash join cannot be
+		// used.
+		if ksterm.Keys() != nil && ksterm.Keys().Static() == nil {
+			return nil, nil, nil, nil, nil
 		}
-		if len(aliases) != 1 {
-			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashNest: multiple (%d) build aliases", len(aliases)))
+	case *algebra.ExpressionTerm:
+		// hash join cannot handle expression term with any correlated references
+		if right.IsCorrelated() {
+			return nil, nil, nil, nil, nil
 		}
-		return plan.NewHashNest(node, child, buildExprs, probeExprs, aliases[0]), nil
-	default:
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashNest: Hash Nest on %s must be a keyspace", node.Alias()))
-	}
-}
 
-func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, op string) (
-	child plan.Operator, buildExprs expression.Expressions, probeExprs expression.Expressions, buildAliases []string, err error) {
+		defaultBuildRight = true
+	case *algebra.SubqueryTerm:
+		// hash join cannot handle correlated subquery
+		if right.Subquery().IsCorrelated() {
+			return nil, nil, nil, nil, nil
+		}
+
+		defaultBuildRight = true
+	default:
+		return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinScan: unexpected right-hand side node type"))
+	}
 
 	buildRight := false
 	joinHint := right.JoinHint()
@@ -370,13 +430,11 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 		if outer || op == "nest" {
 			return nil, nil, nil, nil, nil
 		}
-	}
-
-	// if USE HASH and USE KEYS are specified together, make sure the document key
-	// expressions does not reference any keyspaces, otherwise hash join cannot be
-	// used.
-	if right.Keys() != nil && right.Keys().Static() == nil {
-		return nil, nil, nil, nil, nil
+	} else if defaultBuildRight {
+		// for expression term and subquery term, if no USE HASH hint is
+		// specified, then consider hash join/nest with the right-hand side
+		// as build side
+		buildRight = true
 	}
 
 	alias := right.Alias()
@@ -476,12 +534,14 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 	// if we are doing nested-loop join. However, for hash join, since both sides of the
 	// hash join are independet of each other, we cannot use join filters for index selection
 	// when planning for the right-hand side.
-	right.SetUnderHash()
-	defer func() {
-		if child == nil {
-			right.UnsetUnderHash()
-		}
-	}()
+	if ksterm != nil {
+		ksterm.SetUnderHash()
+		defer func() {
+			if child == nil {
+				ksterm.UnsetUnderHash()
+			}
+		}()
+	}
 
 	_, err = right.Accept(this)
 	if err != nil {
@@ -544,4 +604,65 @@ func (this *builder) buildHashJoinScan(right *algebra.KeyspaceTerm, outer bool, 
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, nil
+}
+
+func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression) (
+	[]plan.Operator, expression.Expression, error) {
+
+	var newOnclause expression.Expression
+	var err error
+
+	// perform covering transformation
+	if len(this.coveringScans) > 0 {
+		var exprTerm *algebra.ExpressionTerm
+		var fromExpr expression.Expression
+
+		if term, ok := node.(*algebra.ExpressionTerm); ok {
+			exprTerm = term
+			if exprTerm.IsCorrelated() {
+				fromExpr = exprTerm.ExpressionTerm()
+			}
+		}
+
+		newOnclause = onclause
+
+		for _, op := range this.coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+
+			newOnclause, err = coverer.Map(newOnclause)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if fromExpr != nil {
+				fromExpr, err = coverer.Map(fromExpr)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+
+		if exprTerm != nil && fromExpr != nil {
+			exprTerm.SetExpressionTerm(fromExpr)
+		}
+	}
+
+	children := this.children
+	subChildren := this.subChildren
+	defer func() {
+		this.children = children
+		this.subChildren = subChildren
+	}()
+
+	// new slices of this.children and this.subChildren are made in function
+	// VisitSubqueryTerm() or VisitExpressionTerm()
+	this.children = nil
+	this.subChildren = nil
+
+	_, err = node.Accept(this)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return this.children, newOnclause, nil
 }

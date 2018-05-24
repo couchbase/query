@@ -18,14 +18,16 @@ import (
 
 type ExpressionScan struct {
 	readonly
-	fromExpr expression.Expression
-	alias    string
+	fromExpr   expression.Expression
+	alias      string
+	correlated bool
 }
 
-func NewExpressionScan(fromExpr expression.Expression, alias string) *ExpressionScan {
+func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool) *ExpressionScan {
 	return &ExpressionScan{
-		fromExpr: fromExpr,
-		alias:    alias,
+		fromExpr:   fromExpr,
+		alias:      alias,
+		correlated: correlated,
 	}
 }
 
@@ -45,6 +47,10 @@ func (this *ExpressionScan) Alias() string {
 	return this.alias
 }
 
+func (this *ExpressionScan) IsCorrelated() bool {
+	return this.correlated
+}
+
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -53,6 +59,9 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	r := map[string]interface{}{"#operator": "ExpressionScan"}
 	r["expr"] = expression.NewStringer().Visit(this.fromExpr)
 	r["alias"] = this.alias
+	if this.correlated {
+		r["correlated"] = this.correlated
+	}
 	if f != nil {
 		f(r)
 	}
@@ -61,9 +70,10 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string `json:"#operator"`
-		FromExpr string `json:"expr"`
-		Alias    string `json:"alias"`
+		_          string `json:"#operator"`
+		FromExpr   string `json:"expr"`
+		Alias      string `json:"alias"`
+		Correlated bool   `json:"correlated"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -75,6 +85,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 		this.fromExpr, err = parser.Parse(_unmarshalled.FromExpr)
 	}
 	this.alias = _unmarshalled.Alias
+	this.correlated = _unmarshalled.Correlated
 
 	return err
 }

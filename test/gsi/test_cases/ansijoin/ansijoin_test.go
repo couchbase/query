@@ -38,6 +38,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, customerId)")
 	runStmt(qc, "CREATE INDEX prod_reviewList_productId on product(DISTINCT reviewList, productId)")
 	runStmt(qc, "CREATE INDEX st_ix11 on shellTest(c11, DISTINCT a11) WHERE type = \"left\"")
+	runStmt(qc, "CREATE INDEX st_ix12 on shellTest(c11, a11) WHERE type = \"left\"")
 	runStmt(qc, "CREATE INDEX st_ix21 on shellTest(c21, DISTINCT a21) WHERE type = \"right\"")
 	runStmt(qc, "CREATE INDEX st_ix22 on shellTest(a22) WHERE type = \"right\"")
 
@@ -84,6 +85,9 @@ func TestAnsiJoin(t *testing.T) {
 	// test ANSI JOIN with UNNEST scan
 	runMatch("case_ansijoin_unnest.json", false, false, qc, t)
 
+	// test ANSI JOIN on expression term and subquery term
+	runMatch("case_ansijoin_exprsubq.json", false, false, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
@@ -95,6 +99,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX purchase.purch_arrProduct_customerId")
 	runStmt(qc, "DROP INDEX product.prod_reviewList_productId")
 	runStmt(qc, "DROP INDEX shellTest.st_ix11")
+	runStmt(qc, "DROP INDEX shellTest.st_ix12")
 	runStmt(qc, "DROP INDEX shellTest.st_ix21")
 	runStmt(qc, "DROP INDEX shellTest.st_ix22")
 

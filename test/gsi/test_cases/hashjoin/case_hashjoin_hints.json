@@ -79,7 +79,7 @@
     {
         "testcase": "USE HASH hints on first keyspace, error",
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c USE HASH(build) JOIN purchase p USE INDEX (purch_customerId_purchaseId, purch_purchaseId) ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
-        "error": "Join hint (USE HASH or USE NL) cannot be specified on the first keyspace c - at JOIN"
+        "error": "Join hint (USE HASH or USE NL) cannot be specified on the first from term c - at JOIN"
     },
     {
         "testcase": "Combination of USE INDEX and USE HASH hints, ON-clause has OR clause, USE HASH hint igored. Explain",

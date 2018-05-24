@@ -23,32 +23,28 @@ combining two or more source objects.  They can be chained.
 */
 type AnsiJoin struct {
 	left     FromTerm
-	right    FromTerm
+	right    SimpleFromTerm
 	outer    bool
 	onclause expression.Expression
 }
 
-func NewAnsiJoin(left FromTerm, outer bool, right FromTerm, onclause expression.Expression) *AnsiJoin {
+func NewAnsiJoin(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
 	return &AnsiJoin{left, right, outer, onclause}
 }
 
-func NewAnsiRightJoin(left FromTerm, right FromTerm, onclause expression.Expression) *AnsiJoin {
+func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
 	// transfer join hint from right-hand side to left-hand side
-	first := GetKeyspaceTerm(right)
-	second := GetKeyspaceTerm(left)
-	if first != nil && second != nil {
-		joinHint := first.JoinHint()
-		if joinHint != JOIN_HINT_NONE {
-			// swith build and probe side of USE HASH hint
-			switch joinHint {
-			case USE_HASH_BUILD:
-				joinHint = USE_HASH_PROBE
-			case USE_HASH_PROBE:
-				joinHint = USE_HASH_BUILD
-			}
-			second.SetJoinHint(joinHint)
-			first.SetJoinHint(JOIN_HINT_NONE)
+	joinHint := right.JoinHint()
+	if joinHint != JOIN_HINT_NONE {
+		// swith build and probe side of USE HASH hint
+		switch joinHint {
+		case USE_HASH_BUILD:
+			joinHint = USE_HASH_PROBE
+		case USE_HASH_PROBE:
+			joinHint = USE_HASH_BUILD
 		}
+		left.SetJoinHint(joinHint)
+		right.SetJoinHint(JOIN_HINT_NONE)
 	}
 
 	return &AnsiJoin{right, left, true, onclause}
@@ -171,7 +167,7 @@ func (this *AnsiJoin) Left() FromTerm {
 /*
 Returns the right source object of the JOIN.
 */
-func (this *AnsiJoin) Right() FromTerm {
+func (this *AnsiJoin) Right() SimpleFromTerm {
 	return this.right
 }
 

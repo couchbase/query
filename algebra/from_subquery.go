@@ -18,13 +18,15 @@ import (
 type SubqueryTerm struct {
 	subquery *Select
 	as       string
+	joinHint JoinHint
+	property uint32
 }
 
 /*
 Constructor.
 */
-func NewSubqueryTerm(subquery *Select, as string) *SubqueryTerm {
-	return &SubqueryTerm{subquery, as}
+func NewSubqueryTerm(subquery *Select, as string, joinHint JoinHint) *SubqueryTerm {
+	return &SubqueryTerm{subquery, as, joinHint, 0}
 }
 
 /*
@@ -67,11 +69,6 @@ Qualify all identifiers for the parent expression. Checks for
 duplicate aliases.
 */
 func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
-	err = this.subquery.Formalize()
-	if err != nil {
-		return
-	}
-
 	alias := this.Alias()
 	if alias == "" {
 		err = errors.NewNoTermNameError("FROM Subquery", "semantics.subquery.requires_name_or_alias")
@@ -85,6 +82,19 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	}
 
 	f = expression.NewFormalizer(alias, parent)
+	if this.IsAnsiJoinOp() {
+		// If on right-hand side of ANSI JOIN, check correlation
+		err = this.subquery.FormalizeSubquery(f)
+		if err != nil {
+			return
+		}
+	} else {
+		err = this.subquery.Formalize()
+		if err != nil {
+			return
+		}
+	}
+
 	f.SetAlias(this.Alias())
 	return
 }
@@ -108,4 +118,74 @@ Returns the inner subquery.
 */
 func (this *SubqueryTerm) Subquery() *Select {
 	return this.subquery
+}
+
+/*
+Returns the join hint
+*/
+func (this *SubqueryTerm) JoinHint() JoinHint {
+	return this.joinHint
+}
+
+/*
+Join hint prefers hash join
+*/
+func (this *SubqueryTerm) PreferHash() bool {
+	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE
+}
+
+/*
+Join hint prefers nested loop join
+*/
+func (this *SubqueryTerm) PreferNL() bool {
+	return this.joinHint == USE_NL
+}
+
+/*
+Returns the property.
+*/
+func (this *SubqueryTerm) Property() uint32 {
+	return this.property
+}
+
+/*
+Returns whether this subquery term is for an ANSI JOIN
+*/
+func (this *SubqueryTerm) IsAnsiJoin() bool {
+	return (this.property & TERM_ANSI_JOIN) != 0
+}
+
+/*
+Returns whether this subquery term is for an ANSI NEST
+*/
+func (this *SubqueryTerm) IsAnsiNest() bool {
+	return (this.property & TERM_ANSI_NEST) != 0
+}
+
+/*
+Returns whether this subquery term is for an ANSI JOIN or ANSI NEST
+*/
+func (this *SubqueryTerm) IsAnsiJoinOp() bool {
+	return (this.property & (TERM_ANSI_JOIN | TERM_ANSI_NEST)) != 0
+}
+
+/*
+Set join hint
+*/
+func (this *SubqueryTerm) SetJoinHint(joinHint JoinHint) {
+	this.joinHint = joinHint
+}
+
+/*
+Set ANSI JOIN property
+*/
+func (this *SubqueryTerm) SetAnsiJoin() {
+	this.property |= TERM_ANSI_JOIN
+}
+
+/*
+Set ANSI NEST property
+*/
+func (this *SubqueryTerm) SetAnsiNest() {
+	this.property |= TERM_ANSI_NEST
 }

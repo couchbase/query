@@ -14,7 +14,7 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func (this *SemChecker) visitJoin(left algebra.FromTerm, right algebra.FromTerm) error {
+func (this *SemChecker) visitJoin(left algebra.FromTerm, right algebra.SimpleFromTerm) error {
 	_, err := left.Accept(this)
 	if err != nil {
 		return err
@@ -75,19 +75,6 @@ func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, er
 }
 
 func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
-	switch right := node.Right().(type) {
-	case *algebra.KeyspaceTerm:
-		/* do nothing */
-	case *algebra.ExpressionTerm:
-		if !right.IsKeyspace() {
-			return nil, errors.NewAnsiKeyspaceOnlyError("JOIN", right.Alias(),
-				"semantics.visit_ansi_join.ansi_keyspace_only")
-		}
-	default:
-		return nil, errors.NewAnsiKeyspaceOnlyError("JOIN", right.Alias(),
-			"semantics.visit_ansi_join.ansi_keyspace_only")
-	}
-
 	switch left := node.Left().(type) {
 	case *algebra.Join, *algebra.IndexJoin:
 		return nil, errors.NewMixedJoinError("non ANSI JOIN", left.Alias(), "ANSI JOIN",
@@ -149,19 +136,6 @@ func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (interface{}, er
 }
 
 func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
-	switch right := node.Right().(type) {
-	case *algebra.KeyspaceTerm:
-		/* do nothing */
-	case *algebra.ExpressionTerm:
-		if !right.IsKeyspace() {
-			return nil, errors.NewAnsiKeyspaceOnlyError("NEST", right.Alias(),
-				"semantics.visit_ansi_nest.ansi_keyspace_only")
-		}
-	default:
-		return nil, errors.NewAnsiKeyspaceOnlyError("NEST", right.Alias(),
-			"semantics.visit_ansi_nest.ansi_keyspace_only")
-	}
-
 	switch left := node.Left().(type) {
 	case *algebra.Join, *algebra.IndexJoin:
 		return nil, errors.NewMixedJoinError("non ANSI JOIN", left.Alias(), "ANSI NEST",

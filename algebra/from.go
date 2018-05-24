@@ -60,6 +60,19 @@ type FromTerm interface {
 	Alias() string
 }
 
+type SimpleFromTerm interface {
+	FromTerm
+	SetAnsiJoin()
+	SetAnsiNest()
+	IsAnsiJoin() bool
+	IsAnsiNest() bool
+	IsAnsiJoinOp() bool
+	JoinHint() JoinHint
+	SetJoinHint(joinHint JoinHint)
+	PreferHash() bool
+	PreferNL() bool
+}
+
 type JoinTerm interface {
 	FromTerm
 	Left() FromTerm
@@ -67,7 +80,7 @@ type JoinTerm interface {
 	Outer() bool
 }
 
-func GetKeyspaceTerm(term FromTerm) *KeyspaceTerm {
+func GetKeyspaceTerm(term SimpleFromTerm) *KeyspaceTerm {
 	if term == nil {
 		return nil
 	}

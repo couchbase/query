@@ -50,6 +50,14 @@ func NewJoinNestNoUseIndexError(op string, alias string, iKey string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+const SUBQ_TERM_NO_CORRELATION = 3140
+
+func NewNoCorrelatedSubqTermError(alias string) Error {
+	return &err{level: EXCEPTION, ICode: SUBQ_TERM_NO_CORRELATION, IKey: "semantics.from_term_no_corr_subq",
+		InternalMsg:    fmt.Sprintf("FROM clause subquery term (%s) cannot be correlated.", alias),
+		InternalCaller: CallerN(1)}
+}
+
 const ANSI_MIXED_JOIN = 3200
 
 func NewMixedJoinError(op1 string, alias1 string, op2 string, alias2 string, iKey string) Error {

@@ -20,7 +20,8 @@ import (
 
 type ExpressionScan struct {
 	base
-	plan *plan.ExpressionScan
+	plan    *plan.ExpressionScan
+	results value.AnnotatedValues
 }
 
 func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionScan {
@@ -52,6 +53,16 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
 
+		correlated := this.plan.IsCorrelated()
+
+		// use cached results if available
+		if !correlated && this.results != nil {
+			for _, av := range this.results {
+				this.sendItem(av)
+			}
+			return
+		}
+
 		ev, e := this.plan.FromExpr().Evaluate(parent, context)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "ExpressionScan"))
@@ -72,10 +83,16 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		acts := actuals.([]interface{})
+		if !correlated {
+			this.results = make(value.AnnotatedValues, 0, len(acts))
+		}
 		for _, act := range acts {
 			actv := value.NewScopeValue(make(map[string]interface{}), parent)
 			actv.SetField(this.plan.Alias(), act)
 			av := value.NewAnnotatedValue(actv)
+			if !correlated {
+				this.results = append(this.results, av)
+			}
 			this.sendItem(av)
 		}
 

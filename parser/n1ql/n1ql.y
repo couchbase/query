@@ -38,6 +38,7 @@ subresult        algebra.Subresult
 selectTerm       *algebra.SelectTerm
 subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
+simpleFromTerm   algebra.SimpleFromTerm
 keyspaceTerm     *algebra.KeyspaceTerm
 use              *algebra.Use
 joinHint         algebra.JoinHint
@@ -329,7 +330,8 @@ tokOffset	 int
 %type <subselect>        subselect
 %type <subselect>        select_from
 %type <subselect>        from_select
-%type <fromTerm>         from_term from opt_from simple_from_term
+%type <fromTerm>         from_term from opt_from
+%type <simpleFromTerm>   simple_from_term
 %type <keyspaceTerm>     keyspace_term
 %type <b>                opt_join_type
 %type <path>             path
@@ -818,9 +820,8 @@ FROM from_term
 from_term:
 simple_from_term
 {
-    ksterm := algebra.GetKeyspaceTerm($1)
-    if ksterm != nil && ksterm.JoinHint() != algebra.JOIN_HINT_NONE {
-        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first keyspace %s", ksterm.Alias()))
+    if $1.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s", $1.Alias()))
     }
     $$ = $1
 }
@@ -874,30 +875,20 @@ from_term opt_join_type unnest expr opt_as_alias
 |
 from_term opt_join_type JOIN simple_from_term ON expr
 {
-    ksterm := algebra.GetKeyspaceTerm($4)
-    if ksterm != nil {
-        ksterm.SetAnsiJoin()
-    }
+    $4.SetAnsiJoin()
     $$ = algebra.NewAnsiJoin($1, $2, $4, $6)
 }
 |
 from_term opt_join_type NEST simple_from_term ON expr
 {
-    ksterm := algebra.GetKeyspaceTerm($4)
-    if ksterm != nil {
-        ksterm.SetAnsiNest()
-    }
+    $4.SetAnsiNest()
     $$ = algebra.NewAnsiNest($1, $2, $4, $6)
 }
 |
 simple_from_term RIGHT opt_outer JOIN simple_from_term ON expr
 {
-    ksterm := algebra.GetKeyspaceTerm($1)
-    if ksterm == nil {
-        yylex.Error("Left hand side of an ANSI RIGHT OUTER JOIN must be a keyspace.")
-    }
-    ksterm.SetAnsiJoin()
-    $$ = algebra.NewAnsiRightJoin(ksterm, $5, $7)
+    $1.SetAnsiJoin()
+    $$ = algebra.NewAnsiRightJoin($1, $5, $7)
 }
 ;
 
@@ -914,21 +905,18 @@ expr opt_as_alias opt_use
               if $2 == "" {
                    yylex.Error("Subquery in FROM clause must have an alias.")
               }
-              if $3 != algebra.EMPTY_USE {
-                   yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX or join hint (USE HASH or USE NL).")
+              if $3.Keys() != nil || $3.Indexes() != nil {
+                   yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
               }
-              $$ = algebra.NewSubqueryTerm(other.Select(), $2)
+              $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
          case *expression.Identifier:
               ksterm := algebra.NewKeyspaceTerm("", other.Alias(), $2, $3.Keys(), $3.Indexes())
-              if $3.JoinHint() != algebra.JOIN_HINT_NONE {
-                  ksterm.SetJoinHint($3.JoinHint())
-              }
-              $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false)
+              $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
          default:
-              if $3 != algebra.EMPTY_USE {
-                  yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX or join hint (USE HASH or USE NL).")
+              if $3.Keys() != nil || $3.Indexes() != nil {
+                  yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
               }
-              $$ = algebra.NewExpressionTerm(other,$2, nil, false)
+              $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
      }
 }
 ;

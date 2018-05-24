@@ -35,6 +35,7 @@ func TestHashJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX purch_purchaseId on purchase(purchaseId)")
 	runStmt(qc, "CREATE INDEX purch_customerId_metaid on purchase(customerId || \"_\" || test_id)")
 	runStmt(qc, "CREATE INDEX ord_customerId_ordersId on orders(customerId, orderId)")
+	runStmt(qc, "CREATE INDEX st_ix11 on shellTest(c11, DISTINCT a11) WHERE type = \"left\"")
 
 	fmt.Println("Running HASH JOIN test cases")
 
@@ -63,6 +64,9 @@ func TestHashJoin(t *testing.T) {
 	// test HASH NEST
 	runMatch("case_hashnest_simple.json", false, true, qc, t)
 
+	// test HASH JOIN with expression term and subquery term
+	runMatch("case_hashjoin_exprsubq.json", false, true, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
@@ -71,22 +75,26 @@ func TestHashJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX purchase.purch_purchaseId")
 	runStmt(qc, "DROP INDEX purchase.purch_customerId_metaid")
 	runStmt(qc, "DROP INDEX orders.ord_customerId_ordersId")
+	runStmt(qc, "DROP INDEX shellTest.st_ix11")
 
 	// create primary indexes
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
 	runStmt(qc, "CREATE PRIMARY INDEX ON product")
 	runStmt(qc, "CREATE PRIMARY INDEX ON purchase")
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
+	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
 
 	// delete all rows from keyspaces used
 	runStmt(qc, "DELETE FROM customer")
 	runStmt(qc, "DELETE FROM product")
 	runStmt(qc, "DELETE FROM purchase")
 	runStmt(qc, "DELETE FROM orders")
+	runStmt(qc, "DELETE FROM shellTest")
 
 	// drop primary indexes
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")
 	runStmt(qc, "DROP PRIMARY INDEX ON product")
 	runStmt(qc, "DROP PRIMARY INDEX ON purchase")
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")
+	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
 }
