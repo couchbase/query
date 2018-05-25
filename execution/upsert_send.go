@@ -145,8 +145,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Capture the upserted keys in case there is a RETURNING clause
 	for _, dp := range dpairs {
-		dv := value.NewAnnotatedValue(dp.Value)
-		dv.SetAttachment("meta", map[string]interface{}{"id": dp.Name})
+		dv := this.setDocumentKey(dp.Name, value.NewAnnotatedValue(dp.Value), context)
 		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.SetAnnotations(dv)
 		av.SetField(this.plan.Alias(), dv)

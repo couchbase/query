@@ -721,37 +721,71 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 	return this.enbatchSize(item, b, cap(this.batch), context)
 }
 
+func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, context *Context) value.AnnotatedValue {
+	cv := value.NewScopeValue(make(map[string]interface{}), parent)
+	av := value.NewAnnotatedValue(cv)
+	av.SetAttachment("meta", map[string]interface{}{"id": key})
+	av.SetId(key)
+	return av
+}
+
+func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue, context *Context) value.AnnotatedValue {
+	item.SetAttachment("meta", map[string]interface{}{"id": key})
+	item.SetId(key)
+	return item
+}
+
 func (this *base) getDocumentKey(item value.AnnotatedValue, context *Context) (string, bool) {
-	mv := item.GetAttachment("meta")
-	if mv == nil {
+
+	// fast path for where value Id is in use
+	key := item.GetId()
+	if key != nil {
+		switch key := key.(type) {
+		case string:
+			return key, true
+		case value.Value:
+			if key.Type() == value.STRING {
+				return key.Actual().(string), true
+			}
+		}
 		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("Value does not contain META: %v", item)))
+			fmt.Sprintf("ID %v of type %T is not a string in value %v", key, key, item)))
 		return "", false
+	} else {
+
+		// slow path (to be deprecated)
+		mv := item.GetAttachment("meta")
+		if mv == nil {
+			context.Error(errors.NewInvalidValueError(
+				fmt.Sprintf("Value does not contain META: %v", item)))
+			return "", false
+		}
+
+		meta, ok := mv.(map[string]interface{})
+		if !ok {
+			context.Error(errors.NewInvalidValueError(
+				fmt.Sprintf("Missing or invalid meta %v of type %T.", mv, mv)))
+			return "", false
+		}
+
+		key, ok := meta["id"]
+		if !ok {
+			context.Error(errors.NewInvalidValueError(
+				fmt.Sprintf("META does not contain ID: %v", item)))
+			return "", false
+		}
+
+		act := value.NewValue(key).Actual()
+		switch act := act.(type) {
+		case string:
+			return act, true
+		default:
+			context.Error(errors.NewInvalidValueError(
+				fmt.Sprintf("ID %v of type %T is not a string in value %v", act, act, item)))
+			return "", false
+		}
 	}
 
-	meta, ok := mv.(map[string]interface{})
-	if !ok {
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("Missing or invalid meta %v of type %T.", mv, mv)))
-		return "", false
-	}
-
-	key, ok := meta["id"]
-	if !ok {
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("META does not contain ID: %v", item)))
-		return "", false
-	}
-
-	act := value.NewValue(key).Actual()
-	switch act := act.(type) {
-	case string:
-		return act, true
-	default:
-		context.Error(errors.NewInvalidValueError(
-			fmt.Sprintf("ID %v of type %T is not a string in value %v", act, act, item)))
-		return "", false
-	}
 }
 
 func (this *base) evaluateKey(keyExpr expression.Expression, item value.AnnotatedValue, context *Context) ([]string, bool) {

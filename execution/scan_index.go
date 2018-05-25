@@ -190,13 +190,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 					// from operators, not kv
 					// add this.addInDocs(1) if this changes
 
-					cv := value.NewScopeValue(make(map[string]interface{}), scope_value)
-					av := value.NewAnnotatedValue(cv)
-
-					// For downstream Fetch
-					meta := map[string]interface{}{"id": entry.PrimaryKey}
-					av.SetAttachment("meta", meta)
-
+					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 					covers := this.plan.Covers()
 					if len(covers) > 0 {
 						for c, v := range this.plan.FilterCovers() {

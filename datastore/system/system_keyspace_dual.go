@@ -66,6 +66,7 @@ func (b *dualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedVa
 			item.SetAttachment("meta", map[string]interface{}{
 				"id": k,
 			})
+			item.SetId(k)
 		}
 
 		keysMap[k] = item

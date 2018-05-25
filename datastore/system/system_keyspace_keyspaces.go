@@ -123,6 +123,7 @@ func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 			item.SetAttachment("meta", map[string]interface{}{
 				"id": k,
 			})
+			item.SetId(k)
 		}
 
 		keysMap[k] = item

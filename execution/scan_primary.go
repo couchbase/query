@@ -93,9 +93,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 				// current policy is to only count 'in' documents
 				// from operators, not kv
 				// add this.addInDocs(1) if this changes
-				cv := value.NewScopeValue(make(map[string]interface{}), parent)
-				av := value.NewAnnotatedValue(cv)
-				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
 				ok = this.sendItem(av)
 				lastEntry = entry
 				nitems++
@@ -153,9 +151,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 		entry, ok := this.getItemEntry(conn.EntryChannel())
 		if ok {
 			if entry != nil {
-				cv := value.NewScopeValue(make(map[string]interface{}), parent)
-				av := value.NewAnnotatedValue(cv)
-				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
 				ok = this.sendItem(av)
 				lastEntry = entry
 				nitems++

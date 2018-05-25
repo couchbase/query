@@ -1079,6 +1079,7 @@ func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedValue {
 		"flags":      flags,
 		"expiration": expiration,
 	})
+	val.SetId(k)
 
 	// Uncomment when needed
 	//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
@@ -1157,6 +1158,7 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 	}
 
 	val.SetAttachment("meta", a)
+	val.SetId(k)
 
 	return val
 }

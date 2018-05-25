@@ -83,6 +83,7 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": key,
 		})
+		item.SetId(key)
 
 		keysMap[key] = item
 	}

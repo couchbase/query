@@ -91,6 +91,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", meta)
+					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
@@ -157,6 +158,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					meta["plan"] = bytes
 				}
 				item.SetAttachment("meta", meta)
+				item.SetId(key)
 				keysMap[key] = item
 			})
 		}

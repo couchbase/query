@@ -37,6 +37,8 @@ type AnnotatedValue interface {
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
+	GetId() interface{}
+	SetId(id interface{})
 	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
@@ -71,6 +73,7 @@ type annotatedValue struct {
 	attachments map[string]interface{}
 	covers      Value
 	bit         uint8
+	id          interface{}
 }
 
 func (this *annotatedValue) String() string {
@@ -194,6 +197,14 @@ func (this *annotatedValue) Bit() uint8 {
 
 func (this *annotatedValue) SetBit(b uint8) {
 	this.bit = b
+}
+
+func (this *annotatedValue) GetId() interface{} {
+	return this.id
+}
+
+func (this *annotatedValue) SetId(id interface{}) {
+	this.id = id
 }
 
 func (this *annotatedValue) Recycle() {

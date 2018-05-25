@@ -75,31 +75,41 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}()
 	}
 
-	if len(this.batch) == 0 {
+	l := len(this.batch)
+	if l == 0 {
 		return true
 	}
 
 	fetchKeys := _STRING_POOL.Get()
 	defer _STRING_POOL.Put(fetchKeys)
 
-	keyCount := _STRING_KEYCOUNT_POOL.Get()
-	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
-
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 
-	for _, av := range this.batch {
-		key, ok := this.getDocumentKey(av, context)
+	var keyCount map[string]int
+	if l == 1 {
+		key, ok := this.getDocumentKey(this.batch[0], context)
 		if !ok {
 			return false
 		}
+		fetchKeys = append(fetchKeys, key)
+	} else {
+		keyCount := _STRING_KEYCOUNT_POOL.Get()
+		defer _STRING_KEYCOUNT_POOL.Put(keyCount)
 
-		v, ok := keyCount[key]
-		if !ok {
-			fetchKeys = append(fetchKeys, key)
-			v = 0
+		for _, av := range this.batch {
+			key, ok := this.getDocumentKey(av, context)
+			if !ok {
+				return false
+			}
+
+			v, ok := keyCount[key]
+			if !ok {
+				fetchKeys = append(fetchKeys, key)
+				v = 0
+			}
+			keyCount[key] = v + 1
 		}
-		keyCount[key] = v + 1
 	}
 
 	this.switchPhase(_SERVTIME)
@@ -115,6 +125,20 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		if err.IsFatal() {
 			fetchOk = false
 		}
+	}
+
+	if l == 1 {
+		fv := fetchMap[fetchKeys[0]]
+		av := this.batch[0]
+		if fv != nil {
+
+			av.SetField(this.plan.Term().Alias(), fv)
+
+			if !this.sendItem(av) {
+				return false
+			}
+		}
+		return fetchOk
 	}
 
 	// Preserve order of keys

@@ -181,6 +181,7 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 		doc.SetAttachment("meta", map[string]interface{}{
 			"id": key,
 		})
+		doc.SetId(key)
 
 		partition := indexPartitionToString(index)
 		if partition != "" {

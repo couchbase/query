@@ -86,13 +86,7 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 			entry, cont := this.getItemEntry(conn.EntryChannel())
 			if cont {
 				if entry != nil {
-					cv := value.NewScopeValue(make(map[string]interface{}), scope_value)
-					av := value.NewAnnotatedValue(cv)
-
-					// For downstream Fetch
-					meta := map[string]interface{}{"id": entry.PrimaryKey}
-					av.SetAttachment("meta", meta)
-
+					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 					covers := this.plan.Covers()
 					if len(covers) > 0 {
 

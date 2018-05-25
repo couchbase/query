@@ -110,6 +110,7 @@ func (b *myUserInfoKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": k,
 		})
+		item.SetId(k)
 
 		keysMap[k] = item
 	}

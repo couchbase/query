@@ -159,6 +159,7 @@ func TestIndexAccess(t *testing.T) {
 func TestAttachments(t *testing.T) {
 	val := NewAnnotatedValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
 	val.SetAttachment("meta", map[string]interface{}{"id": "doc1"})
+	val.SetId("doc1")
 
 	meta := val.GetAttachment("meta").(map[string]interface{})
 	if meta == nil {
@@ -169,7 +170,19 @@ func TestAttachments(t *testing.T) {
 			t.Errorf("Expected id doc1, got %v", id)
 		}
 	}
-
+	id := val.GetId()
+	if id == nil {
+		t.Errorf("id missing")
+	} else {
+		switch id := id.(type) {
+		case string:
+			if id != "doc1" {
+				t.Errorf("Expected id doc1, got %v", id)
+			}
+		default:
+			t.Errorf("Id is not a string")
+		}
+	}
 }
 
 func TestRealWorkflow(t *testing.T) {

@@ -93,6 +93,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", meta)
+					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
 
@@ -186,6 +187,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				}
 
 				item.SetAttachment("meta", meta)
+				item.SetId(key)
 			})
 			if err != nil {
 				errs = append(errs, err)

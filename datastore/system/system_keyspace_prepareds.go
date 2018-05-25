@@ -89,6 +89,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 						"id":   key,
 						"plan": plan,
 					})
+					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
@@ -126,6 +127,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					"id":   key,
 					"plan": bytes,
 				})
+				item.SetId(key)
 				keysMap[key] = item
 			})
 		}

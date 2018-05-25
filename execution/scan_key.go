@@ -70,9 +70,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		acts := actuals.([]interface{})
 
 		for _, key := range acts {
-			cv := value.NewScopeValue(make(map[string]interface{}), parent)
-			av := value.NewAnnotatedValue(cv)
-			av.SetAttachment("meta", map[string]interface{}{"id": key})
+			av := this.newEmptyDocumentWithKey(key, parent, context)
 			if !this.sendItem(av) {
 				break
 			}

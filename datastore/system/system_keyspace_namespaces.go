@@ -71,6 +71,7 @@ func (b *namespaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 			item.SetAttachment("meta", map[string]interface{}{
 				"id": k,
 			})
+			item.SetId(k)
 		}
 
 		keysMap[k] = item
