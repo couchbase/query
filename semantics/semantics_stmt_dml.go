@@ -11,6 +11,7 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 )
 
 func (this *SemChecker) VisitSelect(stmt *algebra.Select) (interface{}, error) {
@@ -40,13 +41,31 @@ func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 }
 
 func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
+
+	actions := stmt.Actions()
+	insert := actions.Insert()
+	if stmt.IsOnKey() {
+		if stmt.Indexes() != nil {
+			return nil, errors.NewMergeNoIndexHintError()
+		}
+		if insert != nil && insert.Key() != nil {
+			return nil, errors.NewMergeInsertNoKeyError()
+		}
+	} else {
+		if insert != nil && insert.Key() == nil {
+			return nil, errors.NewMergeInsertMissingKeyError()
+		}
+	}
+
 	source := stmt.Source()
-	if source.Select() != nil {
-		return source.Select().Accept(this)
+	if source.SubqueryTerm() != nil {
+		return source.SubqueryTerm().Accept(this)
 	} else if source.ExpressionTerm() != nil {
 		return source.ExpressionTerm().Accept(this)
 	} else if source.From() != nil {
 		return source.From().Accept(this)
+	} else {
+		return nil, errors.NewMergeMissingSourceError()
 	}
 	return nil, nil
 }

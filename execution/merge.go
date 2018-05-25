@@ -127,7 +127,11 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				break
 			}
 			this.addInDocs(1)
-			ok = this.processMatch(item, context, update, delete, insert)
+			if this.plan.IsOnKey() {
+				ok = this.processKeyMatch(item, context, update, delete, insert)
+			} else {
+				ok = this.processAction(item, context, "", update, delete, insert)
+			}
 		}
 
 		// Close child input Channels, which will signal children
@@ -140,7 +144,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *Merge) processMatch(item value.AnnotatedValue,
+func (this *Merge) processKeyMatch(item value.AnnotatedValue,
 	context *Context, update, delete, insert Operator) bool {
 	kv, e := this.plan.Key().Evaluate(item, context)
 	if e != nil {
@@ -175,13 +179,31 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
+	if len(bvs) > 0 {
+		item.SetField(this.plan.KeyspaceRef().Alias(), bvs[k])
+	}
+
+	return this.processAction(item, context, k, update, delete, insert)
+}
+
+func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
+	insertKey string, update, delete, insert Operator) bool {
+
+	var tv value.Value
+	var tav value.AnnotatedValue
 	var key string
 	match := false
 	ok1 := true
-	if len(bvs) > 0 {
-		item.SetField(this.plan.KeyspaceRef().Alias(), bvs[k])
 
-		key, ok1 = this.getDocumentKey(bvs[k], context)
+	tv, ok1 = item.Field(this.plan.KeyspaceRef().Alias())
+	if ok1 {
+		tav, ok1 = tv.(value.AnnotatedValue)
+		if !ok1 {
+			context.Error(errors.NewExecutionInternalError("Merge.processAction: Not an annotated value"))
+			return false
+		}
+
+		key, ok1 = this.getDocumentKey(tav, context)
 		if !ok1 {
 			return false
 		}
@@ -195,6 +217,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		}
 	}
 
+	ok := true
 	if match {
 		if update != nil || delete != nil {
 			// make sure document is not updated multiple times
@@ -216,10 +239,26 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	} else {
 		// Not matched; INSERT
 		if insert != nil {
-			// INSERT just uses the ON KEY expression as document key
-			// (see builder.VisitMerge()), and the ON KEY expression
-			// is already evaluated above
-			key = k
+			if insertKey != "" {
+				key = insertKey
+			} else {
+				ins, ok1 := insert.(*SendInsert)
+				if !ok1 {
+					context.Error(errors.NewExecutionInternalError("Merge.processAction: incorrect type for insert operator"))
+					return false
+				}
+				kv, e := ins.plan.Key().Evaluate(item, context)
+				if e != nil {
+					context.Error(errors.NewEvaluationError(e, "MERGE INSERT key"))
+					return false
+				}
+				key, ok1 = kv.Actual().(string)
+				if !ok1 {
+					context.Error(errors.NewInsertKeyTypeError(kv))
+					return false
+				}
+			}
+
 			if _, ok1 = this.inserted[key]; ok1 {
 				context.Error(errors.NewMergeMultiInsertError(key))
 				return false

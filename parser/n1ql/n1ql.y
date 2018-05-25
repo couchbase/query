@@ -336,7 +336,7 @@ tokOffset	 int
 %type <b>                opt_join_type
 %type <path>             path
 %type <s>                namespace_name keyspace_name namespace_term
-%type <use>              opt_use opt_use_del_upd use_options use_keys use_index join_hint
+%type <use>              opt_use opt_use_del_upd opt_use_merge use_options use_keys use_index join_hint
 %type <joinHint>         use_hash_option
 %type <expr>             on_keys on_key
 %type <indexRefs>        index_refs
@@ -364,7 +364,7 @@ tokOffset	 int
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list next_values
-%type <expr>             key_expr opt_value_expr
+%type <expr>             key_expr opt_value_expr value_expr
 %type <projection>       returns returning opt_returning
 %type <set>              set
 %type <setTerm>          set_term
@@ -376,6 +376,7 @@ tokOffset	 int
 %type <binding>          update_binding
 %type <bindings>         update_dimension
 %type <dimensions>       update_dimensions
+%type <b>                opt_key
 %type <mergeActions>     merge_actions opt_merge_delete_insert
 %type <mergeUpdate>      merge_update
 %type <mergeDelete>      merge_delete
@@ -1472,6 +1473,13 @@ opt_value_expr:
     $$ = nil
 }
 |
+value_expr
+{
+    $$ = $1
+}
+;
+
+value_expr:
 COMMA VALUE expr
 {
     $$ = $3
@@ -1675,21 +1683,45 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE INTO keyspace_ref USING simple_from_term ON key_expr merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr merge_actions opt_limit opt_returning
 {
-     switch other := $5.(type) {
+     switch other := $6.(type) {
          case *algebra.SubqueryTerm:
-              source := algebra.NewMergeSourceSelect(other.Subquery(), other.Alias())
-              $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
+              source := algebra.NewMergeSourceSubquery(other)
+              $$ = algebra.NewMerge($3, $4.Indexes(), source, $8, $9, $10, $11, $12)
          case *algebra.ExpressionTerm:
-              source := algebra.NewMergeSourceExpression(other, "")
-              $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
+              source := algebra.NewMergeSourceExpression(other)
+              $$ = algebra.NewMerge($3, $4.Indexes(), source, $8, $9, $10, $11, $12)
          case *algebra.KeyspaceTerm:
-              source := algebra.NewMergeSourceFrom(other, "")
-              $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
+              source := algebra.NewMergeSourceFrom(other)
+              $$ = algebra.NewMerge($3, $4.Indexes(), source, $8, $9, $10, $11, $12)
          default:
 	      yylex.Error("MERGE source term is UNKNOWN.")
      }
+}
+;
+
+opt_use_merge:
+opt_use
+{
+    if $1.Keys() != nil {
+        yylex.Error("Keyspace reference cannot have USE KEYS hint in MERGE statement.")
+    } else if $1.JoinHint() != algebra.JOIN_HINT_NONE {
+        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL)in MERGE statement.")
+    }
+    $$ = $1
+}
+;
+
+opt_key:
+/* empty */
+{
+    $$ = false
+}
+|
+key
+{
+    $$ = true
 }
 ;
 
@@ -1771,7 +1803,17 @@ opt_where
 merge_insert:
 expr opt_where
 {
-    $$ = algebra.NewMergeInsert($1, $2)
+    $$ = algebra.NewMergeInsert(nil, $1, $2)
+}
+|
+LPAREN expr COMMA expr RPAREN opt_where
+{
+    $$ = algebra.NewMergeInsert($2, $4, $6)
+}
+|
+LPAREN key_expr value_expr RPAREN opt_where
+{
+    $$ = algebra.NewMergeInsert($2, $3, $5)
 }
 ;
 

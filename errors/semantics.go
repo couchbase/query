@@ -58,6 +58,38 @@ func NewNoCorrelatedSubqTermError(alias string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+const MERGE_INSERT_NO_KEY = 3150
+
+func NewMergeInsertNoKeyError() Error {
+	return &err{level: EXCEPTION, ICode: MERGE_INSERT_NO_KEY, IKey: "semantics.visit_merge.merge_insert_no_key",
+		InternalMsg:    fmt.Sprintf("MERGE with ON KEY clause cannot have document key specification in INSERT action."),
+		InternalCaller: CallerN(1)}
+}
+
+const MERGE_INSERT_MISSING_KEY = 3160
+
+func NewMergeInsertMissingKeyError() Error {
+	return &err{level: EXCEPTION, ICode: MERGE_INSERT_MISSING_KEY, IKey: "semantics.visit_merge.merge_insert_missing_key",
+		InternalMsg:    fmt.Sprintf("MERGE with ON clause must have document key specification in INSERT action."),
+		InternalCaller: CallerN(1)}
+}
+
+const MERGE_MISSING_SOURCE = 3170
+
+func NewMergeMissingSourceError() Error {
+	return &err{level: EXCEPTION, ICode: MERGE_MISSING_SOURCE, IKey: "semantics.visit_merge.merge_missing_source",
+		InternalMsg:    fmt.Sprintf("MERGE is missing source."),
+		InternalCaller: CallerN(1)}
+}
+
+const MERGE_NO_INDEX_HINT = 3180
+
+func NewMergeNoIndexHintError() Error {
+	return &err{level: EXCEPTION, ICode: MERGE_NO_INDEX_HINT, IKey: "semantics.visit_merge.merge_no_index_hint",
+		InternalMsg:    fmt.Sprintf("MERGE with ON KEY clause cannot have USE INDEX hint specified on target."),
+		InternalCaller: CallerN(1)}
+}
+
 const ANSI_MIXED_JOIN = 3200
 
 func NewMixedJoinError(op1 string, alias1 string, op2 string, alias2 string, iKey string) Error {

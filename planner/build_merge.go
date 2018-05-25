@@ -10,38 +10,41 @@
 package planner
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
-	children := make([]plan.Operator, 0, 8)
-	subChildren := make([]plan.Operator, 0, 8)
+	this.children = make([]plan.Operator, 0, 8)
+	this.subChildren = make([]plan.Operator, 0, 8)
 	source := stmt.Source()
 
 	this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
 	sourceKeyspace := newBaseKeyspace(source.Alias())
 	this.baseKeyspaces[sourceKeyspace.name] = sourceKeyspace
 
-	if source.Select() != nil {
-		sel, err := source.Select().Accept(this)
+	var left algebra.SimpleFromTerm
+
+	if source.SubqueryTerm() != nil {
+		_, err := source.SubqueryTerm().Accept(this)
 		if err != nil {
 			return nil, err
 		}
 
-		children = append(children, sel.(plan.Operator))
+		left = source.SubqueryTerm()
 	} else if source.ExpressionTerm() != nil {
 		_, err := source.ExpressionTerm().Accept(this)
 		if err != nil {
 			return nil, err
 		}
-		children = append(children, this.children...)
-		subChildren = append(subChildren, this.subChildren...)
+
+		left = source.ExpressionTerm()
 	} else {
 		if source.From() == nil {
-			return nil, fmt.Errorf("MERGE missing source.")
+			// should have caught in semantics check
+			return nil, errors.NewPlanInternalError("VisitMerge: MERGE missing source.")
 		}
 
 		_, err := source.From().Accept(this)
@@ -49,13 +52,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			return nil, err
 		}
 
-		// Update local operator slices with results of building From:
-		children = append(children, this.children...)
-		subChildren = append(subChildren, this.subChildren...)
-	}
-
-	if source.As() != "" {
-		subChildren = append(subChildren, plan.NewAlias(source.As()))
+		left = source.From()
 	}
 
 	ksref := stmt.KeyspaceRef()
@@ -111,27 +108,75 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, plan.NewFilter(act.Where()))
 		}
 
-		ops = append(ops, plan.NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), act.Value(), stmt.Limit()))
+		var keyExpr expression.Expression
+		if stmt.IsOnKey() {
+			keyExpr = stmt.On()
+		} else {
+			keyExpr = act.Key()
+		}
+		ops = append(ops, plan.NewSendInsert(keyspace, ksref.Alias(), keyExpr, act.Value(), stmt.Limit()))
 		insert = plan.NewSequence(ops...)
 	}
 
-	merge := plan.NewMerge(keyspace, ksref, stmt.Key(), update, delete, insert)
-	subChildren = append(subChildren, merge)
+	if stmt.IsOnKey() {
+		merge := plan.NewMerge(keyspace, ksref, stmt.On(), update, delete, insert)
+		this.subChildren = append(this.subChildren, merge)
+	} else {
+		// use ANSI JOIN to handle the ON-clause
+		right := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), ksref.As(), nil, stmt.Indexes())
+		right.SetAnsiJoin()
+		algebra.TransferJoinHint(right, left)
 
-	if stmt.Returning() != nil {
-		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
+		targetKeyspace := newBaseKeyspace(right.Alias())
+		this.baseKeyspaces[targetKeyspace.name] = targetKeyspace
+
+		// use outer join if INSERT action is specified
+		outer := false
+		if actions.Insert() != nil {
+			outer = true
+		} else {
+			// similar to processing of pushableOnclause
+			_, err := this.processPredicate(stmt.On(), true)
+			if err != nil {
+				return nil, err
+			}
+		}
+		ansiJoin := algebra.NewAnsiJoin(left, outer, right, stmt.On())
+		join, err := this.buildAnsiJoin(ansiJoin)
+		if err != nil {
+			return nil, err
+		}
+
+		switch join := join.(type) {
+		case *plan.NLJoin:
+			this.subChildren = append(this.subChildren, join)
+		case *plan.Join, *plan.HashJoin:
+			if len(this.subChildren) > 0 {
+				parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+				this.children = append(this.children, parallel)
+				this.subChildren = make([]plan.Operator, 0, 8)
+			}
+			this.children = append(this.children, join)
+		}
+
+		merge := plan.NewMerge(keyspace, ksref, nil, update, delete, insert)
+		this.subChildren = append(this.subChildren, merge)
 	}
 
-	parallel := plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
-	children = append(children, parallel)
+	if stmt.Returning() != nil {
+		this.subChildren = append(this.subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
+	}
+
+	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+	this.children = append(this.children, parallel)
 
 	if stmt.Limit() != nil {
-		children = append(children, plan.NewLimit(stmt.Limit()))
+		this.children = append(this.children, plan.NewLimit(stmt.Limit()))
 	}
 
 	if stmt.Returning() == nil {
-		children = append(children, plan.NewDiscard())
+		this.children = append(this.children, plan.NewDiscard())
 	}
 
-	return plan.NewSequence(children...), nil
+	return plan.NewSequence(this.children...), nil
 }

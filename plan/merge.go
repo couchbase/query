@@ -60,6 +60,10 @@ func (this *Merge) Key() expression.Expression {
 	return this.key
 }
 
+func (this *Merge) IsOnKey() bool {
+	return this.key != nil
+}
+
 func (this *Merge) Update() Operator {
 	return this.update
 }
@@ -80,7 +84,10 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 	r := map[string]interface{}{"#operator": "Merge"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["key"] = expression.NewStringer().Visit(this.key)
+
+	if this.key != nil {
+		r["key"] = expression.NewStringer().Visit(this.key)
+	}
 
 	if this.ref.As() != "" {
 		r["as"] = this.ref.As()

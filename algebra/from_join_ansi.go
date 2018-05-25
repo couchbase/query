@@ -33,6 +33,11 @@ func NewAnsiJoin(left FromTerm, outer bool, right SimpleFromTerm, onclause expre
 }
 
 func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
+	TransferJoinHint(left, right)
+	return &AnsiJoin{right, left, true, onclause}
+}
+
+func TransferJoinHint(left SimpleFromTerm, right SimpleFromTerm) {
 	// transfer join hint from right-hand side to left-hand side
 	joinHint := right.JoinHint()
 	if joinHint != JOIN_HINT_NONE {
@@ -46,8 +51,6 @@ func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expres
 		left.SetJoinHint(joinHint)
 		right.SetJoinHint(JOIN_HINT_NONE)
 	}
-
-	return &AnsiJoin{right, left, true, onclause}
 }
 
 func (this *AnsiJoin) Accept(visitor NodeVisitor) (interface{}, error) {

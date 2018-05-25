@@ -32,8 +32,10 @@ type Merge struct {
 	statementBase
 
 	keyspace  *KeyspaceRef          `json:"keyspace"`
+	indexes   IndexRefs             `json:"indexes"`
 	source    *MergeSource          `json:"source"`
-	key       expression.Expression `json:"key"`
+	on        expression.Expression `json:"on"`
+	isOnKey   bool                  `json:"is_on_key"`
 	actions   *MergeActions         `json:"actions"`
 	limit     expression.Expression `json:"limit"`
 	returning *Projection           `json:"returning"`
@@ -44,12 +46,15 @@ The function NewMerge returns a pointer to the Merge
 struct by assigning the input attributes to the fields
 of the struct.
 */
-func NewMerge(keyspace *KeyspaceRef, source *MergeSource, key expression.Expression,
-	actions *MergeActions, limit expression.Expression, returning *Projection) *Merge {
+func NewMerge(keyspace *KeyspaceRef, indexes IndexRefs, source *MergeSource,
+	isOnKey bool, on expression.Expression, actions *MergeActions,
+	limit expression.Expression, returning *Projection) *Merge {
 	rv := &Merge{
 		keyspace:  keyspace,
+		indexes:   indexes,
 		source:    source,
-		key:       key,
+		on:        on,
+		isOnKey:   isOnKey,
 		actions:   actions,
 		limit:     limit,
 		returning: returning,
@@ -88,7 +93,7 @@ func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 		return
 	}
 
-	this.key, err = mapper.Map(this.key)
+	this.on, err = mapper.Map(this.on)
 	if err != nil {
 		return
 	}
@@ -119,7 +124,7 @@ func (this *Merge) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 64)
 
 	exprs = append(exprs, this.source.Expressions()...)
-	exprs = append(exprs, this.key)
+	exprs = append(exprs, this.on)
 	exprs = append(exprs, this.actions.Expressions()...)
 
 	if this.limit != nil {
@@ -182,11 +187,6 @@ func (this *Merge) Formalize() (err error) {
 		return err
 	}
 
-	this.key, err = sf.Map(this.key)
-	if err != nil {
-		return err
-	}
-
 	if kf.Keyspace() != "" && kf.Keyspace() == sf.Keyspace() {
 		return errors.NewDuplicateAliasError("MERGE", kf.Keyspace(), "semantics.merge.duplicate_alias")
 	}
@@ -201,9 +201,36 @@ func (this *Merge) Formalize() (err error) {
 		f.SetAllowedAlias(sf.Keyspace(), true)
 	}
 
-	err = this.actions.MapExpressions(f)
+	if this.isOnKey {
+		this.on, err = sf.Map(this.on)
+	} else {
+		this.on, err = f.Map(this.on)
+	}
 	if err != nil {
-		return
+		return err
+	}
+
+	// need to formalize separately for INSERT and
+	// UPDATE/DELETE since INSERT can only reference source
+	if this.actions.insert != nil {
+		err = this.actions.insert.Formalize(sf)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.actions.update != nil {
+		err = this.actions.update.Formalize(f)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.actions.delete != nil {
+		err = this.actions.delete.Formalize(f)
+		if err != nil {
+			return
+		}
 	}
 
 	if this.limit != nil {
@@ -228,6 +255,13 @@ func (this *Merge) KeyspaceRef() *KeyspaceRef {
 }
 
 /*
+Returns the index hints for the merge statement.
+*/
+func (this *Merge) Indexes() IndexRefs {
+	return this.indexes
+}
+
+/*
 Returns the merge source for the merge statement.
 */
 func (this *Merge) Source() *MergeSource {
@@ -235,11 +269,18 @@ func (this *Merge) Source() *MergeSource {
 }
 
 /*
-Returns the key expression for the keys clause in
+Returns the on expression for the on clause in
 the merge statement.
 */
-func (this *Merge) Key() expression.Expression {
-	return this.key
+func (this *Merge) On() expression.Expression {
+	return this.on
+}
+
+/*
+Returns whether the on clause is using 'on keys' syntax
+*/
+func (this *Merge) IsOnKey() bool {
+	return this.isOnKey
 }
 
 /*
@@ -276,9 +317,8 @@ term, the select query and the alias as string.
 */
 type MergeSource struct {
 	from  *KeyspaceTerm   `json:"from"`
-	query *Select         `json:"select"`
+	query *SubqueryTerm   `json:"select"`
 	expr  *ExpressionTerm `json:"expr"`
-	as    string          `json:"as"`
 }
 
 /*
@@ -287,10 +327,9 @@ to the MergeSource struct by assigning the input
 attributes to the fields of the struct, setting
 the from keyspace term and the alias.
 */
-func NewMergeSourceFrom(from *KeyspaceTerm, as string) *MergeSource {
+func NewMergeSourceFrom(from *KeyspaceTerm) *MergeSource {
 	return &MergeSource{
 		from: from,
-		as:   as,
 	}
 }
 
@@ -300,10 +339,9 @@ to the MergeSource struct by assigning the input
 attributes to the fields of the struct, setting
 the query and the alias.
 */
-func NewMergeSourceSelect(query *Select, as string) *MergeSource {
+func NewMergeSourceSubquery(query *SubqueryTerm) *MergeSource {
 	return &MergeSource{
 		query: query,
-		as:    as,
 	}
 }
 
@@ -313,10 +351,9 @@ to the MergeSource struct by assigning the input
 attributes to the fields of the struct, setting
 the expr and the alias.
 */
-func NewMergeSourceExpression(expr *ExpressionTerm, as string) *MergeSource {
+func NewMergeSourceExpression(expr *ExpressionTerm) *MergeSource {
 	return &MergeSource{
 		expr: expr,
-		as:   as,
 	}
 }
 
@@ -384,7 +421,7 @@ func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 	}
 
 	if this.query != nil {
-		err = this.query.Formalize()
+		_, err = this.query.Formalize(expression.NewFormalizer("", nil))
 		if err != nil {
 			return
 		}
@@ -417,7 +454,7 @@ func (this *MergeSource) From() *KeyspaceTerm {
 /*
 Return the select query for the merge source.
 */
-func (this *MergeSource) Select() *Select {
+func (this *MergeSource) SubqueryTerm() *SubqueryTerm {
 	return this.query
 }
 
@@ -429,19 +466,12 @@ func (this *MergeSource) ExpressionTerm() *ExpressionTerm {
 }
 
 /*
-Return alias defined by as.
-*/
-func (this *MergeSource) As() string {
-	return this.as
-}
-
-/*
 Return the alias for the merge source. If AS
 is not specified return the from clause alias.
 */
 func (this *MergeSource) Alias() string {
-	if this.as != "" {
-		return this.as
+	if this.query != nil {
+		return this.query.Alias()
 	} else if this.from != nil {
 		return this.from.Alias()
 	} else if this.expr != nil {
@@ -629,6 +659,32 @@ func (this *MergeUpdate) Expressions() expression.Expressions {
 }
 
 /*
+Fully qualify identifiers for each of the constituent fields
+in the update action of merge statement.
+*/
+func (this *MergeUpdate) Formalize(f *expression.Formalizer) (err error) {
+	if this.set != nil {
+		err = this.set.Formalize(f)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.unset != nil {
+		err = this.unset.Formalize(f)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.where != nil {
+		this.where, err = f.Map(this.where)
+	}
+
+	return
+}
+
+/*
 Returns the set clause in a merge update merge-action
 statement.
 */
@@ -694,6 +750,18 @@ func (this *MergeDelete) Expressions() expression.Expressions {
 }
 
 /*
+Fully qualify identifiers for each of the constituent fields
+in the delete action of merge statement.
+*/
+func (this *MergeDelete) Formalize(f *expression.Formalizer) (err error) {
+	if this.where != nil {
+		this.where, err = f.Map(this.where)
+	}
+
+	return
+}
+
+/*
 Return the where clause exppression condition.
 */
 func (this *MergeDelete) Where() expression.Expression {
@@ -706,6 +774,7 @@ Type MergeInsert is a struct that contains the value
 and where condition expressions.
 */
 type MergeInsert struct {
+	key   expression.Expression `json:"key"`
 	value expression.Expression `json:"value"`
 	where expression.Expression `json:"where"`
 }
@@ -715,14 +784,21 @@ The function NewMergeInsert returns a pointer to the MergeInsert
 struct by assigning the input attributes to the fields of the
 struct.
 */
-func NewMergeInsert(value, where expression.Expression) *MergeInsert {
-	return &MergeInsert{value, where}
+func NewMergeInsert(key, value, where expression.Expression) *MergeInsert {
+	return &MergeInsert{key, value, where}
 }
 
 /*
 Apply mapper to value and where expressions.
 */
 func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
+	if this.key != nil {
+		this.key, err = mapper.Map(this.key)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.value != nil {
 		this.value, err = mapper.Map(this.value)
 		if err != nil {
@@ -741,7 +817,11 @@ func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
 Returns all contained Expressions.
 */
 func (this *MergeInsert) Expressions() expression.Expressions {
-	exprs := make(expression.Expressions, 0, 2)
+	exprs := make(expression.Expressions, 0, 3)
+
+	if this.key != nil {
+		exprs = append(exprs, this.key)
+	}
 
 	if this.value != nil {
 		exprs = append(exprs, this.value)
@@ -752,6 +832,39 @@ func (this *MergeInsert) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Fully qualify identifiers for each of the constituent fields
+in the insert action of merge statement.
+*/
+func (this *MergeInsert) Formalize(f *expression.Formalizer) (err error) {
+	if this.key != nil {
+		this.key, err = f.Map(this.key)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.value != nil {
+		this.value, err = f.Map(this.value)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.where != nil {
+		this.where, err = f.Map(this.where)
+	}
+
+	return
+}
+
+/*
+Return the merge insert key expression.
+*/
+func (this *MergeInsert) Key() expression.Expression {
+	return this.key
 }
 
 /*
