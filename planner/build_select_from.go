@@ -70,6 +70,33 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 			}
 		}
 
+		// ANSI OUTER JOIN to INNER JOIN transformation
+		if !this.falseWhereClause() {
+			unnests := _UNNEST_POOL.Get()
+			defer _UNNEST_POOL.Put(unnests)
+			unnests = collectInnerUnnests(node.From(), unnests)
+
+			aoj2aij := newAnsijoinOuterToInner(this.baseKeyspaces, unnests)
+			_, err = node.From().Accept(aoj2aij)
+			if err != nil {
+				return err
+			}
+
+			if aoj2aij.pushableOnclause != nil {
+				// process on clauses from transformed inner joins
+				if this.pushableOnclause != nil {
+					this.pushableOnclause = expression.NewAnd(this.pushableOnclause, aoj2aij.pushableOnclause)
+				} else {
+					this.pushableOnclause = aoj2aij.pushableOnclause
+				}
+
+				_, err = this.processPredicate(aoj2aij.pushableOnclause, true)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		// Use FROM clause in index selection
 		_, err = node.From().Accept(this)
 		if err != nil {

@@ -1,0 +1,276 @@
+[
+    {
+        "testcase": "No outer join to inner join transformation",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.alias = 'o' AND v.`outer` IS NOT MISSING END"
+        },
+        "statements":"SELECT c.customerId, o.ordersId FROM customer c LEFT JOIN orders o ON c.customerId = o.customerId WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] ORDER BY c.customerId, o.ordersId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer132"
+        },
+        {
+            "customerId": "customer302"
+        },
+        {
+            "customerId": "customer35"
+        },
+        {
+            "customerId": "customer619"
+        },
+        {
+            "customerId": "customer693"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders2"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders3"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders4"
+        },
+        {
+            "customerId": "customer947",
+            "ordersId": "orders5"
+        },
+        {
+            "customerId": "customer947",
+            "ordersId": "orders6"
+        }
+    ]
+    },
+    {
+        "testcase": "null-rejecting filter in WHERE clause",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.alias = 'o' AND v.`outer` IS MISSING END"
+        },
+        "statements":"SELECT c.customerId, o.ordersId FROM customer c LEFT JOIN orders o ON c.customerId = o.customerId WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] AND o.productId IS NOT MISSING ORDER BY c.customerId, o.ordersId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders2"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders3"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders4"
+        },
+        {
+            "customerId": "customer947",
+            "ordersId": "orders5"
+        },
+        {
+            "customerId": "customer947",
+            "ordersId": "orders6"
+        }
+    ]
+    },
+    {
+        "testcase": "multiple joins, 2nd INNER JOIN has ANY clause (null-rejecting) with subservient reference NOT as binding variable",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.alias = 'o' AND v.`outer` IS MISSING END"
+        },
+        "statements":"SELECT c.customerId, o.ordersId, p.purchaseId FROM customer c LEFT JOIN orders o ON c.customerId = o.customerId JOIN purchase p ON ANY l IN p.lineItems SATISFIES l.product = o.productId END WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] ORDER BY c.customerId, o.ordersId, p.purchaseId LIMIT 10", 
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase1048"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase1186"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase1410"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase1805"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase2095"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase2152"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase2280"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase2682"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase294"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase3635"
+        }
+    ]
+    },
+    {
+        "testcase": "multiple joins, 2nd INNER JOIN has ANY clause (null-rejecting) with subservient reference AS binding variable",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.alias = 'p' AND v.`outer` IS MISSING END"
+        },
+        "statements":"SELECT c.customerId, o.ordersId, p.purchaseId FROM customer c LEFT JOIN purchase p ON c.customerId = p.customerId JOIN orders o ON c.customerId = o.customerId AND ANY l IN p.lineItems SATISFIES l.product = o.productId END WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] ORDER BY c.customerId, o.ordersId, p.purchaseId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer736",
+            "ordersId": "orders1",
+            "purchaseId": "purchase2682"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders2",
+            "purchaseId": "purchase2682"
+        },
+        {
+            "customerId": "customer736",
+            "ordersId": "orders4",
+            "purchaseId": "purchase2682"
+        },
+        {
+            "customerId": "customer947",
+            "ordersId": "orders5",
+            "purchaseId": "purchase3545"
+        },
+        {
+            "customerId": "customer947",
+            "ordersId": "orders6",
+            "purchaseId": "purchase6299"
+        }
+    ]
+    },
+    {
+        "testcase": "multiple joins, UNNEST first, then 3nd INNER JOIN has null-rejecting filter",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.alias = 'p' AND v.`outer` IS MISSING END"
+        },
+        "statements":"SELECT c.customerId, p.purchaseId, pd.productId FROM customer c LEFT JOIN purchase p ON c.customerId = p.customerId UNNEST p.lineItems as l JOIN product pd ON l.product = pd.productId WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] ORDER BY c.customerId, p.purchaseId, pd.productId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer132",
+            "productId": "product439",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product805",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product831",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product92",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product93",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product671",
+            "purchaseId": "purchase2172"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product277",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product463",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product483",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product294",
+            "purchaseId": "purchase3297"
+        }
+    ]
+    }
+]
+

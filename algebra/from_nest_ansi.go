@@ -172,6 +172,13 @@ func (this *AnsiNest) Onclause() expression.Expression {
 }
 
 /*
+Set outer
+*/
+func (this *AnsiNest) SetOuter(outer bool) {
+	this.outer = outer
+}
+
+/*
 Set ON-clause
 */
 func (this *AnsiNest) SetOnclause(onclause expression.Expression) {

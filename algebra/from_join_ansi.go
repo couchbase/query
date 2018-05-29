@@ -190,6 +190,13 @@ func (this *AnsiJoin) Onclause() expression.Expression {
 }
 
 /*
+Set outer
+*/
+func (this *AnsiJoin) SetOuter(outer bool) {
+	this.outer = outer
+}
+
+/*
 Set ON-clause
 */
 func (this *AnsiJoin) SetOnclause(onclause expression.Expression) {
