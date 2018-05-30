@@ -59,8 +59,8 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	r := map[string]interface{}{"#operator": "ExpressionScan"}
 	r["expr"] = expression.NewStringer().Visit(this.fromExpr)
 	r["alias"] = this.alias
-	if this.correlated {
-		r["correlated"] = this.correlated
+	if !this.correlated {
+		r["uncorrelated"] = !this.correlated
 	}
 	if f != nil {
 		f(r)
@@ -70,10 +70,10 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_          string `json:"#operator"`
-		FromExpr   string `json:"expr"`
-		Alias      string `json:"alias"`
-		Correlated bool   `json:"correlated"`
+		_            string `json:"#operator"`
+		FromExpr     string `json:"expr"`
+		Alias        string `json:"alias"`
+		UnCorrelated bool   `json:"uncorrelated"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -85,7 +85,12 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 		this.fromExpr, err = parser.Parse(_unmarshalled.FromExpr)
 	}
 	this.alias = _unmarshalled.Alias
-	this.correlated = _unmarshalled.Correlated
+	// we use uncorrelated in marshall such that in mixed node cluster
+	// where a query node can be running an earlier version of N1QL
+	// and thus generate plan without the correlated information,
+	// we set correlated to be true just to be safe, i.e., if
+	// no info in the plan, then assume correlated is true.
+	this.correlated = !_unmarshalled.UnCorrelated
 
 	return err
 }
