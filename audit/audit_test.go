@@ -5,6 +5,8 @@ import (
 	"time"
 
 	adt "github.com/couchbase/goutils/go-cbaudit"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/datastore"
 )
 
@@ -13,6 +15,7 @@ import (
 type mockAuditor struct {
 	info           *datastore.AuditInfo
 	recordedEvents []auditQueueEntry
+	metricRegStub  accounting_stub.MetricRegistryStub
 }
 
 func (ma *mockAuditor) submit(entry auditQueueEntry) {
@@ -25,6 +28,10 @@ func (ma *mockAuditor) setAuditInfo(info *datastore.AuditInfo) {
 
 func (ma *mockAuditor) auditInfo() *datastore.AuditInfo {
 	return ma.info
+}
+
+func (ma *mockAuditor) metricRegistry() accounting.MetricRegistry {
+	return ma.metricRegStub
 }
 
 // A fixed structure that implements the Auditable interface
@@ -143,6 +150,7 @@ func TestEventIdGeneration(t *testing.T) {
 			EventDisabled:   make(map[uint32]bool),
 			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
+		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
 	_AUDITOR = mockAuditor
 
@@ -184,6 +192,7 @@ func TestMultiUserRequest(t *testing.T) {
 			EventDisabled:   make(map[uint32]bool),
 			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
+		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
 	_AUDITOR = mockAuditor
 
@@ -217,6 +226,7 @@ func TestAuditDisabled(t *testing.T) {
 			EventDisabled:   make(map[uint32]bool),
 			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
+		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
 	_AUDITOR = mockAuditor
 
@@ -236,6 +246,7 @@ func TestDisabledEvents(t *testing.T) {
 			EventDisabled:   map[uint32]bool{28678: true, 28679: true},
 			UserWhitelisted: make(map[datastore.UserInfo]bool),
 		},
+		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
 	_AUDITOR = mockAuditor
 
@@ -278,6 +289,7 @@ func TestWhitelistedUsers(t *testing.T) {
 				datastore.UserInfo{Name: "nick", Domain: "local"}: true,
 				datastore.UserInfo{Name: "neil", Domain: "local"}: true},
 		},
+		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
 	_AUDITOR = mockAuditor
 

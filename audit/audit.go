@@ -18,9 +18,23 @@ import (
 
 	mcc "github.com/couchbase/gomemcached/client"
 	adt "github.com/couchbase/goutils/go-cbaudit"
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
 )
+
+// We keep counters for four things. All of these counters are available from the /admin/stats API.
+//
+// 1. The total number of potentially auditable requests sent to the query engine. (AUDIT_REQUESTS_TOTAL)
+// 2. The number of potentially auditable requests that cause no audit action to be taken. (AUDIT_REQUESTS_FILTERED)
+// 3. The total number of audit records sent to the server. (AUDIT_ACTIONS)
+// 4. The total number of audit records sent to the server that failed. (AUDIT_ACTIONS_FAILED)
+//
+// Note that AUDIT_ACTIONS can be higher than (AUDIT_REQUESTS_TOTAL - AUDIT_REQUESTS_FILTERED) because
+// some requests cause more than one audit record to be emitted. In particular, requests
+// with multiple RBAC credentails cause one record to be emitted for each record.
+// Also, AUDIT_ACTIONS can be lower than (AUDIT_REQUESTS_TOTAL - AUDIT_REQUESTS_FILTERED) because records
+// in the output queue that have not been sent the server yet, are not counted against AUDIT_ACTIONS.
 
 type Auditable interface {
 	// Standard fields used for all audit records.
@@ -94,15 +108,17 @@ type ApiAuditFields struct {
 // The mock is over in the test file.
 type Auditor interface {
 	auditInfo() *datastore.AuditInfo
-
 	setAuditInfo(info *datastore.AuditInfo)
+
+	metricRegistry() accounting.MetricRegistry
 
 	submit(entry auditQueueEntry)
 }
 
 type standardAuditor struct {
-	auditService     *adt.AuditSvc
-	auditRecordQueue chan auditQueueEntry
+	auditService       *adt.AuditSvc
+	auditRecordQueue   chan auditQueueEntry
+	acctMetricRegistry accounting.MetricRegistry
 
 	auditInfoLock sync.RWMutex // get read or write lock before modifying reference to
 	info          *datastore.AuditInfo
@@ -128,6 +144,10 @@ func (sa *standardAuditor) setAuditInfo(info *datastore.AuditInfo) {
 	sa.auditInfoLock.Unlock()
 }
 
+func (sa *standardAuditor) metricRegistry() accounting.MetricRegistry {
+	return sa.acctMetricRegistry
+}
+
 func eventIsDisabled(au *datastore.AuditInfo, eventId uint32) bool {
 	// No real event number?
 	if eventId == API_DO_NOT_AUDIT {
@@ -148,7 +168,7 @@ var _AUDITOR Auditor
 // numServicers is the number of worker threads we expect to see
 // accessing the audit functionality. It is NOT the number of worker threads
 // the audit system itself has.
-func StartAuditService(server string, numServicers int) {
+func StartAuditService(server string, numServicers int, metricRegistry accounting.MetricRegistry) {
 	// No support for auditing?
 	// Set auditor to NIL for no auditing work at all.
 	if !VERSION_SUPPORTS_AUDIT {
@@ -164,6 +184,7 @@ func StartAuditService(server string, numServicers int) {
 	}
 	auditor := &standardAuditor{}
 	auditor.auditService = service
+	auditor.acctMetricRegistry = metricRegistry
 
 	ds := datastore.GetDatastore()
 	if ds == nil {
@@ -289,14 +310,17 @@ func auditWorker(auditor *standardAuditor, num int) {
 		}
 
 		// Send the audit record using the client.
+		auditor.metricRegistry().Counter(accounting.AUDIT_ACTIONS).Inc(1)
 		if entry.isQueryType {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.queryAuditRecord)
 			if err != nil {
+				auditor.metricRegistry().Counter(accounting.AUDIT_ACTIONS_FAILED).Inc(1)
 				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, stringifyQueryAR(*entry.queryAuditRecord), err)
 			}
 		} else {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.apiAuditRecord)
 			if err != nil {
+				auditor.metricRegistry().Counter(accounting.AUDIT_ACTIONS_FAILED).Inc(1)
 				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, stringifyAPIAR(*entry.apiAuditRecord), err)
 			}
 		}
@@ -369,14 +393,18 @@ func Submit(event Auditable) {
 	if _AUDITOR == nil {
 		return // Nothing configured. Nothing to be done.
 	}
+	metricRegistry := _AUDITOR.metricRegistry()
+	metricRegistry.Counter(accounting.AUDIT_REQUESTS_TOTAL).Inc(1)
 
 	auditInfo := _AUDITOR.auditInfo()
 	if auditInfo == nil {
 		logging.Errorf("Unable to audit. Audit specification is not available.")
+		metricRegistry.Counter(accounting.AUDIT_REQUESTS_FILTERED).Inc(1)
 		return
 	}
 
 	if !auditInfo.AuditEnabled {
+		metricRegistry.Counter(accounting.AUDIT_REQUESTS_FILTERED).Inc(1)
 		return
 	}
 
@@ -389,6 +417,7 @@ func Submit(event Auditable) {
 	}
 
 	if eventIsDisabled(auditInfo, eventTypeId) {
+		metricRegistry.Counter(accounting.AUDIT_REQUESTS_FILTERED).Inc(1)
 		return
 	}
 
@@ -426,20 +455,25 @@ func SubmitApiRequest(event *ApiAuditFields) {
 	if _AUDITOR == nil {
 		return // Nothing configured. Nothing to be done.
 	}
+	metricRegistry := _AUDITOR.metricRegistry()
+	metricRegistry.Counter(accounting.AUDIT_REQUESTS_TOTAL).Inc(1)
 
 	auditInfo := _AUDITOR.auditInfo()
 	if auditInfo == nil {
 		logging.Errorf("Unable to audit. Audit specification is not available.")
+		metricRegistry.Counter(accounting.AUDIT_REQUESTS_FILTERED).Inc(1)
 		return
 	}
 
 	if !auditInfo.AuditEnabled {
+		metricRegistry.Counter(accounting.AUDIT_REQUESTS_FILTERED).Inc(1)
 		return
 	}
 
 	eventTypeId := event.EventTypeId
 
 	if eventIsDisabled(auditInfo, eventTypeId) {
+		metricRegistry.Counter(accounting.AUDIT_REQUESTS_FILTERED).Inc(1)
 		return
 	}
 
