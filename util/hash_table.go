@@ -7,12 +7,10 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execution
+package util
 
 import (
-	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/util"
-	"github.com/couchbase/query/value"
+	"fmt"
 )
 
 // an implementation of hash table loosely based on google's densehash
@@ -52,12 +50,12 @@ var HTLoadThreshold = 0.75
 
 type hashEntry struct {
 	hashKey   uint64        // generated hash code
-	hashVal   value.Value   // values used for hashing
-	inputVals []value.Value // payload
+	hashVal   interface{}   // values used for hashing
+	inputVals []interface{} // payload
 }
 
-func newHashEntry(hashKey uint64, hashVal, inputVal value.Value) *hashEntry {
-	inputVals := []value.Value{inputVal}
+func newHashEntry(hashKey uint64, hashVal, inputVal interface{}) *hashEntry {
+	inputVals := []interface{}{inputVal}
 	return &hashEntry{hashKey, hashVal, inputVals}
 }
 
@@ -91,27 +89,29 @@ func NewHashTable() *HashTable {
 }
 
 // given a hash value (hashVal), put the inputVal into hash table
-func (this *HashTable) Put(hashVal, inputVal value.Value) error {
+func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface{}) ([]byte, error),
+	equal func(val1, val2 interface{}) bool) error {
+
 	this.mode = HASH_TABLE_PUT
 
 	if this.loadFactor() >= HTLoadThreshold {
-		err := this.Grow()
+		err := this.Grow(equal)
 		if err != nil {
 			return err
 		}
 	}
 
-	hashKey, err := this.getHashKey(hashVal)
+	hashKey, err := this.getHashKey(hashVal, marshal)
 	if err != nil {
 		return err
 	}
 
 	hashEntry := newHashEntry(hashKey, hashVal, inputVal)
 
-	return this.putEntry(hashEntry)
+	return this.putEntry(hashEntry, equal)
 }
 
-func (this *HashTable) putEntry(entry *hashEntry) error {
+func (this *HashTable) putEntry(entry *hashEntry, equal func(val1, val2 interface{}) bool) error {
 	// use quadratic probing to find available slot in hash table
 	// since the hash table size is power of 2, the mod operation can be
 	// achieved by bitwise and
@@ -122,11 +122,11 @@ func (this *HashTable) putEntry(entry *hashEntry) error {
 	for i := 0; i < len(this.entries); i++ {
 		e := this.entries[idx]
 		if e != nil {
-			if e.hashKey == entry.hashKey && e.hashVal.Equals(entry.hashVal).Truth() {
+			if e.hashKey == entry.hashKey && equal(e.hashVal, entry.hashVal) {
 				// should not come here if hash table is doubling,
 				// since the entire vector is inherited previously
 				if this.mode == HASH_TABLE_GROW {
-					return errors.NewExecutionInternalError("HashTable.putEntry: unexpected state")
+					return fmt.Errorf("HashTable.putEntry: unexpected state")
 				}
 				e.inputVals = append(e.inputVals, entry.inputVals...)
 				found = true
@@ -143,17 +143,19 @@ func (this *HashTable) putEntry(entry *hashEntry) error {
 	}
 
 	if !found {
-		return errors.NewExecutionInternalError("HashTable.putEntry: did not find slot in hash table")
+		return fmt.Errorf("HashTable.putEntry: did not find slot in hash table")
 	}
 
 	return nil
 }
 
 // give a hash value (hashVal), get the first output value associated with that hash value
-func (this *HashTable) Get(hashVal value.Value) (value.Value, error) {
+func (this *HashTable) Get(hashVal interface{}, marshal func(interface{}) ([]byte, error),
+	equal func(val1, val2 interface{}) bool) (interface{}, error) {
+
 	this.mode = HASH_TABLE_GET
 
-	hashKey, err := this.getHashKey(hashVal)
+	hashKey, err := this.getHashKey(hashVal, marshal)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +165,7 @@ func (this *HashTable) Get(hashVal value.Value) (value.Value, error) {
 	for i := 0; i < len(this.entries); i++ {
 		e := this.entries[idx]
 		if e != nil {
-			if e.hashKey == hashKey && e.hashVal.Equals(hashVal).Truth() {
+			if e.hashKey == hashKey && equal(e.hashVal, hashVal) {
 				if len(e.inputVals) > 1 {
 					this.bucket = idx
 					this.vector = 1
@@ -178,11 +180,11 @@ func (this *HashTable) Get(hashVal value.Value) (value.Value, error) {
 	}
 
 	// should have either found the entry or stopped looking (finding nil)
-	return nil, errors.NewExecutionInternalError("HashTable.Get: unexpected traversal of hash table")
+	return nil, fmt.Errorf("HashTable.Get: unexpected traversal of hash table")
 }
 
 // after initial Get() call, return any additional values associated with the same hash value
-func (this *HashTable) GetNext() (value.Value, error) {
+func (this *HashTable) GetNext() (interface{}, error) {
 	if this.mode == HASH_TABLE_GET {
 		if this.bucket >= 0 && this.vector >= 0 {
 			// if previous get call left a position in the hash table, use that position
@@ -200,21 +202,21 @@ func (this *HashTable) GetNext() (value.Value, error) {
 		}
 	}
 
-	return nil, errors.NewExecutionInternalError("HashTable.GetNext: not following a Get call")
+	return nil, fmt.Errorf("HashTable.GetNext: not following a Get call")
 }
 
-func (this *HashTable) getHashKey(hashVal value.Value) (uint64, error) {
-	bytes, err := hashVal.MarshalJSON()
+func (this *HashTable) getHashKey(hashVal interface{}, marshal func(interface{}) ([]byte, error)) (uint64, error) {
+	bytes, err := marshal(hashVal)
 	if err != nil {
 		return 0, err
 	}
 
-	hashKey := util.SeaHashSum64(bytes)
+	hashKey := SeaHashSum64(bytes)
 
 	return hashKey, nil
 }
 
-func (this *HashTable) Iterate() value.Value {
+func (this *HashTable) Iterate() interface{} {
 	if this.mode != HASH_TABLE_ITERATE {
 		this.mode = HASH_TABLE_ITERATE
 		this.bucket = 0
@@ -244,14 +246,14 @@ func (this *HashTable) loadFactor() float64 {
 	return float64(this.distinct) / float64(len(this.entries))
 }
 
-func (this *HashTable) Grow() error {
+func (this *HashTable) Grow(equal func(val1, val2 interface{}) bool) error {
 	prevMode := this.mode
 	defer func() { this.mode = prevMode }()
 	this.mode = HASH_TABLE_GROW
 
 	newSize := len(this.entries) * 2
 	if newSize > MAX_HASH_TABLE_SIZE {
-		return errors.NewHashTableMaxSizeExceeded()
+		return fmt.Errorf(fmt.Sprintf("Maximum hash table size %d exceeded", MAX_HASH_TABLE_SIZE))
 	}
 
 	this.count = 0
@@ -261,7 +263,7 @@ func (this *HashTable) Grow() error {
 
 	for _, entry := range oldEntries {
 		if entry != nil {
-			err := this.putEntry(entry)
+			err := this.putEntry(entry, equal)
 			if err != nil {
 				return err
 			}

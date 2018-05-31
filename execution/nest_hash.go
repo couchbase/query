@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -22,7 +23,7 @@ type HashNest struct {
 	plan      *plan.HashNest
 	child     Operator
 	ansiFlags uint32
-	hashTab   *HashTable
+	hashTab   *util.HashTable
 	buildVals value.Values
 	probeVals value.Values
 }
@@ -76,7 +77,7 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// build hash table
-	this.hashTab = NewHashTable()
+	this.hashTab = util.NewHashTable()
 
 	this.buildVals = make(value.Values, len(this.plan.BuildExprs()))
 	this.probeVals = make(value.Values, len(this.plan.ProbeExprs()))
@@ -96,7 +97,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	defer this.switchPhase(_EXECTIME)
 
 	var err error
-	var outVal value.Value
+	var outVal interface{}
 	var right_items value.AnnotatedValues
 	ok := true
 
@@ -104,7 +105,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	if probeVal == nil {
 		return false
 	}
-	outVal, err = this.hashTab.Get(probeVal)
+	outVal, err = this.hashTab.Get(probeVal, marshalValue, equalValue)
 	if err != nil {
 		context.Error(errors.NewHashTableGetError(err))
 		return false

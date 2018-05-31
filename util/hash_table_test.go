@@ -7,20 +7,44 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execution
+package util
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
-
-	"github.com/couchbase/query/value"
 )
+
+func getBytesInt(val interface{}) ([]byte, error) {
+	i := val.(int)
+	s := strconv.FormatInt(int64(i), 10)
+	return []byte(s), nil
+}
+
+func getBytesStr(val interface{}) ([]byte, error) {
+	s := val.(string)
+	return []byte(s), nil
+}
+
+func equalInt(val1, val2 interface{}) bool {
+	v1 := val1.(int)
+	v2 := val2.(int)
+	return v1 == v2
+}
+
+func equalStr(val1, val2 interface{}) bool {
+	v1 := val1.(string)
+	v2 := val2.(string)
+	return v1 == v2
+}
 
 func TestHashTable(t *testing.T) {
 
 	var count, dup int
 	var e error
-	var intVal, strVal, inputVal1, inputVal2, outputVal value.Value
+	var intVal int
+	var strVal, inputVal1, inputVal2 string
+	var outputVal interface{}
 
 	// create a hash table
 	htab := NewHashTable()
@@ -35,18 +59,18 @@ func TestHashTable(t *testing.T) {
 			dup = 1
 		}
 
-		intVal = value.NewValue(i)
-		strVal = value.NewValue(fmt.Sprintf("this is string %d", i))
+		intVal = i
+		strVal = fmt.Sprintf("this is string %d", i)
 		for j := 0; j < dup; j++ {
-			inputVal1 = value.NewValue(fmt.Sprintf("this is payload value for int hash value i = %d j = %d", i, j))
-			inputVal2 = value.NewValue(fmt.Sprintf("this is payload value for string hash value i = %d j = %d", i, j))
+			inputVal1 = fmt.Sprintf("this is payload value for int hash value i = %d j = %d", i, j)
+			inputVal2 = fmt.Sprintf("this is payload value for string hash value i = %d j = %d", i, j)
 
-			e = htab.Put(intVal, inputVal1)
+			e = htab.Put(intVal, inputVal1, getBytesInt, equalInt)
 			if e != nil {
 				t.Errorf("PUT of int value failed, i = %d j = %d", i, j)
 			}
 
-			e = htab.Put(strVal, inputVal2)
+			e = htab.Put(strVal, inputVal2, getBytesStr, equalStr)
 			if e != nil {
 				t.Errorf("PUT of string value failed, i = %d j = %d", i, j)
 			}
@@ -65,11 +89,11 @@ func TestHashTable(t *testing.T) {
 			dup = 1
 		}
 
-		intVal = value.NewValue(i)
-		strVal = value.NewValue(fmt.Sprintf("this is string %d", i))
+		intVal = i
+		strVal = fmt.Sprintf("this is string %d", i)
 
 		count = 0
-		outputVal, e = htab.Get(intVal)
+		outputVal, e = htab.Get(intVal, getBytesInt, equalInt)
 		if e != nil {
 			t.Errorf("GET of int value failed, i = %d j = %d", i, count)
 		}
@@ -92,7 +116,7 @@ func TestHashTable(t *testing.T) {
 		}
 
 		count = 0
-		outputVal, e = htab.Get(strVal)
+		outputVal, e = htab.Get(strVal, getBytesStr, equalStr)
 		if e != nil {
 			t.Errorf("GET of string value failed, i = %d j = %d", i, count)
 		}

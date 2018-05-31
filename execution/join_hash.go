@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -23,7 +24,7 @@ type HashJoin struct {
 	plan      *plan.HashJoin
 	child     Operator
 	ansiFlags uint32
-	hashTab   *HashTable
+	hashTab   *util.HashTable
 	buildVals value.Values
 	probeVals value.Values
 }
@@ -77,7 +78,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// build hash table
-	this.hashTab = NewHashTable()
+	this.hashTab = util.NewHashTable()
 
 	this.buildVals = make(value.Values, len(this.plan.BuildExprs()))
 	this.probeVals = make(value.Values, len(this.plan.ProbeExprs()))
@@ -93,7 +94,18 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		this.plan.BuildExprs(), this.buildVals, context)
 }
 
-func buildHashTab(base *base, buildOp Operator, hashTab *HashTable,
+func marshalValue(val interface{}) ([]byte, error) {
+	hashVal := val.(value.Value)
+	return hashVal.MarshalJSON()
+}
+
+func equalValue(val1, val2 interface{}) bool {
+	value1 := val1.(value.Value)
+	value2 := val2.(value.Value)
+	return value1.Equals(value2).Truth()
+}
+
+func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable,
 	buildExprs expression.Expressions, buildVals value.Values, context *Context) bool {
 	var err error
 	stopped := false
@@ -117,7 +129,7 @@ loop:
 				} else {
 					buildVal = value.NewValue(buildVals)
 				}
-				err = hashTab.Put(buildVal, build_item)
+				err = hashTab.Put(buildVal, build_item, marshalValue, equalValue)
 				if err != nil {
 					context.Error(errors.NewHashTablePutError(err))
 					return false
@@ -168,7 +180,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	defer this.switchPhase(_EXECTIME)
 
 	var err error
-	var outVal value.Value
+	var outVal interface{}
 	ok := true
 	matched := false
 
@@ -176,7 +188,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	if probeVal == nil {
 		return false
 	}
-	outVal, err = this.hashTab.Get(probeVal)
+	outVal, err = this.hashTab.Get(probeVal, marshalValue, equalValue)
 	if err != nil {
 		context.Error(errors.NewHashTableGetError(err))
 		return false
