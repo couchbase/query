@@ -58,6 +58,22 @@ func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	source := stmt.Source()
+	if stmt.IsOnKey() {
+		if source.SubqueryTerm() != nil {
+			if source.SubqueryTerm().JoinHint() != algebra.JOIN_HINT_NONE {
+				return nil, errors.NewMergeNoJoinHintError()
+			}
+		} else if source.ExpressionTerm() != nil {
+			if source.ExpressionTerm().JoinHint() != algebra.JOIN_HINT_NONE {
+				return nil, errors.NewMergeNoJoinHintError()
+			}
+		} else if source.From() != nil {
+			if source.From().JoinHint() != algebra.JOIN_HINT_NONE {
+				return nil, errors.NewMergeNoJoinHintError()
+			}
+		}
+	}
+
 	if source.SubqueryTerm() != nil {
 		return source.SubqueryTerm().Accept(this)
 	} else if source.ExpressionTerm() != nil {

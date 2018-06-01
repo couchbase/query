@@ -154,6 +154,11 @@
         "testcase": "MERGE statement (with ON KEY clause) with USE INDEX hint on target",
         "statements":"MERGE INTO shellTest t USE INDEX(st_target_idx)  USING (select meta().id, c11, c12, c13, type, test_id from shellTest WHERE type = \"source\") s ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN NOT MATCHED THEN INSERT {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}",
         "error": "MERGE with ON KEY clause cannot have USE INDEX hint specified on target."
+    },
+    {
+        "testcase": "MERGE statement (with ON KEY clause) with join hint on source",
+        "statements":"MERGE INTO shellTest t USING (select meta().id, c11, c12, c13, type, test_id from shellTest WHERE type = \"source\") s USE HASH(probe) ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN NOT MATCHED THEN INSERT {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}",
+        "error": "MERGE with ON KEY clause cannot have join hint specified on source."
     }
 ]
 

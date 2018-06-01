@@ -90,6 +90,14 @@ func NewMergeNoIndexHintError() Error {
 		InternalCaller: CallerN(1)}
 }
 
+const MERGE_NO_JOIN_HINT = 3190
+
+func NewMergeNoJoinHintError() Error {
+	return &err{level: EXCEPTION, ICode: MERGE_NO_JOIN_HINT, IKey: "semantics.visit_merge.merge_no_join_hint",
+		InternalMsg:    fmt.Sprintf("MERGE with ON KEY clause cannot have join hint specified on source."),
+		InternalCaller: CallerN(1)}
+}
+
 const ANSI_MIXED_JOIN = 3200
 
 func NewMixedJoinError(op1 string, alias1 string, op2 string, alias2 string, iKey string) Error {
