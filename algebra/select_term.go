@@ -99,11 +99,7 @@ Returns bool value that depicts if query is correlated
 or not.
 */
 func (this *SelectTerm) IsCorrelated() bool {
-	return true // FIXME
-}
-
-func (this *SelectTerm) SetCorrelated() {
-	// FIXME is empty
+	return this.query.IsCorrelated()
 }
 
 /*
