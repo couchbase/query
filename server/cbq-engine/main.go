@@ -61,11 +61,6 @@ var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var IPv6 = flag.Bool("ipv6", false, "Query is IPv6 compliant")
 
-// The ssl_minimum_protocol flag is currently provided but is unused.
-// It is included here because if a flag is provided and is not picked up,
-// the server shuts down.
-var _OBSOLETE_SSL_MINIMUM_PROTOCOL = flag.String("ssl_minimum_protocol", "tlsv1", "TLS minimum version (obsolete)")
-
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
