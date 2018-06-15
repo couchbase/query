@@ -356,6 +356,7 @@ tokOffset	 int
 %type <expr>             offset opt_offset
 %type <b>                dir opt_dir
 
+%type <statement>        stmt_body
 %type <statement>        stmt explain prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        infer infer_keyspace
 %type <statement>        insert upsert delete update merge
@@ -407,7 +408,7 @@ tokOffset	 int
 %%
 
 input:
-stmt opt_trailer
+stmt_body opt_trailer
 {
     yylex.(*lexer).setStatement($1)
 }
@@ -426,18 +427,22 @@ opt_trailer:
 opt_trailer SEMI
 ;
 
+stmt_body:
+explain
+|
+prepare
+|
+execute
+|
+stmt
+;
+
 stmt:
 select_stmt
 |
 dml_stmt
 |
 ddl_stmt
-|
-explain
-|
-prepare
-|
-execute
 |
 infer
 |
