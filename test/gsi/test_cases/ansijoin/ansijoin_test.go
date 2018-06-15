@@ -52,6 +52,9 @@ func TestAnsiJoin(t *testing.T) {
 	// index scans on both sides of the ANSI JOIN
 	runMatch("case_ansijoin_simple.json", false, false, qc, t)
 
+	// test named parameters and positional parameters
+	runMatch("case_ansijoin_parameters.json", true, false, qc, t)
+
 	// test ANSI JOIN with IN and OR clauses
 	runMatch("case_ansijoin_or_in.json", false, false, qc, t)
 

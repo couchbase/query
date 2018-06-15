@@ -50,6 +50,9 @@ func TestHashJoin(t *testing.T) {
 	// index scans on both sides of the HASH JOIN
 	runMatch("case_hashjoin_simple.json", false, true, qc, t)
 
+	// named parameters and positional parameters
+	runMatch("case_hashjoin_parameters.json", true, true, qc, t)
+
 	// test multiple HASH JOINs
 	runMatch("case_hashjoin_multi.json", false, true, qc, t)
 
