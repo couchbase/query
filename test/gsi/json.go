@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -423,7 +424,13 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			errstring = go_er.New(fmt.Sprintf("missing statements for case file: %v, index: %v", fname, i))
 			return
 		}
-		statements := v.(string)
+		statements := strings.TrimSpace(v.(string))
+		// when statement starts with PREPARE or EXECUTE
+		// just run the statement as is
+		prefix := strings.ToLower(statements[0:8])
+		if strings.HasPrefix(prefix, "prepare") || strings.HasPrefix(prefix, "execute") {
+			prepared = false
+		}
 
 		var ordered bool
 		if o, ook := c["ordered"]; ook {
@@ -439,30 +446,31 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		fin_stmt = strconv.Itoa(i) + ": " + statements
 		var resultsActual []interface{}
 		var errActual errors.Error
+		var namedArgs map[string]value.Value
+		var positionalArgs value.Values
+		if n, ok1 := c["namedArgs"]; ok1 {
+			nv := value.NewValue(n)
+			size := len(nv.Fields())
+			if size == 0 {
+				size = 1
+			}
+			namedArgs = make(map[string]value.Value, size)
+			for f, v := range nv.Fields() {
+				namedArgs[f] = value.NewValue(v)
+			}
+		}
+		if p, ok2 := c["positionalArgs"]; ok2 {
+			if pa, ok3 := p.([]interface{}); ok3 {
+				for _, v := range pa {
+					positionalArgs = append(positionalArgs, value.NewValue(v))
+				}
+			}
+		}
+
 		if prepared {
-			var namedArgs map[string]value.Value
-			var positionalArgs value.Values
-			if n, ok1 := c["namedArgs"]; ok1 {
-				nv := value.NewValue(n)
-				size := len(nv.Fields())
-				if size == 0 {
-					size = 1
-				}
-				namedArgs = make(map[string]value.Value, size)
-				for f, v := range nv.Fields() {
-					namedArgs[f] = value.NewValue(v)
-				}
-			}
-			if p, ok2 := c["positionalArgs"]; ok2 {
-				if pa, ok3 := p.([]interface{}); ok3 {
-					for _, v := range pa {
-						positionalArgs = append(positionalArgs, value.NewValue(v))
-					}
-				}
-			}
 			resultsActual, _, errActual = RunPrepared(qc, statements, namespace, namedArgs, positionalArgs)
 		} else {
-			resultsActual, _, errActual = Run(qc, statements, namespace, nil, nil)
+			resultsActual, _, errActual = Run(qc, statements, namespace, namedArgs, positionalArgs)
 		}
 
 		errExpected := ""

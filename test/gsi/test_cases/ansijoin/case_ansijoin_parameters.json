@@ -2,7 +2,7 @@
     {
         "testcase": "Use named parameters in ANSI JOIN query",
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = $name AND c.type = $type ORDER BY p.purchaseId LIMIT 10",
-	"namedArgs": {"name": "Champlin", "type": "customer"},
+        "namedArgs": {"name": "Champlin", "type": "customer"},
         "ordered": true,
         "results": [
         {
@@ -70,8 +70,8 @@
     {
         "testcase": "Use positional parameters in ANSI JOIN query",
         "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p USE HASH(build) ON c.customerId = p.customerId WHERE c.lastName = $1 AND c.type = $2 ORDER BY p.purchaseId LIMIT 10",
+        "positionalArgs": [ "Champlin", "customer" ],
         "ordered": true,
-	"positionalArgs": [ "Champlin", "customer" ],
         "results": [
         {
             "customerId": "customer60",
@@ -134,6 +134,154 @@
             "purchaseId": "purchase4315"
         }
     ]
+    },
+    {
+        "testcase": "Self PREPARE using named parameters in ANSI JOIN query",
+        "statements":"PREPARE stmt1 FROM SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = $name AND c.type = $type ORDER BY p.purchaseId LIMIT 10"
+    },
+    {
+        "testcase": "EXECUTE self-prepared statement",
+        "statements":"EXECUTE stmt1",
+        "namedArgs": {"name": "Champlin", "type": "customer"},
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "testcase": "Self PREPARE using positional parameters in ANSI JOIN query",
+        "statements":"PREPARE stmt2 FROM SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = $1 AND c.type = $2 ORDER BY p.purchaseId LIMIT 10"
+    },
+    {
+        "testcase": "Use positional parameters in ANSI JOIN query",
+        "statements":"EXECUTE stmt2",
+        "positionalArgs": [ "Champlin", "customer" ],
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "testcase": "Clear prepared cache",
+        "statements":"DELETE FROM system:prepareds"
     }
 ]
 
