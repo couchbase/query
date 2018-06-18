@@ -71,6 +71,8 @@ func (this *NLNest) beforeItems(context *Context, parent value.Value) bool {
 		} else {
 			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 		}
+	} else {
+		this.plan.Onclause().EnableInlistHash(context)
 	}
 
 	return true
@@ -142,6 +144,10 @@ loop:
 	}
 
 	return true
+}
+
+func (this *NLNest) afterItems(context *Context) {
+	this.plan.Onclause().ResetMemory(context)
 }
 
 func processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValues, alias string,

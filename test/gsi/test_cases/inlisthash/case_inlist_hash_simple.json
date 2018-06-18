@@ -1,0 +1,281 @@
+[
+    {
+        "testcase": "IN-list with all constants",
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN [1, 2, 3, 4, 5, 6, \"a\", \"b\", \"c\", \"d\", 11, 12, 13, 14, 15, 16, \"x\"] ORDER BY c21, c22",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        },
+        {
+            "c21": "d",
+            "c22": "5d"
+        }
+    ]
+    },
+    {
+        "testcase": "NOT IN-list with all constants",
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 NOT IN [1, 2, 3, 4, 5, 6, \"a\", \"b\", \"c\", \"d\", 11, 12, 13, 14, 15, 16, \"x\"] ORDER BY c21, c22",
+        "ordered": true,
+        "results": [
+        {
+            "c21": "h",
+            "c22": "5h"
+        },
+        {
+            "c21": "k",
+            "c22": "5k"
+        },
+        {
+            "c21": "o",
+            "c22": "5o"
+        }
+    ]
+    },
+    {
+        "testcase": "Prepare statement for IN-list with host variables as elements",
+        "statements":"PREPARE stmt1 FROM SELECT c21, c22 FROM shellTest WHERE c21 IN [1, 2, 3, $1, $2, $3, \"a\", \"b\", \"c\", \"d\", 11, 12, 13, 14, 15, 16, \"x\"] ORDER BY c21, c22"
+    },
+    {
+        "testcase": "Execute the prepared statement above",
+        "statements":"EXECUTE stmt1",
+        "positionalArgs": [ 4, 5, "h" ],
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        },
+        {
+            "c21": "d",
+            "c22": "5d"
+        },
+        {
+            "c21": "h",
+            "c22": "5h"
+        }
+    ]
+    },
+    {
+        "testcase": "Execute again the prepared statement above",
+        "statements":"EXECUTE stmt1",
+        "positionalArgs": [ 6, "i", "o" ],
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        },
+        {
+            "c21": "d",
+            "c22": "5d"
+        },
+        {
+            "c21": "o",
+            "c22": "5o"
+        }
+    ]
+    },
+    {
+        "testcase": "Prepare statement for NOT IN-list with host variables as elements",
+        "statements":"PREPARE stmt2 FROM SELECT c21, c22 FROM shellTest WHERE c21 NOT IN [1, 2, 3, $1, $2, $3, \"a\", \"b\", \"c\", \"d\", 11, 12, 13, 14, 15, 16, \"x\"] ORDER BY c21, c22"
+    },
+    {
+        "testcase": "Execute the prepared statement above",
+        "statements":"EXECUTE stmt2",
+        "positionalArgs": [ 4, 5, "h" ],
+        "ordered": true,
+        "results": [
+        {
+            "c21": 6,
+            "c22": 30
+        },
+        {
+            "c21": "k",
+            "c22": "5k"
+        },
+        {
+            "c21": "o",
+            "c22": "5o"
+        }
+    ]
+    },
+    {
+        "testcase": "Execute again the prepared statement above",
+        "statements":"EXECUTE stmt2",
+        "positionalArgs": [ 6, "i", "o" ],
+        "ordered": true,
+        "results": [
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": "h",
+            "c22": "5h"
+        },
+        {
+            "c21": "k",
+            "c22": "5k"
+        }
+    ]
+    },
+    {
+        "testcase": "Prepare statemet with entire IN-list as a host variable",
+        "statements":"PREPARE stmt3 FROM SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist ORDER BY c21, c22"
+    },
+    {
+        "testcase": "Execute the prepared statement above",
+        "statements":"EXECUTE stmt3",
+        "namedArgs": { "inlist": [ 1, 2, 3, 4, 5, "h", "a", "b", "c", "d", 11, 12, 13, 14, 15, 16, "x"] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        },
+        {
+            "c21": "d",
+            "c22": "5d"
+        },
+        {
+            "c21": "h",
+            "c22": "5h"
+        }
+    ]
+    },
+    {
+        "testcase": "Execute the prepared statement above",
+        "statements":"EXECUTE stmt3",
+        "namedArgs": { "inlist": [ 11, 12, 13, 6, "i", "o", "a", "b", "c", "d", 21, 22, 23, 24, 25, 26, "z"] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 6,
+            "c22": 30
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        },
+        {
+            "c21": "d",
+            "c22": "5d"
+        },
+        {
+            "c21": "o",
+            "c22": "5o"
+        }
+    ]
+    },
+    {
+        "testcase": "Prepare statemet with entire NOT IN-list as a host variable",
+        "statements":"PREPARE stmt4 FROM SELECT c21, c22 FROM shellTest WHERE c21 NOT IN $inlist ORDER BY c21, c22"
+    },
+    {
+        "testcase": "Execute the prepared statement above",
+        "statements":"EXECUTE stmt4",
+        "namedArgs": { "inlist": [ 1, 2, 3, 4, 5, "h", "a", "b", "c", "d", 11, 12, 13, 14, 15, 16, "x"] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 6,
+            "c22": 30
+        },
+        {
+            "c21": "k",
+            "c22": "5k"
+        },
+        {
+            "c21": "o",
+            "c22": "5o"
+        }
+    ]
+    },
+    {
+        "testcase": "Execute the prepared statement above",
+        "statements":"EXECUTE stmt4",
+        "namedArgs": { "inlist": [ 11, 12, 13, 6, "i", "o", "a", "b", "c", "d", 21, 22, 23, 24, 25, 26, "z"] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": "h",
+            "c22": "5h"
+        },
+        {
+            "c21": "k",
+            "c22": "5k"
+        }
+    ]
+    },
+    {
+        "testcase": "Clear prepared cache",
+        "statements":"DELETE FROM system:prepareds"
+    }
+]
+

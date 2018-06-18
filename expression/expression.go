@@ -207,6 +207,16 @@ type Expression interface {
 	   Does Value() call generate a NULL value
 	*/
 	IsValueNull() bool
+
+	/*
+	   Enable in-list evaluation optimization (using hash table)
+	*/
+	EnableInlistHash(context Context)
+
+	/*
+	   Reset runtime-alloated memory
+	*/
+	ResetMemory(context Context)
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

@@ -75,10 +75,12 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		} else {
 			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 		}
+	} else {
+		this.plan.Onclause().EnableInlistHash(context)
 	}
 
 	// build hash table
-	this.hashTab = util.NewHashTable()
+	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN)
 
 	this.buildVals = make(value.Values, len(this.plan.BuildExprs()))
 	this.probeVals = make(value.Values, len(this.plan.ProbeExprs()))
@@ -92,17 +94,6 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 
 	return buildHashTab(&(this.base), this.child, this.hashTab,
 		this.plan.BuildExprs(), this.buildVals, context)
-}
-
-func marshalValue(val interface{}) ([]byte, error) {
-	hashVal := val.(value.Value)
-	return hashVal.MarshalJSON()
-}
-
-func equalValue(val1, val2 interface{}) bool {
-	value1 := val1.(value.Value)
-	value2 := val2.(value.Value)
-	return value1.Equals(value2).Truth()
 }
 
 func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable,
@@ -129,7 +120,7 @@ loop:
 				} else {
 					buildVal = value.NewValue(buildVals)
 				}
-				err = hashTab.Put(buildVal, build_item, marshalValue, equalValue)
+				err = hashTab.Put(buildVal, build_item, value.MarshalValue, value.EqualValue)
 				if err != nil {
 					context.Error(errors.NewHashTablePutError(err))
 					return false
@@ -188,7 +179,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	if probeVal == nil {
 		return false
 	}
-	outVal, err = this.hashTab.Get(probeVal, marshalValue, equalValue)
+	outVal, err = this.hashTab.Get(probeVal, value.MarshalValue, value.EqualValue)
 	if err != nil {
 		context.Error(errors.NewHashTableGetError(err))
 		return false
@@ -224,6 +215,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 
 func (this *HashJoin) afterItems(context *Context) {
 	this.dropHashTable()
+	this.plan.Onclause().ResetMemory(context)
 }
 
 func (this *HashJoin) dropHashTable() {

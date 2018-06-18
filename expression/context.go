@@ -29,3 +29,10 @@ type CurlContext interface {
 	Context
 	GetWhitelist() map[string]interface{}
 }
+
+type InlistContext interface {
+	Context
+	GetInlistHash(in *In) *InlistHash
+	EnableInlistHash(in *In)
+	RemoveInlistHash(in *In)
+}

@@ -1,0 +1,53 @@
+[
+    {
+        "testcase": "IN-list with uncorrelated subquery",
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN (SELECT raw c11 FROM shellTest t WHERE t.type = \"subq\") ORDER BY c21, c22",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        }
+    ]
+    },
+    {
+        "testcase": "NOT IN-list with uncorrelated subquery",
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 NOT IN (SELECT raw c11 FROM shellTest t WHERE t.type = \"subq\") ORDER BY c21, c22",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 6,
+            "c22": 30
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        },
+        {
+            "c21": "d",
+            "c22": "5d"
+        },
+        {
+            "c21": "h",
+            "c22": "5h"
+        },
+        {
+            "c21": "k",
+            "c22": "5k"
+        },
+        {
+            "c21": "o",
+            "c22": "5o"
+        }
+    ]
+    }
+]
+

@@ -74,10 +74,12 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 		} else {
 			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 		}
+	} else {
+		this.plan.Onclause().EnableInlistHash(context)
 	}
 
 	// build hash table
-	this.hashTab = util.NewHashTable()
+	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN)
 
 	this.buildVals = make(value.Values, len(this.plan.BuildExprs()))
 	this.probeVals = make(value.Values, len(this.plan.ProbeExprs()))
@@ -105,7 +107,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	if probeVal == nil {
 		return false
 	}
-	outVal, err = this.hashTab.Get(probeVal, marshalValue, equalValue)
+	outVal, err = this.hashTab.Get(probeVal, value.MarshalValue, value.EqualValue)
 	if err != nil {
 		context.Error(errors.NewHashTableGetError(err))
 		return false
@@ -145,6 +147,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 
 func (this *HashNest) afterItems(context *Context) {
 	this.dropHashTable()
+	this.plan.Onclause().ResetMemory(context)
 }
 
 func (this *HashNest) dropHashTable() {

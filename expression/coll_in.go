@@ -10,6 +10,11 @@
 package expression
 
 import (
+	"sync"
+	"sync/atomic"
+
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -65,25 +70,82 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
+	var hashTab *util.HashTable
 	var missing, null bool
+	buildHT := false
 	sa := second.Actual().([]interface{})
-	for _, s := range sa {
-		v := value.NewValue(s)
-		if first.Type() > value.NULL && v.Type() > value.NULL {
-			if first.Equals(v).Truth() {
-				return value.TRUE_VALUE, nil
+
+	inlistContext := context.(InlistContext)
+	inlistHash := inlistContext.GetInlistHash(this)
+	if inlistHash != nil {
+		inlistHash.hashLock.Lock()
+		if inlistHash.ChkHash() {
+			inlistHash.SetHashChecked()
+			if inlistHash.IsHashEnabled() && len(sa) >= _INLIST_HASH_THRESHOLD {
+				if this.Second().Static() != nil {
+					buildHT = true
+				} else if sq, ok := this.Second().(Subquery); ok && !sq.IsCorrelated() {
+					buildHT = true
+				}
+				if buildHT {
+					hashTab = util.NewHashTable(util.HASH_TABLE_FOR_INLIST)
+					inlistHash.hashTab = hashTab
+				}
 			}
-		} else if v.Type() == value.MISSING {
-			missing = true
+			// lock is not released until hash table is built
 		} else {
-			// first.Type() == value.NULL || v.Type() == value.NULL
-			null = true
+			hashTab = inlistHash.hashTab
+			inlistHash.hashLock.Unlock()
 		}
 	}
 
-	if null {
+	if hashTab == nil || buildHT {
+		for _, s := range sa {
+			v := value.NewValue(s)
+			if first.Type() > value.NULL && v.Type() > value.NULL {
+				if buildHT {
+					err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue)
+					if err != nil {
+						return nil, errors.NewHashTablePutError(err)
+					}
+				} else {
+					if first.Equals(v).Truth() {
+						return value.TRUE_VALUE, nil
+					}
+				}
+			} else if v.Type() == value.MISSING {
+				if buildHT {
+					inlistHash.SetMissing()
+				} else {
+					missing = true
+				}
+			} else {
+				// first.Type() == value.NULL || v.Type() == value.NULL
+				if buildHT {
+					inlistHash.SetNull()
+				} else {
+					null = true
+				}
+			}
+		}
+		if buildHT {
+			inlistHash.hashLock.Unlock()
+		}
+	}
+
+	if hashTab != nil {
+		outVal, err := hashTab.Get(first, value.MarshalValue, value.EqualValue)
+		if err != nil {
+			return nil, errors.NewHashTableGetError(err)
+		}
+		if outVal != nil {
+			return value.TRUE_VALUE, nil
+		}
+	}
+
+	if null || (buildHT && inlistHash.HasNull()) {
 		return value.NULL_VALUE, nil
-	} else if missing {
+	} else if missing || (buildHT && inlistHash.HasMissing()) {
 		return value.MISSING_VALUE, nil
 	} else {
 		return value.FALSE_VALUE, nil
@@ -99,9 +161,98 @@ func (this *In) Constructor() FunctionConstructor {
 	}
 }
 
+func (this *In) EnableInlistHash(context Context) {
+	inlistContext := context.(InlistContext)
+	inlistContext.EnableInlistHash(this)
+	for _, child := range this.expr.Children() {
+		child.EnableInlistHash(context)
+	}
+}
+
+func (this *In) ResetMemory(context Context) {
+	inlistContext := context.(InlistContext)
+	inlistContext.RemoveInlistHash(this)
+	for _, child := range this.expr.Children() {
+		child.ResetMemory(context)
+	}
+}
+
+/*
+  Hash tables used in IN-list evaluation.
+  Note that during execution the expression itself comes from
+  the plan, which may be shared among multiple executions, thus
+  no change to the expression itself should be allowed during
+  execution. Therefore hash table should be put somewhere else
+  and not inside the expression itself.
+  We'll use a hash map in the execution context to store a
+  structure (InlistHash) which includes a hash table pointer.
+*/
+const (
+	INEXPR_HASHTAB_CHECKED = 1 << iota
+	INEXPR_HAS_NULL
+	INEXPR_HAS_MISSING
+)
+
+type InlistHash struct {
+	hashTab   *util.HashTable
+	hashFlags uint32
+	hashCnt   int32
+	hashLock  sync.Mutex
+}
+
+func NewInlistHash() *InlistHash {
+	return &InlistHash{}
+}
+
+func (this *InlistHash) ChkHash() bool {
+	return (this.hashFlags & INEXPR_HASHTAB_CHECKED) != 0
+}
+
+func (this *InlistHash) SetHashChecked() {
+	this.hashFlags |= INEXPR_HASHTAB_CHECKED
+}
+
+func (this *InlistHash) IsHashEnabled() bool {
+	return this.hashCnt > 0
+}
+
+func (this *InlistHash) EnableHash() {
+	// in case of parallelism, keep number of instances
+	atomic.AddInt32(&(this.hashCnt), 1)
+}
+
+func (this *InlistHash) HasMissing() bool {
+	return (this.hashFlags & INEXPR_HAS_MISSING) != 0
+}
+
+func (this *InlistHash) SetMissing() {
+	this.hashFlags |= INEXPR_HAS_MISSING
+}
+
+func (this *InlistHash) HasNull() bool {
+	return (this.hashFlags & INEXPR_HAS_NULL) != 0
+}
+
+func (this *InlistHash) SetNull() {
+	this.hashFlags |= INEXPR_HAS_NULL
+}
+
+func (this *InlistHash) DropHashTab() {
+	// let the last instance drop the hash table
+	if atomic.AddInt32(&(this.hashCnt), -1) == 0 {
+		if this.hashTab != nil {
+			this.hashTab.Drop()
+			this.hashTab = nil
+		}
+		this.hashFlags = 0
+	}
+}
+
 /*
 This function implements the NOT IN collection operation.
 */
 func NewNotIn(first, second Expression) Expression {
 	return NewNot(NewIn(first, second))
 }
+
+const _INLIST_HASH_THRESHOLD = 16

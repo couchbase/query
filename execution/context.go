@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
@@ -144,6 +145,8 @@ type Context struct {
 	authenticatedUsers auth.AuthenticatedUsers
 	mutex              sync.RWMutex
 	whitelist          map[string]interface{}
+	inlistHashMap      map[*expression.In]*expression.InlistHash
+	inlistHashLock     sync.RWMutex
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
@@ -176,6 +179,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		prepared:         prepared,
 		indexApiVersion:  indexApiVersion,
 		featureControls:  featureControls,
+		inlistHashMap:    nil,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -507,6 +511,56 @@ func (this *Context) Recover() {
 
 		this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 	}
+}
+
+/*
+  The map entry for hash list in the context can be shared among all parallel instances
+  of an operator (e.g. Filter), and the same hash table can be shared since all instances
+  should have the same expression for the IN-list and we should have already checked that
+  the elements of the IN-list are "static".
+*/
+func (this *Context) GetInlistHash(in *expression.In) *expression.InlistHash {
+	this.inlistHashLock.RLock()
+	defer this.inlistHashLock.RUnlock()
+	if this.inlistHashMap != nil {
+		return this.inlistHashMap[in]
+	}
+	return nil
+}
+
+func (this *Context) EnableInlistHash(in *expression.In) {
+	if this.inlistHashMap == nil {
+		this.inlistHashLock.Lock()
+		if this.inlistHashMap == nil {
+			this.inlistHashMap = make(map[*expression.In]*expression.InlistHash, 4)
+		}
+		this.inlistHashLock.Unlock()
+	}
+	this.inlistHashLock.RLock()
+	ih := this.inlistHashMap[in]
+	this.inlistHashLock.RUnlock()
+	if ih == nil {
+		this.inlistHashLock.Lock()
+		ih = this.inlistHashMap[in]
+		if ih == nil {
+			ih = expression.NewInlistHash()
+			this.inlistHashMap[in] = ih
+		}
+		this.inlistHashLock.Unlock()
+	}
+	ih.EnableHash()
+}
+
+func (this *Context) RemoveInlistHash(in *expression.In) {
+	this.inlistHashLock.Lock()
+	if this.inlistHashMap != nil {
+		ih := this.inlistHashMap[in]
+		if ih != nil {
+			ih.DropHashTab()
+			delete(this.inlistHashMap, in)
+		}
+	}
+	this.inlistHashLock.Unlock()
 }
 
 // contextless assert - for when we don't have a context!

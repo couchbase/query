@@ -46,6 +46,11 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *Filter) beforeItems(context *Context, parent value.Value) bool {
+	this.plan.Condition().EnableInlistHash(context)
+	return true
+}
+
 func (this *Filter) processItem(item value.AnnotatedValue, context *Context) bool {
 	val, e := this.plan.Condition().Evaluate(item, context)
 	if e != nil {
@@ -58,6 +63,10 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 	} else {
 		return true
 	}
+}
+
+func (this *Filter) afterItems(context *Context) {
+	this.plan.Condition().ResetMemory(context)
 }
 
 func (this *Filter) MarshalJSON() ([]byte, error) {

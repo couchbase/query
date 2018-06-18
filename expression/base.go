@@ -528,3 +528,18 @@ func (this *ExpressionBase) ResetValue() {
 		child.ResetValue()
 	}
 }
+
+/*
+Enable in-list evaluation optimization (using a hash table)
+*/
+func (this *ExpressionBase) EnableInlistHash(context Context) {
+	for _, child := range this.expr.Children() {
+		child.EnableInlistHash(context)
+	}
+}
+
+func (this *ExpressionBase) ResetMemory(context Context) {
+	for _, child := range this.expr.Children() {
+		child.ResetMemory(context)
+	}
+}

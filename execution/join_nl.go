@@ -78,6 +78,8 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 		} else {
 			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 		}
+	} else {
+		this.plan.Onclause().EnableInlistHash(context)
 	}
 
 	return true
@@ -146,6 +148,10 @@ loop:
 	}
 
 	return true
+}
+
+func (this *NLJoin) afterItems(context *Context) {
+	this.plan.Onclause().ResetMemory(context)
 }
 
 func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,

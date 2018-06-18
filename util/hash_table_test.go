@@ -47,7 +47,7 @@ func TestHashTable(t *testing.T) {
 	var outputVal interface{}
 
 	// create a hash table
-	htab := NewHashTable()
+	htab := NewHashTable(HASH_TABLE_FOR_HASH_JOIN)
 
 	// insert values into hash table
 	for i := 0; i < 4096; i++ {

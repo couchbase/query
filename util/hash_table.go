@@ -26,8 +26,9 @@ import (
 // use power of 2 as hash table sizes
 // the max size (2 ^ 24) is somewhat arbitrary
 const (
-	MIN_HASH_TABLE_SIZE = 1024
-	MAX_HASH_TABLE_SIZE = 16777216
+	MIN_HASH_TABLE_SIZE_INLIST    = 32
+	MIN_HASH_TABLE_SIZE_HASH_JOIN = 1024
+	MAX_HASH_TABLE_SIZE           = 16777216
 )
 
 // this is the load threadhold that triggers an enlargement of the hash table
@@ -59,6 +60,12 @@ func newHashEntry(hashKey uint64, hashVal, inputVal interface{}) *hashEntry {
 	return &hashEntry{hashKey, hashVal, inputVals}
 }
 
+// hash table purpose
+const (
+	HASH_TABLE_FOR_HASH_JOIN = iota
+	HASH_TABLE_FOR_INLIST
+)
+
 // hash table mode
 const (
 	HASH_TABLE_INIT = iota
@@ -78,13 +85,17 @@ type HashTable struct {
 	vector   int          // when iterate or get, vector position
 }
 
-func NewHashTable() *HashTable {
+func NewHashTable(purpose int) *HashTable {
 	rv := &HashTable{
 		mode:   HASH_TABLE_INIT,
 		bucket: -1,
 		vector: -1,
 	}
-	rv.entries = make([]*hashEntry, MIN_HASH_TABLE_SIZE)
+	size := MIN_HASH_TABLE_SIZE_HASH_JOIN
+	if purpose == HASH_TABLE_FOR_INLIST {
+		size = MIN_HASH_TABLE_SIZE_INLIST
+	}
+	rv.entries = make([]*hashEntry, size)
 	return rv
 }
 
