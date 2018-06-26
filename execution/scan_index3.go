@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
 
@@ -147,7 +148,7 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 	}
 
 	groupAggs := plan.GroupAggs()
-	dspans, empty, err := evalSpan2(plan.Spans(), outer_values, context)
+	dspans, empty, err := evalSpan3(plan.Spans(), outer_values, plan.HasDynamicInSpan(), context)
 
 	// empty span with Index aggregation is present and no group by requies produce default row.
 	// Therefore, do IndexScan
@@ -170,6 +171,62 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 	plan.Index().Scan3(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
 		indexProjection, offset, limit, indexGroupAggs, indexOrder,
 		context.ScanConsistency(), scanVector, conn)
+}
+
+func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, context *Context) (
+	datastore.Spans2, bool, error) {
+	spans := pspans
+	if hasDynamicInSpan {
+		numspans := len(pspans)
+		minPos := 0
+		maxPos := 0
+		for _, ps := range pspans {
+			for i, rg := range ps.Ranges {
+				if !rg.IsDynamicIn() {
+					continue
+				}
+
+				av, empty, err := evalOne(rg.GetDynamicInExpr(), context, parent)
+				if err != nil {
+					return nil, false, err
+				}
+				if !empty && av.Type() == value.ARRAY {
+					arr := av.ActualForIndex().([]interface{})
+					set := value.NewSet(len(arr), true)
+					set.AddAll(arr)
+					arr = set.Actuals()
+					sort.Sort(value.NewSorter(value.NewValue(arr)))
+					newlength := numspans + (maxPos-minPos+1)*(len(arr)-1)
+					if newlength <= _FULL_SPAN_FANOUT {
+						ospans := spans
+						spans = make(plan.Spans2, 0, newlength)
+						add := 0
+						for j, sp := range ospans {
+							if j >= minPos && j <= maxPos {
+								for _, v := range arr {
+									spn := sp.Copy()
+									nrg := spn.Ranges[i]
+									nrg.Low = expression.NewConstant(v)
+									nrg.High = nrg.Low
+									nrg.Inclusion = datastore.BOTH
+									spans = append(spans, spn)
+								}
+								add = add + len(arr) - 1
+							} else {
+								spans = append(spans, sp)
+							}
+						}
+						numspans = len(spans)
+						maxPos = maxPos + add
+					}
+				}
+			}
+			minPos = maxPos + 1
+			maxPos = minPos
+		}
+	}
+
+	return evalSpan2(spans, parent, context)
 }
 
 func planToScanMapping(index datastore.Index, proj *plan.IndexProjection, indexOrderTerms plan.IndexKeyOrders,
@@ -235,3 +292,5 @@ func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 func (this *IndexScan3) SendStop() {
 	this.chanSendStop()
 }
+
+const _FULL_SPAN_FANOUT = 8192

@@ -63,6 +63,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 				return _VALUED_SPANS, nil
 			}
 
+			static.SetDynamicIn()
 			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH)
 			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 			return NewTermSpans(span), nil

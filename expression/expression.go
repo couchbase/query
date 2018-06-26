@@ -209,6 +209,16 @@ type Expression interface {
 	IsValueNull() bool
 
 	/*
+	   Dynamic IN-list expansion
+	*/
+	IsDynamicIn() bool
+
+	/*
+	   Set dynamic IN-list expansion
+	*/
+	SetDynamicIn()
+
+	/*
 	   Enable in-list evaluation optimization (using hash table)
 	*/
 	EnableInlistHash(context Context)

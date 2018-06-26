@@ -24,6 +24,7 @@ const (
 	EXPR_IS_COLL_VAR
 	EXPR_VALUE_MISSING
 	EXPR_VALUE_NULL
+	EXPR_DYNAMIC_IN
 )
 
 /*
@@ -136,6 +137,14 @@ func (this *ExpressionBase) IsValueNull() bool {
 
 func (this *ExpressionBase) SetValueNull() {
 	this.exprFlags |= EXPR_VALUE_NULL
+}
+
+func (this *ExpressionBase) IsDynamicIn() bool {
+	return (this.exprFlags & EXPR_DYNAMIC_IN) != 0
+}
+
+func (this *ExpressionBase) SetDynamicIn() {
+	this.exprFlags |= EXPR_DYNAMIC_IN
 }
 
 /*

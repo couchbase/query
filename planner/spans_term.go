@@ -40,13 +40,14 @@ func (this *TermSpans) CreateScan(
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
+		dynamicIn := this.spans.HasDynamicIn()
 		if distScan && indexGroupAggs == nil {
-			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, nil, nil,
+			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers)
 
 			return plan.NewDistinctScan(limit, offset, scan)
 		} else {
-			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, offset, limit,
+			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers)
 		}
 

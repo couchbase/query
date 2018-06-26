@@ -20,14 +20,19 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const (
+	ISCAN_IS_REVERSE_SCAN = 1 << iota
+	ISCAN_IS_DISTINCT_SCAN
+	ISCAN_HAS_DYNAMIC_IN_SPAN
+)
+
 type IndexScan3 struct {
 	readonly
 	index        datastore.Index3
 	indexer      datastore.Indexer
 	term         *algebra.KeyspaceTerm
 	spans        Spans2
-	reverse      bool
-	distinct     bool
+	flags        uint32
 	groupAggs    *IndexGroupAggregates
 	projection   *IndexProjection
 	orderTerms   IndexKeyOrders
@@ -38,17 +43,26 @@ type IndexScan3 struct {
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
-	reverse, distinct bool, offset, limit expression.Expression,
+	reverse, distinct, dynamicIn bool, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) *IndexScan3 {
+	flags := uint32(0)
+	if reverse {
+		flags |= ISCAN_IS_REVERSE_SCAN
+	}
+	if distinct {
+		flags |= ISCAN_IS_DISTINCT_SCAN
+	}
+	if dynamicIn {
+		flags |= ISCAN_HAS_DYNAMIC_IN_SPAN
+	}
 	return &IndexScan3{
 		index:        index,
 		indexer:      index.Indexer(),
 		term:         term,
 		spans:        spans,
-		reverse:      reverse,
-		distinct:     distinct,
+		flags:        flags,
 		groupAggs:    groupAggs,
 		projection:   projection,
 		orderTerms:   orderTerms,
@@ -84,11 +98,15 @@ func (this *IndexScan3) SetSpans(spans Spans2) {
 }
 
 func (this *IndexScan3) Distinct() bool {
-	return this.distinct
+	return (this.flags & ISCAN_IS_DISTINCT_SCAN) != 0
 }
 
 func (this *IndexScan3) Reverse() bool {
-	return this.reverse
+	return (this.flags & ISCAN_IS_REVERSE_SCAN) != 0
+}
+
+func (this *IndexScan3) HasDynamicInSpan() bool {
+	return (this.flags & ISCAN_HAS_DYNAMIC_IN_SPAN) != 0
 }
 
 func (this *IndexScan3) Projection() *IndexProjection {
@@ -191,12 +209,16 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["as"] = this.term.As()
 	}
 
-	if this.reverse {
-		r["reverse"] = this.reverse
+	if this.Reverse() {
+		r["reverse"] = true
 	}
 
-	if this.distinct {
-		r["distinct"] = this.distinct
+	if this.Distinct() {
+		r["distinct"] = true
+	}
+
+	if this.HasDynamicInSpan() {
+		r["has_dynamic_in"] = true
 	}
 
 	if this.term.IsUnderNL() {
@@ -254,6 +276,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Spans        Spans2                 `json:"spans"`
 		Reverse      bool                   `json:"reverse"`
 		Distinct     bool                   `json:"distinct"`
+		DynamicIn    bool                   `json:"has_dynamic_in"`
 		UnderNL      bool                   `json:"nested_loop"`
 		GroupAggs    *IndexGroupAggregates  `json:"index_group_aggs"`
 		Projection   *IndexProjection       `json:"index_projection"`
@@ -277,8 +300,17 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
 
 	this.spans = _unmarshalled.Spans
-	this.reverse = _unmarshalled.Reverse
-	this.distinct = _unmarshalled.Distinct
+	flags := uint32(0)
+	if _unmarshalled.Reverse {
+		flags |= ISCAN_IS_REVERSE_SCAN
+	}
+	if _unmarshalled.Distinct {
+		flags |= ISCAN_IS_DISTINCT_SCAN
+	}
+	if _unmarshalled.DynamicIn {
+		flags |= ISCAN_HAS_DYNAMIC_IN_SPAN
+	}
+	this.flags = flags
 	this.groupAggs = _unmarshalled.GroupAggs
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms

@@ -1,0 +1,209 @@
+[
+    {
+        "testcase": "Single IN-list on leading index key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 AND v.spans[0].range[0].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist ORDER BY c21, c22",
+	"namedArgs": { "inlist": [ 1, 2, 3, 4, 5 ] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        }
+    ]
+    },
+    {
+        "testcase": "two IN-lists under OR on same leading index key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) > 1 AND ARRAY_LENGTH(v.spans[1].range) = 1 AND v.spans[1].range[0].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist OR c21 IN $inlist2 ORDER BY c21, c22",
+	"namedArgs": { "inlist": [ 1, 2, 3 ], "inlist2": [ "a", "b", "c" ] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        }
+    ]
+    },
+    {
+        "testcase": "one IN-list on non-leading index key with non-IN-list predicate on leading index key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND v.spans[0].range[1].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 BETWEEN 1 AND 5 AND c22 IN $inlist ORDER BY c21, c22",
+        "namedArgs": { "inlist": [ 5, 10, 15 ,20, 25 ] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        }
+    ]
+    },
+    {
+        "testcase": "two IN-lists on different index keys",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND v.spans[0].range[0].dynamic_in = true AND v.spans[0].range[1].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist AND c22 IN $inlist2 ORDER BY c21, c22",
+        "namedArgs": { "inlist": [ 1, 2, 3, 4, 5 ], "inlist2": [ 5, 10, 15 ] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        }
+    ]
+    },
+    {
+        "testcase": "two IN-lists on non-leading index key, with non-IN-list predicate on leading index key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) > 1 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND ARRAY_LENGTH(v.spans[1].range) > 1 AND v.spans[0].range[1].dynamic_in = true AND v.spans[1].range[1].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE c21 BETWEEN 1 AND 5 AND (c22 IN $inlist OR c22 IN $inlist2)",
+        "namedArgs": { "inlist": [ 5, 10, 15 ], "inlist2": [ 20, 25] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        }
+    ]
+    },
+    {
+        "testcase": "two IN-lists on non-leading index key, with non-IN-list OR predicate on leading index key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 6 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND ARRAY_LENGTH(v.spans[5].range) > 1 AND v.spans[0].range[1].dynamic_in = true AND v.spans[5].range[1].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE (c21 = 1 OR c21 = 3 OR c21 = 5) AND (c22 IN $inlist OR c22 IN $inlist2)",
+        "namedArgs": { "inlist": [ 5, 10, 15 ], "inlist2": [ 20, 25] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        }
+    ]
+    },
+    {
+        "testcase": "two IN-lists on leading index key, two IN-lists on non-leading index key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 4 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND ARRAY_LENGTH(v.spans[3].range) > 1 AND v.spans[0].range[0].dynamic_in = true AND v.spans[0].range[1].dynamic_in = true AND v.spans[3].range[0].dynamic_in = true AND v.spans[3].range[1].dynamic_in = true END"
+        },
+        "statements":"SELECT c21, c22 FROM shellTest WHERE (c21 IN $inlist OR c21 IN $inlist2) AND (c22 IN $inlist3 OR c22 IN $inlist4)",
+        "namedArgs": { "inlist": [ 1, 2, 3 ], "inlist2": [ "a", "b", "c" ], "inlist3": [ 5, 15 ], "inlist4": [ "5a", "5c" ] },
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": "a",
+            "c22": "5a"
+        }
+    ]
+    }
+]
+

@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package inlisthash
+package inlist
 
 import (
 	"fmt"
@@ -17,27 +17,30 @@ import (
 )
 
 // Basic test on hash table optimization for IN-list evaluation
-func TestInlistHash(t *testing.T) {
+func TestInlist(t *testing.T) {
 	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
 		return
 	}
 
 	qc := start_cs()
 
-	fmt.Println("\n\nInserting values into Buckets for IN-list hash table evaluation \n\n")
+	fmt.Println("\n\nInserting values into Buckets for IN-list evaluation \n\n")
 	runMatch("insert.json", false, false, qc, t)
 
 	fmt.Println("Creating indexes")
 	runStmt(qc, "CREATE INDEX st_idx1 on shellTest(c21, c22)")
 	runStmt(qc, "CREATE INDEX st_idx2 on shellTest(type, c11)")
 
-	fmt.Println("Running IN-list with hash test cases")
+	fmt.Println("Running IN-list test cases")
 
 	// test hash table handling of long IN-list evaluation
 	runMatch("case_inlist_hash_simple.json", true, false, qc, t)
 
 	// test hash table handling of IN-list with subquery
 	runMatch("case_inlist_hash_subquery.json", false, false, qc, t)
+
+	// test dynamic index span expansion on IN-list as host variables
+	runMatch("case_inlist_dynamic_span.json", true, true, qc, t)
 
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX shellTest.st_idx1")

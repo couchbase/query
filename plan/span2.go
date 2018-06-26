@@ -60,6 +60,10 @@ func (this *Range2) MarshalBase(f func(map[string]interface{})) map[string]inter
 		"inclusion": this.Inclusion,
 	}
 
+	if this.IsDynamicIn() {
+		r["dynamic_in"] = true
+	}
+
 	if this.Low != nil {
 		r["low"] = this.Low
 	}
@@ -79,6 +83,7 @@ func (this *Range2) UnmarshalJSON(body []byte) error {
 		Low       string              `json:"low"`
 		High      string              `json:"high"`
 		Inclusion datastore.Inclusion `json:"inclusion"`
+		DynamicIn bool                `json:"dynamic_in"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -97,6 +102,15 @@ func (this *Range2) UnmarshalJSON(body []byte) error {
 		this.High, err = parser.Parse(_unmarshalled.High)
 		if err != nil {
 			return err
+		}
+	}
+
+	if _unmarshalled.DynamicIn {
+		if low, ok1 := this.Low.(*expression.ArrayMin); ok1 {
+			if high, ok2 := this.High.(*expression.ArrayMax); ok2 {
+				low.Operand().SetDynamicIn()
+				high.Operand().SetDynamicIn()
+			}
 		}
 	}
 
@@ -141,6 +155,28 @@ func (this Ranges2) EquivalentTo(other Ranges2) bool {
 func (this *Range2) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
+}
+
+func (this *Range2) IsDynamicIn() bool {
+	var op1, op2 expression.Expression
+	if low, ok1 := this.Low.(*expression.ArrayMin); ok1 && low.Operand().IsDynamicIn() {
+		op1 = low.Operand()
+	}
+	if high, ok2 := this.High.(*expression.ArrayMax); ok2 && high.Operand().IsDynamicIn() {
+		op2 = high.Operand()
+	}
+	if op1 != nil && op2 != nil && op1.EquivalentTo(op2) {
+		return true
+	}
+
+	return false
+}
+
+func (this *Range2) GetDynamicInExpr() expression.Expression {
+	if this.IsDynamicIn() {
+		return this.Low.(*expression.ArrayMin).Operand()
+	}
+	return nil
 }
 
 type Spans2 []*Span2
@@ -302,4 +338,16 @@ func (this Spans2) EquivalentTo(other Spans2) bool {
 	}
 
 	return true
+}
+
+func (this Spans2) HasDynamicIn() bool {
+	for _, sp := range this {
+		for _, rg := range sp.Ranges {
+			if rg.IsDynamicIn() {
+				return true
+			}
+		}
+	}
+
+	return false
 }
