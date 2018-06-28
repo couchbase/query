@@ -108,16 +108,29 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		andTerms = append(andTerms, pred.Copy())
 	}
 
+	primaries := make(map[string]expression.Expression, len(unnests))
+	primaries[node.Alias()] = expression.NewIdentifier(node.Alias())
+
 	for _, unnest := range unnests {
 		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
+
+		for _, kexpr := range primaries {
+			if unnest.Expression().DependsOn(kexpr) {
+				primaries[unnest.Alias()] = expression.NewIdentifier(unnest.Alias())
+				break
+			}
+		}
+
 		unnestKeyspace, _ := this.baseKeyspaces[unnest.Alias()]
 		// MB-25949, includes predicates on the unnested alias
 		for _, fl := range unnestKeyspace.filters {
 			andTerms = append(andTerms, fl.fltrExpr)
 		}
 		// MB-28720, includes join predicates that only refer to primary term
+		// MB-30292, in case of multiple levels of unnest, include join predicates
+		//           that only refers to aliases in the multiple levels of unnest
 		for _, jfl := range unnestKeyspace.joinfilters {
-			if jfl.singleJoinFilter(node.Alias(), unnest.Alias()) {
+			if jfl.singleJoinFilter(primaries) {
 				andTerms = append(andTerms, jfl.fltrExpr)
 			}
 		}
