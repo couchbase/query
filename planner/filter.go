@@ -61,17 +61,15 @@ func (this *Filter) isDerived() bool {
 	return (this.fltrFlags & FLTR_IS_DERIVED) != 0
 }
 
-// check whether the join filter is a single join filter involving the two keyspaces provided
-func (this *Filter) singleJoinFilter(keyspace1, keyspace2 string) bool {
-	if len(this.keyspaces) != 2 {
-		return false
+// check whether the join filter is a single join filter involving any of the keyspaces provided
+func (this *Filter) singleJoinFilter(unnestKeyspaces map[string]expression.Expression) bool {
+	for ks, _ := range this.keyspaces {
+		if _, ok := unnestKeyspaces[ks]; !ok {
+			return false
+		}
 	}
-	_, ok1 := this.keyspaces[keyspace1]
-	_, ok2 := this.keyspaces[keyspace2]
-	if ok1 && ok2 {
-		return true
-	}
-	return false
+
+	return true
 }
 
 // Combine an array of filters into a single expression by ANDing each filter expression,
