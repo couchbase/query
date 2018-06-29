@@ -45,8 +45,9 @@ type Visitor interface {
 	VisitHashJoin(op *HashJoin) (interface{}, error)
 	VisitHashNest(op *HashNest) (interface{}, error)
 
-	// Let + Letting
+	// Let + Letting, With
 	VisitLet(op *Let) (interface{}, error)
+	VisitWith(op *With) (interface{}, error)
 
 	// Filter
 	VisitFilter(op *Filter) (interface{}, error)

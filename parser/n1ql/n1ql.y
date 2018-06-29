@@ -305,8 +305,8 @@ tokOffset	 int
 
 %type <expr>             expr c_expr b_expr
 %type <exprs>            exprs opt_exprs
-%type <binding>          binding
-%type <bindings>         bindings
+%type <binding>          binding with_term
+%type <bindings>         bindings with_list
 
 %type <s>                alias as_alias opt_as_alias variable opt_name
 
@@ -341,7 +341,7 @@ tokOffset	 int
 %type <expr>             on_keys on_key
 %type <indexRefs>        index_refs
 %type <indexRef>         index_ref
-%type <bindings>         opt_let let
+%type <bindings>         opt_let let opt_with
 %type <expr>             opt_where where
 %type <group>            opt_group group
 %type <bindings>         opt_letting letting
@@ -688,14 +688,24 @@ select_from
 from_select:
 from opt_let opt_where opt_group select_clause
 {
-    $$ = algebra.NewSubselect($1, $2, $3, $4, $5)
+    $$ = algebra.NewSubselect(nil, $1, $2, $3, $4, $5)
+}
+|
+opt_with from opt_let opt_where opt_group select_clause
+{
+    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6)
 }
 ;
 
 select_from:
 select_clause opt_from opt_let opt_where opt_group
 {
-    $$ = algebra.NewSubselect($2, $3, $4, $5, $1)
+    $$ = algebra.NewSubselect(nil, $2, $3, $4, $5, $1)
+}
+|
+opt_with select_clause opt_from opt_let opt_where opt_group
+{
+    $$ = algebra.NewSubselect($1, $3, $4, $5, $6, $2)
 }
 ;
 
@@ -1153,6 +1163,42 @@ bindings COMMA binding
 
 binding:
 alias EQ expr
+{
+    $$ = expression.NewSimpleBinding($1, $3)
+}
+;
+
+/*************************************************
+ *
+ * WITH clause
+ *
+ *************************************************/
+
+opt_with:
+WITH with_list
+{
+    $$ = $2
+}
+;
+
+with_list:
+with_term
+{
+    $$ = expression.Bindings{$1}
+}
+|
+with_list COMMA with_term
+{
+    $$ = append($1, $3)
+}
+;
+
+with_term:
+
+/* we want expressions in parentesheses, but don't want to be
+   forced to have subquery expressions in nested parentheses
+ */
+alias AS paren_expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
 }

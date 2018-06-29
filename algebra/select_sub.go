@@ -24,6 +24,7 @@ group and projection, map to the FromTerm, let clause, group by
 and select clause respectively.
 */
 type Subselect struct {
+	with       expression.Bindings   `json:"with"`
 	from       FromTerm              `json:"from"`
 	let        expression.Bindings   `json:"let"`
 	where      expression.Expression `json:"where"`
@@ -35,9 +36,9 @@ type Subselect struct {
 /*
 Constructor.
 */
-func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expression,
-	group *Group, projection *Projection) *Subselect {
-	return &Subselect{from, let, where, group, projection, false}
+func NewSubselect(with expression.Bindings, from FromTerm, let expression.Bindings,
+	where expression.Expression, group *Group, projection *Projection) *Subselect {
+	return &Subselect{with, from, let, where, group, projection, false}
 }
 
 /*
@@ -57,18 +58,29 @@ func (this *Subselect) Signature() value.Value {
 
 /*
 This method qualifies identifiers for all the contituent
-clauses namely the from, let, where, group and projection
-in a subselect statement.It calls Formalize for the from,
+clauses namely the with, from, let, where, group and projection
+in a subselect statement. It calls Formalize for the from,
 group and projections, calls Map to map the where
 expressions and calls PushBindings for the let clause.
 */
 func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
-	if this.from != nil {
-		f, err = this.from.Formalize(parent)
+	if this.with != nil {
+		f = expression.NewFormalizer("", parent)
+		err = f.PushBindings(this.with, false)
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	}
+
+	if this.from != nil {
+		if f == nil {
+			f = parent
+		}
+		f, err = this.from.Formalize(f)
+		if err != nil {
+			return nil, err
+		}
+	} else if f == nil {
 		f = expression.NewFormalizer("", parent)
 	}
 
@@ -78,7 +90,6 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 			return nil, err
 		}
 	}
-
 	if this.where != nil {
 		this.where, err = f.Map(this.where)
 		if err != nil {
@@ -257,6 +268,14 @@ func (this *Subselect) IsCorrelated() bool {
 
 func (this *Subselect) SetCorrelated() {
 	this.correlated = true
+}
+
+/*
+Returns the let field that represents the With
+clause in the subselect statement.
+*/
+func (this *Subselect) With() expression.Bindings {
+	return this.with
 }
 
 /*

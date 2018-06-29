@@ -246,7 +246,16 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Serialize the top-level children
-	return plan.NewSequence(this.children...), nil
+	var rv plan.Operator
+
+	rv = plan.NewSequence(this.children...)
+
+	// process with in a parent sequence
+	if node.With() != nil {
+		rv = plan.NewWith(node.With(), rv)
+		this.children = append([]plan.Operator{}, rv)
+	}
+	return rv, nil
 }
 
 func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {

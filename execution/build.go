@@ -297,6 +297,16 @@ func (this *builder) VisitLet(plan *plan.Let) (interface{}, error) {
 	return NewLet(plan, this.context), nil
 }
 
+// With
+func (this *builder) VisitWith(plan *plan.With) (interface{}, error) {
+	child := plan.Child()
+	c, e := child.Accept(this)
+	if e != nil {
+		return nil, e
+	}
+	return NewWith(plan, this.context, c.(Operator)), nil
+}
+
 // Filter
 func (this *builder) VisitFilter(plan *plan.Filter) (interface{}, error) {
 	return NewFilter(plan, this.context), nil
