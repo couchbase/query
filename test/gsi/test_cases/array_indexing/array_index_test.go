@@ -95,13 +95,19 @@ func TestArrayIndex(t *testing.T) {
 
 	// Create array indexes for unnest scan
 	runStmt(qc, "CREATE INDEX iax1 ON orders(ALL ARRAY v1 FOR v1 IN a1 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax2 ON orders(ALL ARRAY (ALL ARRAY v2 FOR v2 IN v1 END) FOR v1 IN a2 END,c1,c2) WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax3 ON orders(ALL ARRAY v1.id FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax4 ON orders(ALL ARRAY (ALL ARRAY v2.id FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax5 ON orders(ALL ARRAY (ALL ARRAY [v2.id,v1, c1] FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax6 ON orders(ALL ARRAY v1.val FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
 
 	runMatch("case_array_index_unnest_scan.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX orders.iax1")
+	runStmt(qc, "DROP INDEX orders.iax2")
 	runStmt(qc, "DROP INDEX orders.iax3")
+	runStmt(qc, "DROP INDEX orders.iax4")
+	runStmt(qc, "DROP INDEX orders.iax5")
 	runStmt(qc, "DROP INDEX orders.iax6")
 
 	runStmt(qc, "create primary index on product ")
