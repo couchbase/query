@@ -273,9 +273,11 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		for _, op := range this.coveringScans {
 			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 
-			primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
-			if err != nil {
-				return nil, nil, nil, err
+			if primaryJoinKeys != nil {
+				primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
+				if err != nil {
+					return nil, nil, nil, err
+				}
 			}
 			newOnclause, err = coverer.Map(newOnclause)
 			if err != nil {
@@ -288,9 +290,11 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		for _, op := range coveringScans {
 			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 
-			primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
-			if err != nil {
-				return nil, nil, nil, err
+			if primaryJoinKeys != nil {
+				primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
+				if err != nil {
+					return nil, nil, nil, err
+				}
 			}
 			newOnclause, err = coverer.Map(newOnclause)
 			if err != nil {
