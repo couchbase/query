@@ -329,12 +329,27 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		sargKey = expression.NewIdentifier(unnest.As())
 	}
 
-	sargKeys := expression.Expressions{sargKey}
-	if min, _ := SargableFor(pred, sargKeys); min == 0 {
+	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
+	sargKeys := make(expression.Expressions, 0, len(index.RangeKey()))
+	for i, key := range index.RangeKey() {
+		if i == 0 {
+			sargKeys = append(sargKeys, sargKey)
+		} else {
+			formalizer.SetIndexScope()
+			key, err := formalizer.Map(key)
+			formalizer.ClearIndexScope()
+			if err != nil {
+				return nil, nil, 0, nil
+			}
+			sargKeys = append(sargKeys, key.Copy())
+		}
+	}
+	min, _ := SargableFor(pred, sargKeys)
+	if min == 0 {
 		return nil, nil, 0, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, sargKeys, 1, false, node.Alias())
+	spans, exactSpans, err := SargFor(pred, sargKeys, min, false, node.Alias())
 	if err != nil {
 		return nil, nil, 0, err
 	}

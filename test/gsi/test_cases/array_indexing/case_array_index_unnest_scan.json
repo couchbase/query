@@ -1,0 +1,286 @@
+[
+    {
+        "testcase": "Unnest scan with array index key only. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 END"
+        },
+        "statements":"SELECT v1 FROM orders AS o UNNEST o.a1 AS v1 WHERE o.test_id = \"ua\" AND v1 = 1",
+        "results": [
+        {
+            "v1": 1
+        },
+        {
+            "v1": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key and additional index keys. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 3 END"
+        },
+        "statements":"SELECT v1 FROM orders AS o UNNEST o.a1 AS v1 WHERE o.test_id = \"ua\" AND v1 = 1 AND o.c1 = 10 AND o.c2 between 90 AND 110",
+        "results": [
+        {
+            "v1": 1
+        },
+        {
+            "v1": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key only. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 END"
+        },
+        "statements":"SELECT v2 FROM orders AS o UNNEST o.a2 AS v1 UNNEST v1 AS v2 WHERE o.test_id = \"ua\" AND v2 = 1",
+        "results": [
+        {
+            "v2": 1
+        },
+        {
+            "v2": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key and additional index keys. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 3 END"
+        },
+        "statements":"SELECT v2 FROM orders AS o UNNEST o.a2 AS v1 UNNEST v1 AS v2 WHERE o.test_id = \"ua\" AND v2 = 1 AND o.c1 = 10 AND o.c2 BETWEEN 90 AND 110",
+        "results": [
+        {
+            "v2": 1
+        },
+        {
+            "v2": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key only. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 END"
+        },
+        "statements":"SELECT v1.id FROM orders AS o UNNEST o.a3 AS v1 WHERE o.test_id = \"ua\" AND v1.id = 1 AND v1.type = \"n\"",
+        "results": [
+        {
+            "id": 1
+        },
+        {
+            "id": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key and additional index keys. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 3 END"
+        },
+        "statements":"SELECT v1.id FROM orders AS o UNNEST o.a3 AS v1 WHERE o.test_id = \"ua\" AND v1.id = 1 AND v1.type = \"n\" AND o.c1 = 10 AND o.c2 BETWEEN 90 AND 110",
+        "results": [
+        {
+            "id": 1
+        },
+        {
+            "id": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key only. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 END"
+        },
+        "statements":"SELECT v2.id FROM orders AS o UNNEST o.a4 AS v1 UNNEST v1.aa AS v2 WHERE o.test_id = \"ua\" AND v2.id = 1",
+        "results": [
+        {
+            "id": 1
+        },
+        {
+            "id": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key and additional index keys. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 3 END"
+        },
+        "statements":"SELECT v2.id FROM orders AS o UNNEST o.a4 AS v1 UNNEST v1.aa AS v2 WHERE o.test_id = \"ua\" AND v2.id = 1 AND o.c1 = 10 AND o.c2 BETWEEN 90 AND 110",
+        "results": [
+        {
+            "id": 1
+        },
+        {
+            "id": 1
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key only. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 END"
+        },
+        "statements":"SELECT [v2.id,v1,o.c1] FROM orders AS o UNNEST o.a4 AS v1 UNNEST v1.aa AS v2 WHERE o.test_id = \"ua\" AND [v2.id,v1,o.c1] = [1,{\"aa\":[{\"id\":1},{\"id\":1},{\"id\":2}]},10]",
+        "results": [
+        {
+            "$1": [
+                1,
+                {
+                    "aa": [
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 2
+                        }
+                    ]
+                },
+                10
+            ]
+        },
+        {
+            "$1": [
+                1,
+                {
+                    "aa": [
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 2
+                        }
+                    ]
+                },
+                10
+            ]
+        }    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key and additional index keys. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 3 END"
+        },
+        "statements":"SELECT [v2.id,v1,o.c1] FROM orders AS o UNNEST o.a4 AS v1 UNNEST v1.aa AS v2 WHERE o.test_id = \"ua\" AND [v2.id,v1,o.c1] = [1,{\"aa\":[{\"id\":1},{\"id\":1},{\"id\":2}]},10] AND o.c1 = 10 AND o.c2 BETWEEN 90 AND 110",
+        "results": [
+        {
+            "$1": [
+                1,
+                {
+                    "aa": [
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 2
+                        }
+                    ]
+                },
+                10
+            ]
+        },
+        {
+            "$1": [
+                1,
+                {
+                    "aa": [
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 1
+                        },
+                        {
+                            "id": 2
+                        }
+                    ]
+                },
+                10
+            ]
+        }
+    ]
+    }
+]
+

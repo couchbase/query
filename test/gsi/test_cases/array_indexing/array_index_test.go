@@ -93,14 +93,29 @@ func TestArrayIndex(t *testing.T) {
 	runStmt(qc, "DROP INDEX product.tokenindex1")
 	runStmt(qc, "DROP INDEX product.tokenindex2")
 
+	// Create array indexes for unnest scan
+	runStmt(qc, "CREATE INDEX iax1 ON orders(ALL ARRAY v1 FOR v1 IN a1 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax2 ON orders(ALL ARRAY (ALL ARRAY v2 FOR v2 IN v1 END) FOR v1 IN a2 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax3 ON orders(ALL ARRAY v1.id FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax4 ON orders(ALL ARRAY (ALL ARRAY v2.id FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax5 ON orders(ALL ARRAY (ALL ARRAY [v2.id,v1, c1] FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
+
+	runMatch("case_array_index_unnest_scan.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX orders.iax1")
+	runStmt(qc, "DROP INDEX orders.iax2")
+	runStmt(qc, "DROP INDEX orders.iax3")
+	runStmt(qc, "DROP INDEX orders.iax4")
+	runStmt(qc, "DROP INDEX orders.iax5")
+
 	runStmt(qc, "create primary index on product ")
 	runStmt(qc, "create primary index on purchase")
+	runStmt(qc, "create primary index on orders")
 
 	_, _, errcs := runStmt(qc, "delete from product where test_id = \"arrayIndex\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
-
 	_, _, errcs = runStmt(qc, "delete from product where type = \"coveredIndex\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
@@ -109,6 +124,12 @@ func TestArrayIndex(t *testing.T) {
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
+	_, _, errcs = runStmt(qc, "delete from orders where test_id = \"ua\"")
+	if errcs != nil {
+		t.Errorf("did not expect err %s", errcs.Error())
+	}
+
 	runStmt(qc, "drop primary index on product")
 	runStmt(qc, "drop primary index on purchase")
+	runStmt(qc, "drop primary index on orders")
 }
