@@ -76,7 +76,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 		}
 
 		for _, b := range this.plan.Bindings() {
-			v, e := b.Expression().Evaluate(parent, context)
+			v, e := b.Expression().Evaluate(wv, context)
 			if e != nil {
 				context.Error(errors.NewEvaluationError(e, "WITH"))
 				return

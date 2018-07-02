@@ -49,7 +49,7 @@ func (this *Let) RunOnce(context *Context, parent value.Value) {
 func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 	lv := item.Copy().(value.AnnotatedValue)
 	for _, b := range this.plan.Bindings() {
-		v, e := b.Expression().Evaluate(item, context)
+		v, e := b.Expression().Evaluate(lv, context)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "LET"))
 			return false
