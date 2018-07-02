@@ -74,11 +74,11 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 }
 
 func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
-	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
+	index datastore.Index, entry *indexEntry, arrKey *expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, map[*algebra.Unnest]bool, error) {
 
 	// Sarg and populate spans
-	op, unnest, _, err := this.matchUnnest(node, pred, unnests[0], index, entry, arrayKey, unnests)
+	op, unnest, arrayKey, _, err := this.matchUnnest(node, pred, unnests[0], index, entry, arrKey, unnests)
 	if op == nil || err != nil {
 		return nil, nil, err
 	}
@@ -96,6 +96,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	entry = entry.Copy()
 	entry.sargKeys = expression.Expressions{expression.NewIdentifier(unnest.Alias())}
 	unAlias := unnest.As()
+	entry.keys[0] = arrayKey
 	indexArrayKey := entry.keys[0]
 
 	allDistinct := false
