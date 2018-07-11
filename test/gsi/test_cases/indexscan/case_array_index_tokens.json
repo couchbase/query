@@ -1,0 +1,62 @@
+[
+    {
+        "statements":"select meta().id from product where any d in tokens(description) satisfies lower(tostr(d)) = 'amazon' end order by meta().id limit 2",
+        "results": [
+        {
+            "id": "product0_arrayIndex"
+        },
+        {
+            "id": "product100_arrayIndex"
+        }
+    ]
+    },
+    {
+    	"statements":"select name, productId from product where any r in tokens(name) satisfies lower(tostr(r)) = 'executive' end and any r in tokens(name) satisfies lower(tostr(r)) = 'briefcase' end order by productId",
+    	"results": [
+        {
+            "name": "Briggs & Riley 17 Inch Executive Expandable Rolling Briefcase",
+            "productId": "product0"
+        },
+        {
+            "name": "Briggs & Riley 15.4 Inch Executive Clamshell Briefcase",
+            "productId": "product11"
+        },
+        {
+            "name": "Briggs & Riley 17 Inch Executive Clamshell Briefcase,Black,12.5x17x7.3",
+            "productId": "product14"
+        },
+        {
+            "name": "Briggs & Riley 15.4 Inch Executive Expandable Rolling Briefcase",
+            "productId": "product2"
+        },
+        {
+            "name": "Briggs & Riley 15.4 Inch Executive Expandable Briefcase",
+            "productId": "product3"
+        },
+        {
+            "name": "Briggs & Riley 17 Inch Executive Expandable Briefcase,Black,12.5x17x7",
+            "productId": "product4"
+        }
+    ]
+    },
+    {
+    	"statements":"select name, productId, array_sort(tokens(imageURL,{\"names\":false, \"case\":\"upper\"})) as imageTokens from product where any r in tokens(name) satisfies contains(lower(tostr(r)),'phone') end and any l in tokens(imageURL) satisfies lower(tostr(l)) = 'jpg' end order by productId limit 1",
+    	"results": [
+        {
+            "imageTokens": [
+                "41GNFCVUX3L",
+                "AMAZON",
+                "COM",
+                "ECX",
+                "HTTP",
+                "I",
+                "IMAGES",
+                "JPG",
+                "SL300"
+            ],
+            "name": "Baixt iphone 4 / 4s External Rechargeable Spare Backup Extended 2200 mAh Battery Charger Pack Case Cover for Apple iphone 4s Black",
+            "productId": "product154"
+        }
+    ]
+    }
+]

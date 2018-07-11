@@ -1,0 +1,517 @@
+[
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (iv) WHERE ANY v IN b SATISFIES v > 10 END and type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "iv",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "10"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(any `v` in (`product`.`b`) satisfies (10 \u003c `v`) end and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+	"text": "SELECT * FROM product use index (iv) WHERE ANY v IN b SATISFIES v \u003e 10 END and type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (ixy) WHERE ANY v IN b SATISFIES v.x + v.y > 30 END and type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "ixy",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "30"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(any `v` in (`product`.`b`) satisfies (30 \u003c ((`v`.`x`) + (`v`.`y`))) end and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT * FROM product use index (ixy) WHERE ANY v IN b SATISFIES v.x + v.y \u003e 30 END and type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (iv) UNNEST b AS v WHERE v <= 30 and product.type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "iv",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "High": [
+                                            "30"
+                                        ],
+                                        "Inclusion": 2
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "v",
+                                    "expr": "(`product`.`b`)"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((`v` \u003c= 30) and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT * FROM product use index (iv) UNNEST b AS v WHERE v \u003c= 30 and product.type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (ix) UNNEST b AS v WHERE v.x <= 10 and product.type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "ix",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "High": [
+                                            "10"
+                                        ],
+                                        "Inclusion": 2
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "v",
+                                    "expr": "(`product`.`b`)"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(((`v`.`x`) \u003c= 10) and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT * FROM product use index (ix) UNNEST b AS v WHERE v.x \u003c= 10 and product.type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (ixy) UNNEST b AS v WHERE v.x + v.y > 20 and product.type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "ixy",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "20"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "v",
+                                    "expr": "(`product`.`b`)"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((20 \u003c ((`v`.`x`) + (`v`.`y`))) and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT * FROM product use index (ixy) UNNEST b AS v WHERE v.x + v.y \u003e 20 and product.type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT b FROM product use index (cover_iv) WHERE ANY v IN b SATISFIES v > 10 END and type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "covers": [
+                                "cover ((distinct (array `v` for `v` in (`product`.`b`) end)))",
+                                "cover ((`product`.`b`))",
+                                "cover ((`product`.`type`))",
+                                "cover ((meta(`product`).`id`))"
+                            ],
+                            "index": "cover_iv",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "10"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(any `v` in cover ((`product`.`b`)) satisfies (10 \u003c `v`) end and (cover ((`product`.`type`)) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "cover ((`product`.`b`))"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT b FROM product use index (cover_iv) WHERE ANY v IN b SATISFIES v \u003e 10 END and type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT b,type FROM product use index (cover_ix) WHERE ANY v IN b SATISFIES v.x > 20 END and type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "covers": [
+                                "cover ((distinct (array (`v`.`x`) for `v` in (`product`.`b`) end)))",
+                                "cover ((`product`.`b`))",
+                                "cover ((`product`.`type`))",
+                                "cover ((meta(`product`).`id`))"
+                            ],
+                            "index": "cover_ix",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "20"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(any `v` in cover ((`product`.`b`)) satisfies (20 \u003c (`v`.`x`)) end and (cover ((`product`.`type`)) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "cover ((`product`.`b`))"
+                                        },
+                                        {
+                                            "expr": "cover ((`product`.`type`))"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT b,type FROM product use index (cover_ix) WHERE ANY v IN b SATISFIES v.x \u003e 20 END and type = \"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT b FROM product use index (cover_ixy) WHERE ANY v IN b SATISFIES v.x + v.y > 30 END and type = \"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "covers": [
+                                "cover ((distinct (array ((`v`.`x`) + (`v`.`y`)) for `v` in (`product`.`b`) end)))",
+                                "cover ((`product`.`b`))",
+                                "cover ((`product`.`type`))",
+                                "cover ((meta(`product`).`id`))"
+                            ],
+                            "index": "cover_ixy",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "30"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(any `v` in cover ((`product`.`b`)) satisfies (30 \u003c ((`v`.`x`) + (`v`.`y`))) end and (cover ((`product`.`type`)) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "cover ((`product`.`b`))"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT b FROM product use index (cover_ixy) WHERE ANY v IN b SATISFIES v.x + v.y \u003e 30 END and type = \"coveredIndex\""
+        }
+    ]
+    }
+]
+

@@ -20,10 +20,12 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 
 	spans := make([]SargSpans, 0, len(pred.Operands()))
 	emptySpan := false
-	valuedSpan := false
-	exactValuedSpan := false
+	missingSpan := false
 	nullSpan := false
 	fullSpan := false
+	exactFullSpan := false
+	valuedSpan := false
+	exactValuedSpan := false
 	size := 0
 
 	for _, child := range pred.Operands() {
@@ -34,50 +36,45 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 
 		if cspans == nil || cspans.Size() == 0 {
 			return cspans, nil
-		}
-
-		if cspans == _EXACT_FULL_SPANS {
+		} else if cspans == _WHOLE_SPANS {
 			return cspans, nil
-		}
-
-		if cspans == _FULL_SPANS {
+		} else if cspans == _EXACT_FULL_SPANS {
+			exactFullSpan = true
+		} else if cspans == _FULL_SPANS {
 			fullSpan = true
-		}
-
-		if cspans == _VALUED_SPANS {
-			valuedSpan = true
-		}
-
-		if cspans == _EXACT_VALUED_SPANS {
+		} else if cspans == _EXACT_VALUED_SPANS {
 			exactValuedSpan = true
-		}
-
-		if cspans == _EMPTY_SPANS {
+		} else if cspans == _VALUED_SPANS {
+			valuedSpan = true
+		} else if cspans == _NULL_SPANS {
+			nullSpan = true
+		} else if cspans == _MISSING_SPANS {
+			missingSpan = true
+		} else if cspans == _EMPTY_SPANS {
 			emptySpan = true
 			continue
 		}
 
-		if cspans == _NULL_SPANS {
-			nullSpan = true
-		}
-
 		size += cspans.Size()
 		if size > _FULL_SPAN_FANOUT {
-			return _FULL_SPANS, nil
+			fullSpan = true
+			continue
 		}
 
 		spans = append(spans, cspans)
 	}
 
-	if exactValuedSpan && nullSpan {
+	if (missingSpan && exactFullSpan) || (missingSpan && nullSpan && exactValuedSpan) {
+		return _WHOLE_SPANS, nil
+	} else if (missingSpan && fullSpan) || (missingSpan && nullSpan && valuedSpan) {
+		s := _WHOLE_SPANS.Copy()
+		s.SetExact(false)
+		return s, nil
+	} else if (nullSpan && exactValuedSpan) || exactFullSpan {
 		return _EXACT_FULL_SPANS, nil
-	}
-
-	if (valuedSpan && nullSpan) || fullSpan {
+	} else if (nullSpan && valuedSpan) || fullSpan {
 		return _FULL_SPANS, nil
-	}
-
-	if emptySpan && len(spans) == 0 {
+	} else if emptySpan && len(spans) == 0 {
 		return _EMPTY_SPANS, nil
 	}
 

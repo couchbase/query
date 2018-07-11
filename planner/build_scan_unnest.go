@@ -379,12 +379,12 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		}
 	}
 
-	min, _ := SargableFor(pred, sargKeys)
+	min, max, _ := SargableFor(pred, sargKeys, false, true)
 	if min == 0 {
 		return nil, nil, nil, 0, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, sargKeys, min, false, node.Alias())
+	spans, exactSpans, err := SargFor(pred, sargKeys, max, false, node.Alias())
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}

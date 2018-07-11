@@ -108,7 +108,9 @@ func (this *UnionSpans) Streamline() SargSpans {
 		}
 
 		for _, s := range sps {
-			if s == _EXACT_FULL_SPANS {
+			if s == _WHOLE_SPANS {
+				return s
+			} else if s == _EXACT_FULL_SPANS {
 				return s
 			} else if s == _FULL_SPANS {
 				full = true

@@ -110,10 +110,6 @@ func (this *sarg) VisitLike(pred *expression.Like) (interface{}, error) {
 	return this.visitLike(pred)
 }
 
-func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
-	return this.visitDefault(pred)
-}
-
 func (this *sarg) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
 	return this.visitDefault(pred)
 }

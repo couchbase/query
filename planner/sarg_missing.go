@@ -24,3 +24,15 @@ func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{},
 
 	return nil, nil
 }
+
+func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
+	}
+
+	if pred.Operand().EquivalentTo(this.key) {
+		return _MISSING_SPANS, nil
+	}
+
+	return nil, nil
+}

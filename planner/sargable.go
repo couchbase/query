@@ -13,44 +13,66 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargableFor(pred expression.Expression, keys expression.Expressions) (
-	min, sum int) {
+func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool) (
+	min, max, sum int) {
 
 	if or, ok := pred.(*expression.Or); ok {
-		return sargableForOr(or, keys)
+		return sargableForOr(or, keys, missing, gsi)
 	}
 
-	n := len(keys)
+	skiped := false
 
-	i := 0
-	for ; i < n; i++ {
+	for i := 0; i < len(keys); i++ {
 		// Terminate on statically-valued expression
 		if keys[i].Value() != nil {
-			return i, i
+			return
 		}
 
-		s := &sargable{keys[i]}
+		s := &sargable{keys[i], missing, gsi}
 
 		r, err := pred.Accept(s)
-		if err != nil || !r.(bool) {
-			return i, i
+
+		if err != nil {
+			return
+		}
+
+		if r.(bool) {
+			max = i + 1
+			sum = max
+		} else {
+			if !gsi {
+				return
+			}
+			skiped = true
+		}
+
+		if !skiped {
+			min = max
+		}
+
+		if gsi {
+			missing = true
 		}
 	}
 
-	return i, i
+	return
 }
 
-func sargableForOr(or *expression.Or, keys expression.Expressions) (
-	min, sum int) {
+func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool) (
+	min, max, sum int) {
 
 	for _, c := range or.Operands() {
-		cmin, csum := SargableFor(c, keys)
-		if cmin == 0 || csum < cmin {
-			return 0, 0
+		cmin, cmax, csum := SargableFor(c, keys, missing, gsi)
+		if cmin == 0 || cmax == 0 || csum < cmin || csum < cmax {
+			return 0, 0, 0
 		}
 
 		if min == 0 || cmin < min {
 			min = cmin
+		}
+
+		if max == 0 || cmax < max {
+			max = cmax
 		}
 
 		sum += csum
@@ -60,7 +82,9 @@ func sargableForOr(or *expression.Or, keys expression.Expressions) (
 }
 
 type sargable struct {
-	key expression.Expression
+	key     expression.Expression
+	missing bool
+	gsi     bool
 }
 
 // Arithmetic
@@ -144,6 +168,10 @@ func (this *sargable) VisitLT(pred *expression.LT) (interface{}, error) {
 }
 
 func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
+	if this.missing && pred.Operand().EquivalentTo(this.key) {
+		return true, nil
+	}
+
 	return this.visitDefault(pred)
 }
 

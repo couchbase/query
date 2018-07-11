@@ -1,0 +1,276 @@
+[
+{
+        "statements":" explain select meta().id from product where any d in tokens(description) satisfies lower(tostr(d)) = 'amazon' end order by meta().id limit 2",
+       "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "DistinctScan",
+                                "scan": {
+                                	"#operator": "IndexScan",
+                                    "index": "tokenindex",
+                                    "index_id": "e97e58e3d5559833",
+                                    "keyspace": "product",
+                                    "namespace": "default",
+                                    "spans": [
+                                        {
+                                            "Range": {
+                                                "High": [
+                                                    "\" amazon \""
+                                                ],
+                                                "Inclusion": 3,
+                                                "Low": [
+                                                    "\" amazon \""
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "using": "gsi"
+                                }
+                            },
+                            {
+                                "#operator": "Fetch",
+                                "keyspace": "product",
+                                "namespace": "default"
+                            },
+                            {
+                                "#operator": "Parallel",
+                                "~child": {
+                                    "#operator": "Sequence",
+                                    "~children": [
+                                        {
+                                            "#operator": "Filter",
+                                            "condition": "any `d` in tokens((`product`.`description`)) satisfies (lower(to_string(`d`)) = \" amazon \") end"
+                                        },
+                                        {
+                                            "#operator": "InitialProject",
+                                            "result_terms": [
+                                                {
+                                                    "expr": "(meta(`product`).`id`)"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "Order",
+                        "limit": "2",
+                        "sort_terms": [
+                            {
+                                "expr": "(meta(`product`).`id`)"
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "Limit",
+                        "expr": "2"
+                    },
+                    {
+                        "#operator": "FinalProject"
+                    }
+                ]
+            },
+            "text": "select meta().id from product where any d in tokens(description) satisfies lower(tostr(d)) = ' amazon ' end order by meta().id limit 2;"
+        }
+    ]
+    },
+    {
+    	"statements":"explain select name, productId from product where any r in tokens(name) satisfies lower(tostr(r)) = 'executive' end and any r in tokens(name) satisfies lower(tostr(r)) = 'briefcase' end order by productId",
+    	"results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "DistinctScan",
+                                "scan": {
+                                "#operator": "IndexScan",
+                                    "index": "tokenindex1",
+                                    "index_id": "716c76c7cf7b2fe0",
+                                    "keyspace": "product",
+                                    "namespace": "default",
+                                    "spans": [
+                                        {
+                                            "Range": {
+                                                "Inclusion": 0,
+                                                "Low": [
+                                                    "null"
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "using": "gsi"
+                                }
+                            },
+                            {
+                                "#operator": "Fetch",
+                                "keyspace": "product",
+                                "namespace": "default"
+                            },
+                            {
+                                "#operator": "Parallel",
+                                "~child": {
+                                    "#operator": "Sequence",
+                                    "~children": [
+                                        {
+                                            "#operator": "Filter",
+                                            "condition": "(any `r` in tokens((`product`.`name`)) satisfies (lower(to_string(`r`)) = \"executive\") end and any `r` in tokens((`product`.`name`)) satisfies (lower(to_string(`r`)) = \"briefcase\") end)"
+                                        },
+                                        {
+                                            "#operator": "InitialProject",
+                                            "result_terms": [
+                                                {
+                                                    "expr": "(`product`.`name`)"
+                                                },
+                                                {
+                                                    "expr": "(`product`.`productId`)"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "Order",
+                        "sort_terms": [
+                            {
+                                "expr": "(`product`.`productId`)"
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "FinalProject"
+                    }
+                ]
+            },
+            "text": "select name, productId from product where any r in tokens(name) satisfies lower(tostr(r)) = 'executive' end and any r in tokens(name) satisfies lower(tostr(r)) = 'briefcase' end order by productId;"
+        }
+    ]
+    },
+    {
+    	"statements":"explain select name, productId, tokens(imageURL,{'names':false, 'case':'upper'}) as imageTokens from product where any r in tokens(name) satisfies contains(lower(tostr(r)),'phone') end and any l in tokens(imageURL) satisfies lower(tostr(l)) = 'jpg' end order by productId limit 1",
+       "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "IntersectScan",
+                                "scans": [
+                                    {
+                                        "#operator": "DistinctScan",
+                                        "scan": {
+                                        	"#operator": "IndexScan",
+                                            "index": "tokenindex1",
+                                            "index_id": "716c76c7cf7b2fe0",
+                                            "keyspace": "product",
+                                            "namespace": "default",
+                                            "spans": [
+                                                {
+                                                    "Range": {
+                                                        "Inclusion": 0,
+                                                        "Low": [
+                                                            "null"
+                                                        ]
+                                                    }
+                                                }
+                                            ],
+                                            "using": "gsi"
+                                        }
+                                    },
+                                    {
+                                        "#operator": "DistinctScan",
+                                        "scan": {
+                                        	"#operator": "IndexScan",
+                                            "index": "tokenindex2",
+                                            "index_id": "9cbc991d40b018f2",
+                                            "keyspace": "product",
+                                            "namespace": "default",
+                                            "spans": [
+                                                {
+                                                    "Range": {
+                                                        "Inclusion": 0,
+                                                        "Low": [
+                                                            "null"
+                                                        ]
+                                                    }
+                                                }
+                                            ],
+                                            "using": "gsi"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "#operator": "Fetch",
+                                "keyspace": "product",
+                                "namespace": "default"
+                            },
+                            {
+                                "#operator": "Parallel",
+                                "~child": {
+                                    "#operator": "Sequence",
+                                    "~children": [
+                                        {
+                                            "#operator": "Filter",
+                                            "condition": "(any `r` in tokens((`product`.`name`)) satisfies contains(lower(to_string(`r`)), \"phone\") end and any `l` in tokens((`product`.`imageURL`)) satisfies (lower(to_string(`l`)) = \"jpg\") end)"
+                                        },
+                                        {
+                                            "#operator": "InitialProject",
+                                            "result_terms": [
+                                                {
+                                                    "expr": "(`product`.`name`)"
+                                                },
+                                                {
+                                                    "expr": "(`product`.`productId`)"
+                                                },
+                                                {
+                                                    "as": "imageTokens",
+                                                    "expr": "tokens((`product`.`imageURL`), {\"\\\"case\\\"\": \"upper\", \"\\\"names\\\"\": false})"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "Order",
+                        "limit": "1",
+                        "sort_terms": [
+                            {
+                                "expr": "(`product`.`productId`)"
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "Limit",
+                        "expr": "1"
+                    },
+                    {
+                        "#operator": "FinalProject"
+                    }
+                ]
+            },
+            "text": "select name, productId, tokens(imageURL,{'names':false, 'case':'upper'}) as imageTokens from product where any r in tokens(name) satisfies contains(lower(tostr(r)),'phone') end and any l in tokens(imageURL) satisfies lower(tostr(l)) = 'jpg' end order by productId limit 1;"
+        }
+    ]
+    }
+]

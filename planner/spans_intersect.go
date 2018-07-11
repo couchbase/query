@@ -76,7 +76,8 @@ func (this *IntersectSpans) ConstrainTerm(spans *TermSpans) SargSpans {
 }
 
 func (this *IntersectSpans) Streamline() SargSpans {
-	exact := false
+	exactFull := false
+	whole := false
 	spans := _SPANS_POOL.Get()
 	defer _SPANS_POOL.Put(spans)
 
@@ -94,8 +95,10 @@ func (this *IntersectSpans) Streamline() SargSpans {
 		for _, s := range sps {
 			if s == _EMPTY_SPANS {
 				return s
+			} else if s == _WHOLE_SPANS {
+				whole = true
 			} else if s == _EXACT_FULL_SPANS {
-				exact = true
+				exactFull = true
 			} else if s != _FULL_SPANS {
 				spans = append(spans, s)
 			}
@@ -106,7 +109,9 @@ func (this *IntersectSpans) Streamline() SargSpans {
 
 	switch len(spans) {
 	case 0:
-		if exact {
+		if whole {
+			return _WHOLE_SPANS
+		} else if exactFull {
 			return _EXACT_FULL_SPANS
 		} else {
 			return _FULL_SPANS

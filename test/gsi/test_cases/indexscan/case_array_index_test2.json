@@ -1,0 +1,135 @@
+[
+    {
+        "statements":"SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE ANY r IN reviewList SATISFIES r LIKE \"r%\" END AND test_id = \"arrayIndex\" GROUP BY categories ORDER BY categories, ROUND(SUM(unitPrice), 2) LIMIT 3",
+        "results": [
+        {
+            "categories": [
+                "All Sports \u0026 Outdoors"
+            ],
+            "totprice": 1252.33
+        },
+        {
+            "categories": [
+                "Appliances"
+            ],
+            "totprice": 19686.69
+        },
+        {
+            "categories": [
+                "Arts, Crafts \u0026 Sewing"
+            ],
+            "totprice": 4132.12
+        }
+    ]
+    },
+    {
+        "statements":"SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE ANY r IN reviewList SATISFIES r = 'review8565' END AND test_id = \"arrayIndex\" GROUP BY categories ORDER BY categories, ROUND(SUM(unitPrice), 2) LIMIT 3",
+        "results": [
+        {
+            "categories": [
+                "Appliances"
+            ],
+            "totprice": 199
+        }
+    ]
+    },
+    {
+        "statements":"SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE ANY r IN reviewList SATISFIES r = 'review8565' OR r = 'review6183' END AND test_id = \"arrayIndex\" GROUP BY categories ORDER BY categories, ROUND(SUM(unitPrice), 2) LIMIT 3",
+        "results": [
+        {
+            "categories": [
+                "Appliances"
+            ],
+            "totprice": 199
+        },
+        {
+            "categories": [
+                "Bedding \u0026 Bath"
+            ],
+            "totprice": 17.99
+        }
+    ]
+    },
+    {
+        "statements":"SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE ANY r IN reviewList SATISFIES r = 'review8565' AND r = 'review6183' END AND test_id = \"arrayIndex\" GROUP BY categories ORDER BY categories, ROUND(SUM(unitPrice), 2) LIMIT 3",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE ANY r IN reviewList SATISFIES r = 'review8565' AND r = 'review8565' END AND test_id = \"arrayIndex\" GROUP BY categories ORDER BY categories, ROUND(SUM(unitPrice), 2) LIMIT 3",
+        "results": [
+        {
+            "categories": [
+                "Appliances"
+            ],
+            "totprice": 199
+        }
+    ]
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM product p1 INNER JOIN product p2 ON KEYS (p1.productId) WHERE ANY r IN p1.reviewList SATISFIES r = 'review8565' AND r = 'review8565' END AND p1.test_id = \"arrayIndex\" and p2.test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 0
+        }
+    ]   
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM product p1 USE INDEX (reviewlistidx2all) INNER JOIN product p2 ON KEYS (p1.productId) WHERE ANY r IN p1.reviewList SATISFIES r = 'review8565' AND r = 'review8565' END AND p1.test_id = \"arrayIndex\" and p2.test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 0
+        }
+    ]
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM product p1 USE INDEX (reviewlistidxall) INNER JOIN product p2 ON KEYS (p1.productId) WHERE ANY r IN p1.reviewList SATISFIES r > 'review8565' END OR ANY r IN p1.reviewList SATISFIES r < 'review1000' END AND p1.test_id = \"arrayIndex\" and p2.test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 0
+        }
+    ]
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM product p1 USE INDEX (reviewlistidxall) INNER JOIN product p2 ON KEYS (p1.productId) WHERE ANY r IN p1.reviewList SATISFIES r = 'review8565' AND r = 'review8566' END OR ANY r IN p1.reviewList SATISFIES r = 'review9990' AND r = 'review9991' END AND p1.test_id = \"arrayIndex\" and p2.test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 0
+        }
+    ]
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM product p1 USE INDEX (reviewlistidxall) INNER JOIN product p2 ON KEYS (p1.productId) WHERE ( ANY r IN p1.reviewList SATISFIES r = 'review8565' AND r = 'review8566' END AND ANY r IN p1.reviewList SATISFIES r = 'review8585' AND r = 'review8586' END) AND p1.test_id = \"arrayIndex\" and p2.test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 0
+        }
+    ]
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM product p1 USE INDEX (reviewlistidx3all) INNER JOIN product p2 ON KEYS (p1.productId) WHERE p1.productId IS NOT MISSING AND ANY r IN p1.reviewList SATISFIES r = 'review8565' AND r = 'review8565' END AND p1.test_id = \"arrayIndex\" and p2.test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 0
+        }
+    ]
+    },
+    
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM purchase WHERE ANY l IN lineItems SATISFIES l IN [{\"count\":5, \"product\" : \"product797\"}, {\"count\":4, \"product\" : \"product58\"}] END AND test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 10
+        }
+    ]
+    },
+    {
+        "statements":"SELECT COUNT(1) as mycount FROM purchase WHERE ANY l IN lineItems SATISFIES l = {\"count\":3, \"product\" : \"product284\"} END AND test_id = \"arrayIndex\"",
+        "results": [
+        {
+            "mycount": 9
+        }
+    ]
+    }
+]
+

@@ -13,15 +13,15 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargFor(pred expression.Expression, keys expression.Expressions, min int, isJoin bool, keyspaceName string) (
+func SargFor(pred expression.Expression, keys expression.Expressions, max int, isJoin bool, keyspaceName string) (
 	SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
-		return sargForOr(or, keys, min, isJoin, keyspaceName)
+		return sargForOr(or, keys, max, isJoin, keyspaceName)
 	}
 
-	sargKeys := keys[0:min]
+	sargKeys := keys[0:max]
 
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
@@ -33,14 +33,14 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min int, i
 	return composeSargSpan(sargSpans, exactSpan)
 }
 
-func sargForOr(or *expression.Or, keys expression.Expressions, min int, isJoin bool, keyspaceName string) (
+func sargForOr(or *expression.Or, keys expression.Expressions, max int, isJoin bool, keyspaceName string) (
 	SargSpans, bool, error) {
 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
-		min, _ = SargableFor(c, keys) // Variable length sarging
-		s, ex, err := SargFor(c, keys, min, isJoin, keyspaceName)
+		_, max, _ = SargableFor(c, keys, false, true) // Variable length sarging
+		s, ex, err := SargFor(c, keys, max, isJoin, keyspaceName)
 		if err != nil {
 			return nil, false, err
 		}
@@ -65,60 +65,51 @@ func sargFor(pred, key expression.Expression, isJoin bool, keyspaceName string) 
 	return rs, nil
 }
 
-func SargForFilters(filters Filters, keys expression.Expressions, min int, underHash bool, keyspaceName string) (
+func SargForFilters(filters Filters, keys expression.Expressions, max int, underHash bool, keyspaceName string) (
 	SargSpans, bool, error) {
 
-	sargSpans := make([]SargSpans, min)
+	sargSpans := make([]SargSpans, max)
 	exactSpan := true
 	arrayKeySpans := make(map[int][]SargSpans)
 
-	sargKeys := keys[0:min]
+	sargKeys := keys[0:max]
 
 	for _, fl := range filters {
 		isJoin := fl.isJoin() && !underHash
-		flSargSpans, flExactSpan, pos, err := getSargSpan(fl.fltrExpr, sargKeys, isJoin, keyspaceName)
+		flSargSpans, flExactSpan, err := getSargSpans(fl.fltrExpr, sargKeys, isJoin, keyspaceName)
 		if err != nil {
 			return nil, flExactSpan, err
 		}
 
-		isArray, _ := sargKeys[pos].IsArrayIndexKey()
+		exactSpan = exactSpan && flExactSpan
 
-		if flSargSpans == nil || flSargSpans.Size() == 0 {
-			if !isArray {
-				for _, sargKey := range sargKeys {
-					if fl.fltrExpr.DependsOn(sargKey) {
-						exactSpan = false
-						break
-					}
+		for pos, sargKey := range sargKeys {
+			isArray, _ := sargKey.IsArrayIndexKey()
+			if flSargSpans[pos] == nil || flSargSpans[pos].Size() == 0 {
+				if exactSpan && !isArray && fl.fltrExpr.DependsOn(sargKey) {
+					exactSpan = false
 				}
-			}
-			continue
-		}
-
-		if isArray {
-			if arrayKeySpan, ok := arrayKeySpans[pos]; ok {
-				arrayKeySpan = append(arrayKeySpan, flSargSpans)
-				arrayKeySpans[pos] = arrayKeySpan
-			} else {
-				arrayKeySpans[pos] = make([]SargSpans, 0, len(filters))
-				arrayKeySpans[pos] = append(arrayKeySpans[pos], flSargSpans)
-			}
-		} else {
-			if flSargSpans == _EMPTY_SPANS {
+				continue
+			} else if !isArray && flSargSpans[pos] == _EMPTY_SPANS {
 				return _EMPTY_SPANS, true, nil
 			}
 
-			if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
-				sargSpans[pos] = flSargSpans
+			if isArray {
+				if _, ok := arrayKeySpans[pos]; !ok {
+					arrayKeySpans[pos] = make([]SargSpans, 0, len(filters))
+				}
+				arrayKeySpans[pos] = append(arrayKeySpans[pos], flSargSpans[pos])
 			} else {
-				sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans)
-				if sargSpans[pos] == _EMPTY_SPANS {
-					return _EMPTY_SPANS, true, nil
+				if sargSpans[pos] == nil || sargSpans[pos].Size() == 0 {
+					sargSpans[pos] = flSargSpans[pos]
+				} else {
+					sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans[pos])
+					if sargSpans[pos] == _EMPTY_SPANS {
+						return _EMPTY_SPANS, true, nil
+					}
 				}
 			}
 		}
-
-		exactSpan = exactSpan && flExactSpan
 	}
 
 	for pos, arrayKeySpan := range arrayKeySpans {
@@ -136,11 +127,10 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	size := 1
 	n := 0
 	for _, spans := range sargSpans {
-		if spans == nil {
-			break
+		sz := 1
+		if spans != nil {
+			sz = spans.Size()
 		}
-
-		sz := spans.Size()
 
 		if sz == 0 ||
 			(sz > 1 && size > 1 && sz*size > _FULL_SPAN_FANOUT) {
@@ -158,8 +148,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	for i := n - 1; i >= 0; i-- {
 		rs := sargSpans[i]
 
-		// Reset
-		if rs == nil || rs.Size() == 0 {
+		if rs == nil || rs.Size() == 0 { // Reset
 			ns = nil
 			continue
 		}
@@ -205,12 +194,17 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 	for i := n - 1; i >= 0; i-- {
 		s := &sarg{sargKeys[i], keyspaceName, isJoin}
 		r, err := pred.Accept(s)
-		if err != nil || r == nil {
+		if err != nil {
 			return nil, false, err
 		}
+		var rs SargSpans
 
-		rs := r.(SargSpans)
-		rs = rs.Streamline()
+		if r != nil {
+			rs = r.(SargSpans)
+			rs = rs.Streamline()
+		} else {
+			rs = _WHOLE_SPANS.Copy()
+		}
 
 		sargSpans[i] = rs
 
@@ -228,44 +222,6 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 	}
 
 	return sargSpans, exactSpan, nil
-}
-
-/*
-Get sarg span for one of the index sarg keys. Individual filters are passed in
-*/
-func getSargSpan(pred expression.Expression, sargKeys expression.Expressions, isJoin bool, keyspaceName string) (
-	SargSpans, bool, int, error) {
-
-	n := len(sargKeys)
-
-	exactSpan := true
-
-	// Sarg composite indexes left to right
-	for i := 0; i < n; i++ {
-		s := &sarg{sargKeys[i], keyspaceName, isJoin}
-		r, err := pred.Accept(s)
-		if err != nil {
-			return nil, false, 0, err
-		}
-
-		if r == nil {
-			// not for this key
-			continue
-		}
-
-		rs := r.(SargSpans)
-		rs = rs.Streamline()
-
-		if rs.Size() == 0 {
-			exactSpan = false
-		}
-
-		exactSpan = exactSpan && rs.Exact()
-
-		return rs, exactSpan, i, nil
-	}
-
-	return nil, false, 0, nil
 }
 
 const _FULL_SPAN_FANOUT = 8192

@@ -239,9 +239,16 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			return
 		}
 
-		min, sum := SargableFor(pred, keys)
+		skip := useSkipIndexKeys(index, this.indexApiVersion)
+		min, max, sum := SargableFor(pred, keys, false, skip)
+
+		n := min
+		if skip {
+			n = max
+		}
+
 		entry := &indexEntry{
-			index, keys, keys[0:min], partitionKeys, min, sum, cond, origCond, nil, false, _PUSHDOWN_NONE}
+			index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false, _PUSHDOWN_NONE}
 		all[index] = entry
 
 		if min > 0 {

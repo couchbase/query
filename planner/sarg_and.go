@@ -85,37 +85,32 @@ func addArrayKeys(keySpans []SargSpans) SargSpans {
 
 	spans := make([]SargSpans, 0, len(keySpans))
 	emptySpan := false
-	valuedSpan := false
-	exactValuedSpan := false
+	missingSpan := false
 	nullSpan := false
 	fullSpan := false
 	exactFullSpan := false
+	valuedSpan := false
+	exactValuedSpan := false
 	size := 1
 
 	for _, cspans := range keySpans {
-		if cspans == _EXACT_FULL_SPANS {
+		if cspans == _WHOLE_SPANS {
+			return _WHOLE_SPANS
+		} else if cspans == _EXACT_FULL_SPANS {
 			exactFullSpan = true
-		}
-
-		if cspans == _FULL_SPANS {
+		} else if cspans == _FULL_SPANS {
 			fullSpan = true
-		}
-
-		if cspans == _VALUED_SPANS {
-			valuedSpan = true
-		}
-
-		if cspans == _EXACT_VALUED_SPANS {
+		} else if cspans == _EXACT_VALUED_SPANS {
 			exactValuedSpan = true
-		}
-
-		if cspans == _EMPTY_SPANS {
+		} else if cspans == _VALUED_SPANS {
+			valuedSpan = true
+		} else if cspans == _NULL_SPANS {
+			nullSpan = true
+		} else if cspans == _MISSING_SPANS {
+			missingSpan = true
+		} else if cspans == _EMPTY_SPANS {
 			emptySpan = true
 			continue
-		}
-
-		if cspans == _NULL_SPANS {
-			nullSpan = true
 		}
 
 		size *= cspans.Size()
@@ -127,19 +122,19 @@ func addArrayKeys(keySpans []SargSpans) SargSpans {
 		spans = append(spans, cspans)
 	}
 
-	if (exactValuedSpan && nullSpan) || exactFullSpan {
+	if (missingSpan && exactFullSpan) || (missingSpan && nullSpan && exactValuedSpan) {
+		return _WHOLE_SPANS
+	} else if (missingSpan && fullSpan) || (missingSpan && nullSpan && valuedSpan) {
+		s := _WHOLE_SPANS.Copy()
+		s.SetExact(false)
+		return s
+	} else if (nullSpan && exactValuedSpan) || exactFullSpan {
 		return _EXACT_FULL_SPANS
-	}
-
-	if (valuedSpan && nullSpan) || fullSpan {
+	} else if (nullSpan && valuedSpan) || fullSpan {
 		return _FULL_SPANS
-	}
-
-	if emptySpan && len(spans) == 0 {
+	} else if emptySpan && len(spans) == 0 {
 		return _EMPTY_SPANS
-	}
-
-	if spans == nil || len(spans) == 0 {
+	} else if spans == nil || len(spans) == 0 {
 		return nil
 	}
 

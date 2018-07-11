@@ -27,6 +27,10 @@ func useIndex3API(index datastore.Index, indexApiVersion int) bool {
 	return ok && indexApiVersion >= datastore.INDEX_API_3
 }
 
+func useSkipIndexKeys(index datastore.Index, indexApiVersion int) bool {
+	return useIndex3API(index, indexApiVersion) && index.Type() == datastore.GSI
+}
+
 func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {
 	if index2, ok := entry.index.(datastore.Index2); ok {
 		indexKeys = index2.RangeKey2()
