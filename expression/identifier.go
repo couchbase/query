@@ -96,8 +96,10 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options co
 		if this.EquivalentTo(expr) {
 			switch eType := expr.(type) {
 			case *Identifier:
-				if !options.isSingle || eType.identifier != keyspace {
+				if !options.isSingle {
 					return CoveredTrue
+				} else if eType.identifier != keyspace {
+					return CoveredSkip
 				}
 			default:
 				return CoveredTrue
