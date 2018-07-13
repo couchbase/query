@@ -48,9 +48,9 @@ const (
 )
 
 type coveredOptions struct {
-	isSingle     bool
-	skip         bool
-	trickleEquiv bool
+	isSingle bool
+	skip     bool
+	trickle  bool
 }
 
 func (this *ExpressionBase) String() string {
@@ -357,12 +357,17 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 		case CoveredSkip:
 			options.skip = true
 
+			// MB-30350 trickle down CoveredSkip to outermost field
+			if options.trickle {
+				rv = CoveredSkip
+			}
+
 		// MB-25560: this subexpression is already covered, no need to check subsequent terms
 		case CoveredEquiv:
 			options.skip = true
 
 			// trickle down CoveredEquiv to outermost field
-			if options.trickleEquiv {
+			if options.trickle {
 				rv = CoveredEquiv
 			}
 		}

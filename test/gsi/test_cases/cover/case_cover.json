@@ -747,5 +747,83 @@
             "text": "select email,VMs[0].RAM from shellTest where email LIKE '%@%.%' and VMs[0].RAM > 5 and join_day > 10"
         }
     ]
+    },
+    {
+        "statements":"explain SELECT store.main.status FROM shellTest store LEFT JOIN shellTest item ON KEY item.main.owner FOR store WHERE store.main.status = \"OPEN\"",
+        "ignore":"index_id",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "IndexScan3",
+                        "as": "store",
+                        "covers": [
+                            "cover (((`store`.`main`).`status`))",
+                            "cover ((meta(`store`).`id`))"
+                        ],
+                        "index": "ixCover6",
+                        "keyspace": "shellTest",
+                        "namespace": "default",
+                        "spans": [
+                            {
+                                "exact": true,
+                                "range": [
+                                    {
+                                        "high": "\"OPEN\"",
+                                        "inclusion": 3,
+                                        "low": "\"OPEN\""
+                                    }
+                                ]
+                            }
+                        ],
+                        "using": "gsi"
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "IndexJoin",
+                                    "as": "item",
+                                    "for": "store",
+                                    "keyspace": "shellTest",
+                                    "namespace": "default",
+                                    "on_key": "cover (((`item`.`main`).`owner`))",
+                                    "outer": true,
+                                    "scan": {
+                                        "covers": [
+                                            "cover (((`item`.`main`).`owner`))",
+                                            "cover ((meta(`item`).`id`))"
+                                        ],
+                                        "index": "ixCover7",
+                                        "using": "gsi"
+                                    }
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(cover (((`store`.`main`).`status`)) = \"OPEN\")"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "cover (((`store`.`main`).`status`))"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT store.main.status FROM shellTest store LEFT JOIN shellTest item ON KEY item.main.owner FOR store WHERE store.main.status = \"OPEN\""
+        }
+    ]
     }
 ]
