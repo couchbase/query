@@ -99,7 +99,9 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	}
 
 	for _, unnest := range unnests {
-		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
+		unnestIdent := expression.NewIdentifier(unnest.Alias())
+		unnestIdent.SetUnnestAlias(true)
+		andTerms = append(andTerms, expression.NewIsNotMissing(unnestIdent))
 	}
 
 	pred = expression.NewAnd(andTerms...)
@@ -336,7 +338,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
 		return nil, nil, 0, nil
 	} else {
-		sargKey = expression.NewIdentifier(unnest.As())
+		unnestIdent := expression.NewIdentifier(unnest.As())
+		unnestIdent.SetUnnestAlias(true)
+		sargKey = unnestIdent
 	}
 
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
