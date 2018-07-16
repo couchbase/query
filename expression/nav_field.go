@@ -96,7 +96,6 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options covered
 		}
 	}
 	children := this.expr.Children()
-	options.isSingle = len(children) == 1
 	trickle := options.trickle
 	options.trickle = true
 	rv := CoveredTrue

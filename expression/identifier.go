@@ -14,6 +14,17 @@ import (
 )
 
 /*
+Identifier flags
+*/
+const (
+	IDENT_IS_UNKNOWN      = 1 << iota // unknown
+	IDENT_IS_KEYSPACE                 // keyspace or its alias or equivalent (e.g. subquery term)
+	IDENT_IS_VARIABLE                 // binding variable
+	IDENT_IS_PROJ_ALIAS               // alias used in projection
+	IDENT_IS_UNNEST_ALIAS             // UNNEST alias
+)
+
+/*
 An identifier is a symbolic reference to a particular value
 in the current context.
 */
@@ -22,7 +33,7 @@ type Identifier struct {
 	identifier      string
 	caseInsensitive bool
 	parenthesis     bool
-	keyspaceAlias   bool
+	identFlags      uint32
 }
 
 func NewIdentifier(identifier string) *Identifier {
@@ -88,7 +99,8 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
 	// MB-25317, if this is not the right keyspace, ignore the expression altogether
 	// MB-25370 this only applies for keyspace terms, not variables!
-	if this.identifier != keyspace && !this.IsCollectionVariable() {
+	if (this.IsKeyspaceAlias() && this.identifier != keyspace) ||
+		this.IsProjectionAlias() || this.IsBindingVariable() {
 		return CoveredSkip
 	}
 
@@ -96,7 +108,7 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options co
 		if this.EquivalentTo(expr) {
 			switch eType := expr.(type) {
 			case *Identifier:
-				if !options.isSingle {
+				if !this.IsKeyspaceAlias() {
 					return CoveredTrue
 				} else if eType.identifier != keyspace {
 					return CoveredSkip
@@ -130,8 +142,14 @@ func (this *Identifier) SurvivesGrouping(groupKeys Expressions, allowed *value.S
 		}
 	}
 
-	_, found := allowed.Field(this.identifier)
+	flags, found := allowed.Field(this.identifier)
 	if found {
+		allow_flags := uint32(flags.ActualForIndex().(int64))
+		if (allow_flags & IDENT_IS_PROJ_ALIAS) != 0 {
+			this.SetProjectionAlias(true)
+		} else if (allow_flags & IDENT_IS_VARIABLE) != 0 {
+			this.SetBindingVariable(true)
+		}
 		return true, nil
 	}
 
@@ -169,9 +187,49 @@ func (this *Identifier) SetParenthesis(parenthesis bool) {
 }
 
 func (this *Identifier) IsKeyspaceAlias() bool {
-	return this.keyspaceAlias
+	return (this.identFlags & IDENT_IS_KEYSPACE) != 0
 }
 
 func (this *Identifier) SetKeyspaceAlias(keyspaceAlias bool) {
-	this.keyspaceAlias = keyspaceAlias
+	if keyspaceAlias {
+		this.identFlags |= IDENT_IS_KEYSPACE
+	} else {
+		this.identFlags &^= IDENT_IS_KEYSPACE
+	}
+}
+
+func (this *Identifier) IsBindingVariable() bool {
+	return (this.identFlags & IDENT_IS_VARIABLE) != 0
+}
+
+func (this *Identifier) SetBindingVariable(bindingVariable bool) {
+	if bindingVariable {
+		this.identFlags |= IDENT_IS_VARIABLE
+	} else {
+		this.identFlags &^= IDENT_IS_VARIABLE
+	}
+}
+
+func (this *Identifier) IsProjectionAlias() bool {
+	return (this.identFlags & IDENT_IS_PROJ_ALIAS) != 0
+}
+
+func (this *Identifier) SetProjectionAlias(projectionAlias bool) {
+	if projectionAlias {
+		this.identFlags |= IDENT_IS_PROJ_ALIAS
+	} else {
+		this.identFlags &^= IDENT_IS_PROJ_ALIAS
+	}
+}
+
+func (this *Identifier) IsUnnestAlias() bool {
+	return (this.identFlags & IDENT_IS_UNNEST_ALIAS) != 0
+}
+
+func (this *Identifier) SetUnnestAlias(unnestAlias bool) {
+	if unnestAlias {
+		this.identFlags |= IDENT_IS_UNNEST_ALIAS
+	} else {
+		this.identFlags &^= IDENT_IS_UNNEST_ALIAS
+	}
 }

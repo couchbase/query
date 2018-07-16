@@ -138,9 +138,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 
 		if this.order != nil {
+			allow_flags := value.NewValue(uint32(expression.IDENT_IS_PROJ_ALIAS))
 			for _, t := range proj {
 				if t.As() != "" {
-					allowed.SetField(t.As(), true)
+					allowed.SetField(t.As(), allow_flags)
 				}
 			}
 

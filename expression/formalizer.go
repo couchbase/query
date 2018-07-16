@@ -17,15 +17,6 @@ import (
 )
 
 /*
-Bit flags to indicate type of an identifier
-*/
-const (
-	IDENT_IS_UNKNOWN  = 1 << iota // unknown
-	IDENT_IS_KEYSPACE             // keyspace or its alias or equivalent (e.g. subquery term)
-	IDENT_IS_VARIABLE             // binding variable
-)
-
-/*
 Bit flags for formalizer flags
 */
 const (
@@ -222,13 +213,21 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		// however if this is a keyspace alias added in previous formalization
 		// process then treat it as a keyspace alias
 		ident_flags := uint32(ident_val.ActualForIndex().(int64))
-		tmp_flags := ident_flags & IDENT_IS_KEYSPACE
-		if !this.indexScope() || tmp_flags == 0 || expr.IsKeyspaceAlias() {
+		keyspace_flags := ident_flags & IDENT_IS_KEYSPACE
+		variable_flags := ident_flags & IDENT_IS_VARIABLE
+		unnest_flags := ident_flags & IDENT_IS_UNNEST_ALIAS
+		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
 			// set flag to indicate it's keyspace
-			if tmp_flags != 0 && !expr.IsKeyspaceAlias() {
+			if keyspace_flags != 0 && !expr.IsKeyspaceAlias() {
 				expr.SetKeyspaceAlias(true)
+			}
+			if variable_flags != 0 && !expr.IsBindingVariable() {
+				expr.SetBindingVariable(true)
+			}
+			if unnest_flags != 0 && !expr.IsUnnestAlias() {
+				expr.SetUnnestAlias(true)
 			}
 			return expr, nil
 		}
@@ -446,5 +445,11 @@ func (this *Formalizer) SetAllowedAlias(alias string, isKeyspace bool) {
 	} else {
 		ident_flags = IDENT_IS_UNKNOWN
 	}
+	this.allowed.SetField(alias, value.NewValue(ident_flags))
+}
+
+// alias must be non-empty
+func (this *Formalizer) SetAllowedUnnestAlias(alias string) {
+	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_UNNEST_ALIAS)
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }
