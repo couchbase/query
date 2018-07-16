@@ -96,9 +96,8 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options covered
 		}
 	}
 	children := this.expr.Children()
-	options.isSingle = len(children) == 1
-	trickleEquiv := options.trickleEquiv
-	options.trickleEquiv = true
+	trickle := options.trickle
+	options.trickle = true
 	rv := CoveredTrue
 
 	// MB-22112: we treat the special case where a keyspace is part of the projection list
@@ -119,7 +118,7 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options covered
 			options.skip = true
 
 			// trickle down CoveredEquiv to outermost field
-			if trickleEquiv {
+			if trickle {
 				rv = CoveredEquiv
 			}
 		}

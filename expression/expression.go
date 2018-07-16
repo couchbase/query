@@ -207,6 +207,11 @@ type Expression interface {
 	   Does Value() call generate a NULL value
 	*/
 	IsValueNull() bool
+
+	/*
+	   Set identifier flags
+	*/
+	SetIdentFlags(aliases map[string]bool, flags uint32)
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {
@@ -297,6 +302,6 @@ Function rather than method to make sure we don't pick up
 ExpressionBase.CoveredBy() in error
 */
 func IsCovered(expr Expression, keyspace string, exprs Expressions) bool {
-	isCovered := expr.CoveredBy(keyspace, exprs, coveredOptions{isSingle: true, skip: false, trickleEquiv: false})
+	isCovered := expr.CoveredBy(keyspace, exprs, coveredOptions{skip: false, trickle: false})
 	return isCovered == CoveredSkip || isCovered == CoveredEquiv || isCovered == CoveredTrue
 }

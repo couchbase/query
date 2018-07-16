@@ -21,7 +21,6 @@ import (
 const (
 	EXPR_IS_CONDITIONAL = 1 << iota
 	EXPR_IS_VOLATILE
-	EXPR_IS_COLL_VAR
 	EXPR_VALUE_MISSING
 	EXPR_VALUE_NULL
 )
@@ -48,9 +47,8 @@ const (
 )
 
 type coveredOptions struct {
-	isSingle     bool
-	skip         bool
-	trickleEquiv bool
+	skip    bool
+	trickle bool
 }
 
 func (this *ExpressionBase) String() string {
@@ -101,17 +99,6 @@ func (this *ExpressionBase) conditional() bool {
 
 func (this *ExpressionBase) setConditional() {
 	this.exprFlags |= EXPR_IS_CONDITIONAL
-}
-
-/*
-This method indicates if the expression is a collection variable
-*/
-func (this *ExpressionBase) IsCollectionVariable() bool {
-	return (this.exprFlags & EXPR_IS_COLL_VAR) != 0
-}
-
-func (this *ExpressionBase) SetCollectionVariable() {
-	this.exprFlags |= EXPR_IS_COLL_VAR
 }
 
 /*
@@ -341,7 +328,6 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 		}
 	}
 	children := this.expr.Children()
-	options.isSingle = len(children) == 1
 	rv := CoveredTrue
 
 	// MB-22112: we treat the special case where a keyspace is part of the projection list
@@ -362,7 +348,7 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 			options.skip = true
 
 			// trickle down CoveredEquiv to outermost field
-			if options.trickleEquiv {
+			if options.trickle {
 				rv = CoveredEquiv
 			}
 		}
@@ -526,5 +512,11 @@ func (this *ExpressionBase) ResetValue() {
 	this.value = nil
 	for _, child := range this.expr.Children() {
 		child.ResetValue()
+	}
+}
+
+func (this *ExpressionBase) SetIdentFlags(aliases map[string]bool, flags uint32) {
+	for _, child := range this.expr.Children() {
+		child.SetIdentFlags(aliases, flags)
 	}
 }

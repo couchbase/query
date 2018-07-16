@@ -747,5 +747,86 @@
             "text": "select email,VMs[0].RAM from shellTest where email LIKE '%@%.%' and VMs[0].RAM > 5 and join_day > 10"
         }
     ]
+    },
+    {
+        "statements":"explain SELECT f2 AS o FROM shellTest WHERE f1 = 10 ORDER BY o + 1",
+        "ignore":"index_id",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "IndexScan3",
+                                "covers": [
+                                    "cover ((`shellTest`.`f1`))",
+                                    "cover ((`shellTest`.`f2`))",
+                                    "cover ((meta(`shellTest`).`id`))"
+                                ],
+                                "index": "ixCover",
+                                "index_projection": {
+                                    "entry_keys": [
+                                        0,
+                                        1
+                                    ]
+                                },
+                                "keyspace": "shellTest",
+                                "namespace": "default",
+                                "spans": [
+                                    {
+                                        "exact": true,
+                                        "range": [
+                                            {
+                                                "high": "10",
+                                                "inclusion": 3,
+                                                "low": "10"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "using": "gsi"
+                            },
+                            {
+                                "#operator": "Parallel",
+                                "~child": {
+                                    "#operator": "Sequence",
+                                    "~children": [
+                                        {
+                                            "#operator": "Filter",
+                                            "condition": "(cover ((`shellTest`.`f1`)) = 10)"
+                                        },
+                                        {
+                                            "#operator": "InitialProject",
+                                            "result_terms": [
+                                                {
+                                                    "as": "o",
+                                                    "expr": "cover ((`shellTest`.`f2`))"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "Order",
+                        "sort_terms": [
+                            {
+                                "expr": "(`o` + 1)"
+                            }
+                        ]
+                    },
+                    {
+                        "#operator": "FinalProject"
+                    }
+                ]
+            },
+            "text": "SELECT f2 AS o FROM shellTest WHERE f1 = 10 ORDER BY o + 1"
+        }
+    ]
     }
 ]
