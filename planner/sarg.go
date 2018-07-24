@@ -148,7 +148,10 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	for i := n - 1; i >= 0; i-- {
 		rs := sargSpans[i]
 
-		if rs == nil || rs.Size() == 0 { // Reset
+		if rs == nil {
+			rs = _WHOLE_SPANS.Copy()
+		}
+		if rs.Size() == 0 { // Reset
 			ns = nil
 			continue
 		}
@@ -197,28 +200,25 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 		if err != nil {
 			return nil, false, err
 		}
-		var rs SargSpans
 
 		if r != nil {
-			rs = r.(SargSpans)
+			rs := r.(SargSpans)
 			rs = rs.Streamline()
-		} else {
-			rs = _WHOLE_SPANS.Copy()
+
+			sargSpans[i] = rs
+
+			if rs.Size() == 0 {
+				exactSpan = false
+				continue
+			}
+
+			// If one key span is EMPTY then whole index span can be EMPTY
+			if rs == _EMPTY_SPANS {
+				return []SargSpans{_EMPTY_SPANS}, true, nil
+			}
+
+			exactSpan = exactSpan && rs.Exact()
 		}
-
-		sargSpans[i] = rs
-
-		if rs.Size() == 0 {
-			exactSpan = false
-			continue
-		}
-
-		// If one key span is EMPTY then whole index span can be EMPTY
-		if rs == _EMPTY_SPANS {
-			return []SargSpans{_EMPTY_SPANS}, true, nil
-		}
-
-		exactSpan = exactSpan && rs.Exact()
 	}
 
 	return sargSpans, exactSpan, nil
