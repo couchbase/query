@@ -11,7 +11,6 @@ package value
 
 import (
 	"io"
-	"strconv"
 	"sync"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -33,8 +32,10 @@ type parsedValue struct {
 	parsed       Value
 	sync.RWMutex // to access fields
 	fields       map[string]Value
+	elements     []Value
 	useState     bool
-	state        *json.FindState
+	findState    *json.FindState
+	indexState   *json.IndexState
 	used         int32 // to access state
 }
 
@@ -208,10 +209,10 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		// so we do a scan anyway
 		useState := this.useState && goahead == 1
 		if useState {
-			if this.state == nil {
-				this.state = json.NewFindState(this.raw)
+			if this.findState == nil {
+				this.findState = json.NewFindState(this.raw)
 			}
-			res, err = json.FirstFindWithState(this.state, field)
+			res, err = json.FirstFindWithState(this.findState, field)
 		} else {
 			res, err = json.FirstFind(raw, field)
 		}
@@ -279,17 +280,59 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		return this.unwrap().Index(index)
 	}
 
+	if this.elements != nil {
+		this.RLock()
+		if index < len(this.elements) {
+			result := this.elements[index]
+			this.RUnlock()
+			return NewValue(result), true
+		}
+		this.RUnlock()
+	}
+
 	raw := this.raw
 	if raw != nil {
-		res, err := json.Find(raw, "/"+strconv.Itoa(index))
+		var res []byte
+		var err error
+
+		goahead := int32(0)
+		if this.useState {
+			goahead = atomic.AddInt32(&this.used, 1)
+			defer atomic.AddInt32(&this.used, -1)
+		}
+
+		// Two operators can use the same value at the same time
+		// this is particularly the case for unnest, which scans
+		// an object looking for array elements.
+		// Since the state is, well, statefull, we'll only let the
+		// first served modify it, while the other will have to go
+		// the slow route
+		// For small documents manipulating the state is constly,
+		// so we do a scan anyway
+		useState := this.useState && goahead == 1
+		if useState {
+			if this.indexState == nil {
+				this.indexState = json.NewIndexState(this.raw)
+			}
+			res, err = json.IndexFindWithState(this.indexState, index)
+		} else {
+			res, err = json.IndexFind(raw, index)
+		}
 		if err != nil {
 			return missingIndex(index), false
 		}
 		if res != nil {
 
-			// since this array element  was part of a validated value,
+			// since this array element was part of a validated value,
 			// we don't need to validate it again
-			return NewParsedValue(res, true), true
+			val := NewParsedValueWithOptions(res, true, this.useState)
+
+			if useState {
+				this.Lock()
+				this.elements = append(this.elements, val)
+				this.Unlock()
+			}
+			return val, true
 		}
 	}
 
@@ -418,13 +461,21 @@ func (this *parsedValue) unwrap() Value {
 
 		// Release raw memory when no longer needed
 		this.raw = nil
-		this.state = nil
+		this.findState = nil
+		this.indexState = nil
 		if this.fields != nil {
 			for i, field := range this.fields {
 				this.fields[i] = nil
 				field.Recycle()
 			}
 			this.fields = nil
+		}
+		if this.elements != nil {
+			for i, element := range this.elements {
+				this.elements[i] = nil
+				element.Recycle()
+			}
+			this.elements = nil
 		}
 	}
 
