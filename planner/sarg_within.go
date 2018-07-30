@@ -50,7 +50,7 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 	}
 
 	// De-dup before generating spans
-	set := value.NewSet(len(array), true)
+	set := value.NewSet(len(array), true, false)
 	set.AddAll(array)
 	array = set.Actuals()
 

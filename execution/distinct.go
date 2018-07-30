@@ -26,7 +26,7 @@ type Distinct struct {
 
 func NewDistinct(plan *plan.Distinct, context *Context, collect bool) *Distinct {
 	rv := &Distinct{
-		set:     value.NewSet(int(context.GetPipelineCap()), false),
+		set:     value.NewSet(int(context.GetPipelineCap()), false, false),
 		plan:    plan,
 		collect: collect,
 	}
@@ -47,7 +47,7 @@ func (this *Distinct) Copy() Operator {
 	}
 	rv := &Distinct{
 		plan: this.plan,
-		set:  value.NewSet(cap, false),
+		set:  value.NewSet(cap, false, false),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -89,5 +89,5 @@ func (this *Distinct) MarshalJSON() ([]byte, error) {
 
 func (this *Distinct) reopen(context *Context) {
 	this.baseReopen(context)
-	this.set = value.NewSet(int(context.GetPipelineCap()), false)
+	this.set = value.NewSet(int(context.GetPipelineCap()), false, false)
 }

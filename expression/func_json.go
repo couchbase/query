@@ -385,4 +385,4 @@ func ensureBuffer(buffer []interface{}, length int) []interface{} {
 	return append(buffer2, buffer...)
 }
 
-var _SET_POOL = value.NewSetPool(64, true)
+var _SET_POOL = value.NewSetPool(64, true, false)

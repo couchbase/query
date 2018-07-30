@@ -93,7 +93,7 @@ func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, cont
 		return cumulative, nil
 	}
 
-	return setAdd(item, cumulative)
+	return setAdd(item, cumulative, false), nil
 }
 
 /*

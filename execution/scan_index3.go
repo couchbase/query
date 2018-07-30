@@ -192,7 +192,7 @@ func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, co
 				}
 				if !empty && av.Type() == value.ARRAY {
 					arr := av.ActualForIndex().([]interface{})
-					set := value.NewSet(len(arr), true)
+					set := value.NewSet(len(arr), true, false)
 					set.AddAll(arr)
 					arr = set.Actuals()
 					sort.Sort(value.NewSorter(value.NewValue(arr)))

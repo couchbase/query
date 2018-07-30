@@ -41,9 +41,12 @@ distinct methods.
 var _DISTINCT_AGGREGATES = map[string]Aggregate{
 	"array_agg": &ArrayAggDistinct{},
 	"avg":       &AvgDistinct{},
+	"mean":      &AvgDistinct{},
 	"count":     &CountDistinct{},
 	"countn":    &CountnDistinct{},
 	"sum":       &SumDistinct{},
+	"median":    &MedianDistinct{},
+	"stddev":    &StddevDistinct{},
 }
 
 /*
@@ -54,9 +57,12 @@ functions ARRAY_AGG, AVG, COUNT, MAX, MIN and SUM.
 var _OTHER_AGGREGATES = map[string]Aggregate{
 	"array_agg": &ArrayAgg{},
 	"avg":       &Avg{},
+	"mean":      &Avg{},
 	"count":     &Count{},
 	"countn":    &Countn{},
 	"max":       &Max{},
 	"min":       &Min{},
 	"sum":       &Sum{},
+	"median":    &Median{},
+	"stddev":    &Stddev{},
 }

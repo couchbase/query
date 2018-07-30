@@ -35,11 +35,15 @@ var _INDEX_AGG_PROPERTIES = map[string]*indexGroupAggProperties{
 	"max":                &indexGroupAggProperties{3, true, datastore.AGG_MAX, false, true},
 	"min":                &indexGroupAggProperties{3, true, datastore.AGG_MIN, false, true},
 	"sum":                &indexGroupAggProperties{3, true, datastore.AGG_SUM, false, true},
+	"median":             &indexGroupAggProperties{3, false, datastore.AGG_MEDIAN, false, false},
+	"stddev":             &indexGroupAggProperties{3, false, datastore.AGG_STDDEV, false, false},
 	"array_agg_distinct": &indexGroupAggProperties{3, false, datastore.AGG_ARRAY, true, false},
 	"avg_distinct":       &indexGroupAggProperties{3, true, datastore.AGG_AVG, true, false},
 	"count_distinct":     &indexGroupAggProperties{3, true, datastore.AGG_COUNT, true, false},
 	"countn_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, true, false},
 	"sum_distinct":       &indexGroupAggProperties{3, true, datastore.AGG_SUM, true, false},
+	"median_distinct":    &indexGroupAggProperties{3, false, datastore.AGG_MEDIAN, true, false},
+	"stddev_distinct":    &indexGroupAggProperties{3, false, datastore.AGG_STDDEV, true, false},
 }
 
 func checkAndAdd(ids []int, id int) []int {

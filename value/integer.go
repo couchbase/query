@@ -351,6 +351,10 @@ func (this intValue) Int64() int64 {
 	return int64(this)
 }
 
+func (this intValue) Float64() float64 {
+	return float64(this)
+}
+
 func IsInt(x float64) bool {
 	return x == float64(int64(x))
 }

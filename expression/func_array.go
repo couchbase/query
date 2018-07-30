@@ -452,7 +452,7 @@ func (this *ArrayDistinct) Apply(context Context, arg value.Value) (value.Value,
 	}
 
 	aa := arg.Actual().([]interface{})
-	set := value.NewSet(len(aa), true)
+	set := value.NewSet(len(aa), true, false)
 	for _, a := range aa {
 		set.Add(value.NewValue(a))
 	}
@@ -803,7 +803,7 @@ func (this *ArrayIntersect) Apply(context Context, args ...value.Value) (value.V
 	for _, arg := range args {
 		a := arg.Actual().([]interface{})
 		// De-dup each array
-		set := value.NewSet(len(a), true)
+		set := value.NewSet(len(a), true, false)
 		for _, elem := range a {
 			set.Add(value.NewValue(elem))
 		}
@@ -2193,5 +2193,5 @@ func (this *ArrayUnion) Constructor() FunctionConstructor {
 	return NewArrayUnion
 }
 
-var _ARRAY_SET_POOL = value.NewSetPool(64, true)
+var _ARRAY_SET_POOL = value.NewSetPool(64, true, false)
 var _ARRAY_BAG_POOL = value.NewBagPool(64)

@@ -23,6 +23,7 @@ type NumberValue interface {
 	Neg() NumberValue
 	Sub(n NumberValue) NumberValue
 	Int64() int64
+	Float64() float64
 }
 
 func AsNumberValue(v Value) NumberValue {

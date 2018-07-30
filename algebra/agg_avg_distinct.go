@@ -93,7 +93,7 @@ func (this *AvgDistinct) CumulateInitial(item, cumulative value.Value, context C
 		return cumulative, nil
 	}
 
-	return setAdd(item, cumulative)
+	return setAdd(item, cumulative, true), nil
 }
 
 /*

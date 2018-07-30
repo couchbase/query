@@ -31,25 +31,30 @@ type Set struct {
 	objects   map[string]Value
 	binaries  map[string]Value
 	collect   bool
+	numeric   bool
 	objectCap int
 }
 
 var _MAP_CAP = 64
 
-func NewSet(objectCap int, collect bool) *Set {
+func NewSet(objectCap int, collect, numeric bool) *Set {
 	mapCap := util.MaxInt(objectCap, _MAP_CAP)
 
-	return &Set{
-		booleans:  make(map[bool]Value, 2),
+	rv := &Set{
 		floats:    make(map[float64]Value, mapCap),
 		ints:      make(map[int64]Value, mapCap),
-		strings:   make(map[string]Value, mapCap),
-		arrays:    make(map[string]Value, _MAP_CAP),
-		objects:   make(map[string]Value, objectCap),
-		binaries:  make(map[string]Value, _MAP_CAP),
+		numeric:   numeric,
 		collect:   collect,
 		objectCap: objectCap,
 	}
+	if !numeric {
+		rv.booleans = make(map[bool]Value, 2)
+		rv.strings = make(map[string]Value, mapCap)
+		rv.arrays = make(map[string]Value, _MAP_CAP)
+		rv.objects = make(map[string]Value, objectCap)
+		rv.binaries = make(map[string]Value, _MAP_CAP)
+	}
+	return rv
 }
 
 func (this *Set) Add(item Value) {
@@ -64,7 +69,12 @@ func (this *Set) AddAll(items []interface{}) {
 
 func (this *Set) Put(key, item Value) {
 	if key == nil {
-		this.nills = true
+		this.nills = (this.numeric == false)
+		return
+	}
+
+	if this.numeric && key.Type() != NUMBER  {
+		panic(fmt.Sprintf("Numeric set will not support value type %T.", key))
 		return
 	}
 
@@ -115,6 +125,11 @@ func (this *Set) Remove(key Value) {
 		return
 	}
 
+	if this.numeric && key.Type() != NUMBER  {
+		panic(fmt.Sprintf("Numeric set will not support value type %T.", key))
+		return
+	}
+
 	switch key.Type() {
 	case MISSING:
 		this.missings = nil
@@ -154,6 +169,11 @@ func (this *Set) Remove(key Value) {
 func (this *Set) Has(key Value) bool {
 	if key == nil {
 		return this.nills
+	}
+
+	if this.numeric && key.Type() != NUMBER  {
+		panic(fmt.Sprintf("Numeric set will not support value type %T.", key))
+		return false
 	}
 
 	ok := false
@@ -221,20 +241,22 @@ func (this *Set) Values() []Value {
 
 	rv := make([]Value, 0, this.Len())
 
-	if this.nills {
-		rv = append(rv, nil)
-	}
+	if !this.numeric {
+		if this.nills {
+			rv = append(rv, nil)
+		}
 
-	if this.missings != nil {
-		rv = append(rv, this.missings)
-	}
+		if this.missings != nil {
+			rv = append(rv, this.missings)
+		}
 
-	if this.nulls != nil {
-		rv = append(rv, this.nulls)
-	}
+		if this.nulls != nil {
+			rv = append(rv, this.nulls)
+		}
 
-	for _, av := range this.booleans {
-		rv = append(rv, av)
+		for _, av := range this.booleans {
+			rv = append(rv, av)
+		}
 	}
 
 	for _, av := range this.floats {
@@ -245,20 +267,22 @@ func (this *Set) Values() []Value {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.strings {
-		rv = append(rv, av)
-	}
+	if !this.numeric {
+		for _, av := range this.strings {
+			rv = append(rv, av)
+		}
 
-	for _, av := range this.arrays {
-		rv = append(rv, av)
-	}
+		for _, av := range this.arrays {
+			rv = append(rv, av)
+		}
 
-	for _, av := range this.objects {
-		rv = append(rv, av)
-	}
+		for _, av := range this.objects {
+			rv = append(rv, av)
+		}
 
-	for _, av := range this.binaries {
-		rv = append(rv, av)
+		for _, av := range this.binaries {
+			rv = append(rv, av)
+		}
 	}
 
 	return rv
@@ -271,12 +295,14 @@ func (this *Set) Actuals() []interface{} {
 
 	rv := make([]interface{}, 0, this.Len())
 
-	if this.nills || this.missings != nil || this.nulls != nil {
-		rv = append(rv, nil)
-	}
+	if !this.numeric {
+		if this.nills || this.missings != nil || this.nulls != nil {
+			rv = append(rv, nil)
+		}
 
-	for _, av := range this.booleans {
-		rv = append(rv, av.Actual())
+		for _, av := range this.booleans {
+			rv = append(rv, av.Actual())
+		}
 	}
 
 	for _, av := range this.floats {
@@ -287,20 +313,22 @@ func (this *Set) Actuals() []interface{} {
 		rv = append(rv, av.Actual())
 	}
 
-	for _, av := range this.strings {
-		rv = append(rv, av.Actual())
-	}
+	if !this.numeric {
+		for _, av := range this.strings {
+			rv = append(rv, av.Actual())
+		}
 
-	for _, av := range this.arrays {
-		rv = append(rv, av.Actual())
-	}
+		for _, av := range this.arrays {
+			rv = append(rv, av.Actual())
+		}
 
-	for _, av := range this.objects {
-		rv = append(rv, av.Actual())
-	}
+		for _, av := range this.objects {
+			rv = append(rv, av.Actual())
+		}
 
-	for _, av := range this.binaries {
-		rv = append(rv, av.Actual())
+		for _, av := range this.binaries {
+			rv = append(rv, av.Actual())
+		}
 	}
 
 	return rv
@@ -313,20 +341,22 @@ func (this *Set) Items() []interface{} {
 
 	rv := make([]interface{}, 0, this.Len())
 
-	if this.nills {
-		rv = append(rv, nil)
-	}
+	if !this.numeric {
+		if this.nills {
+			rv = append(rv, nil)
+		}
 
-	if this.missings != nil {
-		rv = append(rv, this.missings)
-	}
+		if this.missings != nil {
+			rv = append(rv, this.missings)
+		}
 
-	if this.nulls != nil {
-		rv = append(rv, this.nulls)
-	}
+		if this.nulls != nil {
+			rv = append(rv, this.nulls)
+		}
 
-	for _, av := range this.booleans {
-		rv = append(rv, av)
+		for _, av := range this.booleans {
+			rv = append(rv, av)
+		}
 	}
 
 	for _, av := range this.floats {
@@ -337,20 +367,22 @@ func (this *Set) Items() []interface{} {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.strings {
-		rv = append(rv, av)
-	}
+	if !this.numeric {
+		for _, av := range this.strings {
+			rv = append(rv, av)
+		}
 
-	for _, av := range this.arrays {
-		rv = append(rv, av)
-	}
+		for _, av := range this.arrays {
+			rv = append(rv, av)
+		}
 
-	for _, av := range this.objects {
-		rv = append(rv, av)
-	}
+		for _, av := range this.objects {
+			rv = append(rv, av)
+		}
 
-	for _, av := range this.binaries {
-		rv = append(rv, av)
+		for _, av := range this.binaries {
+			rv = append(rv, av)
+		}
 	}
 
 	return rv
@@ -361,11 +393,6 @@ func (this *Set) Clear() {
 	this.missings = nil
 	this.nulls = nil
 
-	for k, _ := range this.booleans {
-		this.booleans[k] = nil
-		delete(this.booleans, k)
-	}
-
 	for k, _ := range this.floats {
 		this.floats[k] = nil
 		delete(this.floats, k)
@@ -374,6 +401,15 @@ func (this *Set) Clear() {
 	for k, _ := range this.ints {
 		this.ints[k] = nil
 		delete(this.ints, k)
+	}
+
+	if this.numeric {
+		return
+	}
+
+	for k, _ := range this.booleans {
+		this.booleans[k] = nil
+		delete(this.booleans, k)
 	}
 
 	for k, _ := range this.strings {
@@ -404,17 +440,37 @@ func (this *Set) Copy() *Set {
 	rv.nills = this.nills
 	rv.missings = this.missings
 	rv.nulls = this.nulls
+	rv.numeric = this.numeric
 
-	rv.booleans = make(map[bool]Value, len(this.booleans))
 	rv.floats = make(map[float64]Value, 2*(1+len(this.floats)))
 	rv.ints = make(map[int64]Value, 2*(1+len(this.ints)))
-	rv.strings = make(map[string]Value, 2*(1+len(this.strings)))
-	rv.arrays = make(map[string]Value, 2*(1+len(this.arrays)))
-	rv.objects = make(map[string]Value, 2*(1+len(this.objects)))
-	rv.binaries = make(map[string]Value, 2*(1+len((this.binaries))))
 
-	for k, v := range this.booleans {
-		rv.booleans[k] = v
+	if !rv.numeric {
+		rv.booleans = make(map[bool]Value, len(this.booleans))
+		rv.strings = make(map[string]Value, 2*(1+len(this.strings)))
+		rv.arrays = make(map[string]Value, 2*(1+len(this.arrays)))
+		rv.objects = make(map[string]Value, 2*(1+len(this.objects)))
+		rv.binaries = make(map[string]Value, 2*(1+len((this.binaries))))
+
+		for k, v := range this.booleans {
+			rv.booleans[k] = v
+		}
+
+		for k, v := range this.strings {
+			rv.strings[k] = v
+		}
+
+		for k, v := range this.arrays {
+			rv.arrays[k] = v
+		}
+
+		for k, v := range this.objects {
+			rv.objects[k] = v
+		}
+
+		for k, v := range this.binaries {
+			rv.binaries[k] = v
+		}
 	}
 
 	for k, v := range this.floats {
@@ -423,22 +479,6 @@ func (this *Set) Copy() *Set {
 
 	for k, v := range this.ints {
 		rv.ints[k] = v
-	}
-
-	for k, v := range this.strings {
-		rv.strings[k] = v
-	}
-
-	for k, v := range this.arrays {
-		rv.arrays[k] = v
-	}
-
-	for k, v := range this.objects {
-		rv.objects[k] = v
-	}
-
-	for k, v := range this.binaries {
-		rv.binaries[k] = v
 	}
 
 	return rv

@@ -91,7 +91,7 @@ func (this *CountnDistinct) CumulateInitial(item, cumulative value.Value, contex
 		return cumulative, nil
 	}
 
-	return setAdd(item, cumulative)
+	return setAdd(item, cumulative, true), nil
 }
 
 /*

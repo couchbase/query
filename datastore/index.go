@@ -258,6 +258,8 @@ const (
 	AGG_COUNTN AggregateType = "COUNTN" // Count only when argument is numeric. Required for AVG
 	AGG_ARRAY  AggregateType = "ARRAY_AGG"
 	AGG_AVG    AggregateType = "AVG"
+	AGG_MEDIAN AggregateType = "MEDIAN"
+	AGG_STDDEV AggregateType = "STDDEV"
 )
 
 type IndexGroupKeys []*IndexGroupKey

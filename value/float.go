@@ -383,3 +383,7 @@ func (this floatValue) Sub(n NumberValue) NumberValue {
 func (this floatValue) Int64() int64 {
 	return int64(this)
 }
+
+func (this floatValue) Float64() float64 {
+	return float64(this)
+}

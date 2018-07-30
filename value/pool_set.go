@@ -19,11 +19,12 @@ type SetPool struct {
 	collect   bool
 }
 
-func NewSetPool(objectCap int, collect bool) *SetPool {
+// numeric is a flag to restrict the Set to only contain numeric values(float64 and int64).
+func NewSetPool(objectCap int, collect, numeric bool) *SetPool {
 	rv := &SetPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return NewSet(objectCap, collect)
+				return NewSet(objectCap, collect, numeric)
 			},
 		},
 		objectCap: objectCap,
