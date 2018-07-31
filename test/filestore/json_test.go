@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/value"
 
 	// For now we can't use go_json for unmarshalling
 	// as it returns a map in a different order than
@@ -34,11 +35,11 @@ func start() *MockServer {
 func TestSyntaxErr(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, true, "this is a bad query")
+	r, _, err := Run(qc, true, "this is a bad query", nil, nil)
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
-	r, _, err = Run(qc, true, "") // empty string query
+	r, _, err = Run(qc, true, "", nil, nil) // empty string query
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
@@ -56,7 +57,7 @@ func TestRoleStatements(t *testing.T) {
 	ds.PutUserInfo(&pete)
 	ds.PutUserInfo(&sam)
 
-	r, _, err := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam")
+	r, _, err := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil)
 	if err != nil {
 		t.Fatalf("Unable to run GRANT: %s", err.Error())
 	}
@@ -92,7 +93,7 @@ func TestRoleStatements(t *testing.T) {
 	}
 	compareUserLists(&expectedAfterGrant, &users, t)
 
-	r, _, err = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam")
+	r, _, err = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam", nil, nil)
 	if err != nil {
 		t.Fatalf("Unable to run REVOKE: %s", err.Error())
 	}
@@ -175,7 +176,7 @@ func compareRoleLists(expected *[]datastore.Role, result *[]datastore.Role, t *t
 func TestSimpleSelect(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, true, "select 1 + 1")
+	r, _, err := Run(qc, true, "select 1 + 1", nil, nil)
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -183,7 +184,7 @@ func TestSimpleSelect(t *testing.T) {
 		t.Errorf("unexpected 0 length result")
 	}
 
-	r, _, err = Run(qc, true, "select * from system:keyspaces")
+	r, _, err = Run(qc, true, "select * from system:keyspaces", nil, nil)
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -191,7 +192,7 @@ func TestSimpleSelect(t *testing.T) {
 		t.Errorf("unexpected 0 length result")
 	}
 
-	r, _, err = Run(qc, true, "select * from default:orders")
+	r, _, err = Run(qc, true, "select * from default:orders", nil, nil)
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -282,9 +283,31 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 		v, ok := c["preStatements"]
 		if ok {
 			preStatements := v.(string)
-			_, _, err := Run(qc, pretty, preStatements)
+			_, _, err := Run(qc, pretty, preStatements, nil, nil)
 			if err != nil {
 				t.Errorf("preStatements resulted in error: %v, for case file: %v, index: %v", err, fname, i)
+			}
+		}
+
+		var namedArgs map[string]value.Value
+		var positionalArgs value.Values
+
+		if n, ok1 := c["namedArgs"]; ok1 {
+			nv := value.NewValue(n)
+			size := len(nv.Fields())
+			if size == 0 {
+				size = 1
+			}
+			namedArgs = make(map[string]value.Value, size)
+			for f, v := range nv.Fields() {
+				namedArgs[f] = value.NewValue(v)
+			}
+		}
+		if p, ok2 := c["positionalArgs"]; ok2 {
+			if pa, ok3 := p.([]interface{}); ok3 {
+				for _, v := range pa {
+					positionalArgs = append(positionalArgs, value.NewValue(v))
+				}
 			}
 		}
 
@@ -295,12 +318,12 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 		}
 		statements := v.(string)
 		t.Logf("  %d: %v\n", i, statements)
-		resultsActual, _, errActual := Run(qc, pretty, statements)
+		resultsActual, _, errActual := Run(qc, pretty, statements, namedArgs, positionalArgs)
 
 		v, ok = c["postStatements"]
 		if ok {
 			postStatements := v.(string)
-			_, _, err := Run(qc, pretty, postStatements)
+			_, _, err := Run(qc, pretty, postStatements, nil, nil)
 			if err != nil {
 				t.Errorf("postStatements resulted in error: %v, for case file: %v, index: %v", err, fname, i)
 			}
@@ -309,7 +332,7 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 		v, ok = c["matchStatements"]
 		if ok {
 			matchStatements := v.(string)
-			resultsMatch, _, errMatch := Run(qc, pretty, matchStatements)
+			resultsMatch, _, errMatch := Run(qc, pretty, matchStatements, nil, nil)
 			if !reflect.DeepEqual(errActual, errActual) {
 				t.Errorf("errors don't match, actual: %#v, expected: %#v"+
 					", for case file: %v, index: %v",

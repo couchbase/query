@@ -1,0 +1,47 @@
+[
+    {
+        "preStatements": "prepare a from select * from default:orders use keys $1",
+        "statements": "execute a using [\"1200\"]",
+        "results": [
+        {
+	    "orders": {
+		"type":"order",
+		"id":"1200",
+		"custId":"abc",
+		"shipped-on":"2012/01/02",
+		"orderlines":[
+			{"qty":1,"productId":"coffee01"},
+               		{"qty":1,"productId":"sugar22"}
+		]
+	    }
+        }
+        ]
+    },
+    {
+        "preStatements": "prepare a from select * from default:orders use keys $1",
+	"positionalArgs": ["1200"],
+        "statements": "execute a",
+        "results": [
+        {
+	    "orders": {
+		"type":"order",
+		"id":"1200",
+		"custId":"abc",
+		"shipped-on":"2012/01/02",
+		"orderlines":[
+			{"qty":1,"productId":"coffee01"},
+               		{"qty":1,"productId":"sugar22"}
+		]
+	    }
+        }
+        ]
+    },
+    {
+        "preStatements": "prepare a from select * from default:orders use keys $1",
+	"positionalArgs": ["1200"],
+        "statements": "execute a using [\"1200\"]",
+	"error": "Execution parameter error: cannot have both USING clause and request parameters",
+	"postStatements": "delete from system:prepareds where name = \"a\""
+    }
+]
+

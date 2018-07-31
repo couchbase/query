@@ -166,7 +166,7 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
-func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Error, errors.Error) {
+func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
 
@@ -181,7 +181,7 @@ func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Erro
 	query := &MockQuery{
 		response: mr,
 	}
-	server.NewBaseRequest(&query.BaseRequest, q, nil, nil, nil, "json", 0, 0, 0, 0,
+	server.NewBaseRequest(&query.BaseRequest, q, nil, namedArgs, positionalArgs, "json", 0, 0, 0, 0,
 		value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil, "", "")
 
 	defer mockServer.doStats(query)
