@@ -646,7 +646,41 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			} else {
 
 				// this never happens, but for completeness
-				errors.NewPlanError(nil, "prepared not specified")
+				return nil, errors.NewPlanError(nil, "prepared not specified")
+			}
+
+			usingArgs := exec.Using()
+			if usingArgs != nil {
+
+				// USING clause and REST API parameters can't go together
+				if namedArgs != nil || positionalArgs != nil {
+					return nil, errors.NewExecutionParameterError("cannot have both USING clause and request parameters")
+				}
+
+				argsValue := usingArgs.Value()
+				if argsValue == nil {
+					return nil, errors.NewExecutionParameterError("USING clause does not evaluate to static values")
+				}
+
+				actualValue := argsValue.Actual()
+				switch actualValue := actualValue.(type) {
+				case map[string]interface{}:
+					newArgs := make(map[string]value.Value, len(actualValue))
+					for n, v := range actualValue {
+						newArgs[n] = value.NewValue(v)
+					}
+					request.SetNamedArgs(newArgs)
+				case []interface{}:
+					newArgs := make([]value.Value, len(actualValue))
+					for n, v := range actualValue {
+						newArgs[n] = value.NewValue(v)
+					}
+					request.SetPositionalArgs(newArgs)
+				default:
+
+					// this never happens, but for completeness
+					return nil, errors.NewExecutionParameterError("unexpected value type")
+				}
 			}
 		default:
 

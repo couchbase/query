@@ -55,7 +55,9 @@ type Request interface {
 	IsPrepare() bool
 	SetIsPrepare(bool)
 	NamedArgs() map[string]value.Value
+	SetNamedArgs(args map[string]value.Value)
 	PositionalArgs() value.Values
+	SetPositionalArgs(args value.Values)
 	Namespace() string
 	Timeout() time.Duration
 	SetTimer(*time.Timer)
@@ -333,8 +335,16 @@ func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
 }
 
+func (this *BaseRequest) SetNamedArgs(args map[string]value.Value) {
+	this.namedArgs = args
+}
+
 func (this *BaseRequest) PositionalArgs() value.Values {
 	return this.positionalArgs
+}
+
+func (this *BaseRequest) SetPositionalArgs(args value.Values) {
+	this.positionalArgs = args
 }
 
 func (this *BaseRequest) Namespace() string {

@@ -26,13 +26,17 @@ type Execute struct {
 	statementBase
 
 	prepared value.Value `json:"prepared"`
+
+	// this contains either named parameters (a map of values)
+	// or positional (a slice)
+	using expression.Expression `json:"using"`
 }
 
 /*
 The function NewExecute returns a pointer to the Execute
 struct with the input argument expressions value as a field.
 */
-func NewExecute(prepared expression.Expression) *Execute {
+func NewExecute(prepared expression.Expression, using expression.Expression) *Execute {
 	var preparedValue value.Value
 
 	switch prepared := prepared.(type) {
@@ -44,6 +48,7 @@ func NewExecute(prepared expression.Expression) *Execute {
 
 	rv := &Execute{
 		prepared: preparedValue,
+		using:    using,
 	}
 
 	rv.stmt = rv
@@ -109,4 +114,11 @@ statement.
 */
 func (this *Execute) Prepared() value.Value {
 	return this.prepared
+}
+
+/*
+Returns the input placeholder values
+*/
+func (this *Execute) Using() expression.Expression {
+	return this.using
 }

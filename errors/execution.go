@@ -27,6 +27,11 @@ func NewExecutionInternalError(what string) Error {
 		InternalMsg: fmt.Sprintf("Execution internal error: %v", what), InternalCaller: CallerN(1)}
 }
 
+func NewExecutionParameterError(what string) Error {
+	return &err{level: EXCEPTION, ICode: 5003, IKey: "execution.parameter_error",
+		InternalMsg: fmt.Sprintf("Execution parameter error: %v", what), InternalCaller: CallerN(1)}
+}
+
 func NewEvaluationError(e error, termType string) Error {
 	return &err{level: EXCEPTION, ICode: 5010, IKey: "execution.evaluation_error", ICause: e,
 		InternalMsg: fmt.Sprintf("Error evaluating %s.", termType), InternalCaller: CallerN(1)}

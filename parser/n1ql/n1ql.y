@@ -298,7 +298,7 @@ tokOffset	 int
 %type <f>                NUM
 %type <n>                INT
 %type <n>                POSITIONAL_PARAM NEXT_PARAM
-%type <expr>             literal construction_expr object array
+%type <expr>             literal construction_expr execute_using object array
 %type <expr>             param_expr
 %type <pair>             member
 %type <pairs>            members opt_members
@@ -487,9 +487,21 @@ AS
 ;
 
 execute:
-EXECUTE expr
+EXECUTE expr execute_using
 {
-    $$ = algebra.NewExecute($2)
+    $$ = algebra.NewExecute($2, $3)
+}
+;
+
+execute_using:
+/* empty */
+{
+    $$ = nil
+}
+|
+USING construction_expr
+{
+    $$ = $2
 }
 ;
 
