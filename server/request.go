@@ -42,6 +42,7 @@ const (
 	TIMEOUT   State = "timeout"
 	CLOSED    State = "closed"
 	FATAL     State = "fatal"
+	ABORTED   State = "aborted"
 )
 
 type Request interface {
@@ -201,6 +202,7 @@ type BaseRequest struct {
 	serviceTime     time.Time
 	execTime        time.Time
 	state           State
+	aborted         bool
 	results         value.ValueChannel
 	errors          errors.ErrorChannel
 	warnings        errors.ErrorChannel
@@ -270,6 +272,7 @@ func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, 
 	rv.userAgent = userAgent
 	rv.serviceTime = time.Now()
 	rv.state = RUNNING
+	rv.aborted = false
 	rv.errors = make(errors.ErrorChannel, _ERROR_CAP)
 	rv.warnings = make(errors.ErrorChannel, _ERROR_CAP)
 	rv.closeNotify = make(chan bool, 1)
@@ -449,6 +452,9 @@ func (this *BaseRequest) SetState(state State) {
 func (this *BaseRequest) State() State {
 	this.RLock()
 	defer this.RUnlock()
+	if this.aborted {
+		return ABORTED
+	}
 	return this.state
 }
 
@@ -501,9 +507,14 @@ func (this *BaseRequest) CloseResults() {
 }
 
 func (this *BaseRequest) Fatal(err errors.Error) {
-	defer this.Stop(FATAL)
-
 	this.Error(err)
+	this.Stop(FATAL)
+}
+
+func (this *BaseRequest) Abort(err errors.Error) {
+	this.aborted = true
+	this.Error(err)
+	this.Stop(FATAL)
 }
 
 func (this *BaseRequest) Error(err errors.Error) {

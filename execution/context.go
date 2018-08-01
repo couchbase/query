@@ -103,6 +103,7 @@ const _PHASE_UPDATE_COUNT uint64 = 100
 type Output interface {
 	Result(item value.Value) bool
 	CloseResults()
+	Abort(err errors.Error)
 	Fatal(err errors.Error)
 	Error(err errors.Error)
 	Warning(wrn errors.Error)
@@ -363,6 +364,10 @@ func (this *Context) Error(err errors.Error) {
 	this.output.Error(err)
 }
 
+func (this *Context) Abort(err errors.Error) {
+	this.output.Abort(err)
+}
+
 func (this *Context) Fatal(err errors.Error) {
 	this.output.Fatal(err)
 }
@@ -491,7 +496,7 @@ func (this *Context) assert(test bool, what string) bool {
 	}
 	logging.Severef("assert failure: %v\n\nrequest text:\n<ud>%v</ud>\n",
 		what, this.prepared.Text())
-	this.Fatal(errors.NewExecutionInternalError(what))
+	this.Abort(errors.NewExecutionInternalError(what))
 	return false
 }
 
@@ -509,8 +514,21 @@ func (this *Context) Recover() {
 		os.Stderr.WriteString(s)
 		os.Stderr.Sync()
 
-		this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
+		this.Abort(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 	}
+}
+
+// contextless assert - for when we don't have a context!
+// no statement text printend, but behaviour consistent with other asserts
+func assert(test bool, what string) bool {
+	if test {
+		return true
+	}
+	buf := make([]byte, 1<<16)
+	n := runtime.Stack(buf, false)
+	s := string(buf[0:n])
+	logging.Severef("assert failure: %v\n\nstack:\n%v", what, s)
+	return false
 }
 
 /*
@@ -561,17 +579,4 @@ func (this *Context) RemoveInlistHash(in *expression.In) {
 		}
 	}
 	this.inlistHashLock.Unlock()
-}
-
-// contextless assert - for when we don't have a context!
-// no statement text printend, but behaviour consistent with other asserts
-func assert(test bool, what string) bool {
-	if test {
-		return true
-	}
-	buf := make([]byte, 1<<16)
-	n := runtime.Stack(buf, false)
-	s := string(buf[0:n])
-	logging.Severef("assert failure: %v\n\nstack:\n%v", what, s)
-	return false
 }

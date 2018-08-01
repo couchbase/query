@@ -82,9 +82,13 @@ func RequestsInit(threshold int, limit int) {
 
 	// initial completed_request setup is that it only tracks
 	// requests exceeding a time threshold
-	q, err := newTimeThreshold(threshold)
-	if err == nil {
-		requestLog.qualifiers = []qualifier{q}
+	tq, tErr := newTimeThreshold(threshold)
+	if tErr == nil {
+		requestLog.qualifiers = append(requestLog.qualifiers, tq)
+	}
+	aq, aErr := newAborted(nil)
+	if aErr == nil {
+		requestLog.qualifiers = append(requestLog.qualifiers, aq)
 	}
 
 	requestLog.cache = util.NewGenCache(limit)
@@ -371,4 +375,33 @@ func (this *timeThreshold) evaluate(request *BaseRequest) bool {
 		return false
 	}
 	return true
+}
+
+// 2- aborted
+type aborted struct {
+	// run along, nothing to see here
+}
+
+func newAborted(c interface{}) (*aborted, errors.Error) {
+	return &aborted{}, nil
+}
+
+func (this *aborted) name() string {
+	return "aborted"
+}
+
+func (this *aborted) unique() bool {
+	return true
+}
+
+func (this *aborted) condition() interface{} {
+	return nil
+}
+
+func (this *aborted) isCondition(c interface{}) bool {
+	return true
+}
+
+func (this *aborted) evaluate(request *BaseRequest) bool {
+	return request.State() == ABORTED
 }
