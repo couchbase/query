@@ -263,6 +263,9 @@ func TestPrepareStatements(t *testing.T) {
 	preparedSequence(t, "doInsert", "INSERT INTO p0:b0 VALUES ($1, $2)")
 }
 
+// insert requires parameters
+var insertArgs []interface{} = []interface{}{"aaa", "bbb"}
+
 func preparedSequence(t *testing.T, name string, stmt string) {
 	// Verify a sequence of requests:
 
@@ -275,6 +278,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 	// { "prepared": "name" }  succeeds
 	doJsonRequest(t, map[string]interface{}{
 		"prepared": name,
+		"args":     insertArgs,
 	})
 
 	prepared, _ := prepareds.GetPrepared(value.NewValue(name), 0, nil)
@@ -287,6 +291,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 	doJsonRequest(t, map[string]interface{}{
 		"prepared":     name,
 		"encoded_plan": prepared.EncodedPlan(),
+		"args":         insertArgs,
 	})
 
 }
@@ -301,13 +306,13 @@ func doNoSuchPrepared(t *testing.T, name string) {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
 	}
 
-	select {
-	case err := <-test_server.request().Errors():
-		if err.Code() != errors.NO_SUCH_PREPARED {
-			t.Errorf("Expected error condition: no such prepared. Recieved: %v", err)
-		}
-	default:
-		t.Errorf("Expected error: %v no such prepared, got %v", errors.NO_SUCH_PREPARED, err)
+	errs := test_server.request().Errors()
+	if len(errs) == 0 {
+		t.Errorf("Expected error: %v no such prepared, got nothing", errors.NO_SUCH_PREPARED)
+	} else if len(errs) > 1 {
+		t.Errorf("Expected error: %v no such prepared, got %v", errors.NO_SUCH_PREPARED, errs)
+	} else if errs[0].Code() != errors.NO_SUCH_PREPARED {
+		t.Errorf("Expected error condition: no such prepared. Received: %v", errs[0])
 	}
 }
 
@@ -346,10 +351,13 @@ func doJsonRequest(t *testing.T, payload map[string]interface{}) {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
 	}
 
-	select {
-	case err = <-test_server.request().Errors():
-		t.Errorf("Unexpected error: %v", err)
-	default:
+	errs := test_server.request().Errors()
+	if len(errs) > 0 {
+
+		// insert is not implemented in mock
+		if errs[0].Code() != 16003 {
+			t.Errorf("Unexpected error: %v", errs)
+		}
 	}
 }
 
@@ -364,10 +372,9 @@ func doUrlRequest(t *testing.T, params map[string]string) {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
 	}
 
-	select {
-	case err = <-test_server.request().Errors():
-		t.Errorf("Unexpected error: %v", err)
-	default:
+	errs := test_server.request().Errors()
+	if len(errs) > 0 {
+		t.Errorf("Unexpected error: %v", errs)
 	}
 }
 

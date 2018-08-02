@@ -29,8 +29,6 @@ import (
 
 type RequestChannel chan Request
 
-const _ERROR_CAP = 4
-
 type State string
 
 const (
@@ -204,8 +202,8 @@ type BaseRequest struct {
 	state           State
 	aborted         bool
 	results         value.ValueChannel
-	errors          errors.ErrorChannel
-	warnings        errors.ErrorChannel
+	errors          []errors.Error
+	warnings        []errors.Error
 	closeNotify     chan bool          // implement http.CloseNotifier
 	stopResult      chan bool          // stop consuming results
 	stopExecute     chan bool          // stop executing request
@@ -273,8 +271,6 @@ func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, 
 	rv.serviceTime = time.Now()
 	rv.state = RUNNING
 	rv.aborted = false
-	rv.errors = make(errors.ErrorChannel, _ERROR_CAP)
-	rv.warnings = make(errors.ErrorChannel, _ERROR_CAP)
 	rv.closeNotify = make(chan bool, 1)
 	rv.stopResult = make(chan bool, 1)
 	rv.stopExecute = make(chan bool, 1)
@@ -518,17 +514,15 @@ func (this *BaseRequest) Abort(err errors.Error) {
 }
 
 func (this *BaseRequest) Error(err errors.Error) {
-	select {
-	case this.errors <- err:
-	default:
-	}
+	this.Lock()
+	this.errors = append(this.errors, err)
+	this.Unlock()
 }
 
 func (this *BaseRequest) Warning(wrn errors.Error) {
-	select {
-	case this.warnings <- wrn:
-	default:
-	}
+	this.Lock()
+	this.warnings = append(this.warnings, wrn)
+	this.Unlock()
 }
 
 func (this *BaseRequest) AddMutationCount(i uint64) {
@@ -662,11 +656,11 @@ func (this *BaseRequest) Results() value.ValueChannel {
 	return this.results
 }
 
-func (this *BaseRequest) Errors() errors.ErrorChannel {
+func (this *BaseRequest) Errors() []errors.Error {
 	return this.errors
 }
 
-func (this *BaseRequest) Warnings() errors.ErrorChannel {
+func (this *BaseRequest) Warnings() []errors.Error {
 	return this.warnings
 }
 

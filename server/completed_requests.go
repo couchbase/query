@@ -43,6 +43,7 @@ type RequestLogEntry struct {
 	ResultCount     int
 	ResultSize      int
 	ErrorCount      int
+	Errors          []errors.Error
 	PreparedName    string
 	PreparedText    string
 	Time            time.Time
@@ -62,7 +63,7 @@ type qualifier interface {
 	unique() bool
 	condition() interface{}
 	isCondition(c interface{}) bool
-	evaluate(request *BaseRequest) bool
+	evaluate(request *BaseRequest, req *http.Request) bool
 }
 
 type RequestLog struct {
@@ -118,6 +119,12 @@ func RequestsAddQualifier(name string, condition interface{}) errors.Error {
 	switch name {
 	case "threshold":
 		q, err = newTimeThreshold(condition)
+	case "error":
+		q, err = newReqError(condition)
+	case "user":
+		q, err = newUser(condition)
+	case "client":
+		q, err = newClient(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -157,7 +164,7 @@ func RequestsRemoveQualifier(name string, condition interface{}) errors.Error {
 	requestLog.Lock()
 	defer requestLog.Unlock()
 	for i, q := range requestLog.qualifiers {
-		if q.name() == name && (q.unique() || q.isCondition(condition)) {
+		if q.name() == name && (q.unique() || condition == nil || q.isCondition(condition)) {
 			requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
 			return nil
 		}
@@ -251,7 +258,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	// apply all the qualifiers until one is satisfied
 	doLog := false
 	for _, q := range requestLog.qualifiers {
-		doLog = q.evaluate(request)
+		doLog = q.evaluate(request, req)
 		if doLog {
 			break
 		}
@@ -272,6 +279,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		ResultCount:     result_count,
 		ResultSize:      result_size,
 		ErrorCount:      error_count,
+		Errors:          request.Errors(),
 		Time:            time.Now(),
 		ScanConsistency: string(request.ScanConsistency()),
 	}
@@ -365,7 +373,7 @@ func (this *timeThreshold) isCondition(c interface{}) bool {
 	return false
 }
 
-func (this *timeThreshold) evaluate(request *BaseRequest) bool {
+func (this *timeThreshold) evaluate(request *BaseRequest, req *http.Request) bool {
 
 	// negative threshold means log nothing
 	// zero threshold means log everything (no threshold)
@@ -402,6 +410,149 @@ func (this *aborted) isCondition(c interface{}) bool {
 	return true
 }
 
-func (this *aborted) evaluate(request *BaseRequest) bool {
+func (this *aborted) evaluate(request *BaseRequest, req *http.Request) bool {
 	return request.State() == ABORTED
+}
+
+// 3- errors
+type reqError struct {
+	errCode int
+}
+
+func newReqError(c interface{}) (*reqError, errors.Error) {
+	switch c.(type) {
+	case int:
+		return &reqError{errCode: c.(int)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("error", c)
+}
+
+func (this *reqError) name() string {
+	return "error"
+}
+
+func (this *reqError) unique() bool {
+	return false
+}
+
+func (this *reqError) condition() interface{} {
+	return this.errCode
+}
+
+func (this *reqError) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return c.(int) == this.errCode
+	}
+	return false
+}
+
+func (this *reqError) evaluate(request *BaseRequest, req *http.Request) bool {
+	for _, e := range request.Errors() {
+		if int(e.Code()) == this.errCode {
+			return false
+		}
+	}
+	return false
+}
+
+// 4- users
+type user struct {
+	id string
+}
+
+func newUser(c interface{}) (*user, errors.Error) {
+	switch c.(type) {
+	case string:
+		return &user{id: c.(string)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("error", c)
+}
+
+func (this *user) name() string {
+	return "user"
+}
+
+func (this *user) unique() bool {
+	return false
+}
+
+func (this *user) condition() interface{} {
+	return this.id
+}
+
+func (this *user) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case string:
+		return c.(string) == this.id
+	}
+	return false
+}
+
+func (this *user) evaluate(request *BaseRequest, req *http.Request) bool {
+	var iid, icred int
+
+	credString := datastore.CredsString(request.Credentials(), req)
+
+	// split in space separated tokens
+loop:
+	for icred = 0; icred < len(credString); icred++ {
+		if credString[icred] == ',' {
+			continue loop
+		}
+
+		// compare each token
+		for iid = 0; iid < len(this.id); iid++ {
+			if this.id[iid] != credString[icred] {
+
+				// don't match, skip token
+				for ; icred < len(credString) && credString[icred] != ','; icred++ {
+				}
+				continue loop
+			}
+			icred++
+		}
+		return true
+	}
+	return false
+}
+
+// 5- client ip addresses
+type client struct {
+	address string
+}
+
+func newClient(c interface{}) (*client, errors.Error) {
+	switch c.(type) {
+	case string:
+		return &client{address: c.(string)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("client", c)
+}
+
+func (this *client) name() string {
+	return "client"
+}
+
+func (this *client) unique() bool {
+	return false
+}
+
+func (this *client) condition() interface{} {
+	return this.address
+}
+
+func (this *client) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case string:
+		return c.(string) == this.address
+	}
+	return false
+}
+
+func (this *client) evaluate(request *BaseRequest, req *http.Request) bool {
+
+	// assuming that address is a valid IPv4 or IPv6 address, this is a
+	// quick and dirty way to ignore the port part of the RemoteAddress()
+	return this.address == request.RemoteAddr()[0:len(this.address)]
 }

@@ -150,6 +150,10 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.UserAgent != "" {
 					item.SetField("userAgent", entry.UserAgent)
 				}
+				if entry.Errors != nil {
+					item.SetField("errors", entry.Errors)
+				}
+
 				meta := map[string]interface{}{
 					"id": key,
 				}

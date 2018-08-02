@@ -44,8 +44,8 @@ func (this *httpRequest) Fail(err errors.Error) {
 	// Determine the appropriate http response code based on the error
 	httpRespCode := mapErrorToHttpResponse(err, http.StatusInternalServerError)
 	this.setHttpCode(httpRespCode)
-	// Put the error on the errors channel
-	this.Errors() <- err
+	// Add error to the request
+	this.Error(err)
 }
 
 func mapErrorToHttpResponse(err errors.Error, def int) int {
@@ -145,7 +145,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 }
 
 func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
-	this.Errors() <- errors.NewTimeoutError(timeout)
+	this.Error(errors.NewTimeoutError(timeout))
 	this.Stop(state)
 }
 
@@ -246,7 +246,7 @@ func (this *httpRequest) writeResult(item value.Value, buf *bytes.Buffer, prefix
 	item.Recycle()
 
 	if err != nil {
-		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
+		this.Error(errors.NewServiceErrorInvalidJSON(err))
 		this.SetState(server.FATAL)
 		return false
 	}
@@ -319,33 +319,26 @@ func (this *httpRequest) writeState(state server.State, prefix string) bool {
 
 func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 	var err errors.Error
-	ok := true
-loop:
-	for ok {
-		select {
-		case err, ok = <-this.Errors():
-			if ok {
-				if this.errorCount == 0 {
-					this.writeString(",\n")
-					this.writeString(prefix)
-					this.writeString("\"errors\": [")
+	for _, err = range this.Errors() {
+		if this.errorCount == 0 {
+			this.writeString(",\n")
+			this.writeString(prefix)
+			this.writeString("\"errors\": [")
 
-					// MB-19307: please check the comments
-					// in mapErrortoHttpResponse().
-					// Ideally we should set the status code
-					// only before calling writePrefix()
-					// but this is too cumbersome, having
-					// to check Execution errors as well.
-					if this.State() != server.FATAL {
-						this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
-					}
-				}
-				ok = this.writeError(err, this.errorCount, prefix, indent)
-				this.errorCount++
+			// MB-19307: please check the comments
+			// in mapErrortoHttpResponse().
+			// Ideally we should set the status code
+			// only before calling writePrefix()
+			// but this is too cumbersome, having
+			// to check Execution errors as well.
+			if this.State() != server.FATAL {
+				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
-		default:
-			break loop
 		}
+		if !this.writeError(err, this.errorCount, prefix, indent) {
+			break
+		}
+		this.errorCount++
 	}
 
 	if this.errorCount == 0 {
@@ -360,29 +353,24 @@ loop:
 
 func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 	var err errors.Error
-	ok := true
 	alreadySeen := make(map[string]bool)
+
 loop:
-	for ok {
-		select {
-		case err, ok = <-this.Warnings():
-			if ok {
-				if err.OnceOnly() && alreadySeen[err.Error()] {
-					// do nothing for this warning
-					continue loop
-				}
-				if this.warningCount == 0 {
-					this.writeString(",\n")
-					this.writeString(prefix)
-					this.writeString("\"warnings\": [")
-				}
-				ok = this.writeError(err, this.warningCount, prefix, indent)
-				this.warningCount++
-				alreadySeen[err.Error()] = true
-			}
-		default:
-			break loop
+	for _, err = range this.Warnings() {
+		if err.OnceOnly() && alreadySeen[err.Error()] {
+			// do nothing for this warning
+			continue loop
 		}
+		if this.warningCount == 0 {
+			this.writeString(",\n")
+			this.writeString(prefix)
+			this.writeString("\"warnings\": [")
+		}
+		if !this.writeError(err, this.warningCount, prefix, indent) {
+			break
+		}
+		this.warningCount++
+		alreadySeen[err.Error()] = true
 	}
 
 	if this.warningCount == 0 {

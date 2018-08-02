@@ -622,6 +622,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 			if request.Timings != nil {
 				reqMap["timings"] = request.Timings
 			}
+			if request.Errors != nil {
+				reqMap["errors"] = request.Errors
+			}
 		}
 		if request.Users != "" {
 			reqMap["users"] = request.Users
