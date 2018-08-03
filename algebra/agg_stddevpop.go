@@ -17,23 +17,22 @@ import (
 )
 
 /*
-This represents the Aggregate function Stddev(DISTINCT expr).
-It returns an arithmetic standard deviation of all the distinct
-number values in the group. Type StddevDistinct is a struct that
-inherits from DistinctAggregateBase.
+This represents the Aggregate function STDDEV_POP(expr). It returns
+the arithmetic population standard deviation of all the number values in the
+group. Type StddevPop is a struct that inherits from AggregateBase.
 */
-type StddevDistinct struct {
-	DistinctAggregateBase
+type StddevPop struct {
+	AggregateBase
 }
 
 /*
-The function NewStddevDistinct calls NewDistinctAggregateBase to
-create an aggregate function named Stddev with one expression
-as input.
+The function NewStddevPop calls NewAggregateBase to
+create an aggregate function named stddev_pop with
+one expression as input.
 */
-func NewStddevDistinct(operand expression.Expression) Aggregate {
-	rv := &StddevDistinct{
-		*NewDistinctAggregateBase("stddev", operand),
+func NewStddevPop(operand expression.Expression) Aggregate {
+	rv := &StddevPop{
+		*NewAggregateBase("stddev_pop", operand),
 	}
 
 	rv.SetExpr(rv)
@@ -44,14 +43,14 @@ func NewStddevDistinct(operand expression.Expression) Aggregate {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *StddevDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *StddevPop) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a value of type NUMBER.
 */
-func (this *StddevDistinct) Type() value.Type {
+func (this *StddevPop) Type() value.Type {
 	return value.NUMBER
 }
 
@@ -59,25 +58,25 @@ func (this *StddevDistinct) Type() value.Type {
 Calls the evaluate method for aggregate functions and passes in the
 receiver, current item and current context.
 */
-func (this *StddevDistinct) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
+func (this *StddevPop) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return this.evaluate(this, item, context)
 }
 
 /*
-The constructor returns a NewStddevDistinct with the input operand
+The constructor returns a NewStddevPop with the input operand
 cast to a Function as the FunctionConstructor.
 */
-func (this *StddevDistinct) Constructor() expression.FunctionConstructor {
+func (this *StddevPop) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewStddevDistinct(operands[0])
+		return NewStddevPop(operands[0])
 	}
 }
 
 /*
-If no input to the Stddev function with DISTINCT, then the default value
+If no input to the StddevPop function, then the default value
 returned is a null.
 */
-func (this *StddevDistinct) Default() value.Value {
+func (this *StddevPop) Default() value.Value {
 	return value.NULL_VALUE
 }
 
@@ -85,10 +84,10 @@ func (this *StddevDistinct) Default() value.Value {
 Aggregates input data by evaluating operands.
 For all values other than Number, return the input value itself.
 Maintain two variables for sum and
-set of all the values of type NUMBER.
-Call addStddevVariance to compute the intermediate aggregate value and return it.
+list of all the values of type NUMBER.
+Call stddevAdd to compute the intermediate aggregate value and return it.
 */
-func (this *StddevDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+func (this *StddevPop) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
@@ -98,27 +97,29 @@ func (this *StddevDistinct) CumulateInitial(item, cumulative value.Value, contex
 		return cumulative, nil
 	}
 
-	return addStddevVariance(item, cumulative, true)
+	return addStddevVariance(item, cumulative, false)
 }
 
 /*
-Aggregates distinct intermediate results and return them.
+Aggregates intermediate results and return them.
 */
-func (this *StddevDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return cumulateStddevVariance(part, cumulative, true)
+func (this *StddevPop) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+	return cumulateStddevVariance(part, cumulative, false)
 }
 
 /*
-Compute the Final. Return NULL if no values of type NUMBER exist.
+Compute the population standard deviation as the final.
+Return NULL if no values of type NUMBER exist.
 Return zero if only one value exists.
-calculate variance and return the square root of it as the standard deviation.
+calculate variance according to definition
+and return the square root of it as the standard deviation.
 */
-func (this *StddevDistinct) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
+func (this *StddevPop) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
 	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
 	}
 
-	variance, e := computeVariance(cumulative, true, false, 1.0)
+	variance, e := computeVariance(cumulative, false, false, 0.0)
 	if e != nil {
 		return nil, e
 	}

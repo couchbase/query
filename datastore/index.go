@@ -251,15 +251,20 @@ type StreamingDistinctIndex interface {
 type AggregateType string
 
 const (
-	AGG_MIN    AggregateType = "MIN"
-	AGG_MAX    AggregateType = "MAX"
-	AGG_SUM    AggregateType = "SUM"
-	AGG_COUNT  AggregateType = "COUNT"
-	AGG_COUNTN AggregateType = "COUNTN" // Count only when argument is numeric. Required for AVG
-	AGG_ARRAY  AggregateType = "ARRAY_AGG"
-	AGG_AVG    AggregateType = "AVG"
-	AGG_MEDIAN AggregateType = "MEDIAN"
-	AGG_STDDEV AggregateType = "STDDEV"
+	AGG_MIN        AggregateType = "MIN"
+	AGG_MAX        AggregateType = "MAX"
+	AGG_SUM        AggregateType = "SUM"
+	AGG_COUNT      AggregateType = "COUNT"
+	AGG_COUNTN     AggregateType = "COUNTN" // Count only when argument is numeric. Required for AVG
+	AGG_ARRAY      AggregateType = "ARRAY_AGG"
+	AGG_AVG        AggregateType = "AVG"
+	AGG_MEDIAN     AggregateType = "MEDIAN"
+	AGG_STDDEV     AggregateType = "STDDEV"
+	AGG_STDDEVPOP  AggregateType = "STDDEV_POP"
+	AGG_STDDEVSAMP AggregateType = "STDDEV_SAMP"
+	AGG_VARIANCE   AggregateType = "VARIANCE"
+	AGG_VARSAMP    AggregateType = "VAR_SAMP"
+	AGG_VARPOP     AggregateType = "VAR_POP"
 )
 
 type IndexGroupKeys []*IndexGroupKey

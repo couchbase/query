@@ -39,14 +39,21 @@ defined by _DISTINCT_AGGREGATES. They map to the corresponding
 distinct methods.
 */
 var _DISTINCT_AGGREGATES = map[string]Aggregate{
-	"array_agg": &ArrayAggDistinct{},
-	"avg":       &AvgDistinct{},
-	"mean":      &AvgDistinct{},
-	"count":     &CountDistinct{},
-	"countn":    &CountnDistinct{},
-	"sum":       &SumDistinct{},
-	"median":    &MedianDistinct{},
-	"stddev":    &StddevDistinct{},
+	"array_agg":     &ArrayAggDistinct{},
+	"avg":           &AvgDistinct{},
+	"count":         &CountDistinct{},
+	"countn":        &CountnDistinct{},
+	"mean":          &AvgDistinct{},
+	"median":        &MedianDistinct{},
+	"stddev":        &StddevDistinct{},
+	"stddev_pop":    &StddevPopDistinct{},
+	"stddev_samp":   &StddevSampDistinct{},
+	"sum":           &SumDistinct{},
+	"variance":      &VarianceDistinct{},
+	"var_pop":       &VarPopDistinct{},
+	"variance_pop":  &VarPopDistinct{},
+	"var_samp":      &VarSampDistinct{},
+	"variance_samp": &VarSampDistinct{},
 }
 
 /*
@@ -55,14 +62,21 @@ map from string to Aggregate Function. Contains aggregate
 functions ARRAY_AGG, AVG, COUNT, MAX, MIN and SUM.
 */
 var _OTHER_AGGREGATES = map[string]Aggregate{
-	"array_agg": &ArrayAgg{},
-	"avg":       &Avg{},
-	"mean":      &Avg{},
-	"count":     &Count{},
-	"countn":    &Countn{},
-	"max":       &Max{},
-	"min":       &Min{},
-	"sum":       &Sum{},
-	"median":    &Median{},
-	"stddev":    &Stddev{},
+	"array_agg":     &ArrayAgg{},
+	"avg":           &Avg{},
+	"count":         &Count{},
+	"countn":        &Countn{},
+	"max":           &Max{},
+	"mean":          &Avg{},
+	"median":        &Median{},
+	"min":           &Min{},
+	"stddev":        &Stddev{},
+	"stddev_pop":    &StddevPop{},
+	"stddev_samp":   &StddevSamp{},
+	"sum":           &Sum{},
+	"variance":      &Variance{},
+	"var_pop":       &VarPop{},
+	"variance_pop":  &VarPop{},
+	"var_samp":      &VarSamp{},
+	"variance_samp": &VarSamp{},
 }

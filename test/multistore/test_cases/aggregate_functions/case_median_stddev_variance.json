@@ -1,0 +1,187 @@
+[
+  {
+    "statements": "SELECT ROUND(Median(unitPrice), 3) AS median, count(*) AS cnt FROM product WHERE test_id = \"agg_func\"",
+    "results": [
+      {
+        "cnt": 900,
+        "median": 27.965
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Median(DISTINCT unitPrice) FROM product WHERE test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 33.864999999999995
+      }
+    ]
+  },
+  {
+    "statements": "SELECT ROUND(Median(DISTINCT unitPrice), 0) FROM product WHERE test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 34
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Median(orderInfo.qty) from orders UNNEST orderlines AS orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Median(DISTINCT orderInfo.qty) from orders UNNEST orderlines AS orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 1.5
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev(orderInfo.qty) from orders UNNEST orderlines AS orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.3535533905932738
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev_samp(DISTINCT orderInfo.qty) from orders UNNEST orderlines AS orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.7071067811865476
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev_samp(orderInfo.qty) from orders UNNEST orderlines AS orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.3535533905932738
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev(DISTINCT orderInfo.qty) from orders UNNEST orderlines AS orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.7071067811865476
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev(cntn) FROM orders WHERE cntn=10 and test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev(DISTINCT cntn) FROM orders WHERE cntn=10 and test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev_samp(cntn) FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0.5773502691896257
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev_samp(DISTINCT cntn) FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0.7071067811865476
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Stddev_samp(cntn) FROM orders WHERE test_id = \"cntn_agg_func\" AND cntn = 11",
+    "results": [
+      {
+        "$1": null
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Variance(cntn) FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0.3333333333333333
+      }
+    ]
+  },
+  {
+    "statements": "select variance_samp(orderInfo.qty) from orders UNNEST orderlines As orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.125
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Variance_samp(cntn) FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0.3333333333333333
+      }
+    ]
+  },
+  {
+    "statements": "SELECT variance_samp(cntn) FROM orders WHERE test_id = \"cntn_agg_func\" AND cntn = 11",
+    "results": [
+      {
+        "$1": null
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Variance_pop(cntn) FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0.2222222222222222
+      }
+    ]
+  },
+  {
+    "statements": "select variance_pop(orderInfo.qty) from orders UNNEST orderlines As orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.109375
+      }
+    ]
+  },
+  {
+    "statements": "SELECT Var_pop(cntn) FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+      {
+        "$1": 0.2222222222222222
+      }
+    ]
+  },
+  {
+    "statements": "select variance_pop(DISTINCT orderInfo.qty) from orders UNNEST orderlines As orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.25
+      }
+    ]
+  },
+  {
+    "statements": "select variance_samp(DISTINCT orderInfo.qty) from orders UNNEST orderlines As orderInfo WHERE orders.test_id = \"agg_func\"",
+    "results": [
+      {
+        "$1": 0.5
+      }
+    ]
+  }
+  ]

@@ -10,29 +10,27 @@
 package algebra
 
 import (
-	"math"
-
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
 
 /*
-This represents the Aggregate function Stddev(expr). It returns
-the arithmetic standard deviation of all the number values in the
-group. Type Stddev is a struct that inherits from AggregateBase.
+This represents the Aggregate function  Variance(expr). It returns
+the arithmetic sample variance of all the number values in the
+group. Type Variance is a struct that inherits from AggregateBase.
 */
-type Stddev struct {
+type Variance struct {
 	AggregateBase
 }
 
 /*
-The function NewStddev calls NewAggregateBase to
-create an aggregate function named Stddev with
+The function NewVariance calls NewAggregateBase to
+create an aggregate function named variance with
 one expression as input.
 */
-func NewStddev(operand expression.Expression) Aggregate {
-	rv := &Stddev{
-		*NewAggregateBase("stddev", operand),
+func NewVariance(operand expression.Expression) Aggregate {
+	rv := &Variance{
+		*NewAggregateBase("variance", operand),
 	}
 
 	rv.SetExpr(rv)
@@ -43,14 +41,14 @@ func NewStddev(operand expression.Expression) Aggregate {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Stddev) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *Variance) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a value of type NUMBER.
 */
-func (this *Stddev) Type() value.Type {
+func (this *Variance) Type() value.Type {
 	return value.NUMBER
 }
 
@@ -58,25 +56,25 @@ func (this *Stddev) Type() value.Type {
 Calls the evaluate method for aggregate functions and passes in the
 receiver, current item and current context.
 */
-func (this *Stddev) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
+func (this *Variance) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return this.evaluate(this, item, context)
 }
 
 /*
-The constructor returns a NewStddev with the input operand
+The constructor returns a NewVariance with the input operand
 cast to a Function as the FunctionConstructor.
 */
-func (this *Stddev) Constructor() expression.FunctionConstructor {
+func (this *Variance) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewStddev(operands[0])
+		return NewVariance(operands[0])
 	}
 }
 
 /*
-If no input to the Stddev function, then the default value
+If no input to the Variance function, then the default value
 returned is a null.
 */
-func (this *Stddev) Default() value.Value {
+func (this *Variance) Default() value.Value {
 	return value.NULL_VALUE
 }
 
@@ -87,7 +85,7 @@ Maintain two variables for sum and
 list of all the values of type NUMBER.
 Call addStddevVariance to compute the intermediate aggregate value and return it.
 */
-func (this *Stddev) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+func (this *Variance) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
@@ -103,18 +101,18 @@ func (this *Stddev) CumulateInitial(item, cumulative value.Value, context Contex
 /*
 Aggregates intermediate results and return them.
 */
-func (this *Stddev) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+func (this *Variance) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return cumulateStddevVariance(part, cumulative, false)
 }
 
 /*
-Compute the sample standard deviation as the final.
+Compute the sample variance as the final.
 Return NULL if no values of type NUMBER exist.
 Return zero if only one value exists.
-calculate variance according to definition
-and return the square root of it as the standard deviation.
+calculate sample variance according to definition
+and return it.
 */
-func (this *Stddev) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
+func (this *Variance) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
 	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
 	}
@@ -124,9 +122,5 @@ func (this *Stddev) ComputeFinal(cumulative value.Value, context Context) (value
 		return nil, e
 	}
 
-	if variance == value.NULL_VALUE {
-		return value.NULL_VALUE, nil
-	}
-
-	return value.NewValue(math.Sqrt(variance.(value.NumberValue).Float64())), nil
+	return variance, nil
 }

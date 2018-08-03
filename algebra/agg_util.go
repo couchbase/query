@@ -262,9 +262,11 @@ func medianOfMedian(data []value.Value, k int, even bool) value.Value {
 /*
 Aggregate initial results for standard deviation.
 Flag distinct help to specify stddev(...) and stddev(DISTINCT...)
- */
+*/
 func addStddevVariance(item, cumulative value.Value, distinct bool) (value.Value, error) {
+	var cSum float64
 	cv, ok := cumulative.(value.AnnotatedValue)
+
 	if !ok {
 		cv = value.NewAnnotatedValue(cumulative)
 		if distinct {
@@ -272,9 +274,8 @@ func addStddevVariance(item, cumulative value.Value, distinct bool) (value.Value
 		} else {
 			cv = listAdd(item, cv)
 		}
-		cv.SetAttachment("sum", item)
 	} else {
-		cSum := cv.GetAttachment("sum").(value.NumberValue).Float64()
+		cSum = cv.GetAttachment("sum").(value.NumberValue).Float64()
 		if distinct {
 			set, e := getSet(cv)
 			if e != nil {
@@ -287,9 +288,10 @@ func addStddevVariance(item, cumulative value.Value, distinct bool) (value.Value
 		} else {
 			listAdd(item, cumulative)
 		}
-		cSum += item.(value.NumberValue).Float64()
-		cv.SetAttachment("sum", value.NewValue(cSum))
 	}
+
+	cSum += item.(value.NumberValue).Float64()
+	cv.SetAttachment("sum", value.NewValue(cSum))
 	return cv, nil
 }
 
@@ -344,8 +346,9 @@ func cumulateStddevVariance(part, cumulative value.Value, distinct bool) (value.
 /*
 Function to compute variance, population and sample variance can be returned
 by setting delta to 0.0 and 1.0 respectively.
+If arithmatic overflow happens, return +Infinity.
 */
-func computeVariance(cumulative value.Value, distinct bool, delta float64) (value.Value, error) {
+func computeVariance(cumulative value.Value, distinct, samp bool, delta float64) (value.Value, error) {
 	var count float64
 	var values value.Values
 
@@ -369,16 +372,20 @@ func computeVariance(cumulative value.Value, distinct bool, delta float64) (valu
 		return value.NULL_VALUE, nil
 	}
 	if count == 1.0 {
+		if samp {
+			return value.NULL_VALUE, nil
+		}
 		return value.ZERO_NUMBER, nil
 	}
 
 	sum := cumulative.(value.AnnotatedValue).GetAttachment("sum").(value.NumberValue).Float64()
-	mean := sum / count
+	mean := float64(sum / count)
 	var variance float64
+
 	for _, v := range values {
 		f := v.(value.NumberValue).Float64() - mean
-		variance += f * f / (count - delta)
+		variance += f * f
 	}
 
-	return value.NewValue(variance), nil
+	return value.NewValue(variance / (count - delta)), nil
 }

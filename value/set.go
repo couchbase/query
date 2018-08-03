@@ -73,7 +73,7 @@ func (this *Set) Put(key, item Value) {
 		return
 	}
 
-	if this.numeric && key.Type() != NUMBER  {
+	if this.numeric && key.Type() != NUMBER {
 		panic(fmt.Sprintf("Numeric set will not support value type %T.", key))
 		return
 	}
@@ -125,7 +125,7 @@ func (this *Set) Remove(key Value) {
 		return
 	}
 
-	if this.numeric && key.Type() != NUMBER  {
+	if this.numeric && key.Type() != NUMBER {
 		panic(fmt.Sprintf("Numeric set will not support value type %T.", key))
 		return
 	}
@@ -171,7 +171,7 @@ func (this *Set) Has(key Value) bool {
 		return this.nills
 	}
 
-	if this.numeric && key.Type() != NUMBER  {
+	if this.numeric && key.Type() != NUMBER {
 		panic(fmt.Sprintf("Numeric set will not support value type %T.", key))
 		return false
 	}
