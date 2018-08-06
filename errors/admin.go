@@ -124,18 +124,22 @@ func NewCompletedQualifierUnknown(what string) Error {
 		InternalMsg: "Completed requests qualifier unknown: " + what, InternalCaller: CallerN(1)}
 }
 
+const ADMIN_QUALIFIER_NOT_SET = 2180
+
 func NewCompletedQualifierNotFound(what string, cond interface{}) Error {
 	var condString string
 
 	if cond != nil {
 		condString = fmt.Sprintf(" %v", cond)
 	}
-	return &err{level: EXCEPTION, ICode: 2180, IKey: "admin.accounting.completed",
-		InternalMsg: "Completed requests qualifier unknown: " + what + condString, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: ADMIN_QUALIFIER_NOT_SET, IKey: "admin.accounting.completed",
+		InternalMsg: "Completed requests qualifier not set: " + what + condString, InternalCaller: CallerN(1)}
 }
 
+const ADMIN_QUALIFIER_NOT_UNIQUE = 2190
+
 func NewCompletedQualifierNotUnique(what string) Error {
-	return &err{level: EXCEPTION, ICode: 2190, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: ADMIN_QUALIFIER_NOT_UNIQUE, IKey: "admin.accounting.completed",
 		InternalMsg: "Completed requests qualifier can only be deployed once: " + what, InternalCaller: CallerN(1)}
 }
 

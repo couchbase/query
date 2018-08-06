@@ -252,9 +252,13 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 	// now that the local node name can change, use a consistent one across the scan
 	whoAmI := this.WhoAmI()
 
-	// not part of a cluster, no node to operatre against
+	// not part of a cluster, no node to operate against
 	if len(whoAmI) == 0 {
 		return
+	}
+
+	if key != "" {
+		endpoint = endpoint + "/" + key
 	}
 
 	// no nodes means all nodes
@@ -287,7 +291,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 					continue
 				}
 
-				_, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, data, command, creds, authToken)
+				_, opErr := doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
 				if warnFn != nil {
 					warnFn(opErr)
 				}
@@ -311,7 +315,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 				continue
 			}
 
-			_, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, data, command, creds, authToken)
+			_, opErr := doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
 			if warnFn != nil {
 				warnFn(opErr)
 			}

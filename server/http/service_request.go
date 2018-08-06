@@ -11,7 +11,6 @@ package http
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	go_errors "errors"
 	"fmt"
 	"io"
@@ -22,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	json "github.com/couchbase/go_json"
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"

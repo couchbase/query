@@ -12,28 +12,40 @@
 package server
 
 import (
-	paramSettings "github.com/couchbase/query/server/settings"
+	"github.com/couchbase/query/errors"
 )
 
-func setProfileAdmin(s *Server, o interface{}) {
+func setProfileAdmin(s *Server, o interface{}) errors.Error {
 	value, _ := o.(string)
 	prof, ok := ParseProfile(value)
 	if ok {
 		s.SetProfile(prof)
 	}
+	return nil
 }
 
-func setControlsAdmin(s *Server, o interface{}) {
+func setControlsAdmin(s *Server, o interface{}) errors.Error {
 	value, _ := o.(bool)
 	s.SetControls(value)
+	return nil
 }
 
 func GetProfileAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
-	settings[paramSettings.PROFILE] = srvr.Profile().String()
+	settings[PROFILE] = srvr.Profile().String()
 	return settings
 }
 
 func GetControlsAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
-	settings[paramSettings.CONTROLS] = srvr.Controls()
+	settings[CONTROLS] = srvr.Controls()
 	return settings
+}
+
+func checkProfileAdmin(val interface{}) (bool, errors.Error) {
+	_, ok := val.(string)
+	return ok, nil
+}
+
+func checkControlsAdmin(val interface{}) (bool, errors.Error) {
+	_, ok := val.(bool)
+	return ok, nil
 }

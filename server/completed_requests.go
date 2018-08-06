@@ -31,6 +31,14 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type RequestsOp int
+
+const (
+	CMP_OP_ADD RequestsOp = iota
+	CMP_OP_DEL
+	CMP_OP_UPD
+)
+
 type RequestLogEntry struct {
 	RequestId       string
 	ClientId        string
@@ -63,6 +71,7 @@ type qualifier interface {
 	unique() bool
 	condition() interface{}
 	isCondition(c interface{}) bool
+	checkCondition(c interface{}) errors.Error
 	evaluate(request *BaseRequest, req *http.Request) bool
 }
 
@@ -105,6 +114,51 @@ func RequestsSetLimit(limit int) {
 	requestLog.cache.SetLimit(limit)
 }
 
+func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}) errors.Error {
+	var err errors.Error
+
+	requestLog.Lock()
+	defer requestLog.Unlock()
+	for _, q := range requestLog.qualifiers {
+		if q.name() == name {
+			switch op {
+			case CMP_OP_ADD:
+				if q.unique() || q.isCondition(condition) {
+					return errors.NewCompletedQualifierExists(name)
+				}
+			case CMP_OP_UPD:
+				if q.unique() {
+					return q.checkCondition(condition)
+				} else {
+					return errors.NewCompletedQualifierNotUnique(name)
+				}
+			case CMP_OP_DEL:
+				if q.isCondition(condition) {
+					return nil
+				}
+			}
+		}
+	}
+	if op != CMP_OP_ADD {
+		return errors.NewCompletedQualifierNotFound(name, condition)
+	}
+	switch name {
+	case "threshold":
+		_, err = newTimeThreshold(condition)
+	case "aborted":
+		_, err = newAborted(condition)
+	case "error":
+		_, err = newReqError(condition)
+	case "user":
+		_, err = newUser(condition)
+	case "client":
+		_, err = newClient(condition)
+	default:
+		return errors.NewCompletedQualifierUnknown(name)
+	}
+	return err
+}
+
 func RequestsAddQualifier(name string, condition interface{}) errors.Error {
 	var q qualifier
 	var err errors.Error
@@ -112,13 +166,15 @@ func RequestsAddQualifier(name string, condition interface{}) errors.Error {
 	requestLog.Lock()
 	defer requestLog.Unlock()
 	for _, q := range requestLog.qualifiers {
-		if q.name() == name && q.unique() {
+		if q.name() == name && (q.unique() || q.isCondition(condition)) {
 			return errors.NewCompletedQualifierExists(name)
 		}
 	}
 	switch name {
 	case "threshold":
 		q, err = newTimeThreshold(condition)
+	case "aborted":
+		q, err = newAborted(condition)
 	case "error":
 		q, err = newReqError(condition)
 	case "user":
@@ -128,16 +184,17 @@ func RequestsAddQualifier(name string, condition interface{}) errors.Error {
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
-	if q != nil {
+	if err == nil && q != nil {
 		requestLog.qualifiers = append(requestLog.qualifiers, q)
 	}
 	return err
 }
 
 func RequestsUpdateQualifier(name string, condition interface{}) errors.Error {
-	var q qualifier
+	var nq qualifier
 	var err errors.Error
 
+	iq := -1
 	requestLog.Lock()
 	defer requestLog.Unlock()
 	for i, q := range requestLog.qualifiers {
@@ -145,17 +202,21 @@ func RequestsUpdateQualifier(name string, condition interface{}) errors.Error {
 			if !q.unique() {
 				return errors.NewCompletedQualifierNotUnique(name)
 			}
-			requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
+			iq = i
+			break
 		}
+	}
+	if iq < 0 {
+		return errors.NewCompletedQualifierNotFound(name, "")
 	}
 	switch name {
 	case "threshold":
-		q, err = newTimeThreshold(condition)
+		nq, err = newTimeThreshold(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
-	if q != nil {
-		requestLog.qualifiers = append(requestLog.qualifiers, q)
+	if err == nil && nq != nil {
+		requestLog.qualifiers[iq] = nq
 	}
 	return err
 }
@@ -163,13 +224,23 @@ func RequestsUpdateQualifier(name string, condition interface{}) errors.Error {
 func RequestsRemoveQualifier(name string, condition interface{}) errors.Error {
 	requestLog.Lock()
 	defer requestLog.Unlock()
+
+	count := 0
 	for i, q := range requestLog.qualifiers {
-		if q.name() == name && (q.unique() || condition == nil || q.isCondition(condition)) {
-			requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
-			return nil
+		if q.name() == name {
+			if condition == nil {
+				requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
+				count++
+			} else if q.unique() || q.isCondition(condition) {
+				requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
+				return nil
+			}
 		}
 	}
-	return errors.NewCompletedQualifierNotFound(name, condition)
+	if count == 0 {
+		return errors.NewCompletedQualifierNotFound(name, condition)
+	}
+	return nil
 }
 
 func RequestsGetQualifier(name string) (interface{}, errors.Error) {
@@ -186,20 +257,25 @@ func RequestsGetQualifier(name string) (interface{}, errors.Error) {
 	return nil, errors.NewCompletedQualifierNotFound(name, nil)
 }
 
-func RequestsGetQualifiers() (qualifiers []struct {
-	name      string
-	condition interface{}
-}) {
+func RequestsGetQualifiers() map[string]interface{} {
+	qualifiers := make(map[string]interface{})
 	requestLog.RLock()
 	defer requestLog.RUnlock()
 	for _, q := range requestLog.qualifiers {
-		theQual := struct {
-			name      string
-			condition interface{}
-		}{q.name(), q.condition()}
-		qualifiers = append(qualifiers, theQual)
+		qEntry := qualifiers[q.name()]
+		if qEntry == nil {
+			qualifiers[q.name()] = q.condition()
+		} else {
+			switch qEntry.(type) {
+			case []interface{}:
+				qualifiers[q.name()] = append(qualifiers[q.name()].([]interface{}), q.condition())
+			default:
+				slice := []interface{}{qEntry, q.condition()}
+				qualifiers[q.name()] = slice
+			}
+		}
 	}
-	return
+	return qualifiers
 }
 
 // completed requests operations
@@ -349,6 +425,8 @@ func newTimeThreshold(c interface{}) (*timeThreshold, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &timeThreshold{threshold: time.Duration(c.(int))}, nil
+	case int64:
+		return &timeThreshold{threshold: time.Duration(c.(int64))}, nil
 	}
 	return nil, errors.NewCompletedQualifierInvalidArgument("threshold", c)
 }
@@ -369,8 +447,20 @@ func (this *timeThreshold) isCondition(c interface{}) bool {
 	switch c.(type) {
 	case int:
 		return time.Duration(c.(int)) == this.threshold
+	case int64:
+		return time.Duration(c.(int64)) == this.threshold
 	}
 	return false
+}
+
+func (this *timeThreshold) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case int:
+		return nil
+	case int64:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("threshold", c)
 }
 
 func (this *timeThreshold) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -410,6 +500,10 @@ func (this *aborted) isCondition(c interface{}) bool {
 	return true
 }
 
+func (this *aborted) checkCondition(c interface{}) errors.Error {
+	return nil
+}
+
 func (this *aborted) evaluate(request *BaseRequest, req *http.Request) bool {
 	return request.State() == ABORTED
 }
@@ -423,6 +517,8 @@ func newReqError(c interface{}) (*reqError, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &reqError{errCode: c.(int)}, nil
+	case int64:
+		return &reqError{errCode: int(c.(int64))}, nil
 	}
 	return nil, errors.NewCompletedQualifierInvalidArgument("error", c)
 }
@@ -443,14 +539,20 @@ func (this *reqError) isCondition(c interface{}) bool {
 	switch c.(type) {
 	case int:
 		return c.(int) == this.errCode
+	case int64:
+		return int(c.(int64)) == this.errCode
 	}
 	return false
+}
+
+func (this *reqError) checkCondition(c interface{}) errors.Error {
+	return nil
 }
 
 func (this *reqError) evaluate(request *BaseRequest, req *http.Request) bool {
 	for _, e := range request.Errors() {
 		if int(e.Code()) == this.errCode {
-			return false
+			return true
 		}
 	}
 	return false
@@ -487,6 +589,10 @@ func (this *user) isCondition(c interface{}) bool {
 		return c.(string) == this.id
 	}
 	return false
+}
+
+func (this *user) checkCondition(c interface{}) errors.Error {
+	return nil
 }
 
 func (this *user) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -548,6 +654,10 @@ func (this *client) isCondition(c interface{}) bool {
 		return c.(string) == this.address
 	}
 	return false
+}
+
+func (this *client) checkCondition(c interface{}) errors.Error {
+	return nil
 }
 
 func (this *client) evaluate(request *BaseRequest, req *http.Request) bool {

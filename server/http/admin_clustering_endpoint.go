@@ -18,13 +18,14 @@ import (
 	"sync"
 	"time"
 
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
-	paramSettings "github.com/couchbase/query/server/settings"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
@@ -372,10 +373,26 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, errors.NewAdminDecodingError(err)
 		}
+
+		distribute := settings["distribute"]
+		if distribute != nil {
+			delete(settings, "distribute")
+		}
+
 		af.Values = settings
 
 		if errP := server.ProcessSettings(settings, srvr); errP != nil {
 			return nil, errP
+		}
+
+		if distribute != nil {
+			body, _ := json.Marshal(settings)
+			go distributed.RemoteAccess().DoRemoteOps([]string{}, "settings", "POST", "", string(body),
+				func(warn errors.Error) {
+					if warn != nil {
+						logging.Infof("failed to distribute settings <ud>%v</ud>", settings)
+					}
+				}, distributed.NO_CREDS, "")
 		}
 
 		return fillSettings(settings, srvr), nil
@@ -385,25 +402,26 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {
-	settings[paramSettings.CPUPROFILE] = srvr.CpuProfile()
-	settings[paramSettings.MEMPROFILE] = srvr.MemProfile()
-	settings[paramSettings.SERVICERS] = srvr.Servicers()
-	settings[paramSettings.SCANCAP] = srvr.ScanCap()
-	settings[paramSettings.REQUESTSIZECAP] = srvr.RequestSizeCap()
-	settings[paramSettings.DEBUG] = srvr.Debug()
-	settings[paramSettings.PIPELINEBATCH] = srvr.PipelineBatch()
-	settings[paramSettings.PIPELINECAP] = srvr.PipelineCap()
-	settings[paramSettings.MAXPARALLELISM] = srvr.MaxParallelism()
-	settings[paramSettings.TIMEOUTSETTING] = srvr.Timeout()
-	settings[paramSettings.KEEPALIVELENGTH] = srvr.KeepAlive()
-	settings[paramSettings.LOGLEVEL] = srvr.LogLevel()
+	settings[server.CPUPROFILE] = srvr.CpuProfile()
+	settings[server.MEMPROFILE] = srvr.MemProfile()
+	settings[server.SERVICERS] = srvr.Servicers()
+	settings[server.SCANCAP] = srvr.ScanCap()
+	settings[server.REQUESTSIZECAP] = srvr.RequestSizeCap()
+	settings[server.DEBUG] = srvr.Debug()
+	settings[server.PIPELINEBATCH] = srvr.PipelineBatch()
+	settings[server.PIPELINECAP] = srvr.PipelineCap()
+	settings[server.MAXPARALLELISM] = srvr.MaxParallelism()
+	settings[server.TIMEOUTSETTING] = srvr.Timeout()
+	settings[server.KEEPALIVELENGTH] = srvr.KeepAlive()
+	settings[server.LOGLEVEL] = srvr.LogLevel()
 	threshold, _ := server.RequestsGetQualifier("threshold")
-	settings[paramSettings.CMPTHRESHOLD] = threshold
-	settings[paramSettings.CMPLIMIT] = server.RequestsLimit()
-	settings[paramSettings.PRPLIMIT] = prepareds.PreparedsLimit()
-	settings[paramSettings.PRETTY] = srvr.Pretty()
-	settings[paramSettings.MAXINDEXAPI] = srvr.MaxIndexAPI()
-	settings[paramSettings.N1QLFEATCTRL] = util.GetN1qlFeatureControl()
+	settings[server.CMPTHRESHOLD] = threshold
+	settings[server.CMPLIMIT] = server.RequestsLimit()
+	settings[server.CMPOBJECT] = server.RequestsGetQualifiers()
+	settings[server.PRPLIMIT] = prepareds.PreparedsLimit()
+	settings[server.PRETTY] = srvr.Pretty()
+	settings[server.MAXINDEXAPI] = srvr.MaxIndexAPI()
+	settings[server.N1QLFEATCTRL] = util.GetN1qlFeatureControl()
 	settings = server.GetProfileAdmin(settings, srvr)
 	settings = server.GetControlsAdmin(settings, srvr)
 	return settings

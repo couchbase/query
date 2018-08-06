@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package settings
+package server
 
 import (
 	"github.com/couchbase/query/errors"
@@ -27,6 +27,7 @@ const (
 	SCANCAP         = "scan-cap"
 	SERVICERS       = "servicers"
 	TIMEOUTSETTING  = "timeout"
+	CMPOBJECT       = "completed"
 	CMPTHRESHOLD    = "completed-threshold"
 	CMPLIMIT        = "completed-limit"
 	PRPLIMIT        = "prepared-limit"
@@ -52,6 +53,7 @@ var CHECKERS = map[string]Checker{
 	SCANCAP:         checkNumber,
 	SERVICERS:       checkNumber,
 	TIMEOUTSETTING:  checkNumber,
+	CMPOBJECT:       checkCompleted,
 	CMPTHRESHOLD:    checkNumber,
 	CMPLIMIT:        checkNumber,
 	PRPLIMIT:        checkPositiveInteger,
@@ -69,6 +71,40 @@ func checkBool(val interface{}) (bool, errors.Error) {
 
 func checkNumber(val interface{}) (bool, errors.Error) {
 	_, ok := val.(float64)
+	return ok, nil
+}
+
+func checkObject(val interface{}) (bool, errors.Error) {
+	_, ok := val.(map[string]interface{})
+	return ok, nil
+}
+
+func checkCompleted(val interface{}) (bool, errors.Error) {
+	object, ok := val.(map[string]interface{})
+	if !ok {
+		return ok, nil
+	}
+	for n, v := range object {
+		var op RequestsOp
+
+		switch n[0] {
+		case '+':
+			op = CMP_OP_ADD
+			n = n[1:]
+		case '-':
+			op = CMP_OP_DEL
+			n = n[1:]
+		default:
+			op = CMP_OP_UPD
+		}
+		err := RequestsCheckQualifier(n, op, v)
+		if err != nil && op == CMP_OP_UPD && err.Code() == errors.ADMIN_QUALIFIER_NOT_SET {
+			err = RequestsCheckQualifier(n, CMP_OP_ADD, v)
+		}
+		if err != nil {
+			return false, err
+		}
+	}
 	return ok, nil
 }
 

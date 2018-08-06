@@ -623,7 +623,11 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 				reqMap["timings"] = request.Timings
 			}
 			if request.Errors != nil {
-				reqMap["errors"] = request.Errors
+				errors := make([]map[string]interface{}, len(request.Errors))
+				for i, e := range request.Errors {
+					errors[i] = e.Object()
+				}
+				reqMap["errors"] = errors
 			}
 		}
 		if request.Users != "" {

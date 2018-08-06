@@ -17,97 +17,145 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
-	paramSettings "github.com/couchbase/query/server/settings"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
 	"github.com/couchbase/query/util"
 )
 
-type Setter func(*Server, interface{})
+type Setter func(*Server, interface{}) errors.Error
 
 var _SETTERS = map[string]Setter{
-	paramSettings.CPUPROFILE: func(s *Server, o interface{}) {
+	CPUPROFILE: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(string)
 		s.SetCpuProfile(value)
+		return nil
 	},
-	paramSettings.DEBUG: func(s *Server, o interface{}) {
+	DEBUG: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(bool)
 		s.SetDebug(value)
+		return nil
 	},
-	paramSettings.KEEPALIVELENGTH: func(s *Server, o interface{}) {
+	KEEPALIVELENGTH: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetKeepAlive(int(value))
+		return nil
 	},
-	paramSettings.LOGLEVEL: func(s *Server, o interface{}) {
+	LOGLEVEL: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(string)
 		s.SetLogLevel(value)
+		return nil
 	},
-	paramSettings.MAXPARALLELISM: func(s *Server, o interface{}) {
+	MAXPARALLELISM: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetMaxParallelism(int(value))
+		return nil
 	},
-	paramSettings.MEMPROFILE: func(s *Server, o interface{}) {
+	MEMPROFILE: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(string)
 		s.SetMemProfile(value)
+		return nil
 	},
-	paramSettings.PIPELINECAP: func(s *Server, o interface{}) {
+	PIPELINECAP: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetPipelineCap(int64(value))
+		return nil
 	},
-	paramSettings.PIPELINEBATCH: func(s *Server, o interface{}) {
+	PIPELINEBATCH: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetPipelineBatch(int(value))
+		return nil
 	},
-	paramSettings.REQUESTSIZECAP: func(s *Server, o interface{}) {
+	REQUESTSIZECAP: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetRequestSizeCap(int(value))
+		return nil
 	},
-	paramSettings.SCANCAP: func(s *Server, o interface{}) {
+	SCANCAP: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetScanCap(int64(value))
+		return nil
 	},
-	paramSettings.SERVICERS: func(s *Server, o interface{}) {
+	SERVICERS: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetServicers(int(value))
+		return nil
 	},
-	paramSettings.TIMEOUTSETTING: func(s *Server, o interface{}) {
+	TIMEOUTSETTING: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetTimeout(time.Duration(value))
+		return nil
 	},
-	paramSettings.CMPTHRESHOLD: func(s *Server, o interface{}) {
+	CMPTHRESHOLD: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
-		_ = RequestsUpdateQualifier("threshold", int(value))
+		return RequestsUpdateQualifier("threshold", int(value))
 	},
-	paramSettings.CMPLIMIT: func(s *Server, o interface{}) {
+	CMPLIMIT: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		RequestsSetLimit(int(value))
+		return nil
 	},
-	paramSettings.PRPLIMIT: func(s *Server, o interface{}) {
+	CMPOBJECT: setCompleted,
+	PRPLIMIT: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		prepareds.PreparedsSetLimit(int(value))
+		return nil
 	},
-	paramSettings.PRETTY: func(s *Server, o interface{}) {
+	PRETTY: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(bool)
 		s.SetPretty(value)
+		return nil
 	},
-	paramSettings.MAXINDEXAPI: func(s *Server, o interface{}) {
+	MAXINDEXAPI: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		s.SetMaxIndexAPI(int(value))
+		return nil
 	},
-	paramSettings.PROFILE:  setProfileAdmin,
-	paramSettings.CONTROLS: setControlsAdmin,
-	paramSettings.N1QLFEATCTRL: func(s *Server, o interface{}) {
+	PROFILE:  setProfileAdmin,
+	CONTROLS: setControlsAdmin,
+	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(float64)
 		if s.enterprise {
 			util.SetN1qlFeatureControl(uint64(value))
 		} else {
 			util.SetN1qlFeatureControl(uint64(value) | util.CE_N1QL_FEAT_CTRL)
 		}
+		return nil
 	},
+}
+
+func setCompleted(s *Server, o interface{}) errors.Error {
+	var res errors.Error
+
+	for n, v := range o.(map[string]interface{}) {
+		res = nil
+		switch n[0] {
+		case '+':
+			n = n[1:len(n)]
+			res = RequestsAddQualifier(n, v)
+		case '-':
+			n = n[1:len(n)]
+			res = RequestsRemoveQualifier(n, v)
+		default:
+			res = RequestsUpdateQualifier(n, v)
+			if res != nil {
+				switch res.Code() {
+				case errors.ADMIN_QUALIFIER_NOT_UNIQUE:
+					RequestsRemoveQualifier(n, nil)
+					res = RequestsAddQualifier(n, v)
+				case errors.ADMIN_QUALIFIER_NOT_SET:
+					res = RequestsAddQualifier(n, v)
+				}
+			}
+		}
+		if res != nil {
+			return res
+		}
+	}
+	return nil
 }
 
 func ProcessSettings(settings map[string]interface{}, srvr *Server) errors.Error {
 	for setting, value := range settings {
-		if check_it, ok := paramSettings.CHECKERS[setting]; !ok {
+		if check_it, ok := CHECKERS[setting]; !ok {
 			return errors.NewAdminUnknownSettingError(setting)
 		} else {
 			ok, err := check_it(value)
@@ -122,8 +170,12 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) errors.Error
 	}
 	for setting, value := range settings {
 		set_it := _SETTERS[setting]
-		set_it(srvr, value)
-		logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
+		err := set_it(srvr, value)
+		if err == nil {
+			logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
+		} else {
+			logging.Infof("Could not change query Configuration %v to %v: %v", setting, value, err)
+		}
 	}
 	return nil
 }

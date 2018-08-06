@@ -151,7 +151,11 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					item.SetField("userAgent", entry.UserAgent)
 				}
 				if entry.Errors != nil {
-					item.SetField("errors", entry.Errors)
+					errors := make([]value.Value, len(entry.Errors))
+					for i, e := range entry.Errors {
+						errors[i] = value.NewValue(e.Object())
+					}
+					item.SetField("errors", errors)
 				}
 
 				meta := map[string]interface{}{

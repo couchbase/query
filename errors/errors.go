@@ -46,6 +46,7 @@ type Error interface {
 	IsFatal() bool
 	IsWarning() bool
 	OnceOnly() bool
+	Object() map[string]interface{}
 }
 
 type ErrorChannel chan Error
@@ -101,6 +102,18 @@ func (e *err) Error() string {
 	case e.ICause != nil:
 		return e.ICause.Error()
 	}
+}
+
+func (e *err) Object() map[string]interface{} {
+	m := map[string]interface{}{
+		"code":    e.ICode,
+		"key":     e.IKey,
+		"message": e.InternalMsg,
+	}
+	if e.ICause != nil {
+		m["cause"] = e.ICause.Error()
+	}
+	return m
 }
 
 func (e *err) MarshalJSON() ([]byte, error) {
