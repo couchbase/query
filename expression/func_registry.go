@@ -185,6 +185,8 @@ var _FUNCTIONS = map[string]Function{
 	"regexp_position":  &RegexpPosition0{},
 	"regexp_pos":       &RegexpPosition0{},
 	"regexp_replace":   &RegexpReplace{},
+	"regexp_matches":   &RegexpMatches{},
+	"regexp_split":     &RegexpSplit{},
 
 	// Numeric
 	"abs":     &Abs{},

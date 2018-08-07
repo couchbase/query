@@ -485,3 +485,155 @@ func regexpPositionApply(first, second value.Value, re *regexp.Regexp, startPos 
 
 	return value.NewValue(loc[0] + startPos), nil
 }
+
+///////////////////////////////////////////////////
+//
+// RegexpMatches
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the String function REGEXP_MATCHES(expr, pattern).
+It returns an array containing all the substrings in expr that
+matche the pattern.
+*/
+type RegexpMatches struct {
+	BinaryFunctionBase
+	re *regexp.Regexp
+}
+
+func NewRegexpMatches(first, second Expression) Function {
+	rv := &RegexpMatches{
+		*NewBinaryFunctionBase("regexp_matches", first, second),
+		nil,
+	}
+
+	rv.re, _ = precompileRegexp(second.Value(), false)
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *RegexpMatches) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RegexpMatches) Type() value.Type { return value.ARRAY }
+
+func (this *RegexpMatches) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *RegexpMatches) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	re := this.re
+	if re == nil {
+		var err error
+		re, err = regexp.Compile(second.Actual().(string))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var res []interface{}
+	matches := re.FindAll([]byte(first.Actual().(string)), -1)
+	for _, v := range matches {
+		res = append(res, string(v))
+	}
+	return value.NewValue(res), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *RegexpMatches) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewRegexpMatches(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// RegexpSplit
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the String function REGEXP_SPLIT(expr, pattern).
+It returns an array of substrings found in expr that are separated
+by pattern.
+*/
+type RegexpSplit struct {
+	BinaryFunctionBase
+	re *regexp.Regexp
+}
+
+func NewRegexpSplit(first, second Expression) Function {
+	rv := &RegexpSplit{
+		*NewBinaryFunctionBase("regexp_split", first, second),
+		nil,
+	}
+
+	rv.re, _ = precompileRegexp(second.Value(), false)
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *RegexpSplit) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RegexpSplit) Type() value.Type { return value.ARRAY }
+
+func (this *RegexpSplit) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *RegexpSplit) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	re := this.re
+	if re == nil {
+		var err error
+		re, err = regexp.Compile(second.Actual().(string))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var res []interface{}
+	f := []byte(first.Actual().(string))
+	matches := re.FindAllIndex(f, -1)
+	start := 0
+	for _, v := range matches {
+		res = append(res, string(f[start:v[0]]))
+		start = v[1]
+	}
+	if len(res) > 0 && start < len(f) {
+		res = append(res, string(f[start:]))
+	}
+	return value.NewValue(res), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *RegexpSplit) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewRegexpSplit(operands[0], operands[1])
+	}
+}
