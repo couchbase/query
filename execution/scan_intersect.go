@@ -130,6 +130,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				} else if item != nil {
 					this.addInDocs(1)
 					ok = this.processKey(item, context, fullBits, limit)
+					stopped = this.stopped
 				} else {
 					break loop
 				}

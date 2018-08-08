@@ -144,6 +144,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 					this.addInDocs(1)
 
 					ok = this.processKey(item, context, fullBits, fullBits, limit, false)
+					stopped = this.stopped
 					if ok && limit > 0 && this.fullCount >= limit {
 						childBits |= int64(0x01)
 						break loop
