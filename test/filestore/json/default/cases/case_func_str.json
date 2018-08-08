@@ -615,5 +615,59 @@
                 "$1": "cd"
             }
       ]
+    },
+    {
+      "statements":"SELECT regexp_matches('abcdef', '[bd]')",
+      "results":  [
+            {
+                "$1":  [
+                "b",
+                "d"
+            ]
+            }
+      ]
+    },
+    {
+      "statements":"SELECT regexp_matches('abcdef', '.')",
+      "results":  [
+            {
+                "$1":  [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+            ]
+            }
+      ]
+    },
+    {
+      "statements":"SELECT regexp_split('abcdef', '')",
+      "results":  [
+            {
+                "$1":  [
+		"",
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "f"
+            ]
+            }
+      ]
+    },
+    {
+      "statements":"SELECT regexp_split('abcdef', '[bd]')",
+      "results":  [
+            {
+                "$1":  [
+                "a",
+                "c",
+                "ef"
+            ]
+            }
+      ]
     }
 ]
