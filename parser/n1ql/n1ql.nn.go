@@ -32123,6 +32123,7 @@ OUTER0:
 		case 91:
 			{
 				yylex.logToken(yylex.Text(), "FORCE")
+				lval.tokOffset = yylex.curOffset
 				return FORCE
 			}
 		case 92:

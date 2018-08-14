@@ -19,12 +19,14 @@ type Prepare struct {
 	readonly
 	prepared value.Value
 	plan     *Prepared
+	force    bool
 }
 
-func NewPrepare(prepared value.Value, plan *Prepared) *Prepare {
+func NewPrepare(prepared value.Value, plan *Prepared, force bool) *Prepare {
 	return &Prepare{
 		prepared: prepared,
 		plan:     plan,
+		force:    force,
 	}
 }
 
@@ -42,6 +44,10 @@ func (this *Prepare) Prepared() value.Value {
 
 func (this *Prepare) Plan() *Prepared {
 	return this.plan
+}
+
+func (this *Prepare) Force() bool {
+	return this.force
 }
 
 func (this *Prepare) MarshalJSON() ([]byte, error) {
@@ -77,5 +83,6 @@ func (this *Prepare) UnmarshalJSON(body []byte) error {
 		return err
 	}
 	this.plan = plan
+	this.force = true
 	return nil
 }

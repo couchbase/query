@@ -23,9 +23,11 @@ struct that contains a statement (json statement).
 type Prepare struct {
 	statementBase
 
-	name string    `json:"name"`
-	text string    `json:"text"`
-	stmt Statement `json:"stmt"`
+	name   string    `json:"name"`
+	force  bool      `json:"force"`
+	offset int       `json:"offset"`
+	text   string    `json:"text"`
+	stmt   Statement `json:"stmt"`
 }
 
 /*
@@ -33,11 +35,13 @@ The function NewPrepare returns a pointer to the
 Prepare struct with the input argument statement
 as a field.
 */
-func NewPrepare(name string, stmt Statement, text string) *Prepare {
+func NewPrepare(name string, force bool, stmt Statement, text string, offset int) *Prepare {
 	rv := &Prepare{
-		name: name,
-		stmt: stmt,
-		text: text,
+		name:   name,
+		force:  force,
+		stmt:   stmt,
+		text:   text,
+		offset: offset,
 	}
 	rv.statementBase.stmt = rv
 	return rv
@@ -99,6 +103,20 @@ Return the prepared statement name.
 */
 func (this *Prepare) Name() string {
 	return this.name
+}
+
+/*
+Return the prepared force reprepare status.
+*/
+func (this *Prepare) Force() bool {
+	return this.force
+}
+
+/*
+Return the prepared text start offset.
+*/
+func (this *Prepare) Offset() int {
+	return this.offset
 }
 
 /*

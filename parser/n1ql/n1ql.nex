@@ -175,7 +175,11 @@
 /[fF][iI][rR][sS][tT]/				 { yylex.logToken(yylex.Text(), "FIRST"); return FIRST }
 /[fF][lL][aA][tT][tT][eE][nN]/			 { yylex.logToken(yylex.Text(), "FLATTEN"); return FLATTEN }
 /[fF][oO][rR]/					 { yylex.logToken(yylex.Text(), "FOR"); return FOR }
-/[fF][oO][rR][cC][eE]/				 { yylex.logToken(yylex.Text(), "FORCE"); return FORCE }
+/[fF][oO][rR][cC][eE]/				 {
+						 	yylex.logToken(yylex.Text(), "FORCE")
+							lval.tokOffset = yylex.curOffset
+						 	return FORCE
+						 }
 /[fF][rR][oO][mM]/				 {
 							yylex.logToken(yylex.Text(), "FROM")
 							lval.tokOffset = yylex.curOffset

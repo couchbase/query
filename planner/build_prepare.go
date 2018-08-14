@@ -13,44 +13,71 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
-	pl, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false,
+	var prep *plan.Prepared
+	var err error
+
+	name := stmt.Name()
+	force := stmt.Force()
+	text := planCache.GetText(stmt.Text(), stmt.Offset())
+	if name == "" {
+		var err errors.Error
+
+		name, err = planCache.GetName(text, this.indexApiVersion, this.featureControls)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !force {
+		var gpErr errors.Error
+
+		prep, gpErr = planCache.GetPlan(name, text, this.indexApiVersion, this.featureControls)
+		if gpErr != nil {
+			return nil, gpErr
+		}
+
+		if prep != nil {
+			json_bytes, err := prep.MarshalJSON()
+			if err != nil {
+				return nil, err
+			}
+			val := value.NewValue(json_bytes)
+			err = val.SetField("encoded_plan", value.NewValue(prep.EncodedPlan()))
+			if err != nil {
+				return nil, err
+			}
+			return plan.NewPrepare(val, prep, false), nil
+		}
+	}
+
+	prep, err = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false,
 		this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
 	if err != nil {
 		return nil, err
 	}
 
-	if stmt.Name() == "" {
-		uuid, err := util.UUID()
-		if err != nil {
-			return nil, errors.NewPreparedNameError(err.Error())
-		}
-		pl.SetName(uuid)
-	} else {
-		pl.SetName(stmt.Name())
-	}
+	prep.SetName(name)
+	prep.SetText(text)
+	prep.SetType(stmt.Type())
+	prep.SetIndexApiVersion(this.indexApiVersion)
+	prep.SetFeatureControls(this.featureControls)
 
-	pl.SetText(stmt.Text())
-	pl.SetType(stmt.Type())
-	pl.SetIndexApiVersion(this.indexApiVersion)
-	pl.SetFeatureControls(this.featureControls)
-
-	json_bytes, err := pl.MarshalJSON()
+	json_bytes, err := prep.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	str := pl.BuildEncodedPlan(json_bytes)
+	str := prep.BuildEncodedPlan(json_bytes)
 
-	pl.SetEncodedPlan(str)
+	prep.SetEncodedPlan(str)
 	val := value.NewValue(json_bytes)
 	err = val.SetField("encoded_plan", value.NewValue(str))
 	if err != nil {
 		return nil, err
 	}
 
-	return plan.NewPrepare(val, pl), nil
+	return plan.NewPrepare(val, prep, true), nil
 }

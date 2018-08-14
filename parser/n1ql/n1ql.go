@@ -86,12 +86,14 @@ type lexer struct {
 	parsingStmt      bool
 	lastScannerError string
 	text             string
+	offset           int
 }
 
 func newLexer(nex *Lexer) *lexer {
 	return &lexer{
-		nex:  nex,
-		errs: make([]string, 0, 16),
+		nex:    nex,
+		errs:   make([]string, 0, 16),
+		offset: 0,
 	}
 }
 
@@ -123,6 +125,14 @@ func (this *lexer) ScannerError(s string) {
 
 func (this *lexer) setStatement(stmt algebra.Statement) {
 	this.stmt = stmt
+}
+
+func (this *lexer) setOffset(offset int) {
+	this.offset = offset
+}
+
+func (this *lexer) getOffset() int {
+	return this.offset
 }
 
 func (this *lexer) setExpression(expr expression.Expression) {

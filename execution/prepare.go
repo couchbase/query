@@ -56,10 +56,12 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
-		err := prepareds.AddPrepared(this.plan.Plan())
-		if err != nil {
-			context.Fatal(err)
-			return
+		if this.plan.Force() {
+			err := prepareds.AddPrepared(this.plan.Plan())
+			if err != nil {
+				context.Fatal(err)
+				return
+			}
 		}
 
 		// We are going to amend the prepared name, so make a copy not

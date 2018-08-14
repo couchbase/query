@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,9 +68,60 @@ var systemstore datastore.Datastore
 var namespace string
 
 // init prepareds cache
-
 func PreparedsInit(limit int) {
 	prepareds.cache = util.NewGenCache(limit)
+	planner.SetPlanCache(prepareds)
+}
+
+// preparedCache implements planner.PlanCache
+func (this *preparedCache) GetText(text string, offset int) string {
+
+	// in order to get the force option to not to mistake the
+	// statement as different and refuse to replace the plan
+	// we need to remove it from the statement
+	// this we do for backwards compatibility - ideally we should just
+	// store and compare the prepared text, since with the current
+	// system, variations in the actual prepared statement (eg AS vs FROM, or
+	// one extra space, specifying the name of an already prepared anonymous
+	// statment, use of string vs identifier for the statement name...)s
+	// makes the text verification fails, while it should't
+	prepare := text[:offset]
+	i := strings.Index(strings.ToUpper(prepare), "FORCE")
+	if i < 0 {
+		return text
+	}
+	return prepare[:i] + prepare[i+6:] + text[offset:]
+}
+
+func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64) (string, errors.Error) {
+
+	// different feature controls and index API version generate different names
+	// so that the same statement prepared differently can coexist
+	// prepare options are skipped so that prepare and prepare force yield the same
+	// name
+
+	// FIXME: change after perfrunner on 6.5 done
+	// realm := fmt.Sprintf("%x_%x", indexApiVersion, featureControls)
+	// name, err := util.UUIDV5(realm, text)
+	name, err := util.UUID()
+	if err != nil {
+		return "", errors.NewPreparedNameError(err.Error())
+	}
+	return name, nil
+}
+
+func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int, featureControls uint64) (*plan.Prepared, errors.Error) {
+	prep, err := prepareds.getPrepared(value.NewValue(name), OPT_VERIFY, nil)
+	if err != nil {
+		if err.Code() == errors.NO_SUCH_PREPARED {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls || prep.Text() != text {
+		return nil, nil
+	}
+	return prep, nil
 }
 
 func PreparedsReprepareInit(ds, sy datastore.Datastore, ns string) {
@@ -198,6 +250,10 @@ func DeletePrepared(name string) errors.Error {
 }
 
 func GetPrepared(prepared_stmt value.Value, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+	return prepareds.getPrepared(prepared_stmt, options, phaseTime)
+}
+
+func (prepareds *preparedCache) getPrepared(prepared_stmt value.Value, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	var err errors.Error
 
 	track := (options & OPT_TRACK) != 0
