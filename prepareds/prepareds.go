@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +72,65 @@ var namespace string
 func PreparedsInit(limit int) {
 	prepareds.cache = util.NewGenCache(limit)
 	planner.SetPlanCache(prepareds)
+}
+
+// initialize the cache from a different node
+func PreparedsRemotePrime() {
+	thisHost := distributed.RemoteAccess().WhoAmI()
+	if thisHost == "" {
+		return
+	}
+
+	nodeNames := distributed.RemoteAccess().GetNodeNames()
+	left := len(nodeNames)
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+
+	// try each host until we get something
+	for left > 0 {
+		count := 0
+
+		// choose a random host
+		n := r1.Intn(left)
+		host := nodeNames[n]
+		if n == (left - 1) {
+			nodeNames = nodeNames[:n]
+		} else {
+			nodeNames = append(nodeNames[:n], nodeNames[n+1:]...)
+		}
+		left--
+
+		// but not us
+		if host == thisHost {
+			continue
+		}
+
+		// get the keys
+		distributed.RemoteAccess().GetRemoteKeys([]string{host}, "prepareds",
+			func(id string) bool {
+				_, name := distributed.RemoteAccess().SplitKey(id)
+
+				// and for each key get the prepared and add it
+				distributed.RemoteAccess().GetRemoteDoc(host, name, "prepareds", "GET",
+					func(doc map[string]interface{}) {
+						encoded_plan, ok := doc["encoded_plan"].(string)
+						if ok {
+							_, err := DecodePrepared(name, encoded_plan, false, false, nil)
+							if err == nil {
+								count++
+							}
+						}
+					},
+					func(warn errors.Error) {
+					}, distributed.NO_CREDS, "")
+				return true
+			}, nil)
+
+		// we found stuff, that's good enough
+		if count > 0 {
+			break
+		}
+	}
 }
 
 // preparedCache implements planner.PlanCache

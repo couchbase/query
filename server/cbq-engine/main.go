@@ -275,6 +275,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Now that we are up and running, try to prime the prepareds cache
+	prepareds.PreparedsRemotePrime()
+
 	// Since TLS listener has already been started by NewServiceEndpoint
 	// So not starting here
 	// Check later for enterprise -
