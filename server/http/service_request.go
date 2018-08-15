@@ -467,6 +467,11 @@ func getPrepared(a httpRequestArgs, phaseTime *time.Duration) (string, *plan.Pre
 		return "", nil, err
 	}
 
+	// MB-25351: accept non quoted prepared names (much like the actual PREPARE statement)
+	if prepared_field.Type() == value.BINARY {
+		prepared_field = value.NewValue(string(prepared_field.Actual().([]byte)))
+	}
+
 	// Monitoring API: track prepared statement access
 	prepared, err := prepareds.GetPrepared(prepared_field, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
 	if err != nil || prepared == nil {
