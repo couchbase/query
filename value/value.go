@@ -389,7 +389,11 @@ func NewValue(val interface{}) Value {
 	case []byte:
 		return newValueFromBytes(val)
 	case []interface{}:
-		return sliceValue(val)
+		rv := val
+		if val == nil {
+			rv = make([]interface{}, 0)
+		}
+		return sliceValue(rv)
 	case map[string]interface{}:
 		return objectValue(val)
 	case int:
