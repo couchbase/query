@@ -29,6 +29,7 @@ type OrderedIntersectScan struct {
 	childChannel StopChannel
 	sent         int64
 	fullCount    int64
+	halted       bool
 }
 
 func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, context *Context, scans []Operator) *OrderedIntersectScan {
@@ -121,7 +122,6 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		childBits := int64(0)
 		sendBits := int64(0)
 		finalScan := false
-		stopped := false
 		ok := true
 
 	loop:
@@ -129,7 +129,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			this.switchPhase(_CHANTIME)
 			select {
 			case <-this.stopChannel:
-				stopped = true
+				this.halted = true
 				break loop
 			default:
 			}
@@ -173,7 +173,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 				}
 				n--
 			case <-this.stopChannel:
-				stopped = true
+				this.halted = true
 				break loop
 			default:
 				if n == 0 {
@@ -194,7 +194,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			<-this.childChannel
 		}
 
-		if !stopped && (limit <= 0 || this.sent < limit) {
+		if !this.halted && (limit <= 0 || this.sent < limit) {
 			this.processQueue(fullBits, childBits, limit, true)
 		}
 	})
@@ -264,6 +264,7 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
 
 			item.SetBit(this.bit)
 			if !this.sendItem(item) {
+				this.halted = true
 				return false
 			}
 

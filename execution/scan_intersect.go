@@ -26,6 +26,7 @@ type IntersectScan struct {
 	bits         map[string]int64
 	childChannel StopChannel
 	sent         int64
+	halted       bool
 }
 
 func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operator) *IntersectScan {
@@ -112,7 +113,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		nscans := len(this.scans)
 		childBit := 0
 		childBits := int64(0)
-		stopped := false
 		ok := true
 
 	loop:
@@ -120,7 +120,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			this.switchPhase(_CHANTIME)
 			select {
 			case <-this.stopChannel:
-				stopped = true
+				this.halted = true
 				break loop
 			default:
 			}
@@ -149,7 +149,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				}
 				n--
 			case <-this.stopChannel:
-				stopped = true
+				this.halted = true
 				break loop
 			default:
 				if n == 0 || n < nscans {
@@ -165,7 +165,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			<-this.childChannel
 		}
 
-		if !stopped && ok && childBits != 0 && (limit <= 0 || this.sent < limit) {
+		if !this.halted && ok && childBits != 0 && (limit <= 0 || this.sent < limit) {
 			this.sendItems(childBits)
 		}
 	})
@@ -210,7 +210,8 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue,
 		}
 
 		item.SetBit(this.bit)
-		return this.sendItem(item) && (limit <= 0 || this.sent < limit)
+		this.halted = !this.sendItem(item)
+		return !this.halted && (limit <= 0 || this.sent < limit)
 	}
 
 	this.bits[key] = bits
@@ -227,6 +228,7 @@ func (this *IntersectScan) sendItems(childBits int64) {
 			item := this.values[key]
 			item.SetBit(this.bit)
 			if !this.sendItem(item) {
+				this.halted = true
 				return
 			}
 		}
