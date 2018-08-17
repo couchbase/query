@@ -161,10 +161,8 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 	// prepare options are skipped so that prepare and prepare force yield the same
 	// name
 
-	// FIXME: change after perfrunner on 6.5 done
-	// realm := fmt.Sprintf("%x_%x", indexApiVersion, featureControls)
-	// name, err := util.UUIDV5(realm, text)
-	name, err := util.UUID()
+	realm := fmt.Sprintf("%x_%x", indexApiVersion, featureControls)
+	name, err := util.UUIDV5(realm, text)
 	if err != nil {
 		return "", errors.NewPreparedNameError(err.Error())
 	}
