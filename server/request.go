@@ -94,6 +94,8 @@ type Request interface {
 	IsAdHoc() bool
 	IndexApiVersion() int
 	FeatureControls() uint64
+	SetAutoPrepare(a value.Tristate)
+	AutoPrepare() value.Tristate
 }
 
 type RequestID interface {
@@ -213,6 +215,7 @@ type BaseRequest struct {
 	profile         Profile
 	indexApiVersion int    // Index API version
 	featureControls uint64 // feature bit controls
+	autoPrepare     value.Tristate
 }
 
 type requestIDImpl struct {
@@ -288,6 +291,7 @@ func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, 
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
 	rv.client_id = newClientContextIDImpl(client_id)
+	rv.autoPrepare = value.NONE
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -650,6 +654,14 @@ func (this *BaseRequest) SetFeatureControls(controls uint64) {
 
 func (this *BaseRequest) FeatureControls() uint64 {
 	return this.featureControls
+}
+
+func (this *BaseRequest) SetAutoPrepare(a value.Tristate) {
+	this.autoPrepare = a
+}
+
+func (this *BaseRequest) AutoPrepare() value.Tristate {
+	return this.autoPrepare
 }
 
 func (this *BaseRequest) Results() value.ValueChannel {

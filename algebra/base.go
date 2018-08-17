@@ -16,7 +16,8 @@ import (
 )
 
 type statementBase struct {
-	stmt Statement
+	stmt       Statement
+	paramCount int
 }
 
 /*
@@ -43,8 +44,22 @@ func subqueryPrivileges(exprs expression.Expressions) (*auth.Privileges, errors.
 }
 
 /*
-	unclassified
+unclassified statement
 */
 func (this *statementBase) Type() string {
 	return ""
+}
+
+/*
+track parameters
+*/
+func (this *statementBase) SetParamsCount(params int) {
+	this.paramCount = params
+}
+
+/*
+does it hae parameters?
+*/
+func (this *statementBase) Params() int {
+	return this.paramCount
 }

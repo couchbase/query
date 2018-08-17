@@ -247,6 +247,11 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		pretty, err = httpArgs.getTristate(PRETTY)
 	}
 
+	var autoPrepare value.Tristate
+	if err == nil {
+		autoPrepare, err = httpArgs.getTristate(AUTO_PREPARE)
+	}
+
 	var consistency *scanConfigImpl
 
 	if err == nil {
@@ -320,6 +325,8 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 			}
 		}
 	}
+
+	rv.SetAutoPrepare(autoPrepare)
 
 	rv.SetTimeout(timeout)
 
@@ -412,6 +419,7 @@ const ( // Request argument names
 	CONTROLS          = "controls"
 	N1QL_FEAT_CTRL    = "n1ql_feat_ctrl"
 	MAX_INDEX_API     = "max_index_api"
+	AUTO_PREPARE      = "auto_prepare"
 )
 
 var _PARAMETERS = []string{
@@ -442,6 +450,7 @@ var _PARAMETERS = []string{
 	CONTROLS,
 	N1QL_FEAT_CTRL,
 	MAX_INDEX_API,
+	AUTO_PREPARE,
 }
 
 func isValidParameter(a string) bool {

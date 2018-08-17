@@ -36,6 +36,7 @@ const (
 	PROFILE         = "profile"
 	CONTROLS        = "controls"
 	N1QLFEATCTRL    = "n1ql-feat-ctrl"
+	AUTOPREPARE     = "auto-prepare"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -62,6 +63,7 @@ var CHECKERS = map[string]Checker{
 	PROFILE:         checkProfileAdmin,
 	CONTROLS:        checkControlsAdmin,
 	N1QLFEATCTRL:    checkNumber,
+	AUTOPREPARE:     checkBool,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

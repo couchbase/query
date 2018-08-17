@@ -304,14 +304,18 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 				"name":            name,
 				"uses":            entry.Uses,
 				"statement":       entry.Prepared.Text(),
-				"encoded_plan":    entry.Prepared.EncodedPlan(),
 				"indexApiVersion": entry.Prepared.IndexApiVersion(),
 				"featureControls": entry.Prepared.FeatureControls(),
+			}
+			if entry.Prepared.EncodedPlan() != "" {
+				itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 			}
 			if req.Method == "POST" {
 				itemMap["plan"] = entry.Prepared.Operator
 			}
-			if entry.Uses > 0 {
+
+			// only give times for entries that have completed at least one execution
+			if entry.Uses > 0 && entry.RequestTime > 0 {
 				itemMap["lastUse"] = entry.LastUse.String()
 				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
 					time.Duration(entry.Uses)).String()
@@ -350,7 +354,9 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			}
 			data[i] = map[string]interface{}{}
 			data[i]["name"] = d.Prepared.Name()
-			data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
+			if d.Prepared.EncodedPlan() != "" {
+				data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
+			}
 			data[i]["statement"] = d.Prepared.Text()
 			data[i]["uses"] = d.Uses
 			if d.Uses > 0 {

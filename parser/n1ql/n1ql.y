@@ -2771,6 +2771,7 @@ param_expr:
 NAMED_PARAM
 {
     $$ = algebra.NewNamedParameter($1)
+    yylex.(*lexer).countParam()
 }
 |
 POSITIONAL_PARAM
@@ -2781,6 +2782,7 @@ POSITIONAL_PARAM
     }
 
     $$ = algebra.NewPositionalParameter(p)
+    yylex.(*lexer).countParam()
 }
 |
 NEXT_PARAM

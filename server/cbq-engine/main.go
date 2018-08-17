@@ -81,6 +81,7 @@ var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed
 var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
 
 var PREPARED_LIMIT = flag.Int("prepared-limit", 16384, "maximum number of prepared statements")
+var AUTO_PREPARE = flag.Bool("auto-prepare", false, "Silently prepare ad hoc statements if possible")
 
 // GOGC
 var _GOGC_PERCENT = 200
@@ -235,6 +236,7 @@ func main() {
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
+	server.SetAutoPrepare(*AUTO_PREPARE)
 	if *ENTERPRISE {
 		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
 	} else {

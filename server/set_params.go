@@ -120,6 +120,11 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	AUTOPREPARE: func(s *Server, o interface{}) errors.Error {
+		value, _ := o.(bool)
+		s.SetAutoPrepare(value)
+		return nil
+	},
 }
 
 func setCompleted(s *Server, o interface{}) errors.Error {

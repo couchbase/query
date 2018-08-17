@@ -37,9 +37,10 @@ import (
 
 // prepared statements cache retrieval options
 const (
-	OPT_TRACK  = 1 << iota // track statement in cache
-	OPT_REMOTE             // check with remote node, if available
-	OPT_VERIFY             // verify that the plan is still valid
+	OPT_TRACK     = 1 << iota // track statement in cache
+	OPT_REMOTE                // check with remote node, if available
+	OPT_VERIFY                // verify that the plan is still valid
+	OPT_METACHECK             // metadata check only
 )
 
 type preparedCache struct {
@@ -228,7 +229,7 @@ func (this *preparedCache) get(name value.Value, track bool) *CacheEntry {
 	return nil
 }
 
-func (this *preparedCache) add(prepared *plan.Prepared, populated bool, process func(*CacheEntry) bool) {
+func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bool, process func(*CacheEntry) bool) {
 
 	// prepare a new entry, if statement does not exist
 	ce := &CacheEntry{
@@ -236,6 +237,11 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, process 
 		MinServiceTime: math.MaxUint64,
 		MinRequestTime: math.MaxUint64,
 		populated:      populated,
+	}
+	when := time.Now()
+	if track {
+		ce.Uses = 1
+		ce.LastUse = when
 	}
 	prepareds.cache.Add(ce, prepared.Name(), func(entry interface{}) util.Operation {
 		var op util.Operation = util.AMEND
@@ -249,6 +255,12 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, process 
 		if cont {
 			oldEntry.Prepared = prepared
 			oldEntry.populated = false
+			if track {
+				atomic.AddInt32(&oldEntry.Uses, 1)
+
+				// as before
+				oldEntry.LastUse = when
+			}
 		} else {
 			op = util.IGNORE
 		}
@@ -256,6 +268,84 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, process 
 	})
 }
 
+// Auto Prepare
+func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64) string {
+
+	// different feature controls and index API version generate different names
+	// so that the same statement prepared differently can coexist
+
+	realm := fmt.Sprintf("%x_%x", indexApiVersion, featureControls)
+	name, err := util.UUIDV5(realm, text)
+
+	// this never happens
+	if err != nil {
+		return ""
+	}
+	return name
+}
+
+func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureControls uint64) *plan.Prepared {
+
+	// for auto prepare, we don't verify or reprepare because that would mean
+	// accepting valid but possibly suboptimal statements
+	// instead, we only check the meta data change counters.
+	// either they match, and we have the latest possible plan, or they don't
+	// in which case we should plan again, so as to match the non AutoPrepare
+	// behaviour
+	// we'll let the caller handle the planning.
+	// The new statement will have the latest change counters, so until we
+	// have a new index no other planning will be necessary
+	prep, err := prepareds.getPrepared(value.NewValue(name), OPT_TRACK|OPT_METACHECK, nil)
+	if err != nil {
+		if err.Code() != errors.NO_SUCH_PREPARED {
+			logging.Infof("Auto Prepare plan fetching failed with %v", err)
+		}
+		return nil
+	}
+
+	// this should never happen
+	if text != prep.Text() {
+		logging.Infof("Auto Prepare found mismatching name and statement %v %v", name, text)
+		return nil
+	}
+	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls {
+		return nil
+	}
+	return prep
+}
+
+func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
+
+	// certain statements we don't cache anyway
+	switch stmt.Type() {
+	case "EXPLAIN":
+		return false
+	case "EXECUTE":
+		return false
+	case "PREPARE":
+		return false
+	case "":
+		return false
+	}
+
+	// we also don't cache anything that might depend on placeholders
+	// (you should be using prepared statements for that anyway!)
+	if stmt.Params() > 0 {
+		return false
+	}
+
+	added := true
+	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
+		added = ce.Prepared.Text() == prepared.Text()
+		if !added {
+			logging.Infof("Auto Prepare found mismatching name and statement %v %v %v", prepared.Name(), prepared.Text(), ce.Prepared.Text())
+		}
+		return added
+	})
+	return added
+}
+
+// Prepareds and system keyspaces
 func CountPrepareds() int {
 	return prepareds.cache.Size()
 }
@@ -287,7 +377,7 @@ func PreparedDo(name string, f func(*CacheEntry)) {
 func AddPrepared(prepared *plan.Prepared) errors.Error {
 	added := true
 
-	prepareds.add(prepared, false, func(ce *CacheEntry) bool {
+	prepareds.add(prepared, false, false, func(ce *CacheEntry) bool {
 		if ce.Prepared.Text() != prepared.Text() {
 			added = false
 		}
@@ -318,7 +408,8 @@ func (prepareds *preparedCache) getPrepared(prepared_stmt value.Value, options u
 
 	track := (options & OPT_TRACK) != 0
 	remote := (options & OPT_REMOTE) != 0
-	verify := (options & OPT_VERIFY) != 0
+	verify := (options & (OPT_VERIFY | OPT_METACHECK)) != 0
+	metaCheck := (options & OPT_METACHECK) != 0
 	switch prepared_stmt.Type() {
 	case value.STRING:
 		var prepared *plan.Prepared
@@ -352,7 +443,7 @@ func (prepareds *preparedCache) getPrepared(prepared_stmt value.Value, options u
 				good = prepared.MetadataCheck()
 
 				// counters have changed. fetch new values
-				if !good {
+				if !good && !metaCheck {
 					good = prepared.Verify()
 				}
 			} else {
@@ -381,7 +472,7 @@ func (prepareds *preparedCache) getPrepared(prepared_stmt value.Value, options u
 			// without blocking the whole prepared cacheline
 			// locking will occur at adding time: both requests will insert,
 			// the last wins
-			if !good {
+			if !good && !metaCheck {
 				prepared, err = reprepare(prepared, phaseTime)
 				if err == nil {
 					err = AddPrepared(prepared)
@@ -486,8 +577,7 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 		}
 	}
 
-	when := time.Now()
-	prepareds.add(prepared, good,
+	prepareds.add(prepared, good, track,
 		func(oldEntry *CacheEntry) bool {
 
 			// MB-19509: if the entry exists already, the new plan must
@@ -496,14 +586,6 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 				oldEntry.Prepared.Text() != prepared.Text() {
 				added = false
 				return added
-			}
-
-			// track the entry if required, whether we amend the plan or
-			// not, as at the end of the statement we will record the
-			// metrics anyway
-			if track {
-				atomic.AddInt32(&oldEntry.Uses, 1)
-				oldEntry.LastUse = when
 			}
 
 			// MB-19659: this is where we decide plan conflict.

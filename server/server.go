@@ -100,6 +100,7 @@ type Server struct {
 	srvprofile  Profile
 	srvcontrols bool
 	whitelist   map[string]interface{}
+	autoPrepare bool
 }
 
 // Default Keep Alive Length
@@ -215,6 +216,18 @@ func (this *Server) Pretty() bool {
 	this.RLock()
 	defer this.RUnlock()
 	return this.pretty
+}
+
+func (this *Server) SetAutoPrepare(autoPrepare bool) {
+	this.Lock()
+	defer this.Unlock()
+	this.autoPrepare = autoPrepare
+}
+
+func (this *Server) AutoPrepare() bool {
+	this.RLock()
+	defer this.RUnlock()
+	return this.autoPrepare
 }
 
 func (this *Server) SetPretty(pretty bool) {
@@ -585,7 +598,27 @@ func (this *Server) serviceRequest(request Request) {
 }
 
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
+	var autoPrepare bool
+	var name string
+
 	prepared := request.Prepared()
+
+	// if Auto Prepare is on, see if we have it already
+	if request.AutoPrepare() == value.NONE {
+		autoPrepare = this.autoPrepare
+	} else {
+		autoPrepare = request.AutoPrepare() == value.TRUE
+	}
+	if prepared == nil && autoPrepare {
+		name = prepareds.GetAutoPrepareName(request.Statement(), request.IndexApiVersion(), request.FeatureControls())
+		if name != "" {
+			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(), request.IndexApiVersion(), request.FeatureControls())
+			request.SetPrepared(prepared)
+		} else {
+			autoPrepare = false
+		}
+	}
+
 	if prepared == nil {
 		parse := time.Now()
 		stmt, err := n1ql.ParseStatement(request.Statement())
@@ -684,6 +717,11 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			}
 		default:
 
+			// even though this is not a prepared statement, add the
+			// text for the benefit of context.Recover(): we can
+			// output the text in case of crashes
+			prepared.SetText(request.Statement())
+
 			// set the type for all statements bar prepare
 			// (doing otherwise would have accounting track prepares
 			// as if they were executions)
@@ -691,12 +729,19 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 				request.SetIsPrepare(true)
 			} else {
 				request.SetType(stmt.Type())
-			}
 
-			// even though this is not a prepared statement, add the
-			// text for the benefit of context.Recover(): we can
-			// output the text in case of crashes
-			prepared.SetText(request.Statement())
+				// if autoPrepare is on and this statement is eligible
+				// save it for the benefit of others
+				if autoPrepare {
+					prepared.SetName(name)
+					prepared.SetIndexApiVersion(request.IndexApiVersion())
+					prepared.SetFeatureControls(request.FeatureControls())
+					// trigger prepare metrics recording
+					if prepareds.AddAutoPreparePlan(stmt, prepared) {
+						request.SetPrepared(prepared)
+					}
+				}
+			}
 		}
 	} else {
 

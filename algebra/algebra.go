@@ -60,6 +60,16 @@ type Statement interface {
 		Returns the statement type, for accounting and other purposes
 	*/
 	Type() string
+
+	/*
+		Sets the parameter count, for AutoPrepare and other purposes
+	*/
+	SetParamsCount(params int)
+
+	/*
+		Returns the parameter count, for AutoPrepare and other purposes
+	*/
+	Params() int
 }
 
 /*

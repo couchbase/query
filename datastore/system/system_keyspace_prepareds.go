@@ -103,14 +103,18 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					"name":            localKey,
 					"uses":            entry.Uses,
 					"statement":       entry.Prepared.Text(),
-					"encoded_plan":    entry.Prepared.EncodedPlan(),
 					"indexApiVersion": entry.Prepared.IndexApiVersion(),
 					"featuresControl": entry.Prepared.FeatureControls(),
+				}
+				if entry.Prepared.EncodedPlan() != "" {
+					itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 				}
 				if node != "" {
 					itemMap["node"] = node
 				}
-				if entry.Uses > 0 {
+
+				// only give times for entries that have completed at least one execution
+				if entry.Uses > 0 && entry.RequestTime > 0 {
 					itemMap["lastUse"] = entry.LastUse.String()
 					itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
 						time.Duration(entry.Uses)).String()

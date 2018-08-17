@@ -39,6 +39,7 @@ func ParseStatement(input string) (algebra.Statement, error) {
 			return nil, err
 		}
 
+		lex.stmt.SetParamsCount(lex.paramCount)
 		return lex.stmt, nil
 	}
 }
@@ -80,6 +81,7 @@ func doParse(lex *lexer) {
 type lexer struct {
 	nex              *Lexer
 	posParam         int
+	paramCount       int
 	errs             []string
 	stmt             algebra.Statement
 	expr             expression.Expression
@@ -145,5 +147,10 @@ func (this *lexer) getText() string { return this.text }
 
 func (this *lexer) nextParam() int {
 	this.posParam++
+	this.paramCount++
 	return this.posParam
+}
+
+func (this *lexer) countParam() {
+	this.paramCount++
 }
