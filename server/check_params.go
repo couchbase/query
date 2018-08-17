@@ -72,8 +72,13 @@ func checkBool(val interface{}) (bool, errors.Error) {
 }
 
 func checkNumber(val interface{}) (bool, errors.Error) {
-	_, ok := val.(float64)
-	return ok, nil
+	switch val.(type) {
+	case int64:
+		return true, nil
+	case float64:
+		return true, nil
+	}
+	return false, nil
 }
 
 func checkObject(val interface{}) (bool, errors.Error) {
@@ -111,11 +116,13 @@ func checkCompleted(val interface{}) (bool, errors.Error) {
 }
 
 func checkPositiveInteger(val interface{}) (bool, errors.Error) {
-	v, ok := val.(float64)
-
-	// we are getting floats here - val doesn't cast to ints
-	// and we want a cache, however small
-	return ok && (v > 1), nil
+	switch val := val.(type) {
+	case int64:
+		return (val > 1), nil
+	case float64:
+		return (val > 1), nil
+	}
+	return false, nil
 }
 
 func checkString(val interface{}) (bool, errors.Error) {

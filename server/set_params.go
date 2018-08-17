@@ -35,7 +35,7 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	KEEPALIVELENGTH: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetKeepAlive(int(value))
 		return nil
 	},
@@ -45,7 +45,7 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	MAXPARALLELISM: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetMaxParallelism(int(value))
 		return nil
 	},
@@ -55,47 +55,47 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	PIPELINECAP: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetPipelineCap(int64(value))
 		return nil
 	},
 	PIPELINEBATCH: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetPipelineBatch(int(value))
 		return nil
 	},
 	REQUESTSIZECAP: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetRequestSizeCap(int(value))
 		return nil
 	},
 	SCANCAP: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetScanCap(int64(value))
 		return nil
 	},
 	SERVICERS: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetServicers(int(value))
 		return nil
 	},
 	TIMEOUTSETTING: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetTimeout(time.Duration(value))
 		return nil
 	},
 	CMPTHRESHOLD: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		return RequestsUpdateQualifier("threshold", int(value))
 	},
 	CMPLIMIT: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		RequestsSetLimit(int(value))
 		return nil
 	},
 	CMPOBJECT: setCompleted,
 	PRPLIMIT: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		prepareds.PreparedsSetLimit(int(value))
 		return nil
 	},
@@ -105,14 +105,14 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	MAXINDEXAPI: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		s.SetMaxIndexAPI(int(value))
 		return nil
 	},
 	PROFILE:  setProfileAdmin,
 	CONTROLS: setControlsAdmin,
 	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
-		value, _ := o.(float64)
+		value := getNumber(o)
 		if s.enterprise {
 			util.SetN1qlFeatureControl(uint64(value))
 		} else {
@@ -125,6 +125,16 @@ var _SETTERS = map[string]Setter{
 		s.SetAutoPrepare(value)
 		return nil
 	},
+}
+
+func getNumber(o interface{}) float64 {
+	switch o := o.(type) {
+	case int64:
+		return float64(o)
+	case float64:
+		return o
+	}
+	return -1
 }
 
 func setCompleted(s *Server, o interface{}) errors.Error {
