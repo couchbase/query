@@ -484,18 +484,6 @@ func (prepareds *preparedCache) getPrepared(prepared_stmt value.Value, options u
 			return nil, errors.NewNoSuchPreparedError(name)
 		}
 		return prepared, nil
-	case value.OBJECT:
-		name_value, has_name := prepared_stmt.Field("name")
-		if has_name {
-			if ce := prepareds.get(name_value, track); ce != nil {
-				return ce.Prepared, nil
-			}
-		}
-		prepared_bytes, err := prepared_stmt.MarshalJSON()
-		if err != nil {
-			return nil, errors.NewUnrecognizedPreparedError(err)
-		}
-		return unmarshalPrepared(prepared_bytes, phaseTime)
 	default:
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}

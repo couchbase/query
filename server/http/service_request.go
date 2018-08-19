@@ -98,16 +98,12 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		// MB-18841 (encoded_plan processing affects latency)
 		// MB-19509 (encoded_plan may corrupt cache)
 		// MB-19659 (spurious 4080 on multi node reprepare)
+		// MB-27355 / MB-27778 (distrubute plans / deprecate encoded_plan)
 		// If an encoded_plan has been supplied, only decode it
-		// when the prepared statement can't be found or the plan
-		// is different.
-		// DecodePrepared() will make sure that the plan is only
-		// updated if it matches the REST API encoded_plan
-		// requirements.
+		// when the prepared statement can't be found, for backwards
+		// compatibility with older SDKs
 		if encoded_plan != "" && plan_err == nil &&
-			((err != nil && err.Code() == errors.NO_SUCH_PREPARED) ||
-				(err == nil && prepared != nil &&
-					prepared.MismatchingEncodedPlan(encoded_plan))) {
+			err != nil && err.Code() == errors.NO_SUCH_PREPARED {
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
