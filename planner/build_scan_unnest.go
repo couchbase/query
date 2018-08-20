@@ -10,11 +10,8 @@
 package planner
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
@@ -91,13 +88,6 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	var andTerms []expression.Expression
 
 	nlen := 1 + len(unnests)
-	for _, unnest := range unnests {
-		unnestKeyspace, ok := this.baseKeyspaces[unnest.Alias()]
-		if !ok {
-			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildUnnestScan: missing baseKeyspace %s", unnest.Alias()))
-		}
-		nlen += len(unnestKeyspace.filters) + len(unnestKeyspace.joinfilters)
-	}
 	if nlen <= len(andBuf) {
 		andTerms = andBuf[0:0]
 	} else {
@@ -108,34 +98,10 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		andTerms = append(andTerms, pred.Copy())
 	}
 
-	primaries := make(map[string]expression.Expression, len(unnests))
-	primaries[node.Alias()] = expression.NewIdentifier(node.Alias())
-
 	for _, unnest := range unnests {
 		unnestIdent := expression.NewIdentifier(unnest.Alias())
 		unnestIdent.SetUnnestAlias(true)
 		andTerms = append(andTerms, expression.NewIsNotMissing(unnestIdent))
-
-		for _, kexpr := range primaries {
-			if unnest.Expression().DependsOn(kexpr) {
-				primaries[unnest.Alias()] = unnestIdent
-				break
-			}
-		}
-
-		unnestKeyspace, _ := this.baseKeyspaces[unnest.Alias()]
-		// MB-25949, includes predicates on the unnested alias
-		for _, fl := range unnestKeyspace.filters {
-			andTerms = append(andTerms, fl.fltrExpr)
-		}
-		// MB-28720, includes join predicates that only refer to primary term
-		// MB-30292, in case of multiple levels of unnest, include join predicates
-		//           that only refers to aliases in the multiple levels of unnest
-		for _, jfl := range unnestKeyspace.joinfilters {
-			if jfl.singleJoinFilter(primaries) {
-				andTerms = append(andTerms, jfl.fltrExpr)
-			}
-		}
 	}
 
 	pred = expression.NewAnd(andTerms...)
@@ -214,6 +180,50 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 type opEntry struct {
 	Op  plan.SecondaryScan
 	Len int
+}
+
+func addUnnestPreds(baseKeyspaces map[string]*baseKeyspace, primary *baseKeyspace) {
+	primaries := make(map[string]bool, len(baseKeyspaces))
+	primaries[primary.name] = true
+	nlen := 0
+
+	for _, unnestKeyspace := range baseKeyspaces {
+		if unnestKeyspace.IsPrimaryUnnest() {
+			nlen += len(unnestKeyspace.filters)
+			nlen += len(unnestKeyspace.joinfilters)
+			primaries[unnestKeyspace.name] = true
+		}
+	}
+
+	if nlen == 0 {
+		return
+	}
+
+	newfilters := make(Filters, 0, nlen)
+
+	for _, unnestKeyspace := range baseKeyspaces {
+		if unnestKeyspace.IsPrimaryUnnest() {
+			// MB-25949, includes predicates on the unnested alias
+			for _, fl := range unnestKeyspace.filters {
+				newfltr := fl.Copy()
+				newfltr.setUnnest()
+				newfilters = append(newfilters, newfltr)
+			}
+			// MB-28720, includes join predicates that only refer to primary term
+			// MB-30292, in case of multiple levels of unnest, include join predicates
+			//           that only refers to aliases in the multiple levels of unnest
+			for _, jfl := range unnestKeyspace.joinfilters {
+				if jfl.singleJoinFilter(primaries) {
+					newfltr := jfl.Copy()
+					newfltr.setUnnest()
+					newfilters = append(newfilters, newfltr)
+				}
+			}
+		}
+	}
+
+	primary.filters = append(primary.filters, newfilters...)
+	return
 }
 
 /*

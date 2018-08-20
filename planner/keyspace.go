@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	KS_PLAN_DONE     = 1 << iota // planning is done for this keyspace
-	KS_ONCLAUSE_ONLY             // use ON-clause only for planning
+	KS_PLAN_DONE      = 1 << iota // planning is done for this keyspace
+	KS_ONCLAUSE_ONLY              // use ON-clause only for planning
+	KS_PRIMARY_UNNEST             // primary unnest
 )
 
 type baseKeyspace struct {
@@ -50,6 +51,14 @@ func (this *baseKeyspace) OnclauseOnly() bool {
 
 func (this *baseKeyspace) SetOnclauseOnly() {
 	this.ksFlags |= KS_ONCLAUSE_ONLY
+}
+
+func (this *baseKeyspace) IsPrimaryUnnest() bool {
+	return (this.ksFlags & KS_PRIMARY_UNNEST) != 0
+}
+
+func (this *baseKeyspace) SetPrimaryUnnest() {
+	this.ksFlags |= KS_PRIMARY_UNNEST
 }
 
 func copyBaseKeyspaces(src map[string]*baseKeyspace) map[string]*baseKeyspace {

@@ -421,7 +421,36 @@
                 },
                 10
             ]
-        }    ]
+        }
+    ]
+    },
+    {
+        "testcase": "Unnest scan with array index key only, OR clause. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 END"
+        },
+        "statements":"SELECT v1 FROM orders AS o UNNEST o.a1 AS v1 WHERE o.test_id = \"ua\" AND (v1 = 1 OR v1 = 2) ORDER BY v1",
+        "Results": [
+        {
+            "v1": 1
+        },
+        {
+            "v1": 1
+        },
+        {
+            "v1": 2
+        },
+        {
+            "v1": 2
+        }
+    ]
     }
 
 ]
