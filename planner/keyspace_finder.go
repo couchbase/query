@@ -21,12 +21,15 @@ import (
 type keyspaceFinder struct {
 	baseKeyspaces    map[string]*baseKeyspace
 	pushableOnclause expression.Expression
+	unnestDepends    map[string]*expression.Identifier
 }
 
-func newKeyspaceFinder(baseKeyspaces map[string]*baseKeyspace) *keyspaceFinder {
+func newKeyspaceFinder(baseKeyspaces map[string]*baseKeyspace, primary string) *keyspaceFinder {
 	rv := &keyspaceFinder{
 		baseKeyspaces: baseKeyspaces,
 	}
+	rv.unnestDepends = make(map[string]*expression.Identifier, len(baseKeyspaces))
+	rv.unnestDepends[primary] = expression.NewIdentifier(primary)
 	return rv
 }
 
@@ -131,7 +134,24 @@ func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-	return nil, this.addKeyspaceAlias(node.Alias())
+
+	err = this.addKeyspaceAlias(node.Alias())
+	if err != nil {
+		return nil, err
+	}
+
+	if !node.Outer() {
+		for _, unnest := range this.unnestDepends {
+			if node.Expression().DependsOn(unnest) {
+				ks, _ := this.baseKeyspaces[node.Alias()]
+				ks.SetPrimaryUnnest()
+				this.unnestDepends[node.Alias()] = expression.NewIdentifier(node.Alias())
+				break
+			}
+		}
+	}
+
+	return nil, nil
 }
 
 func (this *keyspaceFinder) VisitUnion(node *algebra.Union) (interface{}, error) {

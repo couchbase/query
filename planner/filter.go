@@ -21,6 +21,7 @@ const (
 	FLTR_IS_JOIN     = 1 << iota // is this originally a join filter
 	FLTR_IS_ONCLAUSE             // is this an ON-clause filter for ANSI JOIN
 	FLTR_IS_DERIVED              // is this a derived filter
+	FLTR_IS_UNNEST               // is this ann unnest filter (inherited)
 )
 
 type Filter struct {
@@ -49,6 +50,21 @@ func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bo
 	return rv
 }
 
+func (this *Filter) Copy() *Filter {
+	rv := &Filter{
+		fltrExpr:  this.fltrExpr.Copy(),
+		origExpr:  this.origExpr.Copy(),
+		fltrFlags: this.fltrFlags,
+	}
+
+	rv.keyspaces = make(map[string]bool, len(this.keyspaces))
+	for key, value := range this.keyspaces {
+		rv.keyspaces[key] = value
+	}
+
+	return rv
+}
+
 func (this *Filter) isOnclause() bool {
 	return (this.fltrFlags & FLTR_IS_ONCLAUSE) != 0
 }
@@ -61,8 +77,16 @@ func (this *Filter) isDerived() bool {
 	return (this.fltrFlags & FLTR_IS_DERIVED) != 0
 }
 
+func (this *Filter) isUnnest() bool {
+	return (this.fltrFlags & FLTR_IS_UNNEST) != 0
+}
+
+func (this *Filter) setUnnest() {
+	this.fltrFlags |= FLTR_IS_UNNEST
+}
+
 // check whether the join filter is a single join filter involving any of the keyspaces provided
-func (this *Filter) singleJoinFilter(unnestKeyspaces map[string]expression.Expression) bool {
+func (this *Filter) singleJoinFilter(unnestKeyspaces map[string]bool) bool {
 	for ks, _ := range this.keyspaces {
 		if _, ok := unnestKeyspaces[ks]; !ok {
 			return false

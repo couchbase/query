@@ -35,7 +35,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 		// gather keyspace references
 		this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
-		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces)
+		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces, this.from.PrimaryTerm().Alias())
 		_, err := node.From().Accept(keyspaceFinder)
 		if err != nil {
 			return err
