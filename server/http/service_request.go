@@ -87,7 +87,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	var prepared *plan.Prepared
-
 	if err == nil {
 		var decoded_plan *plan.Prepared
 		var prepared_name string
@@ -123,8 +122,12 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		}
 	}
 
-	if err == nil && statement == "" && prepared == nil {
-		err = errors.NewServiceErrorMissingValue("statement or prepared")
+	if err == nil {
+		if statement == "" && prepared == nil {
+			err = errors.NewServiceErrorMissingValue("statement or prepared")
+		} else if statement != "" && prepared != nil {
+			err = errors.NewServiceErrorMultipleValues("statement and prepared")
+		}
 	}
 
 	var namedArgs map[string]value.Value
@@ -209,10 +212,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	var format Format
 	if err == nil {
 		format, err = getFormat(httpArgs)
-	}
 
-	if err == nil && format != JSON {
-		err = errors.NewServiceErrorNotImplemented("format", format.String())
+		if err == nil && format != JSON {
+			err = errors.NewServiceErrorNotImplemented("format", format.String())
+		}
 	}
 
 	var signature value.Tristate
@@ -223,19 +226,19 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	var compression Compression
 	if err == nil {
 		compression, err = getCompression(httpArgs)
-	}
 
-	if err == nil && compression != NONE {
-		err = errors.NewServiceErrorNotImplemented("compression", compression.String())
+		if err == nil && compression != NONE {
+			err = errors.NewServiceErrorNotImplemented("compression", compression.String())
+		}
 	}
 
 	var encoding Encoding
 	if err == nil {
 		encoding, err = getEncoding(httpArgs)
-	}
 
-	if err == nil && encoding != UTF8 {
-		err = errors.NewServiceErrorNotImplemented("encoding", encoding.String())
+		if err == nil && encoding != UTF8 {
+			err = errors.NewServiceErrorNotImplemented("encoding", encoding.String())
+		}
 	}
 
 	var pretty value.Tristate
@@ -249,7 +252,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	var consistency *scanConfigImpl
-
 	if err == nil {
 		consistency, err = getScanConfiguration(httpArgs)
 	}
@@ -418,35 +420,35 @@ const ( // Request argument names
 	AUTO_PREPARE      = "auto_prepare"
 )
 
-var _PARAMETERS = []string{
-	STATEMENT,
-	PREPARED,
-	ENCODED_PLAN,
-	CREDS,
-	ARGS,
-	TIMEOUT,
-	SCAN_CONSISTENCY,
-	SCAN_WAIT,
-	SCAN_VECTOR,
-	SCAN_VECTORS,
-	MAX_PARALLELISM,
-	SCAN_CAP,
-	PIPELINE_CAP,
-	PIPELINE_BATCH,
-	READONLY,
-	METRICS,
-	NAMESPACE,
-	FORMAT,
-	ENCODING,
-	COMPRESSION,
-	SIGNATURE,
-	PRETTY,
-	CLIENT_CONTEXT_ID,
-	PROFILE,
-	CONTROLS,
-	N1QL_FEAT_CTRL,
-	MAX_INDEX_API,
-	AUTO_PREPARE,
+var _PARAMETERS = map[string]bool{
+	STATEMENT:         true,
+	PREPARED:          true,
+	ENCODED_PLAN:      true,
+	CREDS:             true,
+	ARGS:              true,
+	TIMEOUT:           true,
+	SCAN_CONSISTENCY:  true,
+	SCAN_WAIT:         true,
+	SCAN_VECTOR:       true,
+	SCAN_VECTORS:      true,
+	MAX_PARALLELISM:   true,
+	SCAN_CAP:          true,
+	PIPELINE_CAP:      true,
+	PIPELINE_BATCH:    true,
+	READONLY:          true,
+	METRICS:           true,
+	NAMESPACE:         true,
+	FORMAT:            true,
+	ENCODING:          true,
+	COMPRESSION:       true,
+	SIGNATURE:         true,
+	PRETTY:            true,
+	CLIENT_CONTEXT_ID: true,
+	PROFILE:           true,
+	CONTROLS:          true,
+	N1QL_FEAT_CTRL:    true,
+	MAX_INDEX_API:     true,
+	AUTO_PREPARE:      true,
 }
 
 func isValidParameter(a string) bool {
@@ -458,23 +460,14 @@ func isValidParameter(a string) bool {
 	if strings.IndexRune(a, '$') == 0 {
 		return true
 	}
-	for _, p := range _PARAMETERS {
-		if strings.EqualFold(p, a) {
-			return true
-		}
-	}
-	return false
+
+	return _PARAMETERS[a]
 }
 
 func getPrepared(a httpRequestArgs, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
-	prepared_field, err := a.getValue(PREPARED)
+	prepared_field, err := a.getPrepared()
 	if err != nil || prepared_field == nil {
 		return "", nil, err
-	}
-
-	// MB-25351: accept non quoted prepared names (much like the actual PREPARE statement)
-	if prepared_field.Type() == value.BINARY {
-		prepared_field = value.NewValue(string(prepared_field.Actual().([]byte)))
 	}
 
 	// Monitoring API: track prepared statement access
@@ -738,7 +731,7 @@ func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Erro
 type httpRequestArgs interface {
 	getString(string, string) (string, errors.Error)
 	getTristate(f string) (value.Tristate, errors.Error)
-	getValue(field string) (value.Value, errors.Error)
+	getPrepared() (value.Value, errors.Error)
 	getDuration(string) (time.Duration, errors.Error)
 	getNamedArgs() (map[string]value.Value, errors.Error)
 	getPositionalArgs() (value.Values, errors.Error)
@@ -777,16 +770,35 @@ func getRequestParams(req *http.Request) (httpRequestArgs, errors.Error) {
 // urlArgs is an implementation of httpRequestArgs that reads
 // request arguments from a url-encoded http request
 type urlArgs struct {
-	req *http.Request
+	req   *http.Request
+	named map[string]value.Value
 }
 
 func newUrlArgs(req *http.Request) (*urlArgs, errors.Error) {
-	for arg, _ := range req.Form {
-		if !isValidParameter(arg) {
-			return nil, errors.NewServiceErrorUnrecognizedParameter(arg)
+	var named map[string]value.Value
+
+	for arg, val := range req.Form {
+		newArg := strings.TrimSpace(strings.ToLower(arg))
+		if !isValidParameter(newArg) {
+			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
+		}
+		if newArg[0] == '$' {
+			delete(req.Form, arg)
+			switch len(val) {
+			case 0:
+				//This is an error - there _has_ to be a value for a named argument
+				return nil, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", arg))
+			case 1:
+				named = addNamedArg(named, newArg, value.NewValue([]byte(util.TrimSpace(val[0]))))
+			default:
+				return nil, errors.NewServiceErrorMultipleValues(arg)
+			}
+		} else if arg != newArg {
+			delete(req.Form, arg)
+			req.Form[newArg] = val
 		}
 	}
-	return &urlArgs{req: req}, nil
+	return &urlArgs{req: req, named: named}, nil
 }
 
 func (this *urlArgs) getStatement() (string, errors.Error) {
@@ -809,23 +821,7 @@ func (this *urlArgs) getStatement() (string, errors.Error) {
 
 // A named argument is an argument of the form: $<identifier>=json_value
 func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
-	var args map[string]value.Value
-
-	for name, _ := range this.req.Form {
-		if !strings.HasPrefix(util.TrimSpace(name), "$") {
-			continue
-		}
-		arg, err := this.formValue(name)
-		if err != nil {
-			return args, err
-		}
-		if len(arg) == 0 {
-			//This is an error - there _has_ to be a value for a named argument
-			return args, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", name))
-		}
-		args = addNamedArg(args, name, value.NewValue([]byte(arg)))
-	}
-	return args, nil
+	return this.named, nil
 }
 
 func getJsonDecoder(r io.Reader) (*json.Decoder, errors.Error) {
@@ -846,16 +842,13 @@ func (this *urlArgs) getPositionalArgs() (value.Values, errors.Error) {
 
 	var args []interface{}
 
-	decoder, err := getJsonDecoder(strings.NewReader(args_field))
-	if err != nil {
-		return positionalArgs, err
-	}
-	e := decoder.Decode(&args)
+	e := json.Unmarshal([]byte(args_field), &args)
 	if e != nil {
 		return positionalArgs, errors.NewServiceErrorBadValue(go_errors.New("unable to parse args parameter as array"), ARGS)
 	}
 
 	positionalArgs = make([]value.Value, len(args))
+
 	// Put each element of args into positionalArgs
 	for i, arg := range args {
 		positionalArgs[i] = value.NewValue(arg)
@@ -926,11 +919,7 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	}
 
 	var target interface{}
-	decoder, err := getJsonDecoder(strings.NewReader(scan_vector_data_field))
-	if err != nil {
-		return nil, err
-	}
-	e := decoder.Decode(&target)
+	e := json.Unmarshal([]byte(scan_vector_data_field), &target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse scan vector"), SCAN_VECTOR)
 	}
@@ -946,11 +935,7 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 	}
 
 	var target interface{}
-	decoder, err := getJsonDecoder(strings.NewReader(scan_vectors_data_field))
-	if err != nil {
-		return nil, err
-	}
-	e := decoder.Decode(&target)
+	e := json.Unmarshal([]byte(scan_vectors_data_field), &target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse scan vectors"), SCAN_VECTORS)
 	}
@@ -1000,11 +985,7 @@ func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 
 	creds_field, err := this.formValue(CREDS)
 	if err == nil && creds_field != "" {
-		decoder, err := getJsonDecoder(strings.NewReader(creds_field))
-		if err != nil {
-			return creds_data, err
-		}
-		e := decoder.Decode(&creds_data)
+		e := json.Unmarshal([]byte(creds_field), &creds_data)
 		if e != nil {
 			err = errors.NewServiceErrorBadValue(go_errors.New("unable to parse creds"), CREDS)
 		}
@@ -1012,25 +993,26 @@ func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 	return creds_data, err
 }
 
-func (this *urlArgs) getValue(field string) (value.Value, errors.Error) {
+func (this *urlArgs) getPrepared() (value.Value, errors.Error) {
 	var val value.Value
-	value_field, err := this.getString(field, "")
-	if err == nil && value_field != "" {
-		val = value.NewValue([]byte(value_field))
+
+	value_field, err := this.formValue(PREPARED)
+	if value_field == "" || err != nil {
+		return val, err
 	}
-	return val, err
+
+	// MB-25351: accept non quoted prepared names (much like the actual PREPARE statement)
+	if value_field[0] != '"' {
+		val = value.NewValue(value_field)
+	} else {
+		val = value.NewValue(strings.Trim(value_field, "\""))
+	}
+
+	return val, nil
 }
 
-// To handle cases where the inp req contains spaces before and after the
-// query param add Trimspace().
 func (this *urlArgs) getField(field string) []string {
-	for name, value := range this.req.Form {
-
-		if strings.EqualFold(util.TrimSpace(field), util.TrimSpace(name)) {
-			return value
-		}
-	}
-	return nil
+	return this.req.Form[field]
 }
 
 func (this *urlArgs) formValue(field string) (string, errors.Error) {
@@ -1049,8 +1031,9 @@ func (this *urlArgs) formValue(field string) (string, errors.Error) {
 // jsonArgs is an implementation of httpRequestArgs that reads
 // request arguments from a json-encoded http request
 type jsonArgs struct {
-	args map[string]interface{}
-	req  *http.Request
+	args  map[string]interface{}
+	named map[string]value.Value
+	req   *http.Request
 }
 
 // create a jsonArgs structure from the given http request.
@@ -1064,9 +1047,17 @@ func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 	if err != nil {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse JSON"), "JSON request body")
 	}
-	for arg, _ := range p.args {
-		if !isValidParameter(arg) {
-			return nil, errors.NewServiceErrorUnrecognizedParameter(arg)
+	for arg, val := range p.args {
+		newArg := strings.TrimSpace(strings.ToLower(arg))
+		if !isValidParameter(newArg) {
+			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
+		}
+		if newArg[0] == '$' {
+			delete(p.args, arg)
+			p.named = addNamedArg(p.named, arg, value.NewValue(val))
+		} else if arg != newArg {
+			delete(p.args, arg)
+			p.args[newArg] = val
 		}
 	}
 	p.req = req
@@ -1074,12 +1065,8 @@ func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 }
 
 func (this *jsonArgs) getField(field string) (interface{}, bool) {
-	for name, value := range this.args {
-		if strings.EqualFold(field, name) {
-			return value, true
-		}
-	}
-	return nil, false
+	value, ok := this.args[field]
+	return value, ok
 }
 
 func (this *jsonArgs) getStatement() (string, errors.Error) {
@@ -1087,14 +1074,7 @@ func (this *jsonArgs) getStatement() (string, errors.Error) {
 }
 
 func (this *jsonArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
-	var args map[string]value.Value
-	for name, arg := range this.args {
-		if !strings.HasPrefix(name, "$") {
-			continue
-		}
-		args = addNamedArg(args, name, value.NewValue(arg))
-	}
-	return args, nil
+	return this.named, nil
 }
 
 func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
@@ -1234,9 +1214,10 @@ func (this *jsonArgs) getString(f string, dflt string) (string, errors.Error) {
 	return value, nil
 }
 
-func (this *jsonArgs) getValue(f string) (value.Value, errors.Error) {
+func (this *jsonArgs) getPrepared() (value.Value, errors.Error) {
 	var val value.Value
-	value_field, in_request := this.getField(f)
+
+	value_field, in_request := this.getField(PREPARED)
 	if !in_request {
 		return val, nil
 	}

@@ -45,8 +45,10 @@ func NewServiceErrorMissingValue(feature string) Error {
 		InternalMsg: fmt.Sprintf("No %s value", feature), InternalCaller: CallerN(1)}
 }
 
+const SERVICE_MULTIPLE_VALUES = 1060
+
 func NewServiceErrorMultipleValues(feature string) Error {
-	return &err{level: EXCEPTION, ICode: 1060, IKey: "service.io.request.multiple_values",
+	return &err{level: EXCEPTION, ICode: SERVICE_MULTIPLE_VALUES, IKey: "service.io.request.multiple_values",
 		InternalMsg: fmt.Sprintf("Multiple values for %s.", feature), InternalCaller: CallerN(1)}
 }
 

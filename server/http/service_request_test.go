@@ -294,6 +294,9 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 		"args":         insertArgs,
 	})
 
+	// { "prepared": "name", "statement": "statement text" }  fails with "multiple values" error
+	doPreparedAndStatement(t, name, stmt)
+
 }
 
 func doNoSuchPrepared(t *testing.T, name string) {
@@ -343,6 +346,27 @@ func doPreparedNameOnly(t *testing.T, name string) {
 	doJsonRequest(t, map[string]interface{}{
 		"prepared": name,
 	})
+}
+
+func doPreparedAndStatement(t *testing.T, name string, stmt string) {
+	payload := map[string]interface{}{
+		"prepared":  name,
+		"statement": stmt,
+	}
+
+	_, err := doJsonEncodedPost(payload)
+	if err != nil {
+		t.Errorf("Unexpected error in HTTP request: %v", err)
+	}
+
+	errs := test_server.request().Errors()
+	if len(errs) == 0 {
+		t.Errorf("Expected error: %v multiple values, got nothing", errors.SERVICE_MULTIPLE_VALUES)
+	} else if len(errs) > 1 {
+		t.Errorf("Expected error: %v multiple values, got %v", errors.SERVICE_MULTIPLE_VALUES, errs)
+	} else if errs[0].Code() != errors.SERVICE_MULTIPLE_VALUES {
+		t.Errorf("Expected error condition: multiple values. Received: %v", errs[0])
+	}
 }
 
 func doJsonRequest(t *testing.T, payload map[string]interface{}) {
