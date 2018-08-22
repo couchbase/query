@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -30,10 +31,20 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
+// known nodes
+type knownNode struct {
+	node       clustering.QueryNode
+	lastAccess time.Time
+}
+
+const _GRACE_PERIOD = 5 * time.Minute
+
 // http implementation of SystemRemoteAccess
 type systemRemoteHttp struct {
+	sync.RWMutex
 	state       clustering.Mode
 	configStore clustering.ConfigurationStore
+	knownNodes  map[string]*knownNode
 }
 
 func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) distributed.SystemRemoteAccess {
@@ -144,7 +155,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					continue
 				}
 
-				body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
+				body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
 				if opErr != nil {
 					if warnFn != nil {
 						warnFn(opErr)
@@ -178,7 +189,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			queryNode, err := getQueryNode(this.configStore, node, "scan", endpoint)
+			queryNode, err := this.getQueryNode(node, "scan", endpoint)
 			if err != nil {
 				if warnFn != nil {
 					warnFn(err)
@@ -186,7 +197,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			body, opErr := doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
+			body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
 			if opErr != nil {
 				if warnFn != nil {
 					warnFn(opErr)
@@ -217,7 +228,7 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 	var body []byte
 	var doc map[string]interface{}
 
-	queryNode, err := getQueryNode(this.configStore, node, "fetch", endpoint)
+	queryNode, err := this.getQueryNode(node, "fetch", endpoint)
 	if err != nil {
 		if warnFn != nil {
 			warnFn(err)
@@ -225,7 +236,7 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		return
 	}
 
-	body, opErr := doRemoteOp(queryNode, endpoint+"/"+key, command, "", "fetch", creds, authToken)
+	body, opErr := this.doRemoteOp(queryNode, endpoint+"/"+key, command, "", "fetch", creds, authToken)
 	if opErr != nil {
 		if warnFn != nil {
 			warnFn(opErr)
@@ -291,7 +302,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 					continue
 				}
 
-				_, opErr := doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
+				_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
 				if warnFn != nil {
 					warnFn(opErr)
 				}
@@ -307,7 +318,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 				continue
 			}
 
-			queryNode, err := getQueryNode(this.configStore, node, "scan", endpoint)
+			queryNode, err := this.getQueryNode(node, "scan", endpoint)
 			if err != nil {
 				if warnFn != nil {
 					warnFn(err)
@@ -315,7 +326,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 				continue
 			}
 
-			_, opErr := doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
+			_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
 			if warnFn != nil {
 				warnFn(opErr)
 			}
@@ -347,7 +358,7 @@ var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10}
 var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
 
 // helper for the REST op
-func doRemoteOp(node clustering.QueryNode, endpoint string, command string, data string, op string,
+func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint string, command string, data string, op string,
 	creds distributed.Creds, authToken string) ([]byte, errors.Error) {
 	var reader io.Reader
 
@@ -384,6 +395,21 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, data
 		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
 	}
 
+	// save this query node for posterity
+	this.RLock()
+	k, ok := this.knownNodes[node.Name()]
+	if ok && k.node == node {
+		k.lastAccess = time.Now()
+		this.RUnlock()
+	} else {
+		this.RUnlock()
+		this.Lock()
+
+		k = &knownNode{node: node, lastAccess: time.Now()}
+		this.knownNodes[node.Name()] = k
+		this.Unlock()
+	}
+
 	// we got a response, but the operation failed: extract the error
 	if resp.StatusCode != 200 {
 		var opErr errors.Error
@@ -402,12 +428,19 @@ func doRemoteOp(node clustering.QueryNode, endpoint string, command string, data
 }
 
 // helper to map a node name to a node
-func getQueryNode(configStore clustering.ConfigurationStore, node string, op string, endpoint string) (clustering.QueryNode, errors.Error) {
-	if configStore == nil {
+func (this *systemRemoteHttp) getQueryNode(node string, op string, endpoint string) (clustering.QueryNode, errors.Error) {
+	this.RLock()
+	k := this.knownNodes[node]
+	this.RUnlock()
+	if k != nil && time.Since(k.lastAccess) < _GRACE_PERIOD {
+		return k.node, nil
+	}
+
+	if this.configStore == nil {
 		return nil, errors.NewSystemRemoteWarning(goErr.New("missing config store"), op, endpoint)
 	}
 
-	cm := configStore.ConfigurationManager()
+	cm := this.configStore.ConfigurationManager()
 	clusters, err := cm.GetClusters()
 	if err != nil {
 		return nil, err
