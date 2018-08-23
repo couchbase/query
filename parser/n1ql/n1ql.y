@@ -16,6 +16,7 @@ func logDebugGrammar(format string, v ...interface{}) {
 
 %union {
 s string
+u32 uint32
 n int64
 f float64
 b bool
@@ -187,6 +188,7 @@ tokOffset	 int
 %token NOT
 %token NOT_A_TOKEN
 %token NULL
+%token NULLS
 %token NUMBER
 %token OBJECT
 %token OFFSET
@@ -406,6 +408,9 @@ tokOffset	 int
 %type <ss>               role_list
 %type <s>                role_name
 %type <s>                user
+
+%type <u32>              opt_nulls
+%type <b>                first_last nulls
 
 %start input
 
@@ -1381,9 +1386,9 @@ sort_terms COMMA sort_term
 ;
 
 sort_term:
-expr opt_dir
+expr opt_dir opt_nulls
 {
-    $$ = algebra.NewSortTerm($1, $2)
+    $$ = algebra.NewSortTerm($1, $2, algebra.NewOrderNullsPos($2,$3))
 }
 ;
 
@@ -1408,6 +1413,27 @@ DESC
 }
 ;
 
+opt_nulls:
+/* empty */
+{
+    $$ = algebra.NewOrderNulls(true,false,false)
+}
+|
+nulls first_last
+{
+    $$ = algebra.NewOrderNulls(false, $1,$2)
+}
+;
+
+first_last:
+FIRST { $$ = false }
+|
+LAST { $$ = true }
+;
+
+nulls:
+NULLS { $$ = true }
+;
 
 /*************************************************
  *

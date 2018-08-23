@@ -75,16 +75,18 @@ value that decides the sort order (ASC or DESC).
 type SortTerm struct {
 	expr       expression.Expression `json:"expr"`
 	descending bool                  `json:"desc"`
+	nullsPos   bool                  `json:"nulls_pos"`
 }
 
 /*
 The function NewSortTerm returns a pointer to the SortTerm
 struct that has its fields set to the input arguments.
 */
-func NewSortTerm(expr expression.Expression, descending bool) *SortTerm {
+func NewSortTerm(expr expression.Expression, descending, nullsPos bool) *SortTerm {
 	return &SortTerm{
 		expr:       expr,
 		descending: descending,
+		nullsPos:   nullsPos,
 	}
 }
 
@@ -96,6 +98,11 @@ func (this *SortTerm) String() string {
 
 	if this.descending {
 		s += " desc"
+		if this.NullsPos() {
+			s += " NULLS FIRST"
+		}
+	} else if this.NullsPos() {
+		s += " NULLS LAST"
 	}
 
 	return s
@@ -114,6 +121,10 @@ Return bool value representing ASC or DESC sort order.
 */
 func (this *SortTerm) Descending() bool {
 	return this.descending
+}
+
+func (this *SortTerm) NullsPos() bool {
+	return this.nullsPos
 }
 
 /*
@@ -158,4 +169,27 @@ func (this SortTerms) String() string {
 	}
 
 	return s
+}
+
+const (
+	ORDER_NULLS_NONE = 1 << iota
+	ORDER_NULLS_FIRST
+	ORDER_NULLS_LAST
+)
+
+func NewOrderNulls(none, nulls, last bool) (r uint32) {
+	if none {
+		r |= ORDER_NULLS_NONE
+	} else if nulls {
+		if last {
+			r |= ORDER_NULLS_LAST
+		} else {
+			r |= ORDER_NULLS_FIRST
+		}
+	}
+	return
+}
+
+func NewOrderNullsPos(descending bool, nulls uint32) bool {
+	return (!descending && (nulls&ORDER_NULLS_LAST) != 0) || (descending && (nulls&ORDER_NULLS_FIRST) != 0)
 }

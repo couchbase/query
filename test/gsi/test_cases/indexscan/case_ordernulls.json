@@ -1,0 +1,456 @@
+[
+    {
+        "testcase": "default nulls order. ASC index. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS NOT MISSING END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 ORDER BY d.c2, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c3": 1003,
+                "c4": 10003
+            },
+            {
+                "c3": 1004,
+                "c4": 10004
+            },
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            },
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            }
+        ]
+    },
+    {
+        "testcase": "NULLS FIRST order. ASC index. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS NOT MISSING END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 ORDER BY d.c2 NULLS FIRST, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c3": 1003,
+                "c4": 10003
+            },
+            {
+                "c3": 1004,
+                "c4": 10004
+            },
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            },
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            }
+        ]
+    },
+    {
+        "testcase": "ASC NULLS LAST order. ASC index. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS MISSING END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.sort_terms[0].nulls_pos END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 ORDER BY d.c2 NULLS LAST, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            },
+            {
+                "c3": 1003,
+                "c4": 10003
+            },
+            {
+                "c3": 1004,
+                "c4": 10004
+            },
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            }
+        ]
+    },
+    {
+        "testcase": "DESC order. ASC index. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS MISSING END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.sort_terms[0].nulls_pos IS MISSING END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 ORDER BY d.c2 DESC, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            },
+            {
+                "c3": 1003,
+                "c4": 10003
+            },
+            {
+                "c3": 1004,
+                "c4": 10004
+            }
+        ]
+    },
+    {
+        "testcase": "DESC NULLS FIRST order. ASC index. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS MISSING END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.sort_terms[0].nulls_pos END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 ORDER BY d.c2 DESC NULLS FIRST, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            },
+            {
+                "c3": 1003,
+                "c4": 10003
+            },
+            {
+                "c3": 1004,
+                "c4": 10004
+            },
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            }
+        ]
+    },
+    {
+        "testcase": "DESC NULLS LAST order. ASC index. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS MISSING END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.sort_terms[0].nulls_pos IS MISSING END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 ORDER BY d.c2 DESC NULLS LAST, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            },
+            {
+                "c3": 1003,
+                "c4": 10003
+            },
+            {
+                "c3": 1004,
+                "c4": 10004
+            }
+        ]
+    },
+    {
+        "testcase": "ASC NULLS LAST order. ASC index. Non MISSING predicate. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS MISSING END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.sort_terms[0].nulls_pos END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 AND d.c2 IS NOT MISSING ORDER BY d.c2 NULLS LAST, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            },
+            {
+                "c2": null,
+                "c3": 1005,
+                "c4": 10005
+            },
+            {
+                "c2": null,
+                "c3": 1006,
+                "c4": 10006
+            }
+        ]
+    },
+    {
+        "testcase": "ASC NULLS LAST order. ASC index. Non NULL predicate. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.index_order IS NOT MISSING END"
+        },
+        "statements":"SELECT d.c2, d.c3, d.c4 FROM orders AS d WHERE d.test_id = \"ordernulls\" AND d.c1 = 10 AND d.c2 IS NOT NULL ORDER BY d.c2 NULLS LAST, d.c3",
+        "ordered": true,
+        "results": [
+            {
+                "c2": -10,
+                "c3": 1008,
+                "c4": 10008
+            },
+            {
+                "c2": 10,
+                "c3": 1001,
+                "c4": 10000
+            },
+            {
+                "c2": 20,
+                "c3": 1002,
+                "c4": 10002
+            },
+            {
+                "c2": 50,
+                "c3": 1007,
+                "c4": 10007
+            },
+            {
+                "c2": 120,
+                "c3": 1009,
+                "c4": 10009
+            }
+        ]
+    }
+]

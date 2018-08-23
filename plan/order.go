@@ -62,6 +62,10 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 			q["desc"] = term.Descending()
 		}
 
+		if term.NullsPos() {
+			q["nulls_pos"] = term.NullsPos()
+		}
+
 		s = append(s, q)
 	}
 	r["sort_terms"] = s
@@ -81,8 +85,9 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string `json:"#operator"`
 		Terms []struct {
-			Expr string `json:"expr"`
-			Desc bool   `json:"desc"`
+			Expr     string `json:"expr"`
+			Desc     bool   `json:"desc"`
+			NullsPos bool   `json:"nulls_pos"`
 		} `json:"sort_terms"`
 		offsetExpr string `json:"offset"`
 		limitExpr  string `json:"limit"`
@@ -99,7 +104,7 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
-		this.terms[i] = algebra.NewSortTerm(expr, term.Desc)
+		this.terms[i] = algebra.NewSortTerm(expr, term.Desc, term.NullsPos)
 	}
 	if offsetExprStr := _unmarshalled.offsetExpr; offsetExprStr != "" {
 		offsetExpr, err := parser.Parse(offsetExprStr)

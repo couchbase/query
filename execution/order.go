@@ -154,7 +154,16 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 			v2.SetAttachment(s, ev2)
 		}
 
-		c = ev1.Collate(ev2)
+		if !term.NullsPos() || ((ev1.Type() <= value.NULL && ev2.Type() <= value.NULL) ||
+			(ev1.Type() > value.NULL && ev2.Type() > value.NULL)) {
+			c = ev1.Collate(ev2)
+		} else {
+			if ev1.Type() <= value.NULL && ev2.Type() > value.NULL {
+				c = 1
+			} else {
+				c = -1
+			}
+		}
 
 		if c == 0 {
 			continue

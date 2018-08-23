@@ -230,6 +230,7 @@
 /[nN][lL]/					 { yylex.logToken(yylex.Text(), "NL"); return NL }
 /[nN][oO][tT]/					 { yylex.logToken(yylex.Text(), "NOT"); return NOT }
 /[nN][uU][lL][lL]/				 { yylex.logToken(yylex.Text(), "NULL"); return NULL }
+/[nN][uU][lL][lL][sS]/				 { yylex.logToken(yylex.Text(), "NULLS"); return NULLS }
 /[nN][uN][mM][bB][eE][rR]/			 { yylex.logToken(yylex.Text(), "NUMBER"); return NUMBER }
 /[oO][bB][jJ][eE][cC][tT]/			 { yylex.logToken(yylex.Text(), "OBJECT"); return OBJECT }
 /[oO][fF][fF][sS][eE][tT]/			 { yylex.logToken(yylex.Text(), "OFFSET"); return OFFSET }

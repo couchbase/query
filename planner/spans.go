@@ -44,6 +44,7 @@ type SargSpans interface {
 	CanPushDownOffset(index datastore.Index, overlap, array bool) bool // Can offset pushdown index
 	SkipsLeadingNulls() bool                                           // For COUNT and MIN pushdown
 	EquivalenceRangeAt(i int) (bool, expression.Expression)            // For index ORDER on equivalence predicates
+	CanPorduceUnknows(pos int) bool                                    // Index key pos can produce MISSING or NULL
 	Size() int                                                         // Total number of spans
 	Copy() SargSpans                                                   // Deep copy
 }

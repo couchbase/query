@@ -148,6 +148,22 @@ func (this *TermSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion 
 	}
 }
 
+func (this *TermSpans) CanPorduceUnknows(pos int) bool {
+	for _, span := range this.spans {
+		if pos >= len(span.Ranges) {
+			return true
+		}
+
+		range2 := span.Ranges[pos]
+		low := range2.Low
+		if low == nil || low.Type() < value.NULL || (low.Type() == value.NULL && (range2.Inclusion&datastore.LOW) != 0) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (this *TermSpans) SkipsLeadingNulls() bool {
 	for _, span := range this.spans {
 		if len(span.Ranges) == 0 {

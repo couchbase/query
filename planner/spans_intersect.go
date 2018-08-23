@@ -135,6 +135,16 @@ func (this *IntersectSpans) CanHaveDuplicates(index datastore.Index, indexApiVer
 	return len(this.spans) == 1 && this.spans[0].CanHaveDuplicates(index, indexApiVersion, overlap, array)
 }
 
+func (this *IntersectSpans) CanPorduceUnknows(pos int) bool {
+	for _, span := range this.spans {
+		if !span.CanPorduceUnknows(pos) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this *IntersectSpans) SkipsLeadingNulls() bool {
 	for _, span := range this.spans {
 		if span.SkipsLeadingNulls() {

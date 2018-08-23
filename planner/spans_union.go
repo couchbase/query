@@ -180,6 +180,16 @@ func (this *UnionSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion
 	return true
 }
 
+func (this *UnionSpans) CanPorduceUnknows(pos int) bool {
+	for _, span := range this.spans {
+		if span.CanPorduceUnknows(pos) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (this *UnionSpans) SkipsLeadingNulls() bool {
 	for _, span := range this.spans {
 		if !span.SkipsLeadingNulls() {
