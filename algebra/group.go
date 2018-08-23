@@ -33,12 +33,21 @@ The function NewGroup returns a pointer to the Group
 struct that has its field sort terms set to the input
 argument expressions.
 */
-func NewGroup(by expression.Expressions, letting expression.Bindings, having expression.Expression) *Group {
-	return &Group{
-		by:      by,
-		letting: letting,
-		having:  having,
+func NewGroup(by GroupTerms, letting expression.Bindings, having expression.Expression) *Group {
+	rv := &Group{
+		by:     by.Expressions(),
+		having: having,
 	}
+
+	var byAlias expression.Bindings
+	for _, g := range by {
+		if g.As() != "" {
+			byAlias = append(byAlias, expression.NewSimpleBinding(g.As(), g.Expression()))
+		}
+	}
+
+	rv.letting = append(byAlias, letting...)
+	return rv
 }
 
 /*
@@ -169,4 +178,58 @@ Returns the having condition expression.
 */
 func (this *Group) Having() expression.Expression {
 	return this.having
+}
+
+type GroupTerms []*GroupTerm
+
+func (this GroupTerms) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, len(this))
+
+	for i, b := range this {
+		exprs[i] = b.expr
+	}
+
+	return exprs
+}
+
+type GroupTerm struct {
+	expr expression.Expression `json:"expr"`
+	as   string                `json:"as"`
+}
+
+func NewGroupTerm(expr expression.Expression, as string) *GroupTerm {
+	return &GroupTerm{
+		expr: expr,
+		as:   as,
+	}
+}
+
+func (this *GroupTerm) MapExpression(mapper expression.Mapper) (err error) {
+	if this.expr != nil {
+		this.expr, err = mapper.Map(this.expr)
+	}
+
+	return
+}
+
+func (this *GroupTerm) String() string {
+	s := ""
+
+	if this.expr != nil {
+		s = this.expr.String()
+	}
+
+	if this.as != "" {
+		s += " as `" + this.as + "`"
+	}
+
+	return s
+}
+
+func (this *GroupTerm) Expression() expression.Expression {
+	return this.expr
+}
+
+func (this *GroupTerm) As() string {
+	return this.as
 }

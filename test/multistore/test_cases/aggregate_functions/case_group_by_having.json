@@ -118,9 +118,18 @@
             "product_colori": "black",
             "sum": 3453.5
         }
-    ] 
- },
-
+          ]
+    },
+    {
+      "description": "use all aggregate functions, with group by alias",
+      "statements": "SELECT month, COUNT(*) as order_count FROM product AS p WHERE test_id = \"agg_func\" GROUP BY DATE_PART_STR(dateAdded, \"month\") as month having month > 11",
+      "results": [
+        {
+          "month": 12,
+          "order_count": 63
+        }
+      ]
+    },
     {
         "description": "use array aggregate function",
         "statements": "SELECT array_Agg(id) from orders where test_id = \"agg_func\"",

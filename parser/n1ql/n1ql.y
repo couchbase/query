@@ -56,6 +56,8 @@ sortTerms        algebra.SortTerms
 indexKeyTerm    *algebra.IndexKeyTerm
 indexKeyTerms    algebra.IndexKeyTerms
 partitionTerm   *algebra.IndexPartitionTerm
+groupTerm       *algebra.GroupTerm
+groupTerms       algebra.GroupTerms
 
 keyspaceRef      *algebra.KeyspaceRef
 
@@ -352,6 +354,8 @@ tokOffset	 int
 %type <order>            order_by opt_order_by
 %type <sortTerm>         sort_term
 %type <sortTerms>        sort_terms
+%type <groupTerm>        group_term
+%type <groupTerms>       group_terms
 %type <expr>             limit opt_limit
 %type <expr>             offset opt_offset
 %type <b>                dir opt_dir
@@ -1279,7 +1283,7 @@ group
 ;
 
 group:
-GROUP BY exprs opt_letting opt_having
+GROUP BY group_terms opt_letting opt_having
 {
     $$ = algebra.NewGroup($3, $4, $5)
 }
@@ -1290,15 +1294,22 @@ letting
 }
 ;
 
-exprs:
-expr
+group_terms:
+group_term
 {
-    $$ = expression.Expressions{$1}
+    $$ = algebra.GroupTerms{$1}
 }
 |
-exprs COMMA expr
+group_terms COMMA group_term
 {
     $$ = append($1, $3)
+}
+;
+
+group_term:
+expr opt_as_alias
+{
+    $$ = algebra.NewGroupTerm($1, $2)
 }
 ;
 
@@ -2760,6 +2771,17 @@ opt_exprs:
 exprs
 ;
 
+exprs:
+expr
+{
+    $$ = expression.Expressions{$1}
+}
+|
+exprs COMMA expr
+{
+    $$ = append($1, $3)
+}
+;
 
 /*************************************************
  *
