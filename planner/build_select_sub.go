@@ -543,6 +543,9 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 			if len(subAggs) > 0 {
 				return nil, fmt.Errorf("Nested aggregates are not allowed.")
 			}
+			if group != nil && group.Letting() != nil && dependsOnLet(agg.Operand(), group.Letting()) {
+				return nil, fmt.Errorf("Aggregate can't depend on GROUP alias or LETTING variable.")
+			}
 		}
 	}
 
