@@ -2195,3 +2195,192 @@ func (this *ArrayUnion) Constructor() FunctionConstructor {
 
 var _ARRAY_SET_POOL = value.NewSetPool(64, true, false)
 var _ARRAY_BAG_POOL = value.NewBagPool(64)
+
+///////////////////////////////////////////////////
+//
+// ArraySwap
+//
+///////////////////////////////////////////////////
+/*
+This represents the array function ARRAY_Swap(array,oldpos,newpos).  It
+returns an array with the elements at oldpos and newpos switched positions with each other.
+both oldpos and newpos are 0-based with negative reverse index accepted.
+*/
+type ArraySwap struct {
+	TernaryFunctionBase
+}
+
+func NewArraySwap(first, second, third Expression) Function {
+	rv := &ArraySwap{
+		*NewTernaryFunctionBase("array_swap", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ArraySwap) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArraySwap) Type() value.Type { return value.ARRAY }
+
+func (this *ArraySwap) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *ArraySwap) PropagatesNull() bool {
+	return false
+}
+
+func (this *ArraySwap) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	if first.Type() != value.ARRAY || second.Type() != value.NUMBER || third.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	oldPos := second.Actual().(float64)
+	newPos := third.Actual().(float64)
+
+	//both position should be integer.
+	if math.Trunc(oldPos) != oldPos || math.Trunc(newPos) != newPos {
+		return value.NULL_VALUE, nil
+	}
+
+	op := int(oldPos)
+	np := int(newPos)
+
+	a := first.Actual().([]interface{})
+	length := len(a)
+
+	//out of range check on the index.
+	if op < -length || op > length-1 || np < -length || np > length-1 {
+		return value.NULL_VALUE, nil
+	}
+
+	op = (op + length) % length
+	np = (np + length) % length
+
+	//do not switch with self.
+	if op == np {
+		return first, nil
+	}
+
+	a[op], a[np] = a[np], a[op]
+	return value.NewValue(a), nil
+}
+
+func (this *ArraySwap) MinArgs() int { return 3 }
+
+func (this *ArraySwap) MaxArgs() int { return 3 }
+
+func (this *ArraySwap) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArraySwap(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ArrayMove
+//
+///////////////////////////////////////////////////
+/*
+This represents the array function ARRAY_Move(array,oldpos,newpos).  It
+returns an array with the elements originally at oldpos moved to newpos.
+both oldpos and newpos are 0-based with negative reverse index accepted.
+*/
+
+type ArrayMove struct {
+	TernaryFunctionBase
+}
+
+func NewArrayMove(first, second, third Expression) Function {
+	rv := &ArrayMove{
+		*NewTernaryFunctionBase("array_move", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ArrayMove) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayMove) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayMove) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *ArrayMove) PropagatesNull() bool {
+	return false
+}
+
+func (this *ArrayMove) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	if first.Type() != value.ARRAY || second.Type() != value.NUMBER || third.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	oldPos := second.Actual().(float64)
+	newPos := third.Actual().(float64)
+
+	//both position should be integer.
+	if math.Trunc(oldPos) != oldPos || math.Trunc(newPos) != newPos {
+		return value.NULL_VALUE, nil
+	}
+
+	op := int(oldPos)
+	np := int(newPos)
+	a := first.Actual().([]interface{})
+	length := len(a)
+
+	//out of range check on the index.
+	if op < -length || op > length-1 || np < -length || np > length-1 {
+		return value.NULL_VALUE, nil
+	}
+
+	op = (op + length) % length
+	np = (np + length) % length
+
+	//check if the old position and new position are same.
+	if op == np {
+		return first, nil
+	}
+
+	v := a[op]
+
+	//remove the element at old position:
+	for i := op; i < length-1; i++ {
+		a[i] = a[i+1]
+	}
+
+	//insert the element at the new position:
+	for i, _ := range a {
+		if length-1-i <= np {
+			break
+		}
+		a[length-i-1] = a[length-i-2]
+	}
+	a[np] = v
+
+	return value.NewValue(a), nil
+}
+
+func (this *ArrayMove) MinArgs() int { return 3 }
+
+func (this *ArrayMove) MaxArgs() int { return 3 }
+
+func (this *ArrayMove) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayMove(operands[0], operands[1], operands[2])
+	}
+}
