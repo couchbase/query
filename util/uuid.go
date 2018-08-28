@@ -15,11 +15,28 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
+	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
 var uuidPool *sync.Pool
 
 const _UUID_SIZE = 16
+
+type randomBytesBuffer struct {
+	switchHandler sync.WaitGroup
+	switchWaiter  sync.WaitGroup
+	currentBuffer []byte
+	nextBuffer    []byte
+	currentIndex  uint32
+	err           error
+}
+
+var randomBytes randomBytesBuffer
+
+const _RANDOM_SIZE = 4096 * _UUID_SIZE
+const _FIRE_THRESHOLD = _RANDOM_SIZE / 2
+const _RANDOM_LOCKER = _RANDOM_SIZE + _UUID_SIZE
 
 func init() {
 	uuidPool = &sync.Pool{
@@ -28,6 +45,97 @@ func init() {
 			return b
 		},
 	}
+	randomBytes.currentBuffer = make([]byte, _RANDOM_SIZE)
+	randomBytes.nextBuffer = make([]byte, _RANDOM_SIZE)
+	randomBytes.switchHandler.Add(1)
+	randomBytes.switchWaiter.Add(1)
+	getNextBuffer()
+	tmp := randomBytes.currentBuffer
+	randomBytes.currentBuffer = randomBytes.nextBuffer
+	randomBytes.nextBuffer = tmp
+}
+
+func readFull(bytes []byte) error {
+	for {
+
+		// copy pointer so that the structure can be changed
+		buffer := randomBytes.currentBuffer
+
+		// get next position
+		index := atomic.AddUint32(&randomBytes.currentIndex, _UUID_SIZE)
+
+		// we are close to needing the next buffer
+		if index == _FIRE_THRESHOLD {
+			randomBytes.switchHandler.Add(1)
+			randomBytes.switchWaiter.Add(1)
+			go getNextBuffer()
+		}
+
+		// we are in luck
+		if index <= _RANDOM_SIZE {
+			copy(bytes, buffer[index-_UUID_SIZE:index])
+			return nil
+		}
+
+		// out of space - slow path
+		// first reader waiting does the dirty work
+		if index == _RANDOM_LOCKER {
+
+			// wait for the asynchronous read
+			randomBytes.switchHandler.Wait()
+
+			// it didn't work
+			if randomBytes.err != nil {
+
+				// wake the waiters (if extra readers come along they will
+				// get an error anyway)
+				randomBytes.switchWaiter.Done()
+
+				// try again: block everyone
+				randomBytes.switchHandler.Add(1)
+				randomBytes.switchWaiter.Add(1)
+
+				// set up another first reader
+				atomic.StoreUint32(&randomBytes.currentIndex, _RANDOM_SIZE)
+
+				go getNextBuffer()
+				return randomBytes.err
+			}
+
+			// switch buffer
+			tmp := randomBytes.currentBuffer
+			randomBytes.currentBuffer = randomBytes.nextBuffer
+			randomBytes.nextBuffer = tmp
+
+			// get our random data
+			copy(bytes, randomBytes.currentBuffer[0:_UUID_SIZE])
+
+			// reset the index and wake up the others
+			atomic.StoreUint32(&randomBytes.currentIndex, _UUID_SIZE)
+			randomBytes.switchWaiter.Done()
+			return nil
+		} else {
+
+			// everyone else takes advantage
+			randomBytes.switchHandler.Wait()
+			if randomBytes.err != nil {
+				return randomBytes.err
+			}
+
+			// try again
+			continue
+		}
+	}
+}
+
+func getNextBuffer() {
+	n, err := io.ReadFull(rand.Reader, randomBytes.nextBuffer)
+	if n != _RANDOM_SIZE {
+		randomBytes.err = fmt.Errorf("random reader only provide %v bytes", n)
+	} else {
+		randomBytes.err = err
+	}
+	randomBytes.switchHandler.Done()
 }
 
 // UUID generates a random UUID according to RFC 4122
@@ -35,8 +143,8 @@ func UUID() (string, error) {
 	uuid := uuidPool.Get().([]byte)
 	defer uuidPool.Put(uuid)
 
-	n, err := io.ReadFull(rand.Reader, uuid)
-	if n != len(uuid) || err != nil {
+	err := readFull(uuid)
+	if err != nil {
 		return "", err
 	}
 	// variant bits; see section 4.1.1
