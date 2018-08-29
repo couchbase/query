@@ -78,7 +78,8 @@ if a keyspace has been dropped, reprepare will fail anyway
 
 func (this *GrantRole) verify(prepared *Prepared) bool {
 	for _, keyspace := range this.node.Keyspaces() {
-		if !verifyKeyspaceName(keyspace, prepared) {
+		_, res := verifyKeyspaceName(keyspace, prepared)
+		if !res {
 			return false
 		}
 	}

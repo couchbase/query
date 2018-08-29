@@ -178,7 +178,9 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 }
 
 func (this *Merge) verify(prepared *Prepared) bool {
-	result := verifyKeyspace(this.keyspace, prepared)
+	var result bool
+
+	this.keyspace, result = verifyKeyspace(this.keyspace, prepared)
 	if result && this.insert != nil {
 		result = this.insert.verify(prepared)
 	}

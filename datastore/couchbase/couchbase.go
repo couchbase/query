@@ -663,7 +663,7 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 	p.lock.RLock()
 	entry, ok := p.keyspaceCache[name]
 	p.lock.RUnlock()
-	if ok && entry.cbKeyspace != nil {
+	if ok && entry.cbKeyspace != nil && entry.cbKeyspace.(*keyspace).flags != 0 {
 		return entry.cbKeyspace, nil
 	}
 
@@ -698,6 +698,9 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 	p.lock.Lock()
 	entry, ok = p.keyspaceCache[name]
 	if !ok {
+
+		// adding a new keyspace does not force the namespace version to change
+		// all previously prepared statements are still good
 		entry = &keyspaceEntry{}
 		p.keyspaceCache[name] = entry
 	}
@@ -824,14 +827,17 @@ func (p *namespace) refresh(changed bool) {
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
 			changed = true
-			ks.cbKeyspace.(*keyspace).deleted = true
+			ks.cbKeyspace.(*keyspace).flags |= _DELETED
+			ks.cbKeyspace.(*keyspace).cbbucket.Close()
 			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
 
 		} else if ks.cbKeyspace.(*keyspace).cbbucket.UUID != newbucket.UUID {
-
+			changed = true
 			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.(*keyspace).cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
+			// and release old one
+			ks.cbKeyspace.(*keyspace).cbbucket.Close()
 			ks.cbKeyspace.(*keyspace).cbbucket = newbucket
 		}
 		// Not deleted. Check if GSI indexer is available
@@ -842,35 +848,24 @@ func (p *namespace) refresh(changed bool) {
 
 	if changed == true {
 		p.setPool(newpool)
+
+		// keyspaces have been reloaded, force full auto reprepare check
 		p.version++
 	}
 }
+
+const (
+	_DELETED       = 1 << iota // this bucket no longer exists
+	_NEEDS_REFRESH             // received error that indicates the bucket needs refreshing
+)
 
 type keyspace struct {
 	namespace   *namespace
 	name        string
 	cbbucket    *cb.Bucket
-	deleted     bool
+	flags       int
 	viewIndexer datastore.Indexer // View index provider
 	gsiIndexer  datastore.Indexer // GSI index provider
-}
-
-//
-// Inferring schemas sometimes requires getting a sample of random documents
-// from a keyspace. Ideally this should come through a random traversal of the
-// primary index, but until that is available, we need to use the Bucket's
-// connection pool of memcached.Clients to request random documents from
-// the KV store.
-//
-
-func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
-	resp, err := k.cbbucket.GetRandomDoc()
-
-	if err != nil {
-		return "", nil, errors.NewCbGetRandomEntryError(err)
-	}
-
-	return fmt.Sprintf("%s", resp.Key), value.NewValue(resp.Body), nil
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -936,9 +931,11 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
-		ks.cbKeyspace.(*keyspace).deleted = true
+		ks.cbKeyspace.(*keyspace).flags |= _DELETED
 		delete(p.keyspaceCache, name)
 
+		// keyspace has been deleted, force full auto reprepare check
+		p.version++
 	} else {
 		logging.Warnf("Keyspace %v not configured on this server", name)
 	}
@@ -963,6 +960,7 @@ func (b *keyspace) Name() string {
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	totalCount, err := b.cbbucket.GetCount(true)
 	if err != nil {
+		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+err.Error())
 	}
 	return totalCount, nil
@@ -992,6 +990,25 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, nil
 }
 
+//
+// Inferring schemas sometimes requires getting a sample of random documents
+// from a keyspace. Ideally this should come through a random traversal of the
+// primary index, but until that is available, we need to use the Bucket's
+// connection pool of memcached.Clients to request random documents from
+// the KV store.
+//
+
+func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
+	resp, err := k.cbbucket.GetRandomDoc()
+
+	if err != nil {
+		k.checkRefresh(err)
+		return "", nil, errors.NewCbGetRandomEntryError(err)
+	}
+
+	return fmt.Sprintf("%s", resp.Key), value.NewValue(resp.Body), nil
+}
+
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) []errors.Error {
 	var bulkResponse map[string]*gomemcached.MCResponse
@@ -1019,6 +1036,8 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 	}
 
 	if err != nil {
+		b.checkRefresh(err)
+
 		// Ignore "Not found" keys
 		if !isNotFoundError(err) {
 			if cb.IsReadTimeOutError(err) {
@@ -1183,6 +1202,12 @@ func opToString(op int) string {
 	return "unknown operation"
 }
 
+func (k *keyspace) checkRefresh(err error) {
+	if cb.IsRefreshRequired(err) {
+		k.flags |= _NEEDS_REFRESH
+	}
+}
+
 func isNotFoundError(err error) bool {
 	return cb.IsKeyNoEntError(err)
 }
@@ -1216,7 +1241,6 @@ func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32,
 }
 
 func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors.Error) {
-
 	if len(inserts) == 0 {
 		return nil, nil
 	}
@@ -1237,6 +1261,7 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 			var added bool
 			// add the key to the backend
 			added, err = b.cbbucket.Add(key, 0, val)
+			b.checkRefresh(err)
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
 				if err != nil {
@@ -1263,10 +1288,12 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 
 				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>", key, uint64(cas), flags, val)
 				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), 0, uint64(cas), val)
+				b.checkRefresh(err)
 			}
 
 		case UPSERT:
 			err = b.cbbucket.Set(key, 0, val)
+			b.checkRefresh(err)
 		}
 
 		if err != nil {
@@ -1306,8 +1333,10 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 	failedDeletes := make([]string, 0)
 	actualDeletes := make([]string, 0)
 	var err error
+
 	for _, key := range deletes {
 		if err = b.cbbucket.Delete(key); err != nil {
+			b.checkRefresh(err)
 			if !isNotFoundError(err) {
 				logging.Infof("Failed to delete key <ud>%s</ud> Error %s", key, err)
 				failedDeletes = append(failedDeletes, key)
@@ -1325,7 +1354,7 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 }
 
 func (b *keyspace) Release() {
-	b.deleted = true
+	b.flags |= _DELETED
 	b.cbbucket.Close()
 }
 

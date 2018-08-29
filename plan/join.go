@@ -114,5 +114,8 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 }
 
 func (this *Join) verify(prepared *Prepared) bool {
-	return verifyKeyspace(this.keyspace, prepared)
+	var res bool
+
+	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
+	return res
 }

@@ -54,7 +54,7 @@ func (view *viewIndexer) keepIndexesFresh() {
 	tickChan := time.Tick(500 * time.Millisecond)
 
 	for _ = range tickChan {
-		if view.keyspace.deleted == true {
+		if view.keyspace.flags != 0 {
 			return
 		}
 		view.Refresh()

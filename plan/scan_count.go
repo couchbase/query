@@ -78,5 +78,8 @@ func (this *CountScan) UnmarshalJSON(body []byte) error {
 }
 
 func (this *CountScan) verify(prepared *Prepared) bool {
-	return verifyKeyspace(this.keyspace, prepared)
+	var res bool
+
+	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
+	return res
 }

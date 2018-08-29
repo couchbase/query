@@ -41,19 +41,21 @@ func verifyIndex(index datastore.Index, indexer datastore.Indexer, prepared *Pre
 	return true
 }
 
-func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) bool {
+func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.Keyspace, bool) {
 	namespace := keyspace.Namespace()
 	ks, err := namespace.KeyspaceById(keyspace.Id())
 
 	if ks == nil || err != nil {
-		return false
+		return keyspace, false
 	}
 
 	// amend prepared statement version so that next time we avoid checks
 	if prepared != nil {
 		prepared.addNamespace(namespace)
 	}
-	return true
+
+	// return newly found keyspace just in case it has been refreshed
+	return ks, true
 }
 
 /*

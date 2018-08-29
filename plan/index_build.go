@@ -88,5 +88,8 @@ func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
 }
 
 func (this *BuildIndexes) verify(prepared *Prepared) bool {
-	return verifyKeyspace(this.keyspace, prepared)
+	var res bool
+
+	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
+	return res
 }

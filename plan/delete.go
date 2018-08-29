@@ -101,5 +101,8 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 }
 
 func (this *SendDelete) verify(prepared *Prepared) bool {
-	return verifyKeyspace(this.keyspace, prepared)
+	var res bool
+
+	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
+	return res
 }
