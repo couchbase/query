@@ -24,8 +24,26 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
 	sourceKeyspace := newBaseKeyspace(source.Alias())
 	this.baseKeyspaces[sourceKeyspace.name] = sourceKeyspace
+	targetKeyspace := newBaseKeyspace(stmt.KeyspaceRef().Alias())
+	this.baseKeyspaces[targetKeyspace.name] = targetKeyspace
 
 	var left algebra.SimpleFromTerm
+	var err error
+	outer := false
+
+	if !stmt.IsOnKey() {
+		// use outer join if INSERT action is specified
+		if stmt.Actions().Insert() != nil {
+			outer = true
+		} else {
+			_, err = this.processPredicate(stmt.On(), true)
+			if err != nil {
+				return nil, err
+			}
+
+			this.pushableOnclause = stmt.On()
+		}
+	}
 
 	if source.SubqueryTerm() != nil {
 		_, err := source.SubqueryTerm().Accept(this)
@@ -127,20 +145,6 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		right.SetAnsiJoin()
 		algebra.TransferJoinHint(right, left)
 
-		targetKeyspace := newBaseKeyspace(right.Alias())
-		this.baseKeyspaces[targetKeyspace.name] = targetKeyspace
-
-		// use outer join if INSERT action is specified
-		outer := false
-		if actions.Insert() != nil {
-			outer = true
-		} else {
-			// similar to processing of pushableOnclause
-			_, err := this.processPredicate(stmt.On(), true)
-			if err != nil {
-				return nil, err
-			}
-		}
 		ansiJoin := algebra.NewAnsiJoin(left, outer, right, stmt.On())
 		join, err := this.buildAnsiJoin(ansiJoin)
 		if err != nil {
