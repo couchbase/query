@@ -74,6 +74,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			this.batchSize = int(context.PipelineCap())
 		}()
 	}
+	op := context.Type()
+	doCopy := op != "" && op != "UPDATE"
 
 	l := len(this.batch)
 	if l == 0 {
@@ -151,7 +153,11 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		fv := fetchMap[key]
 		if fv != nil {
 			if keyCount[key] > 1 {
-				fv = value.NewAnnotatedValue(fv.Copy())
+				if doCopy {
+					fv = value.NewAnnotatedValue(fv.Copy())
+				} else {
+					fv = value.NewAnnotatedValue(fv.CopyForUpdate())
+				}
 				keyCount[key]--
 			}
 
