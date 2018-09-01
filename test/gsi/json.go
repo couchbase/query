@@ -227,8 +227,17 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	query := &MockQuery{
 		response: mr,
 	}
-	server.NewBaseRequest(&query.BaseRequest, q, nil, namedArgs, positionalArgs, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
+	server.NewBaseRequest(&query.BaseRequest)
+	query.SetStatement(q)
+	query.SetNamedArgs(namedArgs)
+	query.SetPositionalArgs(positionalArgs)
+	query.SetNamespace(namespace)
+	query.SetReadonly(value.FALSE)
+	query.SetMetrics(metrics)
+	query.SetSignature(value.TRUE)
+	query.SetPretty(value.TRUE)
+	query.SetScanConfiguration(consistency)
+	query.SetCredentials(_ALL_USERS)
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
@@ -265,8 +274,17 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 		return nil, nil, err
 	}
 
-	server.NewBaseRequest(&query.BaseRequest, "", prepared, namedArgs, positionalArgs, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", _ALL_USERS, "", "")
+	server.NewBaseRequest(&query.BaseRequest)
+	query.SetPrepared(prepared)
+	query.SetNamedArgs(namedArgs)
+	query.SetPositionalArgs(positionalArgs)
+	query.SetNamespace(namespace)
+	query.SetReadonly(value.FALSE)
+	query.SetMetrics(metrics)
+	query.SetSignature(value.TRUE)
+	query.SetPretty(value.TRUE)
+	query.SetScanConfiguration(consistency)
+	query.SetCredentials(_ALL_USERS)
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)

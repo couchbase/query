@@ -40,7 +40,7 @@ type httpRequest struct {
 	resp            http.ResponseWriter
 	req             *http.Request
 	httpCloseNotify <-chan bool
-	writer          responseDataManager
+	writer          bufferedWriter
 	httpRespCode    int
 	resultCount     int
 	resultSize      int
@@ -49,6 +49,9 @@ type httpRequest struct {
 
 	elapsedTime   time.Duration
 	executionTime time.Duration
+
+	stmtCnt int
+	consCnt int
 }
 
 func (r *httpRequest) OriginalHttpRequest() *http.Request {
@@ -58,7 +61,6 @@ func (r *httpRequest) OriginalHttpRequest() *http.Request {
 func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
 	var httpArgs httpRequestArgs
 	var err errors.Error
-	var phaseTime time.Duration
 
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
@@ -81,194 +83,16 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		httpArgs, err = getRequestParams(req)
 	}
 
-	var statement string
-	if err == nil {
-		statement, err = httpArgs.getStatement()
+	rv := &httpRequest{
+		resp: resp,
+		req:  req,
 	}
+	server.NewBaseRequest(&rv.BaseRequest)
+	rv.SetRequestTime(reqTime)
 
-	var prepared *plan.Prepared
-	if err == nil {
-		var decoded_plan *plan.Prepared
-		var prepared_name string
-
-		prepared_name, prepared, err = getPrepared(httpArgs, &phaseTime)
-		encoded_plan, plan_err := getEncodedPlan(httpArgs)
-
-		// MB-18841 (encoded_plan processing affects latency)
-		// MB-19509 (encoded_plan may corrupt cache)
-		// MB-19659 (spurious 4080 on multi node reprepare)
-		// MB-27355 / MB-27778 (distrubute plans / deprecate encoded_plan)
-		// If an encoded_plan has been supplied, only decode it
-		// when the prepared statement can't be found, for backwards
-		// compatibility with older SDKs
-		if encoded_plan != "" && plan_err == nil &&
-			err != nil && err.Code() == errors.NO_SUCH_PREPARED {
-
-			// Monitoring API: we only need to track the prepared
-			// statement if we couldn't do it in getPrepared()
-			// Distributed plans: we don't propagate on encoded_plan parameter
-			// because the client will be using it across all nodes anyway, and
-			// we want to avoid a plan distribution stampede
-			decoded_plan, plan_err = prepareds.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), false, &phaseTime)
-			if plan_err != nil {
-				err = plan_err
-			} else if decoded_plan != nil {
-				prepared = decoded_plan
-				err = nil
-			}
-		}
-		if err == nil && plan_err != nil {
-			err = plan_err
-		}
-	}
-
-	if err == nil {
-		if statement == "" && prepared == nil {
-			err = errors.NewServiceErrorMissingValue("statement or prepared")
-		} else if statement != "" && prepared != nil {
-			err = errors.NewServiceErrorMultipleValues("statement and prepared")
-		}
-	}
-
-	var namedArgs map[string]value.Value
-	if err == nil {
-		namedArgs, err = httpArgs.getNamedArgs()
-	}
-
-	var positionalArgs value.Values
-	if err == nil {
-		positionalArgs, err = httpArgs.getPositionalArgs()
-	}
-
-	var namespace string
-	if err == nil {
-		namespace, err = httpArgs.getString(NAMESPACE, "")
-	}
-
-	var timeout time.Duration
-	if err == nil {
-		timeout, err = httpArgs.getDuration(TIMEOUT)
-	}
-
-	var max_parallelism int
-	var param string
-	if err == nil {
-		param, err = httpArgs.getString(MAX_PARALLELISM, "")
-		if err == nil && param != "" {
-			var e error
-			max_parallelism, e = strconv.Atoi(param)
-			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is invalid"), "max parallelism")
-			}
-		}
-	}
-
-	var scan_cap int64
-	if err == nil {
-		param, err = httpArgs.getString(SCAN_CAP, "")
-		if err == nil && param != "" {
-			var e error
-			scan_cap, e = strconv.ParseInt(param, 10, 64)
-			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("scan_cap is invalid"), "scan cap")
-			}
-		}
-	}
-
-	var pipeline_cap int64
-	if err == nil {
-		param, err = httpArgs.getString(PIPELINE_CAP, "")
-		if err == nil && param != "" {
-			var e error
-			pipeline_cap, e = strconv.ParseInt(param, 10, 64)
-			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_cap is invalid"), "pipeline cap")
-			}
-		}
-	}
-
-	var pipeline_batch int
-	if err == nil {
-		param, err = httpArgs.getString(PIPELINE_BATCH, "")
-		if err == nil && param != "" {
-			var e error
-			pipeline_batch, e = strconv.Atoi(param)
-			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_batch is invalid"), "pipeline batch")
-			}
-		}
-	}
-
-	var readonly value.Tristate
-	if err == nil {
-		readonly, err = getReadonly(httpArgs, req.Method == "GET")
-	}
-
-	var metrics value.Tristate
-	if err == nil {
-		metrics, err = httpArgs.getTristate(METRICS)
-	}
-
-	var format Format
-	if err == nil {
-		format, err = getFormat(httpArgs)
-
-		if err == nil && format != JSON {
-			err = errors.NewServiceErrorNotImplemented("format", format.String())
-		}
-	}
-
-	var signature value.Tristate
-	if err == nil {
-		signature, err = httpArgs.getTristate(SIGNATURE)
-	}
-
-	var compression Compression
-	if err == nil {
-		compression, err = getCompression(httpArgs)
-
-		if err == nil && compression != NONE {
-			err = errors.NewServiceErrorNotImplemented("compression", compression.String())
-		}
-	}
-
-	var encoding Encoding
-	if err == nil {
-		encoding, err = getEncoding(httpArgs)
-
-		if err == nil && encoding != UTF8 {
-			err = errors.NewServiceErrorNotImplemented("encoding", encoding.String())
-		}
-	}
-
-	var pretty value.Tristate
-	if err == nil {
-		pretty, err = httpArgs.getTristate(PRETTY)
-	}
-
-	var autoPrepare value.Tristate
-	if err == nil {
-		autoPrepare, err = httpArgs.getTristate(AUTO_PREPARE)
-	}
-
-	var consistency *scanConfigImpl
-	if err == nil {
-		consistency, err = getScanConfiguration(httpArgs)
-	}
-
-	var creds auth.Credentials
-	if err == nil {
-		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
-	}
-
-	client_id := ""
-	if err == nil {
-		client_id, err = getClientID(httpArgs)
-	}
-
-	var controls value.Tristate
-	if err == nil {
-		controls, err = getControlsRequest(httpArgs)
+	// for GET method, only readonly access
+	if req.Method == "GET" {
+		rv.SetReadonly(value.TRUE)
 	}
 
 	userAgent := req.UserAgent()
@@ -276,59 +100,45 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	if cbUserAgent != "" {
 		userAgent = userAgent + " (" + cbUserAgent + ")"
 	}
-	rv := &httpRequest{
-		resp: resp,
-		req:  req,
-	}
+	rv.SetUserAgent(userAgent)
+	rv.SetRemoteAddr(req.RemoteAddr)
 
-	server.NewBaseRequest(&rv.BaseRequest, statement, prepared, namedArgs, positionalArgs,
-		namespace, max_parallelism, scan_cap, pipeline_cap, pipeline_batch,
-		readonly, metrics, signature, pretty, consistency, client_id, creds,
-		req.RemoteAddr, userAgent)
-
-	rv.SetRequestTime(reqTime)
-	if phaseTime != 0 {
-		rv.Output().AddPhaseTime(execution.REPREPARE, phaseTime)
-	}
-
-	var prof server.Profile
 	if err == nil {
-		rv.SetControls(controls)
-		prof, err = getProfileRequest(httpArgs)
+		err = httpArgs.processParameters(rv)
+	}
+
+	if err == nil {
+		if rv.stmtCnt == 0 {
+			err = errors.NewServiceErrorMissingValue("statement or prepared")
+		} else if rv.stmtCnt > 1 {
+			err = errors.NewServiceErrorMultipleValues("statement and prepared")
+		}
+	}
+
+	// handle parameters that can't be handled dynamically
+	if err == nil {
+		var creds auth.Credentials
+
+		rv.SetNamedArgs(httpArgs.getNamedArgs())
+		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
 		if err == nil {
-			rv.SetProfile(prof)
-		}
-	}
+			rv.SetCredentials(creds)
 
-	if err == nil {
-		param, err = httpArgs.getString(N1QL_FEAT_CTRL, "")
-		if err == nil && param != "" {
-			n1qlFeatureControl, e := strconv.ParseUint(param, 0, 64)
-			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("n1ql_feat_ctrl is invalid"), N1QL_FEAT_CTRL)
+			if rv.consCnt > 0 {
+				var consistency server.ScanConfiguration
+
+				consistency, err = getScanConfiguration(httpArgs)
+				if err == nil {
+					rv.SetScanConfiguration(consistency)
+				}
 			} else {
-				rv.SetFeatureControls(n1qlFeatureControl)
+				rv.SetScanConfiguration(getEmptyScanConfiguration())
 			}
 		}
+
 	}
 
-	if err == nil {
-		param, err = httpArgs.getString(MAX_INDEX_API, "")
-		if err == nil && param != "" {
-			indexApiVer, e := strconv.Atoi(param)
-			if e != nil {
-				err = errors.NewServiceErrorBadValue(go_errors.New("max_index_api is invalid"), MAX_INDEX_API)
-			} else {
-				rv.SetIndexApiVersion(indexApiVer)
-			}
-		}
-	}
-
-	rv.SetAutoPrepare(autoPrepare)
-
-	rv.SetTimeout(timeout)
-
-	rv.writer = NewBufferedWriter(rv, bp)
+	NewBufferedWriter(&rv.writer, rv, bp)
 
 	// Abort if client closes connection; alternatively, return when request completes.
 	rv.httpCloseNotify = resp.(http.CloseNotifier).CloseNotify()
@@ -338,6 +148,291 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	return rv
+}
+
+// stub for those parameters that have to be handled specially
+func handleDummy(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	return nil
+}
+
+func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	statement, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetStatement(statement)
+		rv.stmtCnt++
+	}
+	return err
+}
+
+func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	var phaseTime time.Duration
+
+	prepared_name, prepared, err := getPrepared(httpArgs, parm, val, &phaseTime)
+	encoded_plan, plan_err := httpArgs.getString(ENCODED_PLAN, "")
+
+	// MB-18841 (encoded_plan processing affects latency)
+	// MB-19509 (encoded_plan may corrupt cache)
+	// MB-19659 (spurious 4080 on multi node reprepare)
+	// MB-27355 / MB-27778 (distrubute plans / deprecate encoded_plan)
+	// If an encoded_plan has been supplied, only decode it
+	// when the prepared statement can't be found, for backwards
+	// compatibility with older SDKs
+	if encoded_plan != "" && plan_err == nil &&
+		err != nil && err.Code() == errors.NO_SUCH_PREPARED {
+		var decoded_plan *plan.Prepared
+
+		// Monitoring API: we only need to track the prepared
+		// statement if we couldn't do it in getPrepared()
+		// Distributed plans: we don't propagate on encoded_plan parameter
+		// because the client will be using it across all nodes anyway, and
+		// we want to avoid a plan distribution stampede
+		decoded_plan, plan_err = prepareds.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), false, &phaseTime)
+		if plan_err != nil {
+			err = plan_err
+		} else if decoded_plan != nil {
+			prepared = decoded_plan
+			err = nil
+		}
+	}
+	if err == nil && plan_err != nil {
+		err = plan_err
+	}
+	if prepared != nil {
+		if phaseTime != 0 {
+			rv.Output().AddPhaseTime(execution.REPREPARE, phaseTime)
+		}
+		rv.SetPrepared(prepared)
+		rv.stmtCnt++
+	}
+	return err
+}
+
+func handlePositionalArgs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	positionalArgs, err := httpArgs.getPositionalArgs()
+	if err == nil {
+		rv.SetPositionalArgs(positionalArgs)
+	}
+	return err
+}
+
+func handleNamespace(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	namespace, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNamespace(namespace)
+	}
+	return err
+}
+
+func handleTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	var timeout time.Duration
+
+	t, err := httpArgs.getStringVal(parm, val)
+	if err != nil {
+		return err
+	}
+	timeout, err = newDuration(t)
+	if err == nil {
+		rv.SetTimeout(timeout)
+	}
+	return err
+}
+
+func handleMaxParallelism(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		max_parallelism, e := strconv.Atoi(param)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is invalid"), "max parallelism")
+		} else {
+			rv.SetMaxParallelism(max_parallelism)
+		}
+	}
+	return err
+}
+
+func handleScanCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		scan_cap, e := strconv.ParseInt(param, 10, 64)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("scan_cap is invalid"), "scan cap")
+		} else {
+			rv.SetScanCap(scan_cap)
+		}
+	}
+	return err
+}
+
+func handlePipelineCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		var e error
+		var pipeline_cap int64
+
+		pipeline_cap, e = strconv.ParseInt(param, 10, 64)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_cap is invalid"), "pipeline cap")
+		} else {
+			rv.SetPipelineCap(pipeline_cap)
+		}
+	}
+	return err
+}
+
+func handlePipelineBatch(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		pipeline_batch, e := strconv.Atoi(param)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_batch is invalid"), "pipeline batch")
+		} else {
+			rv.SetPipelineBatch(pipeline_batch)
+		}
+	}
+	return err
+}
+
+func handleReadonly(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	readonly, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		if rv.req.Method == "GET" && readonly == value.FALSE {
+			err = errors.NewServiceErrorReadonly(
+				fmt.Sprintf("%s=false cannot be used with HTTP GET method.", READONLY))
+		} else {
+			rv.SetReadonly(readonly)
+		}
+	}
+	return err
+}
+
+func handleMetrics(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	metrics, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetMetrics(metrics)
+	}
+	return err
+}
+
+func handleFormat(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	format_field, err := httpArgs.getStringVal(parm, val)
+	if err == nil && format_field != "" {
+		format := newFormat(format_field)
+		if format == UNDEFINED_FORMAT {
+			err = errors.NewServiceErrorUnrecognizedValue(FORMAT, format_field)
+		} else if format != JSON {
+			err = errors.NewServiceErrorNotImplemented(FORMAT, format_field)
+		}
+	}
+	return err
+}
+
+func handleSignature(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	signature, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetSignature(signature)
+	}
+	return err
+}
+
+func handleCompression(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	compression_field, err := httpArgs.getStringVal(parm, val)
+	if err == nil && compression_field != "" {
+		compression := newCompression(compression_field)
+		if compression == UNDEFINED_COMPRESSION {
+			err = errors.NewServiceErrorUnrecognizedValue(COMPRESSION, compression_field)
+		} else if compression != NONE {
+			err = errors.NewServiceErrorNotImplemented(COMPRESSION, compression_field)
+		}
+	}
+	return err
+}
+
+func handleEncoding(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	encoding_field, err := httpArgs.getStringVal(parm, val)
+	if err == nil && encoding_field != "" {
+		encoding := newEncoding(encoding_field)
+		if encoding == UNDEFINED_ENCODING {
+			err = errors.NewServiceErrorUnrecognizedValue(ENCODING, encoding_field)
+		} else if encoding != UTF8 {
+			err = errors.NewServiceErrorNotImplemented(ENCODING, encoding_field)
+		}
+	}
+	return err
+}
+
+func handlePretty(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	pretty, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetPretty(pretty)
+	}
+	return err
+}
+
+func handleAutoPrepare(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	autoPrepare, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetAutoPrepare(autoPrepare)
+	}
+	return err
+}
+
+func handleConsistency(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	rv.consCnt++
+	return nil
+}
+
+func handleClientContextID(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	client_id, err := httpArgs.getStringVal(parm, val)
+	if err != nil {
+		return err
+	}
+	client_id, err = getClientID(client_id)
+	if err == nil {
+		rv.SetClientID(client_id)
+	}
+	return err
+}
+
+func handleControls(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	controls, err := getControlsRequest(httpArgs, parm, val)
+	if err == nil {
+		rv.SetControls(controls)
+	}
+	return err
+}
+
+func handleProfile(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	prof, err := getProfileRequest(httpArgs, parm, val)
+	if err == nil {
+		rv.SetProfile(prof)
+	}
+	return err
+}
+
+func handleN1QLFeatCtrl(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		n1qlFeatureControl, e := strconv.ParseUint(param, 0, 64)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("n1ql_feat_ctrl is invalid"), N1QL_FEAT_CTRL)
+		} else {
+			rv.SetFeatureControls(n1qlFeatureControl)
+		}
+	}
+	return err
+}
+
+func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		indexApiVer, e := strconv.Atoi(param)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("max_index_api is invalid"), MAX_INDEX_API)
+		} else {
+			rv.SetIndexApiVersion(indexApiVer)
+		}
+	}
+	return err
 }
 
 // For audit.Auditable interface.
@@ -420,35 +515,35 @@ const ( // Request argument names
 	AUTO_PREPARE      = "auto_prepare"
 )
 
-var _PARAMETERS = map[string]bool{
-	STATEMENT:         true,
-	PREPARED:          true,
-	ENCODED_PLAN:      true,
-	CREDS:             true,
-	ARGS:              true,
-	TIMEOUT:           true,
-	SCAN_CONSISTENCY:  true,
-	SCAN_WAIT:         true,
-	SCAN_VECTOR:       true,
-	SCAN_VECTORS:      true,
-	MAX_PARALLELISM:   true,
-	SCAN_CAP:          true,
-	PIPELINE_CAP:      true,
-	PIPELINE_BATCH:    true,
-	READONLY:          true,
-	METRICS:           true,
-	NAMESPACE:         true,
-	FORMAT:            true,
-	ENCODING:          true,
-	COMPRESSION:       true,
-	SIGNATURE:         true,
-	PRETTY:            true,
-	CLIENT_CONTEXT_ID: true,
-	PROFILE:           true,
-	CONTROLS:          true,
-	N1QL_FEAT_CTRL:    true,
-	MAX_INDEX_API:     true,
-	AUTO_PREPARE:      true,
+var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error{
+	STATEMENT:         handleStatement,
+	PREPARED:          handlePrepared,
+	ENCODED_PLAN:      handleDummy,
+	CREDS:             handleDummy,
+	ARGS:              handlePositionalArgs,
+	TIMEOUT:           handleTimeout,
+	SCAN_CONSISTENCY:  handleConsistency,
+	SCAN_WAIT:         handleConsistency,
+	SCAN_VECTOR:       handleConsistency,
+	SCAN_VECTORS:      handleConsistency,
+	MAX_PARALLELISM:   handleMaxParallelism,
+	SCAN_CAP:          handleScanCap,
+	PIPELINE_CAP:      handlePipelineCap,
+	PIPELINE_BATCH:    handlePipelineBatch,
+	READONLY:          handleReadonly,
+	METRICS:           handleMetrics,
+	NAMESPACE:         handleNamespace,
+	FORMAT:            handleFormat,
+	ENCODING:          handleEncoding,
+	COMPRESSION:       handleCompression,
+	SIGNATURE:         handleSignature,
+	PRETTY:            handlePretty,
+	CLIENT_CONTEXT_ID: handleClientContextID,
+	PROFILE:           handleProfile,
+	CONTROLS:          handleControls,
+	N1QL_FEAT_CTRL:    handleN1QLFeatCtrl,
+	MAX_INDEX_API:     handleMaxIndexAPI,
+	AUTO_PREPARE:      handleAutoPrepare,
 }
 
 func isValidParameter(a string) bool {
@@ -461,11 +556,12 @@ func isValidParameter(a string) bool {
 		return true
 	}
 
-	return _PARAMETERS[a]
+	_, ok := _PARAMETERS[a]
+	return ok
 }
 
-func getPrepared(a httpRequestArgs, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
-	prepared_field, err := a.getPrepared()
+func getPrepared(a httpRequestArgs, parm string, val interface{}, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
+	prepared_field, err := a.getPreparedVal(parm, val)
 	if err != nil || prepared_field == nil {
 		return "", nil, err
 	}
@@ -483,21 +579,11 @@ func getPrepared(a httpRequestArgs, phaseTime *time.Duration) (string, *plan.Pre
 	return prepared_name, prepared, err
 }
 
-func getEncodedPlan(a httpRequestArgs) (string, errors.Error) {
-	return a.getString(ENCODED_PLAN, "")
-}
-
-func getCompression(a httpRequestArgs) (Compression, errors.Error) {
-	var compression Compression
-
-	compression_field, err := a.getString(COMPRESSION, "NONE")
-	if err == nil && compression_field != "" {
-		compression = newCompression(compression_field)
-		if compression == UNDEFINED_COMPRESSION {
-			err = errors.NewServiceErrorUnrecognizedValue(COMPRESSION, compression_field)
-		}
+func getEmptyScanConfiguration() *scanConfigImpl {
+	return &scanConfigImpl{
+		scan_level:         newScanConsistency("NOT_BOUNDED"),
+		scan_vector_source: &ZeroScanVectorSource{},
 	}
-	return compression, err
 }
 
 func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
@@ -555,46 +641,6 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
 		scan_wait:          scan_wait,
 		scan_vector_source: scan_vector_source,
 	}, nil
-}
-
-func getEncoding(a httpRequestArgs) (Encoding, errors.Error) {
-	var encoding Encoding
-
-	encoding_field, err := a.getString(ENCODING, "UTF-8")
-	if err == nil && encoding_field != "" {
-		encoding = newEncoding(encoding_field)
-		if encoding == UNDEFINED_ENCODING {
-			err = errors.NewServiceErrorUnrecognizedValue(ENCODING, encoding_field)
-		}
-	}
-	return encoding, err
-}
-
-func getFormat(a httpRequestArgs) (Format, errors.Error) {
-	var format Format
-
-	format_field, err := a.getString(FORMAT, "JSON")
-	if err == nil && format_field != "" {
-		format = newFormat(format_field)
-		if format == UNDEFINED_FORMAT {
-			err = errors.NewServiceErrorUnrecognizedValue(FORMAT, format_field)
-		}
-	}
-	return format, err
-}
-
-func getReadonly(a httpRequestArgs, isGet bool) (value.Tristate, errors.Error) {
-	readonly, err := a.getTristate(READONLY)
-	if err == nil && isGet {
-		switch readonly {
-		case value.NONE:
-			readonly = value.TRUE
-		case value.FALSE:
-			err = errors.NewServiceErrorReadonly(
-				fmt.Sprintf("%s=false cannot be used with HTTP GET method.", READONLY))
-		}
-	}
-	return readonly, err
 }
 
 func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors.Error) {
@@ -660,11 +706,7 @@ const MAX_CLIENTID = 64
 // Ensure that client context id is no more than 64 characters.
 // Also ensure that client context id does not contain characters that would
 // break json syntax.
-func getClientID(a httpRequestArgs) (string, errors.Error) {
-	client_id, err := a.getString(CLIENT_CONTEXT_ID, "")
-	if err != nil {
-		return client_id, err
-	}
+func getClientID(client_id string) (string, errors.Error) {
 	if len(client_id) > MAX_CLIENTID {
 		id_trunc := make([]byte, MAX_CLIENTID)
 		copy(id_trunc[:], client_id)
@@ -680,20 +722,6 @@ func getClientID(a httpRequestArgs) (string, errors.Error) {
 		}
 	}
 	return client_id, nil
-}
-
-func getProfile(a httpRequestArgs) (server.Profile, errors.Error) {
-	profile, err := a.getString(PROFILE, "")
-	if err == nil && profile != "" {
-		prof, ok := server.ParseProfile(profile)
-		if ok {
-			return prof, nil
-		} else {
-			err = errors.NewServiceErrorUnrecognizedValue(PROFILE, profile)
-		}
-
-	}
-	return server.ProfUnset, err
 }
 
 const acceptType = "application/json"
@@ -729,13 +757,14 @@ func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Erro
 
 // httpRequestArgs is an interface for getting the arguments in a http request
 type httpRequestArgs interface {
+	processParameters(rv *httpRequest) errors.Error
 	getString(string, string) (string, errors.Error)
-	getTristate(f string) (value.Tristate, errors.Error)
-	getPrepared() (value.Value, errors.Error)
+	getStringVal(field string, v interface{}) (string, errors.Error)
+	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
+	getPreparedVal(field string, v interface{}) (value.Value, errors.Error)
 	getDuration(string) (time.Duration, errors.Error)
-	getNamedArgs() (map[string]value.Value, errors.Error)
+	getNamedArgs() map[string]value.Value
 	getPositionalArgs() (value.Values, errors.Error)
-	getStatement() (string, errors.Error)
 	getCredentials() ([]map[string]string, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
 	getScanVectors() (map[string]timestamp.Vector, errors.Error)
@@ -798,30 +827,33 @@ func newUrlArgs(req *http.Request) (*urlArgs, errors.Error) {
 			req.Form[newArg] = val
 		}
 	}
+	if req.Form[STATEMENT] == nil && req.Method == "POST" {
+		bytes, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), STATEMENT)
+		}
+		if len(bytes) > 0 {
+			req.Form[STATEMENT] = []string{string(bytes)}
+		}
+	}
 	return &urlArgs{req: req, named: named}, nil
 }
 
-func (this *urlArgs) getStatement() (string, errors.Error) {
-	statement, err := this.formValue(STATEMENT)
-	if err != nil {
-		return "", err
-	}
+func (this *urlArgs) processParameters(rv *httpRequest) errors.Error {
+	var err errors.Error
 
-	if statement == "" && this.req.Method == "POST" {
-		bytes, err := ioutil.ReadAll(this.req.Body)
+	for parm, val := range this.req.Form {
+		err = _PARAMETERS[parm](rv, this, parm, val)
 		if err != nil {
-			return "", errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), STATEMENT)
+			break
 		}
-
-		statement = string(bytes)
 	}
-
-	return statement, nil
+	return err
 }
 
 // A named argument is an argument of the form: $<identifier>=json_value
-func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
-	return this.named, nil
+func (this *urlArgs) getNamedArgs() map[string]value.Value {
+	return this.named
 }
 
 func getJsonDecoder(r io.Reader) (*json.Decoder, errors.Error) {
@@ -953,6 +985,23 @@ func (this *urlArgs) getDuration(f string) (time.Duration, errors.Error) {
 	return timeout, err
 }
 
+func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.Error) {
+	values, ok := v.([]string)
+
+	// this never happens
+	if !ok {
+		return "", errors.NewServiceErrorBadValue(go_errors.New("unexpected value type"), field)
+	}
+	switch len(values) {
+	case 0:
+		return "", nil
+	case 1:
+		return util.TrimSpace(values[0]), nil
+	default:
+		return "", errors.NewServiceErrorMultipleValues(field)
+	}
+}
+
 func (this *urlArgs) getString(f string, dflt string) (string, errors.Error) {
 	value := dflt
 
@@ -963,9 +1012,10 @@ func (this *urlArgs) getString(f string, dflt string) (string, errors.Error) {
 	return value, err
 }
 
-func (this *urlArgs) getTristate(f string) (value.Tristate, errors.Error) {
+func (this *urlArgs) getTristateVal(field string, v interface{}) (value.Tristate, errors.Error) {
 	tristate_value := value.NONE
-	value_field, err := this.formValue(f)
+
+	value_field, err := this.getStringVal(field, v)
 	if err != nil {
 		return tristate_value, err
 	}
@@ -974,7 +1024,7 @@ func (this *urlArgs) getTristate(f string) (value.Tristate, errors.Error) {
 	}
 	bool_value, e := strconv.ParseBool(value_field)
 	if e != nil {
-		return tristate_value, errors.NewServiceErrorBadValue(go_errors.New("unable to parse tristate as a boolean"), f)
+		return tristate_value, errors.NewServiceErrorBadValue(go_errors.New("unable to parse tristate as a boolean"), field)
 	}
 	tristate_value = value.ToTristate(bool_value)
 	return tristate_value, nil
@@ -993,10 +1043,10 @@ func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 	return creds_data, err
 }
 
-func (this *urlArgs) getPrepared() (value.Value, errors.Error) {
+func (this *urlArgs) getPreparedVal(field string, v interface{}) (value.Value, errors.Error) {
 	var val value.Value
 
-	value_field, err := this.formValue(PREPARED)
+	value_field, err := this.getStringVal(field, v)
 	if value_field == "" || err != nil {
 		return val, err
 	}
@@ -1064,17 +1114,25 @@ func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 	return &p, nil
 }
 
+func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
+	var err errors.Error
+
+	for parm, val := range this.args {
+		err = _PARAMETERS[parm](rv, this, parm, val)
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
 func (this *jsonArgs) getField(field string) (interface{}, bool) {
 	value, ok := this.args[field]
 	return value, ok
 }
 
-func (this *jsonArgs) getStatement() (string, errors.Error) {
-	return this.getString(STATEMENT, "")
-}
-
-func (this *jsonArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
-	return this.named, nil
+func (this *jsonArgs) getNamedArgs() map[string]value.Value {
+	return this.named
 }
 
 func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
@@ -1184,20 +1242,25 @@ func (this *jsonArgs) getDuration(f string) (time.Duration, errors.Error) {
 	return newDuration(t)
 }
 
-func (this *jsonArgs) getTristate(f string) (value.Tristate, errors.Error) {
+func (this *jsonArgs) getTristateVal(field string, v interface{}) (value.Tristate, errors.Error) {
 	value_tristate := value.NONE
-	value_field, in_request := this.getField(f)
-	if !in_request {
-		return value_tristate, nil
-	}
 
-	b, type_ok := value_field.(bool)
+	b, type_ok := v.(bool)
 	if !type_ok {
-		return value_tristate, errors.NewServiceErrorTypeMismatch(f, "boolean")
+		return value_tristate, errors.NewServiceErrorTypeMismatch(field, "boolean")
 	}
 
 	value_tristate = value.ToTristate(b)
 	return value_tristate, nil
+}
+
+// helper function to get a string type argument
+func (this *jsonArgs) getStringVal(field string, v interface{}) (string, errors.Error) {
+	value, type_ok := v.(string)
+	if !type_ok {
+		return value, errors.NewServiceErrorTypeMismatch(field, "string")
+	}
+	return value, nil
 }
 
 // helper function to get a string type argument
@@ -1214,16 +1277,8 @@ func (this *jsonArgs) getString(f string, dflt string) (string, errors.Error) {
 	return value, nil
 }
 
-func (this *jsonArgs) getPrepared() (value.Value, errors.Error) {
-	var val value.Value
-
-	value_field, in_request := this.getField(PREPARED)
-	if !in_request {
-		return val, nil
-	}
-
-	val = value.NewValue(value_field)
-	return val, nil
+func (this *jsonArgs) getPreparedVal(field string, v interface{}) (value.Value, errors.Error) {
+	return value.NewValue(v), nil
 }
 
 type Encoding int

@@ -181,8 +181,16 @@ func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Va
 	query := &MockQuery{
 		response: mr,
 	}
-	server.NewBaseRequest(&query.BaseRequest, q, nil, namedArgs, positionalArgs, "json", 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil, "", "")
+	server.NewBaseRequest(&query.BaseRequest)
+	query.SetStatement(q)
+	query.SetNamedArgs(namedArgs)
+	query.SetPositionalArgs(positionalArgs)
+	query.SetNamespace("json")
+	query.SetReadonly(value.FALSE)
+	query.SetMetrics(metrics)
+	query.SetSignature(value.TRUE)
+	query.SetPretty(pretty)
+	query.SetScanConfiguration(scanConfiguration)
 
 	defer mockServer.doStats(query)
 

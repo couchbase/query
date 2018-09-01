@@ -17,10 +17,10 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func getProfileRequest(a httpRequestArgs) (server.Profile, errors.Error) {
+func getProfileRequest(a httpRequestArgs, parm string, val interface{}) (server.Profile, errors.Error) {
 	return server.ProfUnset, nil
 }
 
-func getControlsRequest(a httpRequestArgs) (value.Tristate, errors.Error) {
+func getControlsRequest(a httpRequestArgs, parm string, val interface{}) (value.Tristate, errors.Error) {
 	return value.NONE, nil
 }

@@ -46,7 +46,9 @@ const (
 type Request interface {
 	Id() RequestID
 	ClientID() ClientContextID
+	SetClientID(id string)
 	Statement() string
+	SetStatement(statement string)
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
@@ -58,20 +60,39 @@ type Request interface {
 	PositionalArgs() value.Values
 	SetPositionalArgs(args value.Values)
 	Namespace() string
+	SetNamespace(namespace string)
 	Timeout() time.Duration
+	SetTimeout(timeout time.Duration)
 	SetTimer(*time.Timer)
 	MaxParallelism() int
+	SetMaxParallelism(maxParallelism int)
 	ScanCap() int64
+	SetScanCap(scanCap int64)
 	PipelineCap() int64
+	SetPipelineCap(pipelineCap int64)
 	PipelineBatch() int
+	SetPipelineBatch(pipelineBatch int)
 	Readonly() value.Tristate
+	SetReadonly(readonly value.Tristate)
 	Metrics() value.Tristate
+	SetMetrics(metrics value.Tristate)
 	Signature() value.Tristate
+	SetSignature(signature value.Tristate)
 	Pretty() value.Tristate
+	SetPretty(pretty value.Tristate)
 	Controls() value.Tristate
+	SetControls(controls value.Tristate)
 	Profile() Profile
+	SetProfile(p Profile)
 	ScanConsistency() datastore.ScanConsistency
+	SetScanConfiguration(consistency ScanConfiguration)
 	ScanVectorSource() timestamp.ScanVectorSource
+	IndexApiVersion() int
+	SetIndexApiVersion(ver int)
+	FeatureControls() uint64
+	SetFeatureControls(controls uint64)
+	AutoPrepare() value.Tristate
+	SetAutoPrepare(a value.Tristate)
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -86,16 +107,15 @@ type Request interface {
 	State() State
 	Halted() bool
 	Credentials() auth.Credentials
+	SetCredentials(credentials auth.Credentials)
 	RemoteAddr() string
+	SetRemoteAddr(remoteAddr string)
 	UserAgent() string
+	SetUserAgent(userAgent string)
 	SetTimings(o execution.Operator)
 	GetTimings() execution.Operator
 	OriginalHttpRequest() *http.Request
 	IsAdHoc() bool
-	IndexApiVersion() int
-	FeatureControls() uint64
-	SetAutoPrepare(a value.Tristate)
-	AutoPrepare() value.Tristate
 }
 
 type RequestID interface {
@@ -249,49 +269,27 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 	return &clientContextIDImpl{id: id}
 }
 
-func NewBaseRequest(rv *BaseRequest, statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
-	positionalArgs value.Values, namespace string, maxParallelism int, scanCap, pipelineCap int64,
-	pipelineBatch int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
-	client_id string, creds auth.Credentials, remoteAddr string, userAgent string) {
-	rv.statement = statement
-	rv.prepared = prepared
-	rv.namedArgs = namedArgs
-	rv.positionalArgs = positionalArgs
-	rv.namespace = namespace
+func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
-	rv.maxParallelism = maxParallelism
-	rv.scanCap = scanCap
-	rv.pipelineCap = pipelineCap
-	rv.pipelineBatch = pipelineBatch
-	rv.readonly = readonly
-	rv.signature = signature
-	rv.metrics = metrics
-	rv.pretty = pretty
-	rv.consistency = consistency
-	rv.credentials = creds
-	rv.remoteAddr = remoteAddr
-	rv.userAgent = userAgent
 	rv.serviceTime = time.Now()
 	rv.state = RUNNING
 	rv.aborted = false
 	rv.closeNotify = make(chan bool, 1)
 	rv.stopResult = make(chan bool, 1)
 	rv.stopExecute = make(chan bool, 1)
+	rv.metrics = value.NONE
+	rv.pretty = value.NONE
+	rv.readonly = value.NONE
+	rv.signature = value.NONE
 	rv.profile = ProfUnset
 	rv.controls = value.NONE
+	rv.autoPrepare = value.NONE
 	rv.indexApiVersion = util.GetMaxIndexAPI()
 	rv.featureControls = util.GetN1qlFeatureControl()
-
-	if maxParallelism <= 0 {
-		maxParallelism = runtime.NumCPU()
-	}
-
-	rv.results = make(value.ValueChannel, maxParallelism)
-
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
-	rv.client_id = newClientContextIDImpl(client_id)
-	rv.autoPrepare = value.NONE
+	rv.results = make(value.ValueChannel, runtime.NumCPU())
+	rv.client_id = newClientContextIDImpl("")
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -300,10 +298,6 @@ func (this *BaseRequest) SetRequestTime(time time.Time) {
 
 func (this *BaseRequest) SetExecTime(time time.Time) {
 	this.execTime = time
-}
-
-func (this *BaseRequest) SetTimeout(timeout time.Duration) {
-	this.timeout = timeout
 }
 
 func (this *BaseRequest) SetTimer(timer *time.Timer) {
@@ -318,8 +312,16 @@ func (this *BaseRequest) ClientID() ClientContextID {
 	return this.client_id
 }
 
+func (this *BaseRequest) SetClientID(id string) {
+	this.client_id.id = id
+}
+
 func (this *BaseRequest) Statement() string {
 	return this.statement
+}
+
+func (this *BaseRequest) SetStatement(statement string) {
+	this.statement = statement
 }
 
 func (this *BaseRequest) Prepared() *plan.Prepared {
@@ -354,40 +356,83 @@ func (this *BaseRequest) Namespace() string {
 	return this.namespace
 }
 
+func (this *BaseRequest) SetNamespace(namespace string) {
+	this.namespace = namespace
+}
+
 func (this *BaseRequest) Timeout() time.Duration {
 	return this.timeout
+}
+
+func (this *BaseRequest) SetTimeout(timeout time.Duration) {
+	this.timeout = timeout
 }
 
 func (this *BaseRequest) MaxParallelism() int {
 	return this.maxParallelism
 }
 
+func (this *BaseRequest) SetMaxParallelism(maxParallelism int) {
+	if maxParallelism <= 0 {
+		maxParallelism = runtime.NumCPU()
+	}
+	this.maxParallelism = maxParallelism
+}
+
 func (this *BaseRequest) ScanCap() int64 {
 	return this.scanCap
+}
+
+func (this *BaseRequest) SetScanCap(scanCap int64) {
+	this.scanCap = scanCap
 }
 
 func (this *BaseRequest) PipelineCap() int64 {
 	return this.pipelineCap
 }
 
+func (this *BaseRequest) SetPipelineCap(pipelineCap int64) {
+	this.pipelineCap = pipelineCap
+}
+
 func (this *BaseRequest) PipelineBatch() int {
 	return this.pipelineBatch
+}
+
+func (this *BaseRequest) SetPipelineBatch(pipelineBatch int) {
+	this.pipelineBatch = pipelineBatch
 }
 
 func (this *BaseRequest) Readonly() value.Tristate {
 	return this.readonly
 }
 
+func (this *BaseRequest) SetReadonly(readonly value.Tristate) {
+	this.readonly = readonly
+}
+
 func (this *BaseRequest) Signature() value.Tristate {
 	return this.signature
+}
+
+func (this *BaseRequest) SetSignature(signature value.Tristate) {
+	this.signature = signature
 }
 
 func (this *BaseRequest) Metrics() value.Tristate {
 	return this.metrics
 }
 
+func (this *BaseRequest) SetMetrics(metrics value.Tristate) {
+	this.metrics = metrics
+}
+
 func (this *BaseRequest) Pretty() value.Tristate {
 	return this.pretty
+}
+
+func (this *BaseRequest) SetPretty(pretty value.Tristate) {
+	this.pretty = pretty
 }
 
 func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {
@@ -395,6 +440,10 @@ func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {
 		return datastore.UNBOUNDED
 	}
 	return this.consistency.ScanConsistency()
+}
+
+func (this *BaseRequest) SetScanConfiguration(consistency ScanConfiguration) {
+	this.consistency = consistency
 }
 
 func (this *BaseRequest) ScanVectorSource() timestamp.ScanVectorSource {
@@ -471,12 +520,24 @@ func (this *BaseRequest) Credentials() auth.Credentials {
 	return this.credentials
 }
 
+func (this *BaseRequest) SetCredentials(credentials auth.Credentials) {
+	this.credentials = credentials
+}
+
 func (this *BaseRequest) RemoteAddr() string {
 	return this.remoteAddr
 }
 
+func (this *BaseRequest) SetRemoteAddr(remoteAddr string) {
+	this.remoteAddr = remoteAddr
+}
+
 func (this *BaseRequest) UserAgent() string {
 	return this.userAgent
+}
+
+func (this *BaseRequest) SetUserAgent(userAgent string) {
+	this.userAgent = userAgent
 }
 
 func (this *BaseRequest) CloseNotify() chan bool {

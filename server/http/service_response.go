@@ -594,13 +594,6 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	return this.writeString("}")
 }
 
-// responseDataManager is an interface for managing response data. It is used by httpRequest to take care of
-// the data in a response.
-type responseDataManager interface {
-	writeString(string) bool // write the given string for the response
-	noMoreData()             // action to take when there is no more data for the response
-}
-
 // bufferedWriter is an implementation of responseDataManager that writes response data to a buffer,
 // up to a threshold:
 type bufferedWriter struct {
@@ -613,15 +606,13 @@ type bufferedWriter struct {
 	lastFlush   time.Time
 }
 
-func NewBufferedWriter(r *httpRequest, bp BufferPool) *bufferedWriter {
-	return &bufferedWriter{
-		req:         r,
-		buffer:      bp.GetBuffer(),
-		buffer_pool: bp,
-		closed:      false,
-		header:      true,
-		lastFlush:   time.Now(),
-	}
+func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
+	w.req = r
+	w.buffer = bp.GetBuffer()
+	w.buffer_pool = bp
+	w.closed = false
+	w.header = true
+	w.lastFlush = time.Now()
 }
 
 func (this *bufferedWriter) writeString(s string) bool {

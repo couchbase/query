@@ -214,8 +214,15 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	query := &MockQuery{
 		response: mr,
 	}
-	server.NewBaseRequest(&query.BaseRequest, q, nil, nil, nil, namespace, 0, 0, 0, 0,
-		value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", AUTH_USERS, "", "")
+	server.NewBaseRequest(&query.BaseRequest)
+	query.SetStatement(q)
+	query.SetNamespace(namespace)
+	query.SetReadonly(value.FALSE)
+	query.SetMetrics(metrics)
+	query.SetSignature(value.TRUE)
+	query.SetPretty(value.TRUE)
+	query.SetScanConfiguration(consistency)
+	query.SetCredentials(AUTH_USERS)
 
 	defer mockServer.doStats(query)
 

@@ -17,8 +17,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func getProfileRequest(a httpRequestArgs) (server.Profile, errors.Error) {
-	profile, err := a.getString(PROFILE, "")
+func getProfileRequest(a httpRequestArgs, parm string, val interface{}) (server.Profile, errors.Error) {
+	profile, err := a.getStringVal(parm, val)
 	if err == nil && profile != "" {
 		prof, ok := server.ParseProfile(profile)
 		if ok {
@@ -31,6 +31,6 @@ func getProfileRequest(a httpRequestArgs) (server.Profile, errors.Error) {
 	return server.ProfUnset, err
 }
 
-func getControlsRequest(a httpRequestArgs) (value.Tristate, errors.Error) {
-	return a.getTristate(CONTROLS)
+func getControlsRequest(a httpRequestArgs, parm string, val interface{}) (value.Tristate, errors.Error) {
+	return a.getTristateVal(parm, val)
 }
