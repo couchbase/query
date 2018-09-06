@@ -1,0 +1,45 @@
+[
+  {
+    "testcase": "Cascading LET variables referenced in WHERE clause pushdown to indexer. Explain",
+    "ignore": "index_id",
+    "explain": {
+      "disabled": false,
+      "results": [
+        {
+          "present": true
+        }
+      ],
+      "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'noix1' END"
+    },
+    "statements":"SELECT v2 AS output FROM orders LET v1 = c1, v3 = v1, v2 = v3 WHERE v2 > 9 AND test_id=\"ordernulls\"",
+    "results": [
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      },
+      {
+        "output": 10
+      }
+    ]
+  }
+]

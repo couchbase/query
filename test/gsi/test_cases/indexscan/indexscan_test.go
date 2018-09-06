@@ -121,6 +121,7 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX noix1 ON orders (c1, c2, c3, c4) WHERE test_id = \"ordernulls\"")
 	runMatch("case_ordernulls.json", false, true, qc, t)
 	runMatch("case_ordernulls.json", true, true, qc, t)
+	runMatch("case_let.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX orders.noix1")
 
 	// order nulls DESC index

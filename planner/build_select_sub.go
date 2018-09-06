@@ -70,7 +70,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if node.Let() != nil && node.Where() != nil {
 		var err error
 		inliner := expression.NewInliner(node.Let().Mappings())
-		this.where, err = inliner.Map(node.Where().Copy())
+		level := getMaxLevelOfLetBindings(node.Let())
+		this.where, err = dereferenceLet(node.Where().Copy(), inliner, level)
 		if err != nil {
 			return nil, err
 		}
@@ -733,4 +734,43 @@ func dependsOnLet(expr expression.Expression, let expression.Bindings) bool {
 	}
 
 	return false
+}
+
+func getMaxLevelOfLetBindings(bindings expression.Bindings) int {
+	exprList := bindings.Expressions()
+	if len(exprList) < 2 {
+		return 1
+	}
+
+	level := 1
+	varList := bindings.Identifiers()
+	levels := make([]int, len(exprList))
+	for i := range levels {
+		levels[i] = 1
+	}
+
+	for i := 0; i < len(exprList); i++ {
+		for j := i - 1; j >= 0; j-- {
+			if exprList[i].DependsOn(varList[j]) && levels[i] <= levels[j] {
+				levels[i] = levels[j] + 1
+				if levels[i] > level {
+					level = levels[i]
+					break
+				}
+			}
+		}
+	}
+	return level
+}
+
+func dereferenceLet(expr expression.Expression, inliner *expression.Inliner, level int) (expression.Expression, error) {
+	for level > 0 {
+		expr_new, e := inliner.Map(expr)
+		if e != nil {
+			return nil, e
+		}
+		level--
+		expr = expr_new
+	}
+	return expr, nil
 }
