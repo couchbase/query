@@ -227,12 +227,11 @@ func handleTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	var timeout time.Duration
 
 	t, err := httpArgs.getStringVal(parm, val)
-	if err != nil {
-		return err
-	}
-	timeout, err = newDuration(t)
-	if err == nil {
-		rv.SetTimeout(timeout)
+	if err == nil && t != "" {
+		timeout, err = newDuration(t)
+		if err == nil {
+			rv.SetTimeout(timeout)
+		}
 	}
 	return err
 }
