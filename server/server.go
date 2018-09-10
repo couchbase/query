@@ -601,7 +601,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, errors.NewParseSyntaxError(err, "")
 		}
 
-		semChecker := semantics.NewSemChecker()
+		semChecker := semantics.NewSemChecker(this.Enterprise(), stmt.Type())
 		_, err = stmt.Accept(semChecker)
 		if err != nil {
 			return nil, errors.NewSemanticsError(err, "")

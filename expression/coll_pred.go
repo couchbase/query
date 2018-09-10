@@ -95,9 +95,9 @@ func (this *collPredBase) SurvivesGrouping(groupKeys Expressions, allowed *value
 	}
 
 	for _, child := range this.Children() {
-		ok, expr := child.SurvivesGrouping(groupKeys, allowed)
+		ok, _ := child.SurvivesGrouping(groupKeys, allowed)
 		if !ok {
-			return ok, expr
+			return ok, nil
 		}
 	}
 

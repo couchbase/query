@@ -30,9 +30,9 @@ The function NewStddevSamp calls NewAggregateBase to
 create an aggregate function named StddevSamp with
 one expression as input.
 */
-func NewStddevSamp(operand expression.Expression) Aggregate {
+func NewStddevSamp(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &StddevSamp{
-		*NewAggregateBase("stddev_samp", operand),
+		*NewAggregateBase("stddev_samp", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -68,16 +68,30 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *StddevSamp) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewStddevSamp(operands[0])
+		return NewStddevSamp(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *StddevSamp) Copy() expression.Expression {
+	rv := &StddevSamp{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the StddevSamp function, then the default value
 returned is a null.
 */
-func (this *StddevSamp) Default() value.Value {
-	return value.NULL_VALUE
+func (this *StddevSamp) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
 }
 
 /*
@@ -88,7 +102,7 @@ list of all the values of type NUMBER.
 Call addStddevVariance to compute the intermediate aggregate value and return it.
 */
 func (this *StddevSamp) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -97,14 +111,14 @@ func (this *StddevSamp) CumulateInitial(item, cumulative value.Value, context Co
 		return cumulative, nil
 	}
 
-	return addStddevVariance(item, cumulative, false)
+	return addStddevVariance(item, cumulative, this.Distinct())
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *StddevSamp) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return cumulateStddevVariance(part, cumulative, false)
+	return cumulateStddevVariance(part, cumulative, this.Distinct())
 }
 
 /*
@@ -119,7 +133,7 @@ func (this *StddevSamp) ComputeFinal(cumulative value.Value, context Context) (v
 		return cumulative, nil
 	}
 
-	variance, e := computeVariance(cumulative, false, true, 1.0)
+	variance, e := computeVariance(cumulative, this.Distinct(), true, 1.0)
 	if e != nil {
 		return nil, e
 	}

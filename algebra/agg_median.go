@@ -29,9 +29,9 @@ The function NewMedian calls NewAggregateBase to
 create an aggregate function named Median with
 one expression as input.
 */
-func NewMedian(operand expression.Expression) Aggregate {
+func NewMedian(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Median{
-		*NewAggregateBase("median", operand),
+		*NewAggregateBase("median", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -65,15 +65,31 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Median) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewMedian(operands[0])
+		return NewMedian(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Median) Copy() expression.Expression {
+	rv := &Median{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the Median function, then the default value
 returned is a null.
 */
-func (this *Median) Default() value.Value { return value.NULL_VALUE }
+func (this *Median) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For all
@@ -82,7 +98,7 @@ arrayAdd to collect all the values of type NUMBER as the intermediate aggregate 
 and return it.
 */
 func (this *Median) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -91,14 +107,22 @@ func (this *Median) CumulateInitial(item, cumulative value.Value, context Contex
 		return cumulative, nil
 	}
 
-	return listAdd(item, cumulative), nil
+	if this.Distinct() {
+		return setAdd(item, cumulative, true), nil
+	} else {
+		return listAdd(item, cumulative), nil
+	}
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *Median) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return cumulateLists(part, cumulative)
+	if this.Distinct() {
+		return cumulateSets(part, cumulative)
+	} else {
+		return cumulateLists(part, cumulative)
+	}
 }
 
 /*
@@ -112,12 +136,22 @@ func (this *Median) ComputeFinal(cumulative value.Value, context Context) (c val
 		return cumulative, nil
 	}
 
+	var length int
+	var vals value.Values
 	av := cumulative.(value.AnnotatedValue)
-	medianList := av.GetAttachment("list").(*value.List)
-	length := medianList.Len()
+
+	if this.Distinct() {
+		medianSet := av.GetAttachment("set").(*value.Set)
+		length = medianSet.Len()
+		vals = medianSet.Values()
+	} else {
+		medianList := av.GetAttachment("list").(*value.List)
+		length = medianList.Len()
+		vals = medianList.Values()
+	}
+
 	if length == 0 {
 		return value.NULL_VALUE, nil
 	}
-	return medianOfMedian(medianList.Values(), (length+1)/2, length&1 == 0), nil
-
+	return medianOfMedian(vals, (length+1)/2, length&1 == 0), nil
 }

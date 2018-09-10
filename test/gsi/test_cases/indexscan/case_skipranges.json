@@ -9,7 +9,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 5 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) = 5 END"
         },
         "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 > 0 AND o.c1 >= 10 AND o.c3 = 1000",
         "results": [
@@ -28,7 +28,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 AND ARRAY_LENGTH(v.spans[0].range) = 5 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 AND ARRAY_LENGTH(v.spans[0].`range`) = 5 END"
         },
         "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 > 0 AND o.c1 >= 10 AND o.c3 IN [1000, 2000]",
         "results": [
@@ -50,7 +50,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 AND ARRAY_LENGTH(v.spans[0].range) = 5 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 AND ARRAY_LENGTH(v.spans[0].`range`) = 5 END"
         },
         "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 > 0 AND ANY v IN o.a1 SATISFIES v IN [11,12] END AND o.c3 = 1000",
         "results": [
@@ -69,7 +69,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 5 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) = 5 END"
         },
         "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 > 0 AND o.c1 IS MISSING AND o.c2 = 600 AND o.c3 IS MISSING",
         "results": [
@@ -88,7 +88,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 5 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) = 5 END"
         },
         "statements":"SELECT v.id FROM orders AS o UNNEST o.a3 AS v WHERE o.test_id = \"skipranges\" AND v.id > 11 AND o.c0 = 1 AND o.c3 = 1000",
         "results": [

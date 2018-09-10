@@ -84,7 +84,7 @@ const NOT_GROUP_KEY_OR_AGG = 4210
 
 func NewNotGroupKeyOrAggError(expr string) Error {
 	return &err{level: EXCEPTION, ICode: NOT_GROUP_KEY_OR_AGG, IKey: "plan.not_group_key_or_agg",
-		InternalMsg: fmt.Sprintf("Expression must be a group key or aggregate: %s", expr), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Expression %s must depend only on group keys or aggregates.", expr), InternalCaller: CallerN(1)}
 }
 
 const NEW_INDEX_ALREADY_EXISTS = 4300

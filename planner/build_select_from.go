@@ -529,7 +529,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 			return false, nil
 		}
 
-		operand := count.Operand()
+		operand := count.Operands()[0]
 		if operand != nil {
 			val := operand.Value()
 			if val == nil || val.Type() <= value.NULL {

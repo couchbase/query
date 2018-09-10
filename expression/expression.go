@@ -263,7 +263,9 @@ func (this Expressions) String() string {
 
 func (this Expressions) Copy() Expressions {
 	rv := make(Expressions, len(this))
-	copy(rv, this)
+	for i, expr := range this {
+		rv[i] = Copy(expr)
+	}
 	return rv
 }
 

@@ -32,9 +32,9 @@ The function NewCount calls NewAggregateBase to
 create an aggregate function named COUNT with
 one expression as input.
 */
-func NewCount(operand expression.Expression) Aggregate {
+func NewCount(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Count{
-		*NewAggregateBase("count", operand),
+		*NewAggregateBase("count", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -80,28 +80,42 @@ input operand cast to a Function as the FunctionConstructor.
 */
 func (this *Count) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		if len(operands) > 0 {
-			return NewCount(operands[0])
-		} else {
-			return NewCount(nil)
-		}
+		return NewCount(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Count) Copy() expression.Expression {
+	rv := &Count{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the COUNT function, then the default value
 returned is a zero value.
 */
-func (this *Count) Default() value.Value { return value.ZERO_VALUE }
+func (this *Count) Default(item value.Value, context Context) (value.Value, error) {
+	return value.ZERO_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For missing and
 null values return the input value itself. Call cumulatePart
 to compute the intermediate aggregate value and return it.
 */
-func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	if this.Operand() != nil {
-		item, e := this.Operand().Evaluate(item, context)
+func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (r value.Value, e error) {
+
+	ops := this.Operands()
+	if ops[0] != nil {
+		item, e = ops[0].Evaluate(item, context)
 		if e != nil {
 			return nil, e
 		}
@@ -111,22 +125,76 @@ func (this *Count) CumulateInitial(item, cumulative value.Value, context Context
 		}
 	}
 
-	return this.cumulatePart(value.ONE_VALUE, cumulative, context)
-
+	if this.Distinct() {
+		return setAdd(item, cumulative, false), nil
+	} else {
+		return this.cumulatePart(value.ONE_VALUE, cumulative, context)
+	}
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *Count) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+	if this.Distinct() {
+		if part == value.ZERO_VALUE {
+			return cumulative, nil
+		} else if cumulative == value.ZERO_VALUE {
+			return part, nil
+		}
+
+		return cumulateSets(part, cumulative)
+	} else {
+		return this.cumulatePart(part, cumulative, context)
+	}
 }
 
 /*
 Returns input cumulative value as the Final result.
 */
 func (this *Count) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
-	return cumulative, nil
+	if this.Distinct() {
+		if cumulative == value.ZERO_VALUE {
+			return cumulative, nil
+		}
+
+		av := cumulative.(value.AnnotatedValue)
+		set := av.GetAttachment("set").(*value.Set)
+		return value.NewValue(set.Len()), nil
+	} else {
+		return cumulative, nil
+	}
+}
+
+/*
+Used for Incremental Aggregation.
+For Distinct aggregate this method will not be called.
+Cumulative must be NUMBER because it has been added earlier.
+Remove the Numbered input data by evaluating operands from Aggregate.
+*/
+
+func (this *Count) CumulateRemove(item, cumulative value.Value, context Context) (value.Value, error) {
+	if this.Distinct() {
+		return nil, fmt.Errorf("Invalid %v.CumulateRemove() for DISTINCT values.", this.Name())
+	}
+
+	ops := this.Operands()
+	if ops[0] != nil {
+		item, e := ops[0].Evaluate(item, context)
+		if e != nil {
+			return nil, e
+		}
+
+		if item.Type() <= value.NULL {
+			return cumulative, nil
+		}
+	}
+
+	if cumulative.Type() == value.NUMBER && value.AsNumberValue(cumulative).Int64() > 0 {
+		return value.AsNumberValue(cumulative).Sub(value.AsNumberValue(value.ONE_VALUE)), nil
+	}
+
+	return nil, fmt.Errorf("Invalid %v.CumulateRemove() for %v value.", cumulative.Actual())
 }
 
 /*

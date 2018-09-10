@@ -153,7 +153,7 @@ func (this *Identifier) SurvivesGrouping(groupKeys Expressions, allowed *value.S
 		return true, nil
 	}
 
-	return false, this
+	return false, nil
 }
 
 func (this *Identifier) Set(item, val value.Value, context Context) bool {

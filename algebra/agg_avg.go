@@ -30,9 +30,9 @@ The function NewAvg calls NewAggregateBase to
 create an aggregate function named AVG with
 one expression as input.
 */
-func NewAvg(operand expression.Expression) Aggregate {
+func NewAvg(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Avg{
-		*NewAggregateBase("avg", operand),
+		*NewAggregateBase("avg", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -66,15 +66,31 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Avg) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewAvg(operands[0])
+		return NewAvg(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Avg) Copy() expression.Expression {
+	rv := &Avg{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the AVG function, then the default value
 returned is a null.
 */
-func (this *Avg) Default() value.Value { return value.NULL_VALUE }
+func (this *Avg) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For all
@@ -83,7 +99,7 @@ cumulatePart to compute the intermediate aggregate value
 and return it.
 */
 func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -91,16 +107,23 @@ func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) 
 	if item.Type() != value.NUMBER {
 		return cumulative, nil
 	}
-
-	part := value.NewValue(map[string]interface{}{"sum": item, "count": value.ONE_VALUE})
-	return this.cumulatePart(part, cumulative, context)
+	if this.Distinct() {
+		return setAdd(item, cumulative, true), nil
+	} else {
+		part := value.NewValue(map[string]interface{}{"sum": item, "count": value.ONE_VALUE})
+		return this.cumulatePart(part, cumulative, context)
+	}
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *Avg) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+	if this.Distinct() {
+		return cumulateSets(part, cumulative)
+	} else {
+		return this.cumulatePart(part, cumulative, context)
+	}
 }
 
 /*
@@ -113,19 +136,75 @@ func (this *Avg) ComputeFinal(cumulative value.Value, context Context) (value.Va
 		return cumulative, nil
 	}
 
-	sum, _ := cumulative.Field("sum")
-	count, _ := cumulative.Field("count")
+	count := float64(0)
+	sum := value.ZERO_NUMBER
 
-	if sum.Type() != value.NUMBER || count.Type() != value.NUMBER {
-		return nil, fmt.Errorf("Missing or invalid sum or count in AVG: %v, %v.",
-			sum.Actual(), count.Actual())
+	if this.Distinct() {
+		av := cumulative.(value.AnnotatedValue)
+		set := av.GetAttachment("set").(*value.Set)
+		count = float64(set.Len())
+
+		for _, v := range set.Values() {
+			switch {
+			case v.Type() == value.NUMBER:
+				sum = sum.Add(value.AsNumberValue(v))
+			default:
+				return nil, fmt.Errorf("Invalid partial AVG %v of type %T.", v.Actual(), v.Actual())
+			}
+		}
+
+	} else {
+		sumv, _ := cumulative.Field("sum")
+		countv, _ := cumulative.Field("count")
+
+		if sumv.Type() != value.NUMBER || countv.Type() != value.NUMBER {
+			return nil, fmt.Errorf("Missing or invalid sum or count in AVG: %v, %v.",
+				sumv.Actual(), countv.Actual())
+		}
+
+		sum = value.AsNumberValue(sumv)
+		count = countv.Actual().(float64)
 	}
 
-	if count.Actual().(float64) > 0.0 {
-		return value.NewValue(sum.Actual().(float64) / count.Actual().(float64)), nil
+	if count > 0.0 {
+		return value.NewValue(sum.Actual().(float64) / count), nil
 	} else {
 		return value.NULL_VALUE, nil
 	}
+}
+
+/*
+Used for Incremental Aggregation.
+For Distinct aggregate this method will not be called.
+Cumulative must be NUMBER because it has been added earlier.
+Remove the Numbered input data by evaluating operands from Aggregate.
+*/
+
+func (this *Avg) CumulateRemove(item, cumulative value.Value, context Context) (value.Value, error) {
+	if this.Distinct() {
+		return nil, fmt.Errorf("Invalid %v.CumulateRemove() for DISTINCT values.", this.Name())
+	}
+
+	item, e := this.Operands()[0].Evaluate(item, context)
+	if e != nil {
+		return nil, e
+	}
+
+	if item.Type() != value.NUMBER {
+		return cumulative, nil
+	}
+
+	if cumulative.Type() > value.NULL {
+		csum, sok := cumulative.Field("sum")
+		ccount, cok := cumulative.Field("count")
+		if sok && cok && csum.Type() == value.NUMBER && ccount.Type() == value.NUMBER {
+			cumulative.SetField("sum", value.AsNumberValue(csum).Sub(value.AsNumberValue(item)))
+			cumulative.SetField("count", value.AsNumberValue(ccount).Sub(value.AsNumberValue(value.ONE_VALUE)))
+			return cumulative, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Invalid %v.CumulateRemove() for %v value.", cumulative.Actual())
 }
 
 /*
@@ -147,7 +226,7 @@ func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (va
 
 	if psum.Type() != value.NUMBER || pcount.Type() != value.NUMBER ||
 		csum.Type() != value.NUMBER || ccount.Type() != value.NUMBER {
-		return nil, fmt.Errorf("Missing or invalid partial sum or count in AVG: %v, %v, %v, v.",
+		return nil, fmt.Errorf("Missing or invalid partial sum or count in AVG: %v, %v, %v, %v.",
 			psum.Actual(), pcount.Actual(), csum.Actual(), ccount.Actual())
 	}
 

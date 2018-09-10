@@ -221,3 +221,8 @@ func NewMergeMultiInsertError(key string) Error {
 		InternalMsg:    fmt.Sprintf("Multiple INSERT of the same document (document key '%s') in a MERGE statement", key),
 		InternalCaller: CallerN(1)}
 }
+
+func NewWindowEvaluationError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5340, IKey: "execution.window_aggregate_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}

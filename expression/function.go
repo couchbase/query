@@ -42,6 +42,11 @@ type Function interface {
 	Distinct() bool
 
 	/*
+	   True if this is a aggregate function
+	*/
+	Aggregate() bool
+
+	/*
 	   Returns the operands of the function.
 	*/
 	Operands() Expressions
@@ -219,6 +224,11 @@ func (this *FunctionBase) Name() string { return this.name }
 Default return value is false.
 */
 func (this *FunctionBase) Distinct() bool { return false }
+
+/*
+Default return value is false.
+*/
+func (this *FunctionBase) Aggregate() bool { return false }
 
 /*
 Return the operands of the function.

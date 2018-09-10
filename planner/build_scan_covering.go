@@ -217,13 +217,13 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 
 	for _, ag := range this.aggs {
 		switch agg := ag.(type) {
-		case *algebra.Count, *algebra.CountDistinct:
+		case *algebra.Count:
 			if !countPush {
 				return nil
 			}
 
 			distinct := agg.Distinct()
-			op := agg.Operand()
+			op := agg.Operands()[0]
 			if !distinct || op.Value() == nil {
 				scan := this.buildIndexCountScan(node, entry, pred, distinct, covers, filterCovers)
 				this.countScan = scan

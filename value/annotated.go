@@ -39,6 +39,7 @@ type AnnotatedValue interface {
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
+	RemoveAttachment(key string)
 	GetId() interface{}
 	SetId(id interface{})
 	Covers() Value

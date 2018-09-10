@@ -579,6 +579,10 @@ func (this *Stringer) VisitSelf(expr *Self) (interface{}, error) {
 
 // Function
 func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
+	if expr.Aggregate() {
+		return expr.String(), nil
+	}
+
 	var buf bytes.Buffer
 	buf.WriteString(expr.Name())
 	buf.WriteString("(")

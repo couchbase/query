@@ -15,29 +15,45 @@ import (
 )
 
 func (this *SemChecker) VisitSelect(stmt *algebra.Select) (interface{}, error) {
-	return stmt.Subresult().Accept(this)
+	prevStmtType := this.stmtType
+	defer func() {
+		this.stmtType = prevStmtType
+	}()
+	this.stmtType = stmt.Type()
+
+	if r, err := stmt.Subresult().Accept(this); err != nil {
+		return r, err
+	}
+
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	if stmt.Select() != nil {
-		return stmt.Select().Accept(this)
+		if r, err := stmt.Select().Accept(this); err != nil {
+			return r, err
+		}
 	}
-	return nil, nil
+
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	if stmt.Select() != nil {
-		return stmt.Select().Accept(this)
+		if r, err := stmt.Select().Accept(this); err != nil {
+			return r, err
+		}
 	}
-	return nil, nil
+
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
@@ -83,7 +99,8 @@ func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	} else {
 		return nil, errors.NewMergeMissingSourceError()
 	}
-	return nil, nil
+
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
@@ -91,13 +108,13 @@ func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error)
 }
 
 func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }

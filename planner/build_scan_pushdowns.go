@@ -97,22 +97,17 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 			switch agg := ag.(type) {
 
 			case *algebra.Count:
-				if this.canPushDownCount(entry, agg.Operand(), indexKeys, false) {
-					pushDownProperty |= _PUSHDOWN_GROUPAGGS
-				}
-
-			case *algebra.CountDistinct:
-				if this.canPushDownCount(entry, agg.Operand(), indexKeys, true) {
+				if this.canPushDownCount(entry, agg.Operands()[0], indexKeys, agg.Distinct()) {
 					pushDownProperty |= _PUSHDOWN_GROUPAGGS
 				}
 
 			case *algebra.Min:
-				if this.canPushDownMinMax(entry, agg.Operand(), indexKeys, false) {
+				if this.canPushDownMinMax(entry, agg.Operands()[0], indexKeys, false) {
 					pushDownProperty |= _PUSHDOWN_GROUPAGGS
 				}
 
 			case *algebra.Max:
-				if this.canPushDownMinMax(entry, agg.Operand(), indexKeys, true) {
+				if this.canPushDownMinMax(entry, agg.Operands()[0], indexKeys, true) {
 					pushDownProperty |= _PUSHDOWN_GROUPAGGS
 				}
 			}
@@ -170,7 +165,7 @@ func (this *builder) indexAggPushDownProperty(entry *indexEntry, indexKeys expre
 
 nextagg:
 	for _, agg := range this.aggs {
-		op := agg.Operand()
+		op := agg.Operands()[0]
 
 		constOp := (op == nil || op.Value() != nil)
 

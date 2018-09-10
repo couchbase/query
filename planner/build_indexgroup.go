@@ -45,14 +45,14 @@ func NewPartialAggCoverer(covers []*expression.Cover, aggs algebra.Aggregates) *
 		}()
 		rv.matchCover = nil
 
-		if agg, ok := expr.(algebra.Aggregate); ok {
+		if agg, ok := expr.(algebra.Aggregate); ok && !agg.IsWindowAggregate() {
 			switch agg.(type) {
-			case *algebra.Avg, *algebra.AvgDistinct:
+			case *algebra.Avg:
 				return indexPartialAggregateAvg2DivisionRewrite(agg, rv.aggs)
 			}
 
 			for _, c := range covers {
-				if expression.Equivalent(agg.Operand(), c) {
+				if expression.Equivalent(agg.Operands()[0], c) {
 					return indexPartialAggregateCount2SumRewrite(agg, c), nil
 				}
 
@@ -106,9 +106,9 @@ func NewFullAggCoverer(covers []*expression.Cover) *FullAggCoverer {
 			return expr, nil
 		}
 
-		if agg, ok := expr.(algebra.Aggregate); ok {
+		if agg, ok := expr.(algebra.Aggregate); ok && !agg.IsWindowAggregate() {
 			switch agg.(type) {
-			case *algebra.Avg, *algebra.AvgDistinct:
+			case *algebra.Avg:
 				return indexFullAggregateAvg2DivisionRewrite(agg, covers)
 			}
 

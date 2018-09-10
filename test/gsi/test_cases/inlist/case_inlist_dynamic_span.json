@@ -9,7 +9,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) = 1 AND v.spans[0].range[0].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) = 1 AND v.spans[0].`range`[0].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist ORDER BY c21, c22",
 	"namedArgs": { "inlist": [ 1, 2, 3, 4, 5 ] },
@@ -39,7 +39,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) > 1 AND ARRAY_LENGTH(v.spans[1].range) = 1 AND v.spans[1].range[0].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) > 1 AND ARRAY_LENGTH(v.spans[1].`range`) = 1 AND v.spans[1].`range`[0].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist OR c21 IN $inlist2 ORDER BY c21, c22",
 	"namedArgs": { "inlist": [ 1, 2, 3 ], "inlist2": [ "a", "b", "c" ] },
@@ -69,7 +69,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND v.spans[0].range[1].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) > 1 AND v.spans[0].`range`[1].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE c21 BETWEEN 1 AND 5 AND c22 IN $inlist ORDER BY c21, c22",
         "namedArgs": { "inlist": [ 5, 10, 15 ,20, 25 ] },
@@ -99,7 +99,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND v.spans[0].range[0].dynamic_in = true AND v.spans[0].range[1].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) > 1 AND v.spans[0].`range`[0].dynamic_in = true AND v.spans[0].`range`[1].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE c21 IN $inlist AND c22 IN $inlist2 ORDER BY c21, c22",
         "namedArgs": { "inlist": [ 1, 2, 3, 4, 5 ], "inlist2": [ 5, 10, 15 ] },
@@ -125,7 +125,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) > 1 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND ARRAY_LENGTH(v.spans[1].range) > 1 AND v.spans[0].range[1].dynamic_in = true AND v.spans[1].range[1].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) > 1 AND ARRAY_LENGTH(v.spans[0].`range`) > 1 AND ARRAY_LENGTH(v.spans[1].`range`) > 1 AND v.spans[0].`range`[1].dynamic_in = true AND v.spans[1].`range`[1].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE c21 BETWEEN 1 AND 5 AND (c22 IN $inlist OR c22 IN $inlist2)",
         "namedArgs": { "inlist": [ 5, 10, 15 ], "inlist2": [ 20, 25] },
@@ -155,7 +155,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 6 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND ARRAY_LENGTH(v.spans[5].range) > 1 AND v.spans[0].range[1].dynamic_in = true AND v.spans[5].range[1].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 6 AND ARRAY_LENGTH(v.spans[0].`range`) > 1 AND ARRAY_LENGTH(v.spans[5].`range`) > 1 AND v.spans[0].`range`[1].dynamic_in = true AND v.spans[5].`range`[1].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE (c21 = 1 OR c21 = 3 OR c21 = 5) AND (c22 IN $inlist OR c22 IN $inlist2)",
         "namedArgs": { "inlist": [ 5, 10, 15 ], "inlist2": [ 20, 25] },
@@ -185,7 +185,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 4 AND ARRAY_LENGTH(v.spans[0].range) > 1 AND ARRAY_LENGTH(v.spans[3].range) > 1 AND v.spans[0].range[0].dynamic_in = true AND v.spans[0].range[1].dynamic_in = true AND v.spans[3].range[0].dynamic_in = true AND v.spans[3].range[1].dynamic_in = true END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.has_dynamic_in = true and ARRAY_LENGTH(v.spans) = 4 AND ARRAY_LENGTH(v.spans[0].`range`) > 1 AND ARRAY_LENGTH(v.spans[3].`range`) > 1 AND v.spans[0].`range`[0].dynamic_in = true AND v.spans[0].`range`[1].dynamic_in = true AND v.spans[3].`range`[0].dynamic_in = true AND v.spans[3].`range`[1].dynamic_in = true END"
         },
         "statements":"SELECT c21, c22 FROM shellTest WHERE (c21 IN $inlist OR c21 IN $inlist2) AND (c22 IN $inlist3 OR c22 IN $inlist4)",
         "namedArgs": { "inlist": [ 1, 2, 3 ], "inlist2": [ "a", "b", "c" ], "inlist3": [ 5, 15 ], "inlist4": [ "5a", "5c" ] },

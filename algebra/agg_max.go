@@ -29,9 +29,9 @@ The function NewMax calls NewAggregateBase to
 create an aggregate function named MAX with
 one expression as input.
 */
-func NewMax(operand expression.Expression) Aggregate {
+func NewMax(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Max{
-		*NewAggregateBase("max", operand),
+		*NewAggregateBase("max", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -65,15 +65,31 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Max) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewMax(operands[0])
+		return NewMax(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Max) Copy() expression.Expression {
+	rv := &Max{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the MAX function, then the default value
 returned is a null.
 */
-func (this *Max) Default() value.Value { return value.NULL_VALUE }
+func (this *Max) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For missing and
@@ -81,7 +97,7 @@ null values return the input value itself. Call cumulatePart
 to compute the intermediate aggregate value and return it.
 */
 func (this *Max) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

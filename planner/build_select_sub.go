@@ -84,9 +84,14 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.inferUnnestPredicates(node.From())
 	}
 
-	aggs, err := allAggregates(node, this.order)
+	aggs, windowAggs, err := allAggregates(node, this.order)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(windowAggs) > 0 {
+		this.resetOrderOffsetLimit()
+		this.resetProjection()
 	}
 
 	// Infer WHERE clause from aggregates
@@ -165,7 +170,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	loop:
 		for _, term := range node.Projection().Terms() {
 			switch expr := term.Expression().(type) {
-			case *algebra.Count, *algebra.CountDistinct, *algebra.Min, *algebra.Max:
+			case *algebra.Count, *algebra.Min, *algebra.Max:
 				this.oldAggregates = true
 			default:
 				if expr.Value() == nil {
@@ -219,6 +224,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 		if group != nil {
 			this.visitGroup(group, aggs)
+		}
+
+		if len(windowAggs) > 0 {
+			this.visitWindowAggregates(windowAggs)
 		}
 
 		projection := node.Projection()
@@ -478,81 +487,104 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	this.where = expression.NewAnd(andTerms...)
 }
 
-func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggregates, error) {
+func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggregates, algebra.Aggregates, error) {
+
+	var err error
 	aggs := make(map[string]algebra.Aggregate)
+	windowAggs := make(map[string]algebra.Aggregate)
 
 	if node.Let() != nil {
-		for _, binding := range node.Let() {
-			collectAggregates(aggs, binding.Expression())
-			if len(aggs) > 0 {
-				return nil, fmt.Errorf("Aggregates not allowed in LET.")
-			}
+		if err = collectAggregates(aggs, windowAggs, node.Let().Expressions()...); err != nil {
+			return nil, nil, err
+		}
+
+		if len(aggs) > 0 {
+			return nil, nil, fmt.Errorf("Aggregates not allowed in LET.")
+		}
+
+		if len(windowAggs) > 0 {
+			return nil, nil, fmt.Errorf("Window Aggregates not allowed in LET.")
 		}
 	}
 
 	if node.Where() != nil {
-		collectAggregates(aggs, node.Where())
+		if err = collectAggregates(aggs, windowAggs, node.Where()); err != nil {
+			return nil, nil, err
+		}
+
 		if len(aggs) > 0 {
-			return nil, fmt.Errorf("Aggregates not allowed in WHERE.")
+			return nil, nil, fmt.Errorf("Aggregates not allowed in WHERE.")
+		}
+
+		if len(windowAggs) > 0 {
+			return nil, nil, fmt.Errorf("Window Aggregates not allowed in WHERE.")
 		}
 	}
 
 	group := node.Group()
 	if group != nil {
-		collectAggregates(aggs, group.By()...)
+		if err = collectAggregates(aggs, windowAggs, group.By()...); err != nil {
+			return nil, nil, err
+		}
+
 		if len(aggs) > 0 {
-			return nil, fmt.Errorf("Aggregates not allowed in GROUP BY.")
+			return nil, nil, fmt.Errorf("Aggregates not allowed in GROUP BY.")
 		}
 
-		letting := group.Letting()
-		for _, binding := range letting {
-			collectAggregates(aggs, binding.Expression())
+		if len(windowAggs) > 0 {
+			return nil, nil, fmt.Errorf("Window Aggregates not allowed in GROUP BY.")
 		}
 
-		having := group.Having()
-		if having != nil {
-			collectAggregates(aggs, having)
+		if group.Letting() != nil {
+			if err = collectAggregates(aggs, windowAggs, group.Letting().Expressions()...); err != nil {
+				return nil, nil, err
+			}
+
+			if len(windowAggs) > 0 {
+				return nil, nil, fmt.Errorf("Window Aggregates not allowed in LETTING.")
+			}
+		}
+
+		if group.Having() != nil {
+			if err = collectAggregates(aggs, windowAggs, group.Having()); err != nil {
+				return nil, nil, err
+			}
+
+			if len(windowAggs) > 0 {
+				return nil, nil, fmt.Errorf("Window Aggregates not allowed in HAVING.")
+			}
 		}
 	}
 
-	projection := node.Projection()
-	if projection != nil {
-		for _, term := range projection.Terms() {
-			if term.Expression() != nil {
-				collectAggregates(aggs, term.Expression())
-			}
+	if node.Projection() != nil {
+		if err = collectAggregates(aggs, windowAggs, node.Projection().Expressions()...); err != nil {
+			return nil, nil, err
 		}
 	}
 
 	if order != nil {
 		allow := len(aggs) > 0
 
-		for _, term := range order.Terms() {
-			if term.Expression() != nil {
-				collectAggregates(aggs, term.Expression())
-			}
+		if err = collectAggregates(aggs, windowAggs, order.Expressions()...); err != nil {
+			return nil, nil, err
 		}
 
 		if !allow && group == nil && len(aggs) > 0 {
-			return nil, fmt.Errorf("Aggregates not available for this ORDER BY.")
+			return nil, nil, fmt.Errorf("Aggregates not available for this ORDER BY.")
 		}
 	}
 
-	if len(aggs) > 0 {
-		// Disallow nested aggregates
-		subAggs := make(map[string]algebra.Aggregate)
+	if group != nil && group.Letting() != nil {
 		for _, agg := range aggs {
-			collectAggregates(subAggs, agg.Operand())
-			if len(subAggs) > 0 {
-				return nil, fmt.Errorf("Nested aggregates are not allowed.")
-			}
-			if group != nil && group.Letting() != nil && dependsOnLet(agg.Operand(), group.Letting()) {
-				return nil, fmt.Errorf("Aggregate can't depend on GROUP alias or LETTING variable.")
+			for _, op := range agg.Operands() {
+				if op != nil && dependsOnLet(op, group.Letting()) {
+					return nil, nil, fmt.Errorf("Aggregate can't depend on GROUP alias or LETTING variable.")
+				}
 			}
 		}
 	}
 
-	return sortAggregatesMap(aggs), nil
+	return sortAggregatesMap(aggs), sortWindowAggregates(windowAggs), nil
 }
 
 func sortAggregatesMap(aggs map[string]algebra.Aggregate) algebra.Aggregates {
@@ -579,27 +611,45 @@ func sortAggregatesSlice(aggSlice algebra.Aggregates) algebra.Aggregates {
 	return sortAggregatesMap(aggs)
 }
 
-func collectAggregates(aggs map[string]algebra.Aggregate, exprs ...expression.Expression) {
-	stringer := expression.NewStringer()
+func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...expression.Expression) (err error) {
 
+	stringer := expression.NewStringer()
 	for _, expr := range exprs {
 		if expr == nil {
 			continue
-		}
-		agg, ok := expr.(algebra.Aggregate)
-		if ok {
+		} else if agg, ok := expr.(algebra.Aggregate); ok {
 			str := stringer.Visit(agg)
-			aggs[str] = agg
-		}
+			wTerm := agg.WindowTerm()
+			nAggs := len(aggs)
+			nWindowAggs := len(windowAggs)
 
-		_, ok = expr.(*algebra.Subquery)
-		if !ok {
-			children := expr.Children()
-			if len(children) > 0 {
-				collectAggregates(aggs, children...)
+			if err = collectAggregates(aggs, windowAggs, agg.Children()...); err != nil {
+				return
+			}
+
+			if wTerm == nil {
+				if nAggs != len(aggs) {
+					return fmt.Errorf("Nested aggregates are not allowed.")
+				}
+
+				if nWindowAggs != len(windowAggs) {
+					return fmt.Errorf("Window aggregates are not allowed inside Aggregates.")
+				}
+				aggs[str] = agg
+			} else {
+				if nWindowAggs != len(windowAggs) {
+					return fmt.Errorf("Window aggregates are not allowed inside Window Aggregates.")
+				}
+				windowAggs[str] = agg
+			}
+		} else if _, ok := expr.(*algebra.Subquery); !ok {
+			if err = collectAggregates(aggs, windowAggs, expr.Children()...); err != nil {
+				return err
 			}
 		}
 	}
+
+	return
 }
 
 /*
@@ -620,7 +670,7 @@ func (this *builder) constrainAggregate(cond expression.Expression, aggs algebra
 	var first expression.Expression
 	for _, agg := range aggs {
 		if first == nil {
-			first = agg.Operand()
+			first = agg.Operands()[0]
 			if first == nil {
 				return cond
 			}
@@ -628,7 +678,7 @@ func (this *builder) constrainAggregate(cond expression.Expression, aggs algebra
 			continue
 		}
 
-		op := agg.Operand()
+		op := agg.Operands()[0]
 		if op == nil || !first.EquivalentTo(op) {
 			return cond
 		}
@@ -657,11 +707,12 @@ func (this *builder) constrainAggregate(cond expression.Expression, aggs algebra
 
 func constrainGroupTerm(expr expression.Expression, groupKeys expression.Expressions,
 	allowed *value.ScopeValue) errors.Error {
-	ok, _ := expr.SurvivesGrouping(groupKeys, allowed)
-	if !ok {
-		return errors.NewNotGroupKeyOrAggError(expr.String())
+	if ok, rexpr := expr.SurvivesGrouping(groupKeys, allowed); !ok {
+		if rexpr == nil {
+			rexpr = expr
+		}
+		return errors.NewNotGroupKeyOrAggError(rexpr.String())
 	}
-
 	return nil
 }
 
@@ -706,16 +757,16 @@ func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggreg
 
 		for _, agg := range aggs {
 			aggIndexProperties := aggToIndexAgg(agg)
-			if !aggIndexProperties.supported {
+			if aggIndexProperties == nil || !aggIndexProperties.supported {
 				this.resetPushDowns()
 				return
 			}
 
-			if agg.Operand() == nil {
+			if agg.Operands()[0] == nil {
 				continue
 			}
 
-			if !agg.Operand().IndexAggregatable() || dependsOnLet(agg.Operand(), let) {
+			if !agg.Operands()[0].IndexAggregatable() || dependsOnLet(agg.Operands()[0], let) {
 				this.resetPushDowns()
 				return
 			}

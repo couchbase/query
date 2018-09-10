@@ -28,9 +28,9 @@ The function NewVariance calls NewAggregateBase to
 create an aggregate function named variance with
 one expression as input.
 */
-func NewVariance(operand expression.Expression) Aggregate {
+func NewVariance(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Variance{
-		*NewAggregateBase("variance", operand),
+		*NewAggregateBase("variance", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -66,16 +66,30 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Variance) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewVariance(operands[0])
+		return NewVariance(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Variance) Copy() expression.Expression {
+	rv := &Variance{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the Variance function, then the default value
 returned is a null.
 */
-func (this *Variance) Default() value.Value {
-	return value.NULL_VALUE
+func (this *Variance) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
 }
 
 /*
@@ -86,7 +100,7 @@ list of all the values of type NUMBER.
 Call addStddevVariance to compute the intermediate aggregate value and return it.
 */
 func (this *Variance) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -95,14 +109,14 @@ func (this *Variance) CumulateInitial(item, cumulative value.Value, context Cont
 		return cumulative, nil
 	}
 
-	return addStddevVariance(item, cumulative, false)
+	return addStddevVariance(item, cumulative, this.Distinct())
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *Variance) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return cumulateStddevVariance(part, cumulative, false)
+	return cumulateStddevVariance(part, cumulative, this.Distinct())
 }
 
 /*
@@ -117,7 +131,7 @@ func (this *Variance) ComputeFinal(cumulative value.Value, context Context) (val
 		return cumulative, nil
 	}
 
-	variance, e := computeVariance(cumulative, false, false, 1.0)
+	variance, e := computeVariance(cumulative, this.Distinct(), false, 1.0)
 	if e != nil {
 		return nil, e
 	}

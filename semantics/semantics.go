@@ -9,8 +9,29 @@
 
 package semantics
 
-type SemChecker struct{}
+import (
+	"github.com/couchbase/query/expression"
+)
 
-func NewSemChecker() *SemChecker {
-	return &SemChecker{}
+type SemChecker struct {
+	expression.MapperBase
+	enterprise bool
+	stmtType   string
+}
+
+func NewSemChecker(enterprise bool, stmtType string) *SemChecker {
+	rv := &SemChecker{}
+	rv.SetMapper(rv)
+	rv.enterprise = enterprise
+	rv.stmtType = stmtType
+
+	return rv
+}
+
+func (this *SemChecker) Enterprise() bool {
+	return this.enterprise
+}
+
+func (this *SemChecker) StmtType() string {
+	return this.stmtType
 }

@@ -88,6 +88,9 @@ var _OPERATORS = map[string]Operator{
 	"IntermediateGroup": &IntermediateGroup{},
 	"FinalGroup":        &FinalGroup{},
 
+	// Window functions
+	"WindowAggregate": &WindowAggregate{},
+
 	// Project
 	"InitialProject":    &InitialProject{},
 	"FinalProject":      &FinalProject{},

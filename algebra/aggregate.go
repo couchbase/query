@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/couchbase/query/expression"
@@ -42,12 +43,42 @@ type Aggregate interface {
 	/*
 	   Represents the aggregate function.
 	*/
-	expression.UnaryFunction
+	expression.Function
+
+	/*
+	   Set aggregate modifers/flags and Window Term.
+	*/
+	SetAggregateModifiers(flags uint32, wTerm *WindowTerm)
+
+	/*
+	   Return WindowTerm.
+	*/
+	WindowTerm() *WindowTerm
+
+	/*
+	   Return Flags
+	*/
+	Flags() uint32
+
+	/*
+	   Checks Any of the flags are set.
+	*/
+	HasFlags(flag uint32) bool
+
+	/*
+	   Aggregate allows incremental operation.
+	*/
+	Incremental() bool
+
+	/*
+	   Window Aggregate
+	*/
+	IsWindowAggregate() bool
 
 	/*
 	   Returned if there is no input data to the function.
 	*/
-	Default() value.Value
+	Default(item value.Value, context Context) (value.Value, error)
 
 	/*
 	   Aggregates input data.
@@ -60,31 +91,172 @@ type Aggregate interface {
 	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
 
 	/*
+	   Remove input data from Aggregate result. For Incremental Aggregation only.
+	*/
+	CumulateRemove(item, cumulative value.Value, context Context) (value.Value, error)
+
+	/*
 	   Performs final post-processing, if any.
 	*/
 	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)
+
+	/*
+	   Check if aggregate is done, if any.
+	*/
+	IsCumulateDone(cumulative value.Value, context Context) (bool, error)
 }
 
 /*
-Base class for Aggregate functions. It inherits from
-expressions UnaryFunctionBase, and has field text
-which represents the function name.
+Base class for Aggregate functions.
+It inherits from expressions FunctionBase, and has
+     text           which represents the function name.
+     flags          which represents the modifers/flags
+                         DISTINCT, INCREMENTAL, RESPECT|IGNORE NULLS, FROM FIRST|LAST
+     windowTerm     which represents the Window information
 */
+
 type AggregateBase struct {
-	expression.UnaryFunctionBase
-	text string
+	expression.FunctionBase
+	text       string
+	flags      uint32
+	windowTerm *WindowTerm
 }
 
 /*
-This method creates a new Unary function using the
+This method creates a new function using the
 input expression name and operands, and returns it
 as a pointer to an AggregateBase struct.
 */
-func NewAggregateBase(name string, operand expression.Expression) *AggregateBase {
-	return &AggregateBase{
-		*expression.NewUnaryFunctionBase(name, operand),
+func NewAggregateBase(name string, operands expression.Expressions, flags uint32, wTerm *WindowTerm) *AggregateBase {
+	rv := &AggregateBase{
+		*expression.NewFunctionBase(name, operands...),
 		"",
+		flags,
+		wTerm,
 	}
+	rv.SetAggregateModifiers(flags, wTerm)
+	return rv
+}
+
+/*
+ Adds new flags to aggregate
+*/
+func (this *AggregateBase) AddFlags(flags uint32) {
+	this.flags |= flags
+}
+
+/*
+ Checks Any flags are set
+*/
+func (this *AggregateBase) HasFlags(flags uint32) bool {
+	return (this.flags & flags) != 0
+}
+
+/*
+Sets aggregate modifiers/flags and window information
+*/
+func (this *AggregateBase) SetAggregateModifiers(flags uint32, wTerm *WindowTerm) {
+	name := this.Name()
+	if name == "min" || name == "max" { // NO-OP
+		flags &^= AGGREGATE_DISTINCT
+	}
+
+	this.windowTerm = wTerm
+	this.flags = flags
+
+	// Aggregate allows incremental operation set the flags
+	if !this.Distinct() && AggregateHasProperty(name, AGGREGATE_ALLOWS_INCREMENTAL) {
+		this.AddFlags(AGGREGATE_INCREMENTAL)
+	}
+}
+
+/*
+Helper functions
+*/
+
+func (this *AggregateBase) Distinct() bool          { return this.HasFlags(AGGREGATE_DISTINCT) }
+func (this *AggregateBase) Aggregate() bool         { return true }
+func (this *AggregateBase) WindowTerm() *WindowTerm { return this.windowTerm }
+func (this *AggregateBase) Flags() uint32           { return this.flags }
+func (this *AggregateBase) MinArgs() int            { return 1 }
+func (this *AggregateBase) MaxArgs() int            { return 1 }
+
+/*
+If Incremental aggregation is possible or not
+*/
+func (this *AggregateBase) Incremental() bool {
+	return this.HasFlags(AGGREGATE_INCREMENTAL) && !this.Distinct()
+}
+
+/*
+ Remove the item from aggregation. Not supported on base calss.
+ When supported each derived function overwrites it.
+*/
+
+func (this *AggregateBase) CumulateRemove(item, cumulative value.Value, context Context) (value.Value, error) {
+	return nil, fmt.Errorf("There is no %v.CumulateRemove().", this.Name())
+}
+
+/*
+ Aggregation is Done for early termination. Not supported on base calss.
+ When supported each derived function overwrites it.
+*/
+
+func (this *AggregateBase) IsCumulateDone(cumulative value.Value, context Context) (bool, error) {
+	return false, fmt.Errorf("There is no %v.IsCumulateDone().", this.Name())
+}
+
+/*
+ Returns string representation of aggregate
+*/
+func (this *AggregateBase) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(this.Name())
+	buf.WriteString("(")
+
+	if this.Distinct() {
+		buf.WriteString("distinct ")
+	}
+
+	for i, op := range this.Operands() {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+
+		// special case: convert count() to count(*)
+		if op == nil && this.Name() == "count" {
+			buf.WriteString("*")
+		} else {
+			buf.WriteString(expression.NewStringer().Visit(op))
+		}
+	}
+
+	buf.WriteString(")")
+
+	// Handle [FROM FIRST|LAST]. FROM FIRST is default of ""
+	if this.HasFlags(AGGREGATE_FROMLAST) {
+		buf.WriteString(" FROM LAST")
+	}
+
+	// Handle [RESPECT|IGNORE NULLS]. RESPECT NULLS is default of ""
+	if this.HasFlags(AGGREGATE_IGNORENULLS) {
+		buf.WriteString(" IGNORE NULLS")
+	}
+
+	// Handle window term
+	wTerm := this.WindowTerm()
+	if wTerm != nil {
+		buf.WriteString(wTerm.String())
+	}
+
+	return buf.String()
+}
+
+/*
+Window Aggregate
+*/
+func (this *AggregateBase) IsWindowAggregate() bool {
+	return this.windowTerm != nil
 }
 
 /*
@@ -144,8 +316,19 @@ Aggregates are same Return true otherwise Return false.
 
 func (this *AggregateBase) EquivalentTo(other expression.Expression) bool {
 	otherAggregate, ok := other.(Aggregate)
-	return ok && !otherAggregate.Distinct() && this.Name() == otherAggregate.Name() &&
-		expression.Equivalents(this.Children(), otherAggregate.Children())
+	return ok && this.String() == otherAggregate.String()
+}
+
+/*
+  Return when aggregate are aggregate are same except names
+*/
+func EqualAggregateModifiers(agg1, agg2 Aggregate) bool {
+	wTerm1 := agg1.WindowTerm()
+	wTerm2 := agg2.WindowTerm()
+
+	return agg1.Flags() == agg2.Flags() &&
+		expression.Equivalents(agg1.Operands(), agg2.Operands()) &&
+		((wTerm1 == wTerm2) || (wTerm1 != nil && wTerm2 != nil && wTerm1.String() == wTerm2.String()))
 }
 
 /*
@@ -159,11 +342,23 @@ func (this *AggregateBase) SubsetOf(other expression.Expression) bool {
 Return the operands of the Aggregate function.
 */
 func (this *AggregateBase) Children() expression.Expressions {
-	if this.Operands()[0] == nil {
-		return nil
-	} else {
-		return this.Operands()
+	ops := this.Operands()
+	rv := make(expression.Expressions, 0, len(ops))
+	for _, op := range ops {
+		if op != nil {
+			rv = append(rv, op)
+		}
 	}
+
+	wTerm := this.WindowTerm()
+	if wTerm != nil {
+		exprs := wTerm.Expressions()
+		if len(exprs) > 0 {
+			rv = append(rv, exprs...)
+		}
+	}
+
+	return rv
 }
 
 /*
@@ -172,53 +367,42 @@ a mapper and maps the involved expressions to an expression.
 If there is an error during the mapping, an error is returned.
 */
 func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
-	children := this.Children()
+	children := this.Operands()
 
 	for i, c := range children {
-		expr, err := mapper.Map(c)
-		if err != nil {
-			return err
-		}
+		if c != nil {
+			expr, err := mapper.Map(c)
+			if err != nil {
+				return err
+			}
 
-		children[i] = expr
+			children[i] = expr
+		}
+	}
+
+	wTerm := this.WindowTerm()
+	if wTerm != nil {
+		return wTerm.MapExpressions(mapper)
 	}
 
 	return nil
 }
 
+/*
+ Check if the expressions are depends only on group by or aggregates.
+ Regular aggregate this is NO-OP.
+ window aggregate the expression in arguments, PARTITION BY, ORDER BY, WINDOWING clause
+ must be part of group by or regular aggregates (If there is GORUP BY)
+*/
 func (this *AggregateBase) SurvivesGrouping(groupKeys expression.Expressions,
 	allowed *value.ScopeValue) (bool, expression.Expression) {
-	return true, nil
-}
-
-/*
-Base class for queries that have the DISTINCT keyword for aggregate
-functions. Type DistinctAggregateBase is a struct that inherits
-AggregateBase.
-*/
-type DistinctAggregateBase struct {
-	AggregateBase
-}
-
-/*
-This method creates a NewAggregateBase function
-using the input expression name and operands, and returns it
-as a pointer to an DistinctAggregateBase struct.
-*/
-func NewDistinctAggregateBase(name string, operand expression.Expression) *DistinctAggregateBase {
-	return &DistinctAggregateBase{
-		*NewAggregateBase(name, operand),
+	if this.WindowTerm() != nil {
+		for _, child := range this.Children() {
+			ok, _ := child.SurvivesGrouping(groupKeys, allowed)
+			if !ok {
+				return ok, child
+			}
+		}
 	}
-}
-
-/*
-For distinct functions that have DISTINCT keyword in the
-aggregate functions in the query, return true.
-*/
-func (this *DistinctAggregateBase) Distinct() bool { return true }
-
-func (this *DistinctAggregateBase) EquivalentTo(other expression.Expression) bool {
-	otherAggregate, ok := other.(Aggregate)
-	return ok && otherAggregate.Distinct() && this.Name() == otherAggregate.Name() &&
-		expression.Equivalents(this.Children(), otherAggregate.Children())
+	return true, nil
 }

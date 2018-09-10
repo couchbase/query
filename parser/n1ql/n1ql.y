@@ -59,6 +59,11 @@ indexKeyTerms    algebra.IndexKeyTerms
 partitionTerm   *algebra.IndexPartitionTerm
 groupTerm       *algebra.GroupTerm
 groupTerms       algebra.GroupTerms
+windowTerm      *algebra.WindowTerm
+windowFrame     *algebra.WindowFrame
+windowFrameExtents    algebra.WindowFrameExtents
+windowFrameExtent *algebra.WindowFrameExtent
+
 
 keyspaceRef      *algebra.KeyspaceRef
 
@@ -113,6 +118,7 @@ tokOffset	 int
 %token CORRELATED
 %token COVER
 %token CREATE
+%token CURRENT
 %token DATABASE
 %token DATASET
 %token DATASTORE
@@ -139,6 +145,7 @@ tokOffset	 int
 %token FETCH
 %token FIRST
 %token FLATTEN
+%token FOLLOWING
 %token FOR
 %token FORCE
 %token FROM
@@ -146,6 +153,7 @@ tokOffset	 int
 %token FUNCTION
 %token GRANT
 %token GROUP
+%token GROUPS
 %token GSI
 %token HASH
 %token HAVING
@@ -185,8 +193,10 @@ tokOffset	 int
 %token NAMESPACE
 %token NEST
 %token NL
+%token NO
 %token NOT
 %token NOT_A_TOKEN
+%token NTH_VALUE
 %token NULL
 %token NULLS
 %token NUMBER
@@ -196,6 +206,7 @@ tokOffset	 int
 %token OPTION
 %token OR
 %token ORDER
+%token OTHERS
 %token OUTER
 %token OVER
 %token PARSE
@@ -203,6 +214,7 @@ tokOffset	 int
 %token PASSWORD
 %token PATH
 %token POOL
+%token PRECEDING
 %token PREPARE
 %token PRIMARY
 %token PRIVATE
@@ -210,16 +222,20 @@ tokOffset	 int
 %token PROBE
 %token PROCEDURE
 %token PUBLIC
+%token RANGE
 %token RAW
 %token REALM
 %token REDUCE
 %token RENAME
+%token RESPECT
 %token RETURN
 %token RETURNING
 %token REVOKE
 %token RIGHT
 %token ROLE
 %token ROLLBACK
+%token ROW
+%token ROWS
 %token SATISFIES
 %token SCHEMA
 %token SELECT
@@ -233,11 +249,13 @@ tokOffset	 int
 %token STRING
 %token SYSTEM
 %token THEN
+%token TIES
 %token TO
 %token TRANSACTION
 %token TRIGGER
 %token TRUE
 %token TRUNCATE
+%token UNBOUNDED
 %token UNDER
 %token UNION
 %token UNIQUE
@@ -409,8 +427,16 @@ tokOffset	 int
 %type <s>                role_name
 %type <s>                user
 
-%type <u32>              opt_nulls
+%type <u32>              opt_order_nulls
 %type <b>                first_last nulls
+
+%type <windowTerm>          opt_window_clause window_clause
+%type <exprs>               opt_window_partition
+%type <u32>                 window_frame_modifier window_frame_valexpr_modifier opt_window_frame_exclusion
+%type <windowFrame>         opt_window_frame
+%type <windowFrameExtents>  window_frame_extents
+%type <windowFrameExtent>   window_frame_extent
+%type <u32>                 opt_nulls_treatment nulls_treatment opt_from_first_last agg_quantifier
 
 %start input
 
@@ -1386,7 +1412,7 @@ sort_terms COMMA sort_term
 ;
 
 sort_term:
-expr opt_dir opt_nulls
+expr opt_dir opt_order_nulls
 {
     $$ = algebra.NewSortTerm($1, $2, algebra.NewOrderNullsPos($2,$3))
 }
@@ -1413,7 +1439,7 @@ DESC
 }
 ;
 
-opt_nulls:
+opt_order_nulls:
 /* empty */
 {
     $$ = algebra.NewOrderNulls(true,false,false)
@@ -2904,48 +2930,82 @@ ELSE expr
  *
  * Function
  *
+ * NTH_VALUE(expr,n) [FROM FIRST|LAST] [RESPECT|IGNORE NULLS] OVER(....)
+ *   requires special handling due to FROM (avoid conflict with query FROM)
+ *   example: SELECT SUM(c1) FROM default WHERE ...
  *************************************************/
 
 function_expr:
-function_name LPAREN opt_exprs RPAREN
+NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_clause
 {
-    $$ = nil;
-    f, ok := expression.GetFunction($1);
-    if !ok {
-        f, ok = algebra.GetAggregate($1, false);
+    $$ = nil
+    fname := "nth_value"
+    f, ok := algebra.GetAggregate(fname, false, ($7 != nil))
+    if ok {
+        if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
+            yylex.Error(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.", fname, f.MinArgs(), f.MaxArgs()))
+        } else {
+            $$ = f.Constructor()($3...)
+            if a, ok := $$.(algebra.Aggregate); ok {
+                 a.SetAggregateModifiers($5|$6, $7)
+            }
+        }
+    } else {
+        yylex.Error(fmt.Sprintf("Invalid function %s.", fname))
+    }
+}
+|
+function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
+{
+    $$ = nil
+    f, ok := expression.GetFunction($1)
+    if !ok || $6 != nil {
+        f, ok = algebra.GetAggregate($1, false, ($6 != nil))
     }
 
     if ok {
-        if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            yylex.Error(fmt.Sprintf("Wrong number of arguments to function %s.", $1));
+        if ($5 == algebra.AGGREGATE_RESPECTNULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_RESPECTNULLS)) ||
+           ($5 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
+            yylex.Error(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", $1))
+        } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
+            yylex.Error(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.", $1, f.MinArgs(), f.MaxArgs()))
         } else {
-            $$ = f.Constructor()($3...);
+            $$ = f.Constructor()($3...)
+            if a, ok := $$.(algebra.Aggregate); ok {
+                 a.SetAggregateModifiers($5, $6)
+            }
         }
     } else {
-        yylex.Error(fmt.Sprintf("Invalid function %s.", $1));
+        yylex.Error(fmt.Sprintf("Invalid function %s.", $1))
     }
 }
 |
-function_name LPAREN DISTINCT expr RPAREN
+function_name LPAREN agg_quantifier expr RPAREN opt_window_clause
 {
-    agg, ok := algebra.GetAggregate($1, true);
+    agg, ok := algebra.GetAggregate($1, $3 == algebra.AGGREGATE_DISTINCT, ($6 != nil))
     if ok {
-        $$ = agg.Constructor()($4);
+        $$ = agg.Constructor()($4)
+        if a, ok := $$.(algebra.Aggregate); ok {
+             a.SetAggregateModifiers($3, $6)
+        }
     } else {
-        yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+        yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1))
     }
 }
 |
-function_name LPAREN STAR RPAREN
+function_name LPAREN STAR RPAREN opt_window_clause
 {
     if strings.ToLower($1) != "count" {
-        yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", $1));
+        yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", $1))
     } else {
-        agg, ok := algebra.GetAggregate($1, false);
+        agg, ok := algebra.GetAggregate($1, false, ($5 != nil))
         if ok {
-            $$ = agg.Constructor()(nil);
+            $$ = agg.Constructor()(nil)
+            if a, ok := $$.(algebra.Aggregate); ok {
+                 a.SetAggregateModifiers(uint32(0), $5)
+            }
         } else {
-            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1))
         }
     }
 }
@@ -3128,5 +3188,173 @@ all DISTINCT expr
 DISTINCT expr
 {
     $$ = expression.NewAll($2, true)
+}
+;
+
+opt_window_clause:
+/* empty */
+{ $$ = nil }
+|
+window_clause
+{ $$ = $1 }
+;
+
+window_clause:
+OVER LPAREN opt_window_partition opt_order_by opt_window_frame RPAREN
+{
+    $$ = algebra.NewWindowTerm($3,$4,$5)
+}
+;
+
+opt_window_partition:
+/* empty */
+{ $$ = nil }
+|
+PARTITION BY exprs
+{ $$ = $3 }
+;
+
+opt_window_frame:
+/* empty */
+{
+    $$ = nil
+}
+|
+window_frame_modifier window_frame_extents opt_window_frame_exclusion
+{
+    $$ = algebra.NewWindowFrame($1|$3, $2)
+}
+;
+
+
+window_frame_modifier:
+ROWS
+{
+    $$ = algebra.WINDOW_FRAME_ROWS
+}
+|
+RANGE
+{
+    $$ = algebra.WINDOW_FRAME_RANGE
+}
+|
+GROUPS
+{
+    $$ = algebra.WINDOW_FRAME_GROUPS
+}
+;
+
+opt_window_frame_exclusion:
+/* empty */
+{
+     $$ = uint32(0)
+}
+|
+EXCLUDE NO OTHERS
+{
+     $$ = uint32(0)
+}
+|
+EXCLUDE CURRENT ROW
+{
+     $$ = algebra.WINDOW_FRAME_EXCLUDE_CURRENT_ROW
+}
+|
+EXCLUDE TIES
+{
+     $$ = algebra.WINDOW_FRAME_EXCLUDE_TIES
+}
+|
+EXCLUDE GROUP
+{
+     $$ = algebra.WINDOW_FRAME_EXCLUDE_GROUP
+}
+;
+
+window_frame_extents:
+window_frame_extent
+{
+    $$ = algebra.WindowFrameExtents{$1}
+}
+|
+BETWEEN window_frame_extent AND window_frame_extent
+{
+    $$ = algebra.WindowFrameExtents{$2, $4}
+}
+;
+
+window_frame_extent:
+UNBOUNDED PRECEDING
+{
+    $$ = algebra.NewWindowFrameExtent(nil, algebra.WINDOW_FRAME_UNBOUNDED_PRECEDING)
+}
+|
+UNBOUNDED FOLLOWING
+{
+    $$ = algebra.NewWindowFrameExtent(nil, algebra.WINDOW_FRAME_UNBOUNDED_FOLLOWING)
+}
+|
+CURRENT ROW
+{
+    $$ = algebra.NewWindowFrameExtent(nil, algebra.WINDOW_FRAME_CURRENT_ROW)
+}
+|
+expr window_frame_valexpr_modifier
+{
+    $$ = algebra.NewWindowFrameExtent($1, $2)
+}
+;
+
+window_frame_valexpr_modifier:
+PRECEDING
+{
+    $$ = algebra.WINDOW_FRAME_VALUE_PRECEDING
+}
+|
+FOLLOWING
+{
+    $$ = algebra.WINDOW_FRAME_VALUE_FOLLOWING
+}
+;
+
+opt_nulls_treatment:
+/* empty */
+{ $$ = uint32(0) }
+|
+nulls_treatment
+{ $$ = $1 }
+;
+
+nulls_treatment:
+RESPECT NULLS
+{ $$ = algebra.AGGREGATE_RESPECTNULLS }
+|
+IGNORE NULLS
+{ $$ = algebra.AGGREGATE_IGNORENULLS }
+;
+
+opt_from_first_last:
+/* empty */
+{ $$ = uint32(0) }
+|
+FROM first_last
+{
+    if $2 {
+         $$ = algebra.AGGREGATE_FROMLAST
+    } else {
+         $$ = algebra.AGGREGATE_FROMFIRST
+    }
+}
+;
+
+agg_quantifier:
+ALL
+{
+   $$ = uint32(0)
+}
+|
+DISTINCT
+{
+   $$ = algebra.AGGREGATE_DISTINCT
 }
 ;

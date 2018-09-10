@@ -57,7 +57,7 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 		sv := value.NewScopeValue(make(map[string]interface{}, len(this.plan.Terms())), item)
 		for _, term := range this.plan.Terms() {
 			switch term.Result().Expression().(type) {
-			case *algebra.Count, *algebra.CountDistinct:
+			case *algebra.Count:
 				v = item.GetValue()
 			default:
 				v, err = term.Result().Expression().Evaluate(item, context)

@@ -281,7 +281,7 @@ func (this *Self) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeVa
 		}
 	}
 
-	return false, this
+	return false, nil
 }
 
 /*

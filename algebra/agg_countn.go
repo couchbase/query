@@ -30,9 +30,9 @@ The function NewCountn calls NewAggregateBase to
 create an aggregate function named COUNTN with
 one expression as input.
 */
-func NewCountn(operand expression.Expression) Aggregate {
+func NewCountn(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Countn{
-		*NewAggregateBase("countn", operand),
+		*NewAggregateBase("countn", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -66,15 +66,31 @@ to a Function as the FunctionConstructor.
 */
 func (this *Countn) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewCountn(operands[0])
+		return NewCountn(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Countn) Copy() expression.Expression {
+	rv := &Countn{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the COUNTN function, then the default value
 returned is a zero value.
 */
-func (this *Countn) Default() value.Value { return value.ZERO_VALUE }
+func (this *Countn) Default(item value.Value, context Context) (value.Value, error) {
+	return value.ZERO_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For missing and
@@ -82,7 +98,7 @@ null values return the input value itself. Call cumulatePart
 to compute the intermediate aggregate value and return it.
 */
 func (this *Countn) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -91,22 +107,73 @@ func (this *Countn) CumulateInitial(item, cumulative value.Value, context Contex
 		return cumulative, nil
 	}
 
-	return this.cumulatePart(value.ONE_VALUE, cumulative, context)
-
+	if this.Distinct() {
+		return setAdd(item, cumulative, true), nil
+	} else {
+		return this.cumulatePart(value.ONE_VALUE, cumulative, context)
+	}
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *Countn) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+	if this.Distinct() {
+		if part == value.ZERO_VALUE {
+			return cumulative, nil
+		} else if cumulative == value.ZERO_VALUE {
+			return part, nil
+		}
+
+		return cumulateSets(part, cumulative)
+	} else {
+		return this.cumulatePart(part, cumulative, context)
+	}
 }
 
 /*
 Returns input cumulative value as the Final result.
 */
 func (this *Countn) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
-	return cumulative, nil
+	if this.Distinct() {
+		if cumulative == value.ZERO_VALUE {
+			return cumulative, nil
+		}
+
+		av := cumulative.(value.AnnotatedValue)
+		set := av.GetAttachment("set").(*value.Set)
+		return value.NewValue(set.Len()), nil
+	} else {
+		return cumulative, nil
+	}
+}
+
+/*
+Used for Incremental Aggregation.
+For Distinct aggregate this method will not be called.
+Cumulative must be NUMBER because it has been added earlier.
+Remove the Numbered input data by evaluating operands from Aggregate.
+*/
+
+func (this *Countn) CumulateRemove(item, cumulative value.Value, context Context) (value.Value, error) {
+	if this.Distinct() {
+		return nil, fmt.Errorf("Invalid %v.CumulateRemove() for DISTINCT values.", this.Name())
+	}
+
+	item, e := this.Operands()[0].Evaluate(item, context)
+	if e != nil {
+		return nil, e
+	}
+
+	if item.Type() != value.NUMBER {
+		return cumulative, nil
+	}
+
+	if cumulative.Type() == value.NUMBER && value.AsNumberValue(cumulative).Int64() > 0 {
+		return value.AsNumberValue(cumulative).Sub(value.AsNumberValue(value.ONE_VALUE)), nil
+	}
+
+	return nil, fmt.Errorf("Invalid %v.CumulateRemove() for %v value.", cumulative.Actual())
 }
 
 /*

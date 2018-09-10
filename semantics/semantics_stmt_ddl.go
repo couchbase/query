@@ -14,29 +14,29 @@ import (
 )
 
 func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
-	return nil, nil
+	return nil, stmt.MapExpressions(this)
 }

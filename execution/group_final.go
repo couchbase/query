@@ -110,7 +110,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		av.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg.String()] = agg.Default()
+			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
 
 		this.sendItem(av)

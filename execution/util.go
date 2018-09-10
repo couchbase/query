@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -32,3 +34,20 @@ func copyOperator(op Operator) Operator {
 
 var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
 var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
+
+func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *Context) (rv value.Value, err error) {
+	sv1 := item.GetAttachment(s)
+	switch sv1 := sv1.(type) {
+	case value.Value:
+		rv = sv1
+	default:
+		rv, err = expr.Evaluate(item, context)
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "getCachedValue()"))
+			return
+		}
+
+		item.SetAttachment(s, rv)
+	}
+	return
+}

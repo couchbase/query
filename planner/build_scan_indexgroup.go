@@ -28,32 +28,16 @@ type indexGroupAggProperties struct {
 }
 
 var _INDEX_AGG_PROPERTIES = map[string]*indexGroupAggProperties{
-	"array_agg":            &indexGroupAggProperties{3, false, datastore.AGG_ARRAY, false, false},
-	"avg":                  &indexGroupAggProperties{3, true, datastore.AGG_AVG, false, false},
-	"count":                &indexGroupAggProperties{3, true, datastore.AGG_COUNT, false, true},
-	"countn":               &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, false, true},
-	"max":                  &indexGroupAggProperties{3, true, datastore.AGG_MAX, false, true},
-	"median":               &indexGroupAggProperties{3, false, datastore.AGG_MEDIAN, false, false},
-	"min":                  &indexGroupAggProperties{3, true, datastore.AGG_MIN, false, true},
-	"sum":                  &indexGroupAggProperties{3, true, datastore.AGG_SUM, false, true},
-	"stddev":               &indexGroupAggProperties{3, false, datastore.AGG_STDDEV, false, false},
-	"stddev_pop":           &indexGroupAggProperties{3, false, datastore.AGG_STDDEVPOP, false, false},
-	"stddev_samp":          &indexGroupAggProperties{3, false, datastore.AGG_STDDEVSAMP, false, false},
-	"variance":             &indexGroupAggProperties{3, false, datastore.AGG_VARIANCE, false, false},
-	"var_pop":              &indexGroupAggProperties{3, false, datastore.AGG_VARPOP, false, false},
-	"var_samp":             &indexGroupAggProperties{3, false, datastore.AGG_VARSAMP, false, false},
-	"array_agg_distinct":   &indexGroupAggProperties{3, false, datastore.AGG_ARRAY, true, false},
-	"avg_distinct":         &indexGroupAggProperties{3, true, datastore.AGG_AVG, true, false},
-	"count_distinct":       &indexGroupAggProperties{3, true, datastore.AGG_COUNT, true, false},
-	"countn_distinct":      &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, true, false},
-	"median_distinct":      &indexGroupAggProperties{3, false, datastore.AGG_MEDIAN, true, false},
-	"sum_distinct":         &indexGroupAggProperties{3, true, datastore.AGG_SUM, true, false},
-	"stddev_distinct":      &indexGroupAggProperties{3, false, datastore.AGG_STDDEV, true, false},
-	"stddev_pop_distinct":  &indexGroupAggProperties{3, false, datastore.AGG_STDDEVPOP, true, false},
-	"stddev_samp_distinct": &indexGroupAggProperties{3, false, datastore.AGG_STDDEVSAMP, true, false},
-	"variance_distinct":    &indexGroupAggProperties{3, false, datastore.AGG_VARIANCE, true, false},
-	"var_pop_distinct":     &indexGroupAggProperties{3, false, datastore.AGG_VARPOP, true, false},
-	"var_samp_distinct":    &indexGroupAggProperties{3, false, datastore.AGG_VARSAMP, true, false},
+	"avg":             &indexGroupAggProperties{3, true, datastore.AGG_AVG, false, false},
+	"count":           &indexGroupAggProperties{3, true, datastore.AGG_COUNT, false, true},
+	"countn":          &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, false, true},
+	"max":             &indexGroupAggProperties{3, true, datastore.AGG_MAX, false, true},
+	"min":             &indexGroupAggProperties{3, true, datastore.AGG_MIN, false, true},
+	"sum":             &indexGroupAggProperties{3, true, datastore.AGG_SUM, false, true},
+	"avg_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_AVG, true, false},
+	"count_distinct":  &indexGroupAggProperties{3, true, datastore.AGG_COUNT, true, false},
+	"countn_distinct": &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, true, false},
+	"sum_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_SUM, true, false},
 }
 
 func checkAndAdd(ids []int, id int) []int {
@@ -68,11 +52,9 @@ func checkAndAdd(ids []int, id int) []int {
 
 func aggToIndexAgg(agg algebra.Aggregate) *indexGroupAggProperties {
 	name := agg.Name()
-	switch agg.(type) {
-	case *algebra.ArrayAggDistinct, *algebra.CountDistinct, *algebra.CountnDistinct, *algebra.AvgDistinct, *algebra.SumDistinct:
+	if agg.Distinct() {
 		name = name + "_distinct"
 	}
-
 	rv, _ := _INDEX_AGG_PROPERTIES[name]
 	return rv
 }
@@ -80,10 +62,10 @@ func aggToIndexAgg(agg algebra.Aggregate) *indexGroupAggProperties {
 func indexPartialAggregateCount2SumRewrite(agg algebra.Aggregate, c *expression.Cover) algebra.Aggregate {
 	switch agg.(type) {
 	case *algebra.Count, *algebra.Countn:
-		if agg.Operand() == nil {
-			return algebra.NewSum(c)
+		if agg.Operands()[0] == nil {
+			return algebra.NewSum(expression.Expressions{c}, uint32(0), nil)
 		}
-		return algebra.NewSum(agg.Operand())
+		return algebra.NewSum(agg.Operands(), uint32(0), nil)
 	}
 	return agg
 }
@@ -102,9 +84,9 @@ func indexPartialAggregateAvg2DivisionRewrite(oagg algebra.Aggregate,
 		for _, agg := range aggs {
 			if sagg == nil {
 				if nagg, ok = agg.(*algebra.Sum); ok {
-					if c, ok = nagg.Operand().(*expression.Cover); ok {
+					if c, ok = nagg.Operands()[0].(*expression.Cover); ok {
 						nagg, ok = c.Covered().(*algebra.Sum)
-						if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
+						if ok && algebra.EqualAggregateModifiers(oagg, nagg) {
 							sagg = agg
 						}
 					}
@@ -113,36 +95,9 @@ func indexPartialAggregateAvg2DivisionRewrite(oagg algebra.Aggregate,
 
 			if cagg == nil {
 				if nagg, ok = agg.(*algebra.Sum); ok {
-					if c, ok = nagg.Operand().(*expression.Cover); ok {
+					if c, ok = nagg.Operands()[0].(*expression.Cover); ok {
 						nagg, ok = c.Covered().(*algebra.Countn)
-						if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
-							cagg = agg
-						}
-					}
-				}
-			}
-			if sagg != nil && cagg != nil {
-				return expression.NewDiv(sagg, cagg), nil
-			}
-		}
-	case *algebra.AvgDistinct:
-		for _, agg := range aggs {
-			if sagg == nil {
-				if nagg, ok = agg.(*algebra.Sum); ok {
-					if c, ok = nagg.Operand().(*expression.Cover); ok {
-						nagg, ok = c.Covered().(*algebra.SumDistinct)
-						if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
-							sagg = agg
-						}
-					}
-				}
-			}
-
-			if cagg == nil {
-				if nagg, ok = agg.(*algebra.Sum); ok {
-					if c, ok = nagg.Operand().(*expression.Cover); ok {
-						nagg, ok = c.Covered().(*algebra.CountnDistinct)
-						if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
+						if ok && algebra.EqualAggregateModifiers(oagg, nagg) {
 							cagg = agg
 						}
 					}
@@ -170,33 +125,14 @@ func indexFullAggregateAvg2DivisionRewrite(oagg algebra.Aggregate,
 		for _, c := range covers {
 			if sagg == nil {
 				nagg, ok = c.Covered().(*algebra.Sum)
-				if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
+				if ok && algebra.EqualAggregateModifiers(oagg, nagg) {
 					sagg = c
 				}
 			}
 
 			if cagg == nil {
 				nagg, ok = c.Covered().(*algebra.Countn)
-				if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
-					cagg = c
-				}
-			}
-			if sagg != nil && cagg != nil {
-				return expression.NewDiv(sagg, cagg), nil
-			}
-		}
-	case *algebra.AvgDistinct:
-		for _, c := range covers {
-			if sagg == nil {
-				nagg, ok = c.Covered().(*algebra.SumDistinct)
-				if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
-					sagg = c
-				}
-			}
-
-			if cagg == nil {
-				nagg, ok = c.Covered().(*algebra.CountnDistinct)
-				if ok && expression.Equivalents(oagg.Children(), nagg.Children()) {
+				if ok && algebra.EqualAggregateModifiers(oagg, nagg) {
 					cagg = c
 				}
 			}
@@ -214,7 +150,7 @@ func (this *builder) indexAggregateRewrite() algebra.Aggregates {
 	stringer := expression.NewStringer()
 
 	for _, agg := range this.aggs {
-		aggOp := agg.Operand()
+		aggOp := agg.Operands()[0]
 		aggProprties := aggToIndexAgg(agg)
 		if aggProprties == nil || !aggProprties.supported ||
 			(aggOp == nil && aggProprties.aggtype != datastore.AGG_COUNT) {
@@ -224,18 +160,11 @@ func (this *builder) indexAggregateRewrite() algebra.Aggregates {
 
 		switch agg.(type) {
 		case *algebra.Avg:
-			naggSum := algebra.NewSum(aggOp)
+			naggSum := algebra.NewSum(agg.Operands().Copy(), agg.Flags(), nil)
 			naggs[stringer.Visit(naggSum)] = naggSum
 
-			naggCountn := algebra.NewCountn(aggOp)
+			naggCountn := algebra.NewCountn(agg.Operands().Copy(), agg.Flags(), nil)
 			naggs[stringer.Visit(naggCountn)] = naggCountn
-
-		case *algebra.AvgDistinct:
-			naggDistinctSum := algebra.NewSumDistinct(aggOp)
-			naggs[stringer.Visit(naggDistinctSum)] = naggDistinctSum
-
-			naggDistinctCountn := algebra.NewCountnDistinct(aggOp)
-			naggs[stringer.Visit(naggDistinctCountn)] = naggDistinctCountn
 
 		default:
 			naggs[stringer.Visit(agg)] = agg
@@ -374,7 +303,7 @@ func (this *builder) buildIndexAggregates(indexKeys expression.Expressions, inde
 
 nextagg:
 	for _, agg := range naggs {
-		aggExpr := agg.Operand()
+		aggExpr := agg.Operands()[0]
 		aggProprties := aggToIndexAgg(agg)
 		if aggProprties == nil || (aggExpr == nil && aggProprties.aggtype != datastore.AGG_COUNT) {
 			this.resetIndexGroupAggs()

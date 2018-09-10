@@ -325,6 +325,11 @@ func (this *builder) VisitFinalGroup(plan *plan.FinalGroup) (interface{}, error)
 	return NewFinalGroup(plan, this.context), nil
 }
 
+// Window functions
+func (this *builder) VisitWindowAggregate(plan *plan.WindowAggregate) (interface{}, error) {
+	return NewWindowAggregate(plan, this.context), nil
+}
+
 // Project
 func (this *builder) VisitInitialProject(plan *plan.InitialProject) (interface{}, error) {
 	return NewInitialProject(plan, this.context), nil

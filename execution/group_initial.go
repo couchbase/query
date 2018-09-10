@@ -74,7 +74,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		gv.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg.String()] = agg.Default()
+			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
 	}
 

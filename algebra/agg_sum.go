@@ -30,9 +30,9 @@ The function NewSum calls NewAggregateBase to
 create an aggregate function named SUM with
 one expression as input.
 */
-func NewSum(operand expression.Expression) Aggregate {
+func NewSum(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Sum{
-		*NewAggregateBase("sum", operand),
+		*NewAggregateBase("sum", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -66,15 +66,31 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Sum) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewSum(operands[0])
+		return NewSum(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Sum) Copy() expression.Expression {
+	rv := &Sum{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the SUM function, then the default value
 returned is a null.
 */
-func (this *Sum) Default() value.Value { return value.NULL_VALUE }
+func (this *Sum) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For all
@@ -84,7 +100,7 @@ and return it.
 */
 
 func (this *Sum) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -93,21 +109,52 @@ func (this *Sum) CumulateInitial(item, cumulative value.Value, context Context) 
 		return cumulative, nil
 	}
 
-	return this.cumulatePart(item, cumulative, context)
+	if this.Distinct() {
+		return setAdd(item, cumulative, true), nil
+	} else {
+		return this.cumulatePart(item, cumulative, context)
+	}
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *Sum) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+	if this.Distinct() {
+		return cumulateSets(part, cumulative)
+	} else {
+		return this.cumulatePart(part, cumulative, context)
+	}
 }
 
 /*
 Returns input cumulative value as the Final result.
 */
 func (this *Sum) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
-	return cumulative, nil
+	if this.Distinct() {
+		return this.computeDistinctFinal(cumulative, context)
+	} else {
+		return cumulative, nil
+	}
+}
+
+func (this *Sum) CumulateRemove(item, cumulative value.Value, context Context) (value.Value, error) {
+	if this.Distinct() {
+		return nil, fmt.Errorf("Invalid %v.CumulateRemove() for DISTINCT values.", this.Name())
+	}
+
+	item, e := this.Operands()[0].Evaluate(item, context)
+	if e != nil {
+		return nil, e
+	}
+
+	if item.Type() != value.NUMBER {
+		return cumulative, nil
+	} else if cumulative.Type() == value.NUMBER {
+		return value.AsNumberValue(cumulative).Sub(value.AsNumberValue(item)), nil
+	}
+
+	return nil, fmt.Errorf("Invalid %v.CumulateRemove() for %v value.", cumulative.Actual())
 }
 
 /*
@@ -115,6 +162,7 @@ Aggregate input partial values into cumulative result number value.
 If the partial and current cumulative result are both float64
 numbers, add them and return.
 */
+
 func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
 	if part == value.NULL_VALUE {
 		return cumulative, nil
@@ -133,4 +181,28 @@ func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (va
 	default:
 		return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", part.Actual(), part.Actual())
 	}
+}
+
+func (this *Sum) computeDistinctFinal(cumulative value.Value, context Context) (c value.Value, e error) {
+	if cumulative == value.NULL_VALUE {
+		return cumulative, nil
+	}
+
+	av := cumulative.(value.AnnotatedValue)
+	set := av.GetAttachment("set").(*value.Set)
+	if set.Len() == 0 {
+		return value.NULL_VALUE, nil
+	}
+
+	sum := value.ZERO_NUMBER
+	for _, v := range set.Values() {
+		switch {
+		case v.Type() == value.NUMBER:
+			sum = sum.Add(value.AsNumberValue(v))
+		default:
+			return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", v.Actual(), v.Actual())
+		}
+	}
+
+	return sum, nil
 }

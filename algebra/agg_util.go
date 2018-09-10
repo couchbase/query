@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
 
@@ -387,4 +388,95 @@ func computeVariance(cumulative value.Value, distinct, samp bool, delta float64)
 	}
 
 	return value.NewValue(variance / (count - delta)), nil
+}
+
+/*
+Return Window attachment
+*/
+func getWindowAttachment(item value.Value, name string) (value.Value, error) {
+	switch item := item.(type) {
+	case value.AnnotatedValue:
+		ps := item.GetAttachment(WINDOW_ATTACHMENT)
+		switch ps := ps.(type) {
+		case value.Value:
+			return ps, nil
+		default:
+			return nil, fmt.Errorf("Invalid %s %v of type %T.", name, item, item)
+		}
+	default:
+		return nil, fmt.Errorf("Invalid %s %v of type %T.", name, item, item)
+	}
+}
+
+/*
+Return list attachment and startpos attachments
+*/
+
+func getNthValues(aggname string, cumpart value.Value, valfunc bool) (*value.List, int, error) {
+	list, e := getList(cumpart)
+	if e != nil {
+		return nil, 0, fmt.Errorf("Invalid %s %v of type %T.", aggname, cumpart.Actual(), cumpart.Actual())
+	}
+
+	if !valfunc {
+		return list, 0, nil
+	}
+
+	switch item := cumpart.(type) {
+	case value.AnnotatedValue:
+		ps := item.GetAttachment("startpos")
+		switch ps := ps.(type) {
+		case value.NumberValue:
+			return list, int(ps.Int64()), nil
+		default:
+			return nil, 0, fmt.Errorf("Invalid %s %v of type %T.", aggname, cumpart.Actual(), cumpart.Actual())
+		}
+	default:
+		return nil, 0, fmt.Errorf("Invalid %s %v of type %T.", aggname, cumpart.Actual(), cumpart.Actual())
+	}
+}
+
+/*
+ Place the item value in the list array at right place.
+    Handles RESPECT|IGNORE NULLS
+    list array size to maxium nitems
+    It inserts item in the order from startpos (i.e start)
+*/
+
+func compute_nth_value(item, cumpart value.Value, expr expression.Expression, nitems, direction int, valfunc, ignoreNulls bool,
+	aggname string, context Context) error {
+
+	var part value.Value
+	list, start, e := getNthValues(aggname, cumpart, valfunc)
+	if !valfunc {
+		start = nitems
+	}
+
+	if e != nil {
+		return e
+	}
+
+	if list.Len() < nitems || start < nitems {
+		part, e = expr.Evaluate(item, context)
+		if e != nil {
+			return e
+		}
+
+		if !ignoreNulls || part.Type() > value.NULL {
+			inserted := false
+			for c := start; c < list.Len() && c < nitems; c++ {
+				cc := part.Collate(list.ItemAt(c))
+				if cc*direction < 0 {
+					list.Insert(c, nitems, part)
+					inserted = true
+					break
+				}
+			}
+
+			if list.Len() < nitems && !inserted {
+				list.Add(part)
+			}
+		}
+	}
+	return nil
 }

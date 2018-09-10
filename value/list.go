@@ -36,6 +36,33 @@ func (this *List) Len() int {
 	return len(this.list)
 }
 
+func (this *List) ItemAt(pos int) Value {
+	if pos >= 0 && pos < len(this.list) {
+		return this.list[pos]
+	}
+	return nil
+}
+
+func (this *List) ReplaceAt(pos int, item Value) bool {
+	if pos >= 0 && pos < len(this.list) {
+		this.list[pos] = item
+		return true
+	}
+	return false
+}
+
+func (this *List) Insert(pos, nlen int, item Value) {
+	l := len(this.list)
+	if nlen != 0 && l == nlen {
+		copy(this.list[pos+1:], this.list[pos:l-1])
+		this.list[pos] = item
+	} else {
+		this.Add(item)
+		copy(this.list[pos+1:], this.list[pos:l])
+		this.list[pos] = item
+	}
+}
+
 func (this *List) Values() []Value {
 	return this.list
 }

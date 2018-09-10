@@ -34,6 +34,15 @@ func NewOrder(terms SortTerms) *Order {
 }
 
 /*
+Copy
+*/
+func (this *Order) Copy() *Order {
+	return &Order{
+		terms: this.terms.Copy(),
+	}
+}
+
+/*
 Map expressions for the terms by calling MapExpressions.
 */
 func (this *Order) MapExpressions(mapper expression.Mapper) error {
@@ -51,7 +60,7 @@ func (this *Order) Expressions() expression.Expressions {
    Representation as a N1QL string.
 */
 func (this *Order) String() string {
-	return " order by " + this.terms.String()
+	return " ORDER BY " + this.terms.String()
 }
 
 /*
@@ -91,13 +100,38 @@ func NewSortTerm(expr expression.Expression, descending, nullsPos bool) *SortTer
 }
 
 /*
+Copy
+*/
+func (this SortTerms) Copy() SortTerms {
+	sterms := make(SortTerms, len(this))
+	for i, s := range this {
+		if s != nil {
+			sterms[i] = s.Copy()
+		}
+	}
+
+	return sterms
+}
+
+/*
+Copy
+*/
+func (this *SortTerm) Copy() *SortTerm {
+	return &SortTerm{
+		expr:       this.expr.Copy(),
+		descending: this.descending,
+		nullsPos:   this.nullsPos,
+	}
+}
+
+/*
    Representation as a N1QL string.
 */
 func (this *SortTerm) String() string {
-	s := this.expr.String()
+	s := expression.NewStringer().Visit(this.expr)
 
 	if this.descending {
-		s += " desc"
+		s += " DESC"
 		if this.NullsPos() {
 			s += " NULLS FIRST"
 		}
@@ -171,6 +205,9 @@ func (this SortTerms) String() string {
 	return s
 }
 
+/*
+Handle [NULLS FIRST|LAST] caluse
+*/
 const (
 	ORDER_NULLS_NONE = 1 << iota
 	ORDER_NULLS_FIRST
@@ -189,6 +226,14 @@ func NewOrderNulls(none, nulls, last bool) (r uint32) {
 	}
 	return
 }
+
+/*
+ Returns true only if it is not Natural order
+ ASC NULLS FIRST is Natural order  -- false
+ DESC NULLS LAST is Natural order  -- false
+ ASC NULLS LAST                    -- true
+ DESC NULLS FIRST                  -- true
+*/
 
 func NewOrderNullsPos(descending bool, nulls uint32) bool {
 	return (!descending && (nulls&ORDER_NULLS_LAST) != 0) || (descending && (nulls&ORDER_NULLS_FIRST) != 0)

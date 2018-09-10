@@ -57,6 +57,9 @@ type Visitor interface {
 	VisitIntermediateGroup(op *IntermediateGroup) (interface{}, error)
 	VisitFinalGroup(op *FinalGroup) (interface{}, error)
 
+	// Window functions
+	VisitWindowAggregate(op *WindowAggregate) (interface{}, error)
+
 	// Project
 	VisitInitialProject(op *InitialProject) (interface{}, error)
 	VisitFinalProject(op *FinalProject) (interface{}, error)

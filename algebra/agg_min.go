@@ -29,9 +29,9 @@ The function NewMin calls NewAggregateBase to
 create an aggregate function named MIN with
 one expression as input.
 */
-func NewMin(operand expression.Expression) Aggregate {
+func NewMin(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &Min{
-		*NewAggregateBase("min", operand),
+		*NewAggregateBase("min", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -65,15 +65,31 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Min) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewMin(operands[0])
+		return NewMin(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *Min) Copy() expression.Expression {
+	rv := &Min{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the MIN function, then the default value
 returned is a null.
 */
-func (this *Min) Default() value.Value { return value.NULL_VALUE }
+func (this *Min) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For missing and
@@ -81,7 +97,7 @@ null values return the input value itself. Call cumulatePart
 to compute the intermediate aggregate value and return it.
 */
 func (this *Min) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

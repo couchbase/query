@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
@@ -126,32 +125,14 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 	for i, term := range this.plan.Terms() {
 		s := this.terms[i]
 
-		sv1 := v1.GetAttachment(s)
-		switch sv1 := sv1.(type) {
-		case value.Value:
-			ev1 = sv1
-		default:
-			ev1, e = term.Expression().Evaluate(v1, this.context)
-			if e != nil {
-				this.context.Error(errors.NewEvaluationError(e, "ORDER BY"))
-				return false
-			}
-
-			v1.SetAttachment(s, ev1)
+		ev1, e = getCachedValue(v1, term.Expression(), s, this.context)
+		if e != nil {
+			return false
 		}
 
-		sv2 := v2.GetAttachment(s)
-		switch sv2 := sv2.(type) {
-		case value.Value:
-			ev2 = sv2
-		default:
-			ev2, e = term.Expression().Evaluate(v2, this.context)
-			if e != nil {
-				this.context.Error(errors.NewEvaluationError(e, "ORDER BY"))
-				return false
-			}
-
-			v2.SetAttachment(s, ev2)
+		ev2, e = getCachedValue(v2, term.Expression(), s, this.context)
+		if e != nil {
+			return false
 		}
 
 		if !term.NullsPos() || ((ev1.Type() <= value.NULL && ev2.Type() <= value.NULL) ||

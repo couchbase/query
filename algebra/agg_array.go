@@ -31,9 +31,9 @@ The function NewArrayAgg calls NewAggregateBase to
 create an aggregate function named ARRAY_AGG with
 one expression as input.
 */
-func NewArrayAgg(operand expression.Expression) Aggregate {
+func NewArrayAgg(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
 	rv := &ArrayAgg{
-		*NewAggregateBase("array_agg", operand),
+		*NewAggregateBase("array_agg", operands, flags, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -67,15 +67,31 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *ArrayAgg) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewArrayAgg(operands[0])
+		return NewArrayAgg(operands, uint32(0), nil)
 	}
+}
+
+/*
+Copy of the aggregate function
+*/
+
+func (this *ArrayAgg) Copy() expression.Expression {
+	rv := &ArrayAgg{
+		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
+			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 /*
 If no input to the ARRAY_AGG function, then the default value
 returned is a null.
 */
-func (this *ArrayAgg) Default() value.Value { return value.NULL_VALUE }
+func (this *ArrayAgg) Default(item value.Value, context Context) (value.Value, error) {
+	return value.NULL_VALUE, nil
+}
 
 /*
 Aggregates input data by evaluating operands. For missing
@@ -84,7 +100,7 @@ cumulatePart to compute the intermediate aggregate value
 and return it.
 */
 func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.Operand().Evaluate(item, context)
+	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -93,26 +109,47 @@ func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Cont
 		return cumulative, nil
 	}
 
-	return this.cumulatePart(value.NewValue([]interface{}{item}), cumulative, context)
+	if this.Distinct() {
+		return setAdd(item, cumulative, false), nil
+	} else {
+		return this.cumulatePart(value.NewValue([]interface{}{item}), cumulative, context)
+	}
 }
 
 /*
 Aggregates intermediate results and return them.
 */
 func (this *ArrayAgg) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+	if this.Distinct() {
+		return cumulateSets(part, cumulative)
+	} else {
+		return this.cumulatePart(part, cumulative, context)
+	}
 }
 
 /*
 Compute the Final result after sorting(post processing).
 */
-func (this *ArrayAgg) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
+func (this *ArrayAgg) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
 	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
 	}
 
-	sort.Sort(value.NewSorter(cumulative))
-	return cumulative, nil
+	if this.Distinct() {
+		av := cumulative.(value.AnnotatedValue)
+		set := av.GetAttachment("set").(*value.Set)
+		if set.Len() == 0 {
+			return value.NULL_VALUE, nil
+		}
+
+		actuals := set.Actuals()
+		c = value.NewValue(actuals)
+	} else {
+		c = cumulative
+	}
+
+	sort.Sort(value.NewSorter(c))
+	return c, nil
 }
 
 /*
