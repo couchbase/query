@@ -348,7 +348,7 @@ func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
 				if elem.refcount == 1 {
 
 					// promote the lock
-					this.locks[b].Unlock()
+					this.locks[b].RUnlock()
 					sharedLock = false
 					this.lock(b)
 
