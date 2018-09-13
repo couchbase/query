@@ -50,6 +50,7 @@ type systemRemoteHttp struct {
 func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) distributed.SystemRemoteAccess {
 	return &systemRemoteHttp{
 		configStore: cfgStore,
+		knownNodes:  make(map[string]*knownNode),
 	}
 }
 
