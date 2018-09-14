@@ -193,6 +193,13 @@ func (this *Context) RequestId() string {
 	return this.requestId
 }
 
+func (this *Context) Type() string {
+	if this.prepared != nil {
+		return this.prepared.Type()
+	}
+	return ""
+}
+
 func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
 }
