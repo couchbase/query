@@ -541,8 +541,9 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 
 	// MB-19509 we now have to check that the encoded plan matches
 	// the prepared statement named in the rest API
+	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
 	if prepared.Name() != "" && prepared_name != "" &&
-		prepared_name != prepared.Name() {
+		prepared_key != prepared.Name() {
 		return nil, errors.NewEncodingNameMismatchError(prepared_name)
 	}
 
