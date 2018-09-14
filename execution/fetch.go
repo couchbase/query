@@ -19,6 +19,7 @@ import (
 type Fetch struct {
 	base
 	plan       *plan.Fetch
+	deepCopy   bool
 	batchSize  int
 	fetchCount uint64
 }
@@ -30,6 +31,8 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	}
 
 	newBase(&rv.base, context)
+	op := context.Type()
+	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
 	rv.execPhase = FETCH
 	rv.output = rv
 	return rv
@@ -40,7 +43,11 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Fetch) Copy() Operator {
-	rv := &Fetch{plan: this.plan, batchSize: this.batchSize}
+	rv := &Fetch{
+		plan:      this.plan,
+		batchSize: this.batchSize,
+		deepCopy:  this.deepCopy,
+	}
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -127,7 +134,11 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		fv := fetchMap[key]
 		if fv != nil {
 			if keyCount[key] > 1 {
-				fv = value.NewAnnotatedValue(fv.Copy())
+				if this.deepCopy {
+					fv = value.NewAnnotatedValue(fv.CopyForUpdate())
+				} else {
+					fv = value.NewAnnotatedValue(fv.Copy())
+				}
 				keyCount[key]--
 			}
 
