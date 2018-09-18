@@ -334,6 +334,9 @@ func (this sliceValue) Successor() Value {
 	return sliceValue(append(this, nil))
 }
 
+func (this sliceValue) Track() {
+}
+
 func (this sliceValue) Recycle() {
 	// the old recycle functionality had never been used
 	// this will be reinstated or removed with the whole
@@ -491,6 +494,9 @@ func (this *listValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 
 func (this *listValue) Successor() Value {
 	return this.slice.Successor()
+}
+
+func (this *listValue) Track() {
 }
 
 func (this *listValue) Recycle() {

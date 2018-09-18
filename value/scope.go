@@ -11,6 +11,8 @@ package value
 
 import (
 	"io"
+
+	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
 /*
@@ -20,6 +22,7 @@ has a parent Value.
 */
 type ScopeValue struct {
 	Value
+	refCnt int32
 	parent Value
 }
 
@@ -27,6 +30,9 @@ func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 	rv := &ScopeValue{}
 	rv.Value = objectValue(val)
 	rv.parent = parent
+	if parent != nil {
+		parent.Track()
+	}
 	return rv
 }
 
@@ -119,7 +125,17 @@ func (this *ScopeValue) Map() map[string]interface{} {
 	return this.Value.(objectValue)
 }
 
+func (this *ScopeValue) Track() {
+	atomic.AddInt32(&this.refCnt, 1)
+}
+
 func (this *ScopeValue) Recycle() {
+
+	// do no recycle if other scope values are using this value
+	refcnt := atomic.AddInt32(&this.refCnt, -1)
+	if refcnt > 0 {
+		return
+	}
 	this.Value.Recycle()
 	this.Value = nil
 	if this.parent != nil {

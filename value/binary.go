@@ -152,6 +152,9 @@ func (this binaryValue) Successor() Value {
 	return binaryValue(append(this, byte(0)))
 }
 
+func (this binaryValue) Track() {
+}
+
 func (this binaryValue) Recycle() {
 }
 

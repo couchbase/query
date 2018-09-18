@@ -202,6 +202,9 @@ func (this *nullValue) Successor() Value {
 	return FALSE_VALUE
 }
 
+func (this *nullValue) Track() {
+}
+
 func (this *nullValue) Recycle() {
 }
 

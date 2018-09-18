@@ -36,6 +36,7 @@ type parsedValue struct {
 	useState     bool
 	findState    *json.FindState
 	indexState   *json.IndexState
+	refCnt       int32 // to check for recycling
 	used         int32 // to access state
 }
 
@@ -414,7 +415,17 @@ func (this *parsedValue) Successor() Value {
 	return this.unwrap().Successor()
 }
 
+func (this *parsedValue) Track() {
+	atomic.AddInt32(&this.refCnt, 1)
+}
+
 func (this *parsedValue) Recycle() {
+
+	// do no recycle if other scope values are using this value
+	refcnt := atomic.AddInt32(&this.refCnt, -1)
+	if refcnt > 0 {
+		return
+	}
 	if this.parsed != nil {
 		this.parsed.Recycle()
 		this.parsed = nil

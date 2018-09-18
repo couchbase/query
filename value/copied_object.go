@@ -17,6 +17,9 @@ type copiedObjectValue struct {
 	objectValue
 }
 
+func (this copiedObjectValue) Track() {
+}
+
 func (this copiedObjectValue) Recycle() {
 	// Do nothing.
 }

@@ -231,6 +231,9 @@ func (this boolValue) Successor() Value {
 	}
 }
 
+func (this boolValue) Track() {
+}
+
 func (this boolValue) Recycle() {
 }
 

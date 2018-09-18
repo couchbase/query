@@ -236,6 +236,9 @@ func (this intValue) Successor() Value {
 	}
 }
 
+func (this intValue) Track() {
+}
+
 func (this intValue) Recycle() {
 }
 

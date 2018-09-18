@@ -16,6 +16,9 @@ type copiedSliceValue struct {
 	sliceValue
 }
 
+func (this copiedSliceValue) Track() {
+}
+
 func (this copiedSliceValue) Recycle() {
 	// Do nothing. This object does not own its subelements.
 }

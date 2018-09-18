@@ -11,6 +11,8 @@ package value
 
 import (
 	"io"
+
+	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
 type AnnotatedValues []AnnotatedValue
@@ -74,6 +76,7 @@ type annotatedValue struct {
 	covers      Value
 	bit         uint8
 	id          interface{}
+	refCnt      int32
 }
 
 func (this *annotatedValue) String() string {
@@ -207,7 +210,17 @@ func (this *annotatedValue) SetId(id interface{}) {
 	this.id = id
 }
 
+func (this *annotatedValue) Track() {
+	atomic.AddInt32(&this.refCnt, 1)
+}
+
 func (this *annotatedValue) Recycle() {
+
+	// do no recycle if other scope values are using this value
+	refcnt := atomic.AddInt32(&this.refCnt, -1)
+	if refcnt > 0 {
+		return
+	}
 	this.Value.Recycle()
 	this.Value = nil
 	this.attachments = nil

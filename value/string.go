@@ -244,6 +244,9 @@ func (this stringValue) Successor() Value {
 	return stringValue(string(this) + " ")
 }
 
+func (this stringValue) Track() {
+}
+
 func (this stringValue) Recycle() {
 }
 

@@ -304,6 +304,9 @@ func (this floatValue) Successor() Value {
 	return floatValue(math.Nextafter(t, math.MaxFloat64))
 }
 
+func (this floatValue) Track() {
+}
+
 func (this floatValue) Recycle() {
 }
 

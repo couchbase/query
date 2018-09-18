@@ -384,6 +384,9 @@ func (this objectValue) Successor() Value {
 	return objectValue(s)
 }
 
+func (this objectValue) Track() {
+}
+
 func (this objectValue) Recycle() {
 	// the old recycle functionality had never been used
 	// this will be reinstated or removed with the whole

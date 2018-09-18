@@ -334,6 +334,12 @@ type Value interface {
 	Recycle()
 
 	/*
+	   Track keeps a reference count (if required), so that recycling
+	   is only done when no references remain
+	*/
+	Track()
+
+	/*
 	   MB-20850. List all the atomic tokens of a value.
 	*/
 	Tokens(set *Set, options Value) *Set

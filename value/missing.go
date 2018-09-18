@@ -209,6 +209,9 @@ func (this missingValue) Successor() Value {
 	return NULL_VALUE
 }
 
+func (this missingValue) Track() {
+}
+
 func (this missingValue) Recycle() {
 }
 
