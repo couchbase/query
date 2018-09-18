@@ -591,7 +591,7 @@ func main() {
 		}
 	}
 
-	if timeoutFlag != "0ms" {
+	if timeoutFlag != "0ms" && timeoutFlag != "" {
 		n1ql.SetQueryParams("timeout", timeoutFlag)
 	}
 

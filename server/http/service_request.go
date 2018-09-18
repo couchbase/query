@@ -565,16 +565,17 @@ func getPrepared(a httpRequestArgs, parm string, val interface{}, phaseTime *tim
 		return "", nil, err
 	}
 
-	// Monitoring API: track prepared statement access
-	prepared, err := prepareds.GetPrepared(prepared_field, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
-	if err != nil || prepared == nil {
-		return "", nil, err
-	}
-
 	prepared_name, ok := prepared_field.Actual().(string)
 	if !ok {
 		prepared_name = ""
 	}
+
+	// Monitoring API: track prepared statement access
+	prepared, err := prepareds.GetPrepared(prepared_field, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
+	if err != nil || prepared == nil {
+		return prepared_name, nil, err
+	}
+
 	return prepared_name, prepared, err
 }
 
@@ -1559,6 +1560,12 @@ func addNamedArg(args map[string]value.Value, name string, arg value.Value) map[
 // helper function to create a time.Duration instance from a given string.
 // There must be a unit - valid units are "ns", "us", "ms", "s", "m", "h"
 func newDuration(s string) (duration time.Duration, err errors.Error) {
+
+	// handle empty REST parameters by returning a zero duration
+	if s == "" {
+		return
+	}
+
 	// Error if given string has no unit
 	last_char := s[len(s)-1]
 	if last_char != 's' && last_char != 'm' && last_char != 'h' {
