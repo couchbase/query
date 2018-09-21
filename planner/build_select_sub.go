@@ -105,16 +105,17 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		letting := group.Letting()
 		// Only aggregates and group keys are allowed in LETTING caluse
 		if letting != nil {
-			for _, expr := range letting.Expressions() {
+			for bv, expr := range letting.Mappings() {
 				if expr != nil {
 					err = constrainGroupTerm(expr, groupKeys, allowed)
 					if err != nil {
 						return nil, err
 					}
 				}
+				vid := expression.NewIdentifier(bv)
+				vid.SetBindingVariable(true)
+				groupKeys = append(groupKeys, vid)
 			}
-			identifiers := letting.Identifiers()
-			groupKeys = append(groupKeys, identifiers...)
 		}
 
 		// Only aggregates and group keys, LETTING varaiables are allowed in HAVING caluse
