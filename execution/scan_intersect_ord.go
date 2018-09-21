@@ -113,7 +113,6 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)
-		firstStopped := false
 		stopped := false
 		ok := true
 
@@ -129,9 +128,6 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 							notifyChildren(this.scans[1:]...)
 						}
 						childBits |= int64(0x01) << uint(childBit)
-					}
-					if childBit == 0 {
-						firstStopped = true
 					}
 					n--
 
@@ -167,10 +163,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 				break loop
 			}
 
-			if n == 1 && !firstStopped && len(this.bits) == 0 {
-				notifyChildren(this.scans[0])
-				firstStopped = true
-			}
+			// MB-31336 defensively skip optimization on only first scan left
 		}
 
 		if !stopped && (limit <= 0 || this.sent < limit) {
