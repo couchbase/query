@@ -53,8 +53,11 @@ func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bo
 func (this *Filter) Copy() *Filter {
 	rv := &Filter{
 		fltrExpr:  this.fltrExpr.Copy(),
-		origExpr:  this.origExpr.Copy(),
 		fltrFlags: this.fltrFlags,
+	}
+
+	if this.origExpr != nil {
+		rv.origExpr = this.origExpr.Copy()
 	}
 
 	rv.keyspaces = make(map[string]bool, len(this.keyspaces))
