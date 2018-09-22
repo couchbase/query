@@ -114,6 +114,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		nscans := len(this.scans)
 		childBits := int64(0)
 		firstStopped := false
+		needProcessing := -1
 		stopped := false
 		ok := true
 
@@ -135,6 +136,12 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 					}
 					n--
 
+					// MB-31336: if only the first scan remains, process the existing keys
+					// and then stop it
+					if n == 1 && !firstStopped {
+						needProcessing = this.queuedItems()
+					}
+
 					// now that all children are gone, flag that there's
 					// no more values coming in
 					if n == 0 {
@@ -145,9 +152,22 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 					ok = this.processKey(item, context, fullBits, fullBits, limit, false)
 					stopped = this.stopped
-					if ok && limit > 0 && this.fullCount >= limit {
-						childBits |= int64(0x01)
-						break loop
+
+					if ok {
+
+						// MB-31336: now that there are no keys that need processing
+						// terminate first scan if there are no more keys in the queue
+						if needProcessing > 0 {
+							needProcessing--
+						}
+						if needProcessing == 0 && !firstStopped && len(this.bits) == 0 {
+							notifyChildren(this.scans[0])
+							firstStopped = true
+						}
+						if limit > 0 && this.fullCount >= limit {
+							childBits |= int64(0x01)
+							break loop
+						}
 					}
 				} else {
 					break loop
@@ -165,11 +185,6 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 					channel.close(context)
 				}
 				break loop
-			}
-
-			if n == 1 && !firstStopped && len(this.bits) == 0 {
-				notifyChildren(this.scans[0])
-				firstStopped = true
 			}
 		}
 

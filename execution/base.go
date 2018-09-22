@@ -385,6 +385,10 @@ func (this *base) getItemOp(op Operator) (value.AnnotatedValue, bool) {
 	return val, ok
 }
 
+func (this *base) queuedItems() int {
+	return this.ValueExchange().queuedItems(this.input.ValueExchange())
+}
+
 func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
 	this.switchPhase(_CHANTIME)
 	defer this.switchPhase(_EXECTIME)

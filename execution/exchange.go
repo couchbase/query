@@ -215,6 +215,11 @@ func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue
 	return true
 }
 
+// channel length
+func (this *valueExchange) queuedItems(op *valueExchange) int {
+	return op.itemsCount
+}
+
 // receive
 func (this *valueExchange) getItem(op *valueExchange) (value.AnnotatedValue, bool) {
 	if this.stop {
