@@ -243,7 +243,7 @@ func main() {
 		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
 	}
 
-	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS, acctstore.MetricRegistry())
+	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 
 	go server.Serve()
 	go server.PlusServe()

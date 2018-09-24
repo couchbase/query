@@ -20,7 +20,6 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
@@ -173,14 +172,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 }
 
 func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	acctStore := endpoint.server.AccountingStore()
-	reg := acctStore.MetricRegistry()
-	if reg == nil {
-		logging.Errorf("http.NotFoundHandler - nil metric registry")
-	} else {
-		reg.Counter(accounting.INVALID_REQUESTS).Inc(1)
-	}
-
+	accounting.UpdateCounter(accounting.INVALID_REQUESTS)
 	return nil, nil
 }
 

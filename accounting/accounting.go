@@ -99,6 +99,7 @@ type Timer interface {
 
 // MetricRegistry is the container for creating and maintaining Metrics
 type MetricRegistry interface {
+
 	// Register a metric with a name.
 	// Possible reasons for error: name already in use
 	Register(name string, metric Metric) errors.Error
@@ -178,148 +179,233 @@ type MetricReporter interface {
 	RateUnit() time.Duration
 }
 
+// define metrics mnemonics
+type CounterId int
+
+const (
+	REQUESTS CounterId = iota
+	CANCELLED
+
+	UNBOUNDED
+	AT_PLUS
+	SCAN_PLUS
+
+	SELECTS
+	UPDATES
+	INSERTS
+	DELETES
+	UNKNOWN
+
+	ACTIVE_REQUESTS
+	QUEUED_REQUESTS
+	INVALID_REQUESTS
+
+	REQUEST_TIME
+	SERVICE_TIME
+
+	RESULT_COUNT
+	RESULT_SIZE
+	ERRORS
+	WARNINGS
+	MUTATIONS
+
+	REQUESTS_250MS
+	REQUESTS_500MS
+	REQUESTS_1000MS
+	REQUESTS_5000MS
+
+	AUDIT_REQUESTS_TOTAL
+	AUDIT_REQUESTS_FILTERED
+	AUDIT_ACTIONS
+	AUDIT_ACTIONS_FAILED
+)
+
 // Define names for all the metrics we are interested in:
 const (
-	REQUESTS  = "requests"
-	CANCELLED = "cancelled"
+	_REQUESTS  = "requests"
+	_CANCELLED = "cancelled"
 
-	UNBOUNDED = "unbounded"
-	AT_PLUS   = "at_plus"
-	SCAN_PLUS = "scan_plus"
+	_UNBOUNDED = "unbounded"
+	_AT_PLUS   = "at_plus"
+	_SCAN_PLUS = "scan_plus"
 
-	SELECTS = "selects"
-	UPDATES = "updates"
-	INSERTS = "inserts"
-	DELETES = "deletes"
-	UNKNOWN = "unknown"
+	_SELECTS = "selects"
+	_UPDATES = "updates"
+	_INSERTS = "inserts"
+	_DELETES = "deletes"
+	_UNKNOWN = "unknown"
 
-	ACTIVE_REQUESTS  = "active_requests"
-	QUEUED_REQUESTS  = "queued_requests"
-	INVALID_REQUESTS = "invalid_requests"
+	_ACTIVE_REQUESTS  = "active_requests"
+	_QUEUED_REQUESTS  = "queued_requests"
+	_INVALID_REQUESTS = "invalid_requests"
 
-	REQUEST_TIME = "request_time"
-	SERVICE_TIME = "service_time"
+	_REQUEST_TIME = "request_time"
+	_SERVICE_TIME = "service_time"
 
-	RESULT_COUNT = "result_count"
-	RESULT_SIZE  = "result_size"
-	ERRORS       = "errors"
-	WARNINGS     = "warnings"
-	MUTATIONS    = "mutations"
+	_RESULT_COUNT = "result_count"
+	_RESULT_SIZE  = "result_size"
+	_ERRORS       = "errors"
+	_WARNINGS     = "warnings"
+	_MUTATIONS    = "mutations"
 
-	REQUESTS_250MS  = "requests_250ms"
-	REQUESTS_500MS  = "requests_500ms"
-	REQUESTS_1000MS = "requests_1000ms"
-	REQUESTS_5000MS = "requests_5000ms"
+	_REQUESTS_250MS  = "requests_250ms"
+	_REQUESTS_500MS  = "requests_500ms"
+	_REQUESTS_1000MS = "requests_1000ms"
+	_REQUESTS_5000MS = "requests_5000ms"
 
-	DURATION_0MS    = 0 * time.Millisecond
-	DURATION_250MS  = 250 * time.Millisecond
-	DURATION_500MS  = 500 * time.Millisecond
-	DURATION_1000MS = 1000 * time.Millisecond
-	DURATION_5000MS = 5000 * time.Millisecond
+	_AUDIT_REQUESTS_TOTAL    = "audit_requests_total"
+	_AUDIT_REQUESTS_FILTERED = "audit_requests_filtered"
+	_AUDIT_ACTIONS           = "audit_actions"
+	_AUDIT_ACTIONS_FAILED    = "audit_actions_failed"
 
 	REQUEST_RATE  = "request_rate"
 	REQUEST_TIMER = "request_timer"
-
-	PREPARED = "prepared"
-
-	AUDIT_REQUESTS_TOTAL    = "audit_requests_total"
-	AUDIT_REQUESTS_FILTERED = "audit_requests_filtered"
-	AUDIT_ACTIONS           = "audit_actions"
-	AUDIT_ACTIONS_FAILED    = "audit_actions_failed"
+	PREPARED      = "prepared"
 )
 
-var metricNames = []string{REQUESTS, CANCELLED, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS, QUEUED_REQUESTS, INVALID_REQUESTS,
-	UNBOUNDED, AT_PLUS, SCAN_PLUS,
-	REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS, REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS,
-	REQUESTS_5000MS, WARNINGS, MUTATIONS,
-	AUDIT_REQUESTS_TOTAL, AUDIT_REQUESTS_FILTERED, AUDIT_ACTIONS, AUDIT_ACTIONS_FAILED}
+// please keep in sync with the mnemonics
+var metricNames = []string{
+	_REQUESTS,
+	_CANCELLED,
+
+	_UNBOUNDED,
+	_AT_PLUS,
+	_SCAN_PLUS,
+
+	_SELECTS,
+	_UPDATES,
+	_INSERTS,
+	_DELETES,
+	_UNKNOWN,
+
+	_ACTIVE_REQUESTS,
+	_QUEUED_REQUESTS,
+	_INVALID_REQUESTS,
+
+	_REQUEST_TIME,
+	_SERVICE_TIME,
+
+	_RESULT_COUNT,
+	_RESULT_SIZE,
+	_ERRORS,
+	_WARNINGS,
+	_MUTATIONS,
+
+	_REQUESTS_250MS,
+	_REQUESTS_500MS,
+	_REQUESTS_1000MS,
+	_REQUESTS_5000MS,
+
+	_AUDIT_REQUESTS_TOTAL,
+	_AUDIT_REQUESTS_FILTERED,
+	_AUDIT_ACTIONS,
+	_AUDIT_ACTIONS_FAILED,
+}
+
+const (
+	_DURATION_0MS    = 0 * time.Millisecond
+	_DURATION_250MS  = 250 * time.Millisecond
+	_DURATION_500MS  = 500 * time.Millisecond
+	_DURATION_1000MS = 1000 * time.Millisecond
+	_DURATION_5000MS = 5000 * time.Millisecond
+)
 
 // Map each duration to its metrics
-var slowMetricsMap = map[time.Duration][]string{
+var slowMetricsMap = map[time.Duration][]CounterId{
 
 	// FIXME MB-15575 would like to use durations as duration windows, not overall
-	DURATION_5000MS: {REQUESTS_5000MS, REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
-	DURATION_1000MS: {REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
-	DURATION_500MS:  {REQUESTS_500MS, REQUESTS_250MS},
-	DURATION_250MS:  {REQUESTS_250MS},
-	DURATION_0MS:    {},
+	_DURATION_5000MS: {REQUESTS_5000MS, REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
+	_DURATION_1000MS: {REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
+	_DURATION_500MS:  {REQUESTS_500MS, REQUESTS_250MS},
+	_DURATION_250MS:  {REQUESTS_250MS},
+	_DURATION_0MS:    {},
 }
+
+var acctstore AccountingStore
+var counters []Counter = make([]Counter, len(metricNames))
+var requestRate Meter
+var requestTimer Timer
+var preparedMeter Meter
 
 // Use the give AccountingStore to create counters for all the metrics we are interested in:
-func RegisterMetrics(acctstore AccountingStore) {
+func RegisterMetrics(acctStore AccountingStore) {
+	acctstore = acctStore
 	ms := acctstore.MetricRegistry()
-	for _, name := range metricNames {
-		ms.Counter(name)
+	for id, name := range metricNames {
+		counters[id] = ms.Counter(name)
 	}
 
-	ms.Meter(REQUEST_RATE)
-	ms.Timer(REQUEST_TIMER)
+	requestRate = ms.Meter(REQUEST_RATE)
+	requestTimer = ms.Timer(REQUEST_TIMER)
 
 	// We have to use a meter due to the way it's used in accounting_gm.go
-	ms.Meter(PREPARED)
+	preparedMeter = ms.Meter(PREPARED)
 }
 
-func RecordMetrics(acctstore AccountingStore,
-	request_time time.Duration, service_time time.Duration,
+// Record request metrics
+func RecordMetrics(request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
 	error_count int, warn_count int, stmt string, prepared bool,
 	cancelled bool, scanConsistency string) {
 
-	ms := acctstore.MetricRegistry()
-	ms.Counter(REQUESTS).Inc(1)
+	if acctstore == nil {
+		return
+	}
+
+	counters[REQUESTS].Inc(1)
 	if cancelled {
-		ms.Counter(CANCELLED).Inc(1)
+		counters[CANCELLED].Inc(1)
 	}
 	switch scanConsistency {
 	case "unbounded":
-		ms.Counter(UNBOUNDED).Inc(1)
+		counters[UNBOUNDED].Inc(1)
 	case "scan_plus":
-		ms.Counter(SCAN_PLUS).Inc(1)
+		counters[SCAN_PLUS].Inc(1)
 	case "at_plus":
-		ms.Counter(AT_PLUS).Inc(1)
+		counters[AT_PLUS].Inc(1)
 	}
-	ms.Counter(REQUEST_TIME).Inc(int64(request_time))
-	ms.Counter(SERVICE_TIME).Inc(int64(service_time))
-	ms.Counter(RESULT_COUNT).Inc(int64(result_count))
-	ms.Counter(RESULT_SIZE).Inc(int64(result_size))
-	ms.Counter(ERRORS).Inc(int64(error_count))
-	ms.Counter(WARNINGS).Inc(int64(warn_count))
+	counters[REQUEST_TIME].Inc(int64(request_time))
+	counters[SERVICE_TIME].Inc(int64(service_time))
+	counters[RESULT_COUNT].Inc(int64(result_count))
+	counters[RESULT_SIZE].Inc(int64(result_size))
+	counters[ERRORS].Inc(int64(error_count))
+	counters[WARNINGS].Inc(int64(warn_count))
 
-	ms.Meter(REQUEST_RATE).Mark(1)
-	ms.Timer(REQUEST_TIMER).Update(request_time)
+	requestRate.Mark(1)
+	requestTimer.Update(request_time)
 
 	if prepared {
-		ms.Meter(PREPARED).Mark(1)
+		preparedMeter.Mark(1)
 	}
 
 	// Determine slow metrics based on request duration
-	slowMetrics := slowMetricsMap[DURATION_0MS]
+	slowMetrics := slowMetricsMap[_DURATION_0MS]
 
 	switch {
-	case request_time >= DURATION_5000MS:
-		slowMetrics = slowMetricsMap[DURATION_5000MS]
-	case request_time >= DURATION_1000MS:
-		slowMetrics = slowMetricsMap[DURATION_1000MS]
-	case request_time >= DURATION_500MS:
-		slowMetrics = slowMetricsMap[DURATION_500MS]
-	case request_time >= DURATION_250MS:
-		slowMetrics = slowMetricsMap[DURATION_250MS]
+	case request_time >= _DURATION_5000MS:
+		slowMetrics = slowMetricsMap[_DURATION_5000MS]
+	case request_time >= _DURATION_1000MS:
+		slowMetrics = slowMetricsMap[_DURATION_1000MS]
+	case request_time >= _DURATION_500MS:
+		slowMetrics = slowMetricsMap[_DURATION_500MS]
+	case request_time >= _DURATION_250MS:
+		slowMetrics = slowMetricsMap[_DURATION_250MS]
 	default:
 	}
 
 	for _, durationMetric := range slowMetrics {
-		ms.Counter(durationMetric).Inc(1)
+		counters[durationMetric].Inc(1)
 	}
 
 	// record the type of request if 0 errors
 	if error_count == 0 {
-		if t := requestType(stmt, prepared); t != UNKNOWN {
-			ms.Counter(t).Inc(1)
+		if t := requestType(stmt); t != UNKNOWN {
+			counters[t].Inc(1)
 		}
 	}
 }
 
-func requestType(stmt string, prepared bool) string {
+func requestType(stmt string) CounterId {
 
 	switch strings.ToLower(stmt) {
 	case "select":
@@ -332,4 +418,11 @@ func requestType(stmt string, prepared bool) string {
 		return DELETES
 	}
 	return UNKNOWN
+}
+
+func UpdateCounter(id CounterId) {
+	if acctstore == nil {
+		return
+	}
+	counters[id].Inc(1)
 }
