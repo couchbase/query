@@ -11,6 +11,8 @@ package expression
 
 import (
 	"time"
+
+	"github.com/couchbase/query/auth"
 )
 
 /*
@@ -28,6 +30,9 @@ type Context interface {
 type CurlContext interface {
 	Context
 	GetWhitelist() map[string]interface{}
+	Credentials() auth.Credentials
+	UrlCredentials() auth.Credentials
+	DatastoreURL() string
 }
 
 type InlistContext interface {
