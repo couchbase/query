@@ -962,6 +962,54 @@
         ]
       }
     ]
+  },
+  {
+    "statements": "select array_except([1, 2, 3, 4, 7, 8, 9], [7, 8, 9, 10])",
+    "results": [
+      {
+        "$1": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select array_except([1, 2, 3, 4, 7, 8, 9], [1, 2, 3, 4, 7, 8, 9])",
+    "results": [
+      {
+        "$1": []
+      }
+    ]
+  },
+  {
+    "statements": "select array_except([1, 2, 3, 4], [])",
+    "results": [
+      {
+        "$1": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select array_except(MISSING, [2, 3])",
+    "results": [
+      {}
+    ]
+  },
+  {
+    "statements": "select array_except(NULL, [2, 3])",
+    "results": [
+      {
+        "$1": null
+      }
+    ]
   }
 ]
 

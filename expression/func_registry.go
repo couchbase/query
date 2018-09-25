@@ -265,6 +265,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_union":     &ArrayUnion{},
 	"array_swap":      &ArraySwap{},
 	"array_move":      &ArrayMove{},
+	"array_except":    &ArrayExcept{},
 
 	// Object
 	"object_add":          &ObjectAdd{},

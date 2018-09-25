@@ -2384,3 +2384,83 @@ func (this *ArrayMove) Constructor() FunctionConstructor {
 		return NewArrayMove(operands[0], operands[1], operands[2])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayExcept
+//
+///////////////////////////////////////////////////
+/*
+This represents the array function ARRAY_EXCEPT(array A,array B).
+It returns an array with the elements that belong to A and not to B.
+*/
+type ArrayExcept struct {
+	BinaryFunctionBase
+}
+
+func NewArrayExcept(first, second Expression) Function {
+	rv := &ArrayExcept{
+		*NewBinaryFunctionBase("array_except", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ArrayExcept) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayExcept) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayExcept) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *ArrayExcept) PropagatesNull() bool {
+	return false
+}
+
+func (this *ArrayExcept) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	if first.Type() != value.ARRAY || second.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	a := first.Actual().([]interface{})
+	b := second.Actual().([]interface{})
+	if len(a) == 0 || len(b) == 0 {
+		return first, nil
+	}
+
+	set := _ARRAY_SET_POOL.Get()
+	defer _ARRAY_SET_POOL.Put(set)
+	set.AddAll(b)
+
+	j := 0
+	for i, _ := range a {
+		v := value.NewValue(a[i])
+		if !set.Has(v) {
+			a[j] = a[i]
+			j++
+		}
+	}
+
+	res := value.NewValue(a[:j])
+
+	//To avoid memory leakage
+	for ; j < len(a); j++ {
+		a[j] = nil
+	}
+
+	return res, nil
+}
+
+func (this *ArrayExcept) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayExcept(operands[0], operands[1])
+	}
+}
