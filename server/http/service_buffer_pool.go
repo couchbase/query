@@ -26,6 +26,7 @@ type BufferPool interface {
 type syncPoolBufPool struct {
 	pool       *sync.Pool
 	buf_size   int
+	max_size   int
 	makeBuffer func() interface{}
 }
 
@@ -44,6 +45,7 @@ func NewSyncPool(buf_size int) BufferPool {
 	newPool.pool = &sync.Pool{}
 	newPool.pool.New = newPool.makeBuffer
 	newPool.buf_size = buf_size
+	newPool.max_size = buf_size * 2
 
 	return &newPool
 }
@@ -53,8 +55,10 @@ func (bp *syncPoolBufPool) GetBuffer() *bytes.Buffer {
 }
 
 func (bp *syncPoolBufPool) PutBuffer(b *bytes.Buffer) {
-	b.Reset()
-	bp.pool.Put(b)
+	if b.Len() < bp.max_size {
+		b.Reset()
+		bp.pool.Put(b)
+	}
 }
 
 func (bp *syncPoolBufPool) BufferCapacity() int {

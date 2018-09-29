@@ -47,13 +47,19 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *Stream) beforeItems(context *Context, parent value.Value) bool {
+	context.SetUp()
+	return true
+}
+
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
-	this.switchPhase(_CHANTIME)
 	ok := context.Result(item)
-	this.switchPhase(_EXECTIME)
 	if ok {
 		this.addOutDocs(1)
 	}
+
+	// item not used past this point
+	item.Recycle()
 	return ok
 }
 

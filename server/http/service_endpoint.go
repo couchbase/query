@@ -148,8 +148,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	if request.ScanConsistency() == datastore.UNBOUNDED {
 		select {
 		case this.server.Channel() <- request:
+
 			// Wait until the request exits.
-			<-request.CloseNotify()
+			request.Finished()
 		default:
 			// Buffer is full.
 			resp.WriteHeader(http.StatusServiceUnavailable)
@@ -157,8 +158,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	} else {
 		select {
 		case this.server.PlusChannel() <- request:
+
 			// Wait until the request exits.
-			<-request.CloseNotify()
+			request.Finished()
 		default:
 			// Buffer is full.
 			resp.WriteHeader(http.StatusServiceUnavailable)

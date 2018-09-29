@@ -591,10 +591,11 @@ func (this *Server) serviceRequest(request Request) {
 		context.SetReqDeadline(time.Time{})
 	}
 
+	request.NotifyStop(operator)
 	go operator.RunOnce(context, nil)
 
 	request.SetExecTime(time.Now())
-	request.Execute(this, prepared.Signature(), operator)
+	request.Execute(this, prepared.Signature())
 }
 
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {

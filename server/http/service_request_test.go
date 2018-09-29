@@ -433,7 +433,7 @@ func (this *testServer) testHandler() http.Handler {
 		select {
 		case this.query_server.Channel() <- this.query_request:
 			// Wait until the request exits.
-			<-this.query_request.CloseNotify()
+			this.query_request.Finished()
 		default:
 		}
 	})

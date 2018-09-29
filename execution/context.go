@@ -101,8 +101,9 @@ var _PHASE_NAMES = []string{
 const _PHASE_UPDATE_COUNT uint64 = 100
 
 type Output interface {
-	Result(item value.Value) bool
-	CloseResults()
+	SetUp()                       // Any action necessary before processing results
+	Result(item value.Value) bool // Process individual items
+	CloseResults()                // Signal that results are through
 	Abort(err errors.Error)
 	Fatal(err errors.Error)
 	Error(err errors.Error)
@@ -357,6 +358,10 @@ func (this *Context) AddPhaseCount(p Phases, c uint64) {
 
 func (this *Context) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
+}
+
+func (this *Context) SetUp() {
+	this.output.SetUp()
 }
 
 func (this *Context) Result(item value.Value) bool {

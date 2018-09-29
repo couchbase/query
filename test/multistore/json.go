@@ -84,62 +84,40 @@ func (this *MockQuery) Fail(err errors.Error) {
 	close(this.response.done)
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, signature value.Value, stopNotify execution.Operator) {
-	defer this.stopAndClose(server.COMPLETED)
+func (this *MockQuery) Execute(srvr *server.Server, signature value.Value) {
 
-	this.NotifyStop(stopNotify)
-	this.writeResults()
+	select {
+	case <-this.Results():
+		this.stopAndAlert(server.COMPLETED)
+	case <-this.StopExecute():
+		this.stopAndAlert(server.STOPPED)
+
+		// wait for operator before continuing
+		<-this.Results()
+	}
 	close(this.response.done)
 }
 
 func (this *MockQuery) Failed(srvr *server.Server) {
-	defer this.stopAndClose(server.FATAL)
+	defer this.stopAndAlert(server.FATAL)
 }
 
 func (this *MockQuery) Expire(state server.State, timeout time.Duration) {
-	defer this.stopAndClose(state)
+	defer this.stopAndAlert(state)
 
 	this.response.err = errors.NewError(nil, "Query timed out")
 	close(this.response.done)
 }
 
-func (this *MockQuery) stopAndClose(state server.State) {
+func (this *MockQuery) stopAndAlert(state server.State) {
 	this.Stop(state)
-	this.Close()
+	this.Alert()
 }
 
-// returns true if the request has already been stopped
-// (eg through timeout or delete)
-func (this *MockQuery) writeResults() bool {
-	var item value.Value
-
-	ok := true
-	for ok {
-		select {
-		case <-this.StopExecute():
-			this.SetState(server.STOPPED)
-			return true
-		default:
-		}
-		select {
-		case item, ok = <-this.Results():
-			if this.Halted() {
-				return false
-			}
-			if ok && !this.writeResult(item) {
-				return false
-			}
-		case <-this.StopExecute():
-			this.SetState(server.STOPPED)
-			return true
-		}
-	}
-
-	this.SetState(server.COMPLETED)
-	return false
+func (this *MockQuery) SetUp() {
 }
 
-func (this *MockQuery) writeResult(item value.Value) bool {
+func (this *MockQuery) Result(item value.Value) bool {
 	bytes, err := json.Marshal(item)
 	if err != nil {
 		this.SetState(server.FATAL)
@@ -229,7 +207,7 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	select {
 	case mockServer.server.Channel() <- query:
 		// Wait until the request exits.
-		<-query.CloseNotify()
+		query.Finished()
 	default:
 		// Timeout.
 		return nil, nil, errors.NewError(nil, "Query timed out")

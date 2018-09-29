@@ -97,10 +97,10 @@ type Request interface {
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
-	CloseNotify() chan bool
 	Servicing()
 	Fail(err errors.Error)
-	Execute(server *Server, signature value.Value, notifyStop execution.Operator)
+	Execute(server *Server, signature value.Value)
+	NotifyStop(stop execution.Operator)
 	Failed(server *Server)
 	Expire(state State, timeout time.Duration)
 	SortCount() uint64
@@ -195,38 +195,37 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id              *requestIDImpl
-	client_id       *clientContextIDImpl
-	statement       string
-	prepared        *plan.Prepared
-	reqType         string
-	isPrepare       bool
-	namedArgs       map[string]value.Value
-	positionalArgs  value.Values
-	namespace       string
-	timeout         time.Duration
-	timer           *time.Timer
-	maxParallelism  int
-	scanCap         int64
-	pipelineCap     int64
-	pipelineBatch   int
-	readonly        value.Tristate
-	signature       value.Tristate
-	metrics         value.Tristate
-	pretty          value.Tristate
-	consistency     ScanConfiguration
-	credentials     auth.Credentials
-	remoteAddr      string
-	userAgent       string
-	requestTime     time.Time
-	serviceTime     time.Time
-	execTime        time.Time
-	state           State
-	aborted         bool
-	results         value.ValueChannel
-	errors          []errors.Error
-	warnings        []errors.Error
-	closeNotify     chan bool          // implement http.CloseNotifier
+	id             *requestIDImpl
+	client_id      *clientContextIDImpl
+	statement      string
+	prepared       *plan.Prepared
+	reqType        string
+	isPrepare      bool
+	namedArgs      map[string]value.Value
+	positionalArgs value.Values
+	namespace      string
+	timeout        time.Duration
+	timer          *time.Timer
+	maxParallelism int
+	scanCap        int64
+	pipelineCap    int64
+	pipelineBatch  int
+	readonly       value.Tristate
+	signature      value.Tristate
+	metrics        value.Tristate
+	pretty         value.Tristate
+	consistency    ScanConfiguration
+	credentials    auth.Credentials
+	remoteAddr     string
+	userAgent      string
+	requestTime    time.Time
+	serviceTime    time.Time
+	execTime       time.Time
+	state          State
+	aborted        bool
+	errors         []errors.Error
+	warnings       []errors.Error
+	sync.WaitGroup
 	stopResult      chan bool          // stop consuming results
 	stopExecute     chan bool          // stop executing request
 	stopOperator    execution.Operator // notified when request execution stops
@@ -272,9 +271,9 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.serviceTime = time.Now()
+	rv.Add(1)
 	rv.state = RUNNING
 	rv.aborted = false
-	rv.closeNotify = make(chan bool, 1)
 	rv.stopResult = make(chan bool, 1)
 	rv.stopExecute = make(chan bool, 1)
 	rv.metrics = value.NONE
@@ -288,7 +287,6 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.featureControls = util.GetN1qlFeatureControl()
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
-	rv.results = make(value.ValueChannel, runtime.NumCPU())
 	rv.client_id = newClientContextIDImpl("")
 }
 
@@ -540,31 +538,8 @@ func (this *BaseRequest) SetUserAgent(userAgent string) {
 	this.userAgent = userAgent
 }
 
-func (this *BaseRequest) CloseNotify() chan bool {
-	return this.closeNotify
-}
-
 func (this *BaseRequest) Servicing() {
 	this.serviceTime = time.Now()
-}
-
-func (this *BaseRequest) Result(item value.Value) bool {
-	select {
-	case <-this.stopResult:
-		return false
-	default:
-	}
-
-	select {
-	case this.results <- item:
-		return true
-	case <-this.stopResult:
-		return false
-	}
-}
-
-func (this *BaseRequest) CloseResults() {
-	close(this.results)
 }
 
 func (this *BaseRequest) Fatal(err errors.Error) {
@@ -725,8 +700,12 @@ func (this *BaseRequest) AutoPrepare() value.Tristate {
 	return this.autoPrepare
 }
 
-func (this *BaseRequest) Results() value.ValueChannel {
-	return this.results
+func (this *BaseRequest) Results() chan bool {
+	return this.stopResult
+}
+
+func (this *BaseRequest) CloseResults() {
+	sendStop(this.stopResult)
 }
 
 func (this *BaseRequest) Errors() []errors.Error {
@@ -762,11 +741,15 @@ func (this *BaseRequest) Stop(state State) {
 		this.stopOperator.SendStop()
 	}
 	sendStop(this.stopExecute)
-	sendStop(this.stopResult)
 }
 
-func (this *BaseRequest) Close() {
-	sendStop(this.closeNotify)
+// alert requestor that the request has completed
+func (this *BaseRequest) Alert() {
+	this.Done()
+}
+
+func (this *BaseRequest) Finished() {
+	this.Wait()
 }
 
 // this logs the request if needed and takes any other action required to

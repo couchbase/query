@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	json "github.com/couchbase/go_json"
@@ -46,6 +47,10 @@ type httpRequest struct {
 	resultSize      int
 	errorCount      int
 	warningCount    int
+
+	sync.WaitGroup
+	prefix string
+	indent string
 
 	elapsedTime   time.Duration
 	executionTime time.Duration
@@ -142,6 +147,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	// Abort if client closes connection; alternatively, return when request completes.
 	rv.httpCloseNotify = resp.(http.CloseNotifier).CloseNotify()
+
+	// Prevent operator to send results until the prefix is done
+	rv.Add(1)
 
 	if err != nil {
 		rv.Fail(err)

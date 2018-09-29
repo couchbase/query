@@ -98,7 +98,7 @@ func (this *httpRequest) setHttpCode(httpRespCode int) {
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
-	defer this.stopAndClose(server.FATAL)
+	defer this.stopAndAlert(server.FATAL)
 
 	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
 	this.writeString("{\n")
@@ -108,7 +108,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeWarnings(prefix, indent)
 	this.writeState("", prefix)
 
-	this.markTimeOfCompletion()
+	this.markTimeOfCompletion(time.Now())
 
 	this.writeMetrics(srvr.Metrics(), prefix, indent)
 	this.writeProfile(srvr.Profile(), prefix, indent)
@@ -117,31 +117,51 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writer.noMoreData()
 }
 
-func (this *httpRequest) markTimeOfCompletion() {
-	this.executionTime = time.Since(this.ServiceTime())
-	this.elapsedTime = time.Since(this.RequestTime())
+func (this *httpRequest) markTimeOfCompletion(now time.Time) {
+	this.executionTime = now.Sub(this.ServiceTime())
+	this.elapsedTime = now.Sub(this.RequestTime())
 }
 
-func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify execution.Operator) {
-	this.NotifyStop(stopNotify)
-
-	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
+func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
+	var stopped bool
+	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
 	this.setHttpCode(http.StatusOK)
-	this.writePrefix(srvr, signature, prefix, indent)
-	stopped := this.writeResults(srvr.Pretty())
-	this.Output().AddPhaseTime(execution.RUN, time.Since(this.ExecTime()))
+	this.writePrefix(srvr, signature, this.prefix, this.indent)
 
-	this.markTimeOfCompletion()
+	// release writer
+	this.Done()
+
+	// wait for somebody to tell us we're done, or toast
+	select {
+	case <-this.Results():
+		this.SetState(server.COMPLETED)
+		stopped = false
+	case <-this.StopExecute():
+		this.SetState(server.STOPPED)
+
+		// wait for operator before continuing
+		<-this.Results()
+		stopped = true
+	case <-this.httpCloseNotify:
+		this.SetState(server.CLOSED)
+
+		// wait for operator before continuing
+		<-this.Results()
+		stopped = false
+	}
+
+	now := time.Now()
+	this.Output().AddPhaseTime(execution.RUN, now.Sub(this.ExecTime()))
+	this.markTimeOfCompletion(now)
 
 	state := this.State()
-	this.writeSuffix(srvr, state, prefix, indent)
+	this.writeSuffix(srvr, state, this.prefix, this.indent)
 	this.writer.noMoreData()
-	if stopped {
-		this.Close()
-	} else {
-		this.stopAndClose(server.COMPLETED)
+	if !stopped {
+		this.Stop(server.COMPLETED)
 	}
+	this.Alert()
 }
 
 func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
@@ -149,9 +169,9 @@ func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
 	this.Stop(state)
 }
 
-func (this *httpRequest) stopAndClose(state server.State) {
+func (this *httpRequest) stopAndAlert(state server.State) {
 	this.Stop(state)
-	this.Close()
+	this.Alert()
 }
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value, prefix, indent string) bool {
@@ -195,77 +215,50 @@ func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, strin
 	}
 }
 
-// returns true if the request has already been stopped
-// (eg through timeout or delete)
-func (this *httpRequest) writeResults(pretty bool) bool {
-	var item value.Value
-	var buf bytes.Buffer
+func (this *httpRequest) SetUp() {
 
-	prefix, indent := this.prettyStrings(pretty, true)
-	ok := true
-	for ok {
-		select {
-		case <-this.StopExecute():
-			this.SetState(server.STOPPED)
-			return true
-		case <-this.httpCloseNotify:
-			this.SetState(server.CLOSED)
-			return false
-		default:
-		}
-
-		select {
-		case item, ok = <-this.Results():
-			if this.Halted() {
-				return true
-			}
-
-			if ok && !this.writeResult(item, &buf, prefix, indent) {
-				return false
-			}
-		case <-this.StopExecute():
-			this.SetState(server.STOPPED)
-			return true
-		case <-this.httpCloseNotify:
-			this.SetState(server.CLOSED)
-			return false
-		}
-	}
-
-	this.SetState(server.COMPLETED)
-	return false
+	// wait for prefix
+	this.Wait()
 }
 
-func (this *httpRequest) writeResult(item value.Value, buf *bytes.Buffer, prefix, indent string) bool {
+func (this *httpRequest) Result(item value.Value) bool {
 	var success bool
 
-	buf.Reset()
-	err := item.WriteJSON(buf, prefix, indent)
-
-	// item won't be used past this point
-	item.Recycle()
-
-	if err != nil {
-		this.Error(errors.NewServiceErrorInvalidJSON(err))
-		this.SetState(server.FATAL)
+	if this.Halted() {
 		return false
 	}
 
+	this.writer.timeFlush()
+	beforeWrites := this.writer.mark()
+
 	if this.resultCount == 0 {
-		success = this.writeString("\n")
+		success = this.writer.write("\n")
 	} else {
-		success = this.writeString(",\n")
+		success = this.writer.write(",\n")
 	}
+	if success {
+		success = this.writer.write(this.prefix)
+	}
+	beforeResult := this.writer.mark()
 
 	if success {
-		success = this.writeString(prefix) && this.writeString(buf.String())
-	}
-
-	if success {
-		this.resultSize += len(buf.Bytes())
-		this.resultCount++
+		err := item.WriteJSON(this.writer.buf(), this.prefix, this.indent)
+		if err != nil {
+			this.Error(errors.NewServiceErrorInvalidJSON(err))
+			this.SetState(server.FATAL)
+			success = false
+		} else {
+			this.resultSize += (this.writer.mark() - beforeResult)
+			this.resultCount++
+			this.writer.sizeFlush()
+		}
 	} else {
 		this.SetState(server.CLOSED)
+	}
+
+	// did not work out: remove last writes so that we have a well formed document
+	if !success {
+		this.writer.truncate(beforeWrites)
 	}
 	return success
 }
@@ -600,7 +593,7 @@ type bufferedWriter struct {
 	sync.Mutex
 	req         *httpRequest  // the request for the response we are writing
 	buffer      *bytes.Buffer // buffer for writing response data to
-	buffer_pool BufferPool    // buffer manager for our buffer
+	buffer_pool BufferPool    // buffer manager for our buffers
 	closed      bool
 	header      bool // headers required
 	lastFlush   time.Time
@@ -616,15 +609,15 @@ func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
 }
 
 func (this *bufferedWriter) writeString(s string) bool {
-	this.Lock()
-	defer this.Unlock()
-
 	if this.closed {
 		return false
 	}
 
-	if len(s)+len(this.buffer.Bytes()) > this.buffer_pool.BufferCapacity() || // threshold exceeded
-		(!this.header && time.Since(this.lastFlush) > 100*time.Millisecond) { // time exceeded
+	this.Lock()
+	defer this.Unlock()
+
+	// threshold exceeded
+	if len(s)+this.buffer.Len() > this.buffer_pool.BufferCapacity() {
 		w := this.req.resp // our request's response writer
 
 		// write response header and data buffered so far using request's response writer:
@@ -641,11 +634,93 @@ func (this *bufferedWriter) writeString(s string) bool {
 		this.lastFlush = time.Now()
 		w.(http.Flusher).Flush()
 	}
+
 	// under threshold - write the string to our buffer
 	_, err := this.buffer.Write([]byte(s))
 	return err == nil
 }
 
+// these are only used by Result() handling
+// fast write
+func (this *bufferedWriter) write(s string) bool {
+	_, err := this.buffer.Write([]byte(s))
+	return err == nil
+}
+
+// flush in a timely manner
+func (this *bufferedWriter) timeFlush() {
+
+	// time flushing only happens after we have sent the first buffer
+	if this.closed || this.header {
+		return
+	}
+
+	this.Lock()
+	defer this.Unlock()
+
+	// flush only if time has exceeded
+	if time.Since(this.lastFlush) > 100*time.Millisecond {
+		w := this.req.resp // our request's response writer
+
+		// write response header and data buffered so far using request's response writer:
+		if this.header {
+			w.WriteHeader(this.req.httpCode())
+			this.header = false
+		}
+
+		// write out and empty the buffer
+		io.Copy(w, this.buffer)
+		this.buffer.Reset()
+
+		// do the flushing
+		this.lastFlush = time.Now()
+		w.(http.Flusher).Flush()
+	}
+}
+
+// flush on a full buffer
+func (this *bufferedWriter) sizeFlush() {
+	if this.closed {
+		return
+	}
+
+	this.Lock()
+	defer this.Unlock()
+
+	// beyond capacity
+	if this.buffer.Len() > this.buffer_pool.BufferCapacity() {
+		w := this.req.resp // our request's response writer
+
+		// write response header and data buffered so far using request's response writer:
+		if this.header {
+			w.WriteHeader(this.req.httpCode())
+			this.header = false
+		}
+
+		// write out and empty the buffer
+		io.Copy(w, this.buffer)
+		this.buffer.Reset()
+
+		// do the flushing
+		this.lastFlush = time.Now()
+		w.(http.Flusher).Flush()
+	}
+}
+
+// mark the current write position
+func (this *bufferedWriter) mark() int {
+	return this.buffer.Len()
+}
+
+func (this *bufferedWriter) truncate(mark int) {
+	this.buffer.Truncate(mark)
+}
+
+func (this bufferedWriter) buf() io.Writer {
+	return this.buffer
+}
+
+// empty and dispose of writer
 func (this *bufferedWriter) noMoreData() {
 	this.Lock()
 	defer this.Unlock()
