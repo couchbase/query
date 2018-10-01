@@ -408,6 +408,7 @@ var _FUNCTIONS = map[string]Function{
 	"toobject":   &ToObject{},
 	"tostr":      &ToString{},
 	"tostring":   &ToString{},
+	"decode":     &Decode{},
 
 	// Unnest
 	"unnest_position": &UnnestPosition{},

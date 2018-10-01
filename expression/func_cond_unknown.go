@@ -482,3 +482,65 @@ func (this *NVL2) Constructor() FunctionConstructor {
 		return NewNVL2(operands[0], operands[1], operands[2])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Decode
+//
+///////////////////////////////////////////////////
+/*
+This represents the Conditional function Decode(expr, search1, result1, ..., searchN, resultN, default(optional))
+It compares expr to each search value one by one.
+If expr is equal to a search, it returns the corresponding result.
+If no match is found, it returns the default value.
+If default is omitted, it returns value.NULL_VALUE.
+*/
+
+type Decode struct {
+	FunctionBase
+}
+
+func NewDecode(operands ...Expression) Function {
+	rv := &Decode{
+		*NewFunctionBase("decode", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *Decode) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Decode) Type() value.Type { return value.JSON }
+
+func (this *Decode) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *Decode) Apply(context Context, args ...value.Value) (value.Value, error) {
+	first := args[0]
+	length := len(args[1:])
+
+	def := value.NULL_VALUE
+	if length%2 == 1 {
+		def = args[length]
+	}
+
+	for i := 1; i+1 < len(args); i += 2 {
+		if first.EquivalentTo(args[i]) {
+			return args[i+1], nil
+		}
+	}
+
+	return def, nil
+}
+
+func (this *Decode) MinArgs() int { return 3 }
+
+func (this *Decode) MaxArgs() int { return math.MaxInt32 }
+
+func (this *Decode) Constructor() FunctionConstructor {
+	return NewDecode
+}

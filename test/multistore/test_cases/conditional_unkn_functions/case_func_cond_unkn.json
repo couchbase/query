@@ -183,5 +183,74 @@
             "Name": null
         }
     ]
+  },
+  {
+    "statements":"SELECT Decode(`custId`, \"customer38\", \"newCustomer\", \"customer12\", \"VIP\", MISSING) FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY custId",
+    "results": [
+      {
+        "$1": "VIP"
+      },
+      {},
+      {},
+      {
+        "$1": "newCustomer"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(`custId`, \"customer38\", \"newCustomer\", \"customer12\", \"VIP\", \"normal customer\") FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY custId",
+    "results": [
+      {
+        "$1": "VIP"
+      },
+      {
+        "$1": "normal customer"
+      },
+      {
+        "$1": "normal customer"
+      },
+      {
+        "$1": "newCustomer"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(firstName, null, \"not available\", missing, \"not given\") FROM customer WHERE test_id = \"cond_unkn_func\" ORDER BY id",
+    "results": [
+      {
+        "$1": "not available"
+      },
+      {
+        "$1": "not given"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(firstName, missing, \"not available\") FROM customer WHERE test_id = \"cond_unkn_func\" ORDER BY id",
+    "results": [
+      {
+        "$1": null
+      },
+      {
+        "$1": "not available"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(orderlines, [{\"productId\": \"coffee01\",\"qty\": 1},{ \"productId\": \"sugar22\",\"qty\": 1}], []) FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY id",
+    "results": [
+      {
+        "$1": []
+      },
+      {
+        "$1": null
+      },
+      {
+        "$1": null
+      },
+      {
+        "$1": []
+      }
+    ]
   }
 ]
