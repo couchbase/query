@@ -82,24 +82,68 @@ type Info interface {
 // to qualify keyspace names. No assumptions are made about namespaces and
 // isolation, resource management, or any other concerns.
 type Namespace interface {
-	DatastoreId() string                                 // Id of the datastore that contains this namespace
-	Id() string                                          // Id of this namespace
-	Name() string                                        // Name of this namespace
+	DatastoreId() string // Id of the datastore that contains this namespace
+	Id() string          // Id of this namespace
+	Name() string        // Name of this namespace
+
+	// For keyspaces that appear directly under namespaces, such as system keyspaces.
 	KeyspaceIds() ([]string, errors.Error)               // Ids of the keyspaces contained in this namespace
 	KeyspaceNames() ([]string, errors.Error)             // Names of the keyspaces contained in this namespace
 	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this namespace using the keyspace's id
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this namespace using the keyspace's name
 	MetadataVersion() uint64                             // Current version of the metadata
+
+	// For keyspaces that are more deeply nested.
+	// Namespaces contain Buckets contain Scopes contain Keyspaces, which are collections.
+	BucketIds() ([]string, errors.Error)             // Ids of the buckets contained in this namespace
+	BucketNames() ([]string, errors.Error)           // Names of the buckets contained in this namespace
+	BucketById(name string) (Bucket, errors.Error)   // Find a bucket in this namespace using the bucket's id
+	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this namespace using the bucket's name
+}
+
+type Bucket interface {
+	Id() string
+	Name() string
+
+	NamespaceId() string
+	Namespace() Namespace
+
+	ScopeIds() ([]string, errors.Error)            // Ids of the scopes contained in this bucket
+	ScopeNames() ([]string, errors.Error)          // Names of the scopes contained in this bucket
+	ScopeById(name string) (Scope, errors.Error)   // Find a scope in this bucket using the scope's id
+	ScopeByName(name string) (Scope, errors.Error) // Find a scope in this bucket using the scope's name
+}
+
+type Scope interface {
+	Id() string
+	Name() string
+
+	BucketId() string
+	Bucket() Bucket
+
+	KeyspaceIds() ([]string, errors.Error)               // Ids of the keyspaces contained in this scope
+	KeyspaceNames() ([]string, errors.Error)             // Names of the keyspaces contained in this scope
+	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this scope using the keyspace's id
+	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this scope using the keyspace's name
 }
 
 // Keyspace is a map of key-value entries (typically key-document, but
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.
 type Keyspace interface {
-	NamespaceId() string                              // Id of the namespace that contains this keyspace
-	Namespace() Namespace                             // Backpointer to namespace
-	Id() string                                       // Id of this keyspace
-	Name() string                                     // Name of this keyspace
+	Id() string   // Id of this keyspace
+	Name() string // Name of this keyspace
+
+	// A keyspace is found either directly under a namespace or under a scope.
+	// If the keyspace is directly under a namespace, the ScopeId() returns "" and Scope() returns nil,
+	// but NamespaceId() and Namespace() return normal values.
+	// If the keyspace is under a scope, NamespaceId() returns "" and Namespace() returns nil,
+	// but ScopeId() and Scope() return normally.
+	NamespaceId() string  // Id of the namespace that contains this keyspace
+	Namespace() Namespace // Backpointer to namespace
+	ScopeId() string      // Id of the scope that contains this keyspace
+	Scope() Scope         // Backpointer to scope
+
 	Count(context QueryContext) (int64, errors.Error) // Number of key-value entries in this keyspace
 	Indexer(name IndexType) (Indexer, errors.Error)   // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
 	Indexers() ([]Indexer, errors.Error)              // List of index providers
@@ -177,3 +221,5 @@ type Role struct {
 	Name   string
 	Bucket string
 }
+
+var NO_STRINGS = make([]string, 0)

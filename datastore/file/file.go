@@ -285,6 +285,22 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	return
 }
 
+func (p *namespace) BucketIds() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketNames() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewOtherNoBuckets("file")
+}
+
+func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewOtherNoBuckets("file")
+}
+
 // keyspace is a file-based keyspace.
 type keyspace struct {
 	namespace *namespace
@@ -307,6 +323,14 @@ func (b *keyspace) Id() string {
 
 func (b *keyspace) Name() string {
 	return b.name
+}
+
+func (b *keyspace) Scope() datastore.Scope {
+	return nil
+}
+
+func (b *keyspace) ScopeId() string {
+	return ""
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {

@@ -179,6 +179,22 @@ func (p *namespace) MetadataVersion() uint64 {
 	return 0
 }
 
+func (p *namespace) BucketIds() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketNames() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewOtherNoBuckets("mock")
+}
+
+func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewOtherNoBuckets("mock")
+}
+
 // keyspace is a mock-based keyspace.
 type keyspace struct {
 	namespace *namespace
@@ -193,6 +209,14 @@ func (b *keyspace) NamespaceId() string {
 
 func (b *keyspace) Namespace() datastore.Namespace {
 	return b.namespace
+}
+
+func (b *keyspace) ScopeId() string {
+	return ""
+}
+
+func (b *keyspace) Scope() datastore.Scope {
+	return nil
 }
 
 func (b *keyspace) Id() string {

@@ -771,6 +771,22 @@ func (p *namespace) MetadataVersion() uint64 {
 	return p.version
 }
 
+func (p *namespace) BucketIds() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketNames() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewNotImplemented("couchbase datastore BucketById()")
+}
+
+func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewNotImplemented("couchbase datastore BucketByName()")
+}
+
 func (p *namespace) setPool(cbpool cb.Pool) {
 	p.nslock.Lock()
 	defer p.nslock.Unlock()
@@ -1379,6 +1395,14 @@ func (b *keyspace) loadIndexes() (err errors.Error) {
 		err = err1
 	}
 	return
+}
+
+func (b *keyspace) Scope() datastore.Scope {
+	return nil
+}
+
+func (b *keyspace) ScopeId() string {
+	return ""
 }
 
 // primaryIndex performs full keyspace scans.

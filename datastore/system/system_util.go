@@ -28,6 +28,16 @@ func (this *keyspaceBase) Namespace() datastore.Namespace {
 	return this.namespace
 }
 
+func (this *keyspaceBase) Scope() datastore.Scope {
+	// System keyspaces are not part of scopes.
+	return nil
+}
+
+func (this *keyspaceBase) ScopeId() string {
+	// System keyspaces are not part of scopes.
+	return ""
+}
+
 func setKeyspaceBase(base *keyspaceBase, namespace *namespace) {
 	base.namespace = namespace
 }

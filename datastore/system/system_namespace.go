@@ -156,3 +156,19 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 
 	return nil
 }
+
+func (p *namespace) BucketIds() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketNames() ([]string, errors.Error) {
+	return datastore.NO_STRINGS, nil
+}
+
+func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewSystemNoBuckets()
+}
+
+func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
+	return nil, errors.NewSystemNoBuckets()
+}

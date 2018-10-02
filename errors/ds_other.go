@@ -57,3 +57,8 @@ func NewInferencerNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 16020, IKey: "datastore.other.inferencer_not_found", ICause: e,
 		InternalMsg: "Inferencer not found " + msg, InternalCaller: CallerN(1)}
 }
+
+func NewOtherNoBuckets(dsName string) Error {
+	return &err{level: EXCEPTION, ICode: 16021, IKey: "datastore.other.no_buckets",
+		InternalMsg: "Datastore " + dsName + "contains no buckets that contain scopes.", InternalCaller: CallerN(1)}
+}

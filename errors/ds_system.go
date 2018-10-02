@@ -87,3 +87,9 @@ func NewSystemMalformedKeyError(key string, keyspace string) Error {
 		InternalMsg:    fmt.Sprintf("System datastore : key %q is not of the correct format for keyspace %s", key, keyspace),
 		InternalCaller: CallerN(1)}
 }
+
+func NewSystemNoBuckets() Error {
+	return &err{level: EXCEPTION, ICode: 11013, IKey: "datastore.system.no_buckets",
+		InternalMsg:    "The system namespace contains no buckets that contain scopes.",
+		InternalCaller: CallerN(1)}
+}
