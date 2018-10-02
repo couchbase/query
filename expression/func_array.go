@@ -2464,3 +2464,72 @@ func (this *ArrayExcept) Constructor() FunctionConstructor {
 		return NewArrayExcept(operands[0], operands[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayBinarySearch
+//
+///////////////////////////////////////////////////
+/*
+This represents the array function ARRAY_BINARY_SEARCH(array A, value B).
+It returns the 1-based position of value B in array A
+using binary search algorithm and suppose A is sorted.
+If B is not found in A, returns -1.
+*/
+
+type ArrayBinarySearch struct {
+	BinaryFunctionBase
+}
+
+func NewArrayBinarySearch(first, second Expression) Function {
+	rv := &ArrayBinarySearch{
+		*NewBinaryFunctionBase("array_binary_search", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ArrayBinarySearch) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayBinarySearch) Type() value.Type { return value.NUMBER }
+
+func (this *ArrayBinarySearch) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *ArrayBinarySearch) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	if first.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	a := first.Actual().([]interface{})
+	low := 0
+	high := len(a) - 1
+
+	for low <= high {
+		mid := low + (high-low)/2
+		v := value.NewValue(a[mid])
+
+		if v.EquivalentTo(second) {
+			return value.NewValue(mid + 1), nil
+		} else if v.Collate(second) < 0 {
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+	return value.NEG_ONE_NUMBER, nil
+}
+
+func (this *ArrayBinarySearch) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayBinarySearch(operands[0], operands[1])
+	}
+}

@@ -1010,6 +1010,52 @@
         "$1": null
       }
     ]
+  },
+  {
+    "statements": "select array_binary_search([1, 2, 3, 4], 4)",
+    "results": [
+      {
+        "$1": 4
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([1, 2, 3, 4], 1)",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([1, 2, 3, 4], 5)",
+    "results": [
+      {
+        "$1": -1
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([1, 2, 3, 4], missing)",
+    "results": [
+      {}
+    ]
+  },
+  {
+    "statements": "select array_binary_search([null, 2, 3, 4], null)",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([\"ab\", \"cd\", \"ef\", \"gh\"], \"gh\")",
+    "results": [
+      {
+        "$1": 4
+      }
+    ]
   }
 ]
 
