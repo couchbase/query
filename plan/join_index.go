@@ -190,7 +190,8 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		expression.NewMeta(expression.NewIdentifier(this.keyFor)),
 		expression.NewFieldName("id", false))
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, keys_expr, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term.SetJoinKeys(keys_expr)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	if err != nil {
 		return err

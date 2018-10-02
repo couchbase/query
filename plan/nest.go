@@ -108,7 +108,8 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.outer = _unmarshalled.Outer
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, keys_expr, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term.SetJoinKeys(keys_expr)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
 
