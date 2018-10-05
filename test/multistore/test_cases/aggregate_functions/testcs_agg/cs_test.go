@@ -68,7 +68,7 @@ func TestCleanupData(t *testing.T) {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
-	_, _, errcs = Run_test(qc, "delete from orders where (test_id = \"agg_func\" OR test_id = \"cntn_agg_func\")")
+	_, _, errcs = Run_test(qc, "delete from orders where (test_id = \"agg_func\" OR test_id = \"cntn_agg_func\" OR test_id = \"median_agg_func\")")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

@@ -2731,5 +2731,65 @@
  },
 {
  "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1304_agg_func\", {\"cntn\":\"efg\",\"test_id\" : \"cntn_agg_func\" })"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":4,\"c1\":103,\"c2\":202,\"c3\":304,\"c4\":404,\"c5\":503,\"c6\":604,\"c7\":702,\"c8\":802,\"c9\":901,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":5,\"c1\":105,\"c2\":203,\"c3\":305,\"c4\":404,\"c5\":502,\"c6\":604,\"c7\":701,\"c8\":804,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":3,\"c1\":101,\"c2\":202,\"c3\":302,\"c4\":404,\"c5\":504,\"c6\":601,\"c7\":702,\"c8\":805,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":5,\"c1\":102,\"c2\":202,\"c3\":304,\"c4\":405,\"c5\":504,\"c6\":604,\"c7\":703,\"c8\":805,\"c9\":902,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":1,\"c1\":104,\"c2\":203,\"c3\":302,\"c4\":402,\"c5\":502,\"c6\":603,\"c7\":704,\"c8\":801,\"c9\":902,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":3,\"c1\":105,\"c2\":201,\"c3\":301,\"c4\":401,\"c5\":505,\"c6\":601,\"c7\":705,\"c8\":804,\"c9\":904,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":4,\"c1\":105,\"c2\":205,\"c3\":305,\"c4\":401,\"c5\":505,\"c6\":602,\"c7\":702,\"c8\":801,\"c9\":901,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":3,\"c1\":105,\"c2\":205,\"c3\":305,\"c4\":404,\"c5\":504,\"c6\":601,\"c7\":704,\"c8\":801,\"c9\":901,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":5,\"c1\":101,\"c2\":202,\"c3\":302,\"c4\":403,\"c5\":505,\"c6\":601,\"c7\":705,\"c8\":801,\"c9\":902,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":5,\"c1\":103,\"c2\":203,\"c3\":302,\"c4\":401,\"c5\":501,\"c6\":601,\"c7\":701,\"c8\":803,\"c9\":904,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":2,\"c1\":101,\"c2\":203,\"c3\":305,\"c4\":402,\"c5\":504,\"c6\":604,\"c7\":703,\"c8\":801,\"c9\":902,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":1,\"c1\":104,\"c2\":203,\"c3\":304,\"c4\":401,\"c5\":504,\"c6\":604,\"c7\":702,\"c8\":803,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":2,\"c1\":104,\"c2\":205,\"c3\":304,\"c4\":402,\"c5\":502,\"c6\":601,\"c7\":704,\"c8\":802,\"c9\":902,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":3,\"c1\":104,\"c2\":203,\"c3\":301,\"c4\":402,\"c5\":503,\"c6\":601,\"c7\":702,\"c8\":801,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":5,\"c1\":101,\"c2\":202,\"c3\":305,\"c4\":403,\"c5\":505,\"c6\":602,\"c7\":702,\"c8\":801,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":2,\"c1\":104,\"c2\":205,\"c3\":301,\"c4\":402,\"c5\":502,\"c6\":605,\"c7\":704,\"c8\":803,\"c9\":901,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":3,\"c1\":105,\"c2\":202,\"c3\":305,\"c4\":402,\"c5\":504,\"c6\":604,\"c7\":705,\"c8\":805,\"c9\":902,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":5,\"c1\":103,\"c2\":202,\"c3\":301,\"c4\":401,\"c5\":502,\"c6\":602,\"c7\":704,\"c8\":802,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":1,\"c1\":102,\"c2\":204,\"c3\":302,\"c4\":403,\"c5\":502,\"c6\":605,\"c7\":704,\"c8\":801,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ {
+  "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":4,\"c1\":104,\"c2\":204,\"c3\":305,\"c4\":401,\"c5\":504,\"c6\":601,\"c7\":703,\"c8\":803,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
  }
 ]

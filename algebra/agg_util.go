@@ -245,17 +245,16 @@ func medianOfMedian(data []value.Value, k int, even bool) value.Value {
 		}
 
 	case k <= len(left):
-		for t > 0 {
+		if t > 0 {
 			left = append(left, pivot)
-			t--
 		}
 		return medianOfMedian(left, k, even)
 	default:
-		for t > 0 {
+		if t > 0 {
 			right = append(right, pivot)
 			t--
 		}
-		return medianOfMedian(right, k-len(left), even)
+		return medianOfMedian(right, k-len(left)-t, even)
 	}
 }
 

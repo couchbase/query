@@ -183,5 +183,21 @@
         "$1": 0.5
       }
     ]
+  },
+  {
+    "statements":"SELECT MEDIAN(c0) AS oagg_0, MEDIAN(c5) AS oagg_1, MEDIAN(c5) AS oagg_2, MEDIAN(c2) AS oagg_3, MEDIAN(c7) AS oagg_4, MEDIAN(c8) AS oagg_5, MEDIAN(c5) AS oagg_6, MEDIAN(c6) AS oagg_7, MEDIAN(c1) AS oagg_8 FROM orders WHERE test_id=\"median_agg_func\"",
+    "results": [
+      {
+        "oagg_0": 3,
+        "oagg_1": 504,
+        "oagg_2": 504,
+        "oagg_3": 203,
+        "oagg_4": 703,
+        "oagg_5": 802,
+        "oagg_6": 504,
+        "oagg_7": 602,
+        "oagg_8": 104
+      }
+    ]
   }
   ]
