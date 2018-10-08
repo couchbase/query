@@ -264,19 +264,13 @@ func (this *httpRequest) Result(item value.Value) bool {
 }
 
 func (this *httpRequest) writeValue(item value.Value, prefix, indent string) bool {
-	var err error
-	var bytes []byte
-
-	if indent == "" && prefix == "" {
-		bytes, err = json.Marshal(item)
-	} else {
-		bytes, err = json.MarshalIndent(item, prefix, indent)
-	}
+	beforeWriteJSON := this.writer.mark()
+	err := item.WriteJSON(this.writer.buf(), prefix, indent)
 	if err != nil {
+		this.writer.truncate(beforeWriteJSON)
 		return this.writeString(fmt.Sprintf("\"ERROR: %v\"", err))
 	}
-
-	return this.writeString(string(bytes))
+	return true
 }
 
 func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, prefix, indent string) bool {
@@ -418,36 +412,38 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		newPrefix = "\n" + prefix + indent
 	}
 
-	rv := this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"metrics\": {") &&
-		this.writeString(fmt.Sprintf("%s\"elapsedTime\": \"%v\"", newPrefix, this.elapsedTime)) &&
-		this.writeString(fmt.Sprintf(",%s\"executionTime\": \"%v\"", newPrefix, this.executionTime)) &&
-		this.writeString(fmt.Sprintf(",%s\"resultCount\": %d", newPrefix, this.resultCount)) &&
-		this.writeString(fmt.Sprintf(",%s\"resultSize\": %d", newPrefix, this.resultSize))
-	if !rv {
+	beforeMetrics := this.writer.mark()
+	if !(this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"metrics\": {")) {
+		this.writer.truncate(beforeMetrics)
 		return false
 	}
+	buf := this.writer.buf()
+	fmt.Fprintf(buf, "%s\"elapsedTime\": \"%v\"", newPrefix, this.elapsedTime)
+	fmt.Fprintf(buf, ",%s\"executionTime\": \"%v\"", newPrefix, this.executionTime)
+	fmt.Fprintf(buf, ",%s\"resultCount\": %d", newPrefix, this.resultCount)
+	fmt.Fprintf(buf, ",%s\"resultSize\": %d", newPrefix, this.resultSize)
 
-	if this.MutationCount() > 0 && !this.writeString(fmt.Sprintf(",%s\"mutationCount\": %d", newPrefix, this.MutationCount())) {
-		return false
+	if this.MutationCount() > 0 {
+		fmt.Fprintf(buf, ",%s\"mutationCount\": %d", newPrefix, this.MutationCount())
 	}
 
-	if this.SortCount() > 0 && !this.writeString(fmt.Sprintf(",%s\"sortCount\": %d", newPrefix, this.SortCount())) {
-		return false
+	if this.SortCount() > 0 {
+		fmt.Fprintf(buf, ",%s\"sortCount\": %d", newPrefix, this.SortCount())
 	}
 
-	if this.errorCount > 0 && !this.writeString(fmt.Sprintf(",%s\"errorCount\": %d", newPrefix, this.errorCount)) {
-		return false
+	if this.errorCount > 0 {
+		fmt.Fprintf(buf, ",%s\"errorCount\": %d", newPrefix, this.errorCount)
 	}
 
-	if this.warningCount > 0 && !this.writeString(fmt.Sprintf(",%s\"warningCount\": %d", newPrefix, this.warningCount)) {
-		return false
+	if this.warningCount > 0 {
+		fmt.Fprintf(buf, ",%s\"warningCount\": %d", newPrefix, this.warningCount)
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
+		this.writer.truncate(beforeMetrics)
 		return false
 	}
 	return this.writeString("}")
-
 }
 
 func (this *httpRequest) writeControls(controls bool, prefix, indent string) bool {
