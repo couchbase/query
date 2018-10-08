@@ -264,6 +264,9 @@ func (this *httpRequest) Result(item value.Value) bool {
 }
 
 func (this *httpRequest) writeValue(item value.Value, prefix, indent string) bool {
+	if item == nil {
+		return true
+	}
 	beforeWriteJSON := this.writer.mark()
 	err := item.WriteJSON(this.writer.buf(), prefix, indent)
 	if err != nil {
