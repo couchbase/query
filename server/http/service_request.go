@@ -63,7 +63,7 @@ func (r *httpRequest) OriginalHttpRequest() *http.Request {
 	return r.req
 }
 
-func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
+func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
 	var httpArgs httpRequestArgs
 	var err errors.Error
 
@@ -88,10 +88,8 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		httpArgs, err = getRequestParams(req)
 	}
 
-	rv := &httpRequest{
-		resp: resp,
-		req:  req,
-	}
+	rv.resp = resp
+	rv.req = req
 	server.NewBaseRequest(&rv.BaseRequest)
 	rv.SetRequestTime(reqTime)
 

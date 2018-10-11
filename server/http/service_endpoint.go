@@ -132,7 +132,11 @@ func (this *HttpEndpoint) ListenTLS() error {
 // If the server channel is full and we are unable to queue a request,
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	request := newHttpRequest(resp, req, this.bufpool, this.server.RequestSizeCap())
+	// avoid GC load. this works because ServeHTTP is alive for the whole
+	// duration of the request and it's safe to reference its frame
+	var httpRequest httpRequest
+
+	request := newHttpRequest(&httpRequest, resp, req, this.bufpool, this.server.RequestSizeCap())
 
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false)
