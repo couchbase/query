@@ -31,7 +31,18 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeys
 		return nil, err
 	}
 
-	return classifier.constant, nil
+	var constant value.Value
+	if classifier.constant != nil {
+		if classifier.constant.Truth() {
+			if !classifier.nonConstant {
+				constant = classifier.constant
+			}
+		} else {
+			constant = classifier.constant
+		}
+	}
+
+	return constant, nil
 }
 
 type exprClassifier struct {
@@ -42,6 +53,7 @@ type exprClassifier struct {
 	recursionJoin   bool
 	recurseJoinExpr expression.Expression
 	isOnclause      bool
+	nonConstant     bool
 	constant        value.Value
 }
 
@@ -351,6 +363,8 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 			this.addConstant(false)
 		}
 		return expr, nil
+	} else {
+		this.nonConstant = true
 	}
 
 	keyspaces, err := expression.CountKeySpaces(expr, this.keyspaceNames)
