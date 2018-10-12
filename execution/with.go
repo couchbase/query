@@ -79,7 +79,11 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 			v, e := b.Expression().Evaluate(wv, context)
 			if e != nil {
 				context.Error(errors.NewEvaluationError(e, "WITH"))
-				return
+				this.notify()
+
+				// MB-31605 have to start the child for the output and stop
+				// operators to be set properly by sequences
+				break
 			}
 
 			wv.SetField(b.Variable(), v)
