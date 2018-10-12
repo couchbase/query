@@ -43,7 +43,7 @@ func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }
 
-func (this *nullValue) WriteJSON(w io.Writer, prefix, indent string) error {
+func (this *nullValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
 	_, err := w.Write(_NULL_BYTES)
 	return err
 }

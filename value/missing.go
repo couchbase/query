@@ -47,7 +47,7 @@ func (this missingValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }
 
-func (this missingValue) WriteJSON(w io.Writer, prefix, indent string) error {
+func (this missingValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
 	_, err := w.Write(_NULL_BYTES)
 	return err
 }

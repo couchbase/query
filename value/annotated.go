@@ -48,6 +48,8 @@ type AnnotatedValue interface {
 	SetAnnotations(av AnnotatedValue)
 	Bit() uint8
 	SetBit(b uint8)
+	Self() bool
+	SetSelf(s bool)
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -77,6 +79,7 @@ type annotatedValue struct {
 	bit         uint8
 	id          interface{}
 	refCnt      int32
+	self        bool
 }
 
 func (this *annotatedValue) String() string {
@@ -87,8 +90,8 @@ func (this *annotatedValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
 }
 
-func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string) error {
-	return this.Value.WriteJSON(w, prefix, indent)
+func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+	return this.Value.WriteJSON(w, prefix, indent, fast)
 }
 
 func (this *annotatedValue) Copy() Value {
@@ -200,6 +203,14 @@ func (this *annotatedValue) Bit() uint8 {
 
 func (this *annotatedValue) SetBit(b uint8) {
 	this.bit = b
+}
+
+func (this *annotatedValue) Self() bool {
+	return this.self
+}
+
+func (this *annotatedValue) SetSelf(s bool) {
+	this.self = s
 }
 
 func (this *annotatedValue) GetId() interface{} {

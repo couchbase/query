@@ -41,9 +41,12 @@ func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return val.MarshalJSON()
 }
 
-func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string) error {
+func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+	if this.parent == nil {
+		return this.Value.WriteJSON(w, prefix, indent, fast)
+	}
 	val := objectValue(this.Fields())
-	return val.WriteJSON(w, prefix, indent)
+	return val.WriteJSON(w, prefix, indent, false)
 }
 
 func (this *ScopeValue) Copy() Value {

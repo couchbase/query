@@ -69,6 +69,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	if result.Star() && (expr == expression.SELF || expr == nil) {
 		// Unprefixed star
 		if item.Type() == value.OBJECT {
+			item.SetSelf(true)
 			return this.sendItem(item)
 		} else {
 			return this.sendItem(_EMPTY_ANNOTATED_VALUE)

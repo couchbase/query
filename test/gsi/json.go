@@ -130,7 +130,7 @@ func (this *MockQuery) stopAndAlert(state server.State) {
 func (this *MockQuery) SetUp() {
 }
 
-func (this *MockQuery) Result(item value.Value) bool {
+func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 	bytes, err := json.Marshal(item)
 	if err != nil {
 		panic(err.Error())

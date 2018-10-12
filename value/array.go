@@ -34,7 +34,7 @@ func (this sliceValue) MarshalJSON() ([]byte, error) {
 	return marshalArray(this)
 }
 
-func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string) (err error) {
+func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
 		return
@@ -57,7 +57,7 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string) (err error)
 		}
 
 		v := NewValue(e)
-		if err = v.WriteJSON(w, newPrefix, indent); err != nil {
+		if err = v.WriteJSON(w, newPrefix, indent, fast); err != nil {
 			return
 		}
 	}
@@ -393,8 +393,8 @@ func (this *listValue) MarshalJSON() ([]byte, error) {
 	return this.slice.MarshalJSON()
 }
 
-func (this *listValue) WriteJSON(w io.Writer, prefix, indent string) (err error) {
-	return this.slice.WriteJSON(w, prefix, indent)
+func (this *listValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
+	return this.slice.WriteJSON(w, prefix, indent, fast)
 }
 
 /*

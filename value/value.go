@@ -173,7 +173,7 @@ type Value interface {
 	/*
 	   Marshal JSON and write it out.
 	*/
-	WriteJSON(w io.Writer, prefix, indent string) error
+	WriteJSON(w io.Writer, prefix, indent string, fast bool) error
 
 	/*
 	   Returns the type of the input based on the previously

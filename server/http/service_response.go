@@ -221,7 +221,7 @@ func (this *httpRequest) SetUp() {
 	this.Wait()
 }
 
-func (this *httpRequest) Result(item value.Value) bool {
+func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	var success bool
 
 	if this.Halted() {
@@ -242,7 +242,7 @@ func (this *httpRequest) Result(item value.Value) bool {
 	beforeResult := this.writer.mark()
 
 	if success {
-		err := item.WriteJSON(this.writer.buf(), this.prefix, this.indent)
+		err := item.WriteJSON(this.writer.buf(), this.prefix, this.indent, item.Self())
 		if err != nil {
 			this.Error(errors.NewServiceErrorInvalidJSON(err))
 			this.SetState(server.FATAL)
@@ -268,7 +268,7 @@ func (this *httpRequest) writeValue(item value.Value, prefix, indent string) boo
 		return this.writeString("null")
 	}
 	beforeWriteJSON := this.writer.mark()
-	err := item.WriteJSON(this.writer.buf(), prefix, indent)
+	err := item.WriteJSON(this.writer.buf(), prefix, indent, false)
 	if err != nil {
 		this.writer.truncate(beforeWriteJSON)
 		return this.writeString(fmt.Sprintf("\"ERROR: %v\"", err))

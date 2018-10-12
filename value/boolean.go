@@ -47,7 +47,7 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 	}
 }
 
-func (this boolValue) WriteJSON(w io.Writer, prefix, indent string) error {
+func (this boolValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
 	b, err := this.MarshalJSON()
 	if err != nil {
 		return err

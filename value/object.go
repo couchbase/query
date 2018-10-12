@@ -77,7 +77,7 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (this objectValue) WriteJSON(w io.Writer, prefix, indent string) (err error) {
+func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
 		return
@@ -87,59 +87,98 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string) (err error
 		return
 	}
 
-	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(this) <= len(nameBuf) {
-		names = nameBuf[0:len(this)]
-	} else {
-		names = _NAME_POOL.GetCapped(len(this))
-		defer _NAME_POOL.Put(names)
-		names = names[0:len(this)]
-	}
-
-	names = sortedNames(this, names)
-
 	newPrefix := prefix + indent
 
-	for i, n := range names {
-		v := NewValue(this[n])
-		if v.Type() == MISSING {
-			continue
-		}
+	l := len(this)
+	written := 0
 
-		if i > 0 {
-			if _, err = w.Write([]byte{','}); err != nil {
+	// handle scoped KV documents without sorts and marshals
+	if l == 1 && fast {
+
+		// unluckily there's no direct way to get the only entry out of a map
+		// so we still need a range
+		for n, val := range this {
+			v := NewValue(val)
+			if v.Type() == MISSING {
+				continue
+			}
+			written++
+			if err = writeJsonNewline(w, newPrefix); err != nil {
+				return
+			}
+			if _, err = w.Write([]byte{'"'}); err != nil {
+				return
+			}
+			if _, err = w.Write([]byte(n)); err != nil {
+				return
+			}
+			if _, err = w.Write([]byte{'"', ':'}); err != nil {
+				return
+			}
+			if newPrefix != "" {
+				if _, err = w.Write([]byte{' '}); err != nil {
+					return err
+				}
+			}
+
+			if err = v.WriteJSON(w, newPrefix, indent, fast); err != nil {
 				return
 			}
 		}
+	} else if l > 0 {
 
-		if err = writeJsonNewline(w, newPrefix); err != nil {
-			return
+		var nameBuf [_NAME_CAP]string
+		var names []string
+		if l <= len(nameBuf) {
+			names = nameBuf[0:len(this)]
+		} else {
+			names = _NAME_POOL.GetCapped(len(this))
+			defer _NAME_POOL.Put(names)
+			names = names[0:len(this)]
 		}
 
-		b, err := json.Marshal(n)
-		if err != nil {
-			return err
-		}
+		names = sortedNames(this, names)
 
-		if _, err = w.Write(b); err != nil {
-			return err
-		}
-		if _, err = w.Write([]byte{':'}); err != nil {
-			return err
-		}
-		if prefix != "" || indent != "" {
-			if _, err = w.Write([]byte{' '}); err != nil {
+		for _, n := range names {
+			v := NewValue(this[n])
+			if v.Type() == MISSING {
+				continue
+			}
+
+			if written > 0 {
+				if _, err = w.Write([]byte{','}); err != nil {
+					return
+				}
+			}
+			written++
+
+			if err = writeJsonNewline(w, newPrefix); err != nil {
+				return
+			}
+
+			b, err := json.Marshal(n)
+			if err != nil {
+				return err
+			}
+
+			if _, err = w.Write(b); err != nil {
+				return err
+			}
+			if _, err = w.Write([]byte{':'}); err != nil {
+				return err
+			}
+			if prefix != "" || indent != "" {
+				if _, err = w.Write([]byte{' '}); err != nil {
+					return err
+				}
+			}
+
+			if err = v.WriteJSON(w, newPrefix, indent, false); err != nil {
 				return err
 			}
 		}
-
-		if err = v.WriteJSON(w, newPrefix, indent); err != nil {
-			return err
-		}
 	}
-
-	if len(names) > 0 {
+	if written > 0 {
 		if err = writeJsonNewline(w, prefix); err != nil {
 			return
 		}

@@ -101,9 +101,9 @@ var _PHASE_NAMES = []string{
 const _PHASE_UPDATE_COUNT uint64 = 100
 
 type Output interface {
-	SetUp()                       // Any action necessary before processing results
-	Result(item value.Value) bool // Process individual items
-	CloseResults()                // Signal that results are through
+	SetUp()                                // Any action necessary before processing results
+	Result(item value.AnnotatedValue) bool // Process individual items
+	CloseResults()                         // Signal that results are through
 	Abort(err errors.Error)
 	Fatal(err errors.Error)
 	Error(err errors.Error)
@@ -364,7 +364,7 @@ func (this *Context) SetUp() {
 	this.output.SetUp()
 }
 
-func (this *Context) Result(item value.Value) bool {
+func (this *Context) Result(item value.AnnotatedValue) bool {
 	return this.output.Result(item)
 }
 
