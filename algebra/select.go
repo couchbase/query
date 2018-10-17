@@ -194,6 +194,11 @@ For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
 func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
+	if parent != nil {
+		withs := parent.SaveWiths()
+		defer parent.RestoreWiths(withs)
+	}
+
 	f, err := this.subresult.Formalize(parent)
 	if err != nil {
 		return err

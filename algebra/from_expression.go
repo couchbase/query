@@ -121,7 +121,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	_, ok := parent.Allowed().Field(alias)
-	if ok {
+	if ok && !parent.WithAlias(alias) {
 		err = errors.NewDuplicateAliasError("FROM expression", alias, "semantics.fromExpr.duplicate_alias")
 		return nil, err
 	}
@@ -141,6 +141,9 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	immediate := f.Allowed().GetValue().Fields()
 	for ident, _ := range f.Identifiers().Fields() {
 		if _, ok := immediate[ident]; !ok {
+			if f.WithAlias(ident) {
+				continue
+			}
 			this.correlated = true
 			break
 		}

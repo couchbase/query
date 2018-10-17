@@ -32,6 +32,7 @@ type Formalizer struct {
 	MapperBase
 
 	keyspace    string
+	withs       map[string]bool
 	allowed     *value.ScopeValue
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
@@ -52,11 +53,18 @@ func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
+	var withs map[string]bool
 	if parent != nil {
 		pv = parent.allowed
 		av = parent.aliases
 		mapSelf = mapSelf || parent.mapSelf()
 		mapKeyspace = mapKeyspace || parent.mapKeyspace()
+		if len(parent.withs) > 0 {
+			withs = make(map[string]bool, len(parent.withs))
+			for k, v := range parent.withs {
+				withs[k] = v
+			}
+		}
 	}
 
 	flags := uint32(0)
@@ -69,6 +77,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 
 	rv := &Formalizer{
 		keyspace:    keyspace,
+		withs:       withs,
 		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
 		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
@@ -392,6 +401,12 @@ func (this *Formalizer) PopBindings() {
 
 func (this *Formalizer) Copy() *Formalizer {
 	f := NewFormalizer(this.keyspace, nil)
+	if len(this.withs) > 0 {
+		f.withs = make(map[string]bool, len(this.withs))
+		for with, _ := range this.withs {
+			f.withs[with] = true
+		}
+	}
 	f.allowed = this.allowed.Copy().(*value.ScopeValue)
 	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
 	f.aliases = this.aliases.Copy().(*value.ScopeValue)
@@ -452,4 +467,31 @@ func (this *Formalizer) SetAllowedAlias(alias string, isKeyspace bool) {
 func (this *Formalizer) SetAllowedUnnestAlias(alias string) {
 	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_UNNEST_ALIAS)
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
+}
+
+func (this *Formalizer) WithAlias(alias string) bool {
+	if this.withs != nil {
+		_, ok := this.withs[alias]
+		return ok
+	}
+	return false
+}
+
+func (this *Formalizer) SetWiths(withs Bindings) {
+	if this.withs == nil {
+		this.withs = make(map[string]bool, len(withs))
+	}
+	for _, b := range withs {
+		this.withs[b.Variable()] = true
+	}
+}
+
+func (this *Formalizer) SaveWiths() map[string]bool {
+	withs := this.withs
+	this.withs = nil
+	return withs
+}
+
+func (this *Formalizer) RestoreWiths(withs map[string]bool) {
+	this.withs = withs
 }

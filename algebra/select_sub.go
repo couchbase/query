@@ -70,6 +70,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 		if err != nil {
 			return nil, err
 		}
+		f.SetWiths(this.with)
 	}
 
 	if this.from != nil {
