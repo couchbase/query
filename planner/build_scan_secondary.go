@@ -39,21 +39,22 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	pred := baseKeyspace.dnfPred
 
-	indexes = minimalIndexes(indexes, true, pred)
-
-	var err error
-	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
+	err := this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
 	if err != nil {
 		return nil, 0, err
 	}
+
+	for _, entry := range indexes {
+		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
+	}
+
+	indexes = minimalIndexes(indexes, true, pred)
 
 	var orderIndex datastore.Index
 	var limit expression.Expression
 	pushDown := false
 
 	for _, entry := range indexes {
-		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
-
 		if this.order != nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			orderIndex = entry.index
 			this.maxParallelism = 1
@@ -303,6 +304,11 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
 			}
 
 			if narrowerOrEquivalent(se, te, shortest, pred) {
+				if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
+					te.PushDownProperty() > se.PushDownProperty() {
+					delete(sargables, s)
+					break
+				}
 				delete(sargables, t)
 			}
 		}
