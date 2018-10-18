@@ -19,6 +19,10 @@ import (
 
 type binaryValue []byte
 
+func NewBinaryValue(bytes []byte) Value {
+	return binaryValue(bytes)
+}
+
 func (this binaryValue) String() string {
 	return fmt.Sprintf("\"<binary (%d b)>\"", len(this))
 }
