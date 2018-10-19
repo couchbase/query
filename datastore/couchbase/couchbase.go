@@ -1011,28 +1011,32 @@ func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) []errors.Error {
+	var noVirtualDocAttr bool
 	var bulkResponse map[string]*gomemcached.MCResponse
 	var mcr *gomemcached.MCResponse
 	var err error
-
-	_subPaths := subPaths
-	noVirtualDocAttr := false
-
-	if len(_subPaths) > 0 && _subPaths[0] != "$document" {
-		_subPaths = append([]string{"$document"}, _subPaths...)
-		noVirtualDocAttr = true
-	}
 
 	l := len(keys)
 	if l == 0 {
 		return nil
 	}
 
-	if l == 1 {
-		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline(), _subPaths)
+	ls := len(subPaths)
+	fast := l == 1 && ls == 0
+	if fast {
+		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline())
 	} else {
-		bulkResponse, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), _subPaths)
-		defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
+		if ls > 0 && subPaths[0] != "$document" {
+			subPaths = append([]string{"$document"}, subPaths...)
+			noVirtualDocAttr = true
+		}
+
+		if l == 1 {
+			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), subPaths)
+		} else {
+			bulkResponse, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), subPaths)
+			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
+		}
 	}
 
 	if err != nil {
@@ -1047,20 +1051,20 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 		}
 	}
 
-	i := 0
-	if l == 1 {
+	if fast {
 		if mcr != nil && err == nil {
-			if len(_subPaths) > 0 {
-				fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, _subPaths, noVirtualDocAttr)
-			} else {
-				fetchMap[keys[0]] = doFetch(keys[0], mcr)
-			}
-			i++
+			fetchMap[keys[0]] = doFetch(keys[0], mcr)
+		}
+
+	} else if l == 1 {
+		if mcr != nil && err == nil {
+			fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, subPaths, noVirtualDocAttr)
 		}
 	} else {
-		if len(_subPaths) > 0 {
+		i := 0
+		if ls > 0 {
 			for k, v := range bulkResponse {
-				fetchMap[k] = getSubDocFetchResults(k, v, _subPaths, noVirtualDocAttr)
+				fetchMap[k] = getSubDocFetchResults(k, v, subPaths, noVirtualDocAttr)
 				i++
 			}
 		} else {
@@ -1068,11 +1072,9 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 				fetchMap[k] = doFetch(k, v)
 				i++
 			}
+			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
 		}
-
 	}
-
-	logging.Debugf("Fetched %d keys ", i)
 
 	return nil
 }

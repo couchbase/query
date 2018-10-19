@@ -87,22 +87,27 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		return true
 	}
 
-	fetchKeys := _STRING_POOL.Get()
-	defer _STRING_POOL.Put(fetchKeys)
+	var keyCount map[string]int
+	var fetchKeys []string
 
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 
-	var keyCount map[string]int
 	if l == 1 {
-		key, ok := this.getDocumentKey(this.batch[0], context)
+		var keys [1]string
+		var ok bool
+
+		keys[0], ok = this.getDocumentKey(this.batch[0], context)
 		if !ok {
 			return false
 		}
-		fetchKeys = append(fetchKeys, key)
+		fetchKeys = keys[0:1:1]
 	} else {
-		keyCount := _STRING_KEYCOUNT_POOL.Get()
+		keyCount = _STRING_KEYCOUNT_POOL.Get()
 		defer _STRING_KEYCOUNT_POOL.Put(keyCount)
+
+		fetchKeys = _STRING_POOL.Get()
+		defer _STRING_POOL.Put(fetchKeys)
 
 		for _, av := range this.batch {
 			key, ok := this.getDocumentKey(av, context)
