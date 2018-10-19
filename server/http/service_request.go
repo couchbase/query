@@ -66,6 +66,8 @@ func (r *httpRequest) OriginalHttpRequest() *http.Request {
 func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
 	var httpArgs httpRequestArgs
 	var err errors.Error
+	var urlArgs urlArgs
+	var jsonArgs jsonArgs
 
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
@@ -85,7 +87,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	err = contentNegotiation(resp, req)
 
 	if err == nil {
-		httpArgs, err = getRequestParams(req)
+		httpArgs, err = getRequestParams(req, &urlArgs, &jsonArgs)
 	}
 
 	rv.resp = resp
@@ -778,7 +780,7 @@ type httpRequestArgs interface {
 
 // getRequestParams creates a httpRequestArgs implementation,
 // depending on the content type in the request
-func getRequestParams(req *http.Request) (httpRequestArgs, errors.Error) {
+func getRequestParams(req *http.Request, urlArgs *urlArgs, jsonArgs *jsonArgs) (httpRequestArgs, errors.Error) {
 
 	const (
 		URL_CONTENT  = "application/x-www-form-urlencoded"
@@ -792,14 +794,14 @@ func getRequestParams(req *http.Request) (httpRequestArgs, errors.Error) {
 	}
 
 	if strings.HasPrefix(content_type, URL_CONTENT) {
-		return newUrlArgs(req)
+		return newUrlArgs(req, urlArgs)
 	}
 
 	if strings.HasPrefix(content_type, JSON_CONTENT) {
-		return newJsonArgs(req)
+		return newJsonArgs(req, jsonArgs)
 	}
 
-	return newUrlArgs(req)
+	return newUrlArgs(req, urlArgs)
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
@@ -809,7 +811,7 @@ type urlArgs struct {
 	named map[string]value.Value
 }
 
-func newUrlArgs(req *http.Request) (*urlArgs, errors.Error) {
+func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 	var named map[string]value.Value
 
 	for arg, val := range req.Form {
@@ -842,7 +844,10 @@ func newUrlArgs(req *http.Request) (*urlArgs, errors.Error) {
 			req.Form[STATEMENT] = []string{string(bytes)}
 		}
 	}
-	return &urlArgs{req: req, named: named}, nil
+
+	urlArgs.req = req
+	urlArgs.named = named
+	return urlArgs, nil
 }
 
 func (this *urlArgs) processParameters(rv *httpRequest) errors.Error {
@@ -903,6 +908,9 @@ func getScanVectorsFromJSON(json interface{}) (map[string]timestamp.Vector, erro
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTORS, "map of strings to vectors")
 	}
 
+	if len(bucketMap) == 0 {
+		return nil, nil
+	}
 	out := make(map[string]timestamp.Vector)
 	for k, v := range bucketMap {
 		// Is it a sparse vector?
@@ -1093,8 +1101,7 @@ type jsonArgs struct {
 }
 
 // create a jsonArgs structure from the given http request.
-func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
-	var p jsonArgs
+func newJsonArgs(req *http.Request, p *jsonArgs) (*jsonArgs, errors.Error) {
 	decoder, e := getJsonDecoder(req.Body)
 	if e != nil {
 		return nil, e
@@ -1117,7 +1124,7 @@ func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 		}
 	}
 	p.req = req
-	return &p, nil
+	return p, nil
 }
 
 func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
