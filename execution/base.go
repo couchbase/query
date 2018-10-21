@@ -75,7 +75,7 @@ type base struct {
 	bit            uint8
 	contextTracked *Context
 	childrenLeft   int32
-	activeCond     *sync.Cond
+	activeCond     sync.Cond
 	activeLock     sync.Mutex
 	primed         bool
 	completed      bool
@@ -120,7 +120,7 @@ func newBase(base *base, context *Context) {
 	newValueExchange(&base.valueExchange, context.GetPipelineCap())
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
-	base.activeCond = sync.NewCond(&base.activeLock)
+	base.activeCond.L = &base.activeLock
 	base.doSend = parallelSend
 	base.closeConsumer = false
 }
@@ -131,7 +131,7 @@ func newRedirectBase(base *base) {
 	newValueExchange(&base.valueExchange, 1)
 	base.execPhase = PHASES
 	base.phaseTimes = func(t time.Duration) {}
-	base.activeCond = sync.NewCond(&base.activeLock)
+	base.activeCond.L = &base.activeLock
 	base.doSend = parallelSend
 	base.closeConsumer = false
 }
@@ -146,7 +146,7 @@ func (this *base) copy(base *base) {
 	base.parent = this.parent
 	base.execPhase = this.execPhase
 	base.phaseTimes = this.phaseTimes
-	base.activeCond = sync.NewCond(&base.activeLock)
+	base.activeCond.L = &base.activeLock
 	base.serializable = this.serializable
 	base.serialized = false
 	base.doSend = parallelSend

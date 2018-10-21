@@ -14,6 +14,8 @@ package util
 // Our implementation tends to be leaner too.
 
 import (
+	"sync"
+
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
@@ -54,4 +56,28 @@ func (o *Once) Do(f func()) {
 
 func (o *Once) Reset() {
 	atomic.StoreUint32(&o.done, 0)
+}
+
+const _POOL_SIZE = 8
+
+type FastPool struct {
+	getNext uint32
+	putNext uint32
+	pool    [_POOL_SIZE]sync.Pool
+}
+
+func NewFastPool(p *FastPool, f func() interface{}) {
+	for i := 0; i < _POOL_SIZE; i++ {
+		p.pool[i].New = f
+	}
+}
+
+func (p *FastPool) Get() interface{} {
+	e := atomic.AddUint32(&p.getNext, 1) % _POOL_SIZE
+	return p.pool[e].Get()
+}
+
+func (p *FastPool) Put(s interface{}) {
+	e := atomic.AddUint32(&p.putNext, 1) % _POOL_SIZE
+	p.pool[e].Put(s)
 }

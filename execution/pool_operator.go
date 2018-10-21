@@ -10,24 +10,21 @@
 package execution
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type OperatorPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewOperatorPool(size int) *OperatorPool {
 	rv := &OperatorPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]Operator, 0, size)
-			},
-		},
 		size: size,
 	}
-
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make([]Operator, 0, size)
+	})
 	return rv
 }
 
