@@ -87,22 +87,22 @@ func NewServiceErrorHttpReq(id string) Error {
 }
 
 func NewServiceErrorScanVectorBadLength(vec []interface{}) Error {
-	return &err{level: EXCEPTION, ICode: 1140, IKey: "service.io.request.type",
+	return &err{level: EXCEPTION, ICode: 1140, IKey: "service.io.request.scan_vector.length",
 		InternalMsg: fmt.Sprintf("Array %v should be of length 2", vec), InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorScanVectorBadSequenceNumber(seq interface{}) Error {
-	return &err{level: EXCEPTION, ICode: 1150, IKey: "service.io.request.type",
+	return &err{level: EXCEPTION, ICode: 1150, IKey: "service.io.request.scan_vector.sequence",
 		InternalMsg: fmt.Sprintf("Bad sequence number %v. Expected an unsigned 64-bit integer.", seq), InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorScanVectorBadUUID(uuid interface{}) Error {
-	return &err{level: EXCEPTION, ICode: 1150, IKey: "service.io.request.type",
+	return &err{level: EXCEPTION, ICode: 1155, IKey: "service.io.request.scan_vector.uuid",
 		InternalMsg: fmt.Sprintf("Bad UUID %v. Expected a string.", uuid), InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorDecodeNil() Error {
-	return &err{level: EXCEPTION, ICode: 1160, IKey: "service.io.request.type",
+	return &err{level: EXCEPTION, ICode: 1160, IKey: "service.io.request.nil",
 		InternalMsg: "Failed to decode nil value.", InternalCaller: CallerN(1)}
 }
 
