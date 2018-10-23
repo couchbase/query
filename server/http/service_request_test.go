@@ -11,7 +11,6 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +19,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/couchbase/go_json"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"

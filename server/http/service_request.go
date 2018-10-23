@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -1443,11 +1442,10 @@ func extractValues(arr []interface{}) (uint64, string, errors.Error) {
 	if len(arr) != 2 {
 		return 0, "", errors.NewServiceErrorScanVectorBadLength(arr)
 	}
-	sequenceNum, found := arr[0].(float64)
-	if !found {
-		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(arr[0])
-	}
-	if sequenceNum < 0.0 || sequenceNum > math.MaxUint64 || math.Floor(sequenceNum) != sequenceNum {
+	// JSON parser maps numbers to float64 or int64.
+	// Only integers are valid here.
+	sequenceNum, found := arr[0].(int64)
+	if !found || sequenceNum < 0 {
 		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(arr[0])
 	}
 	uuid, found := arr[1].(string)
