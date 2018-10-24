@@ -1,7 +1,10 @@
 package datastore
 
 import (
+	"github.com/couchbase/go_json"
+
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -11,7 +14,16 @@ type CollectionsNamespace struct {
 
 func NewCollectionsNamespace() *CollectionsNamespace {
 	// No keyspaces, for now.
-	return &CollectionsNamespace{Keyspaces: make(map[string]*CollectionsKeyspace, 0)}
+	cns := &CollectionsNamespace{Keyspaces: make(map[string]*CollectionsKeyspace)}
+
+	ksName := "test"
+	ks := NewCollectionsKeyspace(ksName, cns)
+	cns.Keyspaces[ksName] = ks
+	ks.addDocument("v1", `{ "f1" : "string value A", "f2" : 10 }`)
+	ks.addDocument("v2", `{ "f1" : "string value B", "f2" : 11 }`)
+	ks.addDocument("v3", `{ "f1" : "string value C", "f2" : 12 }`)
+
+	return cns
 }
 
 func (ns *CollectionsNamespace) DatastoreId() string {
@@ -84,8 +96,30 @@ func (ns *CollectionsNamespace) BucketByName(name string) (Bucket, errors.Error)
 }
 
 type CollectionsKeyspace struct {
-	id string
-	ns *CollectionsNamespace
+	id   string
+	ns   *CollectionsNamespace
+	docs map[string]value.AnnotatedValue
+}
+
+func NewCollectionsKeyspace(name string, namespace *CollectionsNamespace) *CollectionsKeyspace {
+	ks := &CollectionsKeyspace{
+		id:   name,
+		ns:   namespace,
+		docs: make(map[string]value.AnnotatedValue),
+	}
+	return ks
+}
+
+func (ks *CollectionsKeyspace) addDocument(id string, jsonDoc string) {
+	var jsonVal map[string]interface{}
+	err := json.Unmarshal([]byte(jsonDoc), &jsonVal)
+	if err != nil {
+		logging.Errorf("Unable to parse document value %s: %v", id, err)
+	}
+	doc := value.NewAnnotatedValue(jsonVal)
+	doc.SetAttachment("meta", map[string]interface{}{"id": id})
+	doc.SetId(id)
+	ks.docs[id] = doc
 }
 
 func (ks *CollectionsKeyspace) Id() string {
@@ -113,7 +147,7 @@ func (ks *CollectionsKeyspace) Scope() Scope {
 }
 
 func (ks *CollectionsKeyspace) Count(context QueryContext) (int64, errors.Error) {
-	return 0, nil
+	return int64(len(ks.docs)), nil
 }
 
 func (ks *CollectionsKeyspace) Indexer(name IndexType) (Indexer, errors.Error) {
@@ -125,7 +159,14 @@ func (ks *CollectionsKeyspace) Indexers() ([]Indexer, errors.Error) {
 }
 
 func (ks *CollectionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context QueryContext, subPath []string) []errors.Error {
-	return []errors.Error{errors.NewNotImplemented("CollectionsKeyspace.Fetch")}
+	for _, v := range keys {
+		doc := ks.docs[v]
+		if doc != nil {
+			keysMap[v] = doc
+		}
+	}
+
+	return nil
 }
 
 // Used by DML statements
