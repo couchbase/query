@@ -9,24 +9,18 @@
 
 package util
 
-import (
-	"sync"
-)
-
 type StringIntPool struct {
-	pool *sync.Pool
+	pool FastPool
 	size int
 }
 
 func NewStringIntPool(size int) *StringIntPool {
 	rv := &StringIntPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make(map[string]int, size)
-			},
-		},
 		size: size,
 	}
+	NewFastPool(&rv.pool, func() interface{} {
+		return make(map[string]int, rv.size)
+	})
 
 	return rv
 }

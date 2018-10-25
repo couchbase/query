@@ -12,6 +12,7 @@ package execution
 import (
 	"sync"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -56,24 +57,27 @@ type valueExchange struct {
 	operatorState
 }
 
-var valueSlicePool = sync.Pool{New: func() interface{} {
-	return make([]value.AnnotatedValue, GetPipelineCap())
-},
-}
+var valueSlicePool util.FastPool
 
-var smallSlicePool = sync.Pool{New: func() interface{} {
-	return make([]value.AnnotatedValue, 1)
-},
-}
+var smallSlicePool util.FastPool
 
-var smallChildPool = sync.Pool{New: func() interface{} {
-	return make([]int, _SMALL_CHILD_POOL)
-},
-}
+var smallChildPool util.FastPool
 
-var largeChildPool = sync.Pool{New: func() interface{} {
-	return make([]int, _LARGE_CHILD_POOL)
-},
+var largeChildPool util.FastPool
+
+func init() {
+	util.NewFastPool(&valueSlicePool, func() interface{} {
+		return make([]value.AnnotatedValue, GetPipelineCap())
+	})
+	util.NewFastPool(&smallSlicePool, func() interface{} {
+		return make([]value.AnnotatedValue, 1)
+	})
+	util.NewFastPool(&smallChildPool, func() interface{} {
+		return make([]int, _SMALL_CHILD_POOL)
+	})
+	util.NewFastPool(&largeChildPool, func() interface{} {
+		return make([]int, _LARGE_CHILD_POOL)
+	})
 }
 
 // constructor
