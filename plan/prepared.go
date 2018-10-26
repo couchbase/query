@@ -185,7 +185,9 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 	indexer.Refresh()
 	version := indexer.MetadataVersion()
 	for _, idx := range this.indexers {
-		if idx.indexer == indexer {
+		if idx.indexer.Name() == indexer.Name() &&
+			idx.indexer.KeyspaceId() == indexer.KeyspaceId() {
+			idx.indexer = indexer
 			idx.version = version
 			return
 		}
@@ -197,7 +199,8 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 func (this *Prepared) addNamespace(namespace datastore.Namespace) {
 	version := namespace.MetadataVersion()
 	for _, ns := range this.namespaces {
-		if ns.namespace == namespace {
+		if ns.namespace.Name() == namespace.Name() {
+			ns.namespace = namespace
 			ns.version = version
 			return
 		}
