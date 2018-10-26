@@ -271,7 +271,7 @@ func (this *httpRequest) writeValue(item value.Value, prefix, indent string) boo
 	err := item.WriteJSON(this.writer.buf(), prefix, indent, false)
 	if err != nil {
 		this.writer.truncate(beforeWriteJSON)
-		return this.writeString(fmt.Sprintf("\"ERROR: %v\"", err))
+		return this.writer.printf("\"ERROR: %v\"", err)
 	}
 	return true
 }
@@ -304,7 +304,7 @@ func (this *httpRequest) writeState(state server.State, prefix string) bool {
 		}
 	}
 
-	return this.writeString(fmt.Sprintf(",\n%s\"status\": \"%s\"", prefix, state))
+	return this.writer.printf(",\n%s\"status\": \"%s\"", prefix, state)
 }
 
 func (this *httpRequest) writeErrors(prefix string, indent string) bool {
@@ -479,7 +479,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		} else {
 			e, err = json.Marshal(namedArgs)
 		}
-		if err != nil || !this.writeString(fmt.Sprintf("%s\"namedArgs\": %s", newPrefix, e)) {
+		if err != nil || !this.writer.printf("%s\"namedArgs\": %s", newPrefix, e) {
 			logging.Infop("Error writing namedArgs", logging.Pair{"error", err})
 		}
 		needComma = true
@@ -493,7 +493,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		} else {
 			e, err = json.Marshal(positionalArgs)
 		}
-		if err != nil || !this.writeString(fmt.Sprintf("%s\"positionalArgs\": %s", newPrefix, e)) {
+		if err != nil || !this.writer.printf("%s\"positionalArgs\": %s", newPrefix, e) {
 			logging.Infop("Error writing positional args", logging.Pair{"error", err})
 		}
 	}
@@ -532,7 +532,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			} else {
 				e, err = json.Marshal(phaseTimes)
 			}
-			if err != nil || !this.writeString(fmt.Sprintf("%s\"phaseTimes\": %s", newPrefix, e)) {
+			if err != nil || !this.writer.printf("%s\"phaseTimes\": %s", newPrefix, e) {
 				logging.Infop("Error writing phase times", logging.Pair{"error", err})
 			}
 			needComma = true
@@ -547,7 +547,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			} else {
 				e, err = json.Marshal(phaseCounts)
 			}
-			if err != nil || !this.writeString(fmt.Sprintf("%s\"phaseCounts\": %s", newPrefix, e)) {
+			if err != nil || !this.writer.printf("%s\"phaseCounts\": %s", newPrefix, e) {
 				logging.Infop("Error writing phase counts", logging.Pair{"error", err})
 			}
 			needComma = true
@@ -562,7 +562,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			} else {
 				e, err = json.Marshal(phaseOperators)
 			}
-			if err != nil || !this.writeString(fmt.Sprintf("%s\"phaseOperators\": %s", newPrefix, e)) {
+			if err != nil || !this.writer.printf("%s\"phaseOperators\": %s", newPrefix, e) {
 				logging.Infop("Error writing phase operators", logging.Pair{"error", err})
 			}
 		}
@@ -575,7 +575,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			} else {
 				e, err = json.Marshal(timings)
 			}
-			if err != nil || !this.writeString(fmt.Sprintf(",%s\"executionTimings\": %s", newPrefix, e)) {
+			if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
 				logging.Infop("Error writing timings", logging.Pair{"error", err})
 			}
 		}
@@ -586,8 +586,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	return this.writeString("}")
 }
 
-// bufferedWriter is an implementation of responseDataManager that writes response data to a buffer,
-// up to a threshold:
+// the buffered writes the response data in chunks
 type bufferedWriter struct {
 	sync.Mutex
 	req         *httpRequest  // the request for the response we are writing
@@ -597,6 +596,8 @@ type bufferedWriter struct {
 	header      bool // headers required
 	lastFlush   time.Time
 }
+
+const _PRINTF_THRESHOLD = 128
 
 func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
 	w.req = r
@@ -636,6 +637,38 @@ func (this *bufferedWriter) writeString(s string) bool {
 
 	// under threshold - write the string to our buffer
 	_, err := this.buffer.Write([]byte(s))
+	return err == nil
+}
+
+func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
+	if this.closed {
+		return false
+	}
+
+	this.Lock()
+	defer this.Unlock()
+
+	// threshold exceeded
+	if _PRINTF_THRESHOLD+this.buffer.Len() > this.buffer_pool.BufferCapacity() {
+		w := this.req.resp // our request's response writer
+
+		// write response header and data buffered so far using request's response writer:
+		if this.header {
+			w.WriteHeader(this.req.httpCode())
+			this.header = false
+		}
+
+		// write out and empty the buffer
+		io.Copy(w, this.buffer)
+		this.buffer.Reset()
+
+		// do the flushing
+		this.lastFlush = time.Now()
+		w.(http.Flusher).Flush()
+	}
+
+	// under threshold - write the string to our buffer
+	_, err := fmt.Fprintf(this.buffer, f, args...)
 	return err == nil
 }
 
