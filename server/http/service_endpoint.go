@@ -276,7 +276,7 @@ func (this *activeHttpRequests) Put(req server.Request) errors.Error {
 	if !is_http {
 		return errors.NewServiceErrorHttpReq(req.Id().String())
 	}
-	this.cache.Add(http_req, http_req.Id().String(), nil)
+	this.cache.FastAdd(http_req, http_req.Id().String())
 	return nil
 }
 

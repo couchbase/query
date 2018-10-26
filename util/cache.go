@@ -96,6 +96,19 @@ func NewGenCache(l int) *GenCache {
 	return rv
 }
 
+// Fast Add, for caches where entries are never replaced and no actions are necessary
+func (this *GenCache) FastAdd(entry interface{}, id string) {
+	cacheNum := HashString(id, _CACHES)
+	elem := &genElem{
+		contents: entry,
+		ID:       id,
+	}
+	this.lock(cacheNum)
+	this.add(elem, cacheNum)
+	this.maps[cacheNum][id] = elem
+	this.locks[cacheNum].Unlock()
+}
+
 // Add (or update, if ID found) entry, eject old entry if we are controlling sie
 func (this *GenCache) Add(entry interface{}, id string, process func(interface{}) Operation) {
 	cacheNum := HashString(id, _CACHES)
