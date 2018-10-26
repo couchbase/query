@@ -37,6 +37,7 @@ const (
 	CONTROLS        = "controls"
 	N1QLFEATCTRL    = "n1ql-feat-ctrl"
 	AUTOPREPARE     = "auto-prepare"
+	MUTEXPROFILE    = "mutexprofile"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -64,6 +65,7 @@ var CHECKERS = map[string]Checker{
 	CONTROLS:        checkControlsAdmin,
 	N1QLFEATCTRL:    checkNumber,
 	AUTOPREPARE:     checkBool,
+	MUTEXPROFILE:    checkBool,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

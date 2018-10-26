@@ -82,6 +82,7 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 	this.mux.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 	this.mux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
 	this.mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	this.mux.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 
 }
 
@@ -424,6 +425,8 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.N1QLFEATCTRL] = util.GetN1qlFeatureControl()
 	settings = server.GetProfileAdmin(settings, srvr)
 	settings = server.GetControlsAdmin(settings, srvr)
+	settings[server.AUTOPREPARE] = srvr.AutoPrepare()
+	settings[server.MUTEXPROFILE] = srvr.MutexProfile()
 	return settings
 }
 

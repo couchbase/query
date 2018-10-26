@@ -125,6 +125,11 @@ var _SETTERS = map[string]Setter{
 		s.SetAutoPrepare(value)
 		return nil
 	},
+	MUTEXPROFILE: func(s *Server, o interface{}) errors.Error {
+		value, _ := o.(bool)
+		s.SetMutexProfile(value)
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {

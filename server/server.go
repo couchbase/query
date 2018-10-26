@@ -292,6 +292,18 @@ func (this *Server) SetCpuProfile(cpuprofile string) {
 	}
 }
 
+func (this *Server) MutexProfile() bool {
+	return runtime.SetMutexProfileFraction(-1) > 0
+}
+
+func (this *Server) SetMutexProfile(profile bool) {
+	if profile {
+		runtime.SetMutexProfileFraction(1)
+	} else {
+		runtime.SetMutexProfileFraction(0)
+	}
+}
+
 func (this *Server) ScanCap() int64 {
 	return datastore.GetScanCap()
 }
