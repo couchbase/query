@@ -108,7 +108,7 @@ func NewMixedJoinError(op1 string, alias1 string, op2 string, alias2 string, iKe
 
 const ANSI_KEYSPACE_ONLY = 3210
 
-func NewAnsiKeyspaceOnlyError(op string, alias string, iKey string) Error {
+func NewAnsiKeyspaceOnlyError(op string, alias string, iKey string) error {
 	return &err{level: EXCEPTION, ICode: ANSI_KEYSPACE_ONLY, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("ANSI %s (on %s) must be done on a keyspace.", op, alias),
 		InternalCaller: CallerN(1)}
@@ -127,6 +127,12 @@ const ENTERPRISE_FEATURE = 3230
 func NewEnterpirseFeature(opmsg, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: ENTERPRISE_FEATURE, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("%s is enterprise level feature.", opmsg),
+
+const UNSUPPORTED_PATH_TYPE = 3240
+
+func NewUnsupportedPath(base error) Error {
+	return &err{level: EXCEPTION, ICode: UNSUPPORTED_PATH_TYPE, IKey: "semantics.path.unsupported",
+		InternalMsg:    fmt.Sprintf("Unsupported path type: %v", base),
 		InternalCaller: CallerN(1)}
 }
 

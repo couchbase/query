@@ -42,19 +42,18 @@ Specific primary keys within a keyspace can be specified.  Only values
 having those primary keys will be included as inputs to the query.
 */
 type KeyspaceTerm struct {
-	namespace string
-	keyspace  string
-	as        string
-	keys      expression.Expression
-	indexes   IndexRefs
-	joinKeys  expression.Expression
-	joinHint  JoinHint
-	property  uint32
+	path     *Path
+	as       string
+	keys     expression.Expression
+	indexes  IndexRefs
+	joinKeys expression.Expression
+	joinHint JoinHint
+	property uint32
 }
 
 func NewKeyspaceTerm(namespace, keyspace string, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
+	return &KeyspaceTerm{NewPath(namespace, keyspace), as, keys, indexes, nil, JOIN_HINT_NONE, 0}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -99,7 +98,11 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
-	privs, err := privilegesFromKeyspace(this.namespace, this.keyspace)
+	namespace, keyspace, e := this.path.GetNamespaceKeyspace()
+	if e != nil {
+		return nil, errors.NewUnsupportedPath(e)
+	}
+	privs, err := privilegesFromKeyspace(namespace, keyspace)
 	if err != nil {
 		return privs, err
 	}
@@ -136,13 +139,7 @@ func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, error
    Representation as a N1QL string.
 */
 func (this *KeyspaceTerm) String() string {
-	s := ""
-
-	if this.namespace != "" {
-		s += "`" + this.namespace + "`:"
-	}
-
-	s += "`" + this.keyspace + "`"
+	s := this.path.String()
 
 	if this.as != "" {
 		s += " as `" + this.as + "`"
@@ -246,7 +243,7 @@ func (this *KeyspaceTerm) Alias() string {
 	if this.as != "" {
 		return this.as
 	} else {
-		return this.keyspace
+		return this.path.Alias()
 	}
 }
 
@@ -254,23 +251,21 @@ func (this *KeyspaceTerm) Alias() string {
 Returns the namespace string.
 */
 func (this *KeyspaceTerm) Namespace() string {
-	return this.namespace
+	return this.path.Namespace()
 }
 
 /*
 Set the namespace string when it is empty.
 */
 func (this *KeyspaceTerm) SetDefaultNamespace(namespace string) {
-	if this.namespace == "" {
-		this.namespace = namespace
-	}
+	this.path.SetDefaultNamespace(namespace)
 }
 
 /*
 Returns the keyspace string (buckets).
 */
 func (this *KeyspaceTerm) Keyspace() string {
-	return this.keyspace
+	return this.path.Keyspace()
 }
 
 /*
@@ -474,7 +469,6 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	} else if this.keys != nil {
 		r["keys"] = expression.NewStringer().Visit(this.keys)
 	}
-	r["namespace"] = this.namespace
-	r["keyspace"] = this.keyspace
+	r["path"] = this.path
 	return json.Marshal(r)
 }

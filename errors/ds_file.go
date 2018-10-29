@@ -20,7 +20,7 @@ func NewFileDatastoreError(e error, msg string) Error {
 
 func NewFileNamespaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 15001, IKey: "datastore.file.namespace_not_found", ICause: e,
-		InternalMsg: "Namespace not found " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Namespace not found in file store " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileKeyspaceNotFoundError(e error, msg string) Error {

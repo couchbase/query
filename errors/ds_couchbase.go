@@ -25,7 +25,7 @@ func NewCbUrlParseError(e error, msg string) Error {
 
 func NewCbNamespaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12002, IKey: "datastore.couchbase.namespace_not_found", ICause: e,
-		InternalMsg: "Namespace not found " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Namespace not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbKeyspaceNotFoundError(e error, msg string) Error {

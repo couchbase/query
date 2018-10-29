@@ -381,7 +381,7 @@ func doJsonRequest(t *testing.T, payload map[string]interface{}) {
 
 		// insert is not implemented in mock
 		if errs[0].Code() != 16003 {
-			t.Errorf("Unexpected error: %v", errs)
+			t.Errorf("Unexpected error: %v payload: %v", errs, payload)
 		}
 	}
 }
