@@ -221,12 +221,7 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
 
-	select {
-	case mockServer.server.Channel() <- query:
-		// Wait until the request exits.
-		query.Finished()
-	default:
-		// Timeout.
+	if !mockServer.server.ServiceRequest(query) {
 		return nil, nil, errors.NewError(nil, "Query timed out")
 	}
 
@@ -268,12 +263,7 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
 
-	select {
-	case mockServer.server.Channel() <- query:
-		// Wait until the request exits.
-		query.Finished()
-	default:
-		// Timeout.
+	if !mockServer.server.ServiceRequest(query) {
 		return nil, nil, errors.NewError(nil, "Query timed out")
 	}
 
@@ -326,14 +316,11 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)
 
-	channel := make(server.RequestChannel, 10)
-	plusChannel := make(server.RequestChannel, 10)
-
 	// need to do it before NewServer() or server scope's changes to
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
-		false, channel, plusChannel, 1, 1, 1, 0, false, false, true, true,
+		false, 10, 10, 1, 1, 1, 0, false, false, true, true,
 		server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -345,7 +332,6 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	prepareds.PreparedsReprepareInit(ds, sys, namespace)
 	server.SetKeepAlive(1 << 10)
 
-	go server.Serve()
 	mockServer.server = server
 	mockServer.acctstore = acctstore
 

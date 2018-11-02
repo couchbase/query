@@ -206,8 +206,6 @@ func main() {
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
-	channel := make(server.RequestChannel, *REQUEST_CAP*numProcs)
-	plusChannel := make(server.RequestChannel, *REQUEST_CAP*numProcs)
 
 	sys, err := system.NewDatastore(datastore)
 	if err != nil {
@@ -216,7 +214,7 @@ func main() {
 	}
 
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
-		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
+		*READONLY, *REQUEST_CAP*numProcs, *REQUEST_CAP*numProcs, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
 		*PRETTY, prof, ctrl)
 	if err != nil {
@@ -244,9 +242,6 @@ func main() {
 	}
 
 	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
-
-	go server.Serve()
-	go server.PlusServe()
 
 	logging.Infop("cbq-engine started",
 		logging.Pair{"version", util.VERSION},

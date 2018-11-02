@@ -411,17 +411,14 @@ func makeMockServer() *server.Server {
 	}
 
 	datastore.SetDatastore(store)
-	channel := make(server.RequestChannel, 10)
-	plusChannel := make(server.RequestChannel, 10)
 	server, err := server.NewServer(store, nil, nil, nil, "default",
-		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false)
+		false, 10, 10, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
 	server.SetKeepAlive(1 << 10)
 
-	go server.Serve()
 	return server
 }
 
@@ -431,12 +428,7 @@ func (this *testServer) testHandler() http.Handler {
 		if this.query_request.State() == server.FATAL {
 			return
 		}
-		select {
-		case this.query_server.Channel() <- this.query_request:
-			// Wait until the request exits.
-			this.query_request.Finished()
-		default:
-		}
+		this.query_server.ServiceRequest(this.query_request)
 	})
 }
 

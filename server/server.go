@@ -68,39 +68,40 @@ func (profile Profile) String() string {
 	return _PROFILE_NAMES[profile]
 }
 
+type runQueue struct {
+	servicers int
+	runCnt    int32
+	queueCnt  int32
+	queue     util.FastQueue
+}
+
 type Server struct {
 	// due to alignment issues on x86 platforms these atomic
 	// variables need to right at the beginning of the structure
-	servicers      atomic.AlignedInt64
-	plusServicers  atomic.AlignedInt64
 	maxParallelism atomic.AlignedInt64
 	keepAlive      atomic.AlignedInt64
 	requestSize    atomic.AlignedInt64
 
 	sync.RWMutex
-	datastore   datastore.Datastore
-	systemstore datastore.Datastore
-	configstore clustering.ConfigurationStore
-	acctstore   accounting.AccountingStore
-	namespace   string
-	readonly    bool
-	channel     RequestChannel
-	plusChannel RequestChannel
-	done        chan bool
-	plusDone    chan bool
-	timeout     time.Duration
-	signature   bool
-	metrics     bool
-	wg          sync.WaitGroup
-	plusWg      sync.WaitGroup
-	memprofile  string
-	cpuprofile  string
-	enterprise  bool
-	pretty      bool
-	srvprofile  Profile
-	srvcontrols bool
-	whitelist   map[string]interface{}
-	autoPrepare bool
+	unboundQueue runQueue
+	plusQueue    runQueue
+	datastore    datastore.Datastore
+	systemstore  datastore.Datastore
+	configstore  clustering.ConfigurationStore
+	acctstore    accounting.AccountingStore
+	namespace    string
+	readonly     bool
+	timeout      time.Duration
+	signature    bool
+	metrics      bool
+	memprofile   string
+	cpuprofile   string
+	enterprise   bool
+	pretty       bool
+	srvprofile   Profile
+	srvcontrols  bool
+	whitelist    map[string]interface{}
+	autoPrepare  bool
 }
 
 // Default Keep Alive Length
@@ -109,7 +110,7 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 
 func NewServer(store datastore.Datastore, sys datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
-	channel, plusChannel RequestChannel, servicers, plusServicers, maxParallelism int,
+	requestsCap, plusRequestsCap int, servicers, plusServicers, maxParallelism int,
 	timeout time.Duration, signature, metrics, enterprise, pretty bool,
 	srvprofile Profile, srvcontrols bool) (*Server, errors.Error) {
 	rv := &Server{
@@ -119,23 +120,19 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 		acctstore:   acctng,
 		namespace:   namespace,
 		readonly:    readonly,
-		channel:     channel,
-		plusChannel: plusChannel,
 		signature:   signature,
 		timeout:     timeout,
 		metrics:     metrics,
-		done:        make(chan bool),
-		plusDone:    make(chan bool),
 		enterprise:  enterprise,
 		pretty:      pretty,
 		srvcontrols: srvcontrols,
 		srvprofile:  srvprofile,
 	}
 
-	// special case handling for the atomic specfic stuff
-	atomic.StoreInt64(&rv.servicers, int64(servicers))
-	atomic.StoreInt64(&rv.plusServicers, int64(plusServicers))
-
+	rv.unboundQueue.servicers = servicers
+	rv.plusQueue.servicers = plusServicers
+	util.NewFastQueue(&rv.unboundQueue.queue, requestsCap)
+	util.NewFastQueue(&rv.plusQueue.queue, plusRequestsCap)
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 
@@ -146,13 +143,6 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 	} else {
 		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
 	}
-
-	//	sys, err := system.NewDatastore(store)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	rv.systemstore = sys
 
 	// Setup callback function for metakv settings changes
 	callb := func(cfg queryMetakv.Config) {
@@ -194,14 +184,6 @@ func (this *Server) ConfigurationStore() clustering.ConfigurationStore {
 
 func (this *Server) AccountingStore() accounting.AccountingStore {
 	return this.acctstore
-}
-
-func (this *Server) Channel() RequestChannel {
-	return this.channel
-}
-
-func (this *Server) PlusChannel() RequestChannel {
-	return this.plusChannel
 }
 
 func (this *Server) Signature() bool {
@@ -383,53 +365,23 @@ func (this *Server) SetRequestSizeCap(requestSize int) {
 }
 
 func (this *Server) Servicers() int {
-	return int(atomic.LoadInt64(&this.servicers))
+	return this.unboundQueue.servicers
 }
 
 func (this *Server) SetServicers(servicers int) {
 	this.Lock()
-	defer this.Unlock()
-
-	// MB-19683 - don't restart if no change
-	if int(atomic.LoadInt64(&this.servicers)) == servicers {
-		return
-	}
-
-	// Stop the current set of servicers
-	close(this.done)
-	logging.Infop("SetServicers - waiting for current servicers to finish")
-	this.wg.Wait()
-	// Set servicer count and recreate servicers
-	atomic.StoreInt64(&this.servicers, int64(servicers))
-	logging.Infop("SetServicers - starting new servicers")
-	// Start new set of servicers
-	this.done = make(chan bool)
-	go this.Serve()
+	this.unboundQueue.servicers = servicers
+	this.Unlock()
 }
 
 func (this *Server) PlusServicers() int {
-	return int(atomic.LoadInt64(&this.plusServicers))
+	return this.plusQueue.servicers
 }
 
 func (this *Server) SetPlusServicers(plusServicers int) {
 	this.Lock()
-	defer this.Unlock()
-
-	// MB-19683 - don't restart if no change
-	if int(atomic.LoadInt64(&this.plusServicers)) == plusServicers {
-		return
-	}
-
-	// Stop the current set of servicers
-	close(this.plusDone)
-	logging.Infop("SetPlusServicers - waiting for current plusServicers to finish")
-	this.plusWg.Wait()
-	// Set plus servicer count and recreate plus servicers
-	atomic.StoreInt64(&this.plusServicers, int64(plusServicers))
-	logging.Infop("SetPlusServicers - starting new plusServicers")
-	// Start new set of servicers
-	this.plusDone = make(chan bool)
-	go this.PlusServe()
+	this.plusQueue.servicers = plusServicers
+	this.Unlock()
 }
 
 func (this *Server) Timeout() time.Duration {
@@ -469,52 +421,61 @@ func (this *Server) Enterprise() bool {
 	return this.enterprise
 }
 
-func (this *Server) Serve() {
-	// Use a threading model. Do not spawn a separate
-	// goroutine for each request, as that would be
-	// unbounded and could degrade performance of already
-	// executing queries.
-	servicers := this.Servicers()
-	this.wg.Add(servicers)
-	for i := 0; i < servicers; i++ {
-		go this.doServe()
-	}
+func (this *Server) ServiceRequest(request Request) bool {
+	return this.handleRequest(request, &this.unboundQueue)
 }
 
-func (this *Server) doServe() {
-	defer this.wg.Done()
-	ok := true
-	for ok {
-		select {
-		case request := <-this.channel:
-			this.serviceRequest(request)
-		case <-this.done:
-			ok = false
-		}
-	}
+func (this *Server) PlusServiceRequest(request Request) bool {
+	return this.handleRequest(request, &this.plusQueue)
 }
 
-func (this *Server) PlusServe() {
-	// Use a threading model. Do not spawn a separate
-	// goroutine for each request, as that would be
-	// unbounded and could degrade performance of already
-	// executing queries.
-	plusServicers := this.PlusServicers()
-	this.plusWg.Add(plusServicers)
-	for i := 0; i < plusServicers; i++ {
-		go this.doPlusServe()
+func (this *Server) handleRequest(request Request, queue *runQueue) bool {
+	runCnt := atomic.AddInt32(&queue.runCnt, 1)
+
+	// free pass!
+	if int(runCnt) <= queue.servicers {
+		this.serviceRequest(request)
+		queue.releaseRequest()
+		return true
 	}
+
+	// too much stuff going on
+	atomic.AddInt32(&queue.runCnt, -1)
+
+	// queue ourselves until there's a free servicer
+	ok := queue.addRequest(request)
+
+	// more load than we can take
+	if !ok {
+		return false
+	}
+
+	// our turn now
+	this.serviceRequest(request)
+	queue.releaseRequest()
+	return true
 }
 
-func (this *Server) doPlusServe() {
-	defer this.plusWg.Done()
-	ok := true
-	for ok {
-		select {
-		case request := <-this.plusChannel:
-			this.serviceRequest(request)
-		case <-this.plusDone:
-			ok = false
+func (this *runQueue) addRequest(request Request) bool {
+	request.setSleep()
+	ok := this.queue.In(request)
+	if ok {
+		request.sleep()
+	} else {
+		request.release()
+	}
+	return ok
+}
+
+func (this *runQueue) releaseRequest() {
+	out := this.queue.Out()
+	if out == nil {
+		atomic.AddInt32(&this.runCnt, -1)
+	} else {
+		atomic.AddInt32(&this.queueCnt, -1)
+		request := out.(Request)
+		if request != nil {
+			request.release()
 		}
 	}
 }

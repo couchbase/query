@@ -204,12 +204,7 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 
 	defer mockServer.doStats(query)
 
-	select {
-	case mockServer.server.Channel() <- query:
-		// Wait until the request exits.
-		query.Finished()
-	default:
-		// Timeout.
+	if !mockServer.server.ServiceRequest(query) {
 		return nil, nil, errors.NewError(nil, "Query timed out")
 	}
 
@@ -258,14 +253,11 @@ func Start(site, pool, namespace string) *MockServer {
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)
 
-	channel := make(server.RequestChannel, 10)
-	plusChannel := make(server.RequestChannel, 10)
-
 	// need to do it before NewServer() or server scope's changes to
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
-		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true,
+		false, 10, 10, 4, 4, 0, 0, false, false, false, true,
 		server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -275,7 +267,6 @@ func Start(site, pool, namespace string) *MockServer {
 	server.SetKeepAlive(1 << 10)
 	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 
-	go server.Serve()
 	mockServer.server = server
 	mockServer.acctstore = acctstore
 	return mockServer

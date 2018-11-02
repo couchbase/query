@@ -27,8 +27,6 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type RequestChannel chan Request
-
 type State string
 
 const (
@@ -116,6 +114,10 @@ type Request interface {
 	GetTimings() execution.Operator
 	OriginalHttpRequest() *http.Request
 	IsAdHoc() bool
+
+	setSleep() // internal methods for load control
+	sleep()
+	release()
 }
 
 type RequestID interface {
@@ -195,37 +197,38 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id             *requestIDImpl
-	client_id      *clientContextIDImpl
-	statement      string
-	prepared       *plan.Prepared
-	reqType        string
-	isPrepare      bool
-	namedArgs      map[string]value.Value
-	positionalArgs value.Values
-	namespace      string
-	timeout        time.Duration
-	timer          *time.Timer
-	maxParallelism int
-	scanCap        int64
-	pipelineCap    int64
-	pipelineBatch  int
-	readonly       value.Tristate
-	signature      value.Tristate
-	metrics        value.Tristate
-	pretty         value.Tristate
-	consistency    ScanConfiguration
-	credentials    auth.Credentials
-	remoteAddr     string
-	userAgent      string
-	requestTime    time.Time
-	serviceTime    time.Time
-	execTime       time.Time
-	state          State
-	aborted        bool
-	errors         []errors.Error
-	warnings       []errors.Error
-	sync.WaitGroup
+	id              *requestIDImpl
+	client_id       *clientContextIDImpl
+	statement       string
+	prepared        *plan.Prepared
+	reqType         string
+	isPrepare       bool
+	namedArgs       map[string]value.Value
+	positionalArgs  value.Values
+	namespace       string
+	timeout         time.Duration
+	timer           *time.Timer
+	maxParallelism  int
+	scanCap         int64
+	pipelineCap     int64
+	pipelineBatch   int
+	readonly        value.Tristate
+	signature       value.Tristate
+	metrics         value.Tristate
+	pretty          value.Tristate
+	consistency     ScanConfiguration
+	credentials     auth.Credentials
+	remoteAddr      string
+	userAgent       string
+	requestTime     time.Time
+	serviceTime     time.Time
+	execTime        time.Time
+	state           State
+	aborted         bool
+	errors          []errors.Error
+	warnings        []errors.Error
+	results         sync.WaitGroup
+	servicerGate    sync.WaitGroup
 	stopResult      chan bool          // stop consuming results
 	stopExecute     chan bool          // stop executing request
 	stopOperator    execution.Operator // notified when request execution stops
@@ -271,7 +274,7 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.serviceTime = time.Now()
-	rv.Add(1)
+	rv.results.Add(1)
 	rv.state = RUNNING
 	rv.aborted = false
 	rv.stopResult = make(chan bool, 1)
@@ -745,11 +748,19 @@ func (this *BaseRequest) Stop(state State) {
 
 // alert requestor that the request has completed
 func (this *BaseRequest) Alert() {
-	this.Done()
+	this.results.Done()
 }
 
-func (this *BaseRequest) Finished() {
-	this.Wait()
+// load control gate
+func (this *BaseRequest) setSleep() {
+	this.servicerGate.Add(1)
+}
+func (this *BaseRequest) sleep() {
+	this.servicerGate.Wait()
+}
+
+func (this *BaseRequest) release() {
+	this.servicerGate.Done()
 }
 
 // this logs the request if needed and takes any other action required to
