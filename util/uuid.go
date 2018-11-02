@@ -19,8 +19,6 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
-var uuidPool *sync.Pool
-
 const _UUID_SIZE = 16
 
 type randomBytesBuffer struct {
@@ -34,17 +32,11 @@ type randomBytesBuffer struct {
 
 var randomBytes randomBytesBuffer
 
-const _RANDOM_SIZE = 4096 * _UUID_SIZE
+const _RANDOM_SIZE = 32768 * _UUID_SIZE
 const _FIRE_THRESHOLD = _RANDOM_SIZE / 2
 const _RANDOM_LOCKER = _RANDOM_SIZE + _UUID_SIZE
 
 func init() {
-	uuidPool = &sync.Pool{
-		New: func() interface{} {
-			b := make([]byte, _UUID_SIZE, _UUID_SIZE)
-			return b
-		},
-	}
 	randomBytes.currentBuffer = make([]byte, _RANDOM_SIZE)
 	randomBytes.nextBuffer = make([]byte, _RANDOM_SIZE)
 	randomBytes.switchHandler.Add(1)
@@ -140,8 +132,8 @@ func getNextBuffer() {
 
 // UUID generates a random UUID according to RFC 4122
 func UUID() (string, error) {
-	uuid := uuidPool.Get().([]byte)
-	defer uuidPool.Put(uuid)
+	var bytes [_UUID_SIZE]byte
+	uuid := bytes[0:_UUID_SIZE:_UUID_SIZE]
 
 	err := readFull(uuid)
 	if err != nil {
@@ -156,8 +148,8 @@ func UUID() (string, error) {
 
 // UUIDV5 generates a V5 UUID based on data according to RFC 4122
 func UUIDV5(space, data string) (string, error) {
-	uuid := uuidPool.Get().([]byte)
-	defer uuidPool.Put(uuid)
+	var bytes [_UUID_SIZE]byte
+	uuid := bytes[0:_UUID_SIZE:_UUID_SIZE]
 
 	h := sha1.New()
 	h.Write([]byte(space))
