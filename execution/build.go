@@ -501,23 +501,27 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 
 // Sequence
 func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
-	children := _SEQUENCE_POOL.Get()
+	children := plan.Children()
 
-	for _, pchild := range plan.Children() {
+	if len(children) == 1 {
+		child, err := children[0].Accept(this)
+		if err != nil {
+			return nil, err
+		}
+		return child.(Operator), nil
+	}
+
+	execChildren := _SEQUENCE_POOL.Get()
+
+	for _, pchild := range children {
 		child, err := pchild.Accept(this)
 		if err != nil {
 			return nil, err
 		}
 
-		children = append(children, child.(Operator))
+		execChildren = append(execChildren, child.(Operator))
 	}
-
-	if len(children) == 1 {
-		defer _SEQUENCE_POOL.Put(children)
-		return children[0], nil
-	} else {
-		return NewSequence(plan, this.context, children...), nil
-	}
+	return NewSequence(plan, this.context, execChildren...), nil
 }
 
 // Discard

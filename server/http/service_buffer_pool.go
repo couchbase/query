@@ -11,7 +11,8 @@ package http
 
 import (
 	"bytes"
-	"sync"
+
+	"github.com/couchbase/query/util"
 )
 
 // BufferPool provides an API for managing bytes.Buffer objects:
@@ -22,18 +23,16 @@ type BufferPool interface {
 }
 
 // syncPoolBufPool is an implementation of BufferPool
-// that uses a sync.Pool to maintain buffers:
+// that uses a FastPool to maintain buffers:
 type syncPoolBufPool struct {
-	pool       *sync.Pool
-	buf_size   int
-	max_size   int
-	makeBuffer func() interface{}
+	pool     util.FastPool
+	buf_size int
+	max_size int
 }
 
 func NewSyncPool(buf_size int) BufferPool {
-	var newPool syncPoolBufPool
-
-	newPool.makeBuffer = func() interface{} {
+	newPool := &syncPoolBufPool{}
+	util.NewFastPool(&newPool.pool, func() interface{} {
 		var b bytes.Buffer
 
 		// the buffer pool will eventually home just
@@ -41,13 +40,11 @@ func NewSyncPool(buf_size int) BufferPool {
 		// start from that
 		b.Grow(buf_size)
 		return &b
-	}
-	newPool.pool = &sync.Pool{}
-	newPool.pool.New = newPool.makeBuffer
+	})
 	newPool.buf_size = buf_size
 	newPool.max_size = buf_size * 2
 
-	return &newPool
+	return newPool
 }
 
 func (bp *syncPoolBufPool) GetBuffer() *bytes.Buffer {

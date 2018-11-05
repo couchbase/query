@@ -20,6 +20,7 @@ import (
 )
 
 const _UUID_SIZE = 16
+const UUID_STRING_SIZE = 50
 
 type randomBytesBuffer struct {
 	switchHandler sync.WaitGroup
@@ -130,24 +131,41 @@ func getNextBuffer() {
 	randomBytes.switchHandler.Done()
 }
 
-// UUID generates a random UUID according to RFC 4122
-func UUID() (string, error) {
+// UUIDV3 generates a random UUID according to RFC 4122
+func UUIDV3() (string, error) {
+	var arr [UUID_STRING_SIZE]byte
+	buf := arr[0:0:UUID_STRING_SIZE]
+
+	b, err := AppendUUIDV3(buf)
+	return string(b), err
+}
+
+func AppendUUIDV3(buf []byte) ([]byte, error) {
 	var bytes [_UUID_SIZE]byte
 	uuid := bytes[0:_UUID_SIZE:_UUID_SIZE]
 
 	err := readFull(uuid)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// variant bits; see section 4.1.1
 	uuid[8] = uuid[8]&^0xc0 | 0x80
 	// version 4 (pseudo-random); see section 4.1.3
 	uuid[6] = uuid[6]&^0xf0 | 0x40
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
+	buf = doUUID(buf, uuid)
+	return buf, err
 }
 
 // UUIDV5 generates a V5 UUID based on data according to RFC 4122
 func UUIDV5(space, data string) (string, error) {
+	var arr [UUID_STRING_SIZE]byte
+	buf := arr[0:0:UUID_STRING_SIZE]
+
+	b, err := AppendUUIDV5(buf, space, data)
+	return string(b), err
+}
+
+func AppendUUIDV5(buf []byte, space, data string) ([]byte, error) {
 	var bytes [_UUID_SIZE]byte
 	uuid := bytes[0:_UUID_SIZE:_UUID_SIZE]
 
@@ -161,5 +179,37 @@ func UUIDV5(space, data string) (string, error) {
 	uuid[8] = uuid[8]&^0xc0 | 0x80
 	// version 5 (sha1); see section 4.1.3
 	uuid[6] = uuid[6]&^0xf0 | 0x50
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
+	buf = doUUID(buf, uuid)
+	return buf, nil
+}
+
+func doUUID(buf, uuid []byte) []byte {
+	buf = appendSlice(buf, uuid[0:4])
+	buf = append(buf, '-')
+	buf = appendSlice(buf, uuid[4:6])
+	buf = append(buf, '-')
+	buf = appendSlice(buf, uuid[6:8])
+	buf = append(buf, '-')
+	buf = appendSlice(buf, uuid[8:10])
+	buf = append(buf, '-')
+	buf = appendSlice(buf, uuid[10:])
+	return buf
+}
+
+func appendSlice(d, s []byte) []byte {
+	for _, b := range s {
+		b1 := hexNum(b >> 4)
+		b2 := hexNum(b & 0xf)
+		d = append(d, b1, b2)
+	}
+	return d
+}
+
+func hexNum(b byte) byte {
+	if b < 10 {
+		b = b + '0'
+	} else {
+		b = b - 10 + 'a'
+	}
+	return b
 }

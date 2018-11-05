@@ -14,8 +14,8 @@ import (
 )
 
 func TestUUID(t *testing.T) {
-	u1, _ := UUID()
-	u2, _ := UUID()
+	u1, _ := UUIDV3()
+	u2, _ := UUIDV3()
 
 	v5u1, _ := UUIDV5(u1, u2)
 	v5u2, _ := UUIDV5(u1, u2)

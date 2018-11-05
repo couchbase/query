@@ -197,8 +197,8 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id              *requestIDImpl
-	client_id       *clientContextIDImpl
+	id              requestIDImpl
+	client_id       clientContextIDImpl
 	statement       string
 	prepared        *plan.Prepared
 	reqType         string
@@ -267,10 +267,6 @@ func (this *clientContextIDImpl) String() string {
 	return this.id
 }
 
-func newClientContextIDImpl(id string) *clientContextIDImpl {
-	return &clientContextIDImpl{id: id}
-}
-
 func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.serviceTime = time.Now()
@@ -288,9 +284,8 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.autoPrepare = value.NONE
 	rv.indexApiVersion = util.GetMaxIndexAPI()
 	rv.featureControls = util.GetN1qlFeatureControl()
-	uuid, _ := util.UUID()
-	rv.id = &requestIDImpl{id: uuid}
-	rv.client_id = newClientContextIDImpl("")
+	rv.id.id, _ = util.UUIDV3()
+	rv.client_id.id = ""
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -306,11 +301,11 @@ func (this *BaseRequest) SetTimer(timer *time.Timer) {
 }
 
 func (this *BaseRequest) Id() RequestID {
-	return this.id
+	return &this.id
 }
 
 func (this *BaseRequest) ClientID() ClientContextID {
-	return this.client_id
+	return &this.client_id
 }
 
 func (this *BaseRequest) SetClientID(id string) {

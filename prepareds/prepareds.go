@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"math"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -154,6 +155,8 @@ func (this *preparedCache) GetText(text string, offset int) string {
 	return prepare[:i] + prepare[i+6:] + text[offset:]
 }
 
+const _REALM_SIZE = 50
+
 func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64) (string, errors.Error) {
 
 	// different feature controls and index API version generate different names
@@ -161,8 +164,12 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 	// prepare options are skipped so that prepare and prepare force yield the same
 	// name
 
-	realm := fmt.Sprintf("%x_%x", indexApiVersion, featureControls)
-	name, err := util.UUIDV5(realm, text)
+	var buf [_REALM_SIZE]byte
+	realm := buf[0:0:_REALM_SIZE]
+	realm = strconv.AppendInt(realm, int64(indexApiVersion), 16)
+	realm = append(realm, '_')
+	realm = strconv.AppendInt(realm, int64(featureControls), 16)
+	name, err := util.UUIDV5(string(realm), text)
 	if err != nil {
 		return "", errors.NewPreparedNameError(err.Error())
 	}
@@ -272,8 +279,12 @@ func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
 
-	realm := fmt.Sprintf("%x_%x", indexApiVersion, featureControls)
-	name, err := util.UUIDV5(realm, text)
+	var buf [_REALM_SIZE]byte
+	realm := buf[0:0:_REALM_SIZE]
+	realm = strconv.AppendInt(realm, int64(indexApiVersion), 16)
+	realm = append(realm, '_')
+	realm = strconv.AppendInt(realm, int64(featureControls), 16)
+	name, err := util.UUIDV5(string(realm), text)
 
 	// this never happens
 	if err != nil {
