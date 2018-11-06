@@ -23,6 +23,7 @@ type KeyScan struct {
 }
 
 func NewKeyScan(keys expression.Expression) *KeyScan {
+	keys.SetFlatten()
 	return &KeyScan{
 		keys: keys,
 	}

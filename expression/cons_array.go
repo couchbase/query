@@ -58,6 +58,9 @@ func (this *ArrayConstruct) PropagatesNull() bool {
 }
 
 func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.Value, error) {
+	if this.canFlatten() && len(args) == 1 {
+		return args[0], nil
+	}
 	aa := make([]interface{}, len(args))
 	for i, arg := range args {
 		aa[i] = arg

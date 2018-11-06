@@ -224,6 +224,11 @@ type Expression interface {
 	EnableInlistHash(context Context)
 
 	/*
+	   Enable single element array flattening optimization
+	*/
+	SetFlatten()
+
+	/*
 	   Reset runtime-alloated memory
 	*/
 	ResetMemory(context Context)

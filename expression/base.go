@@ -24,6 +24,7 @@ const (
 	EXPR_VALUE_MISSING
 	EXPR_VALUE_NULL
 	EXPR_DYNAMIC_IN
+	EXPR_CAN_FLATTEN
 )
 
 /*
@@ -100,6 +101,14 @@ func (this *ExpressionBase) conditional() bool {
 
 func (this *ExpressionBase) setConditional() {
 	this.exprFlags |= EXPR_IS_CONDITIONAL
+}
+
+func (this *ExpressionBase) canFlatten() bool {
+	return (this.exprFlags & EXPR_CAN_FLATTEN) != 0
+}
+
+func (this *ExpressionBase) SetFlatten() {
+	this.exprFlags |= EXPR_CAN_FLATTEN
 }
 
 /*

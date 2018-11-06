@@ -59,18 +59,16 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		actuals := keys.Actual()
-		switch actuals.(type) {
+		switch actuals := actuals.(type) {
 		case []interface{}:
-		case nil:
-			actuals = []interface{}(nil)
+			for _, key := range actuals {
+				av := this.newEmptyDocumentWithKey(key, parent, context)
+				if !this.sendItem(av) {
+					break
+				}
+			}
 		default:
-			actuals = []interface{}{actuals}
-		}
-
-		acts := actuals.([]interface{})
-
-		for _, key := range acts {
-			av := this.newEmptyDocumentWithKey(key, parent, context)
+			av := this.newEmptyDocumentWithKey(actuals, parent, context)
 			if !this.sendItem(av) {
 				break
 			}
