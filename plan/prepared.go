@@ -184,11 +184,11 @@ func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
 func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 	indexer.Refresh()
 	version := indexer.MetadataVersion()
-	for _, idx := range this.indexers {
+	for i, idx := range this.indexers {
 		if idx.indexer.Name() == indexer.Name() &&
 			idx.indexer.KeyspaceId() == indexer.KeyspaceId() {
-			idx.indexer = indexer
-			idx.version = version
+			this.indexers[i].indexer = indexer
+			this.indexers[i].version = version
 			return
 		}
 	}
@@ -198,10 +198,10 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 // Locking is handled by the top level caller!
 func (this *Prepared) addNamespace(namespace datastore.Namespace) {
 	version := namespace.MetadataVersion()
-	for _, ns := range this.namespaces {
+	for i, ns := range this.namespaces {
 		if ns.namespace.Name() == namespace.Name() {
-			ns.namespace = namespace
-			ns.version = version
+			this.namespaces[i].namespace = namespace
+			this.namespaces[i].version = version
 			return
 		}
 	}
