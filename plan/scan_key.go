@@ -67,6 +67,9 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Keys != "" {
 		this.keys, err = parser.Parse(_unmarshalled.Keys)
+		if this.keys != nil {
+			this.keys.SetFlatten()
+		}
 	}
 
 	return err
