@@ -63,7 +63,7 @@ func (this *InferKeyspace) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *InferKeyspace) Privileges() (*auth.Privileges, errors.Error) {
-	privs, err := privilegesFromKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	privs, err := privilegesFromPath(this.keyspace.path)
 	if err != nil {
 		return privs, err
 	}

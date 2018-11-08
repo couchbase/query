@@ -30,7 +30,7 @@ func NewCbNamespaceNotFoundError(e error, msg string) Error {
 
 func NewCbKeyspaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12003, IKey: "datastore.couchbase.keyspace_not_found", ICause: e,
-		InternalMsg: "Keyspace not found " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Keyspace not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbPrimaryIndexNotFoundError(e error, msg string) Error {
@@ -117,4 +117,14 @@ func NewUnableToInitCbAuthError(e error) Error {
 func NewAuditStreamHandlerFailed(e error) Error {
 	return &err{level: EXCEPTION, ICode: 12019, IKey: "datastore.couchbase.audit_stream_failed event id", ICause: e,
 		InternalMsg: "Audit stream handler failed", InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12020, IKey: "datastore.couchbase.bucket_not_found", ICause: e,
+		InternalMsg: "Bucket not found in CB datastore " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbScopeNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12021, IKey: "datastore.couchbase.scope_not_found", ICause: e,
+		InternalMsg: "Scope not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }

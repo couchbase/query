@@ -41,6 +41,7 @@ subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
 simpleFromTerm   algebra.SimpleFromTerm
 keyspaceTerm     *algebra.KeyspaceTerm
+keyspacePath     *algebra.Path
 use              *algebra.Use
 joinHint         algebra.JoinHint
 indexRefs        algebra.IndexRefs
@@ -355,9 +356,10 @@ tokOffset	 int
 %type <fromTerm>         from_term from opt_from
 %type <simpleFromTerm>   simple_from_term
 %type <keyspaceTerm>     keyspace_term
+%type <keyspacePath>     keyspace_path
 %type <b>                opt_join_type
 %type <path>             path
-%type <s>                namespace_name keyspace_name namespace_term
+%type <s>                namespace_name keyspace_name namespace_term bucket_name scope_name 
 %type <use>              opt_use opt_use_del_upd opt_use_merge use_options use_keys use_index join_hint
 %type <joinHint>         use_hash_option
 %type <expr>             on_keys on_key
@@ -1014,15 +1016,28 @@ FLATTEN
 ;
 
 keyspace_term:
-namespace_term COLON keyspace_name opt_as_alias opt_use
+keyspace_path opt_as_alias opt_use
 {
-    ksterm := algebra.NewKeyspaceTerm($1, $3, $4, $5.Keys(), $5.Indexes())
-    if $5.JoinHint() != algebra.JOIN_HINT_NONE {
-        ksterm.SetJoinHint($5.JoinHint())
+    ksterm := algebra.NewKeyspaceTermFromPath($1, $2, $3.Keys(), $3.Indexes())
+    if $3.JoinHint() != algebra.JOIN_HINT_NONE {
+        ksterm.SetJoinHint($3.JoinHint())
     }
     $$ = ksterm
 }
 ;
+
+keyspace_path: 
+namespace_term COLON keyspace_name 
+{
+    $$ = algebra.NewPathShort($1, $3)
+}
+|
+namespace_term COLON bucket_name DOT scope_name DOT keyspace_name 
+{
+    $$ = algebra.NewPathLong($1, $3, $5, $7)
+}
+;
+
 
 namespace_term:
 namespace_name
@@ -1034,6 +1049,14 @@ SYSTEM
 ;
 
 namespace_name:
+IDENT
+;
+
+bucket_name:
+IDENT
+;
+
+scope_name:
 IDENT
 ;
 

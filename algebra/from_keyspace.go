@@ -53,7 +53,12 @@ type KeyspaceTerm struct {
 
 func NewKeyspaceTerm(namespace, keyspace string, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{NewPath(namespace, keyspace), as, keys, indexes, nil, JOIN_HINT_NONE, 0}
+	return &KeyspaceTerm{NewPathShort(namespace, keyspace), as, keys, indexes, nil, JOIN_HINT_NONE, 0}
+}
+
+func NewKeyspaceTermFromPath(path *Path, as string,
+	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
+	return &KeyspaceTerm{path, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -98,13 +103,9 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
-	namespace, keyspace, e := this.path.GetNamespaceKeyspace()
-	if e != nil {
-		return nil, errors.NewUnsupportedPath(e)
-	}
-	privs, err := privilegesFromKeyspace(namespace, keyspace)
+	privs, err := privilegesFromPath(this.path)
 	if err != nil {
-		return privs, err
+		return nil, err
 	}
 	if this.joinKeys != nil {
 		privs.AddAll(this.joinKeys.Privileges())
@@ -114,11 +115,20 @@ func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
 	return privs, nil
 }
 
-func privilegesFromKeyspace(namespace, keyspace string) (*auth.Privileges, errors.Error) {
+func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
+	namespace := path.Namespace()
+	var bucket string
+	if path.IsCollection() {
+		// Use permissions of bucket for collection.
+		// JTODO: This should actually allow collection-level permissions.
+		bucket = path.Bucket()
+	} else {
+		bucket = path.Keyspace()
+	}
 	privs := auth.NewPrivileges()
-	fullKeyspace := namespace + ":" + keyspace
+	fullKeyspace := namespace + ":" + bucket
 	if namespace == "#system" {
-		switch keyspace {
+		switch bucket {
 		case "user_info", "applicable_roles":
 			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ)
 		case "keyspaces", "indexes", "my_user_info":
@@ -471,4 +481,8 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	}
 	r["path"] = this.path
 	return json.Marshal(r)
+}
+
+func (this *KeyspaceTerm) Path() *Path {
+	return this.path
 }

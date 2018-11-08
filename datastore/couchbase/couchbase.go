@@ -256,7 +256,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 }
 
 var _COLLECTIONS_AVAILABLE bool = false
-var _COLLECTIONS_NS *datastore.CollectionsNamespace = datastore.NewCollectionsNamespace()
+var _COLLECTIONS_NS *datastore.CollectionsNamespace = datastore.NewCollectionsNamespace("collections")
 
 func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()

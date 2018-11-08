@@ -173,8 +173,9 @@ func (this *builder) setFalseWhereClause() {
 }
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {
-	node.SetDefaultNamespace(this.namespace)
-	ns := node.Namespace()
+	path := node.Path()
+	path.SetDefaultNamespace(this.namespace)
+	ns := path.Namespace()
 
 	datastore := this.datastore
 	if strings.ToLower(ns) == "#system" {
@@ -186,7 +187,26 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 		return nil, err
 	}
 
-	keyspace, err := namespace.KeyspaceByName(node.Keyspace())
+	if path.IsCollection() {
+		bucket, err := namespace.BucketByName(path.Bucket())
+		if err != nil {
+			return nil, err
+		}
+
+		scope, err := bucket.ScopeByName(path.Scope())
+		if err != nil {
+			return nil, err
+		}
+
+		keyspace, err := scope.KeyspaceByName(path.Keyspace())
+		if err != nil {
+			return nil, err
+		}
+
+		return keyspace, nil
+	}
+
+	keyspace, err := namespace.KeyspaceByName(path.Keyspace())
 	if err != nil {
 		return nil, err
 	}
