@@ -7,10 +7,8 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-/*
+// Stub accounting package
 
- Packace accounting provides a common API for workload and monitoring data - metrics, statistics, events.
-*/
 package accounting_stub
 
 import (
@@ -44,10 +42,6 @@ func (AccountingStoreStub) URL() string {
 
 func (AccountingStoreStub) MetricRegistry() accounting.MetricRegistry {
 	return MetricRegistryStub{}
-}
-
-func (AccountingStoreStub) HealthCheckRegistry() accounting.HealthCheckRegistry {
-	return HealthCheckRegistryStub{}
 }
 
 func (AccountingStoreStub) MetricReporter() accounting.MetricReporter {
@@ -200,41 +194,6 @@ func (MetricRegistryStub) Timers() map[string]accounting.Timer {
 
 func (MetricRegistryStub) Histograms() map[string]accounting.Histogram {
 	return nil
-}
-
-// A check that tests the status of an entity or compares a metric value against a
-// configurable threshold.
-type HealthCheckStub struct{}
-
-func (HealthCheckStub) Check() (accounting.HealthCheckResult, errors.Error) {
-	return HealthCheckResultStub{}, nil
-}
-
-type HealthCheckResultStub struct{}
-
-func (HealthCheckResultStub) IsHealthy() bool { return true }
-
-func (HealthCheckResultStub) Message() string { return "" }
-
-func (HealthCheckResultStub) Error() errors.Error { return nil }
-
-// HealthCheckRegistry is a centralized container for managing all health checks.
-type HealthCheckRegistryStub struct{}
-
-func (HealthCheckRegistryStub) Register(name string, hc accounting.HealthCheck) errors.Error {
-	return nil
-}
-
-func (HealthCheckRegistryStub) Unregister(name string) errors.Error {
-	return nil
-}
-
-func (HealthCheckRegistryStub) RunHealthChecks() (map[string]accounting.HealthCheckResult, errors.Error) {
-	return nil, nil
-}
-
-func (HealthCheckRegistryStub) RunHealthCheck(name string) (accounting.HealthCheckResult, errors.Error) {
-	return nil, nil
 }
 
 // Periodically report all registered metrics to a source (console, log, service)

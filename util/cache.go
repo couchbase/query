@@ -107,6 +107,7 @@ func (this *GenCache) FastAdd(entry interface{}, id string) {
 	this.add(elem, cacheNum)
 	this.maps[cacheNum][id] = elem
 	this.locks[cacheNum].Unlock()
+	atomic.AddInt32(&this.curSize, 1)
 }
 
 // Add (or update, if ID found) entry, eject old entry if we are controlling sie

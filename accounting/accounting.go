@@ -7,10 +7,8 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-/*
+// Package accounting provides a common API for workload and monitoring data - metrics, statistics, events.
 
- Packace accounting provides a common API for workload and monitoring data - metrics, statistics, events.
-*/
 package accounting
 
 import (
@@ -22,12 +20,11 @@ import (
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)
 type AccountingStore interface {
-	Id() string                               // Id of this AccountingStore
-	URL() string                              // URL to this AccountingStore
-	MetricRegistry() MetricRegistry           // The MetricRegistry that this AccountingStore is managing
-	MetricReporter() MetricReporter           // The MetricReporter that this AccountingStore is using
-	HealthCheckRegistry() HealthCheckRegistry // The HealthCheckRegistry that this AccountingStore is managing
-	Vitals() (interface{}, errors.Error)      // The Vital Signs of the entity that this AccountingStore
+	Id() string                          // Id of this AccountingStore
+	URL() string                         // URL to this AccountingStore
+	MetricRegistry() MetricRegistry      // The MetricRegistry that this AccountingStore is managing
+	MetricReporter() MetricReporter      // The MetricReporter that this AccountingStore is using
+	Vitals() (interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
 }
 
 // Metric types
@@ -126,41 +123,6 @@ type MetricRegistry interface {
 	Histograms() map[string]Histogram // all registered histograms
 }
 
-// A check that tests the status of an entity or compares a metric value against a
-// configurable threshold.
-type HealthCheck interface {
-	// Perform the health check returning a healthy or unhealthy result
-	// If an error occurs during the check an unhealthy result is returned
-	// with the error.
-	Check() (HealthCheckResult, errors.Error)
-}
-
-// The result of a health check; the possibilities are: healthy with optional message
-// or unhealthy with an error message or error object.
-type HealthCheckResult interface {
-	IsHealthy() bool     // true if result is that the health check passed
-	Message() string     // Return message for the result (or nil if no message)
-	Error() errors.Error // Return error for the result (or nil if no error)
-}
-
-// HealthCheckRegistry is a centralized container for managing all health checks.
-type HealthCheckRegistry interface {
-	// Register a health check with the given name.
-	// Reason for error: given name already in use.
-	Register(name string, hc HealthCheck) errors.Error
-
-	// Unregister the health check with the given name
-	// Reasons for error: no such name in use
-	Unregister(name string) errors.Error
-
-	// Run all registered health checks returning a map of results
-	RunHealthChecks() (map[string]HealthCheckResult, errors.Error)
-
-	// Run the named health check returning the result or an error
-	// if there is no health check registered with the given name
-	RunHealthCheck(name string) (HealthCheckResult, errors.Error)
-}
-
 // Periodically report all registered metrics to a source (console, log, service)
 type MetricReporter interface {
 	MetricRegistry() MetricRegistry // The Metrics Registry being reported on
@@ -214,6 +176,8 @@ const (
 	REQUESTS_1000MS
 	REQUESTS_5000MS
 
+	PREPARED
+
 	AUDIT_REQUESTS_TOTAL
 	AUDIT_REQUESTS_FILTERED
 	AUDIT_ACTIONS
@@ -253,6 +217,8 @@ const (
 	_REQUESTS_1000MS = "requests_1000ms"
 	_REQUESTS_5000MS = "requests_5000ms"
 
+	PREPAREDS = "prepared" // Global for gometrics
+
 	_AUDIT_REQUESTS_TOTAL    = "audit_requests_total"
 	_AUDIT_REQUESTS_FILTERED = "audit_requests_filtered"
 	_AUDIT_ACTIONS           = "audit_actions"
@@ -260,7 +226,6 @@ const (
 
 	REQUEST_RATE  = "request_rate"
 	REQUEST_TIMER = "request_timer"
-	PREPARED      = "prepared"
 )
 
 // please keep in sync with the mnemonics
@@ -296,6 +261,8 @@ var metricNames = []string{
 	_REQUESTS_1000MS,
 	_REQUESTS_5000MS,
 
+	PREPAREDS,
+
 	_AUDIT_REQUESTS_TOTAL,
 	_AUDIT_REQUESTS_FILTERED,
 	_AUDIT_ACTIONS,
@@ -323,9 +290,7 @@ var slowMetricsMap = map[time.Duration][]CounterId{
 
 var acctstore AccountingStore
 var counters []Counter = make([]Counter, len(metricNames))
-var requestRate Meter
 var requestTimer Timer
-var preparedMeter Meter
 
 // Use the give AccountingStore to create counters for all the metrics we are interested in:
 func RegisterMetrics(acctStore AccountingStore) {
@@ -335,11 +300,7 @@ func RegisterMetrics(acctStore AccountingStore) {
 		counters[id] = ms.Counter(name)
 	}
 
-	requestRate = ms.Meter(REQUEST_RATE)
 	requestTimer = ms.Timer(REQUEST_TIMER)
-
-	// We have to use a meter due to the way it's used in accounting_gm.go
-	preparedMeter = ms.Meter(PREPARED)
 }
 
 // Record request metrics
@@ -371,11 +332,10 @@ func RecordMetrics(request_time time.Duration, service_time time.Duration,
 	counters[ERRORS].Inc(int64(error_count))
 	counters[WARNINGS].Inc(int64(warn_count))
 
-	requestRate.Mark(1)
 	requestTimer.Update(request_time)
 
 	if prepared {
-		preparedMeter.Mark(1)
+		counters[PREPARED].Inc(1)
 	}
 
 	// Determine slow metrics based on request duration

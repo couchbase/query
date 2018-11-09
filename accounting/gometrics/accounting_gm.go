@@ -7,10 +7,8 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-/*
+// Implementation of accounting API using a go-metrics like package
 
- Implementation of accounting API using the go-metrics
-*/
 package accounting_gm
 
 import (
@@ -21,11 +19,10 @@ import (
 	"time"
 
 	"github.com/couchbase/query/accounting"
-	"github.com/couchbase/query/accounting/stub"
+	"github.com/couchbase/query/accounting/metrics"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 type gometricsAccountingStore struct {
@@ -72,17 +69,12 @@ func (g *gometricsAccountingStore) MetricReporter() accounting.MetricReporter {
 	return g.reporter
 }
 
-func (g *gometricsAccountingStore) HealthCheckRegistry() accounting.HealthCheckRegistry {
-	return accounting_stub.HealthCheckRegistryStub{}
-}
-
 func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	var mem runtime.MemStats
 
 	runtime.ReadMemStats(&mem)
 	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
-	request_rate := g.registry.Meter(accounting.REQUEST_RATE)
-	prepared := g.registry.Meter(accounting.PREPARED)
+	prepared := g.registry.Counter(accounting.PREPAREDS)
 
 	now := time.Now()
 	newUtime, newStime := util.CpuTimes()
@@ -101,7 +93,7 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	g.Unlock()
 
 	actCount, _ := server.ActiveRequestsCount()
-	totCount := request_rate.Count()
+	totCount := request_timer.Count()
 	var prepPercent float64
 	if totCount > 0 {
 		prepPercent = float64(prepared.Count()) / float64(totCount)
@@ -125,9 +117,9 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 		CPUSys:         util.RoundPlaces(sPerc, 4),
 		ReqCount:       totCount,
 		ActCount:       int64(actCount),
-		Req1min:        util.RoundPlaces(request_rate.Rate1(), 4),
-		Req5min:        util.RoundPlaces(request_rate.Rate5(), 4),
-		Req15min:       util.RoundPlaces(request_rate.Rate15(), 4),
+		Req1min:        util.RoundPlaces(request_timer.Rate1(), 4),
+		Req5min:        util.RoundPlaces(request_timer.Rate5(), 4),
+		Req15min:       util.RoundPlaces(request_timer.Rate15(), 4),
 		ReqMean:        time.Duration(request_timer.Mean()).String(),
 		ReqMedian:      time.Duration(request_timer.Percentile(.5)).String(),
 		Req80:          time.Duration(request_timer.Percentile(.8)).String(),
