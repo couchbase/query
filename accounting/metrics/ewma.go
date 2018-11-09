@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 )
 
+const _TICK_FREQUENCY = 5e9
+
 // EWMAs continuously calculate an exponentially-weighted moving average
 // based on an outside source of clock ticks.
 type EWMA interface {
@@ -48,8 +50,9 @@ type StandardEWMA struct {
 // Rate returns the moving average rate of events per second.
 func (a *StandardEWMA) Rate() float64 {
 	a.mutex.Lock()
-	defer a.mutex.Unlock()
-	return a.rate * float64(1e9)
+	r := a.rate * float64(1e9)
+	a.mutex.Unlock()
+	return r
 }
 
 // Tick ticks the clock to update the moving average.  It assumes it is called
@@ -57,15 +60,15 @@ func (a *StandardEWMA) Rate() float64 {
 func (a *StandardEWMA) Tick() {
 	count := atomic.LoadInt64(&a.uncounted)
 	atomic.AddInt64(&a.uncounted, -count)
-	instantRate := float64(count) / float64(5e9)
+	instantRate := float64(count) / float64(_TICK_FREQUENCY)
 	a.mutex.Lock()
-	defer a.mutex.Unlock()
 	if a.init {
 		a.rate += a.alpha * (instantRate - a.rate)
 	} else {
 		a.init = true
 		a.rate = instantRate
 	}
+	a.mutex.Unlock()
 }
 
 // Update adds n uncounted events.

@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"sync"
 	"time"
 )
 
@@ -58,7 +57,6 @@ func NewTimer() Timer {
 type StandardTimer struct {
 	histogram Histogram
 	meter     Meter
-	mutex     sync.Mutex
 }
 
 // Count returns the number of events recorded.
@@ -131,16 +129,12 @@ func (t *StandardTimer) Time(f func()) {
 
 // Record the duration of an event.
 func (t *StandardTimer) Update(d time.Duration) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
 	t.histogram.Update(int64(d))
 	t.meter.Mark(1)
 }
 
 // Record the duration of an event that started at a time and ends now.
 func (t *StandardTimer) UpdateSince(ts time.Time) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
 	t.histogram.Update(int64(time.Since(ts)))
 	t.meter.Mark(1)
 }
