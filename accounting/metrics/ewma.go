@@ -44,14 +44,14 @@ type StandardEWMA struct {
 	alpha     float64
 	rate      float64
 	init      bool
-	mutex     sync.Mutex
+	mutex     sync.RWMutex
 }
 
 // Rate returns the moving average rate of events per second.
 func (a *StandardEWMA) Rate() float64 {
-	a.mutex.Lock()
+	a.mutex.RLock()
 	r := a.rate * float64(1e9)
-	a.mutex.Unlock()
+	a.mutex.RUnlock()
 	return r
 }
 

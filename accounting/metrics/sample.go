@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -36,7 +37,7 @@ type Sample interface {
 type ExpDecaySample struct {
 	alpha         float64
 	count         int64
-	mutex         sync.Mutex
+	mutex         sync.RWMutex
 	reservoirSize int
 	t0, t1        time.Time
 	values        *expDecaySampleHeap
@@ -58,19 +59,17 @@ func NewExpDecaySample(reservoirSize int, alpha float64) Sample {
 // Clear clears all samples.
 func (s *ExpDecaySample) Clear() {
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	s.count = 0
 	s.t0 = time.Now()
 	s.t1 = s.t0.Add(rescaleThreshold)
 	s.values.Clear()
+	s.mutex.Unlock()
 }
 
 // Count returns the number of samples recorded, which may exceed the
 // reservoir size.
 func (s *ExpDecaySample) Count() int64 {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.count
+	return atomic.LoadInt64(&s.count)
 }
 
 // Max returns the maximum value in the sample, which may not be the maximum
@@ -103,9 +102,10 @@ func (s *ExpDecaySample) Percentiles(ps []float64) []float64 {
 
 // Size returns the size of the sample, which is at most the reservoir size.
 func (s *ExpDecaySample) Size() int {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.values.Size()
+	s.mutex.RLock()
+	sz := s.values.Size()
+	s.mutex.RUnlock()
+	return sz
 }
 
 // StdDev returns the standard deviation of the values in the sample.
@@ -125,13 +125,13 @@ func (s *ExpDecaySample) Update(v int64) {
 
 // Values returns a copy of the values in the sample.
 func (s *ExpDecaySample) Values() []int64 {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
 	vals := s.values.Values()
 	values := make([]int64, len(vals))
 	for i, v := range vals {
 		values[i] = v.v
 	}
+	s.mutex.RUnlock()
 	return values
 }
 
@@ -143,27 +143,27 @@ func (s *ExpDecaySample) Variance() float64 {
 // update samples a new value at a particular timestamp.  This is a method all
 // its own to facilitate testing.
 func (s *ExpDecaySample) update(t time.Time, v int64) {
+	ed := expDecaySample{
+		k: math.Exp(t.Sub(s.t0).Seconds()*s.alpha) / rand.Float64(),
+		v: v,
+	}
+	rescale := t.After(s.t1)
+	atomic.AddInt64(&s.count, 1)
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.count++
 	if s.values.Size() == s.reservoirSize {
 		s.values.Pop()
 	}
-	s.values.Push(expDecaySample{
-		k: math.Exp(t.Sub(s.t0).Seconds()*s.alpha) / rand.Float64(),
-		v: v,
-	})
-	if t.After(s.t1) {
-		values := s.values.Values()
+	s.values.Push(ed)
+	if rescale {
 		t0 := s.t0
-		s.values.Clear()
 		s.t0 = t
 		s.t1 = s.t0.Add(rescaleThreshold)
-		for _, v := range values {
-			v.k = v.k * math.Exp(-s.alpha*s.t0.Sub(t0).Seconds())
-			s.values.Push(v)
+		newLandmark := math.Exp(-s.alpha * s.t0.Sub(t0).Seconds())
+		for _, v := range s.values.Values() {
+			v.k = v.k * newLandmark
 		}
 	}
+	s.mutex.Unlock()
 }
 
 // SampleMax returns the maximum value of the slice of int64.
