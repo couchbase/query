@@ -37,8 +37,10 @@ import (
 
 type httpRequest struct {
 	server.BaseRequest
-	resp            http.ResponseWriter
-	req             *http.Request
+	resp        http.ResponseWriter
+	req         *http.Request
+	consistency scanConfigImpl
+
 	httpCloseNotify <-chan bool
 	writer          bufferedWriter
 	httpRespCode    int
@@ -57,6 +59,8 @@ type httpRequest struct {
 	stmtCnt int
 	consCnt int
 }
+
+var zeroScanVectorSource = &ZeroScanVectorSource{}
 
 func (r *httpRequest) OriginalHttpRequest() *http.Request {
 	return r.req
@@ -129,14 +133,13 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			rv.SetCredentials(creds)
 
 			if rv.consCnt > 0 {
-				var consistency server.ScanConfiguration
-
-				consistency, err = getScanConfiguration(httpArgs)
+				err = getScanConfiguration(&rv.consistency, httpArgs)
 				if err == nil {
-					rv.SetScanConfiguration(consistency)
+					rv.SetScanConfiguration(&rv.consistency)
 				}
 			} else {
-				rv.SetScanConfiguration(getEmptyScanConfiguration())
+				getEmptyScanConfiguration(&rv.consistency)
+				rv.SetScanConfiguration(&rv.consistency)
 			}
 		}
 
@@ -586,51 +589,49 @@ func getPrepared(a httpRequestArgs, parm string, val interface{}, phaseTime *tim
 	return prepared_name, prepared, err
 }
 
-func getEmptyScanConfiguration() *scanConfigImpl {
-	return &scanConfigImpl{
-		scan_level:         newScanConsistency("NOT_BOUNDED"),
-		scan_vector_source: &ZeroScanVectorSource{},
-	}
+func getEmptyScanConfiguration(rv *scanConfigImpl) {
+	rv.scan_level = newScanConsistency("NOT_BOUNDED")
+	rv.scan_vector_source = zeroScanVectorSource
 }
 
-func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
+func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs) errors.Error {
 
 	scan_consistency_field, err := a.getString(SCAN_CONSISTENCY, "NOT_BOUNDED")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	scan_level := newScanConsistency(scan_consistency_field)
 	if scan_level == server.UNDEFINED_CONSISTENCY {
-		return nil, errors.NewServiceErrorUnrecognizedValue(SCAN_CONSISTENCY, scan_consistency_field)
+		return errors.NewServiceErrorUnrecognizedValue(SCAN_CONSISTENCY, scan_consistency_field)
 	}
 
 	scan_wait, err := a.getDuration(SCAN_WAIT)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	scan_vector, err := a.getScanVector()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	scan_vectors, err := a.getScanVectors()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var scan_vector_source timestamp.ScanVectorSource
 	if scan_vector == nil {
 		if scan_vectors == nil {
 			if scan_level == server.AT_PLUS && scan_vector == nil && scan_vectors == nil {
-				return nil, errors.NewServiceErrorMissingValue(SCAN_VECTOR)
+				return errors.NewServiceErrorMissingValue(SCAN_VECTOR)
 			}
-			scan_vector_source = &ZeroScanVectorSource{}
+			scan_vector_source = zeroScanVectorSource
 		} else {
 			defaultNamespace, err := a.getString(NAMESPACE, "default")
 			if err != nil {
-				return nil, err
+				return err
 			}
 			scan_vector_source = newMultipleScanVectorSource(defaultNamespace, scan_vectors)
 		}
@@ -639,15 +640,14 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
 			scan_vector_source = &singleScanVectorSource{scan_vector: scan_vector}
 		} else {
 			// Not both scan_vector and scan_vectors.
-			return nil, errors.NewServiceErrorMultipleValues("scan_vector and scan_vectors")
+			return errors.NewServiceErrorMultipleValues("scan_vector and scan_vectors")
 		}
 	}
 
-	return &scanConfigImpl{
-		scan_level:         scan_level,
-		scan_wait:          scan_wait,
-		scan_vector_source: scan_vector_source,
-	}, nil
+	rv.scan_level = scan_level
+	rv.scan_wait = scan_wait
+	rv.scan_vector_source = scan_vector_source
+	return nil
 }
 
 func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors.Error) {
