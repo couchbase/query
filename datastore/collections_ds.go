@@ -4,7 +4,9 @@ import (
 	"github.com/couchbase/go_json"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
 
@@ -33,6 +35,9 @@ func NewCollectionsNamespace(id string) *CollectionsNamespace {
 	ks.AddDocument("v1", `{ "f1" : "string value A", "f2" : 10 }`)
 	ks.AddDocument("v2", `{ "f1" : "string value B", "f2" : 11 }`)
 	ks.AddDocument("v3", `{ "f1" : "string value C", "f2" : 12 }`)
+
+	indexer, _ := ks.Indexer(GSI)
+	indexer.CreatePrimaryIndex("", "#primary", nil)
 
 	return cns
 }
@@ -288,6 +293,7 @@ type CollectionsKeyspace struct {
 	namespace *CollectionsNamespace
 	scope     *CollectionsScope
 	docs      map[string]value.AnnotatedValue
+	indexer   *CollectionsIndexer // keyspace owns indexer; GSI only
 }
 
 func NewCollectionsKeyspace(name string) *CollectionsKeyspace {
@@ -295,6 +301,11 @@ func NewCollectionsKeyspace(name string) *CollectionsKeyspace {
 		id:   name,
 		docs: make(map[string]value.AnnotatedValue),
 	}
+	indexer := &CollectionsIndexer{
+		keyspace:       ks,
+		primaryIndexes: make([]*CollectionsPrimaryIndex, 0),
+	}
+	ks.indexer = indexer
 	return ks
 }
 
@@ -345,11 +356,17 @@ func (ks *CollectionsKeyspace) Count(context QueryContext) (int64, errors.Error)
 }
 
 func (ks *CollectionsKeyspace) Indexer(name IndexType) (Indexer, errors.Error) {
-	return nil, errors.NewNotImplemented("CollectionsKeyspace.Indexer()")
+	if name == GSI {
+		return ks.indexer, nil
+	}
+	return nil, nil
 }
 
 func (ks *CollectionsKeyspace) Indexers() ([]Indexer, errors.Error) {
-	return nil, errors.NewNotImplemented("CollectionsKeyspace.Indexers()")
+	if ks.indexer == nil {
+		return make([]Indexer, 0), nil
+	}
+	return []Indexer{ks.indexer}, nil
 }
 
 func (ks *CollectionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context QueryContext, subPath []string) []errors.Error {
@@ -383,4 +400,173 @@ func (ks *CollectionsKeyspace) Delete(deletes []string, context QueryContext) ([
 
 func (ks *CollectionsKeyspace) Release() {
 	// do nothing
+}
+
+type CollectionsIndexer struct {
+	keyspace       *CollectionsKeyspace       // keyspace owns indexer
+	primaryIndexes []*CollectionsPrimaryIndex // indexer owns indexes
+}
+
+func (indexer *CollectionsIndexer) KeyspaceId() string {
+	return indexer.keyspace.Id()
+}
+
+func (indexer *CollectionsIndexer) Name() IndexType {
+	return GSI
+}
+
+func (indexer *CollectionsIndexer) IndexIds() ([]string, errors.Error) {
+	ret := make([]string, len(indexer.primaryIndexes))
+	for i, v := range indexer.primaryIndexes {
+		ret[i] = v.Id()
+	}
+	return ret, nil
+}
+
+func (indexer *CollectionsIndexer) IndexNames() ([]string, errors.Error) {
+	ret := make([]string, len(indexer.primaryIndexes))
+	for i, v := range indexer.primaryIndexes {
+		ret[i] = v.Name()
+	}
+	return ret, nil
+}
+
+func (indexer *CollectionsIndexer) IndexById(id string) (Index, errors.Error) {
+	for _, v := range indexer.primaryIndexes {
+		if v.Id() == id {
+			return v, nil
+		}
+	}
+	return nil, nil
+}
+
+func (indexer *CollectionsIndexer) IndexByName(name string) (Index, errors.Error) {
+	for _, v := range indexer.primaryIndexes {
+		if v.Name() == name {
+			return v, nil
+		}
+	}
+	return nil, nil
+}
+
+func (indexer *CollectionsIndexer) PrimaryIndexes() ([]PrimaryIndex, errors.Error) {
+	ret := make([]PrimaryIndex, len(indexer.primaryIndexes))
+	for i, v := range indexer.primaryIndexes {
+		ret[i] = v
+	}
+	return ret, nil
+}
+
+func (indexer *CollectionsIndexer) Indexes() ([]Index, errors.Error) {
+	ret := make([]Index, len(indexer.primaryIndexes))
+	for i, v := range indexer.primaryIndexes {
+		ret[i] = v
+	}
+	return ret, nil
+}
+
+func (indexer *CollectionsIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (PrimaryIndex, errors.Error) {
+	index := &CollectionsPrimaryIndex{
+		keyspace: indexer.keyspace,
+		id:       name,
+		indexer:  indexer,
+	}
+	indexer.primaryIndexes = append(indexer.primaryIndexes, index)
+	return index, nil
+}
+
+func (indexer *CollectionsIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
+	where expression.Expression, with value.Value) (Index, errors.Error) {
+	return nil, errors.NewNotImplemented("CollectionsIndexer.CreateIndex()")
+}
+
+func (indexer *CollectionsIndexer) BuildIndexes(requestId string, name ...string) errors.Error {
+	return errors.NewNotImplemented("CollectionsIndexer.BuildIndexes()")
+}
+
+func (indexer *CollectionsIndexer) Refresh() errors.Error {
+	return nil
+}
+
+func (indexer *CollectionsIndexer) MetadataVersion() uint64 {
+	return 1
+}
+
+func (indexer *CollectionsIndexer) SetLogLevel(level logging.Level) {
+	// Do nothing.
+}
+
+type CollectionsPrimaryIndex struct {
+	keyspace *CollectionsKeyspace
+	id       string
+	indexer  *CollectionsIndexer
+}
+
+func (index *CollectionsPrimaryIndex) KeyspaceId() string {
+	return index.keyspace.Id()
+}
+
+func (index *CollectionsPrimaryIndex) Id() string {
+	return index.id
+}
+
+func (index *CollectionsPrimaryIndex) Name() string {
+	return index.id
+}
+
+func (index *CollectionsPrimaryIndex) Type() IndexType {
+	return GSI
+}
+
+func (index *CollectionsPrimaryIndex) Indexer() Indexer {
+	return index.indexer
+}
+
+func (index *CollectionsPrimaryIndex) SeekKey() expression.Expressions {
+	return nil
+}
+
+func (index *CollectionsPrimaryIndex) RangeKey() expression.Expressions {
+	return nil
+}
+
+func (index *CollectionsPrimaryIndex) Condition() expression.Expression {
+	return nil
+}
+
+func (index *CollectionsPrimaryIndex) IsPrimary() bool {
+	return true
+}
+
+func (index *CollectionsPrimaryIndex) State() (state IndexState, msg string, err errors.Error) {
+	return ONLINE, "", nil
+}
+
+func (index *CollectionsPrimaryIndex) Statistics(requestId string, span *Span) (Statistics, errors.Error) {
+	return nil, errors.NewNotImplemented("CollectionsPrimaryIndex.Statistics()")
+}
+
+func (index *CollectionsPrimaryIndex) Drop(requestId string) errors.Error {
+	return errors.NewNotImplemented("CollectionsPrimaryIndex.Statistics()")
+}
+
+func (index *CollectionsPrimaryIndex) Scan(requestId string, span *Span, distinct bool, limit int64, cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) {
+	defer close(conn.EntryChannel())
+
+	for k := range index.keyspace.docs {
+		entry := IndexEntry{PrimaryKey: k}
+		conn.EntryChannel() <- &entry
+	}
+}
+
+func (index *CollectionsPrimaryIndex) ScanEntries(requestId string, limit int64, cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) {
+	defer close(conn.EntryChannel())
+	for key := range index.keyspace.docs {
+		entry := IndexEntry{PrimaryKey: key}
+		conn.EntryChannel() <- &entry
+	}
+}
+
+func (index *CollectionsPrimaryIndex) Count(span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error) {
+	return index.keyspace.Count(nil)
 }
