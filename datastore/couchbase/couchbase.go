@@ -703,7 +703,7 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 		// all previously prepared statements are still good
 		entry = &keyspaceEntry{}
 		p.keyspaceCache[name] = entry
-	} else if entry.cbKeyspace.(*keyspace).flags != 0 {
+	} else if entry.cbKeyspace != nil && entry.cbKeyspace.(*keyspace).flags != 0 {
 
 		// a keyspace that has been deleted or needs refreshing causes a
 		// version change
