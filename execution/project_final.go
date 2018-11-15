@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -21,11 +22,17 @@ type FinalProject struct {
 	plan *plan.FinalProject
 }
 
-func NewFinalProject(plan *plan.FinalProject, context *Context) *FinalProject {
-	rv := &FinalProject{
-		plan: plan,
-	}
+var _FINALPROJ_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_FINALPROJ_OP_POOL, func() interface{} {
+		return &FinalProject{}
+	})
+}
+
+func NewFinalProject(plan *plan.FinalProject, context *Context) *FinalProject {
+	rv := _FINALPROJ_OP_POOL.Get().(*FinalProject)
+	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.SetSerializable()
 	rv.output = rv
@@ -37,9 +44,8 @@ func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *FinalProject) Copy() Operator {
-	rv := &FinalProject{
-		plan: this.plan,
-	}
+	rv := _FINALPROJ_OP_POOL.Get().(*FinalProject)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -63,4 +69,9 @@ func (this *FinalProject) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *FinalProject) Done() {
+	this.baseDone()
+	_FINALPROJ_OP_POOL.Put(this)
 }

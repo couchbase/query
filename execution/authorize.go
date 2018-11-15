@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -23,12 +24,18 @@ type Authorize struct {
 	child Operator
 }
 
-func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Authorize {
-	rv := &Authorize{
-		plan:  plan,
-		child: child,
-	}
+var _AUTH_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_AUTH_OP_POOL, func() interface{} {
+		return &Authorize{}
+	})
+}
+
+func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Authorize {
+	rv := _AUTH_OP_POOL.Get().(*Authorize)
+	rv.plan = plan
+	rv.child = child
 	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
@@ -39,10 +46,9 @@ func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Authorize) Copy() Operator {
-	rv := &Authorize{
-		plan:  this.plan,
-		child: this.child.Copy(),
-	}
+	rv := _AUTH_OP_POOL.Get().(*Authorize)
+	rv.plan = this.plan
+	rv.child = this.child.Copy()
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -124,4 +130,5 @@ func (this *Authorize) Done() {
 		this.child.Done()
 	}
 	this.child = nil
+	_AUTH_OP_POOL.Put(this)
 }

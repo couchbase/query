@@ -13,8 +13,21 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _FETCH_OP_POOL util.FastPool
+var _DUMMYFETCH_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_FETCH_OP_POOL, func() interface{} {
+		return &Fetch{}
+	})
+	util.NewFastPool(&_DUMMYFETCH_OP_POOL, func() interface{} {
+		return &DummyFetch{}
+	})
+}
 
 type Fetch struct {
 	base
@@ -25,11 +38,9 @@ type Fetch struct {
 }
 
 func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
-	rv := &Fetch{
-		plan:      plan,
-		batchSize: context.GetPipelineBatch(),
-	}
-
+	rv := _FETCH_OP_POOL.Get().(*Fetch)
+	rv.plan = plan
+	rv.batchSize = context.GetPipelineBatch()
 	newBase(&rv.base, context)
 	op := context.Type()
 	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
@@ -43,11 +54,10 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Fetch) Copy() Operator {
-	rv := &Fetch{
-		plan:      this.plan,
-		batchSize: this.batchSize,
-		deepCopy:  this.deepCopy,
-	}
+	rv := _FETCH_OP_POOL.Get().(*Fetch)
+	rv.plan = this.plan
+	rv.batchSize = this.batchSize
+	rv.deepCopy = this.deepCopy
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -189,16 +199,19 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Fetch) Done() {
+	this.baseDone()
+	_FETCH_OP_POOL.Put(this)
+}
+
 type DummyFetch struct {
 	base
 	plan *plan.DummyFetch
 }
 
 func NewDummyFetch(plan *plan.DummyFetch, context *Context) *DummyFetch {
-	rv := &DummyFetch{
-		plan: plan,
-	}
-
+	rv := _DUMMYFETCH_OP_POOL.Get().(*DummyFetch)
+	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
@@ -209,7 +222,8 @@ func (this *DummyFetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyFetch) Copy() Operator {
-	rv := &DummyFetch{plan: this.plan}
+	rv := _DUMMYFETCH_OP_POOL.Get().(*DummyFetch)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -232,4 +246,9 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *DummyFetch) Done() {
+	this.baseDone()
+	_DUMMYFETCH_OP_POOL.Put(this)
 }

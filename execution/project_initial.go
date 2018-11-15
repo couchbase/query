@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -23,11 +24,17 @@ type InitialProject struct {
 	plan *plan.InitialProject
 }
 
-func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProject {
-	rv := &InitialProject{
-		plan: plan,
-	}
+var _INITPROJ_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_INITPROJ_OP_POOL, func() interface{} {
+		return &InitialProject{}
+	})
+}
+
+func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProject {
+	rv := _INITPROJ_OP_POOL.Get().(*InitialProject)
+	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
@@ -38,7 +45,8 @@ func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InitialProject) Copy() Operator {
-	rv := &InitialProject{plan: this.plan}
+	rv := _INITPROJ_OP_POOL.Get().(*InitialProject)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -149,4 +157,9 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *InitialProject) Done() {
+	this.baseDone()
+	_INITPROJ_OP_POOL.Put(this)
 }

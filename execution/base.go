@@ -116,41 +116,44 @@ func (this *base) getBase() *base {
 
 // Constructor, (re)opener, closer, destructor
 
-func newBase(base *base, context *Context) {
-	newValueExchange(&base.valueExchange, context.GetPipelineCap())
-	base.execPhase = PHASES
-	base.phaseTimes = func(t time.Duration) {}
-	base.activeCond.L = &base.activeLock
-	base.doSend = parallelSend
-	base.closeConsumer = false
+func newBase(dest *base, context *Context) {
+	*dest = base{}
+	newValueExchange(&dest.valueExchange, context.GetPipelineCap())
+	dest.execPhase = PHASES
+	dest.phaseTimes = func(t time.Duration) {}
+	dest.activeCond.L = &dest.activeLock
+	dest.doSend = parallelSend
+	dest.closeConsumer = false
 }
 
 // The output of this operator will be redirected elsewhere, so we
 // allocate a minimal itemChannel.
-func newRedirectBase(base *base) {
-	newValueExchange(&base.valueExchange, 1)
-	base.execPhase = PHASES
-	base.phaseTimes = func(t time.Duration) {}
-	base.activeCond.L = &base.activeLock
-	base.doSend = parallelSend
-	base.closeConsumer = false
+func newRedirectBase(dest *base) {
+	*dest = base{}
+	newValueExchange(&dest.valueExchange, 1)
+	dest.execPhase = PHASES
+	dest.phaseTimes = func(t time.Duration) {}
+	dest.activeCond.L = &dest.activeLock
+	dest.doSend = parallelSend
+	dest.closeConsumer = false
 }
 
-func (this *base) copy(base *base) {
-	newValueExchange(&base.valueExchange, int64(cap(this.valueExchange.items)))
+func (this *base) copy(dest *base) {
+	*dest = base{}
+	newValueExchange(&dest.valueExchange, int64(cap(this.valueExchange.items)))
 	if this.valueExchange.children != nil {
-		base.trackChildren(cap(this.valueExchange.children))
+		dest.trackChildren(cap(this.valueExchange.children))
 	}
-	base.input = this.input
-	base.output = this.output
-	base.parent = this.parent
-	base.execPhase = this.execPhase
-	base.phaseTimes = this.phaseTimes
-	base.activeCond.L = &base.activeLock
-	base.serializable = this.serializable
-	base.serialized = false
-	base.doSend = parallelSend
-	base.closeConsumer = false
+	dest.input = this.input
+	dest.output = this.output
+	dest.parent = this.parent
+	dest.execPhase = this.execPhase
+	dest.phaseTimes = this.phaseTimes
+	dest.activeCond.L = &dest.activeLock
+	dest.serializable = this.serializable
+	dest.serialized = false
+	dest.doSend = parallelSend
+	dest.closeConsumer = false
 }
 
 // reset the operator to an initial state
@@ -182,6 +185,12 @@ func (this *base) Done() {
 func (this *base) baseDone() {
 	this.wait()
 	this.valueExchange.dispose()
+	this.stopChannel = nil
+	this.input = nil
+	this.output = nil
+	this.parent = nil
+	this.stop = nil
+	this.contextTracked = nil
 }
 
 // reopen for the terminal operator case

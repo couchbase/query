@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -21,11 +22,17 @@ type Stream struct {
 	plan *plan.Stream
 }
 
-func NewStream(plan *plan.Stream, context *Context) *Stream {
-	rv := &Stream{
-		plan: plan,
-	}
+var _STREAM_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_STREAM_OP_POOL, func() interface{} {
+		return &Stream{}
+	})
+}
+
+func NewStream(plan *plan.Stream, context *Context) *Stream {
+	rv := _STREAM_OP_POOL.Get().(*Stream)
+	rv.plan = plan
 	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
@@ -36,9 +43,8 @@ func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Stream) Copy() Operator {
-	rv := &Stream{
-		plan: this.plan,
-	}
+	rv := _STREAM_OP_POOL.Get().(*Stream)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -72,4 +78,9 @@ func (this *Stream) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *Stream) Done() {
+	this.baseDone()
+	_STREAM_OP_POOL.Put(this)
 }

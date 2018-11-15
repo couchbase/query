@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -23,11 +24,17 @@ type KeyScan struct {
 	plan *plan.KeyScan
 }
 
-func NewKeyScan(plan *plan.KeyScan, context *Context) *KeyScan {
-	rv := &KeyScan{
-		plan: plan,
-	}
+var _KEYSCAN_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_KEYSCAN_OP_POOL, func() interface{} {
+		return &KeyScan{}
+	})
+}
+
+func NewKeyScan(plan *plan.KeyScan, context *Context) *KeyScan {
+	rv := _KEYSCAN_OP_POOL.Get().(*KeyScan)
+	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
@@ -38,7 +45,8 @@ func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *KeyScan) Copy() Operator {
-	rv := &KeyScan{plan: this.plan}
+	rv := _KEYSCAN_OP_POOL.Get().(*KeyScan)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -81,4 +89,9 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *KeyScan) Done() {
+	this.baseDone()
+	_KEYSCAN_OP_POOL.Put(this)
 }

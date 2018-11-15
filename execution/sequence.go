@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -22,12 +23,18 @@ type Sequence struct {
 	children []Operator
 }
 
-func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *Sequence {
-	rv := &Sequence{
-		plan:     plan,
-		children: children,
-	}
+var _SEQUENCE_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_SEQUENCE_OP_POOL, func() interface{} {
+		return &Sequence{}
+	})
+}
+
+func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *Sequence {
+	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
+	rv.plan = plan
+	rv.children = children
 	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
@@ -38,16 +45,15 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
+	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
 	children := _SEQUENCE_POOL.Get()
 
 	for _, child := range this.children {
 		children = append(children, child.Copy())
 	}
 
-	rv := &Sequence{
-		plan:     this.plan,
-		children: children,
-	}
+	rv.plan = this.plan
+	rv.children = children
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -136,6 +142,7 @@ func (this *Sequence) Done() {
 	}
 	_SEQUENCE_POOL.Put(this.children)
 	this.children = nil
+	_SEQUENCE_OP_POOL.Put(this)
 }
 
 var _SEQUENCE_POOL = NewOperatorPool(32)

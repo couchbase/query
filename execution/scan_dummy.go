@@ -14,6 +14,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -22,11 +23,17 @@ type DummyScan struct {
 	plan *plan.DummyScan
 }
 
-func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
-	rv := &DummyScan{
-		plan: plan,
-	}
+var _DUMMYSCAN_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_DUMMYSCAN_OP_POOL, func() interface{} {
+		return &DummyScan{}
+	})
+}
+
+func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
+	rv := _DUMMYSCAN_OP_POOL.Get().(*DummyScan)
+	rv.plan = plan
 	newRedirectBase(&rv.base)
 	rv.output = rv
 	return rv
@@ -37,9 +44,8 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyScan) Copy() Operator {
-	rv := &DummyScan{
-		plan: this.plan,
-	}
+	rv := _DUMMYSCAN_OP_POOL.Get().(*DummyScan)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -69,6 +75,11 @@ func (this *DummyScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *DummyScan) Done() {
+	this.baseDone()
+	_DUMMYSCAN_OP_POOL.Put(this)
 }
 
 var _EMPTY_OBJECT = map[string]interface{}{}

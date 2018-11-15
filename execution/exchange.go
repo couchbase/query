@@ -40,6 +40,7 @@ type valueQueue struct {
 	closed       bool
 	readWaiters  opQueue
 	writeWaiters opQueue
+	localValues  [1]value.AnnotatedValue
 	vLock        sync.Mutex
 }
 
@@ -59,8 +60,6 @@ type valueExchange struct {
 
 var valueSlicePool util.FastPool
 
-var smallSlicePool util.FastPool
-
 var smallChildPool util.FastPool
 
 var largeChildPool util.FastPool
@@ -68,9 +67,6 @@ var largeChildPool util.FastPool
 func init() {
 	util.NewFastPool(&valueSlicePool, func() interface{} {
 		return make([]value.AnnotatedValue, GetPipelineCap())
-	})
-	util.NewFastPool(&smallSlicePool, func() interface{} {
-		return make([]value.AnnotatedValue, 1)
 	})
 	util.NewFastPool(&smallChildPool, func() interface{} {
 		return make([]int, _SMALL_CHILD_POOL)
@@ -86,7 +82,7 @@ func newValueExchange(exchange *valueExchange, capacity int64) {
 		capacity = 1
 	}
 	if capacity == 1 {
-		exchange.items = smallSlicePool.Get().([]value.AnnotatedValue)[0:capacity]
+		exchange.items = exchange.localValues[0:1:1]
 	} else if capacity == GetPipelineCap() {
 		exchange.items = valueSlicePool.Get().([]value.AnnotatedValue)[0:capacity]
 	}
@@ -139,6 +135,7 @@ func (this *valueExchange) dispose() {
 
 	// MB-28710 ditch values before pooling
 	for this.itemsCount > 0 {
+		this.items[this.itemsTail].Recycle()
 		this.items[this.itemsTail] = nil
 		this.itemsCount--
 		this.itemsTail++
@@ -148,9 +145,7 @@ func (this *valueExchange) dispose() {
 	}
 
 	c := cap(this.items)
-	if c == 1 {
-		smallSlicePool.Put(this.items[0:0])
-	} else if int64(c) == GetPipelineCap() {
+	if c > 1 && int64(c) == GetPipelineCap() {
 
 		// pipeline cap might have changed in the interim
 		// if ths is the case, we don't want to pool this slice
