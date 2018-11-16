@@ -237,7 +237,7 @@ func (this *AggregateInfo) hasFlags(flags uint32) bool {
 func (this *AggregateInfo) setOnce() (err error) {
 
 	// No ORDER BY all rows in parttition has same aggregate value. Evaluate once.
-	this.once = this.wTerm.OrderBy() == nil
+	this.once = this.wTerm.OrderBy() == nil && !this.hasFlags(_WINDOW_ROW_NUMBER)
 	windowFrame := this.wTerm.WindowFrame()
 
 	/*
