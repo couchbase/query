@@ -67,8 +67,8 @@ func BenchmarkExpDecaySample1028(b *testing.B) {
 }
 
 func TestExpDecaySample10(t *testing.T) {
-	rand.Seed(1)
-	s := NewExpDecaySample(100, 0.99)
+	s := NewExpDecaySample(104, 0.99)
+	setSeed(s)
 	for i := 0; i < 10; i++ {
 		s.Update(int64(i))
 	}
@@ -89,8 +89,8 @@ func TestExpDecaySample10(t *testing.T) {
 }
 
 func TestExpDecaySample100(t *testing.T) {
-	rand.Seed(1)
 	s := NewExpDecaySample(1000, 0.01)
+	setSeed(s)
 	for i := 0; i < 100; i++ {
 		s.Update(int64(i))
 	}
@@ -111,19 +111,19 @@ func TestExpDecaySample100(t *testing.T) {
 }
 
 func TestExpDecaySample1000(t *testing.T) {
-	rand.Seed(1)
-	s := NewExpDecaySample(100, 0.99)
+	s := NewExpDecaySample(104, 0.99)
+	setSeed(s)
 	for i := 0; i < 1000; i++ {
 		s.Update(int64(i))
 	}
 	if size := s.Count(); 1000 != size {
 		t.Errorf("s.Count(): 1000 != %v\n", size)
 	}
-	if size := s.Size(); 100 != size {
-		t.Errorf("s.Size(): 100 != %v\n", size)
+	if size := s.Size(); 104 != size {
+		t.Errorf("s.Size(): 104 != %v\n", size)
 	}
-	if l := len(s.Values()); 100 != l {
-		t.Errorf("len(s.Values()): 100 != %v\n", l)
+	if l := len(s.Values()); 104 != l {
+		t.Errorf("len(s.Values()): 104 != %v\n", l)
 	}
 	for _, v := range s.Values() {
 		if v > 1000 || v < 0 {
@@ -137,8 +137,8 @@ func TestExpDecaySample1000(t *testing.T) {
 // The priority becomes +Inf quickly after starting if this is done,
 // effectively freezing the set of samples until a rescale step happens.
 func TestExpDecaySampleNanosecondRegression(t *testing.T) {
-	rand.Seed(1)
 	s := NewExpDecaySample(100, 0.99)
+	setSeed(s)
 	for i := 0; i < 100; i++ {
 		s.Update(10)
 	}
@@ -162,7 +162,7 @@ func TestExpDecaySampleRescale(t *testing.T) {
 	s.update(time.Now(), 1)
 	s.update(time.Now().Add(time.Hour+time.Microsecond), 1)
 	for _, v := range s.values.Values() {
-		if v.k == 0.0 {
+		if v.inUse && v.k == 0.0 {
 			t.Fatal("v.k == 0.0")
 		}
 	}
@@ -170,8 +170,8 @@ func TestExpDecaySampleRescale(t *testing.T) {
 
 func TestExpDecaySampleStatistics(t *testing.T) {
 	now := time.Now()
-	rand.Seed(1)
 	s := NewExpDecaySample(100, 0.99)
+	setSeed(s)
 	for i := 1; i <= 10000; i++ {
 		s.(*ExpDecaySample).update(now.Add(time.Duration(i)), int64(i))
 	}
@@ -196,54 +196,35 @@ func testExpDecaySampleStatistics(t *testing.T, s Sample) {
 	if count := s.Count(); 10000 != count {
 		t.Errorf("s.Count(): 10000 != %v\n", count)
 	}
-	if min := s.Min(); 107 != min {
-		t.Errorf("s.Min(): 107 != %v\n", min)
+	if min := s.Min(); 81 != min {
+		t.Errorf("s.Min(): 81 != %v\n", min)
 	}
 	if max := s.Max(); 10000 != max {
 		t.Errorf("s.Max(): 10000 != %v\n", max)
 	}
-	if mean := s.Mean(); 4965.98 != mean {
-		t.Errorf("s.Mean(): 4965.98 != %v\n", mean)
+	if mean := s.Mean(); 5151.807692307692 != mean {
+		t.Errorf("s.Mean(): 5151.807692307692 != %v\n", mean)
 	}
-	if stdDev := s.StdDev(); 2959.825156930727 != stdDev {
-		t.Errorf("s.StdDev(): 2959.825156930727 != %v\n", stdDev)
+	if stdDev := s.StdDev(); 3066.508877174006 != stdDev {
+		t.Errorf("s.StdDev(): 3066.508877174006 != %v\n", stdDev)
 	}
 	ps := s.Percentiles([]float64{0.5, 0.75, 0.99})
-	if 4615 != ps[0] {
-		t.Errorf("median: 4615 != %v\n", ps[0])
+	if 5237.5 != ps[0] {
+		t.Errorf("median: 5237.5 != %v\n", ps[0])
 	}
-	if 7672 != ps[1] {
-		t.Errorf("75th percentile: 7672 != %v\n", ps[1])
+	if 7605.5 != ps[1] {
+		t.Errorf("75th percentile: 7605.5 != %v\n", ps[1])
 	}
-	if 9998.99 != ps[2] {
-		t.Errorf("99th percentile: 9998.99 != %v\n", ps[2])
+	if 9999.95 != ps[2] {
+		t.Errorf("99th percentile: 9999.95 != %v\n", ps[2])
 	}
 }
 
-func testUniformSampleStatistics(t *testing.T, s Sample) {
-	if count := s.Count(); 10000 != count {
-		t.Errorf("s.Count(): 10000 != %v\n", count)
-	}
-	if min := s.Min(); 37 != min {
-		t.Errorf("s.Min(): 37 != %v\n", min)
-	}
-	if max := s.Max(); 9989 != max {
-		t.Errorf("s.Max(): 9989 != %v\n", max)
-	}
-	if mean := s.Mean(); 4748.14 != mean {
-		t.Errorf("s.Mean(): 4748.14 != %v\n", mean)
-	}
-	if stdDev := s.StdDev(); 2826.684117548333 != stdDev {
-		t.Errorf("s.StdDev(): 2826.684117548333 != %v\n", stdDev)
-	}
-	ps := s.Percentiles([]float64{0.5, 0.75, 0.99})
-	if 4599 != ps[0] {
-		t.Errorf("median: 4599 != %v\n", ps[0])
-	}
-	if 7380.5 != ps[1] {
-		t.Errorf("75th percentile: 7380.5 != %v\n", ps[1])
-	}
-	if 9986.429999999998 != ps[2] {
-		t.Errorf("99th percentile: 9986.429999999998 != %v\n", ps[2])
+var _PRIMES = [...]int64{3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67}
+
+func setSeed(sample Sample) {
+	s := sample.(*ExpDecaySample)
+	for r, _ := range s.reservoirs {
+		s.reservoirs[r].random = rand.New(rand.NewSource(_PRIMES[r]))
 	}
 }

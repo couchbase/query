@@ -34,25 +34,50 @@ type Sample interface {
 // Decay Model for Streaming Systems".
 //
 // <http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf>
+type samples struct {
+	mutex         sync.RWMutex
+	reservoirSize int
+	random        *rand.Rand
+	values        expDecaySampleHeap
+}
+
+const _RESERVOIRS = 8
+
 type ExpDecaySample struct {
 	alpha         float64
 	count         int64
+	next          uint64
 	mutex         sync.RWMutex
 	reservoirSize int
 	t0, t1        time.Time
-	values        *expDecaySampleHeap
+	values        expDecaySampleHeap
+	reservoirs    [_RESERVOIRS]samples
 }
 
 // NewExpDecaySample constructs a new exponentially-decaying sample with the
 // given reservoir size and alpha.
 func NewExpDecaySample(reservoirSize int, alpha float64) Sample {
+	rSz := reservoirSize / _RESERVOIRS
+	if rSz*_RESERVOIRS != reservoirSize {
+		rSz++
+		reservoirSize = rSz * _RESERVOIRS
+	}
 	s := &ExpDecaySample{
 		alpha:         alpha,
 		reservoirSize: reservoirSize,
 		t0:            time.Now(),
-		values:        newExpDecaySampleHeap(reservoirSize),
 	}
 	s.t1 = s.t0.Add(rescaleThreshold)
+
+	s.values.s = make([]expDecaySample, reservoirSize, reservoirSize)
+	s.values.Clear()
+	start := 0
+	for r, _ := range s.reservoirs {
+		s.reservoirs[r].values.s = s.values.s[start:start : start+rSz]
+		s.reservoirs[r].random = rand.New(rand.NewSource(s.t0.UnixNano() + int64(r)))
+		s.reservoirs[r].reservoirSize = rSz
+		start += rSz
+	}
 	return s
 }
 
@@ -102,9 +127,12 @@ func (s *ExpDecaySample) Percentiles(ps []float64) []float64 {
 
 // Size returns the size of the sample, which is at most the reservoir size.
 func (s *ExpDecaySample) Size() int {
-	s.mutex.RLock()
-	sz := s.values.Size()
-	s.mutex.RUnlock()
+	sz := 0
+	for r, _ := range s.reservoirs {
+		s.reservoirs[r].mutex.RLock()
+		sz += len(s.reservoirs[r].values.s)
+		s.reservoirs[r].mutex.RUnlock()
+	}
 	return sz
 }
 
@@ -127,9 +155,11 @@ func (s *ExpDecaySample) Update(v int64) {
 func (s *ExpDecaySample) Values() []int64 {
 	s.mutex.RLock()
 	vals := s.values.Values()
-	values := make([]int64, len(vals))
-	for i, v := range vals {
-		values[i] = v.v
+	values := make([]int64, 0, cap(vals))
+	for _, v := range vals {
+		if v.inUse {
+			values = append(values, v.v)
+		}
 	}
 	s.mutex.RUnlock()
 	return values
@@ -143,27 +173,41 @@ func (s *ExpDecaySample) Variance() float64 {
 // update samples a new value at a particular timestamp.  This is a method all
 // its own to facilitate testing.
 func (s *ExpDecaySample) update(t time.Time, v int64) {
-	ed := expDecaySample{
-		k: math.Exp(t.Sub(s.t0).Seconds()*s.alpha) / rand.Float64(),
-		v: v,
-	}
+
+	// no clearing for now
+	s.mutex.RLock()
 	rescale := t.After(s.t1)
 	atomic.AddInt64(&s.count, 1)
-	s.mutex.Lock()
-	if s.values.Size() == s.reservoirSize {
-		s.values.Pop()
+
+	// choose and amend reservoir
+	next := atomic.AddUint64(&s.next, 1) % _RESERVOIRS
+	s.reservoirs[next].mutex.Lock()
+	ed := expDecaySample{
+		k:     math.Exp(t.Sub(s.t0).Seconds()*s.alpha) / s.reservoirs[next].random.Float64(),
+		v:     v,
+		inUse: true,
 	}
-	s.values.Push(ed)
+	if s.reservoirs[next].values.Size() == s.reservoirs[next].reservoirSize {
+		s.reservoirs[next].values.Pop()
+	}
+	s.reservoirs[next].values.Push(ed)
+	s.reservoirs[next].mutex.Unlock()
+	s.mutex.RUnlock()
+
+	// numbers getting high - choose a new landmark
 	if rescale {
+		s.mutex.Lock()
 		t0 := s.t0
 		s.t0 = t
 		s.t1 = s.t0.Add(rescaleThreshold)
 		newLandmark := math.Exp(-s.alpha * s.t0.Sub(t0).Seconds())
-		for _, v := range s.values.Values() {
-			v.k = v.k * newLandmark
+		for r, _ := range s.values.s {
+			if s.values.s[r].inUse {
+				s.values.s[r].k = s.values.s[r].k * newLandmark
+			}
 		}
+		s.mutex.Unlock()
 	}
-	s.mutex.Unlock()
 }
 
 // SampleMax returns the maximum value of the slice of int64.
@@ -260,12 +304,9 @@ func SampleVariance(values []int64) float64 {
 
 // expDecaySample represents an individual sample in a heap.
 type expDecaySample struct {
-	k float64
-	v int64
-}
-
-func newExpDecaySampleHeap(reservoirSize int) *expDecaySampleHeap {
-	return &expDecaySampleHeap{make([]expDecaySample, 0, reservoirSize)}
+	k     float64
+	v     int64
+	inUse bool
 }
 
 // expDecaySampleHeap is a min-heap of expDecaySamples.
@@ -275,7 +316,9 @@ type expDecaySampleHeap struct {
 }
 
 func (h *expDecaySampleHeap) Clear() {
-	h.s = h.s[:0]
+	for r := 0; r < cap(h.s); r++ {
+		h.s[r].inUse = false
+	}
 }
 
 func (h *expDecaySampleHeap) Push(s expDecaySample) {
@@ -292,6 +335,7 @@ func (h *expDecaySampleHeap) Pop() expDecaySample {
 
 	n = len(h.s)
 	s := h.s[n-1]
+	h.s[n-1].inUse = false
 	h.s = h.s[0 : n-1]
 	return s
 }
