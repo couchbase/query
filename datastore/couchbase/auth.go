@@ -10,6 +10,7 @@
 package couchbase
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -43,9 +44,9 @@ func privilegeString(namespace, bucket string, requested auth.Privilege) (string
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
-		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!write", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].data.docs!write")
 	case auth.PRIV_READ:
-		permission = fmt.Sprintf("cluster.bucket[%s].data.docs!read", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].data.docs!read")
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
@@ -53,23 +54,23 @@ func privilegeString(namespace, bucket string, requested auth.Privilege) (string
 	case auth.PRIV_SECURITY_WRITE:
 		permission = "cluster.admin.security!write"
 	case auth.PRIV_QUERY_SELECT:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.select!execute", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.select!execute")
 	case auth.PRIV_QUERY_UPDATE:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.update!execute", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.update!execute")
 	case auth.PRIV_QUERY_INSERT:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.insert!execute", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.insert!execute")
 	case auth.PRIV_QUERY_DELETE:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.delete!execute", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.delete!execute")
 	case auth.PRIV_QUERY_BUILD_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!build", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!build")
 	case auth.PRIV_QUERY_CREATE_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!create", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!create")
 	case auth.PRIV_QUERY_ALTER_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!alter", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!alter")
 	case auth.PRIV_QUERY_DROP_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!drop", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!drop")
 	case auth.PRIV_QUERY_LIST_INDEX:
-		permission = fmt.Sprintf("cluster.bucket[%s].n1ql.index!list", bucket)
+		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!list")
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
 		permission = "cluster.n1ql.curl!execute"
 	default:
@@ -186,7 +187,18 @@ func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbau
 }
 
 func userKeyString(c cbauth.Creds) string {
-	return fmt.Sprintf("%s:%s", c.Domain(), c.Name())
+	return joinStrings(c.Domain(), ":", c.Name())
+}
+
+// could be a variadic function, but we are looking for speed and
+// as it happens we always require joining 3 strings...
+func joinStrings(s1, s2, s3 string) string {
+	var buff bytes.Buffer
+
+	buff.WriteString(s1)
+	buff.WriteString(s2)
+	buff.WriteString(s3)
+	return buff.String()
 }
 
 func isClientCertPresent(req *http.Request) bool {
