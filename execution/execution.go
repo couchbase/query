@@ -42,7 +42,6 @@ type Operator interface {
 	SetBit(b uint8)                              // Child bit
 	SetRoot()                                    // Let the root operator know that it is, in fact, root
 	SetKeepAlive(children int, context *Context) // Sets keep alive
-	SetSerializable()                            // Flags operator can be run inline
 	IsSerializable() bool
 	SerializeOutput(op Operator, context *Context) // Has the producer run the consumer inline
 	Copy() Operator                                // Keep input/output/parent; make new channels

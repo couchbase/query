@@ -138,6 +138,22 @@ func newRedirectBase(dest *base) {
 	dest.closeConsumer = false
 }
 
+// This operator will be serialised - allocate valueExchange dynamically
+//
+// A few ground rules for serializable operators:
+// - must always be called in a sequence
+// - must follow a producer in a sequence
+func newSerializedBase(dest *base) {
+	*dest = base{}
+	newValueExchange(&dest.valueExchange, 1)
+	dest.execPhase = PHASES
+	dest.phaseTimes = func(t time.Duration) {}
+	dest.activeCond.L = &dest.activeLock
+	dest.doSend = parallelSend
+	dest.closeConsumer = false
+	dest.serializable = true
+}
+
 func (this *base) copy(dest *base) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, int64(cap(this.valueExchange.items)))
@@ -227,6 +243,10 @@ func (this *base) ValueExchange() *valueExchange {
 	return &this.valueExchange
 }
 
+func (this *base) exchangeMove(dest *base) {
+	this.valueExchange.move(&dest.valueExchange)
+}
+
 // for those operators that really use channels
 func (this *base) newStopChannel() {
 	this.stopChannel = make(stopChannel, 1)
@@ -292,10 +312,6 @@ func (this *base) SetRoot() {
 func (this *base) SetKeepAlive(children int, context *Context) {
 	this.contextTracked = context
 	this.childrenLeft = int32(children)
-}
-
-func (this *base) SetSerializable() {
-	this.serializable = true
 }
 
 func (this *base) IsSerializable() bool {

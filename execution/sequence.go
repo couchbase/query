@@ -35,7 +35,23 @@ func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *S
 	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
 	rv.plan = plan
 	rv.children = children
-	newBase(&rv.base, context)
+
+	// allocate value exchanges for serialized children if required
+	// if not the first operator and the sender has already an operator
+	// we'll just use that, since the sender has no use for it
+	prevBase := children[0].getBase()
+	for i := 1; i < len(children); i++ {
+		thisBase := children[i].getBase()
+		if thisBase.IsSerializable() {
+			prevBase.exchangeMove(thisBase)
+		}
+		prevBase = thisBase
+	}
+
+	// we'll even use the last child's value exchange and save allocating
+	// an unused one for ourselves
+	newRedirectBase(&rv.base)
+	prevBase.exchangeMove(&rv.base)
 	rv.output = rv
 	return rv
 }
@@ -72,14 +88,14 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		first_child := this.children[0]
-		first_child.SetInput(this.input)
-		first_child.SetStop(this.stop)
+		curr := this.children[0]
+		curr.SetInput(this.input)
+		curr.SetStop(this.stop)
 
 		// Define all Inputs and Outputs
-		for i := 0; i < n-1; i++ {
-			curr := this.children[i]
-			next := this.children[i+1]
+		var next Operator
+		for i := 1; i < n; i++ {
+			next = this.children[i]
 
 			// run the consumer inline, if feasible
 			if next.IsSerializable() {
@@ -90,15 +106,14 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 				next.SetInput(curr.Output())
 			}
 			next.SetStop(curr)
+			curr = next
 		}
 
-		last_child := this.children[n-1]
-
-		last_child.SetOutput(this.output)
-		last_child.SetParent(this)
+		next.SetOutput(this.output)
+		next.SetParent(this)
 
 		// Run last child
-		go last_child.RunOnce(context, parent)
+		go next.RunOnce(context, parent)
 	})
 }
 
@@ -136,8 +151,8 @@ func (this *Sequence) reopen(context *Context) {
 
 func (this *Sequence) Done() {
 	this.baseDone()
-	for c, child := range this.children {
-		child.Done()
+	for c, _ := range this.children {
+		this.children[c].Done()
 		this.children[c] = nil
 	}
 	_SEQUENCE_POOL.Put(this.children)

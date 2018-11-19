@@ -94,6 +94,10 @@ func newValueExchange(exchange *valueExchange, capacity int64) {
 	}
 }
 
+func (this *valueExchange) cap() int {
+	return cap(this.items)
+}
+
 // for those operators that have children
 func (this *valueExchange) trackChildren(children int) {
 
@@ -165,6 +169,19 @@ func (this *valueExchange) dispose() {
 		smallChildPool.Put(this.children[0:0])
 	}
 	this.children = nil
+}
+
+// present a different operator with our value exchange and
+// set a default for ours
+// not to be use on an already allocated / used dest!
+// only to be use before dest is allocated (let alone used)!
+func (this *valueExchange) move(dest *valueExchange) {
+	if cap(this.items) == 1 {
+		dest.items = dest.localValues[0:1:1]
+	} else {
+		*dest = *this
+		this.items = this.localValues[0:1:1]
+	}
 }
 
 // send

@@ -31,7 +31,17 @@ func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Paralle
 		child: child,
 	}
 
-	newBase(&rv.base, context)
+	// all the children will be using the same value exchange,
+	// which is the parallel's output anyway
+	// if the child already has a value exchange allocated, we'll use
+	// that and avoid needlessly allocating more
+	childBase := child.getBase()
+	if childBase.cap() > 1 {
+		newRedirectBase(&rv.base)
+		childBase.exchangeMove(&rv.base)
+	} else {
+		newBase(&rv.base, context)
+	}
 	rv.output = rv
 	return rv
 }

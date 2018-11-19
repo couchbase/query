@@ -33,8 +33,7 @@ func init() {
 func NewFinalProject(plan *plan.FinalProject, context *Context) *FinalProject {
 	rv := _FINALPROJ_OP_POOL.Get().(*FinalProject)
 	rv.plan = plan
-	newBase(&rv.base, context)
-	rv.SetSerializable()
+	newSerializedBase(&rv.base)
 	rv.output = rv
 	return rv
 }
