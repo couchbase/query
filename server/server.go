@@ -68,11 +68,30 @@ func (profile Profile) String() string {
 	return _PROFILE_NAMES[profile]
 }
 
+type waitState int
+
+const (
+	_WAIT_EMPTY = waitState(iota)
+	_WAIT_GO
+	_WAIT_FULL
+)
+
+type waitEntry struct {
+	request Request
+	state   waitState
+}
+
 type runQueue struct {
 	servicers int
+	size      int32
+	mutexCnt  int32
 	runCnt    int32
 	queueCnt  int32
-	queue     util.FastQueue
+	head      int32
+	tail      int32
+	sync.Mutex
+	mutexes []sync.Mutex
+	queue   []waitEntry
 }
 
 type Server struct {
@@ -131,8 +150,8 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 
 	rv.unboundQueue.servicers = servicers
 	rv.plusQueue.servicers = plusServicers
-	util.NewFastQueue(&rv.unboundQueue.queue, requestsCap)
-	util.NewFastQueue(&rv.plusQueue.queue, plusRequestsCap)
+	newRunQueue(&rv.unboundQueue, requestsCap)
+	newRunQueue(&rv.plusQueue, plusRequestsCap)
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 
@@ -430,53 +449,102 @@ func (this *Server) PlusServiceRequest(request Request) bool {
 }
 
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
-	runCnt := atomic.AddInt32(&queue.runCnt, 1)
+	queue.Lock()
 
-	// free pass!
-	if int(runCnt) <= queue.servicers {
-		this.serviceRequest(request)
-		queue.releaseRequest()
-		return true
+	// if queue in use or servicers exceeded, reserve a spot in the queue
+	if queue.queueCnt > 0 || queue.runCnt >= int32(queue.servicers) {
+
+		// rats! queue full, can't handle this request
+		if queue.queueCnt == queue.size {
+			queue.Unlock()
+			return false
+		}
+		queue.queueCnt++
+		queue.Unlock()
+
+		// and once it's reserved, wait
+		queue.addRequest(request)
+	} else {
+
+		// all good, go straight ahead
+		queue.runCnt++
+		queue.Unlock()
 	}
 
-	// too much stuff going on
-	atomic.AddInt32(&queue.runCnt, -1)
-
-	// queue ourselves until there's a free servicer
-	ok := queue.addRequest(request)
-
-	// more load than we can take
-	if !ok {
-		return false
-	}
-
-	// our turn now
+	// service
 	this.serviceRequest(request)
-	queue.releaseRequest()
+
+	// anyone to release?
+	queue.Lock()
+	if queue.queueCnt == 0 {
+
+		// nope
+		queue.runCnt--
+		queue.Unlock()
+	} else {
+
+		// reserve a next runner
+		queue.queueCnt--
+		queue.Unlock()
+
+		// and let it go
+		queue.releaseRequest()
+	}
 	return true
 }
 
-func (this *runQueue) addRequest(request Request) bool {
+func newRunQueue(q *runQueue, num int) {
+	q.mutexCnt = int32(runtime.NumCPU())
+	q.size = int32(num)
+	q.mutexes = make([]sync.Mutex, q.mutexCnt)
+	q.queue = make([]waitEntry, num)
+}
+
+func (this *runQueue) addRequest(request Request) {
 	request.setSleep()
-	ok := this.queue.In(request)
-	if ok {
-		request.sleep()
-	} else {
+
+	// get the next available entry, lock it
+	tail := atomic.AddInt32(&this.tail, 1)
+	entry := tail % this.size
+	mutex := tail % this.mutexCnt
+	this.mutexes[mutex].Lock()
+
+	// the previous request terminated before we could get here
+	// we have the go ahead!
+	if this.queue[entry].state == _WAIT_GO {
+		this.queue[entry].state = _WAIT_EMPTY
+		this.mutexes[mutex].Unlock()
 		request.release()
+	} else {
+
+		// have to wait for one of the current runners to wake us up
+		this.queue[entry].state = _WAIT_FULL
+		this.queue[entry].request = request
+		this.mutexes[mutex].Unlock()
+		request.sleep()
 	}
-	return ok
 }
 
 func (this *runQueue) releaseRequest() {
-	out := this.queue.Out()
-	if out == nil {
-		atomic.AddInt32(&this.runCnt, -1)
+
+	// get the next available entry, lock it
+	head := atomic.AddInt32(&this.head, 1)
+	entry := head % this.size
+	mutex := head % this.mutexCnt
+	this.mutexes[mutex].Lock()
+
+	// the next waiter hasn't yet filled the spot, flag that it can go
+	if this.queue[entry].state == _WAIT_EMPTY {
+		this.queue[entry].state = _WAIT_GO
+		this.mutexes[mutex].Unlock()
 	} else {
-		atomic.AddInt32(&this.queueCnt, -1)
-		request := out.(Request)
-		if request != nil {
-			request.release()
-		}
+
+		// it's here, wake it up
+		request := this.queue[entry].request
+		this.queue[entry].request = nil
+		this.queue[entry].state = _WAIT_EMPTY
+		this.mutexes[mutex].Unlock()
+		request.release()
 	}
 }
 
