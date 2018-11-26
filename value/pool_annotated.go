@@ -10,24 +10,21 @@
 package value
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type AnnotatedPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewAnnotatedPool(size int) *AnnotatedPool {
 	rv := &AnnotatedPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make(AnnotatedValues, 0, size)
-			},
-		},
 		size: size,
 	}
-
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make(AnnotatedValues, 0, size)
+	})
 	return rv
 }
 
