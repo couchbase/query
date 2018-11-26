@@ -16,8 +16,17 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _SET_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_SET_OP_POOL, func() interface{} {
+		return &Set{}
+	})
+}
 
 // Write to copy
 type Set struct {
@@ -26,9 +35,8 @@ type Set struct {
 }
 
 func NewSet(plan *plan.Set, context *Context) *Set {
-	rv := &Set{
-		plan: plan,
-	}
+	rv := _SET_OP_POOL.Get().(*Set)
+	rv.plan = plan
 
 	newBase(&rv.base, context)
 	rv.output = rv
@@ -40,7 +48,8 @@ func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Set) Copy() Operator {
-	rv := &Set{plan: this.plan}
+	rv := _SET_OP_POOL.Get().(*Set)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -147,4 +156,9 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *Set) Done() {
+	this.baseDone()
+	_SET_OP_POOL.Put(this)
 }

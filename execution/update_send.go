@@ -16,8 +16,17 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _SENDUPDATE_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_SENDUPDATE_OP_POOL, func() interface{} {
+		return &SendUpdate{}
+	})
+}
 
 // Send to keyspace
 type SendUpdate struct {
@@ -27,10 +36,9 @@ type SendUpdate struct {
 }
 
 func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
-	rv := &SendUpdate{
-		plan:  plan,
-		limit: -1,
-	}
+	rv := _SENDUPDATE_OP_POOL.Get().(*SendUpdate)
+	rv.plan = plan
+	rv.limit = -1
 
 	newBase(&rv.base, context)
 	rv.execPhase = UPDATE
@@ -43,7 +51,9 @@ func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendUpdate) Copy() Operator {
-	rv := &SendUpdate{plan: this.plan, limit: this.limit}
+	rv := _SENDUPDATE_OP_POOL.Get().(*SendUpdate)
+	rv.plan = this.plan
+	rv.limit = this.limit
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -180,6 +190,11 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *SendUpdate) Done() {
+	this.baseDone()
+	_SENDUPDATE_OP_POOL.Put(this)
 }
 
 var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)

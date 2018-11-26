@@ -13,8 +13,17 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _CLONE_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_CLONE_OP_POOL, func() interface{} {
+		return &Clone{}
+	})
+}
 
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
@@ -23,9 +32,8 @@ type Clone struct {
 }
 
 func NewClone(plan *plan.Clone, context *Context) *Clone {
-	rv := &Clone{
-		plan: plan,
-	}
+	rv := _CLONE_OP_POOL.Get().(*Clone)
+	rv.plan = plan
 
 	newBase(&rv.base, context)
 	rv.output = rv
@@ -37,9 +45,8 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Clone) Copy() Operator {
-	rv := &Clone{
-		plan: this.plan,
-	}
+	rv := _CLONE_OP_POOL.Get().(*Clone)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -59,4 +66,9 @@ func (this *Clone) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *Clone) Done() {
+	this.baseDone()
+	_CLONE_OP_POOL.Put(this)
 }

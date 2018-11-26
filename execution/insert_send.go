@@ -15,8 +15,17 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _SENDINSERT_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_SENDINSERT_OP_POOL, func() interface{} {
+		return &SendInsert{}
+	})
+}
 
 type SendInsert struct {
 	base
@@ -25,11 +34,9 @@ type SendInsert struct {
 }
 
 func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
-	rv := &SendInsert{
-		plan:  plan,
-		limit: -1,
-	}
-
+	rv := _SENDINSERT_OP_POOL.Get().(*SendInsert)
+	rv.plan = plan
+	rv.limit = -1
 	newBase(&rv.base, context)
 	rv.execPhase = INSERT
 	rv.output = rv
@@ -41,7 +48,9 @@ func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendInsert) Copy() Operator {
-	rv := &SendInsert{plan: this.plan, limit: this.limit}
+	rv := _SENDINSERT_OP_POOL.Get().(*SendInsert)
+	rv.plan = this.plan
+	rv.limit = this.limit
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -196,6 +205,11 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *SendInsert) Done() {
+	this.baseDone()
+	_SENDINSERT_OP_POOL.Put(this)
 }
 
 var _INSERT_POOL = value.NewPairPool(_BATCH_SIZE)

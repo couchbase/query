@@ -16,8 +16,17 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _UNSET_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_UNSET_OP_POOL, func() interface{} {
+		return &Unset{}
+	})
+}
 
 // Write to copy
 type Unset struct {
@@ -26,9 +35,8 @@ type Unset struct {
 }
 
 func NewUnset(plan *plan.Unset, context *Context) *Unset {
-	rv := &Unset{
-		plan: plan,
-	}
+	rv := _UNSET_OP_POOL.Get().(*Unset)
+	rv.plan = plan
 
 	newBase(&rv.base, context)
 	rv.output = rv
@@ -40,7 +48,8 @@ func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Unset) Copy() Operator {
-	rv := &Unset{plan: this.plan}
+	rv := _UNSET_OP_POOL.Get().(*Unset)
+	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -136,4 +145,9 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *Unset) Done() {
+	this.baseDone()
+	_UNSET_OP_POOL.Put(this)
 }

@@ -18,6 +18,14 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+var _PARALLEL_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_PARALLEL_OP_POOL, func() interface{} {
+		return &Parallel{}
+	})
+}
+
 type Parallel struct {
 	base
 	plan     *plan.Parallel
@@ -26,10 +34,9 @@ type Parallel struct {
 }
 
 func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Parallel {
-	rv := &Parallel{
-		plan:  plan,
-		child: child,
-	}
+	rv := _PARALLEL_OP_POOL.Get().(*Parallel)
+	rv.plan = plan
+	rv.child = child
 
 	// all the children will be using the same value exchange,
 	// which is the parallel's output anyway
@@ -51,10 +58,9 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Parallel) Copy() Operator {
-	rv := &Parallel{
-		plan:  this.plan,
-		child: this.child.Copy(),
-	}
+	rv := _PARALLEL_OP_POOL.Get().(*Parallel)
+	rv.plan = this.plan
+	rv.child = this.child.Copy()
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -150,12 +156,14 @@ func (this *Parallel) reopen(context *Context) {
 
 func (this *Parallel) Done() {
 	this.baseDone()
-	for c, child := range this.children {
-		child.Done()
+	for c, _ := range this.children {
+		this.children[c].Done()
 		this.children[c] = nil
 	}
 	_PARALLEL_POOL.Put(this.children)
 	this.children = nil
+	this.child = nil
+	_PARALLEL_OP_POOL.Put(this)
 }
 
 var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())

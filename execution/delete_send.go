@@ -15,8 +15,17 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+var _SENDDELETE_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_SENDDELETE_OP_POOL, func() interface{} {
+		return &SendDelete{}
+	})
+}
 
 type SendDelete struct {
 	base
@@ -25,10 +34,9 @@ type SendDelete struct {
 }
 
 func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
-	rv := &SendDelete{
-		plan:  plan,
-		limit: -1,
-	}
+	rv := _SENDDELETE_OP_POOL.Get().(*SendDelete)
+	rv.plan = plan
+	rv.limit = -1
 
 	newBase(&rv.base, context)
 	rv.execPhase = DELETE
@@ -41,7 +49,9 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendDelete) Copy() Operator {
-	rv := &SendDelete{plan: this.plan, limit: this.limit}
+	rv := _SENDDELETE_OP_POOL.Get().(*SendDelete)
+	rv.plan = this.plan
+	rv.limit = this.limit
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -148,4 +158,9 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *SendDelete) Done() {
+	this.baseDone()
+	_SENDDELETE_OP_POOL.Put(this)
 }
