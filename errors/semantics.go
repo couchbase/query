@@ -127,6 +127,8 @@ const ENTERPRISE_FEATURE = 3230
 func NewEnterpirseFeature(opmsg, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: ENTERPRISE_FEATURE, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("%s is enterprise level feature.", opmsg),
+		InternalCaller: CallerN(1)}
+}
 
 const UNSUPPORTED_PATH_TYPE = 3240
 
