@@ -788,12 +788,14 @@ func (p *namespace) BucketNames() ([]string, errors.Error) {
 	return datastore.NO_STRINGS, nil
 }
 
+var _COLLECTIONS_NOT_SUPPORTED string = "Collections are not yet supported."
+
 func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
-	return nil, errors.NewNotImplemented("couchbase datastore BucketById()")
+	return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
 }
 
 func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
-	return nil, errors.NewNotImplemented("couchbase datastore BucketByName()")
+	return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
 }
 
 func (p *namespace) setPool(cbpool cb.Pool) {
