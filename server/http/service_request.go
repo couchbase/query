@@ -556,7 +556,7 @@ var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, par
 }
 
 func isValidParameter(a string) bool {
-	a = strings.TrimSpace(a)
+	a = util.TrimSpace(a)
 	// Ignore empty (whitespace) parameters. They are harmless.
 	if a == "" {
 		return true
@@ -814,7 +814,7 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 	var named map[string]value.Value
 
 	for arg, val := range req.Form {
-		newArg := strings.TrimSpace(strings.ToLower(arg))
+		newArg := util.TrimSpace(strings.ToLower(arg))
 		if !isValidParameter(newArg) {
 			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
 		}
@@ -1111,7 +1111,7 @@ func newJsonArgs(req *http.Request, p *jsonArgs) (*jsonArgs, errors.Error) {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse JSON"), "JSON request body")
 	}
 	for arg, val := range p.args {
-		newArg := strings.TrimSpace(strings.ToLower(arg))
+		newArg := util.TrimSpace(strings.ToLower(arg))
 		if !isValidParameter(newArg) {
 			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
 		}
