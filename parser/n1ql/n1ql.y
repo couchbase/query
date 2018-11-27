@@ -2966,7 +2966,11 @@ NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_cla
     f, ok := algebra.GetAggregate(fname, false, ($7 != nil))
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            yylex.Error(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.", fname, f.MinArgs(), f.MaxArgs()))
+             if f.MinArgs() == f.MaxArgs() {
+                   yylex.Error(fmt.Sprintf("Number of arguments to function %s must be %d.", fname, f.MaxArgs()))
+             } else {
+                   yylex.Error(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.", fname, f.MinArgs(), f.MaxArgs()))
+            }
         } else {
             $$ = f.Constructor()($3...)
             if a, ok := $$.(algebra.Aggregate); ok {
@@ -2991,7 +2995,11 @@ function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
            ($5 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
             yylex.Error(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", $1))
         } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            yylex.Error(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.", $1, f.MinArgs(), f.MaxArgs()))
+             if f.MinArgs() == f.MaxArgs() {
+                   yylex.Error(fmt.Sprintf("Number of arguments to function %s must be %d.", $1, f.MaxArgs()))
+             } else {
+                   yylex.Error(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.", $1, f.MinArgs(), f.MaxArgs()))
+            }
         } else {
             $$ = f.Constructor()($3...)
             if a, ok := $$.(algebra.Aggregate); ok {
