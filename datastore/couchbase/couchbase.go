@@ -255,17 +255,11 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 	return map[string]interface{}{}, errs
 }
 
-var _COLLECTIONS_AVAILABLE bool = false
-var _COLLECTIONS_NS *datastore.CollectionsNamespace = datastore.NewCollectionsNamespace("collections")
-
 func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }
 
 func (s *store) NamespaceNames() ([]string, errors.Error) {
-	if _COLLECTIONS_AVAILABLE {
-		return []string{"default", "collections"}, nil
-	}
 	return []string{"default"}, nil
 }
 
@@ -276,9 +270,6 @@ func (s *store) NamespaceById(id string) (p datastore.Namespace, e errors.Error)
 func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
 	p, ok := s.namespaceCache[name]
 	if !ok {
-		if _COLLECTIONS_AVAILABLE && name == "collections" {
-			return _COLLECTIONS_NS, nil
-		}
 		var err errors.Error
 		p, err = loadNamespace(s, name)
 		if err != nil {
