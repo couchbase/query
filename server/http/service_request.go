@@ -825,7 +825,8 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 				//This is an error - there _has_ to be a value for a named argument
 				return nil, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", arg))
 			case 1:
-				named = addNamedArg(named, newArg, value.NewValue([]byte(util.TrimSpace(val[0]))))
+				named = addNamedArg(named, util.TrimSpace(arg),
+					value.NewValue([]byte(util.TrimSpace(val[0]))))
 			default:
 				return nil, errors.NewServiceErrorMultipleValues(arg)
 			}
