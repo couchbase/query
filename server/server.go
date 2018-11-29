@@ -652,6 +652,13 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	} else {
 		autoPrepare = request.AutoPrepare() == value.TRUE
 	}
+
+	namedArgs := request.NamedArgs()
+	positionalArgs := request.PositionalArgs()
+	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+		autoPrepare = false
+	}
+
 	if prepared == nil && autoPrepare {
 		name = prepareds.GetAutoPrepareName(request.Statement(), request.IndexApiVersion(), request.FeatureControls())
 		if name != "" {
@@ -682,8 +689,6 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		}
 
 		prep := time.Now()
-		namedArgs := request.NamedArgs()
-		positionalArgs := request.PositionalArgs()
 
 		// MB-24871: do not replace named/positional parameters with value for prepare statement
 		if isprepare {
