@@ -685,7 +685,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		namedArgs := request.NamedArgs()
 		positionalArgs := request.PositionalArgs()
 
-		// No args for a prepared statement - should we throw an error?
+		// MB-24871: do not replace named/positional parameters with value for prepare statement
 		if isprepare {
 			namedArgs = nil
 			positionalArgs = nil
