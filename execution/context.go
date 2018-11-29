@@ -132,6 +132,7 @@ type Context struct {
 	scanCap            int64
 	pipelineCap        int64
 	pipelineBatch      int
+	isPrepared         bool
 	reqDeadline        time.Time
 	now                time.Time
 	namedArgs          map[string]value.Value
@@ -330,6 +331,14 @@ func (this *Context) PipelineBatch() int {
 
 func (this *Context) SetPipelineBatch(pipelineBatch int) {
 	this.pipelineBatch = pipelineBatch
+}
+
+func (this *Context) IsPrepared() bool {
+	return this.isPrepared
+}
+
+func (this *Context) SetPrepared(isPrepared bool) {
+	this.isPrepared = isPrepared
 }
 
 func (this *Context) AddMutationCount(i uint64) {

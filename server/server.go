@@ -597,6 +597,7 @@ func (this *Server) serviceRequest(request Request) {
 		prepared, request.IndexApiVersion(), request.FeatureControls())
 
 	context.SetWhitelist(this.whitelist)
+	context.SetPrepared(request.Prepared() != nil)
 
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
