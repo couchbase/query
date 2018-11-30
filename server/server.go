@@ -68,30 +68,27 @@ func (profile Profile) String() string {
 	return _PROFILE_NAMES[profile]
 }
 
-type waitState int
-
+// we should have our own type - but then it would be casting galore in CompareAndSwapUint32...
 const (
-	_WAIT_EMPTY = waitState(iota)
+	_WAIT_EMPTY = uint32(iota)
 	_WAIT_GO
 	_WAIT_FULL
 )
 
 type waitEntry struct {
 	request Request
-	state   waitState
+	state   uint32
 }
 
 type runQueue struct {
 	servicers int
 	size      int32
-	mutexCnt  int32
 	runCnt    int32
 	queueCnt  int32
 	head      int32
 	tail      int32
 	sync.Mutex
-	mutexes []sync.Mutex
-	queue   []waitEntry
+	queue []waitEntry
 }
 
 type Server struct {
@@ -451,8 +448,8 @@ func (this *Server) PlusServiceRequest(request Request) bool {
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	queue.Lock()
 
-	// if queue in use or servicers exceeded, reserve a spot in the queue
-	if queue.queueCnt > 0 || queue.runCnt >= int32(queue.servicers) {
+	// if servicers exceeded, reserve a spot in the queue
+	if queue.runCnt >= int32(queue.servicers) {
 
 		// rats! queue full, can't handle this request
 		if queue.queueCnt == queue.size {
@@ -494,56 +491,46 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 }
 
 func newRunQueue(q *runQueue, num int) {
-	q.mutexCnt = int32(runtime.NumCPU())
 	q.size = int32(num)
-	q.mutexes = make([]sync.Mutex, q.mutexCnt)
 	q.queue = make([]waitEntry, num)
 }
 
+// in this next couple of methods, the waiter populates the wait entry and then tries the CAS
+// the waker tries the CAS and then empties
 func (this *runQueue) addRequest(request Request) {
+
+	// get the next available entry
+	entry := atomic.AddInt32(&this.tail, 1) % this.size
+
+	// set up the entry and the request
 	request.setSleep()
+	this.queue[entry].request = request
 
-	// get the next available entry, lock it
-	tail := atomic.AddInt32(&this.tail, 1)
-	entry := tail % this.size
-	mutex := tail % this.mutexCnt
-	this.mutexes[mutex].Lock()
-
-	// the previous request terminated before we could get here
-	// we have the go ahead!
-	if this.queue[entry].state == _WAIT_GO {
-		this.queue[entry].state = _WAIT_EMPTY
-		this.mutexes[mutex].Unlock()
-		request.release()
+	// atomically set the state to full
+	// if we succeed, sleep
+	if atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_FULL) {
+		request.sleep()
 	} else {
 
-		// have to wait for one of the current runners to wake us up
-		this.queue[entry].state = _WAIT_FULL
-		this.queue[entry].request = request
-		this.mutexes[mutex].Unlock()
-		request.sleep()
+		// if the waker got there first, continue
+		this.queue[entry].request = nil
+		this.queue[entry].state = _WAIT_EMPTY
+		request.release()
 	}
 }
 
 func (this *runQueue) releaseRequest() {
 
-	// get the next available entry, lock it
-	head := atomic.AddInt32(&this.head, 1)
-	entry := head % this.size
-	mutex := head % this.mutexCnt
-	this.mutexes[mutex].Lock()
+	// get the next available entry
+	entry := atomic.AddInt32(&this.head, 1) % this.size
 
-	// the next waiter hasn't yet filled the spot, flag that it can go
-	if this.queue[entry].state == _WAIT_EMPTY {
-		this.queue[entry].state = _WAIT_GO
-		this.mutexes[mutex].Unlock()
-	} else {
+	// can we mark the entry as ready to go?
+	if !atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_GO) {
 
-		// it's here, wake it up
+		// nope, the waiter got there first, wake it up
 		request := this.queue[entry].request
 		this.queue[entry].request = nil
 		this.queue[entry].state = _WAIT_EMPTY
-		this.mutexes[mutex].Unlock()
 		request.release()
 	}
 }
