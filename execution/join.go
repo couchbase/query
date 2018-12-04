@@ -51,6 +51,7 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
 	keys, ok := this.evaluateKey(this.plan.Term().JoinKeys(), item, context)
 	if !ok {
+		item.Recycle()
 		return false
 	}
 

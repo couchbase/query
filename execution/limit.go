@@ -81,6 +81,7 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 		this.limit--
 		return this.sendItem(item)
 	} else {
+		item.Recycle()
 		return false
 	}
 }

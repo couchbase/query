@@ -48,6 +48,7 @@ func (this *Discard) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Discard) processItem(item value.AnnotatedValue, context *Context) bool {
+	item.Recycle()
 	return true
 }
 

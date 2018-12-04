@@ -23,9 +23,7 @@ import (
 // worth it!
 const _THRESHOLD = 2560
 
-/*
-A Value with delayed parsing.
-*/
+// A Value with delayed parsing.
 type parsedValue struct {
 	raw          []byte
 	parsedType   Type
@@ -38,6 +36,21 @@ type parsedValue struct {
 	indexState   *json.IndexState
 	refCnt       int32 // to check for recycling
 	used         int32 // to access state
+}
+
+var parsedPool util.FastPool
+
+func init() {
+	util.NewFastPool(&parsedPool, func() interface{} {
+		return &parsedValue{}
+	})
+}
+
+func newParsedValue() *parsedValue {
+	rv := parsedPool.Get().(*parsedValue)
+	*rv = parsedValue{}
+	rv.refCnt = 1
+	return rv
 }
 
 func NewParsedValue(bytes []byte, isValidated bool) Value {
@@ -74,11 +87,11 @@ func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 		return binaryValue(bytes)
 	}
 
-	return &parsedValue{
-		raw:        bytes,
-		parsedType: parsedType,
-		useState:   useState,
-	}
+	rv := newParsedValue()
+	rv.raw = bytes
+	rv.parsedType = parsedType
+	rv.useState = useState
+	return rv
 }
 
 /*
@@ -168,9 +181,7 @@ func (this *parsedValue) CopyForUpdate() Value {
 	return this.unwrap().CopyForUpdate()
 }
 
-/*
-Delayed parsing
-*/
+// Delayed parsing
 func (this *parsedValue) Field(field string) (Value, bool) {
 	if this.parsed != nil {
 		return this.parsed.Field(field)
@@ -265,9 +276,7 @@ func (this *parsedValue) UnsetField(field string) error {
 	return this.unwrap().UnsetField(field)
 }
 
-/*
-Delayed parsing
-*/
+// Delayed parsing
 func (this *parsedValue) Index(index int) (Value, bool) {
 	if this.parsed != nil {
 		return this.parsed.Index(index)
@@ -437,6 +446,7 @@ func (this *parsedValue) Recycle() {
 		}
 		this.fields = nil
 	}
+	parsedPool.Put(this)
 }
 
 func (this *parsedValue) Tokens(set *Set, options Value) *Set {
@@ -451,9 +461,7 @@ func (this *parsedValue) ContainsMatchingToken(matcher MatchFunc, options Value)
 	return this.unwrap().ContainsMatchingToken(matcher, options)
 }
 
-/*
-Delayed parse.
-*/
+// Delayed parse.
 func (this *parsedValue) unwrap() Value {
 	if this.raw != nil {
 		if this.parsedType == BINARY {

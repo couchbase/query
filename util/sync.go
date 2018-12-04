@@ -58,26 +58,87 @@ func (o *Once) Reset() {
 	atomic.StoreUint32(&o.done, 0)
 }
 
-const _POOL_SIZE = 8
+const _POOL_SIZE = 16
+const _POOL_MAX = 1024
 
 type FastPool struct {
-	getNext uint32
-	putNext uint32
-	pool    [_POOL_SIZE]sync.Pool
+	getNext   uint32
+	putNext   uint32
+	useCount  int32
+	freeCount int32
+	f         func() interface{}
+	pool      [_POOL_SIZE]poolList
+	free      [_POOL_SIZE]poolList
+}
+
+type poolList struct {
+	head *poolEntry
+	tail *poolEntry
+	sync.Mutex
+}
+
+type poolEntry struct {
+	entry interface{}
+	next  *poolEntry
 }
 
 func NewFastPool(p *FastPool, f func() interface{}) {
-	for i := 0; i < _POOL_SIZE; i++ {
-		p.pool[i].New = f
-	}
+	*p = FastPool{}
+	p.f = f
 }
 
 func (p *FastPool) Get() interface{} {
-	e := atomic.AddUint32(&p.getNext, 1) % _POOL_SIZE
-	return p.pool[e].Get()
+	l := atomic.AddUint32(&p.getNext, 1) % _POOL_SIZE
+	e := p.pool[l].Get()
+	if e == nil {
+		return p.f()
+	}
+	atomic.AddInt32(&p.useCount, -1)
+	rv := e.entry
+	e.entry = nil
+	if atomic.LoadInt32(&p.freeCount) < _POOL_MAX {
+		atomic.AddInt32(&p.freeCount, 1)
+		p.free[l].Put(e)
+	}
+	return rv
 }
 
 func (p *FastPool) Put(s interface{}) {
-	e := atomic.AddUint32(&p.putNext, 1) % _POOL_SIZE
-	p.pool[e].Put(s)
+	if atomic.LoadInt32(&p.useCount) >= _POOL_MAX {
+		return
+	}
+	l := atomic.AddUint32(&p.putNext, 1) % _POOL_SIZE
+	e := p.free[l].Get()
+	if e == nil {
+		e = &poolEntry{}
+	} else {
+		atomic.AddInt32(&p.freeCount, -1)
+	}
+	e.entry = s
+	atomic.AddInt32(&p.useCount, 1)
+	p.pool[l].Put(e)
+}
+
+func (l *poolList) Get() *poolEntry {
+	l.Lock()
+	if l.head == nil {
+		l.Unlock()
+		return nil
+	}
+	rv := l.head
+	l.head = rv.next
+	l.Unlock()
+	rv.next = nil
+	return rv
+}
+
+func (l *poolList) Put(e *poolEntry) {
+	l.Lock()
+	if l.head == nil {
+		l.head = e
+	} else {
+		l.tail.next = e
+	}
+	l.tail = e
+	l.Unlock()
 }

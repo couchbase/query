@@ -120,6 +120,7 @@ func (this *valueExchange) reset() {
 	this.stop = false
 	this.closed = false
 	for this.itemsCount > 0 {
+		this.items[this.itemsTail].Recycle()
 		this.items[this.itemsTail] = nil
 		this.itemsCount--
 		this.itemsTail++

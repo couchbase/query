@@ -13,9 +13,25 @@ import (
 	"io"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/util"
 )
 
 type AnnotatedValues []AnnotatedValue
+
+var annotatedPool util.FastPool
+
+func init() {
+	util.NewFastPool(&annotatedPool, func() interface{} {
+		return &annotatedValue{}
+	})
+}
+
+func newAnnotatedValue() *annotatedValue {
+	rv := annotatedPool.Get().(*annotatedValue)
+	*rv = annotatedValue{}
+	rv.refCnt = 1
+	return rv
+}
 
 func (this AnnotatedValues) Append(val AnnotatedValue, pool *AnnotatedPool) AnnotatedValues {
 	if len(this) == cap(this) {
@@ -58,16 +74,16 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 	case AnnotatedValue:
 		return val
 	case *ScopeValue:
-		av := &annotatedValue{}
+		av := newAnnotatedValue()
 		av.Value = val
 		av.InheritCovers(val.Parent())
 		return av
 	case Value:
-		av := &annotatedValue{}
+		av := newAnnotatedValue()
 		av.Value = val
 		return av
 	default:
-		av := &annotatedValue{}
+		av := newAnnotatedValue()
 		av.Value = NewValue(val)
 		return av
 	}
@@ -96,10 +112,9 @@ func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string, fast b
 }
 
 func (this *annotatedValue) Copy() Value {
-	rv := &annotatedValue{}
+	rv := newAnnotatedValue()
 	rv.Value = this.Value.Copy()
 	rv.attachments = copyMap(this.attachments, self)
-	rv.covers = this.covers
 	rv.bit = this.bit
 	if this.covers != nil {
 		rv.covers = this.covers.Copy()
@@ -109,7 +124,7 @@ func (this *annotatedValue) Copy() Value {
 }
 
 func (this *annotatedValue) CopyForUpdate() Value {
-	rv := &annotatedValue{}
+	rv := newAnnotatedValue()
 	rv.Value = this.Value.CopyForUpdate()
 	rv.attachments = copyMap(this.attachments, self)
 	rv.covers = this.covers
@@ -235,10 +250,11 @@ func (this *annotatedValue) Recycle() {
 	}
 	this.Value.Recycle()
 	this.Value = nil
-	this.attachments = nil
 	if this.covers != nil {
 		this.covers.Recycle()
 		this.covers = nil
 	}
+	this.attachments = nil
 	this.bit = 0
+	annotatedPool.Put(this)
 }

@@ -80,7 +80,11 @@ func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *ExceptAll) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.set.Has(item) || this.sendItem(item)
+	if this.set.Has(item) {
+		item.Recycle()
+		return true
+	}
+	return this.sendItem(item)
 }
 
 func (this *ExceptAll) afterItems(context *Context) {

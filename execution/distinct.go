@@ -66,6 +66,8 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 	if !this.set.Has(p.(value.Value)) {
 		this.set.Put(p.(value.Value), item)
 		return this.collect || this.sendItem(item)
+	} else {
+		item.Recycle()
 	}
 	return true
 }

@@ -177,6 +177,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 
 	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, context)
 	if probeVal == nil {
+		item.Recycle()
 		return false
 	}
 	outVal, err = this.hashTab.Get(probeVal, value.MarshalValue, value.EqualValue)

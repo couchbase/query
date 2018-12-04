@@ -58,6 +58,7 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 		lv.SetField(b.Variable(), v)
 	}
 
+	item.Recycle()
 	return this.sendItem(lv)
 }
 

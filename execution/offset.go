@@ -79,6 +79,7 @@ func (this *Offset) beforeItems(context *Context, parent value.Value) bool {
 func (this *Offset) processItem(item value.AnnotatedValue, context *Context) bool {
 	if this.offset > 0 {
 		this.offset--
+		item.Recycle()
 		return true
 	} else {
 		return this.sendItem(item)

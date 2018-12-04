@@ -13,6 +13,7 @@ import (
 	"io"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -26,8 +27,23 @@ type ScopeValue struct {
 	parent Value
 }
 
+var scopePool util.FastPool
+
+func init() {
+	util.NewFastPool(&scopePool, func() interface{} {
+		return &ScopeValue{}
+	})
+}
+
+func newScopeValue() *ScopeValue {
+	rv := scopePool.Get().(*ScopeValue)
+	*rv = ScopeValue{}
+	rv.refCnt = 1
+	return rv
+}
+
 func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
-	rv := &ScopeValue{}
+	rv := newScopeValue()
 	rv.Value = objectValue(val)
 	rv.parent = parent
 	if parent != nil {
@@ -50,16 +66,22 @@ func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 }
 
 func (this *ScopeValue) Copy() Value {
-	rv := &ScopeValue{}
+	rv := newScopeValue()
 	rv.Value = this.Value.Copy()
 	rv.parent = this.parent
+	if this.parent != nil {
+		this.parent.Track()
+	}
 	return rv
 }
 
 func (this *ScopeValue) CopyForUpdate() Value {
-	rv := &ScopeValue{}
+	rv := newScopeValue()
 	rv.Value = this.Value.CopyForUpdate()
 	rv.parent = this.parent
+	if this.parent != nil {
+		this.parent.Track()
+	}
 	return rv
 }
 
@@ -145,4 +167,5 @@ func (this *ScopeValue) Recycle() {
 		this.parent.Recycle()
 		this.parent = nil
 	}
+	scopePool.Put(this)
 }
