@@ -11,9 +11,7 @@ package execution
 
 import (
 	"fmt"
-	"github.com/couchbase/cbauth"
 	"net/http"
-	"net/url"
 	"os"
 	"runtime"
 	"sync"
@@ -265,16 +263,6 @@ func (this *Context) Credentials() auth.Credentials {
 	return this.credentials
 }
 
-func (this *Context) UrlCredentials() auth.Credentials {
-	// For the cases where the request doesnt have credentials but uses an auth
-	// token or x509 certs, we need to derive the credentials to be able to query
-	// the fts index.
-	dUrl, _ := url.Parse(this.DatastoreURL())
-	authenticator := cbauth.Default
-	u, p, _ := authenticator.GetHTTPServiceAuth(dUrl.Hostname() + ":" + dUrl.Port())
-	return auth.Credentials{u: p}
-}
-
 func (this *Context) ScanConsistency() datastore.ScanConsistency {
 	return this.consistency
 }
@@ -462,10 +450,6 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	}
 
 	return results, nil
-}
-
-func (this *Context) DatastoreURL() string {
-	return this.datastore.URL()
 }
 
 func (this *Context) getSubplans() *subqueryMap {
