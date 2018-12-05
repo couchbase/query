@@ -40,6 +40,7 @@ type store struct {
 	path           string
 	namespaces     map[string]*namespace
 	namespaceNames []string
+	inferencer     datastore.Inferencer // what we use to infer schemas
 
 	users map[string]*datastore.User
 }
@@ -104,12 +105,13 @@ func (s *store) SetLogLevel(level logging.Level) {
 	// No-op. Uses query engine logger.
 }
 
+// Ignore the name parameter for now
 func (s *store) Inferencer(name datastore.InferenceType) (datastore.Inferencer, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+	return s.inferencer, nil
 }
 
 func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+	return []datastore.Inferencer{s.inferencer}, nil
 }
 
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
@@ -160,6 +162,13 @@ func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	e = fs.loadNamespaces()
 	if e != nil {
 		return
+	}
+
+	// get the schema inferencer
+	var err errors.Error
+	fs.inferencer, err = GetDefaultInferencer(fs)
+	if err != nil {
+		return nil, err
 	}
 
 	s = fs
