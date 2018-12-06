@@ -357,7 +357,7 @@ tokOffset	 int
 %type <simpleFromTerm>   simple_from_term
 %type <keyspaceTerm>     keyspace_term
 %type <keyspacePath>     keyspace_path
-%type <b>                opt_join_type
+%type <b>                opt_join_type opt_quantifier
 %type <path>             path
 %type <s>                namespace_name keyspace_name namespace_term bucket_name scope_name 
 %type <use>              opt_use opt_use_del_upd opt_use_merge use_options use_keys use_index join_hint
@@ -797,30 +797,26 @@ projection
 ;
 
 projection:
-projects
+opt_quantifier projects
 {
-    $$ = algebra.NewProjection(false, $1)
+    $$ = algebra.NewProjection($1, $2)
 }
 |
-DISTINCT projects
+opt_quantifier raw expr opt_as_alias
 {
-    $$ = algebra.NewProjection(true, $2)
+    $$ = algebra.NewRawProjection($1, $3, $4)
 }
+;
+
+opt_quantifier:
+/* empty */
+{ $$ = false }
 |
-ALL projects
-{
-    $$ = algebra.NewProjection(false, $2)
-}
+ALL
+{ $$ = false }
 |
-raw expr opt_as_alias
-{
-    $$ = algebra.NewRawProjection(false, $2, $3)
-}
-|
-DISTINCT raw expr opt_as_alias
-{
-    $$ = algebra.NewRawProjection(true, $3, $4)
-}
+DISTINCT
+{ $$ = true }
 ;
 
 raw:
