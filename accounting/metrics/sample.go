@@ -73,7 +73,7 @@ func NewExpDecaySample(reservoirSize int, alpha float64) Sample {
 	s.values.Clear()
 	start := 0
 	for r, _ := range s.reservoirs {
-		s.reservoirs[r].values.s = s.values.s[start:start : start+rSz]
+		s.reservoirs[r].values.s = s.values.s[start : start : start+rSz]
 		s.reservoirs[r].random = rand.New(rand.NewSource(s.t0.UnixNano() + int64(r)))
 		s.reservoirs[r].reservoirSize = rSz
 		start += rSz
