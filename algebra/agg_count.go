@@ -194,7 +194,7 @@ func (this *Count) CumulateRemove(item, cumulative value.Value, context Context)
 		return value.AsNumberValue(cumulative).Sub(value.AsNumberValue(value.ONE_VALUE)), nil
 	}
 
-	return nil, fmt.Errorf("Invalid %v.CumulateRemove() for %v value.", cumulative.Actual())
+	return nil, fmt.Errorf("Invalid %v.CumulateRemove() for %v value.", this.Name(), cumulative.Actual())
 }
 
 /*
