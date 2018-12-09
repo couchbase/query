@@ -42,7 +42,7 @@ func TestZKClustering(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf("Error creating configstore: ", err)
+		t.Fatal("Error creating configstore: ", err)
 	}
 	fmt.Printf("Created config store %v\n\n", cs)
 
@@ -55,22 +55,22 @@ func TestZKClustering(t *testing.T) {
 	cluster1, err = cfm.AddCluster(cluster1)
 
 	if err != nil {
-		t.Fatalf("Error adding cluster: ", err)
+		t.Fatal("Error adding cluster: ", err)
 	}
 
 	cluster1check, errCheck := cs.ClusterByName("cluster1")
 	if errCheck != nil {
-		t.Fatalf("Unexpected Error retrieving cluster by name: ", errCheck)
+		t.Fatal("Unexpected Error retrieving cluster by name: ", errCheck)
 	}
 
 	fmt.Printf("Retrieved cluster: %v\n\n", cluster1check)
 
 	qn, err_qn := cluster1check.QueryNodeByName("qryNode")
 	if err_qn == nil {
-		t.Fatalf("Expected error getting query node: ", qn)
+		t.Fatal("Expected error getting query node: ", qn)
 	}
 	if qn != nil {
-		t.Fatalf("Unexpected query node! ", qn)
+		t.Fatal("Unexpected query node! ", qn)
 	}
 
 	clusterMgr := cluster1check.ClusterManager()
@@ -78,21 +78,21 @@ func TestZKClustering(t *testing.T) {
 	queryNode, _ := NewQueryNode(":8093", stdCfg, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
-		t.Fatalf("Unexpected error adding query node: ", err_qn)
+		t.Fatal("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
 	queryNode, _ = NewQueryNode(":8094", stdCfg, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
-		t.Fatalf("Unexpected error adding query node: ", err_qn)
+		t.Fatal("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
 	queryNode, _ = NewQueryNode(":8095", stdCfg, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
-		t.Fatalf("Unexpected error adding query node: ", err_qn)
+		t.Fatal("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
@@ -105,7 +105,7 @@ func TestZKClustering(t *testing.T) {
 
 	qryNodes, errT := clusterMgr.GetQueryNodes()
 	if errT != nil {
-		t.Fatalf("Unexpected error getting query nodes: ", errT)
+		t.Fatal("Unexpected error getting query nodes: ", errT)
 	}
 	for i, qNode := range qryNodes {
 		fmt.Printf("Query Node %d: configuration = %v\n\n", i, qNode)
@@ -113,7 +113,7 @@ func TestZKClustering(t *testing.T) {
 
 	clusters, errC := cfm.GetClusters()
 	if errC != nil {
-		t.Fatalf("Unexpected error getting clusters: ", errC)
+		t.Fatal("Unexpected error getting clusters: ", errC)
 	}
 	for c, cluster := range clusters {
 		fmt.Printf("Cluster %d: configuration = %v\n\n", c, cluster)
@@ -122,15 +122,15 @@ func TestZKClustering(t *testing.T) {
 	for _, qNode := range qryNodes {
 		qNode, errT = clusterMgr.RemoveQueryNodeByName(qNode.Name())
 		if errT != nil {
-			t.Fatalf("Unexpected error removing query node: ", errT)
+			t.Fatal("Unexpected error removing query node: ", errT)
 		}
 	}
 	r, err := cfm.RemoveClusterByName(cluster1check.Name())
 	if err != nil {
-		t.Fatalf("Unexpected error removing cluster: ", err)
+		t.Fatal("Unexpected error removing cluster: ", err)
 	}
 	if r {
-		fmt.Printf("Successfully removed cluster \n\n", cluster1)
+		fmt.Printf("Successfully removed cluster %v\n\n", cluster1)
 	}
 
 }

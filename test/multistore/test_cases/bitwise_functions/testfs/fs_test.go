@@ -31,6 +31,6 @@ func TestAllCaseFiles(t *testing.T) {
 		if stmt != "" {
 			t.Logf(" %v\n", stmt)
 		}
-		fmt.Println("\nQuery matched: ", m, "\n\n")
+		fmt.Print("\nQuery matched: ", m, "\n\n")
 	}
 }

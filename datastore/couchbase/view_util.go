@@ -238,7 +238,7 @@ func decodeCompoundArrayAsObject(ca []interface{}) (map[string]interface{}, erro
 
 	key_array, ok := ca[0].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Key array is not an array but type %T", ca[0], ca[0])
+		return nil, fmt.Errorf("Key array is not an array but types %T, %T", ca[0], ca[0])
 	}
 
 	val_array, ok := ca[1].([]interface{})

@@ -22,7 +22,7 @@ func NewAdminConnectionError(e error, msg string) Error {
 
 func NewAdminInvalidURL(component string, url string) Error {
 	return &err{level: EXCEPTION, ICode: 2010, IKey: "admin.invalid_url",
-		InternalMsg: fmt.Sprintf("Invalid % url: %s", component, url), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Invalid %s url: %s", component, url), InternalCaller: CallerN(1)}
 }
 
 func NewAdminDecodingError(e error) Error {

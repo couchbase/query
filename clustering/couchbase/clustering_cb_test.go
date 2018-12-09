@@ -52,7 +52,7 @@ func TestCBClustering(t *testing.T) {
 
 	cs, err := NewConfigstore("http://" + couchbase_location + ":8091")
 	if err != nil {
-		t.Fatalf("Error creating configstore: ", err)
+		t.Fatal("Error creating configstore: ", err)
 	}
 	version := clustering.NewVersion("0.7.0")
 
@@ -67,7 +67,7 @@ func TestCBClustering(t *testing.T) {
 	cluster1, err = cfm.AddCluster(cluster1)
 
 	if err != nil {
-		t.Fatalf("Error adding cluster: ", err)
+		t.Fatal("Error adding cluster: ", err)
 	}
 
 	_, no_such_cluster := cs.ClusterByName("no_such_cluster")
@@ -80,7 +80,7 @@ func TestCBClustering(t *testing.T) {
 	// There should be a cluster called "default" in the Couchbase installation:
 	cluster1check, errCheck := cs.ClusterByName("default")
 	if errCheck != nil {
-		t.Fatalf("Unexpected Error retrieving cluster by name: ", errCheck)
+		t.Fatal("Unexpected Error retrieving cluster by name: ", errCheck)
 	}
 
 	fmt.Printf("Retrieved cluster: %v\n\n", cluster1check)
@@ -91,12 +91,12 @@ func TestCBClustering(t *testing.T) {
 	clusters, errCheck := cm.GetClusters()
 	clusters_json, json_err := json.Marshal(clusters)
 	if err != nil {
-		t.Fatalf("Unexpected Error marshalling GetClusters: ", json_err)
+		t.Fatal("Unexpected Error marshalling GetClusters: ", json_err)
 	}
 
 	fmt.Printf("Retrieved clusters: %s\n", string(clusters_json))
 	if errCheck != nil {
-		t.Fatalf("Unexpected Error retrieving all cluster configs: ", errCheck)
+		t.Fatal("Unexpected Error retrieving all cluster configs: ", errCheck)
 	}
 	iterateClusters(clusters, t)
 }
@@ -105,12 +105,12 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 	for _, c := range clusters {
 		queryNodeNames, errCheck := c.QueryNodeNames()
 		if errCheck != nil {
-			t.Fatalf("Unexpected Error retrieving query node names: ", errCheck)
+			t.Fatal("Unexpected Error retrieving query node names: ", errCheck)
 		}
 		for _, qn := range queryNodeNames {
 			qryNode, errCheck := c.QueryNodeByName(qn)
 			if errCheck != nil {
-				t.Fatalf("Unexpected Error retrieving query node by name: ", errCheck)
+				t.Fatal("Unexpected Error retrieving query node by name: ", errCheck)
 			}
 			if qryNode.QueryEndpoint() == "" {
 				t.Logf("Query node %s does not have QueryEndpoint", qryNode.Name())
@@ -120,19 +120,19 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 			}
 			json_node, json_err := json.Marshal(qryNode)
 			if json_err != nil {
-				t.Fatalf("Unexpected Error marshalling query node: ", json_err)
+				t.Fatal("Unexpected Error marshalling query node: ", json_err)
 			}
 			fmt.Printf("QueryNode=%s\n", string(json_node))
 		}
 		clm := c.ClusterManager()
 		queryNodes, errCheck := clm.GetQueryNodes()
 		if errCheck != nil {
-			t.Fatalf("Unexpected Error retrieving query nodes: ", errCheck)
+			t.Fatal("Unexpected Error retrieving query nodes: ", errCheck)
 		}
 		for _, qryNode := range queryNodes {
 			json_node, json_err := json.Marshal(qryNode)
 			if json_err != nil {
-				t.Fatalf("Unexpected Error marshalling query node: ", json_err)
+				t.Fatal("Unexpected Error marshalling query node: ", json_err)
 			}
 			fmt.Printf("QueryNode=%s\n", string(json_node))
 		}

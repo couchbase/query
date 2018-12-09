@@ -24,7 +24,7 @@ func TestMerge(t *testing.T) {
 
 	qc := start_cs()
 
-	fmt.Println("\n\nInserting values into Buckets for MERGE \n\n")
+	fmt.Print("\n\nInserting values into Buckets for MERGE \n\n")
 	runMatch("insert.json", false, false, qc, t)
 
 	fmt.Println("Creating indexes")

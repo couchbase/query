@@ -35,10 +35,11 @@ Use built-in JSON string marshalling, which handles special
 characters.
 */
 func (this stringValue) String() string {
-	bytes, err := json.MarshalNoEscape(string(this))
+	rawString := string(this)
+	bytes, err := json.MarshalNoEscape(rawString)
 	if err != nil {
 		// We should not get here.
-		panic(fmt.Sprintf("Error marshaling Value %v: %v", this, err))
+		panic(fmt.Sprintf("Error marshaling string Value %s: %v", rawString, err))
 	}
 	return string(bytes)
 }

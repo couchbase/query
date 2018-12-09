@@ -1245,7 +1245,7 @@ func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32,
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("Recovered in f", r)
+			err = fmt.Errorf("Recovered in f %v", r)
 		}
 	}()
 

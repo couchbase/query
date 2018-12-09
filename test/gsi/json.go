@@ -686,7 +686,7 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 			t.Logf(" %v\n", stmt)
 		}
 
-		fmt.Println("\nQuery : ", m, "\n\n")
+		fmt.Print("\nQuery : ", m, "\n\n")
 	}
 
 }
