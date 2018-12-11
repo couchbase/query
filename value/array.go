@@ -338,10 +338,6 @@ func (this sliceValue) Track() {
 }
 
 func (this sliceValue) Recycle() {
-	// the old recycle functionality had never been used
-	// this will be reinstated or removed with the whole
-	// of recycle.go when more investigation has been done
-	//	recycle(this)
 }
 
 func (this sliceValue) Tokens(set *Set, options Value) *Set {
