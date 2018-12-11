@@ -446,6 +446,14 @@ func (this *parsedValue) Recycle() {
 		}
 		this.fields = nil
 	}
+	if this.elements != nil {
+		for i, element := range this.elements {
+			this.elements[i] = nil
+			element.Recycle()
+		}
+		this.elements = nil
+	}
+	this.raw = nil
 	parsedPool.Put(this)
 }
 
