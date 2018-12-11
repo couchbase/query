@@ -1,7 +1,5 @@
 package value
 
-import json "github.com/couchbase/go_json"
-
 func recycle(o interface{}) {
 	if o == nil {
 		return
@@ -38,7 +36,6 @@ func recycle(o interface{}) {
 		for _, v := range m {
 			recycle(v)
 		}
-		json.RecycleMap(m)
 		return
 	}
 
@@ -48,7 +45,6 @@ func recycle(o interface{}) {
 		for _, v := range a {
 			recycle(v)
 		}
-		json.RecycleArray(a)
 		return
 	}
 
