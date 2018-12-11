@@ -41,32 +41,24 @@ func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
 		qvals, qok := qval.Actual().([]interface{})
 		ivals, iok := ival.Actual().([]interface{})
 
-		/* right side of IN in the index and query must be arrays of length > 0.
-		   Also number of comparisions must be <= 8192
-		*/
-
-		if !qok || !iok || len(qvals) == 0 || len(ivals) == 0 || (len(qvals)*len(ivals)) > 8192 {
+		// right side of IN in the index and query must be arrays of length > 0
+		if !qok || !iok || len(qvals) == 0 || len(ivals) == 0 {
 			return false, nil
 		}
 
 		// Build values of index
-		iav := make(value.Values, len(ivals))
-		for i, v := range ivals {
-			iav[i] = value.NewValue(v)
+		iset := value.NewSet(len(ivals), false, false)
+		for _, v := range ivals {
+			iv := value.NewValue(v)
+			iset.Put(iv, iv)
 		}
 
 		// Check every query value is present in the index
-	outer:
 		for _, v := range qvals {
-			qv := value.NewValue(v)
-			for _, v2 := range iav {
-				// query array element is present in index array
-				if qv.EquivalentTo(v2) {
-					continue outer
-				}
+			if !iset.Has(value.NewValue(v)) {
+				// query array element is not present in index array
+				return false, nil
 			}
-			// query array element is not present in index array
-			return false, nil
 		}
 
 		// all query array elements are present in index array
