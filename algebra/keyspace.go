@@ -111,5 +111,5 @@ func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
 Returns the full keyspace name, including the namespace.
 */
 func (this *KeyspaceRef) FullName() string {
-	return this.path.String()
+	return this.path.SimpleString()
 }

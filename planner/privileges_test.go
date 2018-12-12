@@ -71,7 +71,7 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Insert from VALUES", text: "insert into testbucket values ('foo', CURL('http://ip.jsontest.com'))",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "", Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
 			}}},
 		testCase{id: "Select with USE KEYS", text: "select * from testbucket use keys CURL('http://ip.jsontest.com')",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
@@ -82,7 +82,7 @@ func TestStatementPrivileges(t *testing.T) {
 			text: "update default use keys 'mykey' SET myWebServiceEndpoint = (SELECT raw result FROM CURL('http://ip.jsontest.com') result )",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "", Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS},
-				auth.PrivilegePair{Target: ":default", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "default", Priv: auth.PRIV_QUERY_UPDATE},
 			}}},
 		//
 		// ROLE statements
@@ -127,19 +127,19 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Simple Insert",
 			text: "INSERT INTO testbucket VALUES ('key1', { 'a' : 'b' })",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
 			}}},
 		testCase{id: "Insert Select",
 			text: "INSERT INTO testbucket (KEY foo, VALUE bar) SELECT foo, bar FROM otherbucket",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
 				auth.PrivilegePair{Target: ":otherbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		testCase{id: "Insert with Returning",
 			text: "INSERT INTO testbucket VALUES ('key1r', { 'a' : 'b' }) RETURNING meta().cas",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_SELECT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		//
 		// UPDATE statements
@@ -147,19 +147,19 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Simple Update",
 			text: "UPDATE testbucket SET foo = 5",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
 			}}},
 		testCase{id: "Update with WHERE",
 			text: "UPDATE testbucket SET foo = 9 WHERE bar = (SELECT max(id) FROM otherbucket)",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
 				auth.PrivilegePair{Target: ":otherbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		testCase{id: "Update with Returning",
 			text: "UPDATE testbucket SET foo = 9 WHERE bar = baz RETURNING *",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_SELECT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		//
 		// DELETE statements
@@ -167,18 +167,18 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Simple Delete",
 			text: "DELETE FROM testbucket WHERE f = 10",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_DELETE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_DELETE},
 			}}},
 		testCase{id: "Delete with Returning",
 			text: "DELETE FROM testbucket WHERE f = 9 RETURNING *",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_DELETE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_SELECT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_DELETE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		testCase{id: "Delete with Subquery",
 			text: "DELETE FROM testbucket WHERE f = (SELECT max(foo) FROM otherbucket)",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_DELETE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_DELETE},
 				auth.PrivilegePair{Target: ":otherbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		//
@@ -187,22 +187,22 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Upsert with Values",
 			text: "UPSERT INTO testbucket VALUES ('key1', { 'a' : 'b' })",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
 			}}},
 		testCase{id: "Upsert Select",
 			text: "UPSERT INTO testbucket (KEY foo, VALUE bar) SELECT foo, bar FROM otherbucket",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
 				auth.PrivilegePair{Target: ":otherbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		testCase{id: "Upsert with Returning",
 			text: "UPSERT INTO testbucket VALUES ('key1', { 'a' : 'b' }) RETURNING meta().cas",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_SELECT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		//
 		// EXPLAIN statements
@@ -210,15 +210,15 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Explain Insert",
 			text: "EXPLAIN INSERT INTO testbucket (KEY foo, VALUE bar) SELECT foo, bar FROM otherbucket",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
 				auth.PrivilegePair{Target: ":otherbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		testCase{id: "Explain Upsert",
 			text: "EXPLAIN UPSERT INTO testbucket VALUES ('key1', { 'a' : 'b' }) RETURNING meta().cas",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_INSERT},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_SELECT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		//
 		// PREPARE statements
@@ -232,8 +232,8 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Prepare Update",
 			text: "PREPARE UPDATE testbucket SET foo = 9 WHERE bar = baz RETURNING *",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_SELECT},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		//
 		// INFER statements
@@ -252,8 +252,8 @@ func TestStatementPrivileges(t *testing.T) {
 				"WHEN MATCHED THEN DELETE WHERE p.inventoryCount  <= 0",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: ":orders", Priv: auth.PRIV_QUERY_SELECT},
-				auth.PrivilegePair{Target: ":product", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":product", Priv: auth.PRIV_QUERY_DELETE},
+				auth.PrivilegePair{Target: "product", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "product", Priv: auth.PRIV_QUERY_DELETE},
 			}}},
 		testCase{id: "Merge with Update Insert",
 			text: "MERGE INTO all_empts a USING emps_deptb b ON KEY b.empId " +
@@ -262,8 +262,8 @@ func TestStatementPrivileges(t *testing.T) {
 				"INSERT  { 'name': b.name, 'title': b.title, 'depts': b.depts, 'empId': b.empId, 'dob': b.dob }",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: ":emps_deptb", Priv: auth.PRIV_QUERY_SELECT},
-				auth.PrivilegePair{Target: ":all_empts", Priv: auth.PRIV_QUERY_UPDATE},
-				auth.PrivilegePair{Target: ":all_empts", Priv: auth.PRIV_QUERY_INSERT},
+				auth.PrivilegePair{Target: "all_empts", Priv: auth.PRIV_QUERY_UPDATE},
+				auth.PrivilegePair{Target: "all_empts", Priv: auth.PRIV_QUERY_INSERT},
 			}}},
 		//
 		// system tables
@@ -285,12 +285,12 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "Create Index",
 			text: "create index testidx on testbucket(foo)",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_CREATE_INDEX},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_CREATE_INDEX},
 			}}},
 		testCase{id: "Drop Index",
 			text: "drop index testbucket.testidx",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_DROP_INDEX},
+				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_DROP_INDEX},
 			}}},
 	}
 

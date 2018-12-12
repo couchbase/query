@@ -149,7 +149,7 @@ func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
    Representation as a N1QL string.
 */
 func (this *KeyspaceTerm) String() string {
-	s := this.path.String()
+	s := this.path.ProtectedString()
 
 	if this.as != "" {
 		s += " as `" + this.as + "`"

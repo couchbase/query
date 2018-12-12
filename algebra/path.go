@@ -82,12 +82,27 @@ func (path *Path) Alias() string {
 	return path.elements[len(path.elements)-1]
 }
 
-func (path *Path) String() string {
+func (path *Path) SimpleString() string {
+	forceBackticks := false
+	return path.string(forceBackticks)
+}
+
+func (path *Path) ProtectedString() string {
+	forceBackticks := true
+	return path.string(forceBackticks)
+}
+
+func (path *Path) string(forceBackticks bool) string {
 	acc := ""
 	lastIndex := len(path.elements) - 1
 	for i, s := range path.elements {
+		// The first element, i.e. the namespace, may be an empty string.
+		// That means we can omit it, and the separator after it.
+		if i == 0 && path.firstElementIsNamespace && s == "" {
+			continue
+		}
 		// Wrap any element that contains "." in back-ticks.
-		if strings.Contains(s, ".") {
+		if forceBackticks || strings.Contains(s, ".") {
 			acc += "`"
 			acc += s
 			acc += "`"
