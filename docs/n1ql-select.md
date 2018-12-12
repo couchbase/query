@@ -814,7 +814,7 @@ _ordering-term:_
 If no ORDER BY clause is specified, the order in which the result
 objects are returned is undefined.
 
-If an ORDER BY clause is specified, the order of items in the result
+If an ORDER BY clause is specified, the order of objects in the result
 array is determined by the ordering expressions.  Objects are first
 sorted by the left-most expression in the list.  Any items with the
 same sort value are then sorted by the next expression in the list.
@@ -840,6 +840,79 @@ describes the order by type (from lowest to highest):
   name/value by name/value comparison is performed; names are examined
   in sorted order using the normal ordering for strings)
 * binary (raw byte-wise comparison)
+
+Each ORDER BY expression can have separate collation. ASC (lowest to highest),
+DESC (highest to lowest). If collation is omitted default to ASC.
+
+Each ORDER BY expression can have separate nulls ordering (NULLS FIRST or
+NULLS LAST). NULL and MISSING considered together and placed according to
+specification, between NULL and MISSING it follows collation specification.
+If nulls ordering is omitted default is natural order described below.
+* In case of ASC it will be ASC NULLS FIRST
+* In case of DESC it will be DESC NULLS LAST.
+
+<table>
+  <tr>
+        <th>ASC NULLS FIRST</th>
+        <th>ASC NULLS LAST</th>
+        <th>DESC NULLS FIRST</th>
+        <th>DESC NULLS LAST</th>
+  </tr>
+  <tr>
+        <td>MISSING</td>
+        <td>FALSE</td>
+        <td>NULL</td>
+        <td>BINARY</td>
+  </tr>
+  <tr>
+        <td>NULL</td>
+        <td>TRUE</td>
+        <td>MISSING</td>
+        <td>OBJECT</td>
+  </tr>
+  <tr>
+        <td>FALSE</td>
+        <td>NUMBER</td>
+        <td>BINARY</td>
+        <td>ARRAY</td>
+  </tr>
+  <tr>
+        <td>TRUE</td>
+        <td>STRING</td>
+        <td>OBJECT</td>
+        <td>STRING</td>
+  </tr>
+  <tr>
+        <td>NUMBER</td>
+        <td>ARRAY</td>
+        <td>ARRAY</td>
+        <td>NUMBER</td>
+  </tr>
+  <tr>
+        <td>STRING</td>
+        <td>OBJECT</td>
+        <td>STRING</td>
+        <td>TRUE</td>
+  </tr>
+  <tr>
+        <td>ARRAY</td>
+        <td>BINARY</td>
+        <td>NUMBER</td>
+        <td>FALSE</td>
+  </tr>
+  <tr>
+        <td>OBJECT</td>
+        <td>MISSING</td>
+        <td>TRUE</td>
+        <td>NULL</td>
+  </tr>
+  <tr>
+        <td>BINARY</td>
+        <td>NULL</td>
+        <td>FALSE</td>
+        <td>MISSING</td>
+  </tr>
+</table>
 
 ## OFFSET clause
 
@@ -1213,6 +1286,583 @@ _elements:_
 
 ![](diagram/elements.png)
 
+### Window Functions
+
+Window functions computes an aggregate value based on a group of objects.
+The group of rows are defined by window-clause. For each object sliding
+window of objects defined. The window determines objects used to compute
+aggregate. The window size can be physical or logical or group of objects.
+
+Window functions are processed after Joins, LET, Filter, GROUP BY, LETTING,
+and HAVING clause. Window functions can only appear in projection clause or
+query ORDER BY clause. So, window function operates on query result set.
+In case of window function every input object there is output object vs
+aggregates each group returns one object. If query block has GROUP BY
+or aggregate functions the all the expressions in window functions must
+only dependent on GROUP BY expressions or aggregate functions.
+
+The query block can have any number of window functions, there is no limit.
+
+Window functions are used for compute cumulative, moving, and reporting aggregations.
+
+_window-function:_
+
+![](diagram/window-function.png)
+
+_window-function-arguments:_
+
+![](diagram/window-function-arguments.png)
+
+_aggregate-quantifier:_
+
+![](diagram/aggregate-quantifier.png)
+
+_window-function-options:_
+
+![](diagram/window-function-options.png)
+
+_nthval-from:_
+
+![](diagram/nthval-from.png)
+
+_nulls-treatment:_
+
+![](diagram/nulls-treatment.png)
+
+_window-clause:_
+
+![](diagram/window-clause.png)
+
+_window-partition-clause:_
+
+![](diagram/window-partition-clause.png)
+
+_window-order-clause:_
+
+![](diagram/window-order-clause.png)
+
+_ordering-term:_
+
+![](diagram/ordering-term.png)
+
+_window-frame-clause:_
+
+![](diagram/window-frame-clause.png)
+
+_window-frame-exclusion:_
+
+![](diagram/window-frame-exclusion.png)
+
+_window-function-type:_
+
+![](diagram/window-function-type.png)
+
+_aggregate-functions:_
+
+![](diagram/aggregate-functions.png)
+
+_rank-functions:_
+
+![](diagram/rank-functions.png)
+
+## window function type
+
+The window function type can be
+* aggregate functions (ARRAY_AGG, AVG, COUNT, COUNTN, MAX, MEAN, MEDIAN, MIN, SUM,
+                       STDDEV, STDDEV_SAMP, STDDEV_POP, VARIANCE, VAR_SAMP, VAR_POP).
+* rank functions (RANK, DENSE_RANK, PERCENT_RANK, CUME_DIST).
+* ROW_NUMBER.
+* value functions (FIRST_VALUE, LAST_VALUE, NTH_VALUE).
+* LAG, LEAD.
+* NTILE, RATIO_TO_REPORT.
+
+## window function arguments
+
+_window-function-arguments:_
+
+![](diagram/window-function-arguments.png)
+
+_aggregate-quantifier:_
+
+![](diagram/aggregate-quantifier.png)
+
+The window functions takes 0 to 3 arguments. The type of expression is depends on
+each object field type, due to that no error is return unless constant number is
+expected. If the function is expecting certain type (ex: aggregate functions
+(except ARRAY_AGG, COUNT, MIN, MAX), NTILE, RATIO_TO_REPORT expects argument value
+must be number), but argument evaluates to different type, that object will
+omitted from computation (instead of raising error).
+
+The arguments can be constants, object fields, non-window functions, functions,
+aggregates, query named/positional parameters, and expression involving any of these.
+
+There is no restriction on arguments be subquery. However one should avoid this due
+to nature of repeated evaluation during computation. If required, one should use
+LET or intervene subquery to avoid repeated evaluation.
+
+The arguments cannot nest another window functions. You can specify window function
+in subquery and compute another window function in parent query.  Additional restrictions
+apply for 2nd and 3rd arguments whenever is allowed.
+
+Only COUNT window function allows argument as STAR (i.e COUNT(*)).
+
+Only aggregate functions allows ALL, DISTINCT quantifier. Default is ALL.
+
+The return type of window function can be number or one of JSON type. If window function
+returns number high end values may be rounded (number is represented as float64).
+
+The following table shows window functions and corresponding syntax clauses allowed.
+
+<table>
+  <tr>
+        <th>Window Function</th>
+        <th>No of Arguments</th>
+        <th>Quantifier Clause</th>
+        <th>Options Clause</th>
+        <th>Partition Clause</th>
+        <th>Order Clause</th>
+        <th>Frame Clause</th>
+  </tr>
+  <tr>
+        <td>ARRAY_AGG</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>AVG</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>COUNT</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>COUNTN</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>MAX</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>MEAN</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>MEDIAN</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>MIN</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>SUM</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>STDDEV</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>STDDEV_SAMP</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>STDDEV_POP</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>VARIANCE</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>VAR_SAMP</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>VAR_POP</td>
+        <td>1</td>
+        <td>Optional</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>ROW_NUMBER</td>
+        <td>0</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>RANK</td>
+        <td>0</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>DENSE_RANK</td>
+        <td>0</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>PERCENT_RANK</td>
+        <td>0</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>CUME_DIST</td>
+        <td>0</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>NTILE</td>
+        <td>1</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>FIRST_VALUE</td>
+        <td>1</td>
+        <td>No</td>
+        <td>nulls-treatment</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>LAST_VALUE</td>
+        <td>1</td>
+        <td>No</td>
+        <td>nulls-treatment</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>NTH_VALUE</td>
+        <td>2</td>
+        <td>No</td>
+        <td>nthval-from, nulls-treatment</td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>RATIO_TO_REPORT</td>
+        <td>1</td>
+        <td>No</td>
+        <td></td>
+        <td>Optional</td>
+        <td>Optional</td>
+        <td>Optional</td>
+  </tr>
+  <tr>
+        <td>LAG</td>
+        <td>1 or 2 or 3</td>
+        <td>No</td>
+        <td>nulls-treatment</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+  <tr>
+        <td>LEAD</td>
+        <td>1 or 2 or 3</td>
+        <td>No</td>
+        <td>nulls-treatment</td>
+        <td>Optional</td>
+        <td>MUST</td>
+        <td>NO</td>
+  </tr>
+</table>
+
+## window function options
+
+_window-function-options:_
+
+![](diagram/window-function-options.png)
+
+_nthval-from:_
+
+![](diagram/nthval-from.png)
+
+_nulls-treatment:_
+
+![](diagram/nulls-treatment.png)
+
+Only NTH_VALUE function allows nthval-from clause. FROM {FIRST | LAST} determines whether
+the computation begins first or last object of the window. The default is FROM FIRST.
+
+Only FIRST_VALUE, LAST_VALUE, NTH_VALUE, LAG, and LEAD functions allows nulls-treatment clause.
+{RESPECT | IGNORE} NULLS determines whether NULL values are included or eliminated from
+the computation. The default is RESPECT NULLS. MISSING value are also treated as NULLS during
+computation.
+
+## window clause
+
+_window-clause:_
+
+![](diagram/window-clause.png)
+
+The presence of OVER (window-clause) indicates the function is window function.
+The expressions in any part of window-clause can be constants, object fields,
+non-window functions, functions,  aggregates, query named/positional
+parameters, and expression involving any of these.
+
+There is no restriction on any part of window-clause be subquery. However one
+should avoid this due to nature of repeated evaluation during computation.
+If required one should use LET or intervene subquery to avoid repeated evaluation.
+
+Any part of the window-clause cannot nest another window functions. You can
+specify window function in subquery and compute another window function in
+parent query by joining, filtering, grouping.
+
+## window partition clause
+
+_window-partition-clause:_
+
+![](diagram/window-partition-clause.png)
+
+The PARTITION BY clause will partition the query results into groups by
+using all the PARTITION BY expressions. If window-partition-clause is
+omitted all the query results are considered as single partition.
+
+The PARTITION BY clause can have one or more expressions. Multiple
+window functions can have same or different PARTITION BY expressions.
+
+## window order clause
+
+_window-order-clause:_
+
+![](diagram/window-order-clause.png)
+
+_ordering-term:_
+
+![](diagram/ordering-term.png)
+
+The window-order-clause decides how the objects are ordered within the partition.
+Window function works on objects order specified in the window-order-clause of the
+function. The window-order-clause of the function will not guarantee order of
+query results. One should use query ORDER BY to guarantee final result ordering.
+
+The window-order-clause can have multiple ordering expressions. Each ordering
+expression have separate collation and nulls ordering. See query ORDER BY for details.
+
+If there is no window-order-clause, all objects are considered peers (i.e. ties).
+When window-order-clause result in ties each window functions behaves differently.
+To remove ties add additional ordering expressions. This will be more useful for
+rank-functions and ROW_NUMBER.
+
+* ROW_NUMBER return distinct number for each object. If there is ties the return
+  value depends on how objects are processed and result can be non-deterministic.
+* rank-functions (RANK, DENSE_RANK, PERCENT_RANK, CUME_DIST) return same result
+  for each object.
+* Other window functions it depends on window frame. Physical window frame with ROWS
+  results can be non-deterministic (depends on frame specification) for each object.
+  Logical window frame with RANGE/GROUP results are same for each object.
+
+Window frame that uses RANGE with either \<valexpr\> PRECEDING or \<valexpr\> FOLLOWING
+must have only single ordering expression. The ordering expression type must be NUMBER.
+The ordering expression is not a NUMBER type will cause empty window frame, which
+result into DEFAULT window function value (most cases it will be NULL, except
+COUNT/COUNTN which is 0). There is no restriction when window frame is with
+ROWS or GROUPS.
+
+RANGE logical window frame is commonly used in interval time. There is no specific
+time related data type in JSON. The datetime in JSON is represented as string in
+ISO-8601 standard. To avoid NUMBER type restriction one can use N1QL datetime
+functions to convert datetime into MILLISECONDS, use in ordering expression and
+\<valexpr\> in window frame.
+
+## window frame clause
+
+_window-frame-clause:_
+
+![](diagram/window-frame-clause.png)
+
+The window functions allows window-frame-clause. See Table in window function arguments .
+The window-frame-clause is allowed only when window-order-clause is present. The window
+frame specification is top to bottom.
+
+When there is no window-frame-clause
+* If there is no window-order-clause, window frame is entire partition.
+* If there is window-order-clause, window frame becomes all objects in the
+  partition precede current object and its peers (i.e. window frame of
+  RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW).
+
+Otherwise window frame becomes window-frame-clause
+
+The window frame supports the following units.
+* ROWS -- window frame in physical offset. Counts the exact number of objects within the frame.
+The window function may produce non-deterministic results, when window ordering doesn't result in unique
+ordering. You can add unique expression or more window ordering expressions.
+* RANGE -- window frame in logical offset. Looks for a value offset within the frame.
+The window function produce deterministic results.
+* GROUPS -- window frame in logical groups. Counts all groups of tied rows within the frame.
+The window function produce deterministic results.
+
+Window frame that uses RANGE with either \<valexpr\> PRECEDING or \<valexpr\> FOLLOWING
+must have only single ordering expression. The ordering expression type must be NUMBER.
+The ordering expression is not a NUMBER type will cause empty window frame, which
+result into DEFAULT window function value (most cases it will be NULL, except
+COUNT/COUNTN which is 0).
+
+BETWEEN ... AND ... clause specifies start point and endpoint of the window frame.
+The expression before AND is start point and expression after AND is endpoint.
+If BETWEEN is omitted and specifies only one endpoint, it becomes start point and
+endpoint becomes CURRENT ROW.
+
+Window frame endpoint can't be before start point. The specification explicitly violates
+this restriction will result in semantic error. However if it violates this
+restriction implicitly will result in empty window frame, which result into DEFAULT
+window function value (most cases it will be NULL, except COUNT/COUNTN which is 0).
+
+window frame that result in explicit violation are:
+* {ROWS|RANGE|GROUPS} BETWEEN CURRENT ROW AND \<valexpr\> PRECEDING
+* {ROWS|RANGE|GROUPS} BETWEEN \<valexpr\> FOLLOWING AND \<valexpr\> PRECEDING
+* {ROWS|RANGE|GROUPS} BETWEEN \<valexpr\> FOLLOWING AND CURRENT ROW
+
+window frame that result in implicit violation are:
+* {ROWS|RANGE|GROUPS} BETWEEN UNBOUNDED PRECEDING AND \<evalexpr\> PRECEDING,
+  If \<evalexpr\> is too high some objects can result in empty window frame
+* {ROWS|RANGE|GROUPS} BETWEEN \<svalexpr\> PRECEDING AND \<evalexpr\> PRECEDING,
+  If \<evalexpr\> >= \<svalexpr\> will result in empty window frame for all result set
+* {ROWS|RANGE|GROUPS} BETWEEN \<svalexpr\> FOLLOWING AND \<evalexpr\> FOLLOWING,
+  If \<svalexpr\> >= \<evalexpr\> will result in empty window frame for all result set
+* {ROWS|RANGE|GROUPS} BETWEEN \<svalexpr\> FOLLOWING AND UNBOUNDED FOLLOWING,
+  If \<svalexpr\> is too high some objects can result in empty window frame
+* If window-frame-exclusion is present any other window frame specification
+  can result in empty window frame.
+
+If window frame contains \<valexpr\> PRECEDING or \<valexpr\> FOLLOWING,
+It must be positive constant or expression that evaluates positive number.
+For ROWS or GROUPS it must be integer.
+
+Window frame that uses RANGE with either \<valexpr\> PRECEDING or \<valexpr\> FOLLOWING
+must have only single ordering expression. The ordering expression type must be NUMBER.
+The ordering expression is not a NUMBER type will cause empty window frame, which
+result into DEFAULT window function value (most cases it will be NULL, except
+COUNT/COUNTN which is 0). There is no restriction when window frame uses
+ROWS or GROUPS.
+
+RANGE logical window frame is commonly used in interval time. There is no specific
+time related data type in JSON. The datetime in JSON is represented as string in
+ISO-8601 standard. To avoid NUMBER type restriction one can use N1QL datetime
+functions to convert datetime into MILLISECONDS, use in ordering expression and
+\<valexpr\> in window frame.
+
+## window frame exclusion clause
+
+_window-frame-exclusion:_
+
+![](diagram/window-frame-exclusion.png)
+
+This can be used only when window frame clause is present. This is optional clause.
+If this clause omitted, default is no exclusion (same as EXCLUDE NO OTHERS).
+
+* EXCLUDE CURRENT ROW  -- current object is still part of window frame, then current
+  object is removed from the window frame.
+* EXCLUDE GROUP -- remove the current object and any peers of the current object from
+  the window frame.
+* EXCLUDE TIES -- remove any objects other than the current object that are peers of
+  the current object from the window frame.
+* EXCLUDE NO OTHERS -- no additional objects are removed from the window frame
+
+If the current object is already removed from the window frame, then it remains
+removed from the window frame.
+
 ## Boolean interpretation
 
 Some contexts require values to be interpreted as booleans. For
@@ -1264,8 +1914,8 @@ The following operators are supported by N1QL.  The list is ordered
 from highest to lowest precedence.
 
 * CASE
-* . 
-* [] 
+* .
+* []
 * \- (unary)
 * \* / %
 * \+ \- (binary)
@@ -2158,43 +2808,306 @@ __TO\_STRING(expr)__ - string as follows:
 ## Appendix - Aggregate functions
 
 Aggregate functions can only be used in LETTING, HAVING, SELECT, and
-ORDER BY clauses.  When aggregate functions are used in expressions in
+ORDER BY clauses. When aggregate functions are used in expressions in
 these clauses, the query will operate as an aggregate query.
 
-If there is no input row for the group, COUNT functions return 0. All
+These functions can be used both an aggregate functions and window functions. If function
+expects number value, but expr evaluates non number value those are treated as NULL.
+
+The quantifier can be ALL or DISTINCT. The default is ALL.
+* ALL -- All objects are included in the computation.
+* DISTINCT -- DISTINCT expr objects are included in the computation.
+
+If there is no input row and no GROUP BY clause, COUNT, COUNTN functions return 0. All
 other aggregate functions return NULL.
 
-__ARRAY\_AGG(expr)__ - array of the non-MISSING values in the group,
-including NULLs.
+<table>
+    <tr>
+        <th>Aggregate</th>
+        <th>Version</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>ARRAY_AGG(quantifier expr)</td>
+        <td>4.0</td>
+        <td>array of the non-MISSING values in the group, including NULLs.</td>
+    </tr>
+    <tr>
+        <td>AVG(quantifier expr)</td>
+        <td>4.0</td>
+        <td>arithmetic mean (average) of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>MEAN(quantifier expr)</td>
+        <td>6.5</td>
+        <td>synonym of AVG.</td>
+    </tr>
+    <tr>
+        <td>COUNT(*)</td>
+        <td>4.0</td>
+        <td>count of all the input rows for the group, regardless of value.</td>
+    </tr>
+    <tr>
+        <td>COUNT(quantifier expr)</td>
+        <td>4.0</td>
+        <td>count of the non-NULL, non-MISSING values in the group.</td>
+    </tr>
+    <tr>
+        <td>COUNTN(quantifier expr)</td>
+        <td>5.5</td>
+        <td>count of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>MAX(quantifier expr)</td>
+        <td>4.0</td>
+        <td>maximum non-NULL, non-MISSING value in the group, in N1QL collation order.</td>
+    </tr>
+    <tr>
+        <td>MEDIAN(quantifier expr)</td>
+        <td>6.5</td>
+        <td>middle value of the sorted number values in the group.
+            In case of even numbers in the group it returns AVG of middle two values.
+        </td>
+    </tr>
+    <tr>
+        <td>MIN(quantifier expr)</td>
+        <td>4.0</td>
+        <td>minimum non-NULL, non-MISSING value in the group, in N1QL collation order.</td>
+    </tr>
+    <tr>
+        <td>SUM(quantifier expr)</td>
+        <td>4.0</td>
+        <td>arithmetic sum of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>STDDEV(quantifier expr)</td>
+        <td>6.5</td>
+        <td>standard deviation of the number values in the group.
+            If input is 1 row it returns 0 otherwise it returns STDDEV_SAMP.
+        </td>
+    </tr>
+    <tr>
+        <td>STDDEV_SAMP(quantifier expr)</td>
+        <td>6.5</td>
+        <td>sample standard deviation of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>STDDEV_POP(quantifier expr)</td>
+        <td>6.5</td>
+        <td>population standard deviation of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>VARIANCE(quantifier expr)</td>
+        <td>6.5</td>
+        <td> variance of the number values in the group.
+            If input is 1 row it returns 0 otherwise it returns VAR_SAMP.
+        </td>
+    </tr>
+    <tr>
+        <td>VAR_SAMP(quantifier expr)</td>
+        <td>6.5</td>
+        <td>sample variance of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>VARIANCE_SAMP(quantifier expr)</td>
+        <td>6.5</td>
+        <td>synonym of VAR_SAMP.</td>
+    </tr>
+    <tr>
+        <td>VAR_POP(quantifier expr)</td>
+        <td>6.5</td>
+        <td>population variance of the number values in the group.</td>
+    </tr>
+    <tr>
+        <td>VARIANCE_POP(quantifier expr)</td>
+        <td>6.5</td>
+        <td>synonym of VAR_POP.</td>
+    </tr>
+</table>
 
-__ARRAY\_AGG(DISTINCT expr)__ - array of the distinct non-MISSING
-values in the group, including NULLs.
+## Appendix - Window functions
 
-__AVG(expr)__ - arithmetic mean (average) of all the number values in
-the group.
+Window functions can only be used in SELECT projection and ORDER BY clauses.
+Window functions requires OVER (window-clause). See Table in window function
+arguments on various options.
 
-__AVG(DISTINCT expr)__ - arithmetic mean (average) of all the distinct
-number values in the group.
+All aggregate functions listed in Appendix - Aggregate functions section can
+be used as window functions. In addition to those following window functions are supported.
 
-__COUNT(*)__ - count of all the input rows for the group, regardless
-of value.
-
-__COUNT(expr)__ - count of all the non-NULL, non-MISSING values in
-the group.
-
-__COUNT(DISTINCT expr)__ - count of all the distinct non-NULL,
-non-MISSING values in the group.
-
-__MAX(expr)__ - maximum non-NULL, non-MISSING value in the group,
-in N1QL collation order.
-
-__MIN(expr)__ - minimum non-NULL, non-MISSING value in the group,
-in N1QL collation order.
-
-__SUM(expr)__ - sum of all the number values in the group.
-
-__SUM(DISTINCT expr)__ - arithmetic sum of all the distinct number
-values in the group.
+<table>
+    <tr>
+        <th>Window function</th>
+        <th>Version</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>ROW_NUMBER()</td>
+        <td>6.5</td>
+        <td> Returns unique value for every object in every window partition.
+             The row_number in every window partition starts with 1. window-order-clause
+             determines return value of object. If window-order-clause is omitted the
+             return value depends on how query processed each object which can be
+             non-deterministic.
+        </td>
+    </tr>
+    <tr>
+        <td>RANK()</td>
+        <td>6.5</td>
+        <td> Returns number of objects precedes this object plus one in
+             every window partition. If window-order-clause has ties those
+             will get same rank. If there are ties, next non-tied object
+             will include all precede objects, due to that there can
+             be gaps in returned values. For example, If three objects
+             ranked 2, next rank will be 5.
+        </td>
+    </tr>
+    <tr>
+        <td>DENSE_RANK()</td>
+        <td>6.5</td>
+        <td> Returns number of distinct objects precedes this object plus one
+             in every window partition. If window-order-clause has ties those
+             will get same rank. The returned values consecutive and there will
+             not be any gaps in returned values. For example, If three objects
+             ranked 2, next dense_rank will be 3.
+        </td>
+    </tr>
+    <tr>
+        <td>PERCENT_RANK()</td>
+        <td>6.5</td>
+        <td> Returns rank of object minus 1, divided by total number of rows
+             in window partition minus 1. The return value will be between
+             0 and 1. Higher the value higher the ranking.
+        </td>
+    </tr>
+    <tr>
+        <td>CUME_DIST()</td>
+        <td>6.5</td>
+        <td> Returns the number of rows that are ranked lower than or equal
+             to the current row, including the current row, which is divided
+             by the total number of rows in the window partition. The return
+             value will be > 0 and <=1. Higher the value higher the ranking.
+        </td>
+    </tr>
+    <tr>
+        <td>NTILE(num_buckets)</td>
+        <td>6.5</td>
+        <td> Returns value between 1 to the num_buckets, dividing the window
+             partition as equally as possible. When a set of values is not
+             divisible by the num_buckets, the NTILE function puts those
+             objects in the lower buckets. num_buckets can be expression and
+             must evaluate to number type. If not an integer it will be
+             truncated. If the expression depends on object, it evaluates from
+             first object in the window partition.
+        </td>
+    </tr>
+    <tr>
+        <td>RATIO_TO_REPORT(expr)</td>
+        <td>6.5</td>
+        <td> Returns ratio of object value to sum of all object values in
+             the window partition. If window-frame-clause is specified ratio
+             will be all objects with in the current window frame. If expr
+             evaluates to non number type or sum of all object values
+             evaluates to zero it return NULL.
+        </td>
+    </tr>
+    <tr>
+        <td>LAG(expr [,offset [, defval]]) [{RESPECT|IGNORE} NULLS] </td>
+        <td>6.5</td>
+        <td> Returns object value at a given physical offset precedes to
+             the current object position.
+             The optional offset must evaluate to positive integer
+             greater than 0. If omitted it will be 1.
+             The defval is returned when offset goes out of window scope.
+             If omitted it will be NULL.
+             If IGNORE NULLS is specified if any object value evaluate to
+             NULL or MISSING will not be included in offset objects are counted.
+             If RESPECT NULLS is specified if any object value evaluate to NULL
+             or MISSING will be included in offset objects are counted.
+             This is default clause.
+        </td>
+    </tr>
+    <tr>
+        <td>LEAD(expr [,offset [, defval]]) [{RESPECT|IGNORE} NULLS] </td>
+        <td>6.5</td>
+        <td> Returns object value at a given physical offset beyond the
+             current object position.
+             The optional offset must evaluate to positive integer
+             greater than 0. If omitted it will be 1.
+             The defval is returned when offset goes out of window scope.
+             If omitted it will be NULL.
+             If IGNORE NULLS is specified if any object value evaluate to
+             NULL or MISSING will not be included in offset objects are counted.
+             If RESPECT NULLS is specified if any object value evaluate to NULL
+             or MISSING will be included in offset objects are counted.
+             This is default clause.
+        </td>
+    </tr>
+    <tr>
+        <td>FIRST_VALUE(expr) [{RESPECT|IGNORE} NULLS]</td>
+        <td>6.5</td>
+        <td> Returns FIRST object value in each window partition based
+             on window-clause.
+             {RESPECT|IGNORE} NULLS indicates what to do NULL or MISSING
+             values during calculation. The default is RESPECT NULLS.
+             If IGNORE NULLS is specified if any object value evaluate to
+             NULL or MISSING will not be included. It returns first non-NULL,
+             non-MISSING value, If all values are NULL or MISSING it returns NULL.
+             In the following cases FIRST_VALUE can be non-deterministic. You can
+             make deterministic by adding window-order-clause or unique expression
+             to window-order-clause.
+* No window-order-clause.
+* Duplicates found in window-order-clause and window frame is physical offset.
+             In case of window frame is logical offset(RANGE) or logical groups
+             (GROUPS), Duplicates found in window-order-clause, FIRST_VALUE
+             returns lowest value of expr.
+        </td>
+    </tr>
+    <tr>
+        <td>LAST_VALUE(expr) [{RESPECT|IGNORE} NULLS]</td>
+        <td>6.5</td>
+        <td> Returns LAST object value in each window partition based
+             on window-clause.
+             {RESPECT|IGNORE} NULLS indicates what to do NULL or MISSING
+             values during calculation. The default is RESPECT NULLS.
+             If IGNORE NULLS is specified if any object value evaluate to
+             NULL or MISSING will not be included. It returns first non-NULL,
+             non-MISSING value, If all values are NULL or MISSING it returns NULL.
+             In the following cases LAST_VALUE can be non-deterministic. You can
+             make deterministic by adding window-order-clause or unique expression
+             to window-order-clause.
+* No window-order-clause.
+* Duplicates found in window-order-clause and window frame is physical offset.
+* window-frame-clause is omitted.
+             In case of window frame is logical offset(RANGE) or logical groups
+             (GROUPS), Duplicates found in window-order-clause, LAST_VALUE
+             returns highest value of expr.
+        </td>
+    </tr>
+    <tr>
+        <td>NTH_VALUE(expr, offset) [FROM {FIRST|LAST}] [{RESPECT|IGNORE} NULLS]</td>
+        <td>6.5</td>
+        <td> Returns expr value of the offset object defined by window-clause.
+             on window-clause.
+             FROM {FIRST|LAST} indicates whether calculation starts at first
+             or last object of the window-clause. The default is FROM FIRST.
+             {RESPECT|IGNORE} NULLS indicates what to do NULL or MISSING
+             values during calculation. The default is RESPECT NULLS.
+             If IGNORE NULLS is specified if any object value evaluate to
+             NULL or MISSING will not be included. It returns first non-NULL,
+             non-MISSING value, If all values are NULL or MISSING it returns NULL.
+             In the following cases NTH_VALUE can be non-deterministic. You can
+             make deterministic by adding window-order-clause or unique expression
+             to window-order-clause.
+* No window-order-clause.
+* Duplicates found in window-order-clause and window frame is physical offset.
+* window-frame-clause is omitted.
+             In case of window frame is logical offset(RANGE) or logical groups
+             (GROUPS), Duplicates found in window-order-clause, NTH_VALUE
+             returns lowest value of expr for FROM FIRST, highest value
+             of expr FROM LAST.
+        </td>
+    </tr>
+</table>
 
 ## Appendix - Reserved words
 
@@ -2232,8 +3145,10 @@ for future use.
 * __CONNECT__
 * __CONTINUE__
 * __CORRELATE__
+* __CORRELATED__
 * __COVER__
 * __CREATE__
+* __CURRENT__
 * __DATABASE__
 * __DATASET__
 * __DATASTORE__
@@ -2260,13 +3175,17 @@ for future use.
 * __FETCH__
 * __FIRST__
 * __FLATTEN__
+* __FOLLOWING__
 * __FOR__
 * __FORCE__
 * __FROM__
+* __FTS__
 * __FUNCTION__
 * __GRANT__
 * __GROUP__
+* __GROUPS__
 * __GSI__
+* __HASH__
 * __HAVING__
 * __IF__
 * __IGNORE__
@@ -2303,8 +3222,12 @@ for future use.
 * __MISSING__
 * __NAMESPACE__
 * __NEST__
+* __NL__
 * __NOT__
+* __NO__
+* __NTH_VALUE__
 * __NULL__
+* __NULLS__
 * __NUMBER__
 * __OBJECT__
 * __OFFSET__
@@ -2312,6 +3235,7 @@ for future use.
 * __OPTION__
 * __OR__
 * __ORDER__
+* __OTHERS__
 * __OUTER__
 * __OVER__
 * __PARSE__
@@ -2319,22 +3243,28 @@ for future use.
 * __PASSWORD__
 * __PATH__
 * __POOL__
+* __PRECEDING__
 * __PREPARE__
 * __PRIMARY__
 * __PRIVATE__
 * __PRIVILEGE__
 * __PROCEDURE__
+* __PROBE__
 * __PUBLIC__
+* __RANGE__
 * __RAW__
 * __REALM__
 * __REDUCE__
 * __RENAME__
+* __RESPECT__
 * __RETURN__
 * __RETURNING__
 * __REVOKE__
 * __RIGHT__
 * __ROLE__
 * __ROLLBACK__
+* __ROW__
+* __ROWS__
 * __SATISFIES__
 * __SCHEMA__
 * __SELECT__
@@ -2348,11 +3278,13 @@ for future use.
 * __STRING__
 * __SYSTEM__
 * __THEN__
+* __TIES__
 * __TO__
 * __TRANSACTION__
 * __TRIGGER__
 * __TRUE__
 * __TRUNCATE__
+* __UNBOUNDED__
 * __UNDER__
 * __UNION__
 * __UNIQUE__

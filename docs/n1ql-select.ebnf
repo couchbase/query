@@ -62,7 +62,7 @@ having-clause ::= 'HAVING' cond
  *  order-by clause
  */
 order-by-clause ::= 'ORDER' 'BY' ordering-term (',' ordering-term)*
-ordering-term ::= expr ('ASC' | 'DESC')?
+ordering-term ::= expr ('ASC' | 'DESC')? ( 'NULLS' ( 'FIRST' | 'LAST' ) )?
 
 /*
  *  limit clause
@@ -77,7 +77,7 @@ offset-clause ::= 'OFFSET' expr
 /*
  *  expressions
  */
-expr ::= literal | identifier | nested-expr | case-expr | logical-term | comparison-term | arithmetic-term | concatenation-term | function-call | subquery-expr | collection-expr | construction-expr | '(' expr ')'
+expr ::= literal | identifier | nested-expr | case-expr | logical-term | comparison-term | arithmetic-term | concatenation-term | window-function | function-call | subquery-expr | collection-expr | construction-expr | '(' expr ')'
 logical-term ::= cond 'AND' cond | cond 'OR' cond | 'NOT' cond
 case-expr ::= simple-case-expr | searched-case-expr
 simple-case-expr ::= 'CASE' expr ('WHEN' expr 'THEN' expr)+ ('ELSE' expr)? 'END'
@@ -150,3 +150,29 @@ hex-digit ::= [0-9a-fA-F]
  **/
 block-comment ::= '/*' ((text)? newline?)+ '*/'
 line-comment ::=  '--' (text)? newline?
+
+
+
+/*
+ *  window functions
+ */
+
+window-function ::= window-function-type '(' window-function-arguments ')'  window-function-options?  'OVER' '(' window-clause ')'
+window-function-arguments ::= ( aggregate-quantifier? expr ( ',' expr ( ',' expr )? )? )?
+aggregate-quantifier ::= 'ALL' | 'DISTINCT'
+window-function-options ::= nthval-from? nulls-treatment?
+nthval-from ::=  'FROM' ( 'FIRST' | 'LAST' )
+nulls-treatment::= ('RESPECT' | 'IGNORE') 'NULLS'
+window-clause ::= window-partition-clause? ( window-order-clause ( window-frame-clause window-frame-exclusion? )? )?
+window-partition-clause ::= 'PARTITION' 'BY' expr ( ',' expr )*
+window-order-clause ::= 'ORDER' 'BY' ordering-term ( ',' ordering-term )*
+window-frame-clause ::= ( 'ROWS' | 'RANGE' | 'GROUPS' ) ( ('UNBOUNDED' 'PRECEDING' | 'CURRENT' 'ROW' | valexpr 'FOLLOWING') |
+                         'BETWEEN' ('UNBOUNDED' 'PRECEDING' | 'CURRENT' 'ROW' | valexpr ('PRECEDING' | 'FOLLOWING'))
+                         'AND' ('UNBOUNDED' 'FOLLOWING' | 'CURRENT' 'ROW' | valexpr ('PRECEDING' | 'FOLLOWING')) )
+window-frame-exclusion ::= 'EXCLUDE' ( 'CURRENT' 'ROW' | 'GROUP' | 'TIES' | 'NO' 'OTHERS' )
+window-function-type ::=  aggregate-functions | rank-functions | 'ROW_NUMBER' | 'RATIO_TO_REPORT' |
+                            'NTILE' | 'LAG' | 'LEAD' | 'FIRST_VALUE' | 'LAST_VALUE' | 'NTH_VALUE'
+aggregate-functions ::= 'ARRAY_AGG' | 'AVG' | 'COUNT' | 'COUNTN' | 'MAX' | 'MEAN' | 'MEDIAN' | 'MIN' | 'SUM' |
+                        'STDDEV' | 'STDDEV_SAMP' | 'STDDEV_POP' | 'VARIANCE' | 'VAR_SAMP' | 'VAR_POP'
+rank-functions ::= 'RANK' | 'DENSE_RANK' | 'PERCENT_RANK' | 'CUME_DIST'
+
