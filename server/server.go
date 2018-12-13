@@ -846,12 +846,13 @@ func SetIP(val bool) {
 // that node is always ip:port. It should not have a protocol component.
 func HostNameandPort(node string) (host, port string) {
 	tokens := []string{}
-	// For IPv6
-	if _IPv6 {
+
+	// For IPv6, if the nodename contains ":"
+	if _IPv6 && node[0] == '[' {
+
 		// Then the url should be of the form [::1]:8091
 		tokens = strings.Split(node, "]:")
 		host = strings.Replace(tokens[0], "[", "", 1)
-
 	} else {
 		// For IPv4
 		tokens = strings.Split(node, ":")
