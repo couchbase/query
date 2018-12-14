@@ -186,7 +186,7 @@ func (this *WindowAggregate) setupTerms(context *Context) bool {
 
 		// setup aggregate information.
 		aInfo := &AggregateInfo{agg: agg, id: agg.String(), wTerm: wTerm, flags: flags}
-		err := aInfo.setOnce()
+		err := aInfo.setOnce(context)
 		if err != nil {
 			context.Fatal(errors.NewWindowEvaluationError(err, "Error inital setup"))
 			return false
@@ -234,7 +234,7 @@ func (this *AggregateInfo) hasFlags(flags uint32) bool {
  Setup aggregate specific information
 */
 
-func (this *AggregateInfo) setOnce() (err error) {
+func (this *AggregateInfo) setOnce(context *Context) (err error) {
 
 	// No ORDER BY all rows in parttition has same aggregate value. Evaluate once.
 	this.once = this.wTerm.OrderBy() == nil && !this.hasFlags(_WINDOW_ROW_NUMBER)
@@ -293,7 +293,7 @@ func (this *AggregateInfo) setOnce() (err error) {
 
 		// Validate semantics of start frame VALUE expression
 		if wfes[0].HasModifier(algebra.WINDOW_FRAME_VALUE_PRECEDING | algebra.WINDOW_FRAME_VALUE_FOLLOWING) {
-			this.sWindowVal, err = this.windowValidateValExpr(wfes[0].ValueExpression(), rangeWindow)
+			this.sWindowVal, err = this.windowValidateValExpr(wfes[0].ValueExpression(), rangeWindow, context)
 			if err != nil {
 				return
 			}
@@ -307,7 +307,7 @@ func (this *AggregateInfo) setOnce() (err error) {
 
 			// Validate semantics of end frame VALUE expression
 			if wfes[1].HasModifier(algebra.WINDOW_FRAME_VALUE_PRECEDING | algebra.WINDOW_FRAME_VALUE_FOLLOWING) {
-				this.eWindowVal, err = this.windowValidateValExpr(wfes[1].ValueExpression(), rangeWindow)
+				this.eWindowVal, err = this.windowValidateValExpr(wfes[1].ValueExpression(), rangeWindow, context)
 				if err != nil {
 					return
 				}
@@ -853,9 +853,13 @@ func (this *AggregateInfo) windowValueRangePeerPos(op *WindowAggregate, rangeVal
 }
 
 // value_expr must be a constant or expression and must evaluate to a positive numeric value.
-func (this *AggregateInfo) windowValidateValExpr(valExpr expression.Expression, rangeWindow bool) (value.Value, error) {
+func (this *AggregateInfo) windowValidateValExpr(valExpr expression.Expression,
+	rangeWindow bool, context *Context) (value.Value, error) {
 
-	val := valExpr.Value()
+	val, err := valExpr.Evaluate(nil, context)
+	if err != nil {
+		return val, err
+	}
 	if val != nil && val.Type() == value.NUMBER && val.(value.NumberValue).Float64() >= 0.0 &&
 		(rangeWindow || value.IsInt(val.(value.NumberValue).Float64())) {
 		return val, nil
