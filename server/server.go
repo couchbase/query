@@ -87,8 +87,7 @@ type runQueue struct {
 	queueCnt  int32
 	head      int32
 	tail      int32
-	sync.Mutex
-	queue []waitEntry
+	queue     []waitEntry
 }
 
 type Server struct {
@@ -446,46 +445,44 @@ func (this *Server) PlusServiceRequest(request Request) bool {
 }
 
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
-	queue.Lock()
+	runCnt := int(atomic.AddInt32(&queue.runCnt, 1))
 
 	// if servicers exceeded, reserve a spot in the queue
-	if queue.runCnt >= int32(queue.servicers) {
+	if runCnt > queue.servicers {
+
+		atomic.AddInt32(&queue.runCnt, -1)
+		queueCnt := atomic.AddInt32(&queue.queueCnt, 1)
 
 		// rats! queue full, can't handle this request
-		if queue.queueCnt == queue.size {
-			queue.Unlock()
+		if queueCnt == queue.size {
+			atomic.AddInt32(&queue.queueCnt, -1)
 			return false
 		}
-		queue.queueCnt++
-		queue.Unlock()
 
-		// and once it's reserved, wait
+		// (RC #1) wait
 		queue.addRequest(request)
-	} else {
-
-		// all good, go straight ahead
-		queue.runCnt++
-		queue.Unlock()
 	}
 
 	// service
 	this.serviceRequest(request)
 
 	// anyone to release?
-	queue.Lock()
-	if queue.queueCnt == 0 {
+	queueCnt := atomic.LoadInt32(&queue.queueCnt)
+	wakeUp := queueCnt > 0
+	if wakeUp {
+		queueCnt = atomic.AddInt32(&queue.queueCnt, -1)
+		wakeUp = queueCnt >= 0
 
-		// nope
-		queue.runCnt--
-		queue.Unlock()
-	} else {
+		// (RC #2) rats! waker already gone
+		if !wakeUp {
+			atomic.AddInt32(&queue.queueCnt, 1)
+		}
+	}
 
-		// reserve a next runner
-		queue.queueCnt--
-		queue.Unlock()
-
-		// and let it go
+	if wakeUp {
 		queue.releaseRequest()
+	} else {
+		atomic.AddInt32(&queue.runCnt, -1)
 	}
 	return true
 }
@@ -493,6 +490,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 func newRunQueue(q *runQueue, num int) {
 	q.size = int32(num)
 	q.queue = make([]waitEntry, num)
+	go q.checkWaiters()
 }
 
 // in this next couple of methods, the waiter populates the wait entry and then tries the CAS
@@ -532,6 +530,64 @@ func (this *runQueue) releaseRequest() {
 		this.queue[entry].request = nil
 		this.queue[entry].state = _WAIT_EMPTY
 		request.release()
+	}
+}
+
+/*
+MB-31848
+Ideally we would like to modify runCnt and queueCnt atomically and within
+the queues boundaries, however having a lock on the counters does have
+substantial performance implications on NUMA architectures, and we hit
+a throughput ceiling which we wish to avoid.
+
+Sharding the queues would address the ceiling, but it means that we could
+end up with sub-utilised servicers, or conversely no waiters in the current
+queue but plenty in others, which would then have to wait for other runners
+to be woken up.
+In order to fully utilise the servicers, we would have to go round queues
+and push ourselves in, or steal waiters to make sure that they are woken up
+timely - which kind of counters the advantages of the sharding.
+
+Changing the two counters non atomically and correcting out of bounds increments
+does wonders for throughput, but it does open us up to two race conditions,
+marked as RC #1 and RC #2 above.
+In RC #1, by the time that the waiter has queued itself up, all the runners
+might have gone, and the waiter would never be woken up.
+In RC #2, we could have so many concurrent queueCnt decrements, that the runner
+might mistakenly think that there are no waiters.
+
+What we do here is have a cleanup goroutine that wakes up any left behind waiter.
+To the best of my knowledge, this goroutine has never had to correct anythings.
+*/
+func (this *runQueue) checkWaiters() {
+	for {
+
+		// check every tenth of a second
+		time.Sleep(100 * time.Millisecond)
+		runCnt := atomic.LoadInt32(&this.runCnt)
+		queueCnt := atomic.LoadInt32(&this.queueCnt)
+		for {
+
+			// no left behind requests
+			if runCnt > 0 || queueCnt == 0 {
+				break
+			}
+			logging.Infof("request scheduler emptying queue: %v requests", queueCnt)
+
+			// can we pull one?
+			queueCnt = atomic.AddInt32(&this.queueCnt, -1)
+			if this.queueCnt < 0 {
+
+				// another runner came, went, and emptied the queue
+				atomic.AddInt32(&this.queueCnt, 1)
+				break
+			} else {
+
+				// let it free
+				runCnt = atomic.AddInt32(&this.runCnt, 1)
+				this.releaseRequest()
+			}
+		}
 	}
 }
 
