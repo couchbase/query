@@ -170,7 +170,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		fc = entry.origCond.FilterCovers(fc)
 	}
 
-	filterCovers, err := mapFilterCovers(fc)
+	filterCovers, err := mapFilterCovers(fc, alias)
 	if err != nil {
 		return nil, nil, err
 	}

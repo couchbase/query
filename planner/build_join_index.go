@@ -153,7 +153,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			}
 
 			// Include covering expression from index WHERE clause
-			coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, nil, nil)
+			coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, nil, nil, alias)
 			if err != nil {
 				return nil, nil, nil, err
 			}

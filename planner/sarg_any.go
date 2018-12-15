@@ -79,7 +79,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin bool, keyspaceName
 	if cond != nil {
 		fc := make(map[string]value.Value, 4)
 		fc = cond.FilterCovers(fc)
-		filterCovers, err := mapFilterCovers(fc)
+		filterCovers, err := mapFilterCovers(fc, alias)
 		if err == nil {
 			for c, _ := range filterCovers {
 				exprs = append(exprs, c.Covered())

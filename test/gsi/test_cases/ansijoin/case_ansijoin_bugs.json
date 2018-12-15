@@ -1,0 +1,22 @@
+[
+    {
+        "testcase": "MB-32354",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'c' AND ANY w WITHIN v.`~child`.`~children` SATISFIES w.`#operator` LIKE 'IndexScan%' AND array_length(w.`covers`) > 0 AND w.`filter_covers` IS NOT MISSING END END"
+        },
+        "statements":"SELECT d.c11 FROM shellTest d JOIN shellTest b ON d.c11 = b.c21 AND b.type = \"right\" JOIN shellTest c ON d.c11 = c.c21 AND c.type = \"right\" WHERE d.type = \"left\" AND d.c11 < 2",
+        "results": [
+        {
+            "c11": 1
+        }
+	]
+    }
+]
+

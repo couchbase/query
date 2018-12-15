@@ -94,6 +94,9 @@ func TestAnsiJoin(t *testing.T) {
 	// test ANSI OUTER JOIN to ANSI INNER JOIN transformation
 	runMatch("case_ansijoin_oj2ij.json", false, true, qc, t)
 
+	// test ANSI JOIN bug fixes
+	runMatch("case_ansijoin_bugs.json", false, true, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")

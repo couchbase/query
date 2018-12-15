@@ -62,7 +62,7 @@ outer:
 		}
 
 		// Include filter covers
-		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, origPred)
+		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, origPred, alias)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -252,7 +252,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	return scan
 }
 
-func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Value, error) {
+func mapFilterCovers(fc map[string]value.Value, keyspace string) (map[*expression.Cover]value.Value, error) {
 	if len(fc) == 0 {
 		return nil, nil
 	}
@@ -264,6 +264,7 @@ func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Val
 			return nil, err
 		}
 
+		expression.MarkKeyspace(keyspace, expr)
 		c := expression.NewCover(expr)
 		rv[c] = v
 	}
@@ -271,7 +272,7 @@ func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Val
 	return rv, nil
 }
 
-func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred, origPred expression.Expression) (
+func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred, origPred expression.Expression, keyspace string) (
 	expression.Expressions, map[*expression.Cover]value.Value, error) {
 
 	var filterCovers map[*expression.Cover]value.Value
@@ -283,7 +284,7 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 		defer _FILTER_COVERS_POOL.Put(fc)
 		fc = entry.cond.FilterCovers(fc)
 		fc = entry.origCond.FilterCovers(fc)
-		filterCovers, err = mapFilterCovers(fc)
+		filterCovers, err = mapFilterCovers(fc, keyspace)
 		if err != nil {
 			return nil, nil, err
 		}
