@@ -452,12 +452,17 @@ func (this *ArrayDistinct) Apply(context Context, arg value.Value) (value.Value,
 	}
 
 	aa := arg.Actual().([]interface{})
-	set := value.NewSet(len(aa), true, false)
+	naa := make([]interface{}, 0, len(aa))
+	set := value.NewSet(len(aa), false, false)
 	for _, a := range aa {
-		set.Add(value.NewValue(a))
+		av := value.NewValue(a)
+		if !set.Has(av) {
+			set.Add(av)
+			naa = append(naa, a)
+		}
 	}
 
-	return value.NewValue(set.Actuals()), nil
+	return value.NewValue(naa), nil
 }
 
 /*
