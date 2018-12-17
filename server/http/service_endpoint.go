@@ -100,15 +100,21 @@ func (this *HttpEndpoint) ListenTLS() error {
 
 	}
 
+	cbauthTLSsettings, err1 := cbauth.GetTLSConfig()
+	if err1 != nil {
+		return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
+	}
+
 	ln, err := net.Listen("tcp", this.httpsAddr)
 
 	if err == nil {
 		cfg := &tls.Config{
-			Certificates: []tls.Certificate{tlsCert},
-			ClientAuth:   clientAuthType,
-			MinVersion:   cbauth.MinTLSVersion(),
-			CipherSuites: cbauth.CipherSuites(),
-			NextProtos:   []string{"h2", "http/1.1"},
+			Certificates:             []tls.Certificate{tlsCert},
+			ClientAuth:               clientAuthType,
+			MinVersion:               cbauthTLSsettings.MinVersion,
+			CipherSuites:             cbauthTLSsettings.CipherSuites,
+			PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
+			NextProtos:               []string{"h2", "http/1.1"},
 		}
 
 		if clientAuthType != tls.NoClientCert {

@@ -11,7 +11,6 @@ package expression
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -708,7 +707,9 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 
 	// Set the header, so that the entire []string are passed in.
 	this.curlHeader(header)
-	this.curlCiphers()
+	if err := this.curlCiphers(); err != nil {
+		return nil, err
+	}
 
 	var b bytes.Buffer
 
@@ -868,36 +869,14 @@ func (this *Curl) curlCacert(fileName string) {
 	myCurl.Setopt(curl.OPT_CAINFO, fileName)
 }
 
-func (this *Curl) curlCiphers() {
-
-	// For the mapping for nss http://unix.stackexchange.com/questions/208437/how-to-convert-ssl-ciphers-to-curl-format
-	// For the mapping for openssl (default) - https://wiki.openssl.org/index.php/Manual:Ciphers(1)
-	// Each cipher is encoded as a string in curl.
-	// The following map gives the mapping from the standard id to the curl specific string representing
-	// that cipher.
-	ciphersMapping := map[uint16]string{
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA:            "AES128-SHA",
-		tls.TLS_RSA_WITH_AES_256_CBC_SHA:            "AES256-SHA",
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:    "ECDHE-ECDSA-AES256-SHA",
-		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:      "ECDHE-RSA-AES256-SHA",
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:   "ECDHE-RSA-AES128-GCM-SHA256",
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256: "ECDHE-ECDSA-AES128-GCM-SHA256",
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:    "ECDHE-ECDSA-AES128-SHA",
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:      "ECDHE-RSA-AES128-SHA",
-	}
+func (this *Curl) curlCiphers() error {
 
 	// Get the Ciphers supported by couchbase based on the level set
-	cbCiphers := cbauth.CipherSuites()
-
-	// Create a comma separated list of the ciphers that need to be used.
-	finalCipherList := ""
-	for _, cipherId := range cbCiphers {
-		if finalCipherList == "" {
-			finalCipherList = ciphersMapping[cipherId]
-		} else {
-			finalCipherList = finalCipherList + "," + ciphersMapping[cipherId]
-		}
+	tlsCfg, err := cbauth.GetTLSConfig()
+	if err != nil {
+		return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
 	}
+	cbCiphers := strings.Join(tlsCfg.CipherSuiteOpenSSLNames, ",")
 
 	/*
 		Libcurl code to set the ssl ciphers to be used during connection.
@@ -905,7 +884,8 @@ func (this *Curl) curlCiphers() {
 	*/
 
 	myCurl := this.myCurl
-	myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, finalCipherList)
+	myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, cbCiphers)
+	return nil
 }
 
 func setResponseSize(maxSize int64) (finalValue int64) {
