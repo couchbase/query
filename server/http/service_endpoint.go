@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -238,6 +239,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	accounting.RecordMetrics(request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Type(),
 		prepared, (request.State() != server.COMPLETED),
+		int(request.PhaseOperator(execution.INDEX_SCAN)),
+		int(request.PhaseOperator(execution.PRIMARY_SCAN)),
 		string(request.ScanConsistency()))
 
 	request.CompleteRequest(request_time, service_time, request.resultCount,

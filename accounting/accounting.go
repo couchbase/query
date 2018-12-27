@@ -158,6 +158,9 @@ const (
 	DELETES
 	UNKNOWN
 
+	INDEX_SCANS
+	PRIMARY_SCANS
+
 	ACTIVE_REQUESTS
 	QUEUED_REQUESTS
 	INVALID_REQUESTS
@@ -198,6 +201,9 @@ const (
 	_INSERTS = "inserts"
 	_DELETES = "deletes"
 	_UNKNOWN = "unknown"
+
+	_INDEX_SCANS   = "index_scans"
+	_PRIMARY_SCANS = "primary_scans"
 
 	_ACTIVE_REQUESTS  = "active_requests"
 	_QUEUED_REQUESTS  = "queued_requests"
@@ -242,6 +248,9 @@ var metricNames = []string{
 	_INSERTS,
 	_DELETES,
 	_UNKNOWN,
+
+	_INDEX_SCANS,
+	_PRIMARY_SCANS,
 
 	_ACTIVE_REQUESTS,
 	_QUEUED_REQUESTS,
@@ -307,7 +316,7 @@ func RegisterMetrics(acctStore AccountingStore) {
 func RecordMetrics(request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
 	error_count int, warn_count int, stmt string, prepared bool,
-	cancelled bool, scanConsistency string) {
+	cancelled bool, index_scans int, primary_scans int, scanConsistency string) {
 
 	if acctstore == nil {
 		return
@@ -325,6 +334,8 @@ func RecordMetrics(request_time time.Duration, service_time time.Duration,
 	case "at_plus":
 		counters[AT_PLUS].Inc(1)
 	}
+	counters[INDEX_SCANS].Inc(int64(index_scans))
+	counters[PRIMARY_SCANS].Inc(int64(primary_scans))
 	counters[REQUEST_TIME].Inc(int64(request_time))
 	counters[SERVICE_TIME].Inc(int64(service_time))
 	counters[RESULT_COUNT].Inc(int64(result_count))

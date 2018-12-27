@@ -587,6 +587,10 @@ func (this *BaseRequest) AddPhaseOperator(p execution.Phases) {
 	atomic.AddUint64(&this.phaseStats[p].operators, 1)
 }
 
+func (this *BaseRequest) PhaseOperator(p execution.Phases) uint64 {
+	return uint64(this.phaseStats[p].operators)
+}
+
 func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
 	var p map[string]interface{} = nil
 
