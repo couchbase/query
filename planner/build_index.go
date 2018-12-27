@@ -160,13 +160,6 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 		return nil, er
 	}
 
-	for _, name := range stmt.Names() {
-		_, er := indexer.IndexByName(name)
-		if er != nil {
-			return nil, er
-		}
-	}
-
 	return plan.NewBuildIndexes(keyspace, stmt), nil
 }
 

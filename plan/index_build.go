@@ -14,6 +14,8 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 )
 
 // Build indexes
@@ -81,7 +83,16 @@ func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
 	}
 
 	ksref := algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, "")
-	this.node = algebra.NewBuildIndexes(ksref, _unmarshalled.Using, _unmarshalled.Indexes...)
+	exprs := make(expression.Expressions, 0, len(_unmarshalled.Indexes))
+	for _, s := range _unmarshalled.Indexes {
+		expr, err := parser.Parse(s)
+		if err != nil {
+			return err
+		}
+		exprs = append(exprs, expr)
+	}
+
+	this.node = algebra.NewBuildIndexes(ksref, _unmarshalled.Using, exprs...)
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err

@@ -22,12 +22,12 @@ import (
 type BuildIndexes struct {
 	statementBase
 
-	keyspace *KeyspaceRef        `json:"keyspace"`
-	using    datastore.IndexType `json:"using"`
-	names    []string            `json:"names"`
+	keyspace *KeyspaceRef           `json:"keyspace"`
+	using    datastore.IndexType    `json:"using"`
+	names    expression.Expressions `json:"names"`
 }
 
-func NewBuildIndexes(keyspace *KeyspaceRef, using datastore.IndexType, names ...string) *BuildIndexes {
+func NewBuildIndexes(keyspace *KeyspaceRef, using datastore.IndexType, names ...expression.Expression) *BuildIndexes {
 	rv := &BuildIndexes{
 		keyspace: keyspace,
 		using:    using,
@@ -47,15 +47,15 @@ func (this *BuildIndexes) Signature() value.Value {
 }
 
 func (this *BuildIndexes) Formalize() error {
-	return nil
+	return this.MapExpressions(expression.NewFormalizer("", nil))
 }
 
 func (this *BuildIndexes) MapExpressions(mapper expression.Mapper) error {
-	return nil
+	return this.names.MapExpressions(mapper)
 }
 
 func (this *BuildIndexes) Expressions() expression.Expressions {
-	return nil
+	return this.names
 }
 
 /*
@@ -79,7 +79,7 @@ func (this *BuildIndexes) Using() datastore.IndexType {
 	return this.using
 }
 
-func (this *BuildIndexes) Names() []string {
+func (this *BuildIndexes) Names() expression.Expressions {
 	return this.names
 }
 

@@ -410,7 +410,6 @@ tokOffset	 int
 %type <mergeInsert>      merge_insert opt_merge_insert
 
 %type <s>                index_name opt_primary_name
-%type <ss>               index_names
 %type <keyspaceRef>      named_keyspace_ref
 %type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
@@ -2300,24 +2299,11 @@ ALTER INDEX named_keyspace_ref DOT index_name opt_index_using index_with
  *************************************************/
 
 build_index:
-BUILD INDEX ON named_keyspace_ref LPAREN index_names RPAREN opt_index_using
+BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
 {
     $$ = algebra.NewBuildIndexes($4, $8, $6...)
 }
 ;
-
-index_names:
-index_name
-{
-    $$ = []string{$1}
-}
-|
-index_names COMMA index_name
-{
-    $$ = append($1, $3)
-}
-;
-
 
 /*************************************************
  *

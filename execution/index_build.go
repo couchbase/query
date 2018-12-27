@@ -11,7 +11,10 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -70,11 +73,53 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		err = indexer.BuildIndexes(context.RequestId(), node.Names()...)
+		names, err1 := this.getIndexNames(context, parent, node.Names())
+		if err1 != nil {
+			context.Error(errors.NewError(err1, ""))
+			return
+		}
+
+		for _, name := range names {
+			if _, err = indexer.IndexByName(name); err != nil {
+				context.Error(err)
+				return
+			}
+		}
+
+		err = indexer.BuildIndexes(context.RequestId(), names...)
 		if err != nil {
 			context.Error(err)
 		}
 	})
+}
+
+func (this *BuildIndexes) getIndexNames(context *Context, av value.Value, exprs expression.Expressions) ([]string, error) {
+	rv := make([]string, 0, len(exprs))
+	for _, expr := range exprs {
+		val, err := expr.Evaluate(av, context)
+		if err != nil {
+			return nil, err
+		}
+
+		actual := val.Actual()
+
+		if actuals, ok := actual.([]interface{}); ok {
+			for _, actual := range actuals {
+				ac := value.NewValue(actual).Actual()
+				if s, ok := ac.(string); ok {
+					rv = append(rv, s)
+				} else {
+					return nil, fmt.Errorf("index name(%v) must be string", ac)
+				}
+			}
+		} else if s, ok := actual.(string); ok {
+			rv = append(rv, s)
+		} else {
+			return nil, fmt.Errorf("index name(%v) must be string", actual)
+		}
+	}
+	return rv, nil
+
 }
 
 func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
