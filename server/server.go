@@ -454,7 +454,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 		queueCnt := atomic.AddInt32(&queue.queueCnt, 1)
 
 		// rats! queue full, can't handle this request
-		if queueCnt == queue.size {
+		if queueCnt >= queue.size {
 			atomic.AddInt32(&queue.queueCnt, -1)
 			return false
 		}
