@@ -23,12 +23,12 @@ func (this *SemChecker) VisitExpressionTerm(node *algebra.ExpressionTerm) (inter
 		return node.KeyspaceTerm().Accept(this)
 	}
 
-	return nil, nil
+	return node.ExpressionTerm().Accept(this)
 }
 
 func (this *SemChecker) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
 	if node.Subquery().IsCorrelated() {
 		return nil, errors.NewNoCorrelatedSubqTermError(node.Alias())
 	}
-	return nil, nil
+	return node.Subquery().Accept(this)
 }
