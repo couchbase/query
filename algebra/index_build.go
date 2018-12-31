@@ -47,7 +47,19 @@ func (this *BuildIndexes) Signature() value.Value {
 }
 
 func (this *BuildIndexes) Formalize() error {
-	return this.MapExpressions(expression.NewFormalizer("", nil))
+	f := expression.NewFormalizer("", nil)
+	for i, e := range this.names {
+		if ei, ok := e.(*expression.Identifier); ok {
+			this.names[i] = expression.NewConstant(ei.Identifier())
+		} else {
+			expr, err := f.Map(e)
+			if err != nil {
+				return err
+			}
+			this.names[i] = expr
+		}
+	}
+	return nil
 }
 
 func (this *BuildIndexes) MapExpressions(mapper expression.Mapper) error {
