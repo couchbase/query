@@ -562,5 +562,15 @@
                 "$1": "cd"
             }
       ]
+    },
+    {
+      "statements":"SELECT CONCAT2('-','a','b',['c','d'],['xyz']) AS c1, CONCAT2('-','a') AS c2, CONCAT2('-',['b']) AS c3",
+      "results":  [
+            {
+                "c1": "a-b-c-d-xyz",
+                "c2": "a",
+                "c3": "b"
+            }
+      ]
     }
 ]
