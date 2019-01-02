@@ -1015,7 +1015,7 @@
     "statements": "select array_binary_search([1, 2, 3, 4], 4)",
     "results": [
       {
-        "$1": 4
+        "$1": 3
       }
     ]
   },
@@ -1023,7 +1023,7 @@
     "statements": "select array_binary_search([1, 2, 3, 4], 1)",
     "results": [
       {
-        "$1": 1
+        "$1": 0
       }
     ]
   },
@@ -1045,7 +1045,7 @@
     "statements": "select array_binary_search([null, 2, 3, 4], null)",
     "results": [
       {
-        "$1": 1
+        "$1": 0
       }
     ]
   },
@@ -1053,7 +1053,7 @@
     "statements": "select array_binary_search([\"ab\", \"cd\", \"ef\", \"gh\"], \"gh\")",
     "results": [
       {
-        "$1": 4
+        "$1": 3
       }
     ]
   }

@@ -2523,7 +2523,7 @@ func (this *ArrayBinarySearch) Apply(context Context, first, second value.Value)
 		v := value.NewValue(a[mid])
 
 		if v.EquivalentTo(second) {
-			return value.NewValue(mid + 1), nil
+			return value.NewValue(mid), nil
 		} else if v.Collate(second) < 0 {
 			low = mid + 1
 		} else {
