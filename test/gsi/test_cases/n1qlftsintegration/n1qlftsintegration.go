@@ -36,16 +36,43 @@ func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *te
 	gsi.RunMatch(filename, prepared, explain, qc, t)
 }
 
+func isFTSPresent() bool {
+	request, err := http.NewRequest("GET", gsi.Site_CBS+gsi.Auth_param+"@"+gsi.Pool_CBS+gsi.NodeServices, strings.NewReader(""))
+	if err != nil {
+		return false
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		return false
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+
+	var data map[string]interface{}
+
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return false
+	}
+
+	_, ok := data["nodesExt"].([]interface{})[0].(map[string]interface{})["services"].(map[string]interface{})["fts"]
+
+	return ok
+}
+
 func setupftsIndex() error {
 
 	reader := strings.NewReader(
 		`{
 	"type": "fulltext-index",
 		"name": "fts_index",
-		"uuid": "1901bb2f07f79808",
 		"sourceType": "couchbase",
 		"sourceName": "product",
-		"sourceUUID": "6715244cdfcf057eb5164a71512a785e",
 		"planParams": {
 	"maxPartitionsPerPIndex": 171
 	},

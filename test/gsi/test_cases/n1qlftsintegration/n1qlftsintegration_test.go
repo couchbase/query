@@ -14,26 +14,29 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Basic test on cobering indexes
 func TestN1qlFts(t *testing.T) {
 
-	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
+	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" || !isFTSPresent() {
 		return
 	}
 
 	qc := start_cs()
 
-	runStmt(qc, "create primary index on product")
-
 	fmt.Println("\n\nInserting values into Bucket for N1QL FTS integration test \n\n ")
 	runMatch("insert.json", false, false, qc, t)
 
+	runStmt(qc, "create primary index on product")
+
 	err := setupftsIndex()
 	if err != nil {
-		t.Errorf("did not expect err %s", err.Error())
+		t.Logf("did not expect err %s", err.Error())
 	}
+
+	time.Sleep(10 * time.Second)
 
 	runMatch("case_n1qlftsint.json", false, false, qc, t)
 

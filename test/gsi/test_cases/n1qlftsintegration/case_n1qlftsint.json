@@ -1,7 +1,12 @@
 [{
-  "statements": "SELECT raw res.id from SEARCH_QUERY(\"fts_index\",{\"explain\":false,\"fields\": [\"*\"],\"highlight\": {}, \"query\": {\"query\": \"case\"}}).hits res order by res.id",
+  "statements": "SELECT a.id from SEARCH_QUERY(\"fts_index\",{\"explain\":false,\"fields\": [\"*\"],\"highlight\": {}, \"query\": {\"query\": \"briefcase\"}}).hits a order by a.id",
   "results": [
-    "product0_n1qlfts",
-    "product1_n1qlfts"
+    {
+      "id": "product0_n1qlfts"
+    },
+    {
+      "id": "product1_n1qlfts"
+    }
+
   ]
 }]

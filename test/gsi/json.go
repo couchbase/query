@@ -60,6 +60,7 @@ var FTS_API_PATH = "api/index/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
 var curlWhitelist = map[string]interface{}{"all_access": true}
+var NodeServices = "pools/default/nodeServices"
 
 func init() {
 
@@ -218,6 +219,7 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
 	query.SetCredentials(_ALL_USERS)
+	mockServer.server.SetWhitelist(curlWhitelist)
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
