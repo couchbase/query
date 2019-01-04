@@ -2518,17 +2518,18 @@ func (this *ArrayBinarySearch) Apply(context Context, first, second value.Value)
 	low := 0
 	high := len(a) - 1
 
-	for low <= high {
+	for low < high {
 		mid := low + (high-low)/2
 		v := value.NewValue(a[mid])
 
-		if v.EquivalentTo(second) {
-			return value.NewValue(mid), nil
-		} else if v.Collate(second) < 0 {
+		if v.Collate(second) < 0 {
 			low = mid + 1
 		} else {
-			high = mid - 1
+			high = mid
 		}
+	}
+	if value.NewValue(a[low]).EquivalentTo(second) {
+		return value.NewValue(low), nil
 	}
 	return value.NEG_ONE_NUMBER, nil
 }
