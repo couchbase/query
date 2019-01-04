@@ -2477,9 +2477,10 @@ func (this *ArrayExcept) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 /*
 This represents the array function ARRAY_BINARY_SEARCH(array A, value B).
-It returns the 1-based position of value B in array A
+It returns the 0-based position of value B in array A
 using binary search algorithm and suppose A is sorted.
 If B is not found in A, returns -1.
+If there are duplicate values B in A, return the first matched position.
 */
 
 type ArrayBinarySearch struct {
@@ -2506,7 +2507,7 @@ func (this *ArrayBinarySearch) Evaluate(item value.Value, context Context) (valu
 }
 
 func (this *ArrayBinarySearch) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
@@ -2528,7 +2529,7 @@ func (this *ArrayBinarySearch) Apply(context Context, first, second value.Value)
 			high = mid
 		}
 	}
-	if value.NewValue(a[low]).EquivalentTo(second) {
+	if len(a) > 0 && value.NewValue(a[low]).EquivalentTo(second) {
 		return value.NewValue(low), nil
 	}
 	return value.NEG_ONE_NUMBER, nil

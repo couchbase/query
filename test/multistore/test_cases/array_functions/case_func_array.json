@@ -1038,7 +1038,9 @@
   {
     "statements": "select array_binary_search([1, 2, 3, 4], missing)",
     "results": [
-      {}
+      {
+        "$1": -1
+      }
     ]
   },
   {
@@ -1078,6 +1080,30 @@
     "results": [
       {
         "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([], 0)",
+    "results": [
+      {
+        "$1": -1
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([missing, missing, null, 1, 2], missing)",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "select array_binary_search([missing, missing, null, null, 1, 2], null)",
+    "results": [
+      {
+        "$1": 2
       }
     ]
   }
