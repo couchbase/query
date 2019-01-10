@@ -30,6 +30,7 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/prepareds"
@@ -82,6 +83,8 @@ var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of compl
 
 var PREPARED_LIMIT = flag.Int("prepared-limit", 16384, "maximum number of prepared statements")
 var AUTO_PREPARE = flag.Bool("auto-prepare", false, "Silently prepare ad hoc statements if possible")
+
+var FUNCTIONS_LIMIT = flag.Int("functions-limit", 16384, "maximum number of cached functions")
 
 // GOGC
 var _GOGC_PERCENT = 200
@@ -204,6 +207,7 @@ func main() {
 		*PREPARED_LIMIT = 16384
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
+	functions.FunctionsSetLimit(*FUNCTIONS_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 

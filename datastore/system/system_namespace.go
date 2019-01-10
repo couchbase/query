@@ -118,6 +118,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[preps.Name()] = preps
 
+	funcs, e := newFunctionsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[funcs.Name()] = funcs
+
 	reqs, e := newRequestsKeyspace(p)
 	if e != nil {
 		return e

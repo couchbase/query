@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	//Function errors
+	//FTS errors
 	FTS_MISSING_PORT = 10003
 	NODE_ACCESS_ERR  = 10004
 )
@@ -34,5 +34,35 @@ func NewNodeInfoAccessErr(e string) Error {
 func NewNodeServiceErr(e string) Error {
 	return &err{level: EXCEPTION, ICode: NODE_ACCESS_ERR, IKey: "node.service.error", ICause: fmt.Errorf("%v", e),
 		InternalMsg:    fmt.Sprintf("No FTS node in server %v", e),
+		InternalCaller: CallerN(1)}
+}
+
+func NewFunctionsNotSupported() Error {
+	return &err{level: EXCEPTION, ICode: 10100, IKey: "function.CE.error",
+		InternalMsg:    fmt.Sprintf("Functions are only supported in Enterprise Edition"),
+		InternalCaller: CallerN(1)}
+}
+
+func NewMissingFunctionError(f string) Error {
+	return &err{level: EXCEPTION, ICode: 10101, IKey: "function.missing.error", ICause: fmt.Errorf("%v", f),
+		InternalMsg:    fmt.Sprintf("Function not found %v", f),
+		InternalCaller: CallerN(1)}
+}
+
+func NewDuplicateFunctionError(f string) Error {
+	return &err{level: EXCEPTION, ICode: 10102, IKey: "function.duplicate.error", ICause: fmt.Errorf("%v", f),
+		InternalMsg:    fmt.Sprintf("Function already exists %v", f),
+		InternalCaller: CallerN(1)}
+}
+
+func NewInternalFunctionError(e string, f string) Error {
+	return &err{level: EXCEPTION, ICode: 10103, IKey: "function.internal.error", ICause: fmt.Errorf("%v", e),
+		InternalMsg:    fmt.Sprintf("Execution of function %v encountered an unexpected error %v. Please collect the failing statement and contact support", f, e),
+		InternalCaller: CallerN(1)}
+}
+
+func NewArgumentsMismatchError(f string) Error {
+	return &err{level: EXCEPTION, ICode: 10104, IKey: "function.mismatching.error", ICause: fmt.Errorf("%v", f),
+		InternalMsg:    fmt.Sprintf("Incorrect number of arguments supplied to function %v", f),
 		InternalCaller: CallerN(1)}
 }

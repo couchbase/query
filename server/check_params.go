@@ -38,6 +38,7 @@ const (
 	N1QLFEATCTRL    = "n1ql-feat-ctrl"
 	AUTOPREPARE     = "auto-prepare"
 	MUTEXPROFILE    = "mutexprofile"
+	FUNCLIMIT       = "functions-limit"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -66,6 +67,7 @@ var CHECKERS = map[string]Checker{
 	N1QLFEATCTRL:    checkNumber,
 	AUTOPREPARE:     checkBool,
 	MUTEXPROFILE:    checkBool,
+	FUNCLIMIT:       checkPositiveInteger,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

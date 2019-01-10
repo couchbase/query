@@ -15,6 +15,7 @@ import (
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
@@ -128,6 +129,11 @@ var _SETTERS = map[string]Setter{
 	MUTEXPROFILE: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(bool)
 		s.SetMutexProfile(value)
+		return nil
+	},
+	FUNCLIMIT: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		functions.FunctionsSetLimit(int(value))
 		return nil
 	},
 }

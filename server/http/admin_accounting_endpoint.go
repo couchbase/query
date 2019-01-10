@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
@@ -32,6 +33,7 @@ const (
 	preparedsPrefix  = adminPrefix + "/prepareds"
 	requestsPrefix   = adminPrefix + "/active_requests"
 	completedsPrefix = adminPrefix + "/completed_requests"
+	functionsPrefix  = adminPrefix + "/functions_cache"
 	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
 )
@@ -82,6 +84,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	completedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doCompletedIndex)
 	}
+	functionIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doFunctionIndex)
+	}
+	functionHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doFunction)
+	}
+	functionsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doFunctions)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -95,9 +106,12 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
 		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET"}},
 		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
+		functionsPrefix:                       {handler: functionsHandler, methods: []string{"GET"}},
+		functionsPrefix + "/{name}":           {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
 		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/function_cache":     {handler: functionIndexHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -366,6 +380,94 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	}
 }
 
+func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	name := vars["name"]
+
+	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
+	af.Name = name
+
+	if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+		functions.FunctionClear(name, nil)
+		return true, nil
+	} else if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:functions_cache, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
+		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		var itemMap map[string]interface{}
+
+		functions.FunctionDo(name, func(entry *functions.FunctionEntry) {
+			itemMap = map[string]interface{}{
+				"uses": entry.Uses,
+			}
+			entry.Signature(itemMap)
+			entry.Body(itemMap)
+
+			// only give times for entries that have completed at least one execution
+			if entry.Uses > 0 && entry.ServiceTime > 0 {
+				itemMap["lastUse"] = entry.LastUse.String()
+				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
+					time.Duration(entry.Uses)).String()
+				itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
+				itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+			}
+		})
+		return itemMap, nil
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
+	switch req.Method {
+	case "GET":
+		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		numFunctions := functions.CountFunctions()
+		data := make([]map[string]interface{}, numFunctions)
+		i := 0
+
+		snapshot := func(name string, d *functions.FunctionEntry) bool {
+
+			// FIXME quick hack to avoid overruns
+			if i >= numFunctions {
+				return false
+			}
+			data[i] = map[string]interface{}{}
+			data[i]["uses"] = d.Uses
+			d.Signature(data[i])
+			d.Body(data[i])
+			if d.Uses > 0 {
+				data[i]["lastUse"] = d.LastUse.String()
+			}
+			i++
+			return true
+		}
+
+		functions.FunctionsForeach(snapshot, nil)
+		return data, nil
+
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
 func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	requestId := vars["request"]
@@ -376,7 +478,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	if req.Method == "GET" || req.Method == "POST" {
 		if req.Method == "POST" {
 			// Do not audit POST requests. They are an internal API used
-			// only for queries to system:prepareds, and would cause too
+			// only for queries to system:active_requests, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
@@ -553,7 +655,7 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	if req.Method == "GET" || req.Method == "POST" {
 		if req.Method == "POST" {
 			// Do not audit POST requests. They are an internal API used
-			// only for queries to system:prepareds, and would cause too
+			// only for queries to system:completed_requests, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
@@ -738,6 +840,11 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	}
 	server.RequestsForeach(snapshot, nil)
 	return completed, nil
+}
+
+func doFunctionIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_FUNCTIONS
+	return functions.NameFunctions(), nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {

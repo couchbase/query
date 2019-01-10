@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -427,6 +428,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings = server.GetControlsAdmin(settings, srvr)
 	settings[server.AUTOPREPARE] = srvr.AutoPrepare()
 	settings[server.MUTEXPROFILE] = srvr.MutexProfile()
+	settings[server.FUNCLIMIT] = functions.FunctionsLimit()
 	return settings
 }
 
