@@ -129,6 +129,7 @@ type Context struct {
 	scanCap            int64
 	pipelineCap        int64
 	pipelineBatch      int
+	isPrepared         bool
 	reqDeadline        time.Time
 	now                time.Time
 	namedArgs          map[string]value.Value
@@ -326,6 +327,14 @@ func (this *Context) SetPipelineBatch(pipelineBatch int) {
 	this.pipelineBatch = pipelineBatch
 }
 
+func (this *Context) IsPrepared() bool {
+	return this.isPrepared
+}
+
+func (this *Context) SetPrepared(isPrepared bool) {
+	this.isPrepared = isPrepared
+}
+
 func (this *Context) AddMutationCount(i uint64) {
 	this.output.AddMutationCount(i)
 }
@@ -386,8 +395,16 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
+
+		// MB-32140: do not replace named/positional arguments with its value for prepared statements
+		namedArgs := this.namedArgs
+		positionalArgs := this.positionalArgs
+		if this.IsPrepared() {
+			namedArgs = nil
+			positionalArgs = nil
+		}
 		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true,
-			this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
+			namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
 		if err != nil {
 			return nil, err
 		}
