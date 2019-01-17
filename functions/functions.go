@@ -39,7 +39,7 @@ type FunctionName interface {
 	Save(body FunctionBody) errors.Error
 	Delete() errors.Error
 	CheckStorage() bool
-	ResetStorage(name FunctionName)
+	ResetStorage()
 }
 
 type FunctionBody interface {
@@ -133,8 +133,7 @@ func FunctionClear(key string, f func(*FunctionEntry)) bool {
 }
 
 // name resolution
-
-// 1- mock system wide functions (for local testing)
+// mock system wide functions (for local testing)
 type mockName struct {
 	name      string
 	namespace string
@@ -149,7 +148,7 @@ func (name *mockName) Name() string {
 }
 
 func (name *mockName) Key() string {
-	return name.name + "::" + name.namespace
+	return name.namespace + ":" + name.name
 }
 
 func (name *mockName) Signature(object map[string]interface{}) {
@@ -174,59 +173,7 @@ func (name *mockName) CheckStorage() bool {
 	return false
 }
 
-func (name *mockName) ResetStorage(new FunctionName) {
-}
-
-// 2- system wide functions (not bucket or scope dependent)
-type globalName struct {
-	name          string
-	namespace     string
-	changeCounter int
-}
-
-func GlobalFunction(namespace string, name string) FunctionName {
-	return &globalName{name, namespace, 0}
-}
-
-func (name *globalName) Name() string {
-	return name.name
-}
-
-func (name *globalName) Key() string {
-	return name.name + ":" + name.namespace
-}
-
-func (name *globalName) Signature(object map[string]interface{}) {
-	object["name"] = name.name
-	object["namespace"] = name.namespace
-	object["global"] = true
-}
-
-func (name *globalName) Load() (FunctionBody, errors.Error) {
-	// FIXME
-	return nil, nil
-}
-
-func (name *globalName) Save(body FunctionBody) errors.Error {
-	// FIXME
-	return nil
-}
-
-func (name *globalName) Delete() errors.Error {
-	// FIXME
-	return nil
-}
-
-func (name *globalName) CheckStorage() bool {
-	// FIXME
-	return false
-}
-
-func (name *globalName) ResetStorage(new FunctionName) {
-	newName, ok := new.(*globalName)
-	if ok {
-		name.changeCounter = newName.changeCounter
-	}
+func (name *mockName) ResetStorage() {
 }
 
 // function primitives
@@ -338,7 +285,7 @@ func ExecuteFunction(name FunctionName, values []value.Value, context Context) (
 					if e.tag < tag || (tag < 0 && e.tag > 0) {
 						e.tag = tag
 						e.FunctionBody = body
-						e.FunctionName.ResetStorage(name)
+						e.FunctionName.ResetStorage()
 					}
 				})
 			} else {

@@ -22,28 +22,28 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type functionsKeyspace struct {
+type functionsCacheKeyspace struct {
 	keyspaceBase
 	name    string
 	indexer datastore.Indexer
 }
 
-func (b *functionsKeyspace) Release() {
+func (b *functionsCacheKeyspace) Release() {
 }
 
-func (b *functionsKeyspace) NamespaceId() string {
+func (b *functionsCacheKeyspace) NamespaceId() string {
 	return b.namespace.Id()
 }
 
-func (b *functionsKeyspace) Id() string {
+func (b *functionsCacheKeyspace) Id() string {
 	return b.Name()
 }
 
-func (b *functionsKeyspace) Name() string {
+func (b *functionsCacheKeyspace) Name() string {
 	return b.name
 }
 
-func (b *functionsKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
+func (b *functionsCacheKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	var count int
 
 	count = 0
@@ -56,15 +56,15 @@ func (b *functionsKeyspace) Count(context datastore.QueryContext) (int64, errors
 	return int64(functions.CountFunctions() + count), nil
 }
 
-func (b *functionsKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+func (b *functionsCacheKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	return b.indexer, nil
 }
 
-func (b *functionsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
+func (b *functionsCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 
 	creds, authToken := credsFromContext(context)
@@ -125,22 +125,22 @@ func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 	return
 }
 
-func (b *functionsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *functionsCacheKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *functionsKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *functionsCacheKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *functionsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *functionsCacheKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *functionsKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *functionsCacheKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
 
 	creds, authToken := credsFromContext(context)
 
@@ -167,12 +167,12 @@ func (b *functionsKeyspace) Delete(deletes []string, context datastore.QueryCont
 	return deletes, nil
 }
 
-func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {
-	b := new(functionsKeyspace)
+func newFunctionsCacheKeyspace(p *namespace) (*functionsCacheKeyspace, errors.Error) {
+	b := new(functionsCacheKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_FUNCTIONS
+	b.name = KEYSPACE_NAME_FUNCTIONS_CACHE
 
-	primary := &functionsIndex{
+	primary := &functionsCacheIndex{
 		name:     "#primary",
 		keyspace: b,
 		primary:  true,
@@ -185,7 +185,7 @@ func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {
 
 	if err == nil {
 		key := expression.Expressions{expr}
-		nodes := &functionsIndex{
+		nodes := &functionsCacheIndex{
 			name:     "#nodes",
 			keyspace: b,
 			primary:  false,
@@ -200,47 +200,47 @@ func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {
 	return b, nil
 }
 
-type functionsIndex struct {
+type functionsCacheIndex struct {
 	indexBase
 	name     string
-	keyspace *functionsKeyspace
+	keyspace *functionsCacheKeyspace
 	primary  bool
 	idxKey   expression.Expressions
 }
 
-func (pi *functionsIndex) KeyspaceId() string {
+func (pi *functionsCacheIndex) KeyspaceId() string {
 	return pi.keyspace.Id()
 }
 
-func (pi *functionsIndex) Id() string {
+func (pi *functionsCacheIndex) Id() string {
 	return pi.Name()
 }
 
-func (pi *functionsIndex) Name() string {
+func (pi *functionsCacheIndex) Name() string {
 	return pi.name
 }
 
-func (pi *functionsIndex) Type() datastore.IndexType {
+func (pi *functionsCacheIndex) Type() datastore.IndexType {
 	return datastore.SYSTEM
 }
 
-func (pi *functionsIndex) SeekKey() expression.Expressions {
+func (pi *functionsCacheIndex) SeekKey() expression.Expressions {
 	return pi.idxKey
 }
 
-func (pi *functionsIndex) RangeKey() expression.Expressions {
+func (pi *functionsCacheIndex) RangeKey() expression.Expressions {
 	return pi.idxKey
 }
 
-func (pi *functionsIndex) Condition() expression.Expression {
+func (pi *functionsCacheIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *functionsIndex) IsPrimary() bool {
+func (pi *functionsCacheIndex) IsPrimary() bool {
 	return pi.primary
 }
 
-func (pi *functionsIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+func (pi *functionsCacheIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	if pi.primary || distributed.RemoteAccess().WhoAmI() != "" {
 		return datastore.ONLINE, "", nil
 	} else {
@@ -248,16 +248,16 @@ func (pi *functionsIndex) State() (state datastore.IndexState, msg string, err e
 	}
 }
 
-func (pi *functionsIndex) Statistics(requestId string, span *datastore.Span) (
+func (pi *functionsCacheIndex) Statistics(requestId string, span *datastore.Span) (
 	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *functionsIndex) Drop(requestId string) errors.Error {
+func (pi *functionsCacheIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
-func (pi *functionsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
+func (pi *functionsCacheIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 
 	if span == nil || pi.primary {
@@ -338,7 +338,7 @@ func (pi *functionsIndex) Scan(requestId string, span *datastore.Span, distinct 
 	}
 }
 
-func (pi *functionsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
+func (pi *functionsCacheIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	var entry *datastore.IndexEntry
 

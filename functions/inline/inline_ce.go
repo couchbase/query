@@ -33,3 +33,8 @@ func (this *inlineBody) Lang() functions.Language {
 func (this *inlineBody) Body(object map[string]interface{}) {
 	object["functions_feature_disabled"] = true
 }
+
+// ditto, for tests
+func MakeInline(name functions.FunctionName, body []byte) (functions.FunctionBody, errors.Error) {
+	return nil, errors.NewFunctionsNotSupported()
+}

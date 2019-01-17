@@ -66,3 +66,35 @@ func NewArgumentsMismatchError(f string) Error {
 		InternalMsg:    fmt.Sprintf("Incorrect number of arguments supplied to function %v", f),
 		InternalCaller: CallerN(1)}
 }
+
+func NewInvalidFunctionNameError(name string) Error {
+	return &err{level: EXCEPTION, ICode: 10105, IKey: "function.name.error",
+		InternalMsg:    fmt.Sprintf("Invalid function name %v", name),
+		InternalCaller: CallerN(1)}
+}
+
+func NewMetaKVError(where string, what error) Error {
+	return &err{level: EXCEPTION, ICode: 10106, IKey: "function.storage.error", ICause: what,
+		InternalMsg:    fmt.Sprintf("Could not access function definition for %v because %v", where, what),
+		InternalCaller: CallerN(1)}
+}
+
+// same number and key as above, not an error
+func NewMetaKVChangeCounterError(what error) Error {
+	return &err{level: EXCEPTION, ICode: 10106, IKey: "function.storage.error", ICause: what,
+		InternalMsg:    fmt.Sprintf("Could not access functions change counter because %v", what),
+		InternalCaller: CallerN(1)}
+}
+
+// same number and key as above, not an error
+func NewMetaKVIndexError(what error) Error {
+	return &err{level: EXCEPTION, ICode: 10106, IKey: "function.storage.error", ICause: what,
+		InternalMsg:    fmt.Sprintf("Could not access functions definitions because %v", what),
+		InternalCaller: CallerN(1)}
+}
+
+func NewFunctionEncodingError(what string, name string, reason error) Error {
+	return &err{level: EXCEPTION, ICode: 10107, IKey: "function.encoding.error", ICause: reason,
+		InternalMsg:    fmt.Sprintf("Could not %v function definition for %v because %v", what, name, reason),
+		InternalCaller: CallerN(1)}
+}
