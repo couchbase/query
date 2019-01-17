@@ -332,6 +332,19 @@
         ]    
     },
     {
+       "statements": "SELECT (SELECT t.a, p1 FROM (WITH p1 AS ('ABC') SELECT t1.a, p1 FROM data AS t1) AS t) AS proj1 LET data = [{'a':10}]",
+       "results": [
+        {
+            "proj1": [
+                {
+                    "a": 10,
+                    "p1": "ABC"
+                }
+            ]
+        }
+        ]    
+    },
+    {
        "statements": "DELETE FROM orders USE KEYS ['c1235', 'c1236']"
     }
 ]

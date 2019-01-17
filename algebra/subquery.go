@@ -44,7 +44,12 @@ func NewSubquery(query *Select) *Subquery {
    Representation as a N1QL string.
 */
 func (this *Subquery) String() string {
-	return "(" + this.query.String() + ")"
+	var s string
+	if this.IsCorrelated() || this.query.subresult.IsCorrelated() {
+		s += "correlated "
+	}
+
+	return s + "(" + this.query.String() + ")"
 }
 
 /*

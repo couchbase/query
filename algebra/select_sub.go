@@ -242,7 +242,13 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
    Representation as a N1QL string.
 */
 func (this *Subselect) String() string {
-	s := "select " + this.projection.String()
+	var s string
+
+	if len(this.with) > 0 {
+		s += withBindings(this.with)
+	}
+
+	s += "select " + this.projection.String()
 
 	if this.from != nil {
 		s += " from " + this.from.String()
@@ -334,6 +340,26 @@ func stringBindings(bindings expression.Bindings) string {
 		s += b.Variable()
 		s += "` = "
 		s += b.Expression().String()
+	}
+
+	return s
+}
+
+/*
+   Representation as a N1QL WITH clause string.
+*/
+
+func withBindings(bindings expression.Bindings) string {
+	s := " WITH "
+
+	for i, b := range bindings {
+		if i > 0 {
+			s += ", "
+		}
+
+		s += "`" + b.Variable() + "` AS ( "
+		s += b.Expression().String()
+		s += " ) "
 	}
 
 	return s

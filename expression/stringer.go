@@ -610,9 +610,6 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 // Subquery
 func (this *Stringer) VisitSubquery(expr Subquery) (interface{}, error) {
 	var buf bytes.Buffer
-	if expr.IsCorrelated() {
-		buf.WriteString("correlated ")
-	}
 	buf.WriteString(expr.String())
 	return buf.String(), nil
 }

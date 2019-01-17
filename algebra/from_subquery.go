@@ -61,7 +61,13 @@ func (this *SubqueryTerm) Privileges() (*auth.Privileges, errors.Error) {
    Representation as a N1QL string.
 */
 func (this *SubqueryTerm) String() string {
-	return "(" + this.subquery.String() + ") as " + this.as
+	var s string
+
+	if this.subquery.IsCorrelated() || this.subquery.subresult.IsCorrelated() {
+		s += "correlated "
+	}
+
+	return s + "(" + this.subquery.String() + ") as " + this.as
 }
 
 /*
@@ -82,17 +88,9 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	}
 
 	f = expression.NewFormalizer(alias, parent)
-	if this.IsAnsiJoinOp() {
-		// If on right-hand side of ANSI JOIN, check correlation
-		err = this.subquery.FormalizeSubquery(f)
-		if err != nil {
-			return
-		}
-	} else {
-		err = this.subquery.Formalize()
-		if err != nil {
-			return
-		}
+	err = this.subquery.FormalizeSubquery(f)
+	if err != nil {
+		return
 	}
 
 	f.SetAlias(this.Alias())
