@@ -357,8 +357,43 @@ type Indexer3 interface {
 //
 ////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////
+//
+// FTS Index API
+//
+////////////////////////////////////////////////////////////////////////
+
+type FTSSearchInfo struct {
+	Field   value.Value // Search Field
+	Query   value.Value // Search query
+	Options value.Value // Search options
+	Order   []string    // "_score ASC/DESC"
+	Offset  int64       // offset (0 in case of none)
+	Limit   int64       // limit (MaxInt64 in case of none)
+}
+
+type FTSIndex interface {
+	Index
+
+	/* Search returns one IndexEntry for each document.
+	* PrimaryKey -- document key
+	* MetaData   -- by default contains "score", If options contains "meta":true then this
+	*               object contains whole meta info except fields.
+	* EntryKey   -- none
+	 */
+	Search(requestId string, searchInfo *FTSSearchInfo,
+		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// End of FTS Index API
+//
+////////////////////////////////////////////////////////////////////////
+
 type IndexEntry struct {
 	EntryKey   value.Values
+	MetaData   value.Value
 	PrimaryKey string
 }
 
