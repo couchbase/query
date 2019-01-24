@@ -27,6 +27,9 @@ const (
 	PRIV_QUERY_DROP_INDEX      Privilege = 14 // Ability to run DROP INDEX statements.
 	PRIV_QUERY_LIST_INDEX      Privilege = 15 // Ability to list indexes of a keyspace.
 	PRIV_QUERY_EXTERNAL_ACCESS Privilege = 16 // Ability to access the web from a N1QL query.
+//	PRIV_QUERY_CREATE_FUNCTION  Privilege = 17 // Ability to run CREATE FUNCTION statements.
+//	PRIV_QUERY_DROP_FUNCTION    Privilege = 18 // Ability to run DROP FUNCTION statements.
+//	PRIV_QUERY_EXECUTE_FUNCTION Privilege = 19 // Ability to run EXECUTE FUNCTION statements.
 )
 
 func IsStatementTypePrivilege(priv Privilege) bool {
