@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-const _FUNC_PATH = "/query/functions"
+const _FUNC_PATH = "/query/functions/"
 
 type functionsKeyspace struct {
 	keyspaceBase
@@ -84,7 +84,9 @@ func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 
 func (b *functionsKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	body, _, err := metakv.Get(_FUNC_PATH + key)
-	if isNotFoundError(err) || body == nil {
+
+	// get does not return is not found, but nil, nil instead
+	if err == nil && body == nil {
 		return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
 	}
 	if err != nil {
@@ -95,7 +97,7 @@ func (b *functionsKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.E
 
 // dodgy, but the not found error is not exported in metakv
 func isNotFoundError(err error) bool {
-	return err.Error() == "Not found"
+	return err != nil && err.Error() == "Not found"
 }
 
 func (b *functionsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {

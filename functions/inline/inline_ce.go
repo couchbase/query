@@ -21,7 +21,7 @@ import (
 type inlineBody struct {
 }
 
-func NewInlineBody(expr expression.Expression, vars []string) (functions.FunctionBody, errors.Error) {
+func NewInlineBody(expr expression.Expression) (functions.FunctionBody, errors.Error) {
 	return nil, errors.NewFunctionsNotSupported()
 }
 
@@ -32,6 +32,10 @@ func (this *inlineBody) Lang() functions.Language {
 // this will never be called, just a placeholder
 func (this *inlineBody) Body(object map[string]interface{}) {
 	object["functions_feature_disabled"] = true
+}
+
+//ditto
+func (this *inlineBody) SetVars(vars []string) {
 }
 
 // ditto, for tests
