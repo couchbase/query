@@ -180,9 +180,9 @@ func (this *UnionSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion
 	return true
 }
 
-func (this *UnionSpans) CanPorduceUnknows(pos int) bool {
+func (this *UnionSpans) CanProduceUnknowns(pos int) bool {
 	for _, span := range this.spans {
-		if span.CanPorduceUnknows(pos) {
+		if span.CanProduceUnknowns(pos) {
 			return true
 		}
 	}

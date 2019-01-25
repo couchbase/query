@@ -441,7 +441,7 @@ outer:
 		for {
 			projexpr, projalias := hashProj[orderTerm.Expression().Alias()]
 			if indexKeyIsDescCollation(i, indexKeys) == orderTerm.Descending() &&
-				(!orderTerm.NullsPos() || !entry.spans.CanPorduceUnknows(i)) &&
+				(!orderTerm.NullsPos() || !entry.spans.CanProduceUnknowns(i)) &&
 				(orderTerm.Expression().EquivalentTo(keys[i]) ||
 					(projalias && expression.Equivalent(projexpr, keys[i]))) {
 				// orderTerm matched with index key

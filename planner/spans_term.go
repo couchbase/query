@@ -148,7 +148,7 @@ func (this *TermSpans) CanHaveDuplicates(index datastore.Index, indexApiVersion 
 	}
 }
 
-func (this *TermSpans) CanPorduceUnknows(pos int) bool {
+func (this *TermSpans) CanProduceUnknowns(pos int) bool {
 	for _, span := range this.spans {
 		if pos >= len(span.Ranges) {
 			return true
