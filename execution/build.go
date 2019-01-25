@@ -593,18 +593,3 @@ func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
 func (this *builder) VisitInferKeyspace(plan *plan.InferKeyspace) (interface{}, error) {
 	return NewInferKeyspace(plan, this.context), nil
 }
-
-// CreateFunction
-func (this *builder) VisitCreateFunction(plan *plan.CreateFunction) (interface{}, error) {
-	return NewCreateFunction(plan, this.context), nil
-}
-
-// DropFunction
-func (this *builder) VisitDropFunction(plan *plan.DropFunction) (interface{}, error) {
-	return NewDropFunction(plan, this.context), nil
-}
-
-// ExecuteFunction
-func (this *builder) VisitExecuteFunction(plan *plan.ExecuteFunction) (interface{}, error) {
-	return NewExecuteFunction(plan, this.context), nil
-}

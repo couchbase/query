@@ -23,7 +23,7 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-const _FUNC_PATH = "/query/functions/"
+const _FUNC_PATH = "/query/functions"
 const _CHANGE_COUNTER_PATH = "/query/functions_cache/"
 const _CHANGE_COUNTER = _CHANGE_COUNTER_PATH + "counter"
 
@@ -76,7 +76,7 @@ func setChange() {
 
 // dodgy, but the not found error is not exported in metakv
 func isNotFoundError(err error) bool {
-	return err != nil && err.Error() == "Not found"
+	return err.Error() == "Not found"
 }
 
 // we propagate the node name so that if our own change counter gets back to us
@@ -112,7 +112,7 @@ func (name *globalName) Key() string {
 func (name *globalName) Signature(object map[string]interface{}) {
 	object["name"] = name.name
 	object["namespace"] = name.namespace
-	object["type"] = "global"
+	object["global"] = true
 }
 
 func (name *globalName) Load() (functions.FunctionBody, errors.Error) {
@@ -123,10 +123,8 @@ func (name *globalName) Load() (functions.FunctionBody, errors.Error) {
 
 	// load the function
 	val, _, err := metakv.Get(_FUNC_PATH + name.Key())
-
-	// Get does not return a not found error - just nil, nil
-	if val == nil && err == nil {
-		return nil, nil
+	if isNotFoundError(err) {
+		return nil, errors.NewDuplicateFunctionError(name.Name())
 	} else if err != nil {
 		return nil, errors.NewMetaKVError(name.Name(), err)
 	}
@@ -139,7 +137,7 @@ func (name *globalName) Load() (functions.FunctionBody, errors.Error) {
 	}
 
 	// determine language and create body from definition
-	return resolver.MakeBody(name.name, _unmarshalled.Definition)
+	return resolver.MakeBody(name, _unmarshalled.Definition)
 }
 
 func (name *globalName) Save(body functions.FunctionBody) errors.Error {
@@ -159,7 +157,7 @@ func (name *globalName) Save(body functions.FunctionBody) errors.Error {
 	err = metakv.Add(_FUNC_PATH+name.Key(), bytes)
 	if err == metakv.ErrRevMismatch {
 		return errors.NewDuplicateFunctionError(name.Name())
-	} else if err != nil {
+	} else {
 		return errors.NewMetaKVError(name.Name(), err)
 	}
 	setChange()
@@ -170,7 +168,7 @@ func (name *globalName) Save(body functions.FunctionBody) errors.Error {
 func (name *globalName) Delete() errors.Error {
 	err := metakv.Delete(_FUNC_PATH+name.Key(), nil)
 	if isNotFoundError(err) {
-		return errors.NewMissingFunctionError(name.Name())
+		return errors.NewDuplicateFunctionError(name.Name())
 	} else if err != nil {
 		return errors.NewMetaKVError(name.Name(), err)
 	}

@@ -12,10 +12,13 @@
 package inline
 
 import (
+	"encoding/json"
+	go_errors "errors"
 	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/value"
 )
@@ -41,17 +44,17 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 		return nil, errors.NewInternalFunctionError("Wrong language being executed!", name.Name())
 	}
 
-	if len(funcBody.varNames) == 0 {
+	if len(funcBody.varNames) != 0 {
+		if len(values) != len(funcBody.varNames) {
+			return nil, errors.NewArgumentsMismatchError(name.Name())
+		}
 		args := make([]value.Value, len(values))
 		for i, _ := range values {
 			args[i] = value.NewValue(values[i])
 		}
 		parent = map[string]interface{}{"args": args}
 	} else {
-		if len(values) != len(funcBody.varNames) {
-			return nil, errors.NewArgumentsMismatchError(name.Name())
-		}
-		parent = make(map[string]interface{}, len(values))
+		parent := make(map[string]interface{}, len(values))
 		for i, _ := range values {
 			parent[funcBody.varNames[i]] = values[i]
 		}
@@ -64,12 +67,8 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	}
 }
 
-func NewInlineBody(expr expression.Expression) (functions.FunctionBody, errors.Error) {
-	return &inlineBody{expr: expr}, nil
-}
-
-func (this *inlineBody) SetVarNames(vars []string) {
-	this.varNames = vars
+func NewInlineBody(expr expression.Expression, vars []string) (functions.FunctionBody, errors.Error) {
+	return &inlineBody{expr: expr, varNames: vars}, nil
 }
 
 func (this *inlineBody) Lang() functions.Language {
@@ -77,9 +76,37 @@ func (this *inlineBody) Lang() functions.Language {
 }
 
 func (this *inlineBody) Body(object map[string]interface{}) {
-	object["#language"] = "inline"
-	object["expression"] = this.expr.String()
-	if len(this.varNames) > 0 {
+	object["language"] = "inline"
+	object["expression"] = this.expr
+	if len(this.varNames) == 0 {
+		object["variadic"] = true
+	} else {
 		object["parameters"] = this.varNames
 	}
+}
+
+func MakeInline(name functions.FunctionName, body []byte) (functions.FunctionBody, errors.Error) {
+	var expr expression.Expression
+	var _unmarshalled struct {
+		_          string   `json:"#language"`
+		Variadic   bool     `json:"variadic"`
+		Parameters []string `json:"parameters"`
+		Expression string   `json:"expression"`
+	}
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return nil, errors.NewFunctionEncodingError("decode body", name.Name(), err)
+	}
+	if _unmarshalled.Expression != "" {
+		expr, err = parser.Parse(_unmarshalled.Expression)
+		if err != nil {
+			return nil, errors.NewFunctionEncodingError("decode body", name.Name(), err)
+		}
+	} else {
+		return nil, errors.NewFunctionEncodingError("decode body", name.Name(), go_errors.New("expression is missing"))
+	}
+	if len(_unmarshalled.Parameters) != 0 && _unmarshalled.Variadic {
+		return nil, errors.NewFunctionEncodingError("decode body", name.Name(), go_errors.New("function body is variadic AND has parameter names"))
+	}
+	return &inlineBody{expr: expr, varNames: _unmarshalled.Parameters}, nil
 }

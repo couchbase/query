@@ -62,13 +62,6 @@ type Visitor interface {
 	   Visitor for INFER statements.
 	*/
 	VisitInferKeyspace(stmt *InferKeyspace) (interface{}, error)
-
-	/*
-	   Visitor FUNCTION statements
-	*/
-	VisitCreateFunction(stmt *CreateFunction) (interface{}, error)
-	VisitDropFunction(stmt *DropFunction) (interface{}, error)
-	VisitExecuteFunction(stmt *ExecuteFunction) (interface{}, error)
 }
 
 type NodeVisitor interface {

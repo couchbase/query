@@ -7,8 +7,6 @@ import "github.com/couchbase/clog"
 import "github.com/couchbase/query/algebra"
 import "github.com/couchbase/query/datastore"
 import "github.com/couchbase/query/expression"
-import "github.com/couchbase/query/functions"
-import "github.com/couchbase/query/functions/inline"
 import "github.com/couchbase/query/value"
 
 func logDebugGrammar(format string, v ...interface{}) {
@@ -87,9 +85,6 @@ mergeInsert      *algebra.MergeInsert
 indexType        datastore.IndexType
 inferenceType    datastore.InferenceType
 val              value.Value
-
-functionName	 algebra.FunctionName
-functionBody     functions.FunctionBody
 
 // token offset into the statement
 tokOffset	 int
@@ -350,10 +345,6 @@ tokOffset	 int
 %type <expr>             function_expr
 %type <s>                function_name
 
-%type <functionName>	 func_name
-%type <ss>		 parm_list parameter_terms
-%type <functionBody>     func_body
-
 %type <expr>             paren_expr
 %type <subquery>         subquery_expr
 
@@ -397,7 +388,6 @@ tokOffset	 int
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
 %type <statement>        role_stmt grant_role revoke_role
-%type <statement>        function_stmt create_function drop_function execute_function
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list next_values
@@ -493,8 +483,6 @@ ddl_stmt
 infer
 |
 role_stmt
-|
-function_stmt
 ;
 
 explain:
@@ -658,14 +646,6 @@ drop_index
 alter_index
 |
 build_index
-;
-
-function_stmt:
-create_function
-|
-drop_function
-|
-execute_function
 ;
 
 fullselect:
@@ -2322,91 +2302,6 @@ build_index:
 BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
 {
     $$ = algebra.NewBuildIndexes($4, $8, $6...)
-}
-;
-
-/*************************************************
- *
- * CREATE FUNCTION
- *
- *************************************************/
-
-create_function:
-CREATE FUNCTION func_name LPAREN parm_list RPAREN func_body
-{
-    $7.SetVarNames($5)
-    $$ = algebra.NewCreateFunction($3, $7)
-}
-;
-
-func_name:
-namespace_name COLON IDENT
-{
-    $$ = algebra.NewGlobalFunctionName($1, $3)
-}
-|
-IDENT
-{
-    $$ = algebra.NewGlobalFunctionName("", $1)
-}
-;
-
-parm_list:
-/* empty */
-{
-    $$ = nil
-}
-|
-parameter_terms
-;
-
-parameter_terms:
-IDENT
-{
-    $$ = []string{$1}
-}
-|
-parameter_terms COMMA IDENT
-{
-    $$ = append($1, string($3))
-}
-;
-
-func_body:
-USING INLINE FROM expr
-{
-    body, err := inline.NewInlineBody($4)
-    if err != nil {
-	yylex.Error(err.Error())
-    } else {
-        $$ = body
-    }
-}
-;
-
-/*************************************************
- *
- * DROP FUNCTION
- *
- *************************************************/
-
-drop_function:
-DROP FUNCTION func_name
-{
-    $$ = algebra.NewDropFunction($3)
-}
-;
-
-/*************************************************
- *
- * EXECUTE FUNCTION
- *
- *************************************************/
-
-execute_function:
-EXECUTE FUNCTION func_name LPAREN opt_exprs RPAREN
-{
-    $$ = algebra.NewExecuteFunction($3, $5)
 }
 ;
 

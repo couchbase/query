@@ -58,7 +58,7 @@ func (this *statementBase) SetParamsCount(params int) {
 }
 
 /*
-does it have parameters?
+does it hae parameters?
 */
 func (this *statementBase) Params() int {
 	return this.paramCount

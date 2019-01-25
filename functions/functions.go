@@ -44,7 +44,6 @@ type FunctionName interface {
 
 type FunctionBody interface {
 	Lang() Language
-	SetVarNames(vars []string)
 	Body(object map[string]interface{})
 }
 
@@ -262,7 +261,6 @@ func ExecuteFunction(name FunctionName, values []value.Value, context Context) (
 			body = entry.FunctionBody
 		}
 	} else {
-		entry = ce.(*FunctionEntry)
 		body = entry.FunctionBody
 
 		// if the storage change counter has moved, we may need to update the cache
@@ -388,9 +386,6 @@ func (this *missing) Lang() Language {
 
 func (this *missing) Body(object map[string]interface{}) {
 	object["undefined_function"] = true
-}
-
-func (this *missing) SetVarNames(vars []string) {
 }
 
 func (this *missing) Execute(name FunctionName, body FunctionBody, values []value.Value, context Context) (value.Value, errors.Error) {

@@ -154,9 +154,4 @@ var _OPERATORS = map[string]Operator{
 
 	// Prepare
 	"Prepare": &Prepare{},
-
-	// Functions
-	"CreateFunction":  &CreateFunction{},
-	"DropFunction":    &DropFunction{},
-	"ExecuteFunction": &ExecuteFunction{},
 }
