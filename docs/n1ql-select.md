@@ -2337,6 +2337,12 @@ date expr is a string in a supported format. Since Couchbase 4.6.1.
 
 ### String functions
 
+__CONCAT2(separator, arg1, arg2, ....)__ - concat strings into single
+string with separator. ARRAY of strings are flattened in same order
+and concat them with separator in the middle. If no separator needed
+user can provide as "".
+Example: CONCAT2('-','a','b',['c','d'],['xyz'])   --  "a-b-c-d-xyz"
+
 __CONTAINS(expr, substr)__ - true if the string contains the
 substring.
 
