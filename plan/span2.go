@@ -251,7 +251,7 @@ func (this *Span2) MarshalBase(f func(map[string]interface{})) map[string]interf
 	}
 
 	if this.Seek != nil && isNotNull(this.Seek) {
-		r["Seek"] = this.Seek
+		r["seek"] = this.Seek
 	}
 
 	if this.Exact {
