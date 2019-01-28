@@ -529,3 +529,9 @@ func (this *systemRemoteHttp) GetNodeNames() []string {
 	}
 	return names
 }
+
+func (this *systemRemoteHttp) Enabled(nodes []string, capability distributed.Capability) bool {
+
+	// FIXME this is to be implemented properly when MB-31850 is coded
+	return true
+}

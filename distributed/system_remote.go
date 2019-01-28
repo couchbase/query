@@ -46,11 +46,20 @@ type SystemRemoteAccess interface {
 
 	// all the node names
 	GetNodeNames() []string
+
+	// is a specific feature available in a set of nodes?
+	Enabled(nodes []string, capability Capability) bool
 }
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,
 // so we define an equivalent here.
 type Creds map[string]string
+
+type Capability int
+
+const (
+	NEW_PREPAREDS = Capability(iota)
+)
 
 var NO_CREDS = make(Creds, 0)
 

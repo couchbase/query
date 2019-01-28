@@ -178,7 +178,6 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	var phaseTime time.Duration
 
 	prepared_name, prepared, err := getPrepared(httpArgs, parm, val, &phaseTime)
-	encoded_plan, plan_err := httpArgs.getString(ENCODED_PLAN, "")
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -187,25 +186,28 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	// If an encoded_plan has been supplied, only decode it
 	// when the prepared statement can't be found, for backwards
 	// compatibility with older SDKs
-	if encoded_plan != "" && plan_err == nil &&
+	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_ENCODED_PLAN) &&
 		err != nil && err.Code() == errors.NO_SUCH_PREPARED {
-		var decoded_plan *plan.Prepared
+		encoded_plan, plan_err := httpArgs.getString(ENCODED_PLAN, "")
+		if plan_err == nil && encoded_plan != "" && encoded_plan != prepareds.EmptyPlan {
+			var decoded_plan *plan.Prepared
 
-		// Monitoring API: we only need to track the prepared
-		// statement if we couldn't do it in getPrepared()
-		// Distributed plans: we don't propagate on encoded_plan parameter
-		// because the client will be using it across all nodes anyway, and
-		// we want to avoid a plan distribution stampede
-		decoded_plan, plan_err = prepareds.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), false, &phaseTime)
-		if plan_err != nil {
-			err = plan_err
-		} else if decoded_plan != nil {
-			prepared = decoded_plan
-			err = nil
+			// Monitoring API: we only need to track the prepared
+			// statement if we couldn't do it in getPrepared()
+			// Distributed plans: we don't propagate on encoded_plan parameter
+			// because the client will be using it across all nodes anyway, and
+			// we want to avoid a plan distribution stampede
+			decoded_plan, plan_err = prepareds.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), false, &phaseTime)
+			if plan_err != nil {
+				err = plan_err
+			} else if decoded_plan != nil {
+				prepared = decoded_plan
+				err = nil
+			}
 		}
-	}
-	if err == nil && plan_err != nil {
-		err = plan_err
+		if err == nil && plan_err != nil {
+			err = plan_err
+		}
 	}
 	if prepared != nil {
 		if phaseTime != 0 {

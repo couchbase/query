@@ -36,6 +36,10 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+// empty plan for backwards compatibility with older SDKs, engines
+// decodes to ""
+const EmptyPlan = "H4sIAAAAAAAA/wEAAP//AAAAAAAAAAA="
+
 // prepared statements cache retrieval options
 const (
 	OPT_TRACK     = 1 << iota // track statement in cache

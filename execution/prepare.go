@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -72,6 +73,20 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		if host != "" && ok {
 			name = distributed.RemoteAccess().MakeKey(host, name)
 			val.Actual().(map[string]interface{})["name"] = name
+		}
+
+		// encoded_plans are not enabled by default, so we are asked by the SDK team
+		// not to send the plan to save on network traffic, so that older SDKs don't
+		// cache and send long and useless stuff
+		// However, some older SDKs don't like empty encoded plans and treat them as
+		// an error, so we send a short plan that decodes correctly but to an empty string
+		// To make it more complicated, older engines will probably fail to decode the
+		// plan which in turn will confuse the older SDKs even more
+		// So, on mixed versions clusters, we still send proper encoded plans
+		// This will eventually go away when SDKs older than 3.0 will stop being supported
+		if !util.IsFeatureEnabled(context.featureControls, util.N1QL_ENCODED_PLAN) &&
+			distributed.RemoteAccess().Enabled([]string{}, distributed.NEW_PREPAREDS) {
+			val.Actual().(map[string]interface{})["encoded_plan"] = prepareds.EmptyPlan
 		}
 		this.sendItem(value.NewAnnotatedValue(val))
 	})
