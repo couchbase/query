@@ -16,7 +16,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -87,19 +86,18 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 
 func (this *httpRequest) httpCode() int {
 	this.RLock()
-	defer this.RUnlock()
-	return this.httpRespCode
+	rv := this.httpRespCode
+	this.RUnlock()
+	return rv
 }
 
 func (this *httpRequest) setHttpCode(httpRespCode int) {
 	this.Lock()
-	defer this.Unlock()
 	this.httpRespCode = httpRespCode
+	this.Unlock()
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
-	defer this.stopAndAlert(server.FATAL)
-
 	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
 	this.writeString("{\n")
 	this.writeRequestID(prefix)
@@ -115,6 +113,8 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeControls(srvr.Controls(), prefix, indent)
 	this.writeString("\n}\n")
 	this.writer.noMoreData()
+
+	this.stopAndAlert(server.FATAL)
 }
 
 func (this *httpRequest) markTimeOfCompletion(now time.Time) {
@@ -288,7 +288,7 @@ func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, pr
 }
 
 func (this *httpRequest) writeString(s string) bool {
-	return this.writer.writeString(s)
+	return this.writer.writeBytes([]byte(s))
 }
 
 func (this *httpRequest) writeState(state server.State, prefix string) bool {
@@ -304,7 +304,11 @@ func (this *httpRequest) writeState(state server.State, prefix string) bool {
 		}
 	}
 
-	return this.writer.printf(",\n%s\"status\": \"%s\"", prefix, state)
+	return this.writeString(",\n") &&
+		this.writeString(prefix) &&
+		this.writeString("\"status\": \"") &&
+		this.writeString(string(state)) &&
+		this.writeString("\"")
 }
 
 func (this *httpRequest) writeErrors(prefix string, indent string) bool {
@@ -415,17 +419,33 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		newPrefix = "\n" + prefix + indent
 	}
 
+	var b [64]byte
 	beforeMetrics := this.writer.mark()
-	if !(this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"metrics\": {")) {
+	if !(this.writeString(",\n") &&
+		this.writeString(prefix) &&
+		this.writeString("\"metrics\": {") &&
+
+		this.writeString(newPrefix) &&
+		this.writeString("\"elapsedTime\": \"") &&
+		this.writeString(this.elapsedTime.String()) &&
+		this.writeString("\",") &&
+		this.writeString(newPrefix) &&
+		this.writeString("\"executionTime\": \"") &&
+		this.writeString(this.executionTime.String()) &&
+		this.writeString("\",") &&
+		this.writeString(newPrefix) &&
+		this.writeString("\"resultCount\": ") &&
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(this.resultCount), 10)) &&
+		this.writeString(",") &&
+		this.writeString(newPrefix) &&
+		this.writeString("\"resultSize\": ") &&
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(this.resultSize), 10))) {
+
 		this.writer.truncate(beforeMetrics)
 		return false
 	}
-	buf := this.writer.buf()
-	fmt.Fprintf(buf, "%s\"elapsedTime\": \"%v\"", newPrefix, this.elapsedTime)
-	fmt.Fprintf(buf, ",%s\"executionTime\": \"%v\"", newPrefix, this.executionTime)
-	fmt.Fprintf(buf, ",%s\"resultCount\": %d", newPrefix, this.resultCount)
-	fmt.Fprintf(buf, ",%s\"resultSize\": %d", newPrefix, this.resultSize)
 
+	buf := this.writer.buf()
 	if this.MutationCount() > 0 {
 		fmt.Fprintf(buf, ",%s\"mutationCount\": %d", newPrefix, this.MutationCount())
 	}
@@ -586,9 +606,11 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	return this.writeString("}")
 }
 
-// the buffered writes the response data in chunks
+// the buffered writer writes the response data in chunks
+// note that the access to the buffered writer is not controlled,
+// and the executor and stream have to coordinate in between them
+// not to mess up the output
 type bufferedWriter struct {
-	sync.Mutex
 	req         *httpRequest  // the request for the response we are writing
 	buffer      *bytes.Buffer // buffer for writing response data to
 	buffer_pool BufferPool    // buffer manager for our buffers
@@ -608,13 +630,13 @@ func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
 	w.lastFlush = time.Now()
 }
 
-func (this *bufferedWriter) writeString(s string) bool {
+func (this *bufferedWriter) writeBytes(s []byte) bool {
 	if this.closed {
 		return false
 	}
-
-	this.Lock()
-	defer this.Unlock()
+	if len(s) == 0 {
+		return true
+	}
 
 	// threshold exceeded
 	if len(s)+this.buffer.Len() > this.buffer_pool.BufferCapacity() {
@@ -644,9 +666,6 @@ func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
 	if this.closed {
 		return false
 	}
-
-	this.Lock()
-	defer this.Unlock()
 
 	// threshold exceeded
 	if _PRINTF_THRESHOLD+this.buffer.Len() > this.buffer_pool.BufferCapacity() {
@@ -687,9 +706,6 @@ func (this *bufferedWriter) timeFlush() {
 		return
 	}
 
-	this.Lock()
-	defer this.Unlock()
-
 	// flush only if time has exceeded
 	if time.Since(this.lastFlush) > 100*time.Millisecond {
 		w := this.req.resp // our request's response writer
@@ -715,9 +731,6 @@ func (this *bufferedWriter) sizeFlush() {
 	if this.closed {
 		return
 	}
-
-	this.Lock()
-	defer this.Unlock()
 
 	// beyond capacity
 	if this.buffer.Len() > this.buffer_pool.BufferCapacity() {
@@ -754,9 +767,6 @@ func (this bufferedWriter) buf() io.Writer {
 
 // empty and dispose of writer
 func (this *bufferedWriter) noMoreData() {
-	this.Lock()
-	defer this.Unlock()
-
 	if this.closed {
 		return
 	}

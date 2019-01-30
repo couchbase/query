@@ -97,8 +97,8 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 
 		// unluckily there's no direct way to get the only entry out of a map
 		// so we still need a range
-		for n, val := range this {
-			v := NewValue(val)
+		for n, _ := range this {
+			v := NewValue(this[n])
 			if v.Type() == MISSING {
 				continue
 			}
