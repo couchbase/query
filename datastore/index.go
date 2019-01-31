@@ -376,13 +376,43 @@ type FTSIndex interface {
 	Index
 
 	/* Search returns one IndexEntry for each document.
-	* PrimaryKey -- document key
-	* MetaData   -- by default contains "score", If options contains "meta":true then this
-	*               object contains whole meta info except fields.
-	* EntryKey   -- none
-	 */
+	   PrimaryKey -- document key
+	   MetaData   -- by default contains "score", If options contains "meta":true then this
+	                 object contains whole meta info except fields.
+	   EntryKey   -- none
+	*/
 	Search(requestId string, searchInfo *FTSSearchInfo,
 		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
+
+	// For given field/query Index is qualified, exact=true when no false positives
+	Sargable(field string, query, options value.Value) (nkeys int, exact bool, err errors.Error)
+
+	// pagination is allowed
+	Pagination(order []string, offset, limit int64) bool
+}
+
+/*
+ * This global package level function.
+ *
+ * NewVerify (collection, field string, query, options value.Value) (datastore.Verify, errors.Error)
+ *
+ * collection -- bucketname or collection name (namespace:bucket.scope.collection)
+ * filed      -- serach filed name
+ * query      -- serach query
+ * options    -- serach options
+ *
+ * NOTE: If FTSclient uses N1QL expression package, This must be put in separate package and should not use
+ *       FTSclient package or N1QL expression package to avoid circular refrences.
+ *
+ */
+
+type Verify interface {
+	/* Given document verify the result based on serach parameters
+	 * The verification must match the index search results. Should be able to verify without index definition.
+	 * If not able to do should raise error
+	 */
+	// item  -- document
+	Evaluate(item value.Value) (bool, errors.Error)
 }
 
 ////////////////////////////////////////////////////////////////////////
