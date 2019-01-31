@@ -182,6 +182,7 @@ tokOffset	 int
 %token KEYS
 %token KEYSPACE
 %token KNOWN
+%token LANGUAGE
 %token LAST
 %token LEFT
 %token LET
@@ -2373,7 +2374,17 @@ parameter_terms COMMA IDENT
 ;
 
 func_body:
-USING INLINE FROM expr
+LBRACE expr RBRACE
+{
+    body, err := inline.NewInlineBody($2)
+    if err != nil {
+	yylex.Error(err.Error())
+    } else {
+        $$ = body
+    }
+}
+|
+LANGUAGE INLINE AS expr
 {
     body, err := inline.NewInlineBody($4)
     if err != nil {
