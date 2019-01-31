@@ -84,7 +84,9 @@ func newValueExchange(exchange *valueExchange, capacity int64) {
 	if capacity == 1 {
 		exchange.items = exchange.localValues[0:1:1]
 	} else if capacity == GetPipelineCap() {
-		exchange.items = valueSlicePool.Get().([]value.AnnotatedValue)[0:capacity]
+		items := valueSlicePool.Get().([]value.AnnotatedValue)
+		newCap := cap(items)
+		exchange.items = items[0:newCap]
 	}
 
 	// either non standard pipeline cap, or server wide pipeline cap changes
