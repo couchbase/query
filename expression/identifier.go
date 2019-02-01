@@ -233,3 +233,11 @@ func (this *Identifier) SetUnnestAlias(unnestAlias bool) {
 		this.identFlags &^= IDENT_IS_UNNEST_ALIAS
 	}
 }
+
+func (this *Identifier) SetIdentFlags(aliases map[string]bool, flags uint32) {
+	if aliases != nil {
+		if _, ok := aliases[this.identifier]; ok {
+			this.identFlags |= flags
+		}
+	}
+}

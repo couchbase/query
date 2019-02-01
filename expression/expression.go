@@ -232,6 +232,11 @@ type Expression interface {
 	   Reset runtime-alloated memory
 	*/
 	ResetMemory(context Context)
+
+	/*
+	   Set identifier flags
+	*/
+	SetIdentFlags(aliases map[string]bool, flags uint32)
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

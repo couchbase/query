@@ -212,6 +212,20 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 			return err
 		}
 
+		// references to projection alias should be properly marked
+		resultTerms := this.subresult.ResultTerms()
+		aliases := make(map[string]bool, len(resultTerms))
+		for _, pterm := range resultTerms {
+			if !pterm.Star() && pterm.As() != "" {
+				aliases[pterm.As()] = true
+			}
+		}
+		if len(aliases) > 0 {
+			for _, oterm := range this.order.Terms() {
+				oterm.Expression().SetIdentFlags(aliases, expression.IDENT_IS_PROJ_ALIAS)
+			}
+		}
+
 		if !this.correlated {
 			// Determine if this is a correlated subquery
 			immediate := f.Allowed().GetValue().Fields()

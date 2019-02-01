@@ -552,3 +552,9 @@ func (this *ExpressionBase) ResetMemory(context Context) {
 		child.ResetMemory(context)
 	}
 }
+
+func (this *ExpressionBase) SetIdentFlags(aliases map[string]bool, flags uint32) {
+	for _, child := range this.expr.Children() {
+		child.SetIdentFlags(aliases, flags)
+	}
+}
