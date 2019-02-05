@@ -131,9 +131,13 @@ Returns item value divided by sum
 */
 func (this *RatioToReport) cumulatePart(item, part value.Value, context Context) (value.Value, error) {
 	sumv, _ := part.Field("part")
+	if sumv.Type() == value.NULL || item.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
 
-	if sumv.Type() != value.NUMBER {
-		return nil, fmt.Errorf("%s internal Missing or invalid values: %v.", this.Name(), sumv.Actual())
+	if sumv.Type() != value.NUMBER || item.Type() != value.NUMBER {
+		return nil, fmt.Errorf("%s internal Missing or invalid values: %v, %v.",
+			this.Name(), sumv.Actual(), item.Actual())
 	}
 
 	sum := sumv.Actual().(float64)
