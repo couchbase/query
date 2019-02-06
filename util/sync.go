@@ -59,11 +59,13 @@ func (o *Once) Reset() {
 }
 
 const _POOL_SIZE = 16
+const _POOL_LOAD = 16
 const _POOL_MAX = 1024
 
 type FastPool struct {
 	getNext   uint32
 	putNext   uint32
+	load      uint32
 	useCount  int32
 	freeCount int32
 	f         func() interface{}
@@ -88,8 +90,13 @@ func NewFastPool(p *FastPool, f func() interface{}) {
 }
 
 func (p *FastPool) Get() interface{} {
+	if atomic.LoadInt32(&p.useCount) == 0 ||
+		atomic.LoadUint32(&p.getNext)-atomic.LoadUint32(&p.load) > _POOL_LOAD {
+		return p.f()
+	}
 	l := atomic.AddUint32(&p.getNext, 1) % _POOL_SIZE
 	e := p.pool[l].Get()
+	atomic.AddUint32(&p.load, 1)
 	if e == nil {
 		return p.f()
 	}
@@ -115,11 +122,15 @@ func (p *FastPool) Put(s interface{}) {
 		atomic.AddInt32(&p.freeCount, -1)
 	}
 	e.entry = s
-	atomic.AddInt32(&p.useCount, 1)
 	p.pool[l].Put(e)
+	atomic.AddInt32(&p.useCount, 1)
 }
 
 func (l *poolList) Get() *poolEntry {
+	if l.head == nil {
+		return nil
+	}
+
 	l.Lock()
 	if l.head == nil {
 		l.Unlock()
