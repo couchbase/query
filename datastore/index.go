@@ -385,10 +385,10 @@ type FTSIndex interface {
 		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
 
 	// For given field/query Index is qualified, exact=true when no false positives
-	Sargable(field string, query, options value.Value) (nkeys int, exact bool, err errors.Error)
+	Sargable(field string, query, options expression.Expression) (nkeys int, exact bool, err errors.Error)
 
-	// pagination is allowed
-	Pagination(order []string, offset, limit int64) bool
+	// Pageable is allowed
+	Pageable(order []string, offset, limit int64) bool
 }
 
 /*
