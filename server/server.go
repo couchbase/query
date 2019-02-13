@@ -173,6 +173,11 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 	return rv, nil
 }
 
+func MetakvSubscribe() {
+	// Subscribe FTS Client Metakv information
+	queryMetakv.Subscribe(N1ftyMetakvNotifier, queryMetakv.FTSMetaDir, make(chan struct{}))
+}
+
 func (this *Server) Datastore() datastore.Datastore {
 	return this.datastore
 }

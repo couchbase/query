@@ -48,7 +48,7 @@ const (
 	CoveredTrue                     // covered
 )
 
-type coveredOptions struct {
+type CoveredOptions struct {
 	skip    bool
 	trickle bool
 }
@@ -339,7 +339,7 @@ Indicates if this expression is based on the keyspace and is covered
 by the list of expressions; that is, this expression does not depend
 on any stored data beyond the expressions.
 */
-func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
 			return CoveredTrue

@@ -12,7 +12,9 @@ package execution
 import (
 	"fmt"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -21,11 +23,12 @@ import (
 // Build a query execution pipeline from a query plan.
 func Build(plan plan.Operator, context *Context) (Operator, error) {
 	var m map[scannedIndex]bool
+	aliasMap := make(map[string]string, 8)
 	if context.ScanVectorSource().Type() == timestamp.ONE_VECTOR {
 		// Collect scanned indexes.
 		m = make(map[scannedIndex]bool, 8)
 	}
-	builder := &builder{context, m}
+	builder := &builder{context, m, aliasMap}
 	x, err := plan.Accept(builder)
 
 	if err != nil {
@@ -52,28 +55,33 @@ type scannedIndex struct {
 type builder struct {
 	context        *Context
 	scannedIndexes map[scannedIndex]bool // Nil if scanned indexes should not be collected.
+	aliasMap       map[string]string
+}
+
+func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
+	if keyspaceTerm.Namespace() != "#system" {
+		this.aliasMap[keyspaceTerm.Alias()] = keyspaceTerm.Path().ProtectedString()
+	}
+}
+
+// Remember the bucket of the scanned index.
+func (this *builder) setScannedIndexes(keyspaceTerm *algebra.KeyspaceTerm) {
+	if this.scannedIndexes != nil {
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
 }
 
 // Scan
 func (this *builder) VisitPrimaryScan(plan *plan.PrimaryScan) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspace := plan.Keyspace()
-		scannedIndex := scannedIndex{keyspace.NamespaceId(), keyspace.Name()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewPrimaryScan(plan, this.context), nil
 }
 
 func (this *builder) VisitPrimaryScan3(plan *plan.PrimaryScan3) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspace := plan.Keyspace()
-		scannedIndex := scannedIndex{keyspace.NamespaceId(), keyspace.Name()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewPrimaryScan3(plan, this.context), nil
 }
 
@@ -82,68 +90,38 @@ func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error)
 }
 
 func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewIndexScan(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexScan2(plan *plan.IndexScan2) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewIndexScan2(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexScan3(plan *plan.IndexScan3) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewIndexScan3(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewIndexCountScan(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexCountScan2(plan *plan.IndexCountScan2) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewIndexCountScan2(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexCountDistinctScan2(plan *plan.IndexCountDistinctScan2) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
 	return NewIndexCountDistinctScan2(plan, this.context), nil
 }
 
@@ -223,6 +201,7 @@ func (this *builder) VisitOrderedIntersectScan(plan *plan.OrderedIntersectScan) 
 
 // Fetch
 func (this *builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
+	this.setAliasMap(plan.Term())
 	return NewFetch(plan, this.context), nil
 }
 
@@ -233,10 +212,12 @@ func (this *builder) VisitDummyFetch(plan *plan.DummyFetch) (interface{}, error)
 
 // Join
 func (this *builder) VisitJoin(plan *plan.Join) (interface{}, error) {
+	this.setAliasMap(plan.Term())
 	return NewJoin(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexJoin(plan *plan.IndexJoin) (interface{}, error) {
+	this.setAliasMap(plan.Term())
 	return NewIndexJoin(plan, this.context), nil
 }
 
@@ -247,6 +228,7 @@ func (this *builder) VisitNLJoin(plan *plan.NLJoin) (interface{}, error) {
 		return nil, e
 	}
 
+	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
 	return NewNLJoin(plan, this.context, c.(Operator)), nil
 }
 
@@ -257,14 +239,17 @@ func (this *builder) VisitHashJoin(plan *plan.HashJoin) (interface{}, error) {
 		return nil, e
 	}
 
+	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
 	return NewHashJoin(plan, this.context, c.(Operator)), nil
 }
 
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
+	this.setAliasMap(plan.Term())
 	return NewNest(plan, this.context), nil
 }
 
 func (this *builder) VisitIndexNest(plan *plan.IndexNest) (interface{}, error) {
+	this.setAliasMap(plan.Term())
 	return NewIndexNest(plan, this.context), nil
 }
 
@@ -275,6 +260,7 @@ func (this *builder) VisitNLNest(plan *plan.NLNest) (interface{}, error) {
 		return nil, e
 	}
 
+	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
 	return NewNLNest(plan, this.context, c.(Operator)), nil
 }
 
@@ -285,6 +271,7 @@ func (this *builder) VisitHashNest(plan *plan.HashNest) (interface{}, error) {
 		return nil, e
 	}
 
+	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
 	return NewHashNest(plan, this.context, c.(Operator)), nil
 }
 
@@ -309,6 +296,7 @@ func (this *builder) VisitWith(plan *plan.With) (interface{}, error) {
 
 // Filter
 func (this *builder) VisitFilter(plan *plan.Filter) (interface{}, error) {
+	search.SetSearchKeyspace(plan.Condition(), this.aliasMap)
 	return NewFilter(plan, this.context), nil
 }
 
@@ -352,7 +340,11 @@ func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 	children := _UNION_POOL.Get()
 
+	saliasMap := this.aliasMap
+	defer func() { this.aliasMap = saliasMap }()
+
 	for _, child := range plan.Children() {
+		this.aliasMap = make(map[string]string, 8)
 		c, e := child.Accept(this)
 		if e != nil {
 			return nil, e
@@ -365,11 +357,16 @@ func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 }
 
 func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, error) {
+	saliasMap := this.aliasMap
+	defer func() { this.aliasMap = saliasMap }()
+	this.aliasMap = make(map[string]string, 8)
+
 	first, e := plan.First().Accept(this)
 	if e != nil {
 		return nil, e
 	}
 
+	this.aliasMap = make(map[string]string, 8)
 	second, e := plan.Second().Accept(this)
 	if e != nil {
 		return nil, e
@@ -379,11 +376,16 @@ func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, er
 }
 
 func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
+	saliasMap := this.aliasMap
+	defer func() { this.aliasMap = saliasMap }()
+	this.aliasMap = make(map[string]string, 8)
+
 	first, e := plan.First().Accept(this)
 	if e != nil {
 		return nil, e
 	}
 
+	this.aliasMap = make(map[string]string, 8)
 	second, e := plan.Second().Accept(this)
 	if e != nil {
 		return nil, e
@@ -607,4 +609,9 @@ func (this *builder) VisitDropFunction(plan *plan.DropFunction) (interface{}, er
 // ExecuteFunction
 func (this *builder) VisitExecuteFunction(plan *plan.ExecuteFunction) (interface{}, error) {
 	return NewExecuteFunction(plan, this.context), nil
+}
+func (this *builder) VisitIndexFtsSearch(plan *plan.IndexFtsSearch) (interface{}, error) {
+	this.setScannedIndexes(plan.Term())
+	this.setAliasMap(plan.Term())
+	return NewIndexFtsSearch(plan, this.context), nil
 }

@@ -166,11 +166,14 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue,
 	bits := this.bits[key]
 	if bits == 0 {
 		this.values[key] = item
+	} else {
+		mergeSearchMeta(this.values[key], item)
 	}
 
 	bits |= int64(0x01) << item.Bit()
 
 	if (bits&fullBits)^fullBits == 0 {
+		item = this.values[key]
 		delete(this.values, key)
 		delete(this.bits, key)
 
@@ -242,4 +245,23 @@ func (this *IntersectScan) Done() {
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil
+}
+
+func mergeSearchMeta(dest, src value.AnnotatedValue) {
+	srcMeta := src.GetAttachment("smeta")
+	if srcMeta == nil {
+		return
+	}
+
+	destMeta := dest.GetAttachment("smeta")
+	if destMeta == nil {
+		dest.SetAttachment("smeta", srcMeta)
+	} else {
+		s := srcMeta.(map[string]interface{})
+		d := destMeta.(map[string]interface{})
+		for n, v := range s {
+			d[n] = v
+		}
+		dest.SetAttachment("smeta", d)
+	}
 }

@@ -415,7 +415,4 @@ var _FUNCTIONS = map[string]Function{
 	// Unnest
 	"unnest_position": &UnnestPosition{},
 	"unnest_pos":      &UnnestPosition{},
-
-	// FTS
-	"search_query": &FTSQuery{},
 }

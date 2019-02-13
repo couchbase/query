@@ -13,7 +13,7 @@ import (
 	"time"
 
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
-	"github.com/couchbase/query/datastore"
+	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -236,23 +236,42 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 
 	if len(idxrSettings) > 0 {
 		// Call a global function defined by indexer
-		var idxConfig datastore.IndexConfig
-		var err error
-		if idxConfig, err = gsi.GetIndexConfig(); err == nil {
-			err = idxConfig.SetConfig(idxrSettings)
-			if err != nil {
-				//log failure to set values
-				logging.Errorf(" Could not set indexer settings :: %v", idxrSettings)
-			}
-			logging.Infof(" Indexer settings have been updated %v", idxrSettings)
+		idxConfig, err := gsi.GetIndexConfig()
+		if err != nil {
+			logging.Errorf(" Cannot get gsi index config :: %v", err.Error())
+		} else if err = idxConfig.SetConfig(idxrSettings); err != nil {
+			logging.Errorf(" Could not set GSI indexer settings (%v) :: %v", idxrSettings, err.Error())
 		} else {
-			logging.Errorf(" Cannot get index config :: %v", err.Error())
-
+			logging.Infof(" GSI indexer settings have been updated %v", idxrSettings)
 		}
+
+		idxConfig, err = ftsclient.GetConfig()
+		if err != nil {
+			logging.Errorf(" Cannot get n1fty index config :: %v", err.Error())
+		} else if err = idxConfig.SetConfig(idxrSettings); err != nil {
+			logging.Errorf(" Could not set n1fty indexer settings (%v) :: %v",
+				idxrSettings, err.Error())
+		} else {
+			logging.Infof(" n1fty indexer settings have been updated %v", idxrSettings)
+		}
+
 	}
 
 	if len(querySettings) > 0 {
 		// Set the query values
 		ProcessSettings(querySettings, srvr)
 	}
+}
+
+// FTS MetakvNotifier notifies the FTS client about any metakv changes it subscribed for.
+
+func N1ftyMetakvNotifier(path string, val []byte, rev interface{}) error {
+	configs := map[string]interface{}{path: val}
+	idxConfig, err := ftsclient.GetConfig()
+	if err != nil {
+		logging.Errorf(" Cannot get n1fty index config :: %v", err.Error())
+	} else if err = idxConfig.SetConfig(configs); err != nil {
+		logging.Errorf(" Could not set n1fty indexer settings :: %v", err.Error())
+	}
+	return err
 }

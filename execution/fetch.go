@@ -154,6 +154,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		av := this.batch[0]
 		if fv != nil {
 
+			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
 
 			if !this.sendItem(av) {
@@ -181,6 +182,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 				keyCount[key]--
 			}
 
+			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
 
 			if !this.sendItem(av) {

@@ -11,6 +11,7 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Plan errors - errors that are created in the prepared, planner and plan packages
@@ -98,9 +99,9 @@ func NewIndexAlreadyExistsError(idx string) Error {
 
 const AMBIGUOUS_META = 4310
 
-func NewAmbiguousMetaError() Error {
+func NewAmbiguousMetaError(fn string) Error {
 	return &err{level: EXCEPTION, ICode: AMBIGUOUS_META, IKey: "plan.ambiguous_meta",
-		InternalMsg: fmt.Sprintf("META() in query with multiple FROM terms requires an argument."), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("%s() in query with multiple FROM terms requires an argument.", strings.ToUpper(fn)), InternalCaller: CallerN(1)}
 }
 
 const NOT_SUPPORTED_DESC_COLLATION = 4320

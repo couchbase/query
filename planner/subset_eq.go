@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 func (this *subset) VisitEq(expr *expression.Eq) (interface{}, error) {
@@ -101,6 +102,18 @@ func (this *subset) VisitEq(expr *expression.Eq) (interface{}, error) {
 		return false, nil
 
 	default:
+		var val value.Value
+
+		if expr.First().EquivalentTo(expr2) {
+			val = expr.Second().Value()
+		} else if expr.Second().EquivalentTo(expr2) {
+			val = expr.First().Value()
+		}
+
+		if val != nil && val.Type() == value.BOOLEAN && val.Truth() {
+			return true, nil
+		}
+
 		return this.visitDefault(expr)
 	}
 }

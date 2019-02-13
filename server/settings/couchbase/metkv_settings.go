@@ -25,6 +25,7 @@ const (
 	QueryMetaDir          = "/query/"
 	QuerySettingsMetaDir  = QueryMetaDir + "settings/"
 	QuerySettingsMetaPath = QuerySettingsMetaDir + "config"
+	FTSMetaDir            = "/fts/cbgt/cfg/"
 )
 
 // List of parameters to be sent to the indexer
@@ -38,6 +39,30 @@ var GLOBALPARAM = map[string]string{
 }
 
 type Config value.Value
+
+func Subscribe(callb metakv.Callback, path string, cancelCh chan struct{}) {
+	go func() {
+		fn := func(r int, err error) error {
+			if r > 0 {
+				logging.Errorf("ERROR: metakv notifier failed (%v)..Retrying %v", err, r)
+			}
+			// cancelCh is the cancel channel to return contril back to metakv.
+			err = metakv.RunObserveChildren(path, callb, cancelCh)
+			if err != nil {
+				logging.Infof("New susbscription %s done:%v", path, err)
+			}
+			return err
+		}
+
+		// Retry mechanism for above function - no of retries - 100
+		rh := common.NewRetryHelper(MAX_METAKV_RETRIES, time.Second, 2, fn)
+		err := rh.Run()
+		if err != nil {
+			logging.Fatalf("ERROR: Settings metakv notifier failed (%v).. Exiting", err)
+			return
+		}
+	}()
+}
 
 func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 	// Callback function that processes the input key value given by metakv.
@@ -73,24 +98,7 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 		return nil
 	}
 
-	go func() {
-		fn := func(r int, err error) error {
-			if r > 0 {
-				logging.Errorf("ERROR: metakv notifier failed (%v)..Retrying %v", err, r)
-			}
-			// cancelCh is the cancel channel to return contril back to metakv.
-			err = metakv.RunObserveChildren(QuerySettingsMetaDir, metaKvCallback, cancelCh)
-			return err
-		}
-
-		// Retry mechanism for above function - no of retries - 100
-		rh := common.NewRetryHelper(MAX_METAKV_RETRIES, time.Second, 2, fn)
-		err := rh.Run()
-		if err != nil {
-			logging.Fatalf("ERROR: Settings metakv notifier failed (%v).. Exiting", err)
-			return
-		}
-	}()
+	Subscribe(metaKvCallback, QuerySettingsMetaDir, cancelCh)
 
 	return
 }

@@ -56,6 +56,7 @@ const (
 	UPSERT
 	MERGE
 	INFER
+	FTS_SEARCH
 
 	// Server layer
 	INSTANTIATE
@@ -92,6 +93,7 @@ var _PHASE_NAMES = []string{
 	UPSERT:       "upsert",
 	MERGE:        "merge",
 	INFER:        "inferKeySpace",
+	FTS_SEARCH:   "ftsSearch",
 
 	INSTANTIATE: "instantiate",
 	PARSE:       "parse",

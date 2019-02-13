@@ -87,7 +87,7 @@ func (this *Field) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Field) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *Field) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	for _, expr := range exprs {
 
 		// MB-25560: if a field is equivalent, no need to check children field / field names
@@ -300,7 +300,7 @@ func (this *FieldName) EquivalentTo(other Expression) bool {
 
 // MB-22112 We need an ad hoc CoveredBy for FieldNames, so that we can make sure
 // that they can be checked for equivalence against their natural match, identifiers
-func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 
 	// MB-25317 / MB-25370 if the identifier preceeding the field name is not the keyspace
 	// then we are skipping this test

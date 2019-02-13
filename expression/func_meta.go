@@ -190,7 +190,7 @@ func (this *Meta) Indexable() bool {
 	return true
 }
 
-func (this *Meta) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *Meta) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	if len(this.operands) > 0 {
 		alias := NewIdentifier(keyspace)
 		if !this.operands[0].DependsOn(alias) {
@@ -217,7 +217,9 @@ func (this *Meta) MaxArgs() int { return 1 }
 Factory method pattern.
 */
 func (this *Meta) Constructor() FunctionConstructor {
-	return NewMeta
+	return func(operands ...Expression) Function {
+		return NewMeta(operands...)
+	}
 }
 
 ///////////////////////////////////////////////////
@@ -269,7 +271,7 @@ func (this *Self) Indexable() bool {
 	return true
 }
 
-func (this *Self) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *Self) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	return CoveredFalse
 }
 

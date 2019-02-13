@@ -7,6 +7,7 @@ import "github.com/couchbase/clog"
 import "github.com/couchbase/query/algebra"
 import "github.com/couchbase/query/datastore"
 import "github.com/couchbase/query/expression"
+import "github.com/couchbase/query/expression/search"
 import "github.com/couchbase/query/functions"
 import "github.com/couchbase/query/functions/inline"
 import "github.com/couchbase/query/value"
@@ -3084,6 +3085,9 @@ function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
 {
     $$ = nil
     f, ok := expression.GetFunction($1)
+    if !ok {
+        f, ok = search.GetSearchFunction($1)
+    }
     if !ok || $6 != nil {
         f, ok = algebra.GetAggregate($1, false, ($6 != nil))
     }

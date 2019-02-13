@@ -672,3 +672,63 @@ func (this *Stringer) visitBindings(bindings Bindings, w io.Writer, in, within s
 		io.WriteString(w, this.Visit(b.expr))
 	}
 }
+
+type PathToString struct {
+	MapperBase
+
+	alias string
+	path  string
+}
+
+func NewPathToString() *PathToString {
+	rv := &PathToString{}
+	stringer := NewStringer()
+
+	rv.SetMapper(rv)
+	rv.SetMapFunc(func(expr Expression) (Expression, error) {
+
+		switch expr2 := expr.(type) {
+		case *Identifier:
+			rv.alias = expr2.Alias()
+			return expr, nil
+
+		case *Field:
+			var sv string
+			second := expr2.Second().Value()
+			if second != nil {
+				sv, _ = second.Actual().(string)
+			}
+			if sv != "" {
+				_, err := rv.Map(expr2.First())
+				if err == nil {
+					if rv.path != "" {
+						rv.path += "."
+					}
+					rv.path += "`" + sv + "`"
+					return expr, nil
+				}
+			}
+
+		case *Element:
+			_, err := rv.Map(expr2.First())
+			if err == nil {
+				rv.path += "[" + stringer.Visit(expr2.Second()) + "]"
+				return expr, nil
+			}
+			return expr, nil
+		}
+		return expr, fmt.Errorf("not field name")
+	})
+
+	return rv
+}
+
+func PathString(expr Expression) (alias, path string, err error) {
+	rv := NewPathToString()
+	_, err = rv.Map(expr)
+	if err != nil {
+		return "", "", err
+	}
+
+	return rv.alias, rv.path, err
+}

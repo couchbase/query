@@ -101,7 +101,7 @@ func (this *Cover) DependsOn(other Expression) bool {
 	return this.covered.DependsOn(other)
 }
 
-func (this *Cover) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *Cover) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	return this.covered.CoveredBy(keyspace, exprs, options)
 }
 

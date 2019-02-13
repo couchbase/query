@@ -65,6 +65,20 @@ func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
 		return true, nil
 
 	default:
+		if expr.First().EquivalentTo(expr2) {
+			val := expr.Second().Value()
+			if val != nil {
+				if vals, ok := val.Actual().([]interface{}); ok && len(vals) > 0 {
+					for _, v := range vals {
+						iv := value.NewValue(v)
+						if iv.Type() != value.BOOLEAN || !iv.Truth() {
+							return false, nil
+						}
+					}
+					return true, nil
+				}
+			}
+		}
 		return this.visitDefault(expr)
 	}
 }

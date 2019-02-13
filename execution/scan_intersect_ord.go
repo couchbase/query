@@ -207,6 +207,8 @@ func (this *OrderedIntersectScan) processKey(item value.AnnotatedValue,
 
 	if !found || bit == 0 {
 		this.values[key] = item
+	} else {
+		mergeSearchMeta(this.values[key], item)
 	}
 
 	if bit == 0 {

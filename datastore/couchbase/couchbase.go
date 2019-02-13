@@ -31,6 +31,7 @@ import (
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
+	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -865,7 +866,11 @@ func (p *namespace) refresh(changed bool) {
 		}
 		// Not deleted. Check if GSI indexer is available
 		if ks.cbKeyspace.(*keyspace).gsiIndexer == nil {
-			ks.cbKeyspace.(*keyspace).refreshIndexer(p.store.URL(), p.Name())
+			ks.cbKeyspace.(*keyspace).refreshGSIIndexer(p.store.URL(), p.Name())
+		}
+		// Not deleted. Check if FTS indexer is available
+		if ks.cbKeyspace.(*keyspace).ftsIndexer == nil {
+			ks.cbKeyspace.(*keyspace).refreshFTSIndexer(p.store.URL(), p.Name())
 		}
 	}
 
@@ -889,6 +894,7 @@ type keyspace struct {
 	flags       int
 	viewIndexer datastore.Indexer // View index provider
 	gsiIndexer  datastore.Indexer // GSI index provider
+	ftsIndexer  datastore.Indexer // FTS index provider
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -937,6 +943,11 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), name)
 	if qerr != nil {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
+	}
+
+	rv.ftsIndexer, qerr = ftsclient.NewFTSIndexer(p.store.URL(), p.Name(), name)
+	if qerr != nil {
+		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", name, qerr)
 	}
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
@@ -996,6 +1007,11 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 			return b.gsiIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("GSI may not be enabled"))
+	case datastore.FTS:
+		if b.ftsIndexer != nil {
+			return b.ftsIndexer, nil
+		}
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("FTS may not be enabled"))
 	case datastore.VIEW:
 		return b.viewIndexer, nil
 	default:
@@ -1004,9 +1020,13 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	indexers := make([]datastore.Indexer, 0, 2)
+	indexers := make([]datastore.Indexer, 0, 3)
 	if b.gsiIndexer != nil {
 		indexers = append(indexers, b.gsiIndexer)
+	}
+
+	if b.ftsIndexer != nil {
+		indexers = append(indexers, b.ftsIndexer)
 	}
 
 	indexers = append(indexers, b.viewIndexer)
@@ -1383,11 +1403,19 @@ func (b *keyspace) Release() {
 	b.cbbucket.Close()
 }
 
-func (b *keyspace) refreshIndexer(url string, poolName string) {
+func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 	var err error
 	b.gsiIndexer, err = gsi.NewGSIIndexer(url, poolName, b.Name())
 	if err == nil {
 		logging.Infof(" GSI Indexer loaded ")
+	}
+}
+
+func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
+	var err error
+	b.ftsIndexer, err = ftsclient.NewFTSIndexer(url, poolName, b.Name())
+	if err == nil {
+		logging.Infof(" FTS Indexer loaded ")
 	}
 }
 

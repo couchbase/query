@@ -74,7 +74,7 @@ func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, er
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, err error) {
 	switch left := node.Left().(type) {
 	case *algebra.Join, *algebra.IndexJoin:
 		return nil, errors.NewMixedJoinError("non ANSI JOIN", left.Alias(), "ANSI JOIN",
@@ -84,7 +84,15 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, erro
 			node.Alias(), "semantics.visit_ansi_join.ansi_mixed_join")
 	}
 
-	return nil, this.visitJoin(node.Left(), node.Right())
+	if err = this.visitJoin(node.Left(), node.Right()); err != nil {
+		return nil, err
+	}
+
+	this.setSemFlag(_SEM_ON)
+	_, err = this.Map(node.Onclause())
+	this.unsetSemFlag(_SEM_ON)
+
+	return nil, err
 }
 
 func (this *SemChecker) VisitNest(node *algebra.Nest) (interface{}, error) {
@@ -135,7 +143,7 @@ func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (interface{}, er
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (r interface{}, err error) {
 	switch left := node.Left().(type) {
 	case *algebra.Join, *algebra.IndexJoin:
 		return nil, errors.NewMixedJoinError("non ANSI JOIN", left.Alias(), "ANSI NEST",
@@ -145,7 +153,15 @@ func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, erro
 			node.Alias(), "semantics.visit_ansi_nest.ansi_mixed_join")
 	}
 
-	return nil, this.visitJoin(node.Left(), node.Right())
+	if err = this.visitJoin(node.Left(), node.Right()); err != nil {
+		return nil, err
+	}
+
+	this.setSemFlag(_SEM_ON)
+	_, err = this.Map(node.Onclause())
+	this.unsetSemFlag(_SEM_ON)
+
+	return nil, err
 }
 
 func (this *SemChecker) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
@@ -153,5 +169,6 @@ func (this *SemChecker) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	_, err = this.Map(node.Expression())
+	return nil, err
 }

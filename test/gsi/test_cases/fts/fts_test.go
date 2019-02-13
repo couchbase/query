@@ -38,7 +38,7 @@ func TestN1qlFts(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	runMatch("case_n1qlftsint.json", false, false, qc, t)
+	runMatch("case_fts.json", false, false, qc, t)
 
 	err = deleteFTSIndex()
 	if err != nil {

@@ -14,17 +14,8 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
-
-func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, error) {
-	if agg, ok := expr.(algebra.Aggregate); ok {
-		return expr, this.visitAggregateFunction(agg)
-	}
-
-	return expr, expr.MapChildren(this)
-}
 
 func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error) {
 
@@ -64,7 +55,7 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 	}
 
 	// Window Aggregation is EE feature only
-	if !this.Enterprise() {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return errors.NewEnterpirseFeature("Window function", "semantics.visit_aggregate_function")
 	}
 

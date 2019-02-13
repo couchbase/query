@@ -15,7 +15,7 @@ import (
 )
 
 func (this *SemChecker) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	return nil, nil
+	return nil, node.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {

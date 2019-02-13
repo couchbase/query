@@ -14,18 +14,36 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func (this *SemChecker) VisitSelect(stmt *algebra.Select) (interface{}, error) {
+func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err error) {
 	prevStmtType := this.stmtType
 	defer func() {
 		this.stmtType = prevStmtType
 	}()
 	this.stmtType = stmt.Type()
 
-	if r, err := stmt.Subresult().Accept(this); err != nil {
+	if r, err = stmt.Subresult().Accept(this); err != nil {
 		return r, err
 	}
 
-	return nil, stmt.MapExpressions(this)
+	if stmt.Order() != nil {
+		if err = stmt.Order().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Offset() != nil {
+		if _, err = this.Map(stmt.Offset()); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Limit() != nil {
+		if _, err = this.Map(stmt.Limit()); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }
 
 func (this *SemChecker) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
@@ -48,15 +66,81 @@ func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
-	return nil, stmt.MapExpressions(this)
+func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err error) {
+	if stmt.Keys() != nil {
+		if _, err = this.Map(stmt.Keys()); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Where() != nil {
+		this.setSemFlag(_SEM_WHERE)
+		_, err = this.Map(stmt.Where())
+		this.unsetSemFlag(_SEM_WHERE)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Limit() != nil {
+		if _, err = this.Map(stmt.Limit()); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Returning() != nil {
+		if err = stmt.Returning().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }
 
-func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
-	return nil, stmt.MapExpressions(this)
+func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (r interface{}, err error) {
+	if stmt.Keys() != nil {
+		if _, err = this.Map(stmt.Keys()); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Set() != nil {
+		if err = stmt.Set().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Unset() != nil {
+		if err = stmt.Unset().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Where() != nil {
+		this.setSemFlag(_SEM_WHERE)
+		_, err = this.Map(stmt.Where())
+		this.unsetSemFlag(_SEM_WHERE)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Limit() != nil {
+		if _, err = this.Map(stmt.Limit()); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Returning() != nil {
+		if err = stmt.Returning().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }
 
-func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
+func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (r interface{}, err error) {
 
 	actions := stmt.Actions()
 	insert := actions.Insert()
@@ -98,6 +182,33 @@ func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		return source.From().Accept(this)
 	} else {
 		return nil, errors.NewMergeMissingSourceError()
+	}
+
+	if stmt.On() != nil {
+		if !stmt.IsOnKey() {
+			this.setSemFlag(_SEM_ON)
+		}
+		_, err = this.Map(stmt.On())
+		this.unsetSemFlag(_SEM_ON)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err = stmt.Actions().MapExpressions(this); err != nil {
+		return nil, err
+	}
+
+	if stmt.Limit() != nil {
+		if _, err = this.Map(stmt.Limit()); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Returning() != nil {
+		if err = stmt.Returning().MapExpressions(this); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, stmt.MapExpressions(this)

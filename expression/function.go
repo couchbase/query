@@ -273,7 +273,7 @@ func (this *NullaryFunctionBase) Indexable() bool {
 	return false
 }
 
-func (this *NullaryFunctionBase) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+func (this *NullaryFunctionBase) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	return CoveredTrue
 }
 

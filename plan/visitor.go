@@ -30,6 +30,9 @@ type Visitor interface {
 	VisitOrderedIntersectScan(op *OrderedIntersectScan) (interface{}, error)
 	VisitExpressionScan(op *ExpressionScan) (interface{}, error)
 
+	// FTS Search
+	VisitIndexFtsSearch(op *IndexFtsSearch) (interface{}, error)
+
 	// Fetch
 	VisitFetch(op *Fetch) (interface{}, error)
 	VisitDummyFetch(op *DummyFetch) (interface{}, error)

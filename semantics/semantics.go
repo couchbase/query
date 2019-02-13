@@ -13,23 +13,40 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+/* semantic flags */
+const (
+	_SEM_ENTERPRISE = 1 << iota
+	_SEM_WHERE
+	_SEM_ON
+)
+
 type SemChecker struct {
 	expression.MapperBase
-	enterprise bool
-	stmtType   string
+	semFlag  uint32
+	stmtType string
 }
 
 func NewSemChecker(enterprise bool, stmtType string) *SemChecker {
 	rv := &SemChecker{}
 	rv.SetMapper(rv)
-	rv.enterprise = enterprise
 	rv.stmtType = stmtType
+	if enterprise {
+		rv.setSemFlag(_SEM_ENTERPRISE)
+	}
 
 	return rv
 }
 
-func (this *SemChecker) Enterprise() bool {
-	return this.enterprise
+func (this *SemChecker) setSemFlag(flag uint32) {
+	this.semFlag |= flag
+}
+
+func (this *SemChecker) unsetSemFlag(flag uint32) {
+	this.semFlag &^= flag
+}
+
+func (this *SemChecker) hasSemFlag(flag uint32) bool {
+	return (this.semFlag & flag) != 0
 }
 
 func (this *SemChecker) StmtType() string {

@@ -278,14 +278,15 @@ Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 	if !this.mapKeyspace() {
-		meta, ok := expr.(*Meta)
-		if ok && len(meta.Operands()) == 0 {
+		fnName := expr.Name()
+		if len(expr.Operands()) == 0 &&
+			(fnName == "meta" || fnName == "search_meta" || fnName == "search_score") {
 			if this.keyspace != "" {
 				keyspaceIdent := NewIdentifier(this.keyspace)
 				keyspaceIdent.SetKeyspaceAlias(true)
-				return NewMeta(keyspaceIdent), nil
+				return expr.Constructor()(keyspaceIdent), nil
 			} else {
-				return nil, errors.NewAmbiguousMetaError()
+				return nil, errors.NewAmbiguousMetaError(fnName)
 			}
 		}
 	}

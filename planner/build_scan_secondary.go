@@ -16,16 +16,23 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace, id expression.Expression) (
-	plan.SecondaryScan, int, error) {
+	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace, id expression.Expression,
+	searchSargables []*indexEntry) (plan.SecondaryScan, int, error) {
 
 	if this.cover != nil && !node.IsAnsiNest() {
+		if len(searchSargables) == 1 {
+			scan, sargLength, err := this.buildSearchCoveringScan(searchSargables, node, baseKeyspace, id)
+			if scan != nil || err != nil {
+				return scan, sargLength, err
+			}
+		}
 		scan, sargLength, err := this.buildCoveringScan(indexes, node, baseKeyspace, id)
 		if scan != nil || err != nil {
 			return scan, sargLength, err
@@ -50,30 +57,35 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	indexes = minimalIndexes(indexes, true, pred)
 
-	var orderIndex datastore.Index
+	var orderEntry *indexEntry
 	var limit expression.Expression
 	pushDown := false
 
 	for _, entry := range indexes {
 		if this.order != nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
-			orderIndex = entry.index
+			orderEntry = entry
 			this.maxParallelism = 1
 		}
 
-		if !pushDown && entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
+		if !pushDown && len(searchSargables) == 0 &&
+			entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
 			pushDown = true
 		}
 	}
 
+	searchOrderEntry, searchOrders, _ := this.searchPagination(searchSargables, pred)
+	if orderEntry == nil {
+		orderEntry = searchOrderEntry
+	}
 	// No ordering index, disable ORDER and LIMIT pushdown
-	if this.order != nil && orderIndex == nil {
+	if this.order != nil && orderEntry == nil {
 		this.resetOrderOffsetLimit()
 	}
 
 	if pushDown && len(indexes) > 1 {
 		limit = offsetPlusLimit(this.offset, this.limit)
 		this.resetOffsetLimit()
-	} else if !pushDown {
+	} else if !pushDown && len(searchSargables) == 0 {
 		this.resetOffsetLimit()
 	}
 
@@ -126,14 +138,14 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 
 		var indexKeyOrders plan.IndexKeyOrders
-		if index == orderIndex {
+		if orderEntry != nil && index == orderEntry.index {
 			_, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
 		}
 
 		scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
 			this.offset, this.limit, indexProjection, indexKeyOrders, nil, nil, nil)
 
-		if index == orderIndex {
+		if orderEntry != nil && index == orderEntry.index {
 			scans[0] = scan
 		} else {
 			scans = append(scans, scan)
@@ -141,6 +153,16 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 		if len(entry.sargKeys) > sargLength {
 			sargLength = len(entry.sargKeys)
+		}
+	}
+
+	for _, entry := range searchSargables {
+		sfn := entry.sargKeys[0].(*search.Search)
+		scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, nil)
+		if entry == orderEntry {
+			scans[0] = scan
+		} else {
+			scans = append(scans, scan)
 		}
 	}
 
@@ -169,9 +191,11 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 	var keys expression.Expressions
 
 	for _, index := range indexes {
-		isArray := false
+		var isArray bool
 
-		if index.IsPrimary() {
+		if index.Type() == datastore.FTS {
+			continue
+		} else if index.IsPrimary() {
 			if primaryKey != nil {
 				keys = primaryKey
 			} else {
@@ -179,6 +203,11 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			}
 		} else {
 			keys = index.RangeKey()
+
+			if len(keys) == 0 {
+				continue
+			}
+
 			keys = keys.Copy()
 
 			for i, key := range keys {

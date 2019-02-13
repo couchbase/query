@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -265,7 +266,24 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	minimals := minimalIndexes(sargables, false, pred)
 
+	var searchFns map[string]*search.Search
+	var searchSargables []*indexEntry
+
+	if !node.IsUnderNL() {
+		searchFns = make(map[string]*search.Search)
+
+		if err = collectFTSSearch(node.Alias(), searchFns, pred); err != nil {
+			return nil, 0, err
+		}
+
+		searchSargables, err = this.sargableSearchIndexes(indexes, pred, searchFns)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
 	indexPushDowns := this.storeIndexPushDowns()
+
 	defer func() {
 		if this.orderScan != nil {
 			this.order = indexPushDowns.order
@@ -276,14 +294,15 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	var limitPushed bool
 
 	// Try secondary scan
-	if len(minimals) > 0 {
+	if len(minimals) > 0 || len(searchSargables) > 0 {
 		if len(this.baseKeyspaces) > 1 {
 			this.resetOffsetLimit()
 			this.resetProjection()
 			this.resetIndexGroupAggs()
 		}
 
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, baseKeyspace, id)
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, baseKeyspace,
+			id, searchSargables)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -456,6 +475,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 	[]datastore.Index, error) {
 
 	for _, hint := range hints {
+
 		indexer, err := keyspace.Indexer(hint.Using())
 		if err != nil {
 			return nil, err

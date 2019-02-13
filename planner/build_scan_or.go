@@ -126,7 +126,8 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 				}
 			}
 
-			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
+			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace,
+				id, indexes, primaryKey, formalizer)
 			if scan == nil || err != nil {
 				return nil, 0, err
 			}
