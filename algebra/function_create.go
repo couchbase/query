@@ -26,7 +26,7 @@ and function body
 type CreateFunction struct {
 	statementBase
 
-	name FunctionName           `json:"name"`
+	name functions.FunctionName `json:"name"`
 	body functions.FunctionBody `json:"keys"`
 }
 
@@ -34,7 +34,7 @@ type CreateFunction struct {
 The function NewCreateFunction returns a pointer to the
 CreateFunction struct with the input argument values as fields.
 */
-func NewCreateFunction(name FunctionName, body functions.FunctionBody) *CreateFunction {
+func NewCreateFunction(name functions.FunctionName, body functions.FunctionBody) *CreateFunction {
 	rv := &CreateFunction{
 		name: name,
 		body: body,
@@ -44,7 +44,7 @@ func NewCreateFunction(name FunctionName, body functions.FunctionBody) *CreateFu
 	return rv
 }
 
-func (this *CreateFunction) Name() FunctionName {
+func (this *CreateFunction) Name() functions.FunctionName {
 	return this.name
 }
 

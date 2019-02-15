@@ -27,6 +27,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
@@ -37,6 +38,10 @@ import (
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+func init() {
+	constructor.Init()
+}
 
 type Profile int
 
@@ -710,7 +715,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	if prepared == nil && autoPrepare {
 		name = prepareds.GetAutoPrepareName(request.Statement(), request.IndexApiVersion(), request.FeatureControls())
 		if name != "" {
-			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(), request.IndexApiVersion(), request.FeatureControls())
+			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(), request.IndexApiVersion(), request.FeatureControls(), request.Namespace()) // TODO switch to collections scope
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
@@ -719,7 +724,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 
 	if prepared == nil {
 		parse := time.Now()
-		stmt, err := n1ql.ParseStatement(request.Statement())
+		stmt, err := n1ql.ParseStatement(request.Statement(), namespace) // TODO switch to collections scope
 		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
@@ -832,6 +837,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 					prepared.SetName(name)
 					prepared.SetIndexApiVersion(request.IndexApiVersion())
 					prepared.SetFeatureControls(request.FeatureControls())
+					prepared.SetNamespace(request.Namespace()) // TODO switch to collections scope
 					// trigger prepare metrics recording
 					if prepareds.AddAutoPreparePlan(stmt, prepared) {
 						request.SetPrepared(prepared)

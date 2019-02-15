@@ -227,7 +227,7 @@ func main() {
 	}
 
 	datastore_package.SetSystemstore(server.Systemstore())
-	prepareds.PreparedsReprepareInit(datastore, sys, *NAMESPACE)
+	prepareds.PreparedsReprepareInit(datastore, sys)
 
 	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)

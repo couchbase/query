@@ -226,7 +226,7 @@ func Start(site, pool string) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-	prepareds.PreparedsReprepareInit(ds, sys, "json")
+	prepareds.PreparedsReprepareInit(ds, sys)
 
 	server.SetKeepAlive(1 << 10)
 	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)

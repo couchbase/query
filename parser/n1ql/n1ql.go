@@ -19,12 +19,14 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-func ParseStatement(input string) (algebra.Statement, error) {
+// TODO switch to collections scope
+func ParseStatement(input string, namespace string) (algebra.Statement, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
 	lex.parsingStmt = true
 	lex.text = input
+	lex.namespace = namespace
 	lex.nex.ResetOffset()
 	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
@@ -89,6 +91,7 @@ type lexer struct {
 	lastScannerError string
 	text             string
 	offset           int
+	namespace        string // TODO switch to collections scope
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -153,4 +156,9 @@ func (this *lexer) nextParam() int {
 
 func (this *lexer) countParam() {
 	this.paramCount++
+}
+
+// TODO swith to collections scope
+func (this *lexer) Namespace() string {
+	return this.namespace
 }

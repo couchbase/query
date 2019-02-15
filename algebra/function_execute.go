@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/value"
 )
 
@@ -25,7 +26,7 @@ and argument expression list
 type ExecuteFunction struct {
 	statementBase
 
-	name  FunctionName           `json:"name"`
+	name  functions.FunctionName `json:"name"`
 	exprs expression.Expressions `json:"expressions"`
 }
 
@@ -33,7 +34,7 @@ type ExecuteFunction struct {
 The function NewExecuteFunction returns a pointer to the
 ExecuteFunction struct with the input argument values as fields.
 */
-func NewExecuteFunction(name FunctionName, exprs expression.Expressions) *ExecuteFunction {
+func NewExecuteFunction(name functions.FunctionName, exprs expression.Expressions) *ExecuteFunction {
 	rv := &ExecuteFunction{
 		name:  name,
 		exprs: exprs,
@@ -43,7 +44,7 @@ func NewExecuteFunction(name FunctionName, exprs expression.Expressions) *Execut
 	return rv
 }
 
-func (this *ExecuteFunction) Name() FunctionName {
+func (this *ExecuteFunction) Name() functions.FunctionName {
 	return this.name
 }
 

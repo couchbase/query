@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,14 +25,14 @@ create function statement. The fields just refer to the function name.
 type DropFunction struct {
 	statementBase
 
-	name FunctionName `json:"name"`
+	name functions.FunctionName `json:"name"`
 }
 
 /*
 The function NewDropFunction returns a pointer to the
 DropFunction struct with the input argument values as fields.
 */
-func NewDropFunction(name FunctionName) *DropFunction {
+func NewDropFunction(name functions.FunctionName) *DropFunction {
 	rv := &DropFunction{
 		name: name,
 	}
@@ -40,7 +41,7 @@ func NewDropFunction(name FunctionName) *DropFunction {
 	return rv
 }
 
-func (this *DropFunction) Name() FunctionName {
+func (this *DropFunction) Name() functions.FunctionName {
 	return this.name
 }
 

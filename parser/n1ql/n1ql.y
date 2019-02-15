@@ -89,7 +89,7 @@ indexType        datastore.IndexType
 inferenceType    datastore.InferenceType
 val              value.Value
 
-functionName	 algebra.FunctionName
+functionName	 functions.FunctionName
 functionBody     functions.FunctionBody
 
 // token offset into the statement
@@ -352,7 +352,7 @@ tokOffset	 int
 %type <expr>             function_expr
 %type <s>                function_name
 
-%type <functionName>	 func_name
+%type <functionName>	 func_name long_func_name short_func_name
 %type <ss>		 parm_list parameter_terms
 %type <functionBody>     func_body
 
@@ -370,7 +370,7 @@ tokOffset	 int
 %type <keyspacePath>     keyspace_path
 %type <b>                opt_join_type opt_quantifier
 %type <path>             path
-%type <s>                namespace_name keyspace_name namespace_term bucket_name scope_name 
+%type <s>                namespace_name namespace_term bucket_name scope_name keyspace_name
 %type <use>              opt_use opt_use_del_upd opt_use_merge use_options use_keys use_index join_hint
 %type <joinHint>         use_hash_option
 %type <expr>             on_keys on_key
@@ -1054,7 +1054,6 @@ namespace_term COLON bucket_name DOT scope_name DOT keyspace_name
     $$ = algebra.NewPathLong($1, $3, $5, $7)
 }
 ;
-
 
 namespace_term:
 namespace_name
@@ -2336,20 +2335,48 @@ BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
 create_function:
 CREATE FUNCTION func_name LPAREN parm_list RPAREN func_body
 {
-    $7.SetVarNames($5)
+    err := $7.SetVarNames($5)
+    if err != nil {
+	yylex.Error(err.Error())
+    }
     $$ = algebra.NewCreateFunction($3, $7)
 }
 ;
 
 func_name:
-namespace_name COLON IDENT
+short_func_name
+|
+long_func_name
+;
+
+short_func_name:
+keyspace_name
 {
-    $$ = algebra.NewGlobalFunctionName($1, $3)
+    name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
+    if err != nil {
+	yylex.Error(err.Error())
+    }
+    $$ = name
+}
+;
+
+long_func_name:
+IDENT NOT_A_TOKEN keyspace_name
+{
+    name, err := functions.Constructor([]string{$1, $3}, yylex.(*lexer).Namespace())
+    if $$ != nil {
+	yylex.Error(err.Error())
+    }
+    $$ = name
 }
 |
-IDENT
+IDENT NOT_A_TOKEN bucket_name DOT scope_name DOT keyspace_name
 {
-    $$ = algebra.NewGlobalFunctionName("", $1)
+    name, err := functions.Constructor([]string{$1, $3}, yylex.(*lexer).Namespace())
+    if $$ != nil {
+	yylex.Error(err.Error())
+    }
+    $$ = name
 }
 ;
 
@@ -3109,7 +3136,16 @@ function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
             }
         }
     } else {
-        yylex.Error(fmt.Sprintf("Invalid function %s.", $1))
+	name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
+	if err != nil {
+	    yylex.Error(err.Error())
+	}
+	f := expression.GetUserDefinedFunction(name)
+	if f != nil {
+		$$ = f.Constructor()($3...)
+	} else {
+		yylex.Error(fmt.Sprintf("Invalid function %s.", $1))
+	}
     }
 }
 |
@@ -3142,12 +3178,21 @@ function_name LPAREN STAR RPAREN opt_window_clause
         }
     }
 }
+|
+long_func_name LPAREN opt_exprs RPAREN
+{
+	f := expression.GetUserDefinedFunction($1)
+	if f != nil {
+		$$ = f.Constructor()($3...)
+	} else {
+		yylex.Error(fmt.Sprintf("Invalid function %v", $1))
+	}
+}
 ;
 
 function_name:
 IDENT
 ;
-
 
 /*************************************************
  *

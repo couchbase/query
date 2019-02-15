@@ -7,21 +7,24 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package constructor
 
 import (
-	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/functions"
+	globalName "github.com/couchbase/query/functions/metakv"
 )
 
-func (this *builder) VisitCreateFunction(stmt *algebra.CreateFunction) (interface{}, error) {
-	return plan.NewCreateFunction(stmt), nil
+func Init() {
+	functions.Constructor = newGlobalFunction
 }
 
-func (this *builder) VisitDropFunction(stmt *algebra.DropFunction) (interface{}, error) {
-	return plan.NewDropFunction(stmt), nil
-}
-
-func (this *builder) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (interface{}, error) {
-	return plan.NewExecuteFunction(stmt), nil
+// TODO switch to collections context
+func newGlobalFunction(elem []string, namespace string) (functions.FunctionName, errors.Error) {
+	if len(elem) == 2 {
+		return globalName.NewGlobalFunction(elem[0], elem[1])
+	} else if namespace == "" {
+		return nil, errors.NewInvalidFunctionNameError(elem[0])
+	}
+	return globalName.NewGlobalFunction(namespace, elem[0])
 }

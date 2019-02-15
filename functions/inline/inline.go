@@ -68,8 +68,39 @@ func NewInlineBody(expr expression.Expression) (functions.FunctionBody, errors.E
 	return &inlineBody{expr: expr}, nil
 }
 
-func (this *inlineBody) SetVarNames(vars []string) {
+func (this *inlineBody) SetVarNames(vars []string) errors.Error {
+	var bindings expression.Bindings
+
 	this.varNames = vars
+
+	/* We do not have parameter values at this stage, so the binding is
+	   done only to identify variables as variables and not formalize them
+	   as fields. We use a dummy expression for that.
+	   We also have to mark the variable as with aliases, ie predefined
+	   values (which is what they are), and have the value descend to
+	   children formalizers, so that subqueries is not mistakenly marked
+	   as correlated
+	*/
+	c := expression.NewConstant("")
+	if len(vars) == 0 {
+		bindings = expression.Bindings{expression.NewSimpleBinding("args", c)}
+	} else {
+		bindings = make(expression.Bindings, len(vars))
+		i := 0
+		for v, _ := range vars {
+			bindings[i] = expression.NewSimpleBinding(vars[v], c)
+			i++
+		}
+	}
+
+	f := expression.NewFormalizer("", nil)
+	f.SetPermanentWiths(bindings)
+	f.PushBindings(bindings, true)
+	_, err := this.expr.Accept(f)
+	if err != nil {
+		return errors.NewError(err, "")
+	}
+	return nil
 }
 
 func (this *inlineBody) Lang() functions.Language {
@@ -80,6 +111,10 @@ func (this *inlineBody) Body(object map[string]interface{}) {
 	object["#language"] = "inline"
 	object["expression"] = this.expr.String()
 	if len(this.varNames) > 0 {
-		object["parameters"] = this.varNames
+		vars := make([]value.Value, len(this.varNames))
+		for v, _ := range this.varNames {
+			vars[v] = value.NewValue(this.varNames[v])
+		}
+		object["parameters"] = vars
 	}
 }

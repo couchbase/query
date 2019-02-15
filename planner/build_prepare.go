@@ -26,7 +26,8 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	if name == "" {
 		var err errors.Error
 
-		name, err = planCache.GetName(text, this.indexApiVersion, this.featureControls)
+		// TODO switch to collections scope
+		name, err = planCache.GetName(text, this.indexApiVersion, this.featureControls, this.namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -35,7 +36,8 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	if !force {
 		var gpErr errors.Error
 
-		prep, gpErr = planCache.GetPlan(name, text, this.indexApiVersion, this.featureControls)
+		// TODO switch to collections scope
+		prep, gpErr = planCache.GetPlan(name, text, this.indexApiVersion, this.featureControls, this.namespace)
 		if gpErr != nil {
 			return nil, gpErr
 		}
@@ -65,6 +67,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetType(stmt.Type())
 	prep.SetIndexApiVersion(this.indexApiVersion)
 	prep.SetFeatureControls(this.featureControls)
+	prep.SetNamespace(this.namespace) // TODO switch to collection scope
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {

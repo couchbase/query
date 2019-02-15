@@ -333,7 +333,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 
 	server.SetWhitelist(curlWhitelist)
 
-	prepareds.PreparedsReprepareInit(ds, sys, namespace)
+	prepareds.PreparedsReprepareInit(ds, sys)
 	server.SetKeepAlive(1 << 10)
 
 	mockServer.server = server

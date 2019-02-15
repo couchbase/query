@@ -27,7 +27,7 @@ type CreateFunction struct {
 
 func NewCreateFunction(node *algebra.CreateFunction) *CreateFunction {
 	return &CreateFunction{
-		name: toFunctionName(node.Name()),
+		name: node.Name(),
 		body: node.Body(),
 	}
 }

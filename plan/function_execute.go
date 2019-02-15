@@ -26,7 +26,7 @@ type ExecuteFunction struct {
 
 func NewExecuteFunction(node *algebra.ExecuteFunction) *ExecuteFunction {
 	return &ExecuteFunction{
-		name:  toFunctionName(node.Name()),
+		name:  node.Name(),
 		exprs: node.Expressions(),
 	}
 }

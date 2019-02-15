@@ -72,7 +72,6 @@ type CacheEntry struct {
 var prepareds = &preparedCache{}
 var store datastore.Datastore
 var systemstore datastore.Datastore
-var namespace string
 
 // init prepareds cache
 func PreparedsInit(limit int) {
@@ -159,9 +158,10 @@ func (this *preparedCache) GetText(text string, offset int) string {
 	return prepare[:i] + prepare[i+6:] + text[offset:]
 }
 
-const _REALM_SIZE = 50
+const _REALM_SIZE = 256
 
-func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64) (string, errors.Error) {
+// TODO switch to collections scope
+func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64, namespace string) (string, errors.Error) {
 
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
@@ -173,6 +173,8 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 	realm = strconv.AppendInt(realm, int64(indexApiVersion), 16)
 	realm = append(realm, '_')
 	realm = strconv.AppendInt(realm, int64(featureControls), 16)
+	realm = append(realm, '_')
+	realm = append(realm, namespace...)
 	name, err := util.UUIDV5(string(realm), text)
 	if err != nil {
 		return "", errors.NewPreparedNameError(err.Error())
@@ -180,7 +182,8 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 	return name, nil
 }
 
-func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int, featureControls uint64) (*plan.Prepared, errors.Error) {
+// TODO switch to collections scope
+func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) (*plan.Prepared, errors.Error) {
 	prep, err := prepareds.getPrepared(value.NewValue(name), OPT_VERIFY, nil)
 	if err != nil {
 		if err.Code() == errors.NO_SUCH_PREPARED {
@@ -188,16 +191,16 @@ func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int
 		}
 		return nil, err
 	}
-	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls || prep.Text() != text {
+	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls ||
+		prep.Namespace() != namespace || prep.Text() != text {
 		return nil, nil
 	}
 	return prep, nil
 }
 
-func PreparedsReprepareInit(ds, sy datastore.Datastore, ns string) {
+func PreparedsReprepareInit(ds, sy datastore.Datastore) {
 	store = ds
 	systemstore = sy
-	namespace = ns
 }
 
 // configure prepareds cache
@@ -297,7 +300,8 @@ func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64
 	return name
 }
 
-func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureControls uint64) *plan.Prepared {
+// TODO switch to collections scope
+func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) *plan.Prepared {
 
 	// for auto prepare, we don't verify or reprepare because that would mean
 	// accepting valid but possibly suboptimal statements
@@ -321,7 +325,7 @@ func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureCo
 		logging.Infof("Auto Prepare found mismatching name and statement %v %v", name, text)
 		return nil
 	}
-	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls {
+	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls || prep.Namespace() != namespace {
 		return nil
 	}
 	return prep
@@ -643,7 +647,9 @@ func distributePrepared(name, plan string) {
 
 func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	parse := time.Now()
-	stmt, err := n1ql.ParseStatement(prepared.Text())
+
+	// TODO switch to collections scope
+	stmt, err := n1ql.ParseStatement(prepared.Text(), prepared.Namespace())
 	if phaseTime != nil {
 		*phaseTime += time.Since(parse)
 	}
@@ -654,9 +660,9 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	}
 
 	// since this is a reprepare, no need to check semantics again after parsing.
-
+	// TODO switch to collections scope
 	prep := time.Now()
-	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, namespace, false,
+	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(), false,
 
 		// building prepared statements should not depend on args
 		nil, nil, prepared.IndexApiVersion(), prepared.FeatureControls())
@@ -672,6 +678,7 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	pl.SetType(prepared.Type())
 	pl.SetIndexApiVersion(prepared.IndexApiVersion())
 	pl.SetFeatureControls(prepared.FeatureControls())
+	pl.SetNamespace(prepared.Namespace()) // TODO switch to collections scope
 
 	json_bytes, err := pl.MarshalJSON()
 	if err != nil {

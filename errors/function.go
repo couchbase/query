@@ -44,7 +44,7 @@ func NewFunctionsNotSupported() Error {
 }
 
 func NewMissingFunctionError(f string) Error {
-	return &err{level: EXCEPTION, ICode: 10101, IKey: "function.missing.error", ICause: fmt.Errorf("%v", f),
+	return &err{level: EXCEPTION, ICode: 10101, IKey: "function.missing.error",
 		InternalMsg:    fmt.Sprintf("Function not found %v", f),
 		InternalCaller: CallerN(1)}
 }

@@ -53,7 +53,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		}
 		body, newErr := inline.NewInlineBody(expr)
 		if body != nil {
-			body.SetVarNames(_unmarshalled.Parameters)
+			newErr = body.SetVarNames(_unmarshalled.Parameters)
 		}
 		return body, newErr
 

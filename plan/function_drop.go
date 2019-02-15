@@ -24,7 +24,7 @@ type DropFunction struct {
 
 func NewDropFunction(node *algebra.DropFunction) *DropFunction {
 	return &DropFunction{
-		name: toFunctionName(node.Name()),
+		name: node.Name(),
 	}
 }
 

@@ -116,6 +116,9 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	for ident, _ := range f.Identifiers().Fields() {
 		if _, ok := immediate[ident]; !ok {
+			if f.WithAlias(ident) {
+				continue
+			}
 			this.correlated = true
 			break
 		}

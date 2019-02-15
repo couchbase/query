@@ -13,18 +13,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/functions"
 	globalName "github.com/couchbase/query/functions/metakv"
 )
-
-func toFunctionName(name algebra.FunctionName) functions.FunctionName {
-	components := name.Components()
-
-	// switch here on components len for scoped functions names!
-	functionName, _ := globalName.NewGlobalFunction(components[0], components[1])
-	return functionName
-}
 
 func makeName(bytes []byte) (functions.FunctionName, error) {
 	var name_type struct {

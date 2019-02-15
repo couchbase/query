@@ -5,6 +5,7 @@
 	"results": [
         {
             "name": "test",
+	    "namespace": "json",
             "operator": {
                 "#operator": "Sequence",
                 "~children": [

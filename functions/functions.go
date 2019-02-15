@@ -44,7 +44,7 @@ type FunctionName interface {
 
 type FunctionBody interface {
 	Lang() Language
-	SetVarNames(vars []string)
+	SetVarNames(vars []string) errors.Error
 	Body(object map[string]interface{})
 }
 
@@ -67,6 +67,9 @@ type functionCache struct {
 	cache *util.GenCache
 	tag   atomic.AlignedInt64
 }
+
+// TODO switch to collections scope
+var Constructor func(elem []string, namespace string) (FunctionName, errors.Error)
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
@@ -239,6 +242,30 @@ func DeleteFunction(name FunctionName) errors.Error {
 	return err
 }
 
+func PreLoad(name FunctionName) bool {
+	var err errors.Error
+
+	//is the entry in the cache?
+	key := name.Key()
+	ce := functions.cache.Get(key, nil)
+	if ce != nil {
+		entry := ce.(FunctionEntry)
+		return entry.Lang() != _MISSING
+	}
+
+	// nope, try to load it
+	entry := &FunctionEntry{FunctionName: name}
+	entry.FunctionBody, err = name.Load()
+
+	// if all good, cache
+	if entry.FunctionBody != nil && err == nil {
+		entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+		entry = entry.add()
+		return true
+	}
+	return false
+}
+
 func ExecuteFunction(name FunctionName, values []value.Value, context Context) (value.Value, errors.Error) {
 	var err errors.Error
 	var entry *FunctionEntry
@@ -390,7 +417,8 @@ func (this *missing) Body(object map[string]interface{}) {
 	object["undefined_function"] = true
 }
 
-func (this *missing) SetVarNames(vars []string) {
+func (this *missing) SetVarNames(vars []string) errors.Error {
+	return nil
 }
 
 func (this *missing) Execute(name FunctionName, body FunctionBody, values []value.Value, context Context) (value.Value, errors.Error) {

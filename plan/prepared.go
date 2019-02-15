@@ -28,6 +28,7 @@ type Prepared struct {
 	reqType         string
 	indexApiVersion int
 	featureControls uint64
+	namespace       string // TODO change into scope
 
 	indexers   []idxVersion // for reprepare checking
 	namespaces []nsVersion
@@ -63,6 +64,7 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	r["text"] = this.text
 	r["indexApiVersion"] = this.indexApiVersion
 	r["featureControls"] = this.featureControls
+	r["namespace"] = this.namespace
 
 	if f != nil {
 		f(r)
@@ -80,6 +82,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 		ReqType         string          `json:"reqType"`
 		ApiVersion      int             `json:"indexApiVersion"`
 		FeatureControls uint64          `json:"featureControls"`
+		Namespace       string          `json:"namespace"`
 	}
 
 	var op_type struct {
@@ -108,6 +111,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	this.reqType = _unmarshalled.ReqType
 	this.indexApiVersion = _unmarshalled.ApiVersion
 	this.featureControls = _unmarshalled.FeatureControls
+	this.namespace = _unmarshalled.Namespace
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -155,6 +159,14 @@ func (this *Prepared) FeatureControls() uint64 {
 
 func (this *Prepared) SetFeatureControls(featureControls uint64) {
 	this.featureControls = featureControls
+}
+
+func (this *Prepared) Namespace() string {
+	return this.namespace
+}
+
+func (this *Prepared) SetNamespace(namespace string) {
+	this.namespace = namespace
 }
 
 func (this *Prepared) EncodedPlan() string {
