@@ -31,7 +31,7 @@ import (
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
-	ftsclient "github.com/couchbase/n1fty"
+	// ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -945,11 +945,13 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
 	}
 
-	rv.ftsIndexer, qerr = ftsclient.NewFTSIndexer(p.store.URL(), p.Name(), name)
-	if qerr != nil {
-		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", name, qerr)
-	}
+	/*
+		rv.ftsIndexer, qerr = ftsclient.NewFTSIndexer(p.store.URL(), p.Name(), name)
+		if qerr != nil {
+			logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", name, qerr)
+		}
 
+	*/
 	// Create a bucket updater that will keep the couchbase bucket fresh.
 	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
 
@@ -1412,11 +1414,13 @@ func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 }
 
 func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
-	var err error
-	b.ftsIndexer, err = ftsclient.NewFTSIndexer(url, poolName, b.Name())
-	if err == nil {
-		logging.Infof(" FTS Indexer loaded ")
-	}
+	/*
+		var err error
+		b.ftsIndexer, err = ftsclient.NewFTSIndexer(url, poolName, b.Name())
+		if err == nil {
+			logging.Infof(" FTS Indexer loaded ")
+		}
+	*/
 }
 
 func (b *keyspace) loadIndexes() (err errors.Error) {

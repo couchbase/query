@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"strings"
 
-	ftsverify "github.com/couchbase/n1fty/verify"
+	//	ftsverify "github.com/couchbase/n1fty/verify"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -509,7 +509,7 @@ func (this *Search) Evaluate(item value.Value, context expression.Context) (valu
 
 func (this *Search) Apply(context expression.Context, args ...value.Value) (value.Value, error) {
 	var err error
-	this.verify, err = ftsverify.NewVerify(this.KeyspacePath(), this.FieldName(), args[1], args[2])
+	//	this.verify, err = ftsverify.NewVerify(this.KeyspacePath(), this.FieldName(), args[1], args[2])
 	return nil, err
 }
 
