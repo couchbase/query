@@ -19,8 +19,12 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
+func ParseStatement(input string) (algebra.Statement, error) {
+	return ParseStatement2(input, "default")
+}
+
 // TODO switch to collections scope
-func ParseStatement(input string, namespace string) (algebra.Statement, error) {
+func ParseStatement2(input string, namespace string) (algebra.Statement, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
