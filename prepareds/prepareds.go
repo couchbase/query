@@ -649,7 +649,7 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	parse := time.Now()
 
 	// TODO switch to collections scope
-	stmt, err := n1ql.ParseStatement(prepared.Text(), prepared.Namespace())
+	stmt, err := n1ql.ParseStatement2(prepared.Text(), prepared.Namespace())
 	if phaseTime != nil {
 		*phaseTime += time.Since(parse)
 	}
