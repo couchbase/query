@@ -14,9 +14,7 @@ import (
 	"net/url"
 	"strings"
 
-	//	ftsverify "github.com/couchbase/n1fty/verify"
 	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -445,10 +443,15 @@ func portOnly(hostport string) string {
 //
 ///////////////////////////////////////////////////
 
+type SearchVerify interface {
+	Evaluate(item value.Value) (bool, errors.Error)
+}
+
 type Search struct {
 	expression.FunctionBase
 	keyspacePath string
-	verify       datastore.Verify
+	verify       SearchVerify
+	err          error
 }
 
 func NewSearch(operands ...expression.Expression) expression.Function {
@@ -486,10 +489,7 @@ func (this *Search) CoveredBy(keyspace string, exprs expression.Expressions,
 
 func (this *Search) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	if this.verify == nil {
-		_, err := this.Eval(this, item, context)
-		if err != nil {
-			return value.FALSE_VALUE, err
-		}
+		return value.FALSE_VALUE, this.err
 	}
 
 	// Evaluate document for keyspace. If MISSING or NULL return (For OUTER Join)
@@ -507,12 +507,6 @@ func (this *Search) Evaluate(item value.Value, context expression.Context) (valu
 
 }
 
-func (this *Search) Apply(context expression.Context, args ...value.Value) (value.Value, error) {
-	var err error
-	//	this.verify, err = ftsverify.NewVerify(this.KeyspacePath(), this.FieldName(), args[1], args[2])
-	return nil, err
-}
-
 /*
 Factory method pattern.
 */
@@ -520,6 +514,11 @@ func (this *Search) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
 		return NewSearch(operands...)
 	}
+}
+
+func (this *Search) SetVerify(v SearchVerify, err error) {
+	this.verify = v
+	this.err = err
 }
 
 func (this *Search) Keyspace() *expression.Identifier {
@@ -795,26 +794,4 @@ func (this *SearchScore) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
 		return NewSearchScore(operands...)
 	}
-}
-
-type searchKeyspace struct {
-	expression.MapperBase
-	aliasMap map[string]string
-}
-
-func SetSearchKeyspace(cond expression.Expression, aliasMap map[string]string) {
-	rv := &searchKeyspace{aliasMap: aliasMap}
-	rv.SetMapFunc(func(expr expression.Expression) (expression.Expression, error) {
-		if sfn, ok := expr.(*Search); ok {
-			if path, ok := aliasMap[sfn.KeyspaceAlias()]; ok {
-				sfn.SetKeyspacePath(path)
-			}
-		} else if _, ok := expr.(expression.Subquery); !ok {
-			return expr, expr.MapChildren(rv)
-		}
-		return expr, nil
-	})
-
-	rv.SetMapper(rv)
-	rv.Map(cond)
 }

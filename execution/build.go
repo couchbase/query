@@ -14,7 +14,6 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -228,8 +227,7 @@ func (this *builder) VisitNLJoin(plan *plan.NLJoin) (interface{}, error) {
 		return nil, e
 	}
 
-	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
-	return NewNLJoin(plan, this.context, c.(Operator)), nil
+	return NewNLJoin(plan, this.context, c.(Operator), this.aliasMap), nil
 }
 
 func (this *builder) VisitHashJoin(plan *plan.HashJoin) (interface{}, error) {
@@ -239,8 +237,7 @@ func (this *builder) VisitHashJoin(plan *plan.HashJoin) (interface{}, error) {
 		return nil, e
 	}
 
-	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
-	return NewHashJoin(plan, this.context, c.(Operator)), nil
+	return NewHashJoin(plan, this.context, c.(Operator), this.aliasMap), nil
 }
 
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
@@ -260,8 +257,7 @@ func (this *builder) VisitNLNest(plan *plan.NLNest) (interface{}, error) {
 		return nil, e
 	}
 
-	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
-	return NewNLNest(plan, this.context, c.(Operator)), nil
+	return NewNLNest(plan, this.context, c.(Operator), this.aliasMap), nil
 }
 
 func (this *builder) VisitHashNest(plan *plan.HashNest) (interface{}, error) {
@@ -271,8 +267,7 @@ func (this *builder) VisitHashNest(plan *plan.HashNest) (interface{}, error) {
 		return nil, e
 	}
 
-	search.SetSearchKeyspace(plan.Onclause(), this.aliasMap)
-	return NewHashNest(plan, this.context, c.(Operator)), nil
+	return NewHashNest(plan, this.context, c.(Operator), this.aliasMap), nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {
@@ -296,8 +291,7 @@ func (this *builder) VisitWith(plan *plan.With) (interface{}, error) {
 
 // Filter
 func (this *builder) VisitFilter(plan *plan.Filter) (interface{}, error) {
-	search.SetSearchKeyspace(plan.Condition(), this.aliasMap)
-	return NewFilter(plan, this.context), nil
+	return NewFilter(plan, this.context, this.aliasMap), nil
 }
 
 // Group

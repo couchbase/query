@@ -23,16 +23,18 @@ type HashJoin struct {
 	base
 	plan      *plan.HashJoin
 	child     Operator
+	aliasMap  map[string]string
 	ansiFlags uint32
 	hashTab   *util.HashTable
 	buildVals value.Values
 	probeVals value.Values
 }
 
-func NewHashJoin(plan *plan.HashJoin, context *Context, child Operator) *HashJoin {
+func NewHashJoin(plan *plan.HashJoin, context *Context, child Operator, aliasMap map[string]string) *HashJoin {
 	rv := &HashJoin{
-		plan:  plan,
-		child: child,
+		plan:     plan,
+		child:    child,
+		aliasMap: aliasMap,
 	}
 
 	newBase(&rv.base, context)
@@ -48,8 +50,9 @@ func (this *HashJoin) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *HashJoin) Copy() Operator {
 	rv := &HashJoin{
-		plan:  this.plan,
-		child: this.child.Copy(),
+		plan:     this.plan,
+		child:    this.child.Copy(),
+		aliasMap: this.aliasMap,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -77,6 +80,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		}
 	} else {
 		this.plan.Onclause().EnableInlistHash(context)
+		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
 	// build hash table

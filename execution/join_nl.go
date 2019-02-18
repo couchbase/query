@@ -29,13 +29,15 @@ type NLJoin struct {
 	base
 	plan      *plan.NLJoin
 	child     Operator
+	aliasMap  map[string]string
 	ansiFlags uint32
 }
 
-func NewNLJoin(plan *plan.NLJoin, context *Context, child Operator) *NLJoin {
+func NewNLJoin(plan *plan.NLJoin, context *Context, child Operator, aliasMap map[string]string) *NLJoin {
 	rv := &NLJoin{
-		plan:  plan,
-		child: child,
+		plan:     plan,
+		child:    child,
+		aliasMap: aliasMap,
 	}
 
 	newBase(&rv.base, context)
@@ -51,8 +53,9 @@ func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *NLJoin) Copy() Operator {
 	rv := &NLJoin{
-		plan:  this.plan,
-		child: this.child.Copy(),
+		plan:     this.plan,
+		child:    this.child.Copy(),
+		aliasMap: this.aliasMap,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -80,6 +83,7 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 		}
 	} else {
 		this.plan.Onclause().EnableInlistHash(context)
+		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
 	return true

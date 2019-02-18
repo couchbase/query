@@ -14,8 +14,11 @@ import (
 	"fmt"
 	"math"
 
+	ftsverify "github.com/couchbase/n1fty/verify"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -203,4 +206,45 @@ func (this *IndexFtsSearch) SendStop() {
 func (this *IndexFtsSearch) Done() {
 	this.baseDone()
 	_FTSSEARCH_OP_POOL.Put(this)
+}
+
+func SetSearchInfo(aliasMap map[string]string, item value.Value,
+	context *Context, exprs ...expression.Expression) error {
+	var q, o value.Value
+	var err error
+
+	for _, expr := range exprs {
+		if expr == nil {
+			continue
+		} else if sfn, ok := expr.(*search.Search); ok {
+			if path, ok := aliasMap[sfn.KeyspaceAlias()]; ok {
+				sfn.SetKeyspacePath(path)
+			}
+
+			// record error as part of search function so that we can raise error
+			// only if search function is invoked
+			var v datastore.Verify
+			q, _, err = evalOne(sfn.Query(), context, nil)
+			if err != nil || q == nil || (q.Type() != value.STRING && q.Type() != value.OBJECT) {
+				err = fmt.Errorf("%v function Query parameter must be string or object.", sfn)
+			}
+
+			if err == nil {
+				o, _, err = evalOne(sfn.Options(), context, nil)
+				if err != nil || o == nil || o.Type() != value.OBJECT {
+					err = fmt.Errorf("%v function Options parameter must be object.", sfn)
+				}
+			}
+
+			if err == nil {
+				v, err = ftsverify.NewVerify(sfn.KeyspacePath(), sfn.FieldName(), q, o)
+			}
+
+			sfn.SetVerify(v, err)
+		} else if _, ok := expr.(expression.Subquery); !ok {
+			SetSearchInfo(aliasMap, item, context, expr.Children()...)
+		}
+	}
+
+	return nil
 }

@@ -22,13 +22,15 @@ type NLNest struct {
 	base
 	plan      *plan.NLNest
 	child     Operator
+	aliasMap  map[string]string
 	ansiFlags uint32
 }
 
-func NewNLNest(plan *plan.NLNest, context *Context, child Operator) *NLNest {
+func NewNLNest(plan *plan.NLNest, context *Context, child Operator, aliasMap map[string]string) *NLNest {
 	rv := &NLNest{
-		plan:  plan,
-		child: child,
+		plan:     plan,
+		child:    child,
+		aliasMap: aliasMap,
 	}
 
 	newBase(&rv.base, context)
@@ -44,8 +46,9 @@ func (this *NLNest) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *NLNest) Copy() Operator {
 	rv := &NLNest{
-		plan:  this.plan,
-		child: this.child.Copy(),
+		plan:     this.plan,
+		child:    this.child.Copy(),
+		aliasMap: this.aliasMap,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -73,6 +76,7 @@ func (this *NLNest) beforeItems(context *Context, parent value.Value) bool {
 		}
 	} else {
 		this.plan.Onclause().EnableInlistHash(context)
+		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
 	return true

@@ -22,16 +22,18 @@ type HashNest struct {
 	base
 	plan      *plan.HashNest
 	child     Operator
+	aliasMap  map[string]string
 	ansiFlags uint32
 	hashTab   *util.HashTable
 	buildVals value.Values
 	probeVals value.Values
 }
 
-func NewHashNest(plan *plan.HashNest, context *Context, child Operator) *HashNest {
+func NewHashNest(plan *plan.HashNest, context *Context, child Operator, aliasMap map[string]string) *HashNest {
 	rv := &HashNest{
-		plan:  plan,
-		child: child,
+		plan:     plan,
+		child:    child,
+		aliasMap: aliasMap,
 	}
 
 	newBase(&rv.base, context)
@@ -47,8 +49,9 @@ func (this *HashNest) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *HashNest) Copy() Operator {
 	rv := &HashNest{
-		plan:  this.plan,
-		child: this.child.Copy(),
+		plan:     this.plan,
+		child:    this.child.Copy(),
+		aliasMap: this.aliasMap,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -76,6 +79,7 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 		}
 	} else {
 		this.plan.Onclause().EnableInlistHash(context)
+		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
 	// build hash table

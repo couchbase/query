@@ -19,12 +19,14 @@ import (
 
 type Filter struct {
 	base
-	plan *plan.Filter
+	plan     *plan.Filter
+	aliasMap map[string]string
 }
 
-func NewFilter(plan *plan.Filter, context *Context) *Filter {
+func NewFilter(plan *plan.Filter, context *Context, aliasMap map[string]string) *Filter {
 	rv := &Filter{
-		plan: plan,
+		plan:     plan,
+		aliasMap: aliasMap,
 	}
 
 	newBase(&rv.base, context)
@@ -37,7 +39,7 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Filter) Copy() Operator {
-	rv := &Filter{plan: this.plan}
+	rv := &Filter{plan: this.plan, aliasMap: this.aliasMap}
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -48,6 +50,7 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 
 func (this *Filter) beforeItems(context *Context, parent value.Value) bool {
 	this.plan.Condition().EnableInlistHash(context)
+	SetSearchInfo(this.aliasMap, parent, context, this.plan.Condition())
 	return true
 }
 
