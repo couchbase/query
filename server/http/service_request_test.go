@@ -66,8 +66,7 @@ func init() {
 	logging.SetLogger(logger)
 	prepareds.PreparedsInit(1024)
 	test_server = newTestServer()
-	prepareds.PreparedsReprepareInit(test_server.query_server.Datastore(), test_server.query_server.Systemstore(),
-		test_server.query_server.Namespace())
+	prepareds.PreparedsReprepareInit(test_server.query_server.Datastore(), test_server.query_server.Systemstore())
 }
 
 func verifyEntry(t *testing.T, e timestamp.Entry, position uint32, guard string, value uint64) {

@@ -189,6 +189,7 @@
 						 }
 /[fF][tT][sS]/					 { yylex.logToken(yylex.Text(), "FTS"); return FTS }
 /[fF][uU][nN][cC][tT][iI][oO][nN]/		 { yylex.logToken(yylex.Text(), "FUNCTION"); return FUNCTION }
+/[gG][oO][lL][aA][nN][gG]/			 { yylex.logToken(yylex.Text(), "GOLANG"); return GOLANG }
 /[gG][rR][aA][nN][tT]/				 { yylex.logToken(yylex.Text(), "GRANT"); return GRANT }
 /[gG][rR][oO][uU][pP]/				 { yylex.logToken(yylex.Text(), "GROUP"); return GROUP }
 /[gG][rR][oO][uU][pP][sS]/			 { yylex.logToken(yylex.Text(), "GROUPS"); return GROUPS }

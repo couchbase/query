@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
 )
 
@@ -52,6 +53,27 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("expression is missing"))
 		}
 		body, newErr := inline.NewInlineBody(expr)
+		if body != nil {
+			newErr = body.SetVarNames(_unmarshalled.Parameters)
+		}
+		return body, newErr
+
+	case "golang":
+
+		var _unmarshalled struct {
+			_          string   `json:"#language"`
+			Parameters []string `json:"parameters"`
+			Library    string   `json:"library"`
+			Object     string   `json:"object"`
+		}
+		err := json.Unmarshal(bytes, &_unmarshalled)
+		if err != nil {
+			return nil, errors.NewFunctionEncodingError("decode body", name, err)
+		}
+		if _unmarshalled.Object == "" || _unmarshalled.Library == "" {
+			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
+		}
+		body, newErr := golang.NewGolangBody(_unmarshalled.Library, _unmarshalled.Object)
 		if body != nil {
 			newErr = body.SetVarNames(_unmarshalled.Parameters)
 		}

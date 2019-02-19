@@ -10,6 +10,7 @@ import "github.com/couchbase/query/expression"
 import "github.com/couchbase/query/expression/search"
 import "github.com/couchbase/query/functions"
 import "github.com/couchbase/query/functions/inline"
+import "github.com/couchbase/query/functions/golang"
 import "github.com/couchbase/query/value"
 
 func logDebugGrammar(format string, v ...interface{}) {
@@ -158,6 +159,7 @@ tokOffset	 int
 %token FROM
 %token FTS
 %token FUNCTION
+%token GOLANG
 %token GRANT
 %token GROUP
 %token GROUPS
@@ -2335,9 +2337,11 @@ BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
 create_function:
 CREATE FUNCTION func_name LPAREN parm_list RPAREN func_body
 {
-    err := $7.SetVarNames($5)
-    if err != nil {
-	yylex.Error(err.Error())
+    if $7 != nil {
+	err := $7.SetVarNames($5)
+	if err != nil {
+		yylex.Error(err.Error())
+    	}
     }
     $$ = algebra.NewCreateFunction($3, $7)
 }
@@ -2418,6 +2422,16 @@ LANGUAGE INLINE AS expr
     if err != nil {
 	yylex.Error(err.Error())
     } else {
+        $$ = body
+    }
+}
+|
+LANGUAGE GOLANG AS LBRACE STR COMMA STR RBRACE
+{   
+    body, err := golang.NewGolangBody($5, $7)
+    if err != nil {
+        yylex.Error(err.Error())
+    } else { 
         $$ = body
     }
 }

@@ -55,9 +55,9 @@ func NewDuplicateFunctionError(f string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewInternalFunctionError(e string, f string) Error {
-	return &err{level: EXCEPTION, ICode: 10103, IKey: "function.internal.error", ICause: fmt.Errorf("%v", e),
-		InternalMsg:    fmt.Sprintf("Execution of function %v encountered an unexpected error %v. Please collect the failing statement and contact support", f, e),
+func NewInternalFunctionError(e error, f string) Error {
+	return &err{level: EXCEPTION, ICode: 10103, IKey: "function.internal.error", ICause: e,
+		InternalMsg:    fmt.Sprintf("Operation on function %v encountered an unexpected error %v. Please collect the failing statement and contact support", f, e),
 		InternalCaller: CallerN(1)}
 }
 
@@ -96,5 +96,16 @@ func NewMetaKVIndexError(what error) Error {
 func NewFunctionEncodingError(what string, name string, reason error) Error {
 	return &err{level: EXCEPTION, ICode: 10107, IKey: "function.encoding.error", ICause: reason,
 		InternalMsg:    fmt.Sprintf("Could not %v function definition for %v because %v", what, name, reason),
+		InternalCaller: CallerN(1)}
+}
+
+func NewFunctionsDisabledError() Error {
+	return &err{level: EXCEPTION, ICode: 10108, IKey: "function.golang.disabled.error",
+		InternalMsg: "Golang functions are disabled", InternalCaller: CallerN(1)}
+}
+
+func NewFunctionExecutionError(what string, name string, reason error) Error {
+	return &err{level: EXCEPTION, ICode: 10109, IKey: "function.execution.error", ICause: reason,
+		InternalMsg:    fmt.Sprintf("Error executing function %v %v: %v", name, what, reason),
 		InternalCaller: CallerN(1)}
 }

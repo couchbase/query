@@ -12,7 +12,7 @@
 package inline
 
 import (
-	"fmt"
+	goerrors "errors"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -38,7 +38,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	funcBody, ok := body.(*inlineBody)
 
 	if !ok {
-		return nil, errors.NewInternalFunctionError("Wrong language being executed!", name.Name())
+		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
 	}
 
 	if len(funcBody.varNames) == 0 {
@@ -58,7 +58,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	}
 	val, err := funcBody.expr.Evaluate(value.NewValue(parent), context)
 	if err != nil {
-		return nil, errors.NewError(err, fmt.Sprintf("Error executing function %v", name.Name()))
+		return nil, errors.NewFunctionExecutionError("", name.Name(), err)
 	} else {
 		return val, nil
 	}
@@ -98,7 +98,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	f.PushBindings(bindings, true)
 	_, err := this.expr.Accept(f)
 	if err != nil {
-		return errors.NewError(err, "")
+		return errors.NewInternalFunctionError(err, "")
 	}
 	return nil
 }

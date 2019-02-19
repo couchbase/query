@@ -26,6 +26,7 @@ type Language int
 const (
 	_MISSING Language = iota
 	INLINE
+	GOLANG
 	_SIZER
 )
 
@@ -249,7 +250,7 @@ func PreLoad(name FunctionName) bool {
 	key := name.Key()
 	ce := functions.cache.Get(key, nil)
 	if ce != nil {
-		entry := ce.(FunctionEntry)
+		entry := ce.(*FunctionEntry)
 		return entry.Lang() != _MISSING
 	}
 
