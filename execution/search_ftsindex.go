@@ -133,16 +133,9 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnection, parent value.Value) {
 	defer context.Recover() // Recover from any panic
 
-	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
-	// for span evaluation
-	outer_values := parent
-	if !this.plan.Term().IsUnderNL() {
-		outer_values = nil
-	}
-
 	scanVector := context.ScanVectorSource().ScanVector(this.plan.Term().Namespace(), this.plan.Term().Keyspace())
 
-	indexSearchInfo, err := this.planToSearchMapping(context, outer_values)
+	indexSearchInfo, err := this.planToSearchMapping(context, parent)
 	index, ok := this.plan.Index().(datastore.FTSIndex)
 	if err != nil || !ok {
 		context.Error(errors.NewEvaluationError(err, "searchinfo"))
@@ -224,13 +217,13 @@ func SetSearchInfo(aliasMap map[string]string, item value.Value,
 			// record error as part of search function so that we can raise error
 			// only if search function is invoked
 			var v datastore.Verify
-			q, _, err = evalOne(sfn.Query(), context, nil)
+			q, _, err = evalOne(sfn.Query(), context, item)
 			if err != nil || q == nil || (q.Type() != value.STRING && q.Type() != value.OBJECT) {
 				err = fmt.Errorf("%v function Query parameter must be string or object.", sfn)
 			}
 
 			if err == nil {
-				o, _, err = evalOne(sfn.Options(), context, nil)
+				o, _, err = evalOne(sfn.Options(), context, item)
 				if err != nil || o == nil || o.Type() != value.OBJECT {
 					err = fmt.Errorf("%v function Options parameter must be object.", sfn)
 				}
