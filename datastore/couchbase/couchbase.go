@@ -620,7 +620,7 @@ type namespace struct {
 
 type keyspaceEntry struct {
 	sync.Mutex
-	cbKeyspace datastore.Keyspace
+	cbKeyspace *keyspace
 	errCount   int
 	errTime    time.Time
 	lastUse    time.Time
@@ -658,13 +658,17 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 }
 
 func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
+	return p.keyspaceByName(name)
+}
+
+func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	var err errors.Error
 
 	// make sure that no one is deleting the keyspace as we check
 	p.lock.RLock()
 	entry, ok := p.keyspaceCache[name]
 	p.lock.RUnlock()
-	if ok && entry.cbKeyspace != nil && entry.cbKeyspace.(*keyspace).flags != 0 {
+	if ok && entry.cbKeyspace != nil && entry.cbKeyspace.flags != 0 {
 		return entry.cbKeyspace, nil
 	}
 
@@ -704,7 +708,7 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 		// all previously prepared statements are still good
 		entry = &keyspaceEntry{}
 		p.keyspaceCache[name] = entry
-	} else if entry.cbKeyspace != nil && entry.cbKeyspace.(*keyspace).flags != 0 {
+	} else if entry.cbKeyspace != nil && entry.cbKeyspace.flags != 0 {
 
 		// a keyspace that has been deleted or needs refreshing causes a
 		// version change
@@ -765,7 +769,8 @@ func compareNodeAddress(a, b []string) bool {
 }
 
 func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
-	return p.KeyspaceByName(id)
+	return p.keyspaceByName(id)
+
 }
 
 func (p *namespace) MetadataVersion() uint64 {
@@ -773,21 +778,31 @@ func (p *namespace) MetadataVersion() uint64 {
 }
 
 func (p *namespace) BucketIds() ([]string, errors.Error) {
-	return datastore.NO_STRINGS, nil
+	if !_COLLECTIONS_SUPPORTED {
+		return datastore.NO_STRINGS, nil
+	}
+	return p.KeyspaceIds()
 }
 
 func (p *namespace) BucketNames() ([]string, errors.Error) {
-	return datastore.NO_STRINGS, nil
+	if !_COLLECTIONS_SUPPORTED {
+		return datastore.NO_STRINGS, nil
+	}
+	return p.KeyspaceNames()
 }
 
-var _COLLECTIONS_NOT_SUPPORTED string = "Collections are not yet supported."
-
 func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
-	return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
+	if !_COLLECTIONS_SUPPORTED {
+		return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
+	}
+	return p.keyspaceByName(name)
 }
 
 func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
-	return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
+	if !_COLLECTIONS_SUPPORTED {
+		return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
+	}
+	return p.keyspaceByName(name)
 }
 
 func (p *namespace) setPool(cbpool cb.Pool) {
@@ -851,26 +866,26 @@ func (p *namespace) refresh(changed bool) {
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
 			changed = true
-			ks.cbKeyspace.(*keyspace).flags |= _DELETED
-			ks.cbKeyspace.(*keyspace).cbbucket.Close()
+			ks.cbKeyspace.flags |= _DELETED
+			ks.cbKeyspace.cbbucket.Close()
 			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
 
-		} else if ks.cbKeyspace.(*keyspace).cbbucket.UUID != newbucket.UUID {
+		} else if ks.cbKeyspace.cbbucket.UUID != newbucket.UUID {
 			changed = true
-			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.(*keyspace).cbbucket.UUID, newbucket.UUID)
+			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
 			// and release old one
-			ks.cbKeyspace.(*keyspace).cbbucket.Close()
-			ks.cbKeyspace.(*keyspace).cbbucket = newbucket
+			ks.cbKeyspace.cbbucket.Close()
+			ks.cbKeyspace.cbbucket = newbucket
 		}
 		// Not deleted. Check if GSI indexer is available
-		if ks.cbKeyspace.(*keyspace).gsiIndexer == nil {
-			ks.cbKeyspace.(*keyspace).refreshGSIIndexer(p.store.URL(), p.Name())
+		if ks.cbKeyspace.gsiIndexer == nil {
+			ks.cbKeyspace.refreshGSIIndexer(p.store.URL(), p.Name())
 		}
 		// Not deleted. Check if FTS indexer is available
-		if ks.cbKeyspace.(*keyspace).ftsIndexer == nil {
-			ks.cbKeyspace.(*keyspace).refreshFTSIndexer(p.store.URL(), p.Name())
+		if ks.cbKeyspace.ftsIndexer == nil {
+			ks.cbKeyspace.refreshFTSIndexer(p.store.URL(), p.Name())
 		}
 	}
 
@@ -895,9 +910,14 @@ type keyspace struct {
 	viewIndexer datastore.Indexer // View index provider
 	gsiIndexer  datastore.Indexer // GSI index provider
 	ftsIndexer  datastore.Indexer // FTS index provider
+
+	collectionsManifestUid uint32
+	scopes                 map[string]*scope // scopes by id
 }
 
-func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
+var _NO_SCOPES map[string]*scope = map[string]*scope{}
+
+func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 
 	cbNamespace := p.getPool()
 	cbbucket, err := cbNamespace.GetBucket(name)
@@ -932,6 +952,17 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	// Initialize index providers
 	rv.viewIndexer = newViewIndexer(rv)
 
+	rv.scopes = _NO_SCOPES
+	if _COLLECTIONS_SUPPORTED {
+		mani, err := cbbucket.GetCollectionsManifest()
+		if err == nil {
+			rv.collectionsManifestUid = uint32(mani.Uid)
+			rv.scopes = buildScopesAndCollections(mani, rv)
+		} else {
+			logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
+		}
+	}
+
 	logging.Infof("Created New Bucket %s", name)
 
 	//discover existing indexes
@@ -965,7 +996,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
-		ks.cbKeyspace.(*keyspace).flags |= _DELETED
+		ks.cbKeyspace.flags |= _DELETED
 		delete(p.keyspaceCache, name)
 
 		// keyspace has been deleted, force full auto reprepare check
@@ -1433,6 +1464,43 @@ func (b *keyspace) Scope() datastore.Scope {
 
 func (b *keyspace) ScopeId() string {
 	return ""
+}
+
+func (ks *keyspace) ScopeIds() ([]string, errors.Error) {
+	ids := make([]string, len(ks.scopes))
+	ix := 0
+	for k := range ks.scopes {
+		ids[ix] = k
+		ix++
+	}
+	return ids, nil
+}
+
+func (ks *keyspace) ScopeNames() ([]string, errors.Error) {
+	ids := make([]string, len(ks.scopes))
+	ix := 0
+	for _, v := range ks.scopes {
+		ids[ix] = v.Name()
+		ix++
+	}
+	return ids, nil
+}
+
+func (ks *keyspace) ScopeById(id string) (datastore.Scope, errors.Error) {
+	scope := ks.scopes[id]
+	if scope == nil {
+		return nil, errors.NewCbScopeNotFoundError(nil, id)
+	}
+	return scope, nil
+}
+
+func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
+	for _, v := range ks.scopes {
+		if name == v.Name() {
+			return v, nil
+		}
+	}
+	return nil, errors.NewCbScopeNotFoundError(nil, name)
 }
 
 // primaryIndex performs full keyspace scans.
