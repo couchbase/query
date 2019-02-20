@@ -219,7 +219,7 @@ func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error)
 }
 
 func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
-	return nil, stmt.MapExpressions(this)
+	return stmt.Statement().Accept(this)
 }
 
 func (this *SemChecker) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
