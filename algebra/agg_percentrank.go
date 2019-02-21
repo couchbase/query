@@ -29,9 +29,9 @@ type PercentRank struct {
 The function NewPercentRank calls NewAggregateBase to
 create an aggregate function named PercentRank
 */
-func NewPercentRank(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewPercentRank(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &PercentRank{
-		*NewAggregateBase("percent_rank", operands, flags, wTerm),
+		*NewAggregateBase("percent_rank", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -75,7 +75,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *PercentRank) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewPercentRank(operands, uint32(0), nil)
+		return NewPercentRank(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -86,7 +86,7 @@ Copy of the aggregate function
 func (this *PercentRank) Copy() expression.Expression {
 	rv := &PercentRank{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)

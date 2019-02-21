@@ -30,9 +30,9 @@ type RowNumber struct {
 The function NewRowNumber calls NewAggregateBase to
 create an aggregate function named RowNumber
 */
-func NewRowNumber(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewRowNumber(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &RowNumber{
-		*NewAggregateBase("row_number", operands, flags, wTerm),
+		*NewAggregateBase("row_number", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -76,7 +76,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *RowNumber) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewRowNumber(operands, uint32(0), nil)
+		return NewRowNumber(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -87,7 +87,7 @@ Copy of the aggregate function
 func (this *RowNumber) Copy() expression.Expression {
 	rv := &RowNumber{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)

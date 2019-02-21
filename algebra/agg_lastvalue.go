@@ -28,9 +28,9 @@ type LastValue struct {
 The function NewLastValue calls NewAggregateBase to
 create an aggregate function named LastValue
 */
-func NewLastValue(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewLastValue(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &LastValue{
-		*NewAggregateBase("last_value", operands, flags, wTerm), 1,
+		*NewAggregateBase("last_value", operands, flags, filter, wTerm), 1,
 	}
 
 	rv.SetExpr(rv)
@@ -64,7 +64,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *LastValue) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewLastValue(operands, uint32(0), nil)
+		return NewLastValue(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -75,7 +75,7 @@ Copy of the aggregate function
 func (this *LastValue) Copy() expression.Expression {
 	rv := &LastValue{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 		this.nthItem,
 	}
 

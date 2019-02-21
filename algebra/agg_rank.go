@@ -30,9 +30,9 @@ type Rank struct {
 The function NewRank calls NewAggregateBase to
 create an aggregate function named Rank
 */
-func NewRank(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewRank(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Rank{
-		*NewAggregateBase("rank", operands, flags, wTerm),
+		*NewAggregateBase("rank", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -76,7 +76,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Rank) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewRank(operands, uint32(0), nil)
+		return NewRank(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -87,7 +87,7 @@ Copy of the aggregate function
 func (this *Rank) Copy() expression.Expression {
 	rv := &Rank{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)

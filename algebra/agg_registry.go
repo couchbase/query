@@ -22,12 +22,12 @@ If the function exists it returns true and the function.
 While looking into the map, convert the string name to lowercase.
 */
 
-func GetAggregate(name string, distinct, window bool) (Aggregate, bool) {
+func GetAggregate(name string, distinct, filter, window bool) (Aggregate, bool) {
 	rv, ok := _AGGREGATES[strings.ToLower(name)]
-	if !ok || (window && !rv.HasProperty(AGGREGATE_ALLOWS_WINDOW)) {
+	if !ok || (distinct && !rv.HasProperty(AGGREGATE_ALLOWS_DISTINCT)) ||
+		(filter && !rv.HasProperty(AGGREGATE_ALLOWS_FILTER)) ||
+		(window && !rv.HasProperty(AGGREGATE_ALLOWS_WINDOW)) {
 		return nil, false
-	} else if distinct {
-		return rv.agg, rv.HasProperty(AGGREGATE_ALLOWS_DISTINCT)
 	} else if window {
 		return rv.agg, rv.HasProperty(AGGREGATE_ALLOWS_WINDOW)
 	} else {
@@ -54,6 +54,7 @@ Aggregate properties. These allow syntax and semantics checks.
 const (
 	AGGREGATE_ALLOWS_REGULAR = 1 << iota
 	AGGREGATE_ALLOWS_DISTINCT
+	AGGREGATE_ALLOWS_FILTER
 	AGGREGATE_ALLOWS_WINDOW
 	AGGREGATE_ALLOWS_WINDOW_FRAME
 	AGGREGATE_ALLOWS_INCREMENTAL
@@ -72,7 +73,7 @@ const (
  Grouped Aggregate properties.
 */
 const (
-	AGGREGATE_ALLOWS_ALL             = AGGREGATE_ALLOWS_REGULAR | AGGREGATE_ALLOWS_DISTINCT | AGGREGATE_ALLOWS_WINDOW | AGGREGATE_ALLOWS_WINDOW_FRAME
+	AGGREGATE_ALLOWS_ALL             = AGGREGATE_ALLOWS_REGULAR | AGGREGATE_ALLOWS_DISTINCT | AGGREGATE_ALLOWS_WINDOW | AGGREGATE_ALLOWS_WINDOW_FRAME | AGGREGATE_ALLOWS_FILTER
 	AGGREGATE_ALLOWS_ALL_INCREMENTAL = AGGREGATE_ALLOWS_ALL | AGGREGATE_ALLOWS_INCREMENTAL
 	AGGREGATE_WINDOW_RANK            = AGGREGATE_ALLOWS_WINDOW | AGGREGATE_ALLOWS_INCREMENTAL | AGGREGATE_WINDOW_ORDER
 	AGGREGATE_ROW_NUMBER             = AGGREGATE_ALLOWS_WINDOW | AGGREGATE_ALLOWS_INCREMENTAL | AGGREGATE_WINDOW_RELEASE_CURRENTROW

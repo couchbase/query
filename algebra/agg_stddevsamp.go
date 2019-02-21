@@ -30,9 +30,9 @@ The function NewStddevSamp calls NewAggregateBase to
 create an aggregate function named StddevSamp with
 one expression as input.
 */
-func NewStddevSamp(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewStddevSamp(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &StddevSamp{
-		*NewAggregateBase("stddev_samp", operands, flags, wTerm),
+		*NewAggregateBase("stddev_samp", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -68,7 +68,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *StddevSamp) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewStddevSamp(operands, uint32(0), nil)
+		return NewStddevSamp(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -79,7 +79,7 @@ Copy of the aggregate function
 func (this *StddevSamp) Copy() expression.Expression {
 	rv := &StddevSamp{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)
@@ -103,6 +103,11 @@ list of all the values of type NUMBER.
 Call addStddevVariance to compute the intermediate aggregate value and return it.
 */
 func (this *StddevSamp) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+	// apply filter if any
+	if ok, e := this.evaluateFilter(item, context); e != nil || !ok {
+		return cumulative, e
+	}
+
 	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e

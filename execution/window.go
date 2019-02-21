@@ -247,7 +247,7 @@ func (this *AggregateInfo) setOnce(context *Context) (err error) {
 	         Phase 2 RATIO_TO_REPORT
 	*/
 	if this.hasFlags(_WINDOW_RATIO_TO_REPORT) {
-		this.preAgg = algebra.NewSum(this.agg.Operands(), this.agg.Flags(), this.wTerm)
+		this.preAgg = algebra.NewSum(this.agg.Operands(), this.agg.Flags(), this.agg.Filter(), this.wTerm)
 	}
 
 	this.repeats = value.ONE_VALUE

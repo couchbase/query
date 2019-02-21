@@ -28,9 +28,9 @@ type RatioToReport struct {
 The function NewRatioToReport calls NewAggregateBase to
 create an aggregate function named RatioToReport
 */
-func NewRatioToReport(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewRatioToReport(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &RatioToReport{
-		*NewAggregateBase("ratio_to_report", operands, flags, wTerm),
+		*NewAggregateBase("ratio_to_report", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -64,7 +64,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *RatioToReport) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewRatioToReport(operands, uint32(0), nil)
+		return NewRatioToReport(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -75,7 +75,7 @@ Copy of the aggregate function
 func (this *RatioToReport) Copy() expression.Expression {
 	rv := &RatioToReport{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)

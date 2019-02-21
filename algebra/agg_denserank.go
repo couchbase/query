@@ -31,9 +31,9 @@ type DenseRank struct {
 The function NewDenseRank calls NewAggregateBase to
 create an aggregate function named DenseRank
 */
-func NewDenseRank(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewDenseRank(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &DenseRank{
-		*NewAggregateBase("dense_rank", operands, flags, wTerm),
+		*NewAggregateBase("dense_rank", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -77,7 +77,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *DenseRank) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewDenseRank(operands, uint32(0), nil)
+		return NewDenseRank(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -88,7 +88,7 @@ Copy of the aggregate function
 func (this *DenseRank) Copy() expression.Expression {
 	rv := &DenseRank{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)

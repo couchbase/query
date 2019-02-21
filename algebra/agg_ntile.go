@@ -39,9 +39,9 @@ The function NewNtile calls NewAggregateBase to
 create an aggregate function named Ntile
 */
 
-func NewNtile(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewNtile(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Ntile{
-		*NewAggregateBase("ntile", operands, flags, wTerm), 0, 0, 0, 0,
+		*NewAggregateBase("ntile", operands, flags, filter, wTerm), 0, 0, 0, 0,
 	}
 
 	rv.SetExpr(rv)
@@ -75,7 +75,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Ntile) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewNtile(operands, uint32(0), nil)
+		return NewNtile(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -86,7 +86,7 @@ Copy of the aggregate function
 func (this *Ntile) Copy() expression.Expression {
 	rv := &Ntile{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 		this.buckets, this.nrows, this.cbucket, this.cMaxRow,
 	}
 

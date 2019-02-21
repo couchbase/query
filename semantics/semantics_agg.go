@@ -45,6 +45,12 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 			"semantics.visit_aggregate_function.flags")
 	}
 
+	// Aggregate syntax has FILTER, but aggregate doesn't support it
+	if agg.Filter() != nil && !algebra.AggregateHasProperty(aggName, algebra.AGGREGATE_ALLOWS_FILTER) {
+		return errors.NewWindowSemanticError(aggName, "FILTER clause ", "is not allowed.",
+			"semantics.visit_aggregate_function.filter")
+	}
+
 	wTerm := agg.WindowTerm()
 	if wTerm == nil {
 		if algebra.AggregateHasProperty(aggName, algebra.AGGREGATE_ALLOWS_REGULAR) {

@@ -25,19 +25,20 @@ type indexGroupAggProperties struct {
 	aggtype        datastore.AggregateType
 	distinct       bool
 	partialAllowed bool
+	filter         bool
 }
 
 var _INDEX_AGG_PROPERTIES = map[string]*indexGroupAggProperties{
-	"avg":             &indexGroupAggProperties{3, true, datastore.AGG_AVG, false, false},
-	"count":           &indexGroupAggProperties{3, true, datastore.AGG_COUNT, false, true},
-	"countn":          &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, false, true},
-	"max":             &indexGroupAggProperties{3, true, datastore.AGG_MAX, false, true},
-	"min":             &indexGroupAggProperties{3, true, datastore.AGG_MIN, false, true},
-	"sum":             &indexGroupAggProperties{3, true, datastore.AGG_SUM, false, true},
-	"avg_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_AVG, true, false},
-	"count_distinct":  &indexGroupAggProperties{3, true, datastore.AGG_COUNT, true, false},
-	"countn_distinct": &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, true, false},
-	"sum_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_SUM, true, false},
+	"avg":             &indexGroupAggProperties{3, true, datastore.AGG_AVG, false, false, false},
+	"count":           &indexGroupAggProperties{3, true, datastore.AGG_COUNT, false, true, false},
+	"countn":          &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, false, true, false},
+	"max":             &indexGroupAggProperties{3, true, datastore.AGG_MAX, false, true, false},
+	"min":             &indexGroupAggProperties{3, true, datastore.AGG_MIN, false, true, false},
+	"sum":             &indexGroupAggProperties{3, true, datastore.AGG_SUM, false, true, false},
+	"avg_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_AVG, true, false, false},
+	"count_distinct":  &indexGroupAggProperties{3, true, datastore.AGG_COUNT, true, false, false},
+	"countn_distinct": &indexGroupAggProperties{3, true, datastore.AGG_COUNTN, true, false, false},
+	"sum_distinct":    &indexGroupAggProperties{3, true, datastore.AGG_SUM, true, false, false},
 }
 
 func checkAndAdd(ids []int, id int) []int {
@@ -63,9 +64,9 @@ func indexPartialAggregateCount2SumRewrite(agg algebra.Aggregate, c *expression.
 	switch agg.(type) {
 	case *algebra.Count, *algebra.Countn:
 		if agg.Operands()[0] == nil {
-			return algebra.NewSum(expression.Expressions{c}, uint32(0), nil)
+			return algebra.NewSum(expression.Expressions{c}, uint32(0), nil, nil)
 		}
-		return algebra.NewSum(agg.Operands(), uint32(0), nil)
+		return algebra.NewSum(agg.Operands(), uint32(0), nil, nil)
 	}
 	return agg
 }
@@ -160,10 +161,10 @@ func (this *builder) indexAggregateRewrite() algebra.Aggregates {
 
 		switch agg.(type) {
 		case *algebra.Avg:
-			naggSum := algebra.NewSum(agg.Operands().Copy(), agg.Flags(), nil)
+			naggSum := algebra.NewSum(agg.Operands().Copy(), agg.Flags(), expression.Copy(agg.Filter()), nil)
 			naggs[stringer.Visit(naggSum)] = naggSum
 
-			naggCountn := algebra.NewCountn(agg.Operands().Copy(), agg.Flags(), nil)
+			naggCountn := algebra.NewCountn(agg.Operands().Copy(), agg.Flags(), expression.Copy(agg.Filter()), nil)
 			naggs[stringer.Visit(naggCountn)] = naggCountn
 
 		default:

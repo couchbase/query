@@ -32,9 +32,9 @@ type Lead struct {
 The function NewLead calls NewAggregateBase to
 create an aggregate function named Lead
 */
-func NewLead(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewLead(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Lead{
-		*NewAggregateBase("lead", operands, flags, wTerm), 1, 1,
+		*NewAggregateBase("lead", operands, flags, filter, wTerm), 1, 1,
 	}
 
 	rv.SetExpr(rv)
@@ -68,7 +68,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Lead) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewLead(operands, uint32(0), nil)
+		return NewLead(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -79,7 +79,7 @@ Copy of the aggregate function
 func (this *Lead) Copy() expression.Expression {
 	rv := &Lead{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 		this.nthItem, this.direction,
 	}
 

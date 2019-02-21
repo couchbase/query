@@ -28,9 +28,9 @@ type FirstValue struct {
 The function NewFirstValue calls NewAggregateBase to
 create an aggregate function named FirstValue
 */
-func NewFirstValue(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewFirstValue(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &FirstValue{
-		*NewAggregateBase("first_value", operands, flags, wTerm), 1,
+		*NewAggregateBase("first_value", operands, flags, filter, wTerm), 1,
 	}
 
 	rv.SetExpr(rv)
@@ -64,7 +64,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *FirstValue) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewFirstValue(operands, uint32(0), nil)
+		return NewFirstValue(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -75,7 +75,7 @@ Copy of the aggregate function
 func (this *FirstValue) Copy() expression.Expression {
 	rv := &FirstValue{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 		this.nthItem,
 	}
 

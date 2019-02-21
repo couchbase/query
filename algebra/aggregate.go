@@ -48,7 +48,7 @@ type Aggregate interface {
 	/*
 	   Set aggregate modifers/flags and Window Term.
 	*/
-	SetAggregateModifiers(flags uint32, wTerm *WindowTerm)
+	SetAggregateModifiers(flags uint32, filter expression.Expression, wTerm *WindowTerm)
 
 	/*
 	   Return WindowTerm.
@@ -64,6 +64,12 @@ type Aggregate interface {
 	   Checks Any of the flags are set.
 	*/
 	HasFlags(flag uint32) bool
+
+	/*
+	   Filter expression
+	*/
+
+	Filter() expression.Expression
 
 	/*
 	   Aggregate allows incremental operation.
@@ -112,6 +118,7 @@ It inherits from expressions FunctionBase, and has
      text           which represents the function name.
      flags          which represents the modifers/flags
                          DISTINCT, INCREMENTAL, RESPECT|IGNORE NULLS, FROM FIRST|LAST
+     filter         include those objects that filter condition is true in aggregation
      windowTerm     which represents the Window information
 */
 
@@ -119,6 +126,7 @@ type AggregateBase struct {
 	expression.FunctionBase
 	text       string
 	flags      uint32
+	filter     expression.Expression
 	windowTerm *WindowTerm
 }
 
@@ -127,14 +135,14 @@ This method creates a new function using the
 input expression name and operands, and returns it
 as a pointer to an AggregateBase struct.
 */
-func NewAggregateBase(name string, operands expression.Expressions, flags uint32, wTerm *WindowTerm) *AggregateBase {
+func NewAggregateBase(name string, operands expression.Expressions, flags uint32, filter expression.Expression,
+	wTerm *WindowTerm) *AggregateBase {
 	rv := &AggregateBase{
-		*expression.NewFunctionBase(name, operands...),
-		"",
-		flags,
-		wTerm,
+		FunctionBase: *expression.NewFunctionBase(name, operands...),
+		text:         "",
+		flags:        flags,
 	}
-	rv.SetAggregateModifiers(flags, wTerm)
+	rv.SetAggregateModifiers(flags, filter, wTerm)
 	return rv
 }
 
@@ -155,14 +163,15 @@ func (this *AggregateBase) HasFlags(flags uint32) bool {
 /*
 Sets aggregate modifiers/flags and window information
 */
-func (this *AggregateBase) SetAggregateModifiers(flags uint32, wTerm *WindowTerm) {
+func (this *AggregateBase) SetAggregateModifiers(flags uint32, filter expression.Expression, wTerm *WindowTerm) {
 	name := this.Name()
 	if name == "min" || name == "max" { // NO-OP
 		flags &^= AGGREGATE_DISTINCT
 	}
 
-	this.windowTerm = wTerm
 	this.flags = flags
+	this.filter = filter
+	this.windowTerm = wTerm
 
 	// Aggregate allows incremental operation set the flags
 	if !this.Distinct() && AggregateHasProperty(name, AGGREGATE_ALLOWS_INCREMENTAL) {
@@ -174,12 +183,13 @@ func (this *AggregateBase) SetAggregateModifiers(flags uint32, wTerm *WindowTerm
 Helper functions
 */
 
-func (this *AggregateBase) Distinct() bool          { return this.HasFlags(AGGREGATE_DISTINCT) }
-func (this *AggregateBase) Aggregate() bool         { return true }
-func (this *AggregateBase) WindowTerm() *WindowTerm { return this.windowTerm }
-func (this *AggregateBase) Flags() uint32           { return this.flags }
-func (this *AggregateBase) MinArgs() int            { return 1 }
-func (this *AggregateBase) MaxArgs() int            { return 1 }
+func (this *AggregateBase) Distinct() bool                { return this.HasFlags(AGGREGATE_DISTINCT) }
+func (this *AggregateBase) Aggregate() bool               { return true }
+func (this *AggregateBase) WindowTerm() *WindowTerm       { return this.windowTerm }
+func (this *AggregateBase) Flags() uint32                 { return this.flags }
+func (this *AggregateBase) MinArgs() int                  { return 1 }
+func (this *AggregateBase) MaxArgs() int                  { return 1 }
+func (this *AggregateBase) Filter() expression.Expression { return this.filter }
 
 /*
 If Incremental aggregation is possible or not
@@ -211,11 +221,13 @@ func (this *AggregateBase) IsCumulateDone(cumulative value.Value, context Contex
 */
 func (this *AggregateBase) String() string {
 	var buf bytes.Buffer
+	stringer := expression.NewStringer()
+
 	buf.WriteString(this.Name())
 	buf.WriteString("(")
 
 	if this.Distinct() {
-		buf.WriteString("distinct ")
+		buf.WriteString("DISTINCT ")
 	}
 
 	for i, op := range this.Operands() {
@@ -227,11 +239,17 @@ func (this *AggregateBase) String() string {
 		if op == nil && this.Name() == "count" {
 			buf.WriteString("*")
 		} else {
-			buf.WriteString(expression.NewStringer().Visit(op))
+			buf.WriteString(stringer.Visit(op))
 		}
 	}
 
 	buf.WriteString(")")
+
+	if this.Filter() != nil {
+		buf.WriteString(" FILTER (WHERE ")
+		buf.WriteString(stringer.Visit(this.Filter()))
+		buf.WriteString(")")
+	}
 
 	// Handle [FROM FIRST|LAST]. FROM FIRST is default of ""
 	if this.HasFlags(AGGREGATE_FROMLAST) {
@@ -327,6 +345,7 @@ func EqualAggregateModifiers(agg1, agg2 Aggregate) bool {
 	wTerm2 := agg2.WindowTerm()
 
 	return agg1.Flags() == agg2.Flags() &&
+		expression.Equivalent(agg1.Filter(), agg2.Filter()) &&
 		expression.Equivalents(agg1.Operands(), agg2.Operands()) &&
 		((wTerm1 == wTerm2) || (wTerm1 != nil && wTerm2 != nil && wTerm1.String() == wTerm2.String()))
 }
@@ -348,6 +367,10 @@ func (this *AggregateBase) Children() expression.Expressions {
 		if op != nil {
 			rv = append(rv, op)
 		}
+	}
+
+	if this.Filter() != nil {
+		rv = append(rv, this.Filter())
 	}
 
 	wTerm := this.WindowTerm()
@@ -380,6 +403,15 @@ func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 		}
 	}
 
+	if this.Filter() != nil {
+		expr, err := mapper.Map(this.Filter())
+		if err != nil {
+			return err
+		}
+
+		this.filter = expr
+	}
+
 	wTerm := this.WindowTerm()
 	if wTerm != nil {
 		return wTerm.MapExpressions(mapper)
@@ -405,4 +437,18 @@ func (this *AggregateBase) SurvivesGrouping(groupKeys expression.Expressions,
 		}
 	}
 	return true, nil
+}
+
+func (this *AggregateBase) evaluateFilter(item value.Value, context Context) (bool, error) {
+	if this.Filter() == nil {
+		return true, nil
+	}
+
+	val, e := this.Filter().Evaluate(item, context)
+	if e != nil {
+		return false, e
+	}
+
+	return val.Truth(), nil
+
 }

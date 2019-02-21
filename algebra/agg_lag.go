@@ -32,9 +32,9 @@ type Lag struct {
 The function NewLag calls NewAggregateBase to
 create an aggregate function named Lag
 */
-func NewLag(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewLag(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Lag{
-		*NewAggregateBase("lag", operands, flags, wTerm), 1, -1,
+		*NewAggregateBase("lag", operands, flags, filter, wTerm), 1, -1,
 	}
 
 	rv.SetExpr(rv)
@@ -68,7 +68,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Lag) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewLag(operands, uint32(0), nil)
+		return NewLag(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -79,7 +79,7 @@ Copy of the aggregate function
 func (this *Lag) Copy() expression.Expression {
 	rv := &Lag{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 		this.nthItem, this.direction,
 	}
 

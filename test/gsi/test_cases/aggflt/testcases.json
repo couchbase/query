@@ -1,0 +1,146 @@
+[
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT SUM(d.c3) FILTER (WHERE d.c2 = 'X') AS s FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A'",
+        "results": [
+            {
+                "s": 12
+            }
+        ]
+    },
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT SUM(d.c3) FILTER (WHERE d.c2 = 'X' OR d.c2 = 'Y') AS s FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A'",
+        "results": [
+            {
+                "s": 42
+            }
+        ]
+    },
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT SUM(d.c3) FILTER (WHERE d.c2 IN ['X','Y']) AS s FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A'",
+        "results": [
+            {
+                "s": 42
+            }
+        ]
+    },
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements": "SELECT SUM(d.c3) FILTER (WHERE d.c4 > 10 ) AS s FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A'",
+        "results": [
+            {
+                "s": 45
+            }
+        ]
+    },
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT SUM(d.c3) FILTER (WHERE d.c2 IN ['X']) OVER() AS s FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A' LIMIT 2",
+        "results": [
+            {
+                "s": 12
+            },
+            {
+                "s": 12
+            }
+        ]
+    },
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT SUM(d.c3) FILTER (WHERE d.c2 IN ['X']) AS s, COUNT(1) FILTER (WHERE d.c2 IN ['Y']) AS c FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A' LIMIT 2",
+        "results": [
+            {
+                "c": 5,
+                "s": 12
+            }
+        ]
+    },
+    {
+        "testcase": "Filter Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT COUNT(d.c3) FILTER (WHERE d.c2 IN ['A']) AS c FROM orders AS d WHERE d.test_id = 'aggflt' AND d.c1 = 'A'",
+        "results": [
+            {
+                "c": 0
+            }
+        ]
+    }
+]

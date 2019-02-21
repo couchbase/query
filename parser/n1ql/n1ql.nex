@@ -178,6 +178,7 @@
 						 }
 /[fF][aA][lL][sS][eE]/				 { yylex.logToken(yylex.Text(), "FALSE"); return FALSE }
 /[fF][eE][tT][cC][hH]/				 { yylex.logToken(yylex.Text(), "FETCH"); return FETCH }
+/[fF][iI][lL][tT][eE][rR]/			 { yylex.logToken(yylex.Text(), "FILTER"); return FILTER }
 /[fF][iI][rR][sS][tT]/				 { yylex.logToken(yylex.Text(), "FIRST"); return FIRST }
 /[fF][lL][aA][tT][tT][eE][nN]/			 { yylex.logToken(yylex.Text(), "FLATTEN"); return FLATTEN }
 /[fF][oO][lL][lL][oO][wW][iI][nN][gG]/		 { yylex.logToken(yylex.Text(), "FOLLOWING"); return FOLLOWING }

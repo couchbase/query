@@ -154,6 +154,7 @@ tokOffset	 int
 %token EXPLAIN
 %token FALSE
 %token FETCH
+%token FILTER
 %token FIRST
 %token FLATTEN
 %token FOLLOWING
@@ -386,7 +387,7 @@ tokOffset	 int
 %type <indexRefs>        index_refs
 %type <indexRef>         index_ref
 %type <bindings>         opt_let let opt_with
-%type <expr>             opt_where where
+%type <expr>             opt_where where opt_filter
 %type <group>            opt_group group
 %type <bindings>         opt_letting letting
 %type <expr>             opt_having having
@@ -456,7 +457,7 @@ tokOffset	 int
 %type <u32>              opt_order_nulls
 %type <b>                first_last nulls
 
-%type <windowTerm>          opt_window_clause window_clause
+%type <windowTerm>          window_specification window_function_details opt_window_function
 %type <exprs>               opt_window_partition
 %type <u32>                 window_frame_modifier window_frame_valexpr_modifier opt_window_frame_exclusion
 %type <windowFrame>         opt_window_frame
@@ -812,11 +813,6 @@ select_from
 ;
 
 from_select:
-from opt_let opt_where opt_group select_clause
-{
-    $$ = algebra.NewSubselect(nil, $1, $2, $3, $4, $5)
-}
-|
 opt_with from opt_let opt_where opt_group select_clause
 {
     $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6)
@@ -824,11 +820,6 @@ opt_with from opt_let opt_where opt_group select_clause
 ;
 
 select_from:
-select_clause opt_from opt_let opt_where opt_group
-{
-    $$ = algebra.NewSubselect(nil, $2, $3, $4, $5, $1)
-}
-|
 opt_with select_clause opt_from opt_let opt_where opt_group
 {
     $$ = algebra.NewSubselect($1, $3, $4, $5, $6, $2)
@@ -1327,6 +1318,9 @@ alias EQ expr
  *************************************************/
 
 opt_with:
+/* empty */
+{ $$ = nil }
+|
 WITH with_list
 {
     $$ = $2
@@ -3189,11 +3183,11 @@ ELSE expr
  *************************************************/
 
 function_expr:
-NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_clause
+NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_function_details
 {
     $$ = nil
     fname := "nth_value"
-    f, ok := algebra.GetAggregate(fname, false, ($7 != nil))
+    f, ok := algebra.GetAggregate(fname, false, false, ($7 != nil))
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
              if f.MinArgs() == f.MaxArgs() {
@@ -3204,7 +3198,7 @@ NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_cla
         } else {
             $$ = f.Constructor()($3...)
             if a, ok := $$.(algebra.Aggregate); ok {
-                 a.SetAggregateModifiers($5|$6, $7)
+                 a.SetAggregateModifiers($5|$6, nil, $7)
             }
         }
     } else {
@@ -3212,21 +3206,23 @@ NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_cla
     }
 }
 |
-function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
+function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_function
 {
     $$ = nil
     f, ok := expression.GetFunction($1)
     if !ok {
         f, ok = search.GetSearchFunction($1)
     }
-    if !ok || $6 != nil {
-        f, ok = algebra.GetAggregate($1, false, ($6 != nil))
+    if !ok || $7 != nil {
+        f, ok = algebra.GetAggregate($1, false, ($5 != nil), ($7 != nil))
     }
 
     if ok {
-        if ($5 == algebra.AGGREGATE_RESPECTNULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_RESPECTNULLS)) ||
-           ($5 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
+        if ($6 == algebra.AGGREGATE_RESPECTNULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_RESPECTNULLS)) ||
+           ($6 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
             yylex.Error(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", $1))
+        } else if ($5 != nil && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_ALLOWS_FILTER)) {
+            yylex.Error(fmt.Sprintf("FILTER caluse syntax is not valid for function %s.", $1))
         } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
              if f.MinArgs() == f.MaxArgs() {
                    yylex.Error(fmt.Sprintf("Number of arguments to function %s must be %d.", $1, f.MaxArgs()))
@@ -3236,16 +3232,20 @@ function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
         } else {
             $$ = f.Constructor()($3...)
             if a, ok := $$.(algebra.Aggregate); ok {
-                 a.SetAggregateModifiers($5, $6)
+                 a.SetAggregateModifiers($6, $5, $7)
             }
         }
     } else {
-	name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
-	if err != nil {
-	    yylex.Error(err.Error())
-	    yylex.(*lexer).Stop()
-	}
-	f := expression.GetUserDefinedFunction(name)
+        f = nil
+        if $5 == nil && $6 == uint32(0) && $7 == nil {
+	     name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
+	     if err != nil {
+	         yylex.Error(err.Error())
+	         yylex.(*lexer).Stop()
+	     }
+	     f = expression.GetUserDefinedFunction(name)
+        }
+
 	if f != nil {
 		$$ = f.Constructor()($3...)
 	} else {
@@ -3255,29 +3255,29 @@ function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
     }
 }
 |
-function_name LPAREN agg_quantifier expr RPAREN opt_window_clause
+function_name LPAREN agg_quantifier expr RPAREN opt_filter opt_window_function
 {
-    agg, ok := algebra.GetAggregate($1, $3 == algebra.AGGREGATE_DISTINCT, ($6 != nil))
+    agg, ok := algebra.GetAggregate($1, $3 == algebra.AGGREGATE_DISTINCT, ($6 != nil), ($7 != nil))
     if ok {
         $$ = agg.Constructor()($4)
         if a, ok := $$.(algebra.Aggregate); ok {
-             a.SetAggregateModifiers($3, $6)
+             a.SetAggregateModifiers($3, $6, $7)
         }
     } else {
         yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1))
     }
 }
 |
-function_name LPAREN STAR RPAREN opt_window_clause
+function_name LPAREN STAR RPAREN opt_filter opt_window_function
 {
     if strings.ToLower($1) != "count" {
         yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", $1))
     } else {
-        agg, ok := algebra.GetAggregate($1, false, ($5 != nil))
+        agg, ok := algebra.GetAggregate($1, false, ($5 != nil), ($6 != nil))
         if ok {
             $$ = agg.Constructor()(nil)
             if a, ok := $$.(algebra.Aggregate); ok {
-                 a.SetAggregateModifiers(uint32(0), $5)
+                 a.SetAggregateModifiers(uint32(0), $5, $6)
             }
         } else {
             yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1))
@@ -3476,18 +3476,16 @@ DISTINCT expr
 }
 ;
 
-opt_window_clause:
-/* empty */
-{ $$ = nil }
-|
-window_clause
-{ $$ = $1 }
-;
+/*************************************************
+ *
+ * WINDOW clause
+ *
+ *************************************************/
 
-window_clause:
-OVER LPAREN opt_window_partition opt_order_by opt_window_frame RPAREN
+window_specification:
+LPAREN opt_window_partition opt_order_by opt_window_frame RPAREN
 {
-    $$ = algebra.NewWindowTerm($3,$4,$5)
+    $$ = algebra.NewWindowTerm($2,$3,$4)
 }
 ;
 
@@ -3510,7 +3508,6 @@ window_frame_modifier window_frame_extents opt_window_frame_exclusion
     $$ = algebra.NewWindowFrame($1|$3, $2)
 }
 ;
-
 
 window_frame_modifier:
 ROWS
@@ -3641,5 +3638,28 @@ ALL
 DISTINCT
 {
    $$ = algebra.AGGREGATE_DISTINCT
+}
+;
+
+opt_filter:
+/* empty */
+{ $$ = nil }
+|
+FILTER LPAREN where RPAREN
+{ $$ = $3 }
+;
+
+opt_window_function:
+/* empty */
+{ $$ = nil }
+|
+window_function_details
+{ $$ = $1 }
+;
+
+window_function_details:
+OVER window_specification
+{
+    $$ = $2
 }
 ;

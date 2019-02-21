@@ -29,9 +29,9 @@ type CumeDist struct {
 The function NewCumeDist calls NewAggregateBase to
 create an aggregate function named CumeDist
 */
-func NewCumeDist(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewCumeDist(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &CumeDist{
-		*NewAggregateBase("cume_dist", operands, flags, wTerm),
+		*NewAggregateBase("cume_dist", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -75,7 +75,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *CumeDist) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewCumeDist(operands, uint32(0), nil)
+		return NewCumeDist(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -86,7 +86,7 @@ Copy of the aggregate function
 func (this *CumeDist) Copy() expression.Expression {
 	rv := &CumeDist{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)

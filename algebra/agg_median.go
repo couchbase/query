@@ -29,9 +29,9 @@ The function NewMedian calls NewAggregateBase to
 create an aggregate function named Median with
 one expression as input.
 */
-func NewMedian(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewMedian(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Median{
-		*NewAggregateBase("median", operands, flags, wTerm),
+		*NewAggregateBase("median", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -65,7 +65,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Median) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewMedian(operands, uint32(0), nil)
+		return NewMedian(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -76,7 +76,7 @@ Copy of the aggregate function
 func (this *Median) Copy() expression.Expression {
 	rv := &Median{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)
@@ -99,6 +99,11 @@ arrayAdd to collect all the values of type NUMBER as the intermediate aggregate 
 and return it.
 */
 func (this *Median) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+	// apply filter if any
+	if ok, e := this.evaluateFilter(item, context); e != nil || !ok {
+		return cumulative, e
+	}
+
 	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e

@@ -32,9 +32,9 @@ The function NewCount calls NewAggregateBase to
 create an aggregate function named COUNT with
 one expression as input.
 */
-func NewCount(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewCount(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Count{
-		*NewAggregateBase("count", operands, flags, wTerm),
+		*NewAggregateBase("count", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -80,7 +80,7 @@ input operand cast to a Function as the FunctionConstructor.
 */
 func (this *Count) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewCount(operands, uint32(0), nil)
+		return NewCount(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -91,7 +91,7 @@ Copy of the aggregate function
 func (this *Count) Copy() expression.Expression {
 	rv := &Count{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)
@@ -113,6 +113,11 @@ null values return the input value itself. Call cumulatePart
 to compute the intermediate aggregate value and return it.
 */
 func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (r value.Value, e error) {
+
+	// apply filter if any
+	if ok, e := this.evaluateFilter(item, context); e != nil || !ok {
+		return cumulative, e
+	}
 
 	ops := this.Operands()
 	if ops[0] != nil {

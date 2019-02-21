@@ -671,6 +671,16 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 				}
 				windowAggs[str] = agg
 			}
+
+			if agg.Filter() != nil {
+				subqueries, err1 := expression.ListSubqueries(expression.Expressions{agg.Filter()}, false)
+				if err1 != nil {
+					return err1
+				}
+				if len(subqueries) > 0 {
+					return fmt.Errorf("subquries are not allowed in aggregate filter.")
+				}
+			}
 		} else if _, ok := expr.(*algebra.Subquery); !ok {
 			if err = collectAggregates(aggs, windowAggs, expr.Children()...); err != nil {
 				return err
@@ -786,7 +796,8 @@ func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggreg
 
 		for _, agg := range aggs {
 			aggIndexProperties := aggToIndexAgg(agg)
-			if aggIndexProperties == nil || !aggIndexProperties.supported {
+			if aggIndexProperties == nil || !aggIndexProperties.supported ||
+				(agg.Filter() != nil && !aggIndexProperties.filter) {
 				this.resetPushDowns()
 				return
 			}

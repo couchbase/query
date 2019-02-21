@@ -30,9 +30,9 @@ The function NewSum calls NewAggregateBase to
 create an aggregate function named SUM with
 one expression as input.
 */
-func NewSum(operands expression.Expressions, flags uint32, wTerm *WindowTerm) Aggregate {
+func NewSum(operands expression.Expressions, flags uint32, filter expression.Expression, wTerm *WindowTerm) Aggregate {
 	rv := &Sum{
-		*NewAggregateBase("sum", operands, flags, wTerm),
+		*NewAggregateBase("sum", operands, flags, filter, wTerm),
 	}
 
 	rv.SetExpr(rv)
@@ -66,7 +66,7 @@ cast to a Function as the FunctionConstructor.
 */
 func (this *Sum) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
-		return NewSum(operands, uint32(0), nil)
+		return NewSum(operands, uint32(0), nil, nil)
 	}
 }
 
@@ -77,7 +77,7 @@ Copy of the aggregate function
 func (this *Sum) Copy() expression.Expression {
 	rv := &Sum{
 		*NewAggregateBase(this.Name(), expression.CopyExpressions(this.Operands()),
-			this.Flags(), CopyWindowTerm(this.WindowTerm())),
+			this.Flags(), expression.Copy(this.Filter()), CopyWindowTerm(this.WindowTerm())),
 	}
 
 	rv.BaseCopy(this)
@@ -101,6 +101,11 @@ and return it.
 */
 
 func (this *Sum) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+	// apply filter if any
+	if ok, e := this.evaluateFilter(item, context); e != nil || !ok {
+		return cumulative, e
+	}
+
 	item, e := this.Operands()[0].Evaluate(item, context)
 	if e != nil {
 		return nil, e
