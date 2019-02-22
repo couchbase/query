@@ -170,7 +170,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 					continue
 				}
 
-				n, exact, err := index.Sargable(s.FieldName(), s.Query(), s.Options())
+				n, _, exact, _, err := index.Sargable(s.FieldName(), s.Query(), s.Options(), nil)
 				if err != nil {
 					return nil, err
 				}
