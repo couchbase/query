@@ -466,7 +466,7 @@ func (this *Search) Accept(visitor expression.Visitor) (interface{}, error) {
 }
 
 func (this *Search) Type() value.Type                           { return value.BOOLEAN }
-func (this *Search) MinArgs() int                               { return 3 }
+func (this *Search) MinArgs() int                               { return 2 }
 func (this *Search) MaxArgs() int                               { return 3 }
 func (this *Search) Indexable() bool                            { return false }
 func (this *Search) DependsOn(other expression.Expression) bool { return false }
@@ -548,51 +548,82 @@ func (this *Search) Query() expression.Expression {
 }
 
 func (this *Search) Options() expression.Expression {
-	return this.Operands()[2]
+	if len(this.Operands()) > 2 {
+		return this.Operands()[2]
+	}
+
+	return nil
 }
 
 func (this *Search) IndexName() (name string) {
-	name, _ = this.getIndexNameAndSlv(this.Options())
+	name, _, _ = this.getIndexNameAndOutName(this.Options())
 	return
 }
 
-func (this *Search) SlvName() string {
-	name, slv := this.getIndexNameAndSlv(this.Options())
-	if slv == "" {
-		slv = name
+func (this *Search) OutName() string {
+	_, outName, _ := this.getIndexNameAndOutName(this.Options())
+	if outName == "" {
+		outName = expression.DEF_OUTNAME
 	}
 
-	return slv
+	return outName
 }
 
 func (this *Search) IndexMetaField() expression.Expression {
-	return expression.NewField(this.Keyspace(), expression.NewFieldName(this.SlvName(), false))
+	return expression.NewField(this.Keyspace(), expression.NewFieldName(this.OutName(), false))
+
 }
 
-func (this *Search) getIndexNameAndSlv(arg expression.Expression) (index, slv string) {
+func (this *Search) getIndexNameAndOutName(arg expression.Expression) (index, outName string, err error) {
+	if arg == nil {
+		return
+	}
 	options := arg.Value()
 	if options == nil {
 		if oc, ok := arg.(*expression.ObjectConstruct); ok {
 			for name, val := range oc.Mapping() {
 				n := name.Value()
-				v := val.Value()
-				if n == nil || v == nil || n.Type() != value.STRING || v.Type() != value.STRING {
+				if n == nil || n.Type() != value.STRING {
 					continue
 				}
+
 				if n.Actual().(string) == "index" {
+					v := val.Value()
+					if v == nil || (v.Type() != value.STRING && v.Type() != value.OBJECT) {
+						err = fmt.Errorf("%s() not valid third argument: %v", this.Name(),
+							arg.String())
+						return
+
+					}
 					index, _ = v.Actual().(string)
-				} else if n.Actual().(string) == "slv" {
-					slv, _ = v.Actual().(string)
+				}
+
+				if n.Actual().(string) == "out" {
+					v := val.Value()
+					if v == nil || v.Type() != value.STRING {
+						err = fmt.Errorf("%s() not valid third argument: %v", this.Name(),
+							arg.String())
+						return
+					}
+					outName, _ = v.Actual().(string)
 				}
 			}
 		}
 	} else if options.Type() == value.OBJECT {
 		if val, ok := options.Field("index"); ok {
+			if val == nil || (val.Type() != value.STRING && val.Type() != value.OBJECT) {
+				err = fmt.Errorf("%s() not valid third argument: %v", this.Name(), arg.String())
+				return
+			}
 			index, _ = val.Actual().(string)
 		}
 
-		if val, ok := options.Field("slv"); ok {
-			slv, _ = val.Actual().(string)
+		if val, ok := options.Field("out"); ok {
+			if val == nil || val.Type() != value.STRING {
+				err = fmt.Errorf("%s() not valid third argument: %v", this.Name(), arg.String())
+				return
+			}
+			outName, _ = val.Actual().(string)
 		}
 	}
 
@@ -607,19 +638,14 @@ func (this *Search) ValidOperands() error {
 		return fmt.Errorf("%s() not valid first argument: %s", this.Name(), op.String())
 	}
 
-	op = this.Operands()[1]
+	op = this.Query()
 	val := op.Value()
 	if (val != nil && val.Type() != value.STRING && val.Type() != value.OBJECT) || op.Static() == nil {
 		return fmt.Errorf("%s() not valid second argument: %s", this.Name(), op.String())
 	}
 
-	op = this.Operands()[2]
-	if this.IndexName() == "" {
-		return fmt.Errorf("%s() not valid third argument or 'index' field is missing : %s",
-			this.Name(), op.String())
-	}
-
-	return nil
+	_, _, err := this.getIndexNameAndOutName(this.Options())
+	return err
 }
 
 type SearchMeta struct {
@@ -641,7 +667,7 @@ func (this *SearchMeta) Accept(visitor expression.Visitor) (interface{}, error) 
 }
 
 func (this *SearchMeta) Type() value.Type                           { return value.OBJECT }
-func (this *SearchMeta) MinArgs() int                               { return 1 }
+func (this *SearchMeta) MinArgs() int                               { return 0 }
 func (this *SearchMeta) MaxArgs() int                               { return 1 }
 func (this *SearchMeta) Indexable() bool                            { return false }
 func (this *SearchMeta) DependsOn(other expression.Expression) bool { return false }
@@ -662,34 +688,45 @@ func (this *SearchMeta) CoveredBy(keyspace string, exprs expression.Expressions,
 	return expression.CoveredFalse
 }
 
-func (this *SearchMeta) KeyspaceAlias() string {
+func (this *SearchMeta) Keyspace() *expression.Identifier {
 	op := this.Operands()[0]
-	if field, ok := op.(*expression.Field); ok && len(op.Children()) == 2 {
-		if keyspace, ok := field.First().(*expression.Identifier); ok {
-			return keyspace.Alias()
-		}
+	switch op := op.(type) {
+	case *expression.Identifier:
+		return op
+	case *expression.Field:
+		keyspace, _ := op.First().(*expression.Identifier)
+		return keyspace
+	default:
+		return nil
+	}
+}
+
+func (this *SearchMeta) KeyspaceAlias() string {
+	keyspace := this.Keyspace()
+	if keyspace != nil {
+		return keyspace.Alias()
 	}
 	return ""
 }
 
 func (this *SearchMeta) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	if this.keyspace == nil {
+
 		// Transform argument FROM ks.idxname TO META(ks).idxname
+		this.keyspace = this.Keyspace()
+		if this.keyspace == nil {
+			return value.NULL_VALUE, nil
+		}
+
 		op := this.Operands()[0]
-		field, ok := op.(*expression.Field)
 
-		if !ok || len(op.Children()) != 2 {
-			return value.NULL_VALUE, nil
+		if field, ok := op.(*expression.Field); ok {
+			if _, ok = field.First().(*expression.Identifier); !ok {
+				return value.NULL_VALUE, nil
+			}
+			this.second = field.Second().Value()
+			this.field = expression.NewField(nil, field.Second())
 		}
-
-		keyspace, ok := field.First().(*expression.Identifier)
-		if !ok {
-			return value.NULL_VALUE, nil
-		}
-
-		this.keyspace = keyspace
-		this.second = field.Second().Value()
-		this.field = expression.NewField(nil, field.Second())
 	}
 
 	val, err := this.getSmeta(this.keyspace, item, context)
@@ -697,10 +734,19 @@ func (this *SearchMeta) Evaluate(item value.Value, context expression.Context) (
 		return value.NULL_VALUE, err
 	}
 
-	return this.field.Apply(context, val, this.second)
+	if this.field != nil {
+		return this.field.Apply(context, val, this.second)
+	} else {
+		return val, err
+	}
 }
 
-func (this *SearchMeta) getSmeta(keyspace *expression.Identifier, item value.Value, context expression.Context) (value.Value, error) {
+func (this *SearchMeta) getSmeta(keyspace *expression.Identifier, item value.Value,
+	context expression.Context) (value.Value, error) {
+
+	if keyspace == nil {
+		return value.NULL_VALUE, nil
+	}
 
 	val, err := keyspace.Evaluate(item, context)
 	if err != nil {
@@ -746,7 +792,7 @@ func (this *SearchScore) Accept(visitor expression.Visitor) (interface{}, error)
 }
 
 func (this *SearchScore) Type() value.Type                           { return value.NUMBER }
-func (this *SearchScore) MinArgs() int                               { return 1 }
+func (this *SearchScore) MinArgs() int                               { return 0 }
 func (this *SearchScore) MaxArgs() int                               { return 1 }
 func (this *SearchScore) Indexable() bool                            { return false }
 func (this *SearchScore) DependsOn(other expression.Expression) bool { return false }
@@ -768,12 +814,23 @@ func (this *SearchScore) CoveredBy(keyspace string, exprs expression.Expressions
 	return expression.CoveredFalse
 }
 
-func (this *SearchScore) KeyspaceAlias() string {
+func (this *SearchScore) Keyspace() *expression.Identifier {
 	op := this.Operands()[0]
-	if field, ok := op.(*expression.Field); ok && len(op.Children()) == 2 {
-		if keyspace, ok := field.First().(*expression.Identifier); ok {
-			return keyspace.Alias()
-		}
+	switch op := op.(type) {
+	case *expression.Identifier:
+		return op
+	case *expression.Field:
+		keyspace, _ := op.First().(*expression.Identifier)
+		return keyspace
+	default:
+		return nil
+	}
+}
+
+func (this *SearchScore) KeyspaceAlias() string {
+	keyspace := this.Keyspace()
+	if keyspace != nil {
+		return keyspace.Alias()
 	}
 	return ""
 }

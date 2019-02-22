@@ -222,11 +222,11 @@ type FTSSearchInfo struct {
 	offset  expression.Expression
 	limit   expression.Expression
 	order   []string
-	slv     string
+	outName string
 }
 
 func NewFTSSearchInfo(field, query, options, offset, limit expression.Expression,
-	order []string, slv string) *FTSSearchInfo {
+	order []string, outName string) *FTSSearchInfo {
 
 	return &FTSSearchInfo{
 		field:   field,
@@ -235,7 +235,7 @@ func NewFTSSearchInfo(field, query, options, offset, limit expression.Expression
 		offset:  offset,
 		limit:   limit,
 		order:   order,
-		slv:     slv,
+		outName: outName,
 	}
 }
 
@@ -247,7 +247,7 @@ func (this *FTSSearchInfo) Copy() *FTSSearchInfo {
 		offset:  expression.Copy(this.offset),
 		limit:   expression.Copy(this.limit),
 		order:   this.order,
-		slv:     this.slv,
+		outName: this.outName,
 	}
 }
 
@@ -279,8 +279,8 @@ func (this *FTSSearchInfo) Order() []string {
 	return this.order
 }
 
-func (this *FTSSearchInfo) Slv() string {
-	return this.slv
+func (this *FTSSearchInfo) OutName() string {
+	return this.outName
 }
 
 func (this *FTSSearchInfo) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
@@ -309,7 +309,7 @@ func (this *FTSSearchInfo) MarshalBase(f func(map[string]interface{})) map[strin
 		r["order"] = this.order
 	}
 
-	r["slv"] = this.slv
+	r["outname"] = this.outName
 
 	if f != nil {
 		f(r)
@@ -325,7 +325,7 @@ func (this *FTSSearchInfo) UnmarshalJSON(body []byte) error {
 		Offset  string   `json:"offset"`
 		Limit   string   `json:"limit"`
 		Order   []string `json:"order"`
-		Slv     string   `json:"slv"`
+		OutName string   `json:"outname"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -369,7 +369,7 @@ func (this *FTSSearchInfo) UnmarshalJSON(body []byte) error {
 	}
 
 	this.order = _unmarshalled.Order
-	this.slv = _unmarshalled.Slv
+	this.outName = _unmarshalled.OutName
 
 	return nil
 }

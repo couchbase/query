@@ -25,6 +25,10 @@ const (
 	FORM_INDEX_SCOPE              // formalizing index key or index condition
 )
 
+const (
+	DEF_OUTNAME = "out"
+)
+
 /*
 Convert expressions to full form qualified by keyspace aliases.
 */
@@ -279,14 +283,34 @@ Formalize META() functions defined on indexes.
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 	if !this.mapKeyspace() {
 		fnName := expr.Name()
-		if len(expr.Operands()) == 0 &&
-			(fnName == "meta" || fnName == "search_meta" || fnName == "search_score") {
-			if this.keyspace != "" {
-				keyspaceIdent := NewIdentifier(this.keyspace)
-				keyspaceIdent.SetKeyspaceAlias(true)
-				return expr.Constructor()(keyspaceIdent), nil
-			} else {
-				return nil, errors.NewAmbiguousMetaError(fnName)
+		if fnName == "meta" || fnName == "search_meta" || fnName == "search_score" {
+			if len(expr.Operands()) == 0 {
+				if this.keyspace != "" {
+					keyspaceIdent := NewIdentifier(this.keyspace)
+					keyspaceIdent.SetKeyspaceAlias(true)
+					var op Expression
+					op = keyspaceIdent
+					if fnName == "search_meta" || fnName == "search_score" {
+						op = NewField(keyspaceIdent, NewFieldName(DEF_OUTNAME, false))
+					}
+					return expr.Constructor()(op), nil
+				} else {
+					return nil, errors.NewAmbiguousMetaError(fnName)
+				}
+			} else if len(expr.Operands()) == 1 && (fnName == "search_meta" || fnName == "search_score") {
+				op := expr.Operands()[0]
+				if keyspaceIdent, ok := op.(*Identifier); ok {
+					alias := this.keyspace
+					if this.keyspace == "" {
+						if _, ok = this.Allowed().Field(keyspaceIdent.Alias()); ok {
+							alias = keyspaceIdent.Alias()
+						}
+					}
+					if keyspaceIdent.Alias() == alias {
+						op = NewField(keyspaceIdent, NewFieldName(DEF_OUTNAME, false))
+						return expr.Constructor()(op), nil
+					}
+				}
 			}
 		}
 	}

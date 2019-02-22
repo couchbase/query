@@ -91,7 +91,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 			scope_value = nil
 		}
 
-		slvName := this.plan.SearchInfo().Slv()
+		outName := this.plan.SearchInfo().OutName()
 		covers := this.plan.Covers()
 
 		for ok {
@@ -112,7 +112,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 						av.SetCover(covers[3].Text(), smeta)
 						av.SetField(this.plan.Term().Alias(), av)
 					}
-					av.SetAttachment("smeta", map[string]interface{}{slvName: entry.MetaData})
+					av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
 					av.SetBit(this.bit)
 					ok = this.sendItem(av)
 					docs++
@@ -172,7 +172,7 @@ func (this *IndexFtsSearch) planToSearchMapping(context *Context,
 			fmt.Sprintf("Search() function Query parameter must be string or object.")))
 	}
 
-	if indexSearchInfo.Options == nil || indexSearchInfo.Options.Type() != value.OBJECT {
+	if indexSearchInfo.Options != nil && indexSearchInfo.Options.Type() != value.OBJECT {
 		context.Error(errors.NewInvalidValueError(
 			fmt.Sprintf("Search() function Options parameter must be object.")))
 	}
@@ -224,7 +224,7 @@ func SetSearchInfo(aliasMap map[string]string, item value.Value,
 
 			if err == nil {
 				o, _, err = evalOne(sfn.Options(), context, item)
-				if err != nil || o == nil || o.Type() != value.OBJECT {
+				if err != nil || (o != nil && o.Type() != value.OBJECT) {
 					err = fmt.Errorf("%v function Options parameter must be object.", sfn)
 				}
 			}

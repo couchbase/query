@@ -88,7 +88,7 @@ func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.Keyspa
 
 	return plan.NewIndexFtsSearch(index, node,
 		plan.NewFTSSearchInfo(expression.NewConstant(sfn.FieldName()), sfn.Query(), sfn.Options(),
-			this.offset, this.limit, order, sfn.SlvName()), covers)
+			this.offset, this.limit, order, sfn.OutName()), covers)
 }
 
 func (this *builder) searchPagination(searchSargables []*indexEntry, pred expression.Expression) (
@@ -105,11 +105,26 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 	limit := getLimitOffset(this.limit, math.MaxInt64)
 
 	if this.order != nil && len(this.order.Terms()) == 1 {
+		var hashProj map[string]expression.Expression
+
+		if this.projection != nil {
+			hashProj = make(map[string]expression.Expression, len(this.projection.Terms()))
+			for _, term := range this.projection.Terms() {
+				hashProj[term.Alias()] = term.Expression()
+			}
+		}
+
 		orderTerm := this.order.Terms()[0]
-		if scorefn, ok := orderTerm.Expression().(*search.SearchScore); ok {
+		oExpr := orderTerm.Expression()
+		if projexpr, projalias := hashProj[oExpr.Alias()]; projalias {
+			oExpr = projexpr
+		}
+
+		if scorefn, ok := oExpr.(*search.SearchScore); ok {
 			for _, entry := range searchSargables {
 				sfn, ok := entry.sargKeys[0].(*search.Search)
-				if ok && expression.Equivalent(sfn.IndexMetaField(), scorefn.IndexMetaField()) {
+				if ok && expression.Equivalent(sfn.IndexMetaField(),
+					scorefn.IndexMetaField()) {
 					index := entry.index.(datastore.FTSIndex)
 					collation := " ASC"
 					if orderTerm.Descending() {
@@ -152,40 +167,46 @@ func getLimitOffset(expr expression.Expression, defval int64) int64 {
 func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expression.Expression,
 	searchFns map[string]*search.Search) (searchSargables []*indexEntry, err error) {
 
-	if len(searchFns) == 0 {
-		return
-	}
-
 	searchSargables = make([]*indexEntry, 0, len(searchFns))
-	for _, idx := range indexes {
-		index, ok := idx.(datastore.FTSIndex)
-		if !ok {
+
+	for _, s := range searchFns {
+		siname := s.IndexName()
+		keys := expression.Expressions{s.Copy()}
+		if !SubsetOf(pred, keys[0]) {
 			continue
 		}
 
-		for _, s := range searchFns {
-			if s.IndexName() == index.Name() {
-				keys := expression.Expressions{s.Copy()}
-				if !SubsetOf(pred, keys[0]) {
-					continue
-				}
+		var mappings interface{}
+		var n int
+		var size, esize int64
+		var exact bool
+		var entry *indexEntry
 
-				n, _, exact, _, err := index.Sargable(s.FieldName(), s.Query(), s.Options(), nil)
-				if err != nil {
-					return nil, err
-				}
+		qprams := s.Query().Value() == nil || (s.Options() != nil && s.Options().Value() == nil)
 
-				if n == 0 {
-					continue
-				}
-
-				if exact && (s.Query().Value() == nil || s.Options().Value() == nil) {
-					exact = false
-				}
-				entry := &indexEntry{
-					index, keys, keys, nil, 1, 1, nil, nil, nil, exact, _PUSHDOWN_NONE}
-				searchSargables = append(searchSargables, entry)
+		for _, idx := range indexes {
+			index, ok := idx.(datastore.FTSIndex)
+			if !ok || (siname != "" && siname != index.Name()) {
+				continue
 			}
+
+			n, size, exact, mappings, err = index.Sargable(s.FieldName(), s.Query(), s.Options(), mappings)
+			if err != nil {
+				return nil, err
+			}
+
+			if n > 0 {
+				exact = exact && !qprams
+				if entry == nil || size < esize {
+					entry = &indexEntry{
+						index, keys, keys, nil, 1, 1, nil, nil, nil, exact, _PUSHDOWN_NONE}
+					esize = size
+				}
+			}
+		}
+
+		if entry != nil {
+			searchSargables = append(searchSargables, entry)
 		}
 	}
 
