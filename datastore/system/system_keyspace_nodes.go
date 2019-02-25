@@ -182,7 +182,7 @@ func (pi *nodeIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 	} else {
 		var numProduced int64 = 0
 
-		defer close(conn.EntryChannel())
+		defer conn.Sender().Close()
 		spanEvaluator, err := compileSpan(span)
 		if err != nil {
 			conn.Error(err)
@@ -212,7 +212,7 @@ func (pi *nodeIndex) ScanEntries(requestId string, limit int64, cons datastore.S
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	var numProduced int64 = 0
 
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 	info := pi.keyspace.namespace.store.actualStore.Info()
 	topology, errs := info.Topology()
 	for _, key := range topology {

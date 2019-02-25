@@ -252,7 +252,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 	if span == nil {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
-		defer close(conn.EntryChannel())
+		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
 		if err != nil {
@@ -303,7 +303,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 
 func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()

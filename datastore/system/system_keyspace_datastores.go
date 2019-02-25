@@ -180,13 +180,13 @@ func (pi *storeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 			entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
 			sendSystemKey(conn, &entry)
 		}
-		close(conn.EntryChannel())
+		conn.Sender().Close()
 	}
 }
 
 func (pi *storeIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
 	sendSystemKey(conn, &entry)

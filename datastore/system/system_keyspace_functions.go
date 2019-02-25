@@ -195,13 +195,13 @@ func (pi *functionsIndex) Scan(requestId string, span *datastore.Span, distinct 
 			entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
 			sendSystemKey(conn, &entry)
 		}
-		close(conn.EntryChannel())
+		conn.Sender().Close()
 	}
 }
 
 func (pi *functionsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	err := metakv.IterateChildren(_FUNC_PATH, func(path string, value []byte, rev interface{}) error {
 		entry := datastore.IndexEntry{PrimaryKey: path[len(_FUNC_PATH):]}

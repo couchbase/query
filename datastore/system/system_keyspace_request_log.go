@@ -322,7 +322,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
 		var entry *datastore.IndexEntry
-		defer close(conn.EntryChannel())
+		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
 		if err != nil {
@@ -398,7 +398,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	var entry *datastore.IndexEntry
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	// now that the node name can change in flight, use a consistent one across the scan
 	whoAmI := distributed.RemoteAccess().WhoAmI()

@@ -70,7 +70,8 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	defer this.switchPhase(_NOTIME)
 	conn := datastore.NewIndexConnection(context)
 	conn.SetPrimary()
-	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+	defer conn.Dispose()  // Dispose of the connection
+	defer conn.SendStop() // Notify index that I have stopped
 
 	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, false, context)
 
@@ -87,7 +88,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 	var lastEntry *datastore.IndexEntry
 	for {
-		entry, ok := this.getItemEntry(conn.EntryChannel())
+		entry, ok := this.getItemEntry(conn)
 		if ok {
 			if entry != nil {
 				// current policy is to only count 'in' documents
@@ -134,7 +135,8 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 	this.switchPhase(_EXECTIME)
 	defer this.switchPhase(_NOTIME)
-	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+	defer conn.Dispose()  // Dispose of the connection
+	defer conn.SendStop() // Notify index that I have stopped
 
 	go this.scanChunk(context, conn, limit, indexEntry)
 
@@ -148,7 +150,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 	var lastEntry *datastore.IndexEntry
 	for {
-		entry, ok := this.getItemEntry(conn.EntryChannel())
+		entry, ok := this.getItemEntry(conn)
 		if ok {
 			if entry != nil {
 				av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)

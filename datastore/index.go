@@ -443,11 +443,20 @@ type Statistics interface {
 }
 
 type IndexConnection struct {
+	sender       idxEntryChannel
 	entryChannel EntryChannel // Closed by the index when the scan is completed or aborted.
 	stopChannel  StopChannel  // Notifies index to stop scanning. Never closed, just garbage-collected.
 	context      Context
 	timeout      bool
 	primary      bool
+}
+
+type Sender interface {
+	SendEntry(entry *IndexEntry) bool
+	Close()
+	Capacity() int
+	Length() int
+	IsStopped() bool
 }
 
 const _ENTRY_CAP = 512 // Default index scan request size
@@ -459,11 +468,13 @@ func NewIndexConnection(context Context) *IndexConnection {
 		size = _ENTRY_CAP
 	}
 
-	return &IndexConnection{
+	rv := &IndexConnection{
 		entryChannel: make(EntryChannel, size),
 		stopChannel:  make(StopChannel, 1),
 		context:      context,
 	}
+	newEntryChannel(&rv.sender, rv)
+	return rv
 }
 
 var scanCap atomic.AlignedInt64
@@ -494,11 +505,28 @@ func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, err
 		size = maxSize
 	}
 
-	return &IndexConnection{
+	rv := &IndexConnection{
 		entryChannel: make(EntryChannel, size),
 		stopChannel:  make(StopChannel, 1),
 		context:      context,
-	}, nil
+	}
+	newEntryChannel(&rv.sender, rv)
+	return rv, nil
+}
+
+func (this *IndexConnection) Dispose() {
+	// Entry Exchange expects two closes, one from the sender and one from the receiver
+	// the first marks the connection has having completed the data
+	// the second marks all actors as gone, meaning the connection can be recycled
+	// this.sender.Close()
+}
+
+func (this *IndexConnection) SendStop() {
+	this.sender.sendStop()
+}
+
+func (this *IndexConnection) Sender() Sender {
+	return &this.sender
 }
 
 func (this *IndexConnection) EntryChannel() EntryChannel {

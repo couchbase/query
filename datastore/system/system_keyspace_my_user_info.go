@@ -205,7 +205,7 @@ func (pi *myUserInfoIndex) Scan(requestId string, span *datastore.Span, distinct
 
 func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 	sliceOfUsers, err := getUserInfoList(pi.keyspace.namespace.store)
 	if err != nil {
 		conn.Fatal(err)

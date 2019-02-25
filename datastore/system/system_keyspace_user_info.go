@@ -220,7 +220,7 @@ func userInfoListToMap(sliceOfUsers []interface{}) (map[string]value.Value, erro
 
 func (pi *userInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	sliceOfUsers, err := getUserInfoList(pi.keyspace.namespace.store)
 	if err != nil {

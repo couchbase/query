@@ -73,13 +73,14 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 
 		id := idv.Actual().(string)
 		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+		defer conn.Dispose()  // Dispose of the connection
+		defer conn.SendStop() // Notify index that I have stopped
 
 		wg.Add(1)
 		go this.scan(id, context, conn, &wg)
 
 		for {
-			entry, cont := this.getItemEntry(conn.EntryChannel())
+			entry, cont := this.getItemEntry(conn)
 			if cont {
 				if entry != nil {
 					// current policy is to only count 'in' documents
@@ -126,7 +127,6 @@ func (this *IndexJoin) scan(id string, context *Context,
 
 	this.plan.Index().Scan(context.RequestId(), span, false,
 		math.MaxInt64, consistency, nil, conn)
-
 	wg.Done()
 }
 

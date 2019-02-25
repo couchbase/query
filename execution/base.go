@@ -442,7 +442,7 @@ func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
 	}
 }
 
-func (this *base) getItemEntry(channel datastore.EntryChannel) (*datastore.IndexEntry, bool) {
+func (this *base) getItemEntry(conn *datastore.IndexConnection) (*datastore.IndexEntry, bool) {
 
 	// this is used explictly to get keys from the indexer
 	// so by definition we are tracking service time
@@ -457,7 +457,7 @@ func (this *base) getItemEntry(channel datastore.EntryChannel) (*datastore.Index
 	}
 
 	select {
-	case item, ok := <-channel:
+	case item, ok := <-conn.EntryChannel():
 		if ok {
 
 			// getItemEntry does not keep track of

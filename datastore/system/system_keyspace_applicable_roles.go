@@ -171,7 +171,7 @@ func (pi *applicableRolesIndex) Drop(requestId string) errors.Error {
 
 func (pi *applicableRolesIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	if span == nil {
 		pi.scanEntries(limit, conn, nil)
@@ -187,7 +187,7 @@ func (pi *applicableRolesIndex) Scan(requestId string, span *datastore.Span, dis
 
 func (pi *applicableRolesIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	pi.scanEntries(limit, conn, nil)
 }

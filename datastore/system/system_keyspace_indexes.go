@@ -366,7 +366,7 @@ func canListIndexes(context datastore.QueryContext, namespace string, keyspace s
 
 func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	// eliminate duplicate keys
 	keys := make(map[string]string, 64)

@@ -70,7 +70,8 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()                          // Notify that I have stopped
 
 		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+		defer conn.Dispose()  // Dispose of the connection
+		defer conn.SendStop() // Notify index that I have stopped
 
 		go this.search(context, conn, parent)
 
@@ -95,7 +96,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 		covers := this.plan.Covers()
 
 		for ok {
-			entry, cont := this.getItemEntry(conn.EntryChannel())
+			entry, cont := this.getItemEntry(conn)
 			if cont {
 				if entry != nil {
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
@@ -139,7 +140,7 @@ func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnec
 	index, ok := this.plan.Index().(datastore.FTSIndex)
 	if err != nil || !ok {
 		context.Error(errors.NewEvaluationError(err, "searchinfo"))
-		close(conn.EntryChannel())
+		conn.Sender().Close()
 		return
 	}
 

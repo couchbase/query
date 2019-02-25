@@ -160,7 +160,8 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()                          // Notify that I have stopped
 
 		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+		defer conn.Dispose()  // Dispose of the connection
+		defer conn.SendStop() // Notify index that I have stopped
 
 		go this.scan(context, conn, parent)
 
@@ -182,7 +183,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		for ok {
-			entry, cont := this.getItemEntry(conn.EntryChannel())
+			entry, cont := this.getItemEntry(conn)
 			if cont {
 				if entry != nil {
 
@@ -240,7 +241,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "span"))
 		}
-		close(conn.EntryChannel())
+		conn.Sender().Close()
 		return
 	}
 

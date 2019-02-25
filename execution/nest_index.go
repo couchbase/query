@@ -71,13 +71,14 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 
 		id := idv.Actual().(string)
 		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+		defer conn.Dispose()  // Dispose of the connection
+		defer conn.SendStop() // Notify index that I have stopped
 
 		wg.Add(1)
 		go this.scan(id, context, conn, &wg)
 
 		for {
-			entry, ok := this.getItemEntry(conn.EntryChannel())
+			entry, ok := this.getItemEntry(conn)
 			if ok {
 				if entry != nil {
 					// current policy is to only count 'in' documents
@@ -120,7 +121,6 @@ func (this *IndexNest) scan(id string, context *Context,
 
 	this.plan.Index().Scan(context.RequestId(), span, false,
 		math.MaxInt64, consistency, nil, conn)
-
 	wg.Done()
 }
 
