@@ -162,7 +162,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				}
 			}
 		}
-		this.resetProjection()
 	}
 
 	// Identify aggregates for index pushdown for old releases
