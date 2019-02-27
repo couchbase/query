@@ -600,7 +600,7 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 	rv := namespace{
 		store:         s,
 		name:          name,
-		cbNamespace:   cbpool,
+		cbNamespace:   &cbpool,
 		keyspaceCache: make(map[string]*keyspaceEntry),
 	}
 
@@ -611,7 +611,7 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 type namespace struct {
 	store         *store
 	name          string
-	cbNamespace   cb.Pool
+	cbNamespace   *cb.Pool
 	keyspaceCache map[string]*keyspaceEntry
 	version       uint64
 	lock          sync.RWMutex // lock to guard the keyspaceCache
@@ -805,13 +805,17 @@ func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
 	return p.keyspaceByName(name)
 }
 
-func (p *namespace) setPool(cbpool cb.Pool) {
+func (p *namespace) setPool(cbpool *cb.Pool) {
 	p.nslock.Lock()
-	defer p.nslock.Unlock()
+	oldPool := p.cbNamespace
 	p.cbNamespace = cbpool
+	p.nslock.Unlock()
+
+	// MB-33185 let go of old pool
+	oldPool.Close()
 }
 
-func (p *namespace) getPool() cb.Pool {
+func (p *namespace) getPool() *cb.Pool {
 	p.nslock.RLock()
 	defer p.nslock.RUnlock()
 	return p.cbNamespace
@@ -890,7 +894,7 @@ func (p *namespace) refresh(changed bool) {
 	}
 
 	if changed == true {
-		p.setPool(newpool)
+		p.setPool(&newpool)
 
 		// keyspaces have been reloaded, force full auto reprepare check
 		p.version++
