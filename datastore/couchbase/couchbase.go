@@ -599,7 +599,7 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 	rv := namespace{
 		store:         s,
 		name:          name,
-		cbNamespace:   cbpool,
+		cbNamespace:   &cbpool,
 		keyspaceCache: make(map[string]*keyspaceEntry),
 	}
 
@@ -610,7 +610,7 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 type namespace struct {
 	store         *store
 	name          string
-	cbNamespace   cb.Pool
+	cbNamespace   *cb.Pool
 	keyspaceCache map[string]*keyspaceEntry
 	version       uint64
 	lock          sync.RWMutex // lock to guard the keyspaceCache
@@ -763,13 +763,17 @@ func (p *namespace) MetadataVersion() uint64 {
 	return p.version
 }
 
-func (p *namespace) setPool(cbpool cb.Pool) {
+func (p *namespace) setPool(cbpool *cb.Pool) {
 	p.nslock.Lock()
-	defer p.nslock.Unlock()
+	oldPool := p.cbNamespace
 	p.cbNamespace = cbpool
+	p.nslock.Unlock()
+
+	// MB-33185 let go of old pool
+	oldPool.Close()
 }
 
-func (p *namespace) getPool() cb.Pool {
+func (p *namespace) getPool() *cb.Pool {
 	p.nslock.RLock()
 	defer p.nslock.RUnlock()
 	return p.cbNamespace
@@ -841,7 +845,7 @@ func (p *namespace) refresh(changed bool) {
 	}
 
 	if changed == true {
-		p.setPool(newpool)
+		p.setPool(&newpool)
 		p.version++
 	}
 }
@@ -1193,7 +1197,7 @@ func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32,
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("Recovered in f", r)
+			err = fmt.Errorf("Recovered in f %v", r)
 		}
 	}()
 
