@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -31,26 +30,15 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-// known nodes
-type knownNode struct {
-	node       clustering.QueryNode
-	lastAccess time.Time
-}
-
-const _GRACE_PERIOD = 5 * time.Minute
-
 // http implementation of SystemRemoteAccess
 type systemRemoteHttp struct {
-	sync.RWMutex
 	state       clustering.Mode
 	configStore clustering.ConfigurationStore
-	knownNodes  map[string]*knownNode
 }
 
 func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) distributed.SystemRemoteAccess {
 	return &systemRemoteHttp{
 		configStore: cfgStore,
-		knownNodes:  make(map[string]*knownNode),
 	}
 }
 
@@ -129,8 +117,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 	// no nodes means all nodes
 	if len(nodes) == 0 {
 
-		cm := this.configStore.ConfigurationManager()
-		clusters, err := cm.GetClusters()
+		clusters, err := this.configStore.ClusterNames()
 		if err != nil {
 			if warnFn != nil {
 				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
@@ -138,9 +125,8 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 			return
 		}
 
-		for _, c := range clusters {
-			clm := c.ClusterManager()
-			queryNodes, err := clm.GetQueryNodes()
+		for c, _ := range clusters {
+			cl, err := this.configStore.ClusterByName(clusters[c])
 			if err != nil {
 				if warnFn != nil {
 					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
@@ -148,11 +134,26 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			for _, queryNode := range queryNodes {
-				node := queryNode.Name()
+			queryNodeNames, err := cl.QueryNodeNames()
+			if err != nil {
+				if warnFn != nil {
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+				}
+				continue
+			}
+
+			for n, _ := range queryNodeNames {
+				node := queryNodeNames[n]
 
 				// skip ourselves, we will be processed locally
 				if node == whoAmI {
+					continue
+				}
+				queryNode, err := this.getQueryNode(node, "scan", endpoint)
+				if err != nil {
+					if warnFn != nil {
+						warnFn(err)
+					}
 					continue
 				}
 
@@ -276,8 +277,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 	// no nodes means all nodes
 	if len(nodes) == 0 {
 
-		cm := this.configStore.ConfigurationManager()
-		clusters, err := cm.GetClusters()
+		clusters, err := this.configStore.ClusterNames()
 		if err != nil {
 			if warnFn != nil {
 				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
@@ -285,9 +285,15 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 			return
 		}
 
-		for _, c := range clusters {
-			clm := c.ClusterManager()
-			queryNodes, err := clm.GetQueryNodes()
+		for c, _ := range clusters {
+			cl, err := this.configStore.ClusterByName(clusters[c])
+			if err != nil {
+				if warnFn != nil {
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+				}
+				continue
+			}
+			queryNodeNames, err := cl.QueryNodeNames()
 			if err != nil {
 				if warnFn != nil {
 					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
@@ -295,14 +301,21 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 				continue
 			}
 
-			for _, queryNode := range queryNodes {
-				node := queryNode.Name()
+			for n, _ := range queryNodeNames {
+				node := queryNodeNames[n]
 
 				// skip ourselves, we will be processed locally
 				if node == whoAmI {
 					continue
 				}
 
+				queryNode, err := this.getQueryNode(node, "scan", endpoint)
+				if err != nil {
+					if warnFn != nil {
+						warnFn(err)
+					}
+					continue
+				}
 				_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
 				if warnFn != nil {
 					warnFn(opErr)
@@ -396,21 +409,6 @@ func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint str
 		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
 	}
 
-	// save this query node for posterity
-	this.RLock()
-	k, ok := this.knownNodes[node.Name()]
-	if ok && k.node == node {
-		k.lastAccess = time.Now()
-		this.RUnlock()
-	} else {
-		this.RUnlock()
-		this.Lock()
-
-		k = &knownNode{node: node, lastAccess: time.Now()}
-		this.knownNodes[node.Name()] = k
-		this.Unlock()
-	}
-
 	// we got a response, but the operation failed: extract the error
 	if resp.StatusCode != 200 {
 		var opErr errors.Error
@@ -430,34 +428,23 @@ func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint str
 
 // helper to map a node name to a node
 func (this *systemRemoteHttp) getQueryNode(node string, op string, endpoint string) (clustering.QueryNode, errors.Error) {
-	this.RLock()
-	k := this.knownNodes[node]
-	this.RUnlock()
-	if k != nil && time.Since(k.lastAccess) < _GRACE_PERIOD {
-		return k.node, nil
-	}
-
 	if this.configStore == nil {
 		return nil, errors.NewSystemRemoteWarning(goErr.New("missing config store"), op, endpoint)
 	}
 
-	cm := this.configStore.ConfigurationManager()
-	clusters, err := cm.GetClusters()
+	clusters, err := this.configStore.ClusterNames()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, c := range clusters {
-		clm := c.ClusterManager()
-		queryNodes, err := clm.GetQueryNodes()
+	for c, _ := range clusters {
+		cl, err := this.configStore.ClusterByName(clusters[c])
 		if err != nil {
-			continue
+			return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
 		}
-
-		for _, queryNode := range queryNodes {
-			if queryNode.Name() == node {
-				return queryNode, nil
-			}
+		queryNode, err := cl.QueryNodeByName(node)
+		if queryNode != nil && err == nil {
+			return queryNode, nil
 		}
 	}
 	return nil, errors.NewSystemRemoteWarning(fmt.Errorf("node %v not found", node), op, endpoint)
@@ -510,21 +497,23 @@ func (this *systemRemoteHttp) GetNodeNames() []string {
 	if len(this.WhoAmI()) == 0 {
 		return names
 	}
-	cm := this.configStore.ConfigurationManager()
-	clusters, err := cm.GetClusters()
+	clusters, err := this.configStore.ClusterNames()
 	if err != nil {
 		return names
 	}
 
-	for _, c := range clusters {
-		clm := c.ClusterManager()
-		queryNodes, err := clm.GetQueryNodes()
+	for c, _ := range clusters {
+		cl, err := this.configStore.ClusterByName(clusters[c])
+		if err != nil {
+			continue
+		}
+		queryNodeNames, err := cl.QueryNodeNames()
 		if err != nil {
 			continue
 		}
 
-		for _, queryNode := range queryNodes {
-			names = append(names, queryNode.Name())
+		for n, _ := range queryNodeNames {
+			names = append(names, queryNodeNames[n])
 		}
 	}
 	return names
