@@ -11,6 +11,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -70,16 +71,23 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		switch actuals := actuals.(type) {
 		case []interface{}:
 			for _, key := range actuals {
-				av := this.newEmptyDocumentWithKey(key, parent, context)
-				if !this.sendItem(av) {
-					break
+				k := value.NewValue(key).Actual()
+				if _, ok := k.(string); ok {
+					av := this.newEmptyDocumentWithKey(key, parent, context)
+					if !this.sendItem(av) {
+						break
+					}
+				} else {
+					context.Warning(errors.NewWarning(fmt.Sprintf("Document key must be string: %v", k)))
 				}
 			}
-		default:
+		case string:
 			av := this.newEmptyDocumentWithKey(actuals, parent, context)
 			if !this.sendItem(av) {
 				break
 			}
+		default:
+			context.Warning(errors.NewWarning(fmt.Sprintf("Document key must be string: %v", actuals)))
 		}
 	})
 }
