@@ -73,7 +73,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 	}
 
-	searchOrderEntry, searchOrders, _ := this.searchPagination(searchSargables, pred)
+	searchOrderEntry, searchOrders, _ := this.searchPagination(searchSargables, pred, node.Alias())
 	if orderEntry == nil {
 		orderEntry = searchOrderEntry
 	}
@@ -158,7 +158,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	for _, entry := range searchSargables {
 		sfn := entry.sargKeys[0].(*search.Search)
-		scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, nil)
+		scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, nil, nil)
 		if entry == orderEntry {
 			scans[0] = scan
 		} else {

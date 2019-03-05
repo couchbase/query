@@ -48,11 +48,15 @@ func (this *builder) buildSearchCoveringScan(searchSargables []*indexEntry, node
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
 	sfn := entry.sargKeys[0].(*search.Search)
-	coveringExprs := make(expression.Expressions, 0, len(entry.keys)+3)
-	coveringExprs = append(coveringExprs, entry.keys...)
-	coveringExprs = append(coveringExprs, id)
-	coveringExprs = append(coveringExprs, search.NewSearchScore(sfn.IndexMetaField()))
-	coveringExprs = append(coveringExprs, search.NewSearchMeta(sfn.IndexMetaField()))
+	keys := make(expression.Expressions, 0, len(entry.keys)+3)
+	keys = append(keys, entry.keys...)
+	keys = append(keys, id, search.NewSearchScore(sfn.IndexMetaField()),
+		search.NewSearchMeta(sfn.IndexMetaField()))
+
+	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, pred, alias)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	for _, expr := range exprs {
 		if !expression.IsCovered(expr, alias, coveringExprs) {
@@ -60,22 +64,22 @@ func (this *builder) buildSearchCoveringScan(searchSargables []*indexEntry, node
 		}
 	}
 
-	covers := make(expression.Covers, 0, len(coveringExprs))
-	for _, expr := range coveringExprs {
+	covers := make(expression.Covers, 0, len(keys))
+	for _, expr := range keys {
 		covers = append(covers, expression.NewCover(expr))
 	}
 
-	searchOrderEntry, searchOrders, _ := this.searchPagination(searchSargables, pred)
-
-	this.resetProjection()
 	if this.group != nil {
 		this.resetPushDowns()
 	}
 
+	searchOrderEntry, searchOrders, _ := this.searchPagination(searchSargables, pred, alias)
+	this.resetProjection()
+
 	if this.order != nil && searchOrderEntry == nil {
 		this.resetOrderOffsetLimit()
 	}
-	scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, covers)
+	scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, covers, filterCovers)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -84,20 +88,22 @@ func (this *builder) buildSearchCoveringScan(searchSargables []*indexEntry, node
 }
 
 func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.KeyspaceTerm,
-	sfn *search.Search, order []string, covers expression.Covers) plan.SecondaryScan {
+	sfn *search.Search, order []string, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	return plan.NewIndexFtsSearch(index, node,
 		plan.NewFTSSearchInfo(expression.NewConstant(sfn.FieldName()), sfn.Query(), sfn.Options(),
-			this.offset, this.limit, order, sfn.OutName()), covers)
+			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers)
 }
 
-func (this *builder) searchPagination(searchSargables []*indexEntry, pred expression.Expression) (
-	orderEntry *indexEntry, orders []string, err error) {
+func (this *builder) searchPagination(searchSargables []*indexEntry, pred expression.Expression,
+	alias string) (orderEntry *indexEntry, orders []string, err error) {
 
 	if len(searchSargables) == 0 {
 		return nil, nil, nil
 	} else if this.hasOffsetOrLimit() && (len(searchSargables) > 1 ||
-		!expression.Equivalent(pred, searchSargables[0].sargKeys[0]) || !searchSargables[0].exactSpans) {
+		!searchSargables[0].exactSpans ||
+		!this.checkExactSpans(searchSargables[0], pred, alias, nil)) {
 		this.resetOffsetLimit()
 	}
 
@@ -129,7 +135,13 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 					collation := " ASC"
 					if orderTerm.Descending() {
 						collation = " DESC"
+						if orderTerm.NullsPos() {
+							collation += " NULLS FIRST"
+						}
+					} else if orderTerm.NullsPos() {
+						collation += " NULLS LAST"
 					}
+
 					orders = append(orders, "score"+collation)
 					if index.Pageable(orders, offset, limit) {
 						return entry, orders, nil
@@ -165,7 +177,8 @@ func getLimitOffset(expr expression.Expression, defval int64) int64 {
 }
 
 func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expression.Expression,
-	searchFns map[string]*search.Search) (searchSargables []*indexEntry, err error) {
+	searchFns map[string]*search.Search, formalizer *expression.Formalizer) (
+	searchSargables []*indexEntry, err error) {
 
 	searchSargables = make([]*indexEntry, 0, len(searchFns))
 
@@ -190,6 +203,15 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 				continue
 			}
 
+			var cond, origCond expression.Expression
+			ok, cond, origCond, err = this.sargableSearchCondition(index, pred, formalizer)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				continue
+			}
+
 			n, size, exact, mappings, err = index.Sargable(s.FieldName(), s.Query(), s.Options(), mappings)
 			if err != nil {
 				return nil, err
@@ -199,7 +221,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 				exact = exact && !qprams
 				if entry == nil || size < esize {
 					entry = &indexEntry{
-						index, keys, keys, nil, 1, 1, nil, nil, nil, exact, _PUSHDOWN_NONE}
+						index, keys, keys, nil, 1, 1, cond, origCond, nil, exact, _PUSHDOWN_NONE}
 					esize = size
 				}
 			}
@@ -211,4 +233,33 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 	}
 
 	return
+}
+
+func (this *builder) sargableSearchCondition(index datastore.Index, subset expression.Expression,
+	formalizer *expression.Formalizer) (bool, expression.Expression, expression.Expression, error) {
+
+	var err error
+	var origCond expression.Expression
+
+	cond := index.Condition()
+	if cond == nil {
+		return true, nil, nil, nil
+	}
+	cond = cond.Copy()
+
+	formalizer.SetIndexScope()
+	cond, err = formalizer.Map(cond)
+	formalizer.ClearIndexScope()
+	if err != nil {
+		return false, nil, nil, err
+	}
+
+	origCond = cond.Copy()
+	dnf := NewDNF(cond, true, true)
+	cond, err = dnf.Map(cond)
+	if err != nil {
+		return false, nil, nil, err
+	}
+
+	return SubsetOf(subset, cond), cond, origCond, nil
 }

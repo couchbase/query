@@ -94,6 +94,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 
 		outName := this.plan.SearchInfo().OutName()
 		covers := this.plan.Covers()
+		fc := this.plan.FilterCovers()
 
 		for ok {
 			entry, cont := this.getItemEntry(conn)
@@ -101,6 +102,10 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 				if entry != nil {
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 					if len(covers) > 0 {
+						for c, v := range fc {
+							av.SetCover(c.Text(), v)
+						}
+
 						av.SetCover(covers[0].Text(), value.NewValue(true))
 						av.SetCover(covers[1].Text(), value.NewValue(entry.PrimaryKey))
 						smeta := entry.MetaData

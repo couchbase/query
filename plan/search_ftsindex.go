@@ -22,22 +22,25 @@ import (
 
 type IndexFtsSearch struct {
 	readonly
-	index      datastore.Index
-	indexer    datastore.Indexer
-	term       *algebra.KeyspaceTerm
-	searchInfo *FTSSearchInfo
-	covers     expression.Covers
+	index        datastore.Index
+	indexer      datastore.Indexer
+	term         *algebra.KeyspaceTerm
+	searchInfo   *FTSSearchInfo
+	covers       expression.Covers
+	filterCovers map[*expression.Cover]value.Value
 }
 
 func NewIndexFtsSearch(index datastore.Index, term *algebra.KeyspaceTerm,
-	searchInfo *FTSSearchInfo, covers expression.Covers) *IndexFtsSearch {
+	searchInfo *FTSSearchInfo, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value) *IndexFtsSearch {
 
 	return &IndexFtsSearch{
-		index:      index,
-		indexer:    index.Indexer(),
-		term:       term,
-		searchInfo: searchInfo,
-		covers:     covers,
+		index:        index,
+		indexer:      index.Indexer(),
+		term:         term,
+		searchInfo:   searchInfo,
+		covers:       covers,
+		filterCovers: filterCovers,
 	}
 }
 
@@ -108,7 +111,7 @@ func (this *IndexFtsSearch) SetCovers(covers expression.Covers) {
 }
 
 func (this *IndexFtsSearch) FilterCovers() map[*expression.Cover]value.Value {
-	return nil
+	return this.filterCovers
 }
 
 func (this *IndexFtsSearch) Covering() bool {
@@ -148,6 +151,15 @@ func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[stri
 		r["covers"] = this.covers
 	}
 
+	if len(this.filterCovers) > 0 {
+		fc := make(map[string]value.Value, len(this.filterCovers))
+		for c, v := range this.filterCovers {
+			fc[c.String()] = v
+		}
+
+		r["filter_covers"] = fc
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -156,16 +168,17 @@ func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_          string              `json:"#operator"`
-		Index      string              `json:"index"`
-		IndexId    string              `json:"index_id"`
-		Namespace  string              `json:"namespace"`
-		Keyspace   string              `json:"keyspace"`
-		As         string              `json:"as"`
-		Using      datastore.IndexType `json:"using"`
-		UnderNL    bool                `json:"nested_loop"`
-		SearchInfo *FTSSearchInfo      `json:"search_info"`
-		Covers     []string            `json:"covers"`
+		_            string                 `json:"#operator"`
+		Index        string                 `json:"index"`
+		IndexId      string                 `json:"index_id"`
+		Namespace    string                 `json:"namespace"`
+		Keyspace     string                 `json:"keyspace"`
+		As           string                 `json:"as"`
+		Using        datastore.IndexType    `json:"using"`
+		UnderNL      bool                   `json:"nested_loop"`
+		SearchInfo   *FTSSearchInfo         `json:"search_info"`
+		Covers       []string               `json:"covers"`
+		FilterCovers map[string]interface{} `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -200,6 +213,19 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 			}
 
 			this.covers[i] = expression.NewCover(expr)
+		}
+	}
+
+	if len(_unmarshalled.FilterCovers) > 0 {
+		this.filterCovers = make(map[*expression.Cover]value.Value, len(_unmarshalled.FilterCovers))
+		for k, v := range _unmarshalled.FilterCovers {
+			expr, err := parser.Parse(k)
+			if err != nil {
+				return err
+			}
+
+			c := expression.NewCover(expr)
+			this.filterCovers[c] = value.NewValue(v)
 		}
 	}
 

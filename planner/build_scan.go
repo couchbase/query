@@ -276,7 +276,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 			return nil, 0, err
 		}
 
-		searchSargables, err = this.sargableSearchIndexes(indexes, pred, searchFns)
+		searchSargables, err = this.sargableSearchIndexes(indexes, pred, searchFns, formalizer)
 		if err != nil {
 			return nil, 0, err
 		}
