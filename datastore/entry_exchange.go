@@ -169,7 +169,7 @@ func (this *EntryExchange) SendEntry(item *IndexEntry) bool {
 }
 
 // receive
-func (this *EntryExchange) getEntry() (*IndexEntry, bool) {
+func (this *EntryExchange) GetEntry() (*IndexEntry, bool) {
 
 	if this.stop {
 		return nil, false

@@ -453,6 +453,7 @@ type IndexConnection struct {
 
 type Sender interface {
 	SendEntry(entry *IndexEntry) bool
+	GetEntry() (*IndexEntry, bool)
 	Close()
 	Capacity() int
 	Length() int

@@ -40,7 +40,11 @@ func (this *idxEntryChannel) SendEntry(e *IndexEntry) bool {
 	}
 }
 
-// no need for receive
+// receive
+func (this *idxEntryChannel) GetEntry() (*IndexEntry, bool) {
+	entry, ok := <-this.conn.EntryChannel()
+	return entry, ok
+}
 
 // last orders
 func (this *idxEntryChannel) Close() {
