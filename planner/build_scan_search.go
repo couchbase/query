@@ -143,7 +143,7 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 					}
 
 					orders = append(orders, "score"+collation)
-					if index.Pageable(orders, offset, limit) {
+					if index.Pageable(orders, offset, limit, sfn.Query(), sfn.Options()) {
 						return entry, orders, nil
 					}
 					this.resetOrderOffsetLimit()
@@ -157,7 +157,8 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 		this.resetOffsetLimit()
 	} else {
 		index := searchSargables[0].index.(datastore.FTSIndex)
-		if !index.Pageable(nil, offset, limit) {
+		sfn, _ := searchSargables[0].sargKeys[0].(*search.Search)
+		if !index.Pageable(nil, offset, limit, sfn.Query(), sfn.Options()) {
 			this.resetOffsetLimit()
 		}
 	}

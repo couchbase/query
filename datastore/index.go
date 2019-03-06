@@ -389,7 +389,7 @@ type FTSIndex interface {
 		size int64, exact bool, omappings interface{}, err errors.Error)
 
 	// Pageable is allowed
-	Pageable(order []string, offset, limit int64) bool
+	Pageable(order []string, offset, limit int64, query, options expression.Expression) bool
 }
 
 /*
