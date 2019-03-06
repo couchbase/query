@@ -28,11 +28,11 @@ type inlineBody struct {
 	varNames []string
 }
 
-func init() {
+func Init() {
 	functions.FunctionsNewLanguage(functions.INLINE, &inline{})
 }
 
-func (this *inline) Execute(name functions.FunctionName, body functions.FunctionBody, values []value.Value, context functions.Context) (value.Value, errors.Error) {
+func (this *inline) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var parent map[string]interface{}
 
 	funcBody, ok := body.(*inlineBody)
@@ -116,5 +116,14 @@ func (this *inlineBody) Body(object map[string]interface{}) {
 			vars[v] = value.NewValue(this.varNames[v])
 		}
 		object["parameters"] = vars
+	}
+}
+
+func (this *inlineBody) Indexable() value.Tristate {
+	ix := this.expr.Indexable()
+	if ix {
+		return value.TRUE
+	} else {
+		return value.FALSE
 	}
 }

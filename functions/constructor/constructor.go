@@ -12,11 +12,15 @@ package constructor
 import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/golang"
+	"github.com/couchbase/query/functions/inline"
 	globalName "github.com/couchbase/query/functions/metakv"
 )
 
 func Init() {
 	functions.Constructor = newGlobalFunction
+	golang.Init()
+	inline.Init()
 }
 
 // TODO switch to collections context

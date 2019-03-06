@@ -15,10 +15,14 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/value"
 )
 
 // this body is used to fail function creation outside of EE
 type inlineBody struct {
+}
+
+func Init() {
 }
 
 func NewInlineBody(expr expression.Expression) (functions.FunctionBody, errors.Error) {
@@ -36,6 +40,10 @@ func (this *inlineBody) Body(object map[string]interface{}) {
 
 //ditto
 func (this *inlineBody) SetVars(vars []string) {
+}
+
+func (this *inlineBody) Indexable() value.Tristate {
+	return value.FALSE
 }
 
 // ditto, for tests

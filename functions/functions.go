@@ -30,6 +30,14 @@ const (
 	_SIZER
 )
 
+type Modifier int
+
+const (
+	NONE Modifier = 1 << iota
+	READONLY
+	INVARIANT
+)
+
 const _LIMIT = 16384
 
 type FunctionName interface {
@@ -47,6 +55,7 @@ type FunctionBody interface {
 	Lang() Language
 	SetVarNames(vars []string) errors.Error
 	Body(object map[string]interface{})
+	Indexable() value.Tristate
 }
 
 type FunctionEntry struct {
@@ -61,7 +70,7 @@ type FunctionEntry struct {
 }
 
 type LanguageRunner interface {
-	Execute(name FunctionName, body FunctionBody, values []value.Value, context Context) (value.Value, errors.Error)
+	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error)
 }
 
 type functionCache struct {
@@ -243,7 +252,7 @@ func DeleteFunction(name FunctionName) errors.Error {
 	return err
 }
 
-func PreLoad(name FunctionName) bool {
+func preLoad(name FunctionName) *FunctionEntry {
 	var err errors.Error
 
 	//is the entry in the cache?
@@ -251,7 +260,11 @@ func PreLoad(name FunctionName) bool {
 	ce := functions.cache.Get(key, nil)
 	if ce != nil {
 		entry := ce.(*FunctionEntry)
-		return entry.Lang() != _MISSING
+		if entry.Lang() != _MISSING {
+			return entry
+		} else {
+			return nil
+		}
 	}
 
 	// nope, try to load it
@@ -262,12 +275,25 @@ func PreLoad(name FunctionName) bool {
 	if entry.FunctionBody != nil && err == nil {
 		entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
 		entry = entry.add()
-		return true
+		return entry
 	}
-	return false
+	return nil
 }
 
-func ExecuteFunction(name FunctionName, values []value.Value, context Context) (value.Value, errors.Error) {
+func PreLoad(name FunctionName) bool {
+	f := preLoad(name)
+	return (f != nil)
+}
+
+func Indexable(name FunctionName) value.Tristate {
+	f := preLoad(name)
+	if f == nil {
+		return value.FALSE
+	}
+	return f.Indexable()
+}
+
+func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
 	var err errors.Error
 	var entry *FunctionEntry
 
@@ -354,7 +380,7 @@ func ExecuteFunction(name FunctionName, values []value.Value, context Context) (
 		}
 	*/
 	start := time.Now()
-	val, err := languages[entry.Lang()].Execute(name, body, values, context)
+	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, context)
 
 	// update stats
 	serviceTime := time.Since(start)
@@ -402,7 +428,7 @@ func isAuthorized(context Context, name FunctionName, priv auth.Privilege) error
 type empty struct {
 }
 
-func (this *empty) Execute(name FunctionName, body FunctionBody, values []value.Value, context Context) (value.Value, errors.Error) {
+func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
 	return nil, errors.NewFunctionsNotSupported()
 }
 
@@ -418,10 +444,14 @@ func (this *missing) Body(object map[string]interface{}) {
 	object["undefined_function"] = true
 }
 
+func (this *missing) Indexable() value.Tristate {
+	return value.FALSE
+}
+
 func (this *missing) SetVarNames(vars []string) errors.Error {
 	return nil
 }
 
-func (this *missing) Execute(name FunctionName, body FunctionBody, values []value.Value, context Context) (value.Value, errors.Error) {
+func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
 }

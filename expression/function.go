@@ -601,6 +601,44 @@ math package.
 */
 func (this *CommutativeFunctionBase) MaxArgs() int { return math.MaxInt16 }
 
+type UserDefinedFunctionBase struct {
+	FunctionBase
+}
+
+/*
+The method NewUserDefinedFunctionBase returns a pointer to a
+UserDefinedFunctionBase struct, initializing the name
+*/
+func NewUserDefinedFunctionBase(name string, operands ...Expression) *UserDefinedFunctionBase {
+	return &UserDefinedFunctionBase{
+		FunctionBase{
+			name:     name,
+			operands: operands,
+		},
+	}
+}
+
+func (this *UserDefinedFunctionBase) EvalForIndex(applied UdfApplied, item value.Value, context Context) (
+	result value.Value, err error) {
+	var buf [8]value.Value
+	var args []value.Value
+	if len(this.operands) <= len(buf) {
+		args = buf[0:len(this.operands)]
+	} else {
+		args = _ARGS_POOL.GetSized(len(this.operands))
+		defer _ARGS_POOL.Put(args)
+	}
+
+	for i, op := range this.operands {
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return
+		}
+	}
+
+	return applied.IdxApply(context, args...)
+}
+
 var _FOUND_POOL = util.NewBoolPool(64)
 
 /*
@@ -631,4 +669,12 @@ Define Apply methods to evaluate Ternary functions.
 */
 type TernaryApplied interface {
 	Apply(context Context, first, second, third value.Value) (value.Value, error)
+}
+
+/*
+Define Apply methods to evaluate user defined functions
+*/
+type UdfApplied interface {
+	Apply(context Context, args ...value.Value) (value.Value, error)
+	IdxApply(context Context, args ...value.Value) (value.Value, error)
 }

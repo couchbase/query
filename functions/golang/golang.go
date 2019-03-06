@@ -35,7 +35,7 @@ type golangBody struct {
 var _PATH string
 var enabled = true
 
-func init() {
+func Init() {
 	functions.FunctionsNewLanguage(functions.GOLANG, &golang{})
 
 	// only enable golang udfs if can determine our own absolute path
@@ -47,7 +47,7 @@ func init() {
 	}
 }
 
-func (this *golang) Execute(name functions.FunctionName, body functions.FunctionBody, values []value.Value, context functions.Context) (value.Value, errors.Error) {
+func (this *golang) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var args, val value.Value
 
 	funcName := name.Name()
@@ -129,4 +129,10 @@ func (this *golangBody) Body(object map[string]interface{}) {
 		}
 		object["parameters"] = vars
 	}
+}
+
+func (this *golangBody) Indexable() value.Tristate {
+
+	// for now
+	return value.FALSE
 }

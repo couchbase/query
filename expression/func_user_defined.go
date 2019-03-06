@@ -40,13 +40,13 @@ func GetUserDefinedFunction(name functions.FunctionName) Function {
 This represents the execution of UDFs
 */
 type UserDefinedFunction struct {
-	FunctionBase
+	UserDefinedFunctionBase
 	name functions.FunctionName
 }
 
 func NewUserDefinedFunction(name functions.FunctionName, operands ...Expression) Function {
 	rv := &UserDefinedFunction{
-		*NewFunctionBase(name.Key(), operands...),
+		*NewUserDefinedFunctionBase(name.Key(), operands...),
 		name,
 	}
 
@@ -73,13 +73,31 @@ func (this *UserDefinedFunction) Evaluate(item value.Value, context Context) (va
 	return this.Eval(this, item, context)
 }
 
+func (this *UserDefinedFunction) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
+	val, err := this.EvalForIndex(this, item, context)
+	return val, nil, err
+}
+
 func (this *UserDefinedFunction) Apply(context Context, args ...value.Value) (value.Value, error) {
-	val, err := functions.ExecuteFunction(this.name, args, context)
+	val, err := functions.ExecuteFunction(this.name, functions.READONLY, args, context)
 	if err == nil {
 		return val, nil
 	} else {
 		return val, fmt.Errorf(err.Error())
 	}
+}
+
+func (this *UserDefinedFunction) IdxApply(context Context, args ...value.Value) (value.Value, error) {
+	val, err := functions.ExecuteFunction(this.name, functions.READONLY+functions.INVARIANT, args, context)
+	if err == nil {
+		return val, nil
+	} else {
+		return val, fmt.Errorf(err.Error())
+	}
+}
+
+func (this *UserDefinedFunction) Indexable() bool {
+	return functions.Indexable(this.name) != value.FALSE
 }
 
 /*

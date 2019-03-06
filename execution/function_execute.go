@@ -73,7 +73,7 @@ func (this *ExecuteFunction) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		val, err := functions.ExecuteFunction(this.plan.Name(), args, context)
+		val, err := functions.ExecuteFunction(this.plan.Name(), functions.NONE, args, context)
 		if err != nil {
 			context.Error(err)
 		} else {

@@ -14,10 +14,14 @@ package golang
 import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/value"
 )
 
 // this body is used to fail function creation where not supported
 type golangBody struct {
+}
+
+func Init() {
 }
 
 func NewGolangBody(library, object string) (functions.FunctionBody, errors.Error) {
@@ -35,6 +39,10 @@ func (this *golangBody) Body(object map[string]interface{}) {
 
 //ditto
 func (this *golangBody) SetVars(vars []string) {
+}
+
+func (this *golangBody) Indexable() value.Tristate {
+	return value.FALSE
 }
 
 // ditto, for tests
