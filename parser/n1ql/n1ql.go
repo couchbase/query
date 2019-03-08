@@ -19,6 +19,12 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
+var namespaces map[string]interface{}
+
+func SetNamespaces(ns map[string]interface{}) {
+	namespaces = ns
+}
+
 func ParseStatement(input string) (algebra.Statement, error) {
 	return ParseStatement2(input, "default")
 }
@@ -96,6 +102,8 @@ type lexer struct {
 	text             string
 	offset           int
 	namespace        string // TODO switch to collections scope
+	saved            int
+	lval             yySymType
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -107,7 +115,41 @@ func newLexer(nex *Lexer) *lexer {
 }
 
 func (this *lexer) Lex(lval *yySymType) int {
-	return this.nex.Lex(lval)
+
+	// if we had peeked, return that peeked token
+	if this.saved != 0 {
+		rv := this.saved
+		*lval = this.lval
+		this.saved = 0
+		return rv
+	}
+
+	rv := this.nex.Lex(lval)
+
+	// we are going to treat identifiers specially to resolve
+	// shift reduce conflicts on namespaces
+	if rv != IDENT {
+		return rv
+	}
+
+	// is it a namespace?
+	_, found := namespaces[lval.s]
+	if !found {
+		return IDENT
+	}
+
+	// save the current token value and check the next
+	oldLval := *lval
+	this.saved = this.nex.Lex(lval)
+	this.lval = *lval
+	*lval = oldLval
+
+	// not a colon, so we have an identifier
+	if this.saved != COLON {
+		return IDENT
+	}
+
+	return NAMESPACE_ID
 }
 
 func (this *lexer) Remainder(offset int) string {

@@ -201,6 +201,7 @@ tokOffset	 int
 %token MINUS
 %token MISSING
 %token NAMESPACE
+%token NAMESPACE_ID
 %token NEST
 %token NL
 %token NO
@@ -322,10 +323,12 @@ tokOffset	 int
 
 /* Override precedence */
 %left           LPAREN RPAREN
+%left           NSCOLON
+
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID
 %type <s>                NAMED_PARAM
 %type <f>                NUM
 %type <n>                INT
@@ -372,7 +375,7 @@ tokOffset	 int
 %type <keyspacePath>     keyspace_path
 %type <b>                opt_join_type opt_quantifier
 %type <path>             path
-%type <s>                namespace_name namespace_term bucket_name scope_name keyspace_name
+%type <s>                namespace_term namespace_name bucket_name scope_name keyspace_name
 %type <use>              opt_use opt_use_del_upd opt_use_merge use_options use_keys use_index join_hint
 %type <joinHint>         use_hash_option
 %type <expr>             on_keys on_key
@@ -1046,28 +1049,34 @@ keyspace_path opt_as_alias opt_use
 ;
 
 keyspace_path: 
-namespace_term COLON keyspace_name 
+namespace_term keyspace_name 
 {
-    $$ = algebra.NewPathShort($1, $3)
+    $$ = algebra.NewPathShort($1, $2)
 }
 |
-namespace_term COLON bucket_name DOT scope_name DOT keyspace_name 
+namespace_term bucket_name DOT scope_name DOT keyspace_name 
 {
-    $$ = algebra.NewPathLong($1, $3, $5, $7)
+    $$ = algebra.NewPathLong($1, $2, $4, $6)
 }
 ;
 
+/* for namespaces we have to have a rule with the namespace followed by the colon
+   to resolve most shift reduce / reduce reduce conflicts
+*/
 namespace_term:
 namespace_name
 |
-SYSTEM
+SYSTEM COLON
 {
     $$ = "#system"
 }
 ;
 
 namespace_name:
-IDENT
+NAMESPACE_ID COLON
+{
+    $$ = $1
+}
 ;
 
 bucket_name:
@@ -1567,14 +1576,9 @@ INSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_re
 ;
 
 keyspace_ref:
-SYSTEM COLON keyspace_name opt_as_alias
+namespace_term keyspace_name opt_as_alias
 {
-    $$ = algebra.NewKeyspaceRef("#system", $3, $4)
-}
-|
-namespace_name COLON keyspace_name opt_as_alias
-{
-    $$ = algebra.NewKeyspaceRef($1, $3, $4)
+    $$ = algebra.NewKeyspaceRef($1, $2, $3)
 }
 |
 keyspace_name opt_as_alias
@@ -2154,9 +2158,9 @@ keyspace_name
     $$ = algebra.NewKeyspaceRef("", $1, "")
 }
 |
-namespace_name COLON keyspace_name
+namespace_name keyspace_name
 {
-    $$ = algebra.NewKeyspaceRef($1, $3, "")
+    $$ = algebra.NewKeyspaceRef($1, $2, "")
 }
 ;
 
@@ -2365,23 +2369,25 @@ keyspace_name
 ;
 
 long_func_name:
-IDENT NOT_A_TOKEN keyspace_name
+namespace_term keyspace_name
 {
-    name, err := functions.Constructor([]string{$1, $3}, yylex.(*lexer).Namespace())
+    name, err := functions.Constructor([]string{$1, $2}, yylex.(*lexer).Namespace())
     if $$ != nil {
 	yylex.Error(err.Error())
     }
     $$ = name
 }
+/* TODO function names for collections
 |
-IDENT NOT_A_TOKEN bucket_name DOT scope_name DOT keyspace_name
+namespace_term bucket_name DOT scope_name DOT keyspace_name
 {
-    name, err := functions.Constructor([]string{$1, $3}, yylex.(*lexer).Namespace())
+    name, err := functions.Constructor([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace())
     if $$ != nil {
 	yylex.Error(err.Error())
     }
     $$ = name
 }
+*/
 ;
 
 parm_list:
