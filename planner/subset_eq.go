@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/value"
 )
 
@@ -101,7 +102,7 @@ func (this *subset) VisitEq(expr *expression.Eq) (interface{}, error) {
 
 		return false, nil
 
-	default:
+	case *search.Search:
 		var val value.Value
 
 		if expr.First().EquivalentTo(expr2) {
@@ -114,6 +115,9 @@ func (this *subset) VisitEq(expr *expression.Eq) (interface{}, error) {
 			return true, nil
 		}
 
+		return this.visitDefault(expr)
+
+	default:
 		return this.visitDefault(expr)
 	}
 }

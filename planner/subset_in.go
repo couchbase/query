@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/value"
 )
 
@@ -64,7 +65,7 @@ func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
 		// all query array elements are present in index array
 		return true, nil
 
-	default:
+	case *search.Search:
 		if expr.First().EquivalentTo(expr2) {
 			val := expr.Second().Value()
 			if val != nil {
@@ -79,6 +80,10 @@ func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
 				}
 			}
 		}
+
+		return this.visitDefault(expr)
+
+	default:
 		return this.visitDefault(expr)
 	}
 }
