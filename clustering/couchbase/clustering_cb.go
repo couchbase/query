@@ -610,6 +610,11 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		// must be enclosed within ‘[‘ and ‘]’ brackets.
 		if hostname == "" {
 			hostname = server.GetIP(true)
+		} else {
+			hostname, _ = server.HostNameandPort(hostname)
+		}
+		if strings.ContainsRune(hostname, ':') {
+			hostname = "[" + hostname + "]"
 		}
 
 		mgmtPort := nodeServices.Services["mgmt"]
