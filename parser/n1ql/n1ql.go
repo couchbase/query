@@ -102,6 +102,7 @@ type lexer struct {
 	text             string
 	offset           int
 	namespace        string // TODO switch to collections scope
+	hasSaved         bool
 	saved            int
 	lval             yySymType
 }
@@ -117,10 +118,10 @@ func newLexer(nex *Lexer) *lexer {
 func (this *lexer) Lex(lval *yySymType) int {
 
 	// if we had peeked, return that peeked token
-	if this.saved != 0 {
+	if this.hasSaved {
 		rv := this.saved
 		*lval = this.lval
-		this.saved = 0
+		this.hasSaved = false
 		return rv
 	}
 
@@ -139,6 +140,7 @@ func (this *lexer) Lex(lval *yySymType) int {
 	}
 
 	// save the current token value and check the next
+	this.hasSaved = true
 	oldLval := *lval
 	this.saved = this.nex.Lex(lval)
 	this.lval = *lval
