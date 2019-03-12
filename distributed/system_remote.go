@@ -47,8 +47,8 @@ type SystemRemoteAccess interface {
 	// all the node names
 	GetNodeNames() []string
 
-	// is a specific feature available in a set of nodes?
-	Enabled(nodes []string, capability Capability) bool
+	// is a specific feature available in all clusters?
+	Enabled(capability Capability) bool
 }
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,
@@ -59,6 +59,7 @@ type Capability int
 
 const (
 	NEW_PREPAREDS = Capability(iota)
+	NEW_OPTIMIZER
 )
 
 var NO_CREDS = make(Creds, 0)

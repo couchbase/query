@@ -511,6 +511,7 @@ type cbCluster struct {
 	queryNodeNames    []string                      `json:"-"`
 	queryNodeServices map[string]services           `json:"-"`
 	queryNodes        map[string]*cbQueryNodeConfig `json:"-"`
+	capabilities      map[string]bool               `json:"-"`
 	poolSrvRev        int                           `json:"-"`
 	lastCheck         time.Time                     `json:"-"`
 }
@@ -636,11 +637,34 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		queryNodeServices[nodeId] = queryServices
 	}
 
+	var capabilities map[string]bool
+	if len(poolServices.Capabilities) > 0 {
+		var caps map[string]interface{}
+
+		err := json.Unmarshal(poolServices.Capabilities, &caps)
+		if err == nil {
+			n1ql := caps["n1ql"]
+			if n1ql != nil {
+				capList, ok := n1ql.([]interface{})
+				if ok {
+					capabilities = make(map[string]bool, len(capList))
+					for i, _ := range capList {
+						name, ok := capList[i].(string)
+						if ok {
+							capabilities[name] = true
+						}
+					}
+				}
+			}
+		}
+	}
+
 	this.Lock()
 	defer this.Unlock()
 	this.queryNodeNames = queryNodeNames
 	this.queryNodeServices = queryNodeServices
 	this.queryNodes = make(map[string]*cbQueryNodeConfig)
+	this.capabilities = capabilities
 
 	this.poolSrvRev = poolServices.Rev
 	this.lastCheck = time.Now()
@@ -722,6 +746,20 @@ func (this *cbCluster) Version() clustering.Version {
 
 func (this *cbCluster) ClusterManager() clustering.ClusterManager {
 	return this
+}
+
+func (this *cbCluster) Capability(name string) bool {
+
+	// dirty trick to refresh the cluster and load the capabilities
+	_, err := this.QueryNodeNames()
+	if err != nil {
+		return false
+	}
+
+	this.RLock()
+	rv := this.capabilities[name]
+	this.RUnlock()
+	return rv
 }
 
 // cbCluster implements clustering.ClusterManager interface

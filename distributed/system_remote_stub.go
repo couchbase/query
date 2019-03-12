@@ -67,6 +67,6 @@ func (this systemRemoteStub) GetNodeNames() []string {
 }
 
 // check capability
-func (this systemRemoteStub) Enabled(nodes []string, capability Capability) bool {
+func (this systemRemoteStub) Enabled(capability Capability) bool {
 	return false
 }

@@ -142,6 +142,10 @@ func (ClusterStub) ClusterManager() clustering.ClusterManager {
 	return ClusterManagerStub{}
 }
 
+func (ClusterStub) Capability(name string) bool {
+	return false
+}
+
 // StandaloneStub is a stub implementation of clustering.Standalone
 type StandaloneStub struct{}
 

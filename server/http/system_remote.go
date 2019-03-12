@@ -519,8 +519,30 @@ func (this *systemRemoteHttp) GetNodeNames() []string {
 	return names
 }
 
-func (this *systemRemoteHttp) Enabled(nodes []string, capability distributed.Capability) bool {
+var capabilities = map[distributed.Capability]string{
+	distributed.NEW_PREPAREDS: "enhancedPreparedStatements",
+	distributed.NEW_OPTIMIZER: "costBasedOptimizer",
+}
 
-	// FIXME this is to be implemented properly when MB-31850 is coded
+// a capability is enabled if we are part of a cluster and we find it enabled
+// on each cluster that's reachable
+func (this *systemRemoteHttp) Enabled(capability distributed.Capability) bool {
+	if len(this.WhoAmI()) == 0 {
+		return false
+	}
+	clusters, err := this.configStore.ClusterNames()
+	if err != nil {
+		return false
+	}
+
+	for c, _ := range clusters {
+		cl, err := this.configStore.ClusterByName(clusters[c])
+		if err != nil {
+			continue
+		}
+		if !cl.Capability(capabilities[capability]) {
+			return false
+		}
+	}
 	return true
 }

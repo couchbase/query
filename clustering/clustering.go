@@ -79,6 +79,7 @@ type Cluster interface {
 	ConfigurationStore() ConfigurationStore                // The ConfigurationStore used by all Query Nodes in the cluster
 	Version() Version                                      // Logical version of the software that the QueryNodes in the cluster are running
 	ClusterManager() ClusterManager                        // Get a ClusterManager for this Cluster
+	Capability(string) bool                                // Check if cluster possesses a certain capability
 }
 
 type Standalone interface {

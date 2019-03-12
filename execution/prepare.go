@@ -85,7 +85,7 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		// So, on mixed versions clusters, we still send proper encoded plans
 		// This will eventually go away when SDKs older than 3.0 will stop being supported
 		if !util.IsFeatureEnabled(context.featureControls, util.N1QL_ENCODED_PLAN) &&
-			distributed.RemoteAccess().Enabled([]string{}, distributed.NEW_PREPAREDS) {
+			distributed.RemoteAccess().Enabled(distributed.NEW_PREPAREDS) {
 			val.Actual().(map[string]interface{})["encoded_plan"] = prepareds.EmptyPlan
 		}
 		this.sendItem(value.NewAnnotatedValue(val))

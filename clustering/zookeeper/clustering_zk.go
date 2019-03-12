@@ -278,6 +278,10 @@ func (z *zkCluster) ClusterManager() clustering.ClusterManager {
 	return z
 }
 
+func (z *zkCluster) Capability(name string) bool {
+	return false
+}
+
 // zkCluster implements clustering.ClusterManager interface
 func (z *zkCluster) Cluster() clustering.Cluster {
 	return z
