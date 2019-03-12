@@ -922,15 +922,23 @@ func SetIP(val bool) {
 func HostNameandPort(node string) (host, port string) {
 	tokens := []string{}
 
-	// For IPv6, if the nodename contains ":"
+	// it's an IPv6 with port
 	if _IPv6 && node[0] == '[' {
 
 		// Then the url should be of the form [::1]:8091
 		tokens = strings.Split(node, "]:")
 		host = strings.Replace(tokens[0], "[", "", 1)
 	} else {
-		// For IPv4
+
+		// IPv4 with or without port
+		// FQDN with or without port
+		// IPv6 without port
 		tokens = strings.Split(node, ":")
+
+		// if we have more than two tokens, it was IPv6 without port
+		if len(tokens) > 2 {
+			tokens = []string{node}
+		}
 		host = tokens[0]
 	}
 
