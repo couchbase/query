@@ -165,7 +165,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Identify aggregates for index pushdown for old releases
-	if len(aggs) == 1 && group.By() == nil {
+	if len(aggs) == 1 && len(group.By()) == 0 {
 	loop:
 		for _, term := range node.Projection().Terms() {
 			switch expr := term.Expression().(type) {
