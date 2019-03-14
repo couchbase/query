@@ -159,4 +159,8 @@ var _OPERATORS = map[string]Operator{
 	"CreateFunction":  &CreateFunction{},
 	"DropFunction":    &DropFunction{},
 	"ExecuteFunction": &ExecuteFunction{},
+
+	// Index Advisor
+	"AdviseIndex": &Advise{},
+	"IndexAdvice": &IndexAdvice{},
 }

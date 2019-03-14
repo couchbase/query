@@ -30,6 +30,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevOffset := this.offset
 	prevProjection := this.delayProjection
 	prevRequirePrimaryKey := this.requirePrimaryKey
+	prevCollectQueryInfo := this.storeCollectQueryInfo()
 	defer func() {
 		this.cover = prevCover
 		this.order = prevOrder
@@ -37,6 +38,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.offset = prevOffset
 		this.delayProjection = prevProjection
 		this.requirePrimaryKey = prevRequirePrimaryKey
+		this.restoreCollectQueryInfo(prevCollectQueryInfo)
+
 	}()
 
 	stmtOrder := stmt.Order()
@@ -49,6 +52,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	this.initialIndexAdvisor(stmt)
 
 	this.cover = nil
 	this.delayProjection = false

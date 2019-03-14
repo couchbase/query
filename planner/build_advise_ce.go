@@ -1,0 +1,63 @@
+//  Copyright (c) 2019 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+// +build !enterprise
+
+package planner
+
+import (
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
+
+	"fmt"
+)
+
+type collectQueryInfo struct {
+}
+
+func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
+	return nil, fmt.Errorf("Not supported.")
+}
+
+func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
+}
+
+func (this *builder) extractPredicates(where, on expression.Expression) {
+}
+
+func (this *builder) extractIndexJoin(index datastore.Index, node *algebra.KeyspaceTerm, cover bool) {
+}
+
+func (this *builder) appendQueryInfo(scan plan.Operator, node *algebra.KeyspaceTerm, uncovered bool) {
+}
+
+func (this *builder) enableUnnest(alias string) {
+}
+
+func (this *builder) collectPredicates(baseKeyspace *baseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
+	return nil
+}
+
+func (this *builder) setUnnest() {
+}
+
+func (this *builder) processadviseJF(alias string) {
+}
+
+func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order) {
+}
+
+func (this *builder) storeCollectQueryInfo() *collectQueryInfo {
+	return nil
+}
+
+func (this *builder) restoreCollectQueryInfo(info *collectQueryInfo) {
+}

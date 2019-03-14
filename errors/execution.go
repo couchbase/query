@@ -226,3 +226,8 @@ func NewWindowEvaluationError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 5340, IKey: "execution.window_aggregate_error", ICause: e,
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
+
+func NewAdviseIndexError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5350, IKey: "execution.advise_index_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}

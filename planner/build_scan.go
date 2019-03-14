@@ -110,7 +110,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			if err != nil {
 				return nil, nil, err
 			}
+
 		}
+
+		this.enableUnnest(node.Alias())
+		this.collectPredicates(baseKeyspace, keyspace, node, nil, false)
 
 		if baseKeyspace.dnfPred != nil {
 			if baseKeyspace.origPred == nil {
@@ -210,7 +214,10 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		pred = baseKeyspace.onclause
 	}
 	if or, ok := pred.(*expression.Or); ok {
+
 		scan, _, err := this.buildOrScan(node, baseKeyspace, id, or, indexes, primaryKey, formalizer)
+		this.collectPredicates(baseKeyspace, keyspace, node, pred, join)
+
 		if scan != nil || err != nil {
 			return scan, nil, err
 		}

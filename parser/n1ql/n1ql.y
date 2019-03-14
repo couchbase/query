@@ -98,6 +98,7 @@ tokOffset	 int
 }
 
 %token _ERROR_	// used by the scanner to flag errors
+%token ADVISE
 %token ALL
 %token ALTER
 %token ANALYZE
@@ -399,7 +400,7 @@ tokOffset	 int
 %type <b>                dir opt_dir
 
 %type <statement>        stmt_body
-%type <statement>        stmt explain prepare execute select_stmt dml_stmt ddl_stmt
+%type <statement>        stmt advise explain prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        infer infer_keyspace
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
@@ -481,6 +482,8 @@ opt_trailer SEMI
 ;
 
 stmt_body:
+advise
+|
 explain
 |
 prepare
@@ -502,6 +505,13 @@ infer
 role_stmt
 |
 function_stmt
+;
+
+advise:
+ADVISE stmt
+{
+    $$ = algebra.NewAdvise($2, yylex.(*lexer).Remainder($<tokOffset>1))
+}
 ;
 
 explain:

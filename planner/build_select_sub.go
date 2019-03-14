@@ -79,6 +79,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.where = node.Where()
 	}
 
+	this.extractLetGroupProjOrder(node.Let(), nil, node.Projection(), this.order)
+
 	// Infer WHERE clause from UNNEST
 	if node.From() != nil {
 		this.inferUnnestPredicates(node.From())
@@ -198,6 +200,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	this.setIndexGroupAggs(group, aggs, node.Let())
+	this.extractLetGroupProjOrder(nil, group, nil, nil)
 
 	err = this.visitFrom(node, group)
 	if err != nil {

@@ -24,6 +24,9 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	node *algebra.IndexJoin) (op *plan.IndexJoin, err error) {
 
 	index, covers, filterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
+
+	this.extractIndexJoin(index, node.Right(), covers != nil)
+
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +42,9 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 	node *algebra.IndexNest) (op *plan.IndexNest, err error) {
 
 	index, _, _, err := this.buildJoinScan(keyspace, node.Right(), "nest")
+
+	this.extractIndexJoin(index, node.Right(), false)
+
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +59,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	allindexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(allindexes)
 	allindexes, err := allIndexes(keyspace, nil, allindexes, this.indexApiVersion)
-	if err != nil {
+	if err != nil && !this.indexAdvisor {
 		return nil, nil, nil, err
 	}
 
@@ -83,7 +89,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	}
 
-	if len(indexes) == 0 {
+	if len(indexes) == 0 && !this.indexAdvisor {
 		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
 
@@ -112,6 +118,11 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		}
 	} else {
 		return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildJoinScan: keyspace %s not found", node.Alias()))
+	}
+
+	this.collectPredicates(nil, keyspace, node, subset, false)
+	if err != nil || len(indexes) == 0 {
+		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
 
 	primaryKey := expression.Expressions{

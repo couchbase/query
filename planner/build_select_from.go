@@ -97,6 +97,8 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 			}
 		}
 
+		this.extractPredicates(this.where, nil)
+
 		// Use FROM clause in index selection
 		_, err = node.From().Accept(this)
 		if err != nil {
@@ -143,7 +145,12 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	}
 
 	scan, err := this.selectScan(keyspace, node)
+
+	uncovered := len(this.coveringScans) == 0 && this.countScan == nil
+	this.appendQueryInfo(scan, node, uncovered)
+
 	if err != nil {
+		this.processadviseJF(node.Alias())
 		return nil, err
 	}
 
@@ -181,6 +188,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
 	sel, err := node.Subquery().Accept(this)
 	if err != nil {
+		this.processadviseJF(node.Alias())
 		return nil, err
 	}
 
@@ -272,7 +280,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 	}
 
 	_, err := node.Left().Accept(this)
-	if err != nil {
+	if err != nil && !this.indexAdvisor {
 		return nil, err
 	}
 
@@ -314,12 +322,12 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 	}
 
 	_, err := node.Left().Accept(this)
-	if err != nil {
+	if err != nil && !this.indexAdvisor {
 		return nil, err
 	}
-
 	join, err := this.buildAnsiJoin(node)
 	if err != nil {
+		this.processadviseJF(node.Alias())
 		return nil, err
 	}
 
@@ -395,7 +403,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 	}
 
 	_, err := node.Left().Accept(this)
-	if err != nil {
+	if err != nil && !this.indexAdvisor {
 		return nil, err
 	}
 
@@ -436,12 +444,13 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 	}
 
 	_, err := node.Left().Accept(this)
-	if err != nil {
+	if err != nil && !this.indexAdvisor {
 		return nil, err
 	}
 
 	nest, err := this.buildAnsiNest(node)
 	if err != nil {
+		this.processadviseJF(node.Alias())
 		return nil, err
 	}
 
@@ -470,8 +479,11 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		this.resetPushDowns()
 	}
 
+	this.setUnnest()
+
 	_, err := node.Left().Accept(this)
 	if err != nil {
+		this.processadviseJF(node.Alias())
 		return nil, err
 	}
 

@@ -67,6 +67,7 @@ const (
 
 type builder struct {
 	indexPushDowns
+	collectQueryInfo
 	datastore         datastore.Datastore
 	systemstore       datastore.Datastore
 	namespace         string
@@ -94,6 +95,7 @@ type builder struct {
 	baseKeyspaces     map[string]*baseKeyspace
 	pushableOnclause  expression.Expression // combined ON-clause from all inner joins
 	builderFlags      uint32
+	indexAdvisor      bool
 }
 
 type indexPushDowns struct {

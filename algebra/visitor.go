@@ -49,6 +49,11 @@ type Visitor interface {
 	VisitExplain(stmt *Explain) (interface{}, error)
 
 	/*
+	   Visitor for ADVISE statements.
+	*/
+	VisitAdvise(stmt *Advise) (interface{}, error)
+
+	/*
 	   Visitor for PREPARED statements.
 	*/
 	VisitPrepare(stmt *Prepare) (interface{}, error)

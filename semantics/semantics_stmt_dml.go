@@ -218,6 +218,18 @@ func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error)
 	return stmt.Statement().Accept(this)
 }
 
+func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpirseFeature("Advise", "semantics.visit_advise")
+	}
+	switch stmt.Statement().Type() {
+	case "SELECT", "DELETE", "MERGE", "UPDATE":
+		return stmt.Statement().Accept(this)
+	default:
+		return nil, errors.NewAdviseUnsupportedStmtError("semantics.visit_advise")
+	}
+}
+
 func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	return stmt.Statement().Accept(this)
 }

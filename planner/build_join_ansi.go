@@ -33,6 +33,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			return nil, err
 		}
 
+		this.extractPredicates(nil, node.Onclause())
+
 		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
 			// currently only consider hash join when USE HASH join hint is specified
 			var hjoin *plan.HashJoin
@@ -122,6 +124,8 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		if err != nil {
 			return nil, err
 		}
+
+		this.extractPredicates(nil, node.Onclause())
 
 		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
 			// currently only consider hash nest when USE HASH join hint is specified

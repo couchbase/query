@@ -45,16 +45,19 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 	}
 
+	this.initialIndexAdvisor(stmt)
+	this.extractPredicates(nil, this.pushableOnclause)
+
 	if source.SubqueryTerm() != nil {
 		_, err := source.SubqueryTerm().Accept(this)
-		if err != nil {
+		if err != nil && !this.indexAdvisor {
 			return nil, err
 		}
 
 		left = source.SubqueryTerm()
 	} else if source.ExpressionTerm() != nil {
 		_, err := source.ExpressionTerm().Accept(this)
-		if err != nil {
+		if err != nil && !this.indexAdvisor {
 			return nil, err
 		}
 
@@ -66,7 +69,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 
 		_, err := source.From().Accept(this)
-		if err != nil {
+		if err != nil && !this.indexAdvisor {
 			return nil, err
 		}
 

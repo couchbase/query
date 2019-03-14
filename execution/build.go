@@ -609,3 +609,12 @@ func (this *builder) VisitIndexFtsSearch(plan *plan.IndexFtsSearch) (interface{}
 	this.setAliasMap(plan.Term())
 	return NewIndexFtsSearch(plan, this.context), nil
 }
+
+// Index Advisor
+func (this *builder) VisitIndexAdvice(plan *plan.IndexAdvice) (interface{}, error) {
+	return NewIndexAdvisor(plan, this.context), nil
+}
+
+func (this *builder) VisitAdvise(plan *plan.Advise) (interface{}, error) {
+	return NewAdviseIndex(plan, this.context), nil
+}

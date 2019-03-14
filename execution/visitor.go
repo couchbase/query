@@ -135,4 +135,8 @@ type Visitor interface {
 	VisitCreateFunction(op *CreateFunction) (interface{}, error)
 	VisitDropFunction(op *DropFunction) (interface{}, error)
 	VisitExecuteFunction(op *ExecuteFunction) (interface{}, error)
+
+	// Index Advisor
+	VisitIndexAdvice(op *IndexAdvice) (interface{}, error)
+	VisitAdvise(op *Advise) (interface{}, error)
 }

@@ -112,6 +112,11 @@
 /;/		  { yylex.logToken(yylex.Text(), "SEMI"); return SEMI }
 /\!/		  { yylex.logToken(yylex.Text(), "NOT_A_TOKEN"); return NOT_A_TOKEN }
 
+/[aA][dD][vV][iI][sS][eE]/			 {
+							yylex.logToken(yylex.Text(), "ADVISE")
+							lval.tokOffset = yylex.curOffset
+							return ADVISE
+							}
 /[aA][lL][lL]/	    			  	 { yylex.logToken(yylex.Text(), "ALL"); return ALL }
 /[aA][lL][tT][eE][rR]/				 { yylex.logToken(yylex.Text(), "ALTER"); return ALTER }
 /[aA][nN][aA][lL][yY][zZ][eE]/			 { yylex.logToken(yylex.Text(), "ANALYZE"); return ANALYZE }
