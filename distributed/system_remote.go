@@ -60,6 +60,7 @@ type Capability int
 const (
 	NEW_PREPAREDS = Capability(iota)
 	NEW_OPTIMIZER
+	NEW_INDEXADVISOR
 )
 
 var NO_CREDS = make(Creds, 0)
