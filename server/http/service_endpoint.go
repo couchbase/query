@@ -33,18 +33,20 @@ import (
 )
 
 type HttpEndpoint struct {
-	server      *server.Server
-	metrics     bool
-	httpAddr    string
-	httpsAddr   string
-	certFile    string
-	keyFile     string
-	bufpool     BufferPool
-	listener    net.Listener
-	listenerTLS net.Listener
-	mux         *mux.Router
-	actives     server.ActiveRequests
-	options     server.ServerOptions
+	server                  *server.Server
+	metrics                 bool
+	httpAddr                string
+	httpsAddr               string
+	certFile                string
+	keyFile                 string
+	bufpool                 BufferPool
+	listener                net.Listener
+	listenerTLS             net.Listener
+	mux                     *mux.Router
+	actives                 server.ActiveRequests
+	options                 server.ServerOptions
+	tlsConfig               cbauth.TLSConfig
+	clusterEncryptionConfig cbauth.ClusterEncryptionConfig
 }
 
 const (
@@ -94,30 +96,25 @@ func (this *HttpEndpoint) ListenTLS() error {
 		return err
 	}
 
-	clientAuthType, err := cbauth.GetClientCertAuthType()
-	if err != nil {
-		return fmt.Errorf("Failed to get client cert auth type from cbauth")
-
-	}
-
 	cbauthTLSsettings, err1 := cbauth.GetTLSConfig()
 	if err1 != nil {
 		return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
 	}
+	this.tlsConfig = cbauthTLSsettings
 
 	ln, err := net.Listen("tcp", this.httpsAddr)
 
 	if err == nil {
 		cfg := &tls.Config{
 			Certificates:             []tls.Certificate{tlsCert},
-			ClientAuth:               clientAuthType,
+			ClientAuth:               cbauthTLSsettings.ClientAuthType,
 			MinVersion:               cbauthTLSsettings.MinVersion,
 			CipherSuites:             cbauthTLSsettings.CipherSuites,
 			PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
 			NextProtos:               []string{"h2", "http/1.1"},
 		}
 
-		if clientAuthType != tls.NoClientCert {
+		if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
 			caCert, err := ioutil.ReadFile(this.certFile)
 			if err != nil {
 				return fmt.Errorf(" Error in reading cacert file, err: %v", err)
@@ -209,23 +206,45 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 		http.FileServer(http.Dir(pathValue))))
 }
 
+// Reconfigure the node-to-node encryption.
+func (this *HttpEndpoint) UpdateNodeToNodeEncryptionLevel() {
+	cryptoConfig, err := cbauth.GetClusterEncryptionConfig()
+	if err != nil {
+		logging.Errorf("unable to retrieve node-to-node encryption settings: %v", err)
+		return
+	}
+	this.clusterEncryptionConfig = cryptoConfig
+
+	// Add code for actual reconfiguration here.
+
+	// Temporary log message.
+	logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)
+}
+
 func (this *HttpEndpoint) setupSSL() {
 
-	err := cbauth.RegisterTLSRefreshCallback(func() error {
-		logging.Infof(" Certificates have been refreshed by ns server ")
-		closeErr := this.CloseTLS()
-		if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
-			logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
-			return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
+	err := cbauth.RegisterConfigRefreshCallback(func(configChange uint64) error {
+		// Both flags could be set here.
+		if (configChange & cbauth.CFG_CHANGE_CERTS_TLSCONFIG) != 0 {
+			logging.Infof(" Certificates have been refreshed by ns server ")
+			closeErr := this.CloseTLS()
+			if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
+				logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
+				return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
+			}
+
+			tlsErr := this.ListenTLS()
+			if tlsErr != nil {
+				if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address & already in use") {
+					time.Sleep(100 * time.Millisecond)
+				}
+				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
+				return errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
+			}
 		}
 
-		tlsErr := this.ListenTLS()
-		if tlsErr != nil {
-			if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address & already in use") {
-				time.Sleep(100 * time.Millisecond)
-			}
-			logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
-			return errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
+		if (configChange & cbauth.CFG_CHANGE_CLUSTER_ENCRYPTION) != 0 {
+			this.UpdateNodeToNodeEncryptionLevel()
 		}
 		return nil
 	})
