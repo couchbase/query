@@ -11,6 +11,7 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 )
 
@@ -221,6 +222,9 @@ func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error)
 func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpirseFeature("Advise", "semantics.visit_advise")
+	}
+	if !distributed.RemoteAccess().Enabled(distributed.NEW_INDEXADVISOR) {
+		return nil, errors.NewSemanticsError(nil, "The Advisor feature is enabled only in developer preview.")
 	}
 	switch stmt.Statement().Type() {
 	case "SELECT", "DELETE", "MERGE", "UPDATE":
