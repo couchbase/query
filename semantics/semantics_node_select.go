@@ -11,6 +11,7 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 )
 
 func (this *SemChecker) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
@@ -57,4 +58,11 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 	err = node.Projection().MapExpressions(this)
 
 	return nil, err
+}
+
+func (this *SemChecker) VisitSubquery(expr expression.Subquery) (r interface{}, err error) {
+	if node, ok := expr.(*algebra.Subquery); ok {
+		_, err = node.Select().Accept(this)
+	}
+	return expr, err
 }
