@@ -131,7 +131,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// Array index covers matching UNNEST expressions
 	var coveredExprs map[expression.Expression]bool
 	var coveredUnnests map[*algebra.Unnest]bool
-	bindings := coveredUnnestBindings(arrayKey, allDistinct, unnest)
+	bindings, whens := coveredUnnestBindings(arrayKey, allDistinct, unnest)
 	if !unnestExprInKeys {
 		coveredUnnests = make(map[*algebra.Unnest]bool, len(unnests))
 		coveredExprs = make(map[expression.Expression]bool, len(unnests))
@@ -162,6 +162,10 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 			return nil, nil, err
 		}
 		fc = expr.FilterCovers(fc)
+	}
+
+	for _, wexpr := range whens {
+		fc = wexpr.FilterCovers(fc)
 	}
 
 	// Include filter covers from index WHERE clause
@@ -267,14 +271,18 @@ func unrollArrayKeys(expr expression.Expression, allDistinct bool, unnest *algeb
 	return expr
 }
 
-func coveredUnnestBindings(key expression.Expression, allDistinct bool, unnest *algebra.Unnest) map[string]expression.Expression {
+func coveredUnnestBindings(key expression.Expression, allDistinct bool, unnest *algebra.Unnest) (map[string]expression.Expression, expression.Expressions) {
 	bindings := make(map[string]expression.Expression, 8)
+	whens := make(expression.Expressions, 0, 4)
 
 	for all, ok := key.(*expression.All); ok && (allDistinct || !all.Distinct()); all, ok = key.(*expression.All) {
 		if array, ok := all.Array().(*expression.Array); ok &&
 			len(array.Bindings()) == 1 && !array.Bindings()[0].Descend() {
 			binding := array.Bindings()[0]
 			bindings[binding.Variable()] = binding.Expression()
+			if array.When() != nil {
+				whens = append(whens, array.When())
+			}
 			key = array.ValueMapping()
 		} else {
 			if !ok {
@@ -285,5 +293,5 @@ func coveredUnnestBindings(key expression.Expression, allDistinct bool, unnest *
 		}
 	}
 
-	return bindings
+	return bindings, whens
 }
