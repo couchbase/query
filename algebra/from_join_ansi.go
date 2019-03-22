@@ -22,19 +22,20 @@ Represents the ANSI JOIN clause. AnsiJoins create new input objects by
 combining two or more source objects.  They can be chained.
 */
 type AnsiJoin struct {
-	left     FromTerm
-	right    SimpleFromTerm
-	outer    bool
-	onclause expression.Expression
+	left      FromTerm
+	right     SimpleFromTerm
+	outer     bool
+	onclause  expression.Expression
+	hintError string
 }
 
 func NewAnsiJoin(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
-	return &AnsiJoin{left, right, outer, onclause}
+	return &AnsiJoin{left, right, outer, onclause, ""}
 }
 
 func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
 	TransferJoinHint(left, right)
-	return &AnsiJoin{right, left, true, onclause}
+	return &AnsiJoin{right, left, true, onclause, ""}
 }
 
 func TransferJoinHint(left SimpleFromTerm, right SimpleFromTerm) {
@@ -201,6 +202,22 @@ Set ON-clause
 */
 func (this *AnsiJoin) SetOnclause(onclause expression.Expression) {
 	this.onclause = onclause
+}
+
+/*
+Hint Error
+*/
+func (this *AnsiJoin) HintError() string {
+	return this.hintError
+}
+
+/*
+Set Hint Error
+*/
+func (this *AnsiJoin) SetHintError(hintError string) {
+	if this.hintError == "" {
+		this.hintError = hintError
+	}
 }
 
 /*

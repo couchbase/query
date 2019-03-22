@@ -88,6 +88,13 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, er
 		return nil, err
 	}
 
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		ksterm := algebra.GetKeyspaceTerm(node.Right())
+		if ksterm != nil && ksterm.PreferHash() {
+			node.SetHintError(algebra.HASH_JOIN_EE_ONLY)
+		}
+	}
+
 	this.setSemFlag(_SEM_ON)
 	_, err = this.Map(node.Onclause())
 	this.unsetSemFlag(_SEM_ON)
@@ -155,6 +162,13 @@ func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (r interface{}, er
 
 	if err = this.visitJoin(node.Left(), node.Right()); err != nil {
 		return nil, err
+	}
+
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		ksterm := algebra.GetKeyspaceTerm(node.Right())
+		if ksterm != nil && ksterm.PreferHash() {
+			node.SetHintError(algebra.HASH_NEST_EE_ONLY)
+		}
 	}
 
 	this.setSemFlag(_SEM_ON)

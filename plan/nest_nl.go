@@ -19,18 +19,20 @@ import (
 
 type NLNest struct {
 	readonly
-	outer    bool
-	alias    string
-	onclause expression.Expression
-	child    Operator
+	outer     bool
+	alias     string
+	onclause  expression.Expression
+	hintError string
+	child     Operator
 }
 
 func NewNLNest(nest *algebra.AnsiNest, child Operator) *NLNest {
 	rv := &NLNest{
-		outer:    nest.Outer(),
-		alias:    nest.Alias(),
-		onclause: nest.Onclause(),
-		child:    child,
+		outer:     nest.Outer(),
+		alias:     nest.Alias(),
+		onclause:  nest.Onclause(),
+		hintError: nest.HintError(),
+		child:     child,
 	}
 
 	return rv
@@ -56,6 +58,10 @@ func (this *NLNest) Onclause() expression.Expression {
 	return this.onclause
 }
 
+func (this *NLNest) HintError() string {
+	return this.hintError
+}
+
 func (this *NLNest) Child() Operator {
 	return this.child
 }
@@ -73,6 +79,10 @@ func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["outer"] = this.outer
 	}
 
+	if this.hintError != "" {
+		r["hint_not_followed"] = this.hintError
+	}
+
 	r["~child"] = this.child
 
 	if f != nil {
@@ -83,11 +93,12 @@ func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *NLNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string          `json:"#operator"`
-		Onclause string          `json:"on_clause"`
-		Outer    bool            `json:"outer"`
-		Alias    string          `json:"alias"`
-		Child    json.RawMessage `json:"~child"`
+		_         string          `json:"#operator"`
+		Onclause  string          `json:"on_clause"`
+		Outer     bool            `json:"outer"`
+		Alias     string          `json:"alias"`
+		HintError string          `json:"hint_not_followed"`
+		Child     json.RawMessage `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -104,6 +115,7 @@ func (this *NLNest) UnmarshalJSON(body []byte) error {
 
 	this.outer = _unmarshalled.Outer
 	this.alias = _unmarshalled.Alias
+	this.hintError = _unmarshalled.HintError
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

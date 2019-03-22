@@ -25,6 +25,7 @@ type HashNest struct {
 	buildExprs expression.Expressions
 	probeExprs expression.Expressions
 	buildAlias string
+	hintError  string
 }
 
 func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs expression.Expressions,
@@ -36,6 +37,7 @@ func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs 
 		buildExprs: buildExprs,
 		probeExprs: probeExprs,
 		buildAlias: buildAlias,
+		hintError:  nest.HintError(),
 	}
 }
 
@@ -71,6 +73,10 @@ func (this *HashNest) BuildAlias() string {
 	return this.buildAlias
 }
 
+func (this *HashNest) HintError() string {
+	return this.hintError
+}
+
 func (this *HashNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -97,6 +103,10 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 
 	r["build_alias"] = this.buildAlias
 
+	if this.hintError != "" {
+		r["hint_not_followed"] = this.hintError
+	}
+
 	r["~child"] = this.child
 
 	if f != nil {
@@ -113,6 +123,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 		BuildExprs []string        `json:"build_exprs"`
 		ProbeExprs []string        `json:"probe_exprs"`
 		BuildAlias string          `json:"build_alias"`
+		HintError  string          `json:"hint_not_followed"`
 		Child      json.RawMessage `json:"~child"`
 	}
 
@@ -149,6 +160,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.buildAlias = _unmarshalled.BuildAlias
+	this.hintError = _unmarshalled.HintError
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

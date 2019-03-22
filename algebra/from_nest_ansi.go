@@ -26,14 +26,15 @@ right hand inputs are collected into an array and nested as a single
 array-valued field in the result object.
 */
 type AnsiNest struct {
-	left     FromTerm
-	right    SimpleFromTerm
-	outer    bool
-	onclause expression.Expression
+	left      FromTerm
+	right     SimpleFromTerm
+	outer     bool
+	onclause  expression.Expression
+	hintError string
 }
 
 func NewAnsiNest(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiNest {
-	return &AnsiNest{left, right, outer, onclause}
+	return &AnsiNest{left, right, outer, onclause, ""}
 }
 
 func (this *AnsiNest) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -183,6 +184,22 @@ Set ON-clause
 */
 func (this *AnsiNest) SetOnclause(onclause expression.Expression) {
 	this.onclause = onclause
+}
+
+/*
+Hint Error
+*/
+func (this *AnsiNest) HintError() string {
+	return this.hintError
+}
+
+/*
+Set Hint Error
+*/
+func (this *AnsiNest) SetHintError(hintError string) {
+	if this.hintError == "" {
+		this.hintError = hintError
+	}
 }
 
 /*

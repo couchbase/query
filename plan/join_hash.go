@@ -25,6 +25,7 @@ type HashJoin struct {
 	buildExprs   expression.Expressions
 	probeExprs   expression.Expressions
 	buildAliases []string
+	hintError    string
 }
 
 func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs expression.Expressions,
@@ -36,6 +37,7 @@ func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs 
 		buildExprs:   buildExprs,
 		probeExprs:   probeExprs,
 		buildAliases: buildAliases,
+		hintError:    join.HintError(),
 	}
 }
 
@@ -71,6 +73,10 @@ func (this *HashJoin) BuildAliases() []string {
 	return this.buildAliases
 }
 
+func (this *HashJoin) HintError() string {
+	return this.hintError
+}
+
 func (this *HashJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -97,6 +103,10 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 
 	r["build_aliases"] = this.buildAliases
 
+	if this.hintError != "" {
+		r["hint_not_followed"] = this.hintError
+	}
+
 	r["~child"] = this.child
 
 	if f != nil {
@@ -113,6 +123,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 		BuildExprs   []string        `json:"build_exprs"`
 		ProbeExprs   []string        `json:"probe_exprs"`
 		BuildAliases []string        `json:"build_aliases"`
+		HintError    string          `json:"hint_not_followed"`
 		Child        json.RawMessage `json:"~child"`
 	}
 
@@ -149,6 +160,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	}
 
 	this.buildAliases = _unmarshalled.BuildAliases
+	this.hintError = _unmarshalled.HintError
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {
