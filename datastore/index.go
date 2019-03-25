@@ -10,6 +10,7 @@
 package datastore
 
 import (
+	"github.com/couchbase/cbauth"
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -52,6 +53,17 @@ type Indexer interface {
 	Refresh() errors.Error                                      // Refresh list of indexes from metadata
 	MetadataVersion() uint64                                    // Meta data change counter
 	SetLogLevel(level logging.Level)                            // Set log level for in-process logging
+
+	// Comment out the new method so GSI and FTS get access to ConnectionSecurityConfig
+	// without breaking the build.
+	// SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
+}
+
+type ConnectionSecurityConfig struct {
+	tlsConfig               cbauth.TLSConfig
+	clusterEncryptionConfig cbauth.ClusterEncryptionConfig
+	certFile                string
+	keyFile                 string
 }
 
 type IndexConfig interface {
