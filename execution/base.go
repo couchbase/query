@@ -49,6 +49,7 @@ type annotatedChannel chan value.AnnotatedValue
 
 type base struct {
 	valueExchange
+	conn           *datastore.IndexConnection
 	stopChannel    stopChannel
 	input          Operator
 	output         Operator
@@ -219,6 +220,9 @@ func (this *base) baseReopen(context *Context) {
 		default:
 		}
 	}
+	if this.conn != nil {
+		this.conn = nil
+	}
 	this.valueExchange.reset()
 	this.once.Reset()
 	this.contextTracked = nil
@@ -369,6 +373,18 @@ func (this *base) chanSendStop() {
 	this.switchPhase(_EXECTIME)
 }
 
+func (this *base) connSendStop(conn *datastore.IndexConnection) {
+	if this.completed {
+		return
+	}
+	this.switchPhase(_CHANTIME)
+	this.valueExchange.sendStop()
+	if conn != nil {
+		conn.SendStop()
+	}
+	this.switchPhase(_EXECTIME)
+}
+
 func (this *base) sendItem(item value.AnnotatedValue) bool {
 	return this.sendItemOp(this.output, item)
 }
@@ -443,34 +459,21 @@ func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
 }
 
 func (this *base) getItemEntry(conn *datastore.IndexConnection) (*datastore.IndexEntry, bool) {
+	this.conn = conn
+	if this.stopped {
+		return nil, false
+	}
 
 	// this is used explictly to get keys from the indexer
 	// so by definition we are tracking service time
 	this.switchPhase(_SERVTIME)
-	defer this.switchPhase(_EXECTIME)
-
-	select {
-	case <-this.stopChannel: // Never closed
-		this.stopped = true
-		return nil, false
-	default:
-	}
-
-	select {
-	case item, ok := <-conn.EntryChannel():
-		if ok {
-
-			// getItemEntry does not keep track of
-			// incoming documents
-			return item, true
-		}
-
-		// no more data
-		return nil, true
-	case <-this.stopChannel: // Never closed
+	item, ok := conn.Sender().GetEntry()
+	this.switchPhase(_EXECTIME)
+	if !ok {
 		this.stopped = true
 		return nil, false
 	}
+	return item, ok
 }
 
 func (this *base) getItemChildren() (value.AnnotatedValue, int, bool) {

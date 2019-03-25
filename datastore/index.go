@@ -440,8 +440,6 @@ type IndexEntry struct {
 	PrimaryKey string
 }
 
-type EntryChannel chan *IndexEntry
-
 // Statistics captures statistics for a range.
 // - it may return heuristics and/or outdated values.
 // - query shall not depend on the accuracy of this statistics.
@@ -455,12 +453,10 @@ type Statistics interface {
 }
 
 type IndexConnection struct {
-	sender       idxEntryChannel
-	entryChannel EntryChannel // Closed by the index when the scan is completed or aborted.
-	stopChannel  StopChannel  // Notifies index to stop scanning. Never closed, just garbage-collected.
-	context      Context
-	timeout      bool
-	primary      bool
+	sender  EntryExchange
+	context Context
+	timeout bool
+	primary bool
 }
 
 type Sender interface {
@@ -482,11 +478,9 @@ func NewIndexConnection(context Context) *IndexConnection {
 	}
 
 	rv := &IndexConnection{
-		entryChannel: make(EntryChannel, size),
-		stopChannel:  make(StopChannel, 1),
-		context:      context,
+		context: context,
 	}
-	newEntryChannel(&rv.sender, rv)
+	newEntryExchange(&rv.sender, size)
 	return rv
 }
 
@@ -519,11 +513,9 @@ func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, err
 	}
 
 	rv := &IndexConnection{
-		entryChannel: make(EntryChannel, size),
-		stopChannel:  make(StopChannel, 1),
-		context:      context,
+		context: context,
 	}
-	newEntryChannel(&rv.sender, rv)
+	newEntryExchange(&rv.sender, maxSize)
 	return rv, nil
 }
 
@@ -531,23 +523,23 @@ func (this *IndexConnection) Dispose() {
 	// Entry Exchange expects two closes, one from the sender and one from the receiver
 	// the first marks the connection has having completed the data
 	// the second marks all actors as gone, meaning the connection can be recycled
-	// this.sender.Close()
+	this.sender.Close()
 }
 
 func (this *IndexConnection) SendStop() {
 	this.sender.sendStop()
 }
 
+func (this *IndexConnection) SendTimeout() {
+	this.sender.sendTimeout()
+}
+
+func (this *IndexConnection) Reset() {
+	this.sender.reset()
+}
+
 func (this *IndexConnection) Sender() Sender {
 	return &this.sender
-}
-
-func (this *IndexConnection) EntryChannel() EntryChannel {
-	return this.entryChannel
-}
-
-func (this *IndexConnection) StopChannel() StopChannel {
-	return this.stopChannel
 }
 
 func (this *IndexConnection) Fatal(err errors.Error) {

@@ -153,23 +153,17 @@ func Test2iScanRange(t *testing.T) {
 		},
 	}
 	conn := datastore.NewIndexConnection(nil)
-	entrych := conn.EntryChannel()
-	quitch := conn.StopChannel()
 
 	go index.Scan("", span, false, 10000, conn)
 
 	count := 0
 loop:
 	for {
-		select {
-		case _, ok := <-entrych:
-			if !ok {
-				break loop
-			}
-			count++
-		case <-quitch:
+		_, ok := conn.Sender.GetEntry()
+		if !ok {
 			break loop
 		}
+		count++
 	}
 	if count != 20000 {
 		t.Fatal("failed ScanRange() - ", count)
@@ -180,24 +174,17 @@ func Test2iScanEntries(t *testing.T) {
 	c.LogIgnore()
 	//c.SetLogLevel(c.LogLevelDebug)
 	conn := datastore.NewIndexConnection(nil)
-	entrych := conn.EntryChannel()
-	quitch := conn.StopChannel()
 
 	go index.ScanEntries(10000, conn)
 
 	count := 0
 loop:
 	for {
-		select {
-		case _, ok := <-entrych:
-			if !ok {
-				break loop
-			}
-			count++
-
-		case <-quitch:
+		_, ok := conn.Sender().GetEntry()
+		if !ok {
 			break loop
 		}
+		count++
 	}
 	if count != 20000 {
 		t.Fatal("failed ScanEntries() - ", count)

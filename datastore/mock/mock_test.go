@@ -249,8 +249,8 @@ func doIndexScan(t *testing.T, b datastore.Keyspace, span *datastore.Span) (
 	go idx.Scan("", span, false, nitems, datastore.UNBOUNDED, nil, conn)
 
 	for {
-		entry, ok := <-conn.EntryChannel()
-		if !ok {
+		entry, ok := conn.Sender().GetEntry()
+		if entry == nil || !ok {
 			return
 		}
 

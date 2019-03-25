@@ -698,7 +698,7 @@ func (pi *primaryIndex) Drop(requestId string) errors.Error {
 
 func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
@@ -760,7 +760,7 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 
 		if !dirEntry.IsDir() {
 			entry := datastore.IndexEntry{PrimaryKey: id}
-			conn.EntryChannel() <- &entry
+			conn.Sender().SendEntry(&entry)
 			n++
 		}
 	}
@@ -768,7 +768,7 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 
 func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
@@ -782,7 +782,7 @@ func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastor
 		}
 		if !dirEntry.IsDir() {
 			entry := datastore.IndexEntry{PrimaryKey: documentPathToId(dirEntry.Name())}
-			conn.EntryChannel() <- &entry
+			conn.Sender().SendEntry(&entry)
 		}
 	}
 }

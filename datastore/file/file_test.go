@@ -107,12 +107,14 @@ func TestFile(t *testing.T) {
 
 	go index.ScanEntries("", math.MaxInt64, datastore.UNBOUNDED, nil, conn)
 
+	var entry *datastore.IndexEntry
 	ok := true
 	for ok {
-		entry, ok := <-conn.EntryChannel()
-		if ok {
+		entry, ok = conn.Sender().GetEntry()
+		if entry != nil {
 			fmt.Printf("\nScanned %s", entry.PrimaryKey)
 		} else {
+			ok = false
 			break
 		}
 	}

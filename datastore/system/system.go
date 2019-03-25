@@ -257,17 +257,8 @@ func (si *systemIndexer) SetLogLevel(level logging.Level) {
 }
 
 func sendSystemKey(conn *datastore.IndexConnection, entry *datastore.IndexEntry) bool {
-	select {
-	case <-conn.StopChannel():
-		return false
-	default:
-	}
-	select {
-	case conn.EntryChannel() <- entry:
-		return true
-	case <-conn.StopChannel():
-		return false
-	case <-time.After(scanTimeout):
-		return false
-	}
+	stop := time.AfterFunc(scanTimeout, func() { conn.SendTimeout() })
+	rv := conn.Sender().SendEntry(entry)
+	stop.Stop()
+	return rv
 }

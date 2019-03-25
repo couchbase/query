@@ -128,11 +128,9 @@ func TestServer(t *testing.T) {
 	ok := true
 	for ok {
 
-		select {
-		case entry, ok = <-conn.EntryChannel():
-			if ok {
-				fmt.Printf("\n primary key %v", entry.PrimaryKey)
-			}
+		entry, ok = conn.Sender().GetEntry()
+		if ok {
+			fmt.Printf("\n primary key %v", entry.PrimaryKey)
 		}
 	}
 }

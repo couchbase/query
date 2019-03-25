@@ -29,7 +29,6 @@ func NewIndexCountScan(plan *plan.IndexCountScan, context *Context) *IndexCountS
 	}
 
 	newRedirectBase(&rv.base)
-	rv.newStopChannel()
 	rv.output = rv
 	return rv
 }
@@ -118,9 +117,4 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
-}
-
-// send a stop
-func (this *IndexCountScan) SendStop() {
-	this.chanSendStop()
 }

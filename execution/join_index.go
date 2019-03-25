@@ -24,6 +24,8 @@ import (
 
 type IndexJoin struct {
 	joinBase
+	sync.Mutex
+	conn     *datastore.IndexConnection
 	plan     *plan.IndexJoin
 	joinTime time.Duration
 }
@@ -34,7 +36,6 @@ func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 	}
 
 	newJoinBase(&rv.joinBase, context)
-	rv.newStopChannel()
 	rv.execPhase = INDEX_JOIN
 	rv.output = rv
 	return rv
@@ -72,15 +73,22 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 		defer wg.Wait()
 
 		id := idv.Actual().(string)
-		conn := datastore.NewIndexConnection(context)
-		defer conn.Dispose()  // Dispose of the connection
-		defer conn.SendStop() // Notify index that I have stopped
+		this.Lock()
+		this.conn = datastore.NewIndexConnection(context)
+		defer func() {
+			this.Lock()
+			this.conn = nil
+			this.Unlock()
+		}()
+		defer this.conn.Dispose()  // Dispose of the connection
+		defer this.conn.SendStop() // Notify index that I have stopped
+		this.Unlock()
 
 		wg.Add(1)
-		go this.scan(id, context, conn, &wg)
+		go this.scan(id, context, this.conn, &wg)
 
 		for {
-			entry, cont := this.getItemEntry(conn)
+			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
 					// current policy is to only count 'in' documents
@@ -213,5 +221,10 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 
 // send a stop
 func (this *IndexJoin) SendStop() {
-	this.chanSendStop()
+	this.baseSendStop()
+	this.Lock()
+	if this.conn != nil {
+		this.conn.SendStop()
+	}
+	this.Unlock()
 }

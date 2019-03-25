@@ -32,6 +32,7 @@ func init() {
 
 type IndexScan3 struct {
 	base
+	conn     *datastore.IndexConnection
 	plan     *plan.IndexScan3
 	children []Operator
 }
@@ -41,7 +42,6 @@ func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
 	rv.plan = plan
 
 	newBase(&rv.base, context)
-	rv.newStopChannel()
 	rv.output = rv
 	return rv
 }
@@ -67,11 +67,11 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer this.notify()                          // Notify that I have stopped
 
-		conn := datastore.NewIndexConnection(context)
-		defer conn.Dispose()  // Dispose of the connection
-		defer conn.SendStop() // Notify index that I have stopped
+		this.conn = datastore.NewIndexConnection(context)
+		defer this.conn.Dispose()  // Dispose of the connection
+		defer this.conn.SendStop() // Notify index that I have stopped
 
-		go this.scan(context, conn, parent)
+		go this.scan(context, this.conn, parent)
 
 		ok := true
 		var docs uint64 = 0
@@ -91,7 +91,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		}
 
 		for ok {
-			entry, cont := this.getItemEntry(conn)
+			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
@@ -298,7 +298,7 @@ func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 
 // send a stop
 func (this *IndexScan3) SendStop() {
-	this.chanSendStop()
+	this.connSendStop(this.conn)
 }
 
 func (this *IndexScan3) Done() {

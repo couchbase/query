@@ -31,6 +31,7 @@ func init() {
 
 type PrimaryScan3 struct {
 	base
+	conn *datastore.IndexConnection
 	plan *plan.PrimaryScan3
 }
 
@@ -39,7 +40,6 @@ func NewPrimaryScan3(plan *plan.PrimaryScan3, context *Context) *PrimaryScan3 {
 	rv.plan = plan
 
 	newBase(&rv.base, context)
-	rv.newStopChannel()
 	rv.output = rv
 	return rv
 }
@@ -70,15 +70,15 @@ func (this *PrimaryScan3) RunOnce(context *Context, parent value.Value) {
 func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	this.switchPhase(_EXECTIME)
 	defer this.switchPhase(_NOTIME)
-	conn := datastore.NewIndexConnection(context)
-	conn.SetPrimary()
-	defer conn.Dispose()  // Dispose of the connection
-	defer conn.SendStop() // Notify index that I have stopped
+	this.conn = datastore.NewIndexConnection(context)
+	this.conn.SetPrimary()
+	defer this.conn.Dispose()  // Dispose of the connection
+	defer this.conn.SendStop() // Notify index that I have stopped
 
 	offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), false, context)
 	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, false, context)
 
-	go this.scanEntries(context, conn, offset, limit)
+	go this.scanEntries(context, this.conn, offset, limit)
 
 	nitems := uint64(0)
 
@@ -91,7 +91,7 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 
 	var lastEntry *datastore.IndexEntry
 	for {
-		entry, ok := this.getItemEntry(conn)
+		entry, ok := this.getItemEntry(this.conn)
 		if ok {
 			if entry != nil {
 				// current policy is to only count 'in' documents
@@ -115,7 +115,7 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	}
 
 	emsg := "Primary index scan timeout - resorting to chunked scan"
-	for conn.Timeout() {
+	for this.conn.Timeout() {
 		// Offset, Aggregates, Order needs to be exact.
 		// On timeout return error because we cann't stitch the output
 		if this.plan.Offset() != nil || len(this.plan.OrderTerms()) > 0 || this.plan.GroupAggs() != nil ||
@@ -128,9 +128,10 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
 
 		// do chunked scans; lastEntry the starting point
-		conn = datastore.NewIndexConnection(context)
-		conn.SetPrimary()
-		lastEntry, nitems = this.scanPrimaryChunk(context, parent, conn, lastEntry, limit)
+		// old connection will be disposed by the defer above
+		this.conn = datastore.NewIndexConnection(context)
+		this.conn.SetPrimary()
+		lastEntry, nitems = this.scanPrimaryChunk(context, parent, this.conn, lastEntry, limit)
 		emsg = "Primary index chunked scan"
 	}
 }
@@ -212,7 +213,7 @@ func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 
 // send a stop
 func (this *PrimaryScan3) SendStop() {
-	this.chanSendStop()
+	this.connSendStop(this.conn)
 }
 
 func (this *PrimaryScan3) Done() {

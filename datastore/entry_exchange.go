@@ -34,6 +34,7 @@ type entryQueue struct {
 
 type scanState struct {
 	stop       bool
+	timeout    bool
 	queue      scanQueue
 	oLock      sync.RWMutex
 	mustSignal bool
@@ -42,7 +43,8 @@ type scanState struct {
 
 type EntryExchange struct {
 	entryQueue
-	scanState
+	reader scanState
+	writer scanState
 }
 
 var entrySlicePool = sync.Pool{New: func() interface{} {
@@ -74,7 +76,8 @@ func newEntryExchange(exchange *EntryExchange, capacity int64) {
 // it's the responsibility of the caller to know that no more readers or
 // writers are around
 func (this *EntryExchange) reset() {
-	this.stop = false
+	this.reader.stop = false
+	this.writer.stop = false
 	this.closed = false
 	for this.itemsCount > 0 {
 		this.items[this.itemsTail] = nil
@@ -123,16 +126,17 @@ func (this *EntryExchange) Length() int {
 
 // send
 func (this *EntryExchange) SendEntry(item *IndexEntry) bool {
-	if this.stop {
+	if this.writer.stop {
 		return false
 	}
 	this.vLock.Lock()
-	this.oLock.Lock()
+	this.writer.oLock.Lock()
 	for {
 
 		// stop takes precedence
-		if this.stop {
-			this.oLock.Unlock()
+		if this.writer.stop || this.writer.timeout {
+			this.writer.timeout = false
+			this.writer.oLock.Unlock()
 			this.vLock.Unlock()
 			return false
 		}
@@ -142,17 +146,16 @@ func (this *EntryExchange) SendEntry(item *IndexEntry) bool {
 		if this.closed {
 			this.readWaiters.signal()
 			this.writeWaiters.signal()
-			this.oLock.Unlock()
+			this.writer.oLock.Unlock()
 			this.vLock.Unlock()
 			return false
 		}
 		if this.itemsCount < cap(this.items) {
 			break
 		}
-		this.enqueue(this, &this.writeWaiters)
-
+		this.writer.enqueue(this, &this.writeWaiters)
 	}
-	this.oLock.Unlock()
+	this.writer.oLock.Unlock()
 	this.items[this.itemsHead] = item
 	this.itemsHead++
 	if this.itemsHead >= cap(this.items) {
@@ -171,16 +174,17 @@ func (this *EntryExchange) SendEntry(item *IndexEntry) bool {
 // receive
 func (this *EntryExchange) GetEntry() (*IndexEntry, bool) {
 
-	if this.stop {
+	if this.reader.stop {
 		return nil, false
 	}
 	this.vLock.Lock()
-	this.oLock.Lock()
+	this.reader.oLock.Lock()
 	for {
 
 		// stop takes precedence
-		if this.stop {
-			this.oLock.Unlock()
+		if this.reader.stop || this.reader.timeout {
+			this.reader.timeout = false
+			this.reader.oLock.Unlock()
 			this.vLock.Unlock()
 			return nil, false
 		}
@@ -191,15 +195,15 @@ func (this *EntryExchange) GetEntry() (*IndexEntry, bool) {
 
 		// no more
 		if this.closed {
-			this.oLock.Unlock()
+			this.reader.oLock.Unlock()
 			this.readWaiters.signal()
 			this.writeWaiters.signal()
 			this.vLock.Unlock()
 			return nil, true
 		}
-		this.enqueue(this, &this.readWaiters)
+		this.reader.enqueue(this, &this.readWaiters)
 	}
-	this.oLock.Unlock()
+	this.reader.oLock.Unlock()
 	val := this.items[this.itemsTail]
 	this.items[this.itemsTail] = nil
 	this.itemsTail++
@@ -301,6 +305,11 @@ func (this *entryQueue) close() {
 
 // signal stop
 func (this *EntryExchange) sendStop() {
+	this.reader.sendStop()
+	this.writer.sendStop()
+}
+
+func (this *scanState) sendStop() {
 	this.oLock.Lock()
 	this.stop = true
 	if this.mustSignal {
@@ -310,10 +319,25 @@ func (this *EntryExchange) sendStop() {
 	this.oLock.Unlock()
 }
 
+// signal sender timeout
+func (this *EntryExchange) sendTimeout() {
+	this.writer.sendTimeout()
+}
+
+func (this *scanState) sendTimeout() {
+	this.oLock.Lock()
+	this.timeout = true
+	if this.mustSignal {
+		this.mustSignal = false
+		this.wg.Done()
+	}
+	this.oLock.Unlock()
+}
+
 // did we get a stop?
 func (this *EntryExchange) IsStopped() bool {
-	this.oLock.RLock()
-	rv := this.stop
-	this.oLock.RUnlock()
+	this.reader.oLock.RLock()
+	rv := this.reader.stop
+	this.reader.oLock.RUnlock()
 	return rv
 }

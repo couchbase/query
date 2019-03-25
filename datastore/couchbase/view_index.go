@@ -404,7 +404,7 @@ func (vi *viewIndex) Drop(requestId string) errors.Error {
 
 func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
@@ -439,11 +439,10 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 						conn.Error(errors.NewError(err, "View Row "+fmt.Sprintf("%v", viewRow.Key)))
 					}
 				}
-				select {
-				case conn.EntryChannel() <- &entry:
+				if conn.Sender().SendEntry(&entry) {
 					sentRows = true
 					numRows++
-				case <-conn.StopChannel():
+				} else {
 					logging.Debugf(" Asked to stop after sending %v rows", numRows)
 					ok = false
 				}

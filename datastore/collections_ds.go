@@ -551,19 +551,19 @@ func (index *CollectionsPrimaryIndex) Drop(requestId string) errors.Error {
 }
 
 func (index *CollectionsPrimaryIndex) Scan(requestId string, span *Span, distinct bool, limit int64, cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	for k := range index.keyspace.docs {
 		entry := IndexEntry{PrimaryKey: k}
-		conn.EntryChannel() <- &entry
+		conn.Sender().SendEntry(&entry)
 	}
 }
 
 func (index *CollectionsPrimaryIndex) ScanEntries(requestId string, limit int64, cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 	for key := range index.keyspace.docs {
 		entry := IndexEntry{PrimaryKey: key}
-		conn.EntryChannel() <- &entry
+		conn.Sender().SendEntry(&entry)
 	}
 }
 

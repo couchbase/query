@@ -514,7 +514,7 @@ func (pi *primaryIndex) Drop(requestId string) errors.Error {
 
 func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
@@ -566,13 +566,13 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 		}
 
 		entry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &entry
+		conn.Sender().SendEntry(&entry)
 	}
 }
 
 func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
+	defer conn.Sender().Close()
 
 	if limit == 0 {
 		limit = int64(pi.keyspace.nitems)
@@ -580,6 +580,6 @@ func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastor
 
 	for i := 0; i < pi.keyspace.nitems && int64(i) < limit; i++ {
 		entry := datastore.IndexEntry{PrimaryKey: strconv.Itoa(i)}
-		conn.EntryChannel() <- &entry
+		conn.Sender().SendEntry(&entry)
 	}
 }
