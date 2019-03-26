@@ -8,14 +8,15 @@ ftstests="test_cases/fts test_cases/ftsclient"
 cd $GOPATH/src/github.com/couchbase/query/test/gsi
 for i in test_cases/*
 do
-    if [ $flag -le 0 ];then
+   
+#    if [ $flag -le 0 ];then
         for ft in $ftstests
         do
             if [ $ft == $i ];then
                  continue 2
             fi
         done
-    fi
+#    fi
     source ./exportval.sh $*
     cd $i
     go test ./...
