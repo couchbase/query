@@ -132,4 +132,8 @@ func NewCbScopeNotFoundError(e error, msg string) Error {
 func NewCbKeyspaceSizeError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12022, IKey: "datastore.couchbase.keyspace_size_error", ICause: e,
 		InternalMsg: "Failed to get keyspace size " + msg, InternalCaller: CallerN(1)}
+
+func NewCbSecurityConfigNotProvided(bucket string) Error {
+	return &err{level: EXCEPTION, ICode: 12023, IKey: "datastore.couchbase.security_config_not_provided",
+		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1)}
 }

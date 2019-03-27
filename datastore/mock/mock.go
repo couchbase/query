@@ -104,6 +104,10 @@ func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS")
 }
 
+func (s *store) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "AuditInfo")
 }
@@ -408,6 +412,10 @@ func (mi *mockIndexer) MetadataVersion() uint64 {
 
 func (mi *mockIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
+}
+
+func (mi *mockIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing.
 }
 
 // NewDatastore creates a new mock store for the given "path".  The

@@ -282,18 +282,22 @@ as defined in server/server.go.
 */
 func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 
+	nullSecurityConfig := &datastore.ConnectionSecurityConfig{}
+
 	mockServer := &MockServer{}
 	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	ds.SetConnectionSecurityConfig(nullSecurityConfig)
 
 	sys, err := system.NewDatastore(ds)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	ds.SetConnectionSecurityConfig(nullSecurityConfig)
 
 	if setGlobals {
 		datastore.SetDatastore(ds)

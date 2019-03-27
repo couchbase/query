@@ -302,6 +302,10 @@ func (view *viewIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
 }
 
+func (view *viewIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing.
+}
+
 type viewIndex struct {
 	name      string
 	using     datastore.IndexType

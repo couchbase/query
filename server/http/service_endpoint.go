@@ -33,20 +33,19 @@ import (
 )
 
 type HttpEndpoint struct {
-	server                  *server.Server
-	metrics                 bool
-	httpAddr                string
-	httpsAddr               string
-	certFile                string
-	keyFile                 string
-	bufpool                 BufferPool
-	listener                net.Listener
-	listenerTLS             net.Listener
-	mux                     *mux.Router
-	actives                 server.ActiveRequests
-	options                 server.ServerOptions
-	tlsConfig               cbauth.TLSConfig
-	clusterEncryptionConfig cbauth.ClusterEncryptionConfig
+	server        *server.Server
+	metrics       bool
+	httpAddr      string
+	httpsAddr     string
+	certFile      string
+	keyFile       string
+	bufpool       BufferPool
+	listener      net.Listener
+	listenerTLS   net.Listener
+	mux           *mux.Router
+	actives       server.ActiveRequests
+	options       server.ServerOptions
+	connSecConfig datastore.ConnectionSecurityConfig
 }
 
 const (
@@ -66,6 +65,9 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 		actives:   NewActiveRequests(),
 		options:   NewHttpOptions(srv),
 	}
+
+	rv.connSecConfig.CertFile = certFile
+	rv.connSecConfig.KeyFile = keyFile
 
 	server.SetActives(rv.actives)
 	server.SetOptions(rv.options)
@@ -100,7 +102,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 	if err1 != nil {
 		return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
 	}
-	this.tlsConfig = cbauthTLSsettings
+	this.connSecConfig.TLSConfig = cbauthTLSsettings
 
 	ln, err := net.Listen("tcp", this.httpsAddr)
 
@@ -208,23 +210,13 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 
 // Reconfigure the node-to-node encryption.
 func (this *HttpEndpoint) UpdateNodeToNodeEncryptionLevel() {
-	cryptoConfig, err := cbauth.GetClusterEncryptionConfig()
-	if err != nil {
-		logging.Errorf("unable to retrieve node-to-node encryption settings: %v", err)
-		return
-	}
-	this.clusterEncryptionConfig = cryptoConfig
-
-	// Add code for actual reconfiguration here.
-
-	// Temporary log message.
-	logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)
 }
 
 func (this *HttpEndpoint) setupSSL() {
 
 	err := cbauth.RegisterConfigRefreshCallback(func(configChange uint64) error {
 		// Both flags could be set here.
+		settingsUpdated := false
 		if (configChange & cbauth.CFG_CHANGE_CERTS_TLSCONFIG) != 0 {
 			logging.Infof(" Certificates have been refreshed by ns server ")
 			closeErr := this.CloseTLS()
@@ -241,10 +233,35 @@ func (this *HttpEndpoint) setupSSL() {
 				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
 				return errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
 			}
+			settingsUpdated = true
 		}
 
 		if (configChange & cbauth.CFG_CHANGE_CLUSTER_ENCRYPTION) != 0 {
-			this.UpdateNodeToNodeEncryptionLevel()
+			cryptoConfig, err := cbauth.GetClusterEncryptionConfig()
+			if err != nil {
+				logging.Errorf("unable to retrieve node-to-node encryption settings: %v", err)
+				return errors.NewAdminEndpointError(err, "unable to retrieve node-to-node encryption settings")
+			}
+			this.connSecConfig.ClusterEncryptionConfig = cryptoConfig
+
+			// Temporary log message.
+			logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)
+			settingsUpdated = true
+		}
+
+		if settingsUpdated {
+			ds := datastore.GetDatastore()
+			if ds == nil {
+				logging.Warnf("No datastore configured. Unable to update connection security settings.")
+			} else {
+				ds.SetConnectionSecurityConfig(&(this.connSecConfig))
+			}
+			sds := datastore.GetSystemstore()
+			if sds == nil {
+				logging.Warnf("No system datastore configured. Unable to update connection security settings.")
+			} else {
+				sds.SetConnectionSecurityConfig(&(this.connSecConfig))
+			}
 		}
 		return nil
 	})

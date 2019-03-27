@@ -95,6 +95,7 @@ type store struct {
 	inferencer     datastore.Inferencer  // what we use to infer schemas
 	statUpdater    datastore.StatUpdater // what we use to update statistics
 	connectionUrl  string                // where to contact ns_server
+	connSecConfig  *datastore.ConnectionSecurityConfig
 }
 
 func (s *store) Id() string {
@@ -460,6 +461,26 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 		roles[i].Bucket = rd.BucketName
 	}
 	return roles, nil
+}
+
+func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionSecurityConfig) {
+	s.connSecConfig = connSecConfig
+	// Implementation based on SetLogLevel(), above.
+	for _, n := range s.namespaceCache {
+		defer n.lock.Unlock()
+		n.lock.Lock()
+		for _, k := range n.keyspaceCache {
+			if k.cbKeyspace == nil {
+				continue
+			}
+			indexers, _ := k.cbKeyspace.Indexers()
+			if len(indexers) > 0 {
+				for _, idxr := range indexers {
+					idxr.SetConnectionSecurityConfig(connSecConfig)
+				}
+			}
+		}
+	}
 }
 
 func initCbAuth(url string) (*cb.Client, error) {
@@ -958,6 +979,11 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		return nil, errors.NewCbBucketTypeNotSupportedError(nil, cbbucket.Type)
 	}
 
+	connSecConfig := p.store.connSecConfig
+	if connSecConfig == nil {
+		return nil, errors.NewCbSecurityConfigNotProvided(name)
+	}
+
 	rv := &keyspace{
 		namespace: p,
 		name:      name,
@@ -990,11 +1016,13 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	if qerr != nil {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
 	}
+	rv.gsiIndexer.SetConnectionSecurityConfig(connSecConfig)
 
 	rv.ftsIndexer, qerr = ftsclient.NewFTSIndexer(p.store.URL(), p.Name(), name)
 	if qerr != nil {
 		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", name, qerr)
 	}
+	rv.ftsIndexer.SetConnectionSecurityConfig(connSecConfig)
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
 	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
@@ -1464,6 +1492,8 @@ func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 	if err == nil {
 		logging.Infof(" GSI Indexer loaded ")
 	}
+	// We know the connSecConfig is present, because we checked when the keyspace was created.
+	b.gsiIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 }
 
 func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
@@ -1472,6 +1502,8 @@ func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
 	if err == nil {
 		logging.Infof(" FTS Indexer loaded ")
 	}
+	// We know the connSecConfig is present, because we checked when the keyspace was created.
+	b.ftsIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 }
 
 func (b *keyspace) loadIndexes() (err errors.Error) {

@@ -115,6 +115,10 @@ func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS")
 }
 
+func (s *store) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing.
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "AuditInfo")
 }
@@ -258,6 +262,10 @@ func (si *systemIndexer) MetadataVersion() uint64 {
 
 func (si *systemIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
+}
+
+func (si *systemIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing.
 }
 
 func sendSystemKey(conn *datastore.IndexConnection, entry *datastore.IndexEntry) bool {

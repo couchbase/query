@@ -118,6 +118,10 @@ func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS")
 }
 
+func (s *store) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing.
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "AuditInfo")
 }
@@ -653,6 +657,10 @@ func (b *fileIndexer) MetadataVersion() uint64 {
 
 func (b *fileIndexer) SetLogLevel(level logging.Level) {
 	// No-op, uses query engine logger
+}
+
+func (b *fileIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
+	// Do nothing.
 }
 
 // primaryIndex performs full keyspace scans.

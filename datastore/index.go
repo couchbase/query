@@ -57,7 +57,7 @@ type Indexer interface {
 
 	// Comment out the new method so GSI and FTS get access to ConnectionSecurityConfig
 	// without breaking the build.
-	// SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
+	SetConnectionSecurityConfig(connSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
 }
 
 type ConnectionSecurityConfig struct {

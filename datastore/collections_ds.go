@@ -500,6 +500,10 @@ func (indexer *CollectionsIndexer) SetLogLevel(level logging.Level) {
 	// Do nothing.
 }
 
+func (indexer *CollectionsIndexer) SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) {
+	// Do nothing for now.
+}
+
 type CollectionsPrimaryIndex struct {
 	keyspace *CollectionsKeyspace
 	id       string
