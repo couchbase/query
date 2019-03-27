@@ -29,7 +29,7 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 	size := 0
 
 	for _, child := range pred.Operands() {
-		cspans, err := sargFor(child, this.key, this.isJoin, this.keyspaceName)
+		cspans, err := sargFor(child, this.key, this.isJoin, this.doSelec, this.baseKeyspace)
 		if err != nil {
 			return nil, err
 		}

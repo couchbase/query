@@ -103,13 +103,13 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	subset := pred
 	if kspace, ok := this.baseKeyspaces[node.Alias()]; ok {
-		err = combineFilters(kspace, false)
+		err = CombineFilters(kspace, false)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		if kspace.dnfPred != nil {
-			subset = expression.NewAnd(subset, kspace.dnfPred.Copy())
+		if kspace.DnfPred() != nil {
+			subset = expression.NewAnd(subset, kspace.DnfPred().Copy())
 			dnf = NewDNF(subset, true, true)
 			subset, err = dnf.Map(subset)
 			if err != nil {
@@ -136,7 +136,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		return nil, nil, nil, err
 	}
 
-	minimals := minimalIndexes(sargables, false, pred)
+	minimals := this.minimalIndexes(sargables, false, pred)
 	if len(minimals) == 0 {
 		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
@@ -184,7 +184,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 		}
 	}
 
-	secondaries = minimalIndexes(secondaries, true, pred)
+	secondaries = this.minimalIndexes(secondaries, true, pred)
 
 	for index, _ := range secondaries {
 		return index, nil, nil, nil

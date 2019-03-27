@@ -45,7 +45,8 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		}
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
-		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.keyspaceName, variable.Alias())
+		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
+			this.baseKeyspace, variable.Alias())
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -63,7 +64,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 	}
 
 	// Array Index key can have only single binding
-	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.keyspaceName,
-		array.Bindings()[0].Variable())
+	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
+		this.baseKeyspace, array.Bindings()[0].Variable())
 
 }

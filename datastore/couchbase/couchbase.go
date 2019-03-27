@@ -93,6 +93,7 @@ type store struct {
 	namespaceCache map[string]*namespace // map of pool-names and IDs
 	CbAuthInit     bool                  // whether cbAuth is initialized
 	inferencer     datastore.Inferencer  // what we use to infer schemas
+	statUpdater    datastore.StatUpdater // what we use to update statistics
 	connectionUrl  string                // where to contact ns_server
 }
 
@@ -353,6 +354,10 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return []datastore.Inferencer{s.inferencer}, nil
 }
 
+func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
+	return s.statUpdater, nil
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	auditSpec, err := s.client.GetAuditSpec()
 	if err != nil {
@@ -551,6 +556,12 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	// get the schema inferencer
 	var er errors.Error
 	store.inferencer, er = GetDefaultInferencer(store)
+	if er != nil {
+		return nil, er
+	}
+
+	// get statistics updater
+	store.statUpdater, er = GetDefaultStatUpdater(store)
 	if er != nil {
 		return nil, er
 	}
@@ -1027,12 +1038,21 @@ func (b *keyspace) Name() string {
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	totalCount, err := b.cbbucket.GetCount(true)
+	count, err := b.cbbucket.GetCount(true)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+err.Error())
 	}
-	return totalCount, nil
+	return count, nil
+}
+
+func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	size, err := b.cbbucket.GetSize(true)
+	if err != nil {
+		b.checkRefresh(err)
+		return 0, errors.NewCbKeyspaceSizeError(nil, "keyspace "+b.Name()+"Error "+err.Error())
+	}
+	return size, nil
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {

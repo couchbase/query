@@ -128,3 +128,8 @@ func NewCbScopeNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12021, IKey: "datastore.couchbase.scope_not_found", ICause: e,
 		InternalMsg: "Scope not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }
+
+func NewCbKeyspaceSizeError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12022, IKey: "datastore.couchbase.keyspace_size_error", ICause: e,
+		InternalMsg: "Failed to get keyspace size " + msg, InternalCaller: CallerN(1)}
+}

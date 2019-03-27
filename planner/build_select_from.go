@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -34,7 +35,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		defer func() { this.from = prevFrom }()
 
 		// gather keyspace references
-		this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
+		this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
 		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces, this.from.PrimaryTerm().Alias())
 		_, err := node.From().Accept(keyspaceFinder)
 		if err != nil {
@@ -553,6 +554,25 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	scan := plan.NewCountScan(keyspace, from)
 	this.children = append(this.children, scan)
 	return true, nil
+}
+
+func (this *builder) processKeyspaceDone(keyspace string) error {
+	var err error
+	for _, baseKeyspace := range this.baseKeyspaces {
+		if baseKeyspace.PlanDone() {
+			continue
+		} else if keyspace == baseKeyspace.Name() {
+			baseKeyspace.SetPlanDone()
+			continue
+		}
+
+		err = base.MoveJoinFilters(keyspace, baseKeyspace)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (this *builder) resetOrderOffsetLimit() {

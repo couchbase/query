@@ -100,6 +100,10 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 
+func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS")
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "AuditInfo")
 }
@@ -229,6 +233,10 @@ func (b *keyspace) Name() string {
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	return int64(b.nitems), nil
+}
+
+func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	return int64(b.nitems) * 25, nil // assumes each document is 25 bytes, see genItem()
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {

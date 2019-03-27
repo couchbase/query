@@ -64,7 +64,7 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 		}
 
 		expr := expression.NewConstant(val)
-		range2 := plan.NewRange2(expr, expr, datastore.BOTH)
+		range2 := plan.NewRange2(expr, expr, datastore.BOTH, optDefInSelec(), OPT_SELEC_NOT_AVAIL, 0)
 		span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 		spans = append(spans, span)
 		spans = append(spans, span)

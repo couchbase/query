@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -74,7 +75,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 	var pred, pred2 expression.Expression
 	if join {
-		pred = baseKeyspace.dnfPred
+		pred = baseKeyspace.DnfPred()
 	} else {
 		pred = this.where
 		pred2 = this.pushableOnclause
@@ -94,7 +95,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	if pred != nil || pred2 != nil {
 		// for ANSI JOIN, the following process is already done for ON clause filters
 		if !join {
-			if len(baseKeyspace.joinfilters) > 0 {
+			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
 				err = deriveNotNullFilter(keyspace, baseKeyspace, this.indexApiVersion)
 				if err != nil {
@@ -106,7 +107,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			addUnnestPreds(this.baseKeyspaces, baseKeyspace)
 
 			// include pushed ON-clause filter
-			err = combineFilters(baseKeyspace, true)
+			err = CombineFilters(baseKeyspace, true)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -116,8 +117,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		this.enableUnnest(node.Alias())
 		this.collectPredicates(baseKeyspace, keyspace, node, nil, false)
 
-		if baseKeyspace.dnfPred != nil {
-			if baseKeyspace.origPred == nil {
+		if baseKeyspace.DnfPred() != nil {
+			if baseKeyspace.OrigPred() == nil {
 				return nil, nil, errors.NewPlanInternalError("buildScan: NULL origPred")
 			}
 			return this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints)
@@ -130,7 +131,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			op = "nest"
 		}
 		return nil, nil, errors.NewNoAnsiJoinError(node.Alias(), op)
-	} else if this.cover != nil && baseKeyspace.dnfPred == nil {
+	} else if this.cover != nil && baseKeyspace.DnfPred() == nil {
 		// Handle covering primary scan
 		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, hints)
 		if scan != nil || err != nil {
@@ -143,11 +144,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 }
 
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	baseKeyspace *baseKeyspace, id expression.Expression, hints []datastore.Index) (
+	baseKeyspace *base.BaseKeyspace, id expression.Expression, hints []datastore.Index) (
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	// Handle constant FALSE predicate
-	cpred := baseKeyspace.origPred.Value()
+	cpred := baseKeyspace.OrigPred().Value()
 	if cpred != nil && !cpred.Truth() {
 		return _EMPTY_PLAN, nil, nil
 	}
@@ -197,7 +198,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 }
 
 func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	baseKeyspace *baseKeyspace, id expression.Expression, indexes []datastore.Index,
+	baseKeyspace *base.BaseKeyspace, id expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary plan.Operator, err error) {
 
@@ -209,9 +210,9 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	order := this.order
 
 	// Prefer OR scan
-	pred := baseKeyspace.dnfPred
+	pred := baseKeyspace.DnfPred()
 	if join && baseKeyspace.OnclauseOnly() {
-		pred = baseKeyspace.onclause
+		pred = baseKeyspace.Onclause()
 	}
 	if or, ok := pred.(*expression.Or); ok {
 
@@ -244,7 +245,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 }
 
 func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
-	baseKeyspace *baseKeyspace, id expression.Expression, indexes []datastore.Index,
+	baseKeyspace *base.BaseKeyspace, id expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	secondary plan.SecondaryScan, sargLength int, err error) {
 
@@ -261,9 +262,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	pred := baseKeyspace.dnfPred
+	pred := baseKeyspace.DnfPred()
 	if join && baseKeyspace.OnclauseOnly() {
-		pred = baseKeyspace.onclause
+		pred = baseKeyspace.Onclause()
 	}
 
 	sargables, all, arrays, err := this.sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
@@ -271,7 +272,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		return nil, 0, err
 	}
 
-	minimals := minimalIndexes(sargables, false, pred)
+	minimals := this.minimalIndexes(sargables, false, pred)
 
 	var searchFns map[string]*search.Search
 	var searchSargables []*indexEntry
@@ -365,7 +366,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 			this.offset = indexPushDowns.offset
 		}
 
-		dynamicPred := baseKeyspace.origPred.Copy()
+		dynamicPred := baseKeyspace.OrigPred().Copy()
 		dnf := NewDNF(dynamicPred, false, true)
 		dynamicPred, err = dnf.Map(dynamicPred)
 		if err != nil {
@@ -456,7 +457,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 		}
 	}
 
-	constant, err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause)
+	constant, err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause, this.useCBO)
 	return
 }
 

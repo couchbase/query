@@ -48,6 +48,10 @@ func (b *nodeKeyspace) Count(context datastore.QueryContext) (int64, errors.Erro
 	return int64(len(topology)), err
 }
 
+func (b *nodeKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	return -1, nil
+}
+
 func (b *nodeKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	return b.si, nil
 }

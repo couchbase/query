@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 /*
@@ -182,16 +183,16 @@ type opEntry struct {
 	Len int
 }
 
-func addUnnestPreds(baseKeyspaces map[string]*baseKeyspace, primary *baseKeyspace) {
+func addUnnestPreds(baseKeyspaces map[string]*base.BaseKeyspace, primary *base.BaseKeyspace) {
 	primaries := make(map[string]bool, len(baseKeyspaces))
-	primaries[primary.name] = true
+	primaries[primary.Name()] = true
 	nlen := 0
 
 	for _, unnestKeyspace := range baseKeyspaces {
 		if unnestKeyspace.IsPrimaryUnnest() {
-			nlen += len(unnestKeyspace.filters)
-			nlen += len(unnestKeyspace.joinfilters)
-			primaries[unnestKeyspace.name] = true
+			nlen += len(unnestKeyspace.Filters())
+			nlen += len(unnestKeyspace.JoinFilters())
+			primaries[unnestKeyspace.Name()] = true
 		}
 	}
 
@@ -199,30 +200,30 @@ func addUnnestPreds(baseKeyspaces map[string]*baseKeyspace, primary *baseKeyspac
 		return
 	}
 
-	newfilters := make(Filters, 0, nlen)
+	newfilters := make(base.Filters, 0, nlen)
 
 	for _, unnestKeyspace := range baseKeyspaces {
 		if unnestKeyspace.IsPrimaryUnnest() {
 			// MB-25949, includes predicates on the unnested alias
-			for _, fl := range unnestKeyspace.filters {
+			for _, fl := range unnestKeyspace.Filters() {
 				newfltr := fl.Copy()
-				newfltr.setUnnest()
+				newfltr.SetUnnest()
 				newfilters = append(newfilters, newfltr)
 			}
 			// MB-28720, includes join predicates that only refer to primary term
 			// MB-30292, in case of multiple levels of unnest, include join predicates
 			//           that only refers to aliases in the multiple levels of unnest
-			for _, jfl := range unnestKeyspace.joinfilters {
-				if jfl.singleJoinFilter(primaries) {
+			for _, jfl := range unnestKeyspace.JoinFilters() {
+				if jfl.SingleJoinFilter(primaries) {
 					newfltr := jfl.Copy()
-					newfltr.setUnnest()
+					newfltr.SetUnnest()
 					newfilters = append(newfilters, newfltr)
 				}
 			}
 		}
 	}
 
-	primary.filters = append(primary.filters, newfilters...)
+	primary.AddFilters(newfilters)
 	return
 }
 
@@ -399,7 +400,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		return nil, nil, nil, 0, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, sargKeys, max, false, node.Alias())
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	spans, exactSpans, err := SargFor(pred, sargKeys, max, false, this.useCBO, baseKeyspace)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
@@ -408,7 +410,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.exactSpans = exactSpans
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
 	scan := entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
-		nil, nil, indexProjection, nil, nil, nil, nil)
+		nil, nil, indexProjection, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 	return scan, unnest, newArrayKey, 1, nil
 }
 

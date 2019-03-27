@@ -36,7 +36,8 @@ func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
 		return _VALUED_SPANS, nil
 	}
 
-	range2 := plan.NewRange2(expr, expr, datastore.BOTH)
+	selec := this.getSelec(pred)
+	range2 := plan.NewRange2(expr, expr, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 	span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 	return NewTermSpans(span), nil
 }

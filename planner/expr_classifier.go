@@ -14,18 +14,19 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
-func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeyspace, isOnclause bool) (
+func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace, isOnclause, doSelec bool) (
 	value.Value, error) {
 
 	if len(baseKeyspaces) == 0 {
 		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
-	classifier := newExprClassifier(baseKeyspaces, isOnclause)
+	classifier := newExprClassifier(baseKeyspaces, isOnclause, doSelec)
 	_, err := expr.Accept(classifier)
 	if err != nil {
 		return nil, err
@@ -46,8 +47,8 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*baseKeys
 }
 
 type exprClassifier struct {
-	baseKeyspaces   map[string]*baseKeyspace
-	keyspaceNames   map[string]bool
+	baseKeyspaces   map[string]*base.BaseKeyspace
+	keyspaceNames   map[string]string
 	recursion       bool
 	recurseExpr     expression.Expression
 	recursionJoin   bool
@@ -55,18 +56,20 @@ type exprClassifier struct {
 	isOnclause      bool
 	nonConstant     bool
 	constant        value.Value
+	doSelec         bool
 }
 
-func newExprClassifier(baseKeyspaces map[string]*baseKeyspace, isOnclause bool) *exprClassifier {
+func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, isOnclause, doSelec bool) *exprClassifier {
 
 	rv := &exprClassifier{
 		baseKeyspaces: baseKeyspaces,
 		isOnclause:    isOnclause,
+		doSelec:       doSelec,
 	}
 
-	rv.keyspaceNames = make(map[string]bool, len(baseKeyspaces))
+	rv.keyspaceNames = make(map[string]string, len(baseKeyspaces))
 	for _, keyspace := range baseKeyspaces {
-		rv.keyspaceNames[keyspace.name] = true
+		rv.keyspaceNames[keyspace.Name()] = keyspace.Keyspace()
 	}
 
 	return rv
@@ -445,24 +448,27 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 
 	for kspace, _ := range keyspaces {
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
-			filter := newFilter(dnfExpr, origExpr, keyspaces, this.isOnclause, isJoin)
+			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, this.isOnclause, isJoin)
+			if this.doSelec {
+				optCalcSelectivity(filter)
+			}
 
 			if len(keyspaces) == 1 {
-				baseKspace.filters = append(baseKspace.filters, filter)
+				baseKspace.AddFilter(filter)
 			} else {
-				baseKspace.joinfilters = append(baseKspace.joinfilters, filter)
+				baseKspace.AddJoinFilter(filter)
 				// if this is an OR join predicate, attempt to extract a new OR-predicate
 				// for a single keyspace (to enable union scan)
 				if or, ok := dnfExpr.(*expression.Or); ok {
-					newPred, newOrigPred, orIsJoin, err := this.extractExpr(or, baseKspace.name)
+					newPred, newOrigPred, orIsJoin, err := this.extractExpr(or, baseKspace.Name())
 					if err != nil {
 						return nil, err
 					}
 					if newPred != nil {
-						newKeyspaces := make(map[string]bool, 1)
-						newKeyspaces[baseKspace.name] = true
-						newFilter := newFilter(newPred, newOrigPred, newKeyspaces, this.isOnclause, orIsJoin)
-						baseKspace.filters = append(baseKspace.filters, newFilter)
+						newKeyspaces := make(map[string]string, 1)
+						newKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
+						newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces, this.isOnclause, orIsJoin)
+						baseKspace.AddFilter(newFilter)
 					}
 				}
 			}
@@ -486,30 +492,33 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var newTerms, newOrigTerms expression.Expressions
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
-		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, this.isOnclause)
+		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
+		_, err := ClassifyExpr(op, baseKeyspaces, this.isOnclause, this.doSelec)
 		if err != nil {
 			return nil, nil, false, err
 		}
 		newTerm = nil
 		newOrigTerm = nil
 		if kspace, ok := baseKeyspaces[keyspaceName]; ok {
-			for _, fl := range kspace.filters {
+			for _, fl := range kspace.Filters() {
+				fltrExpr := fl.FltrExpr()
+				origExpr := fl.OrigExpr()
+
 				if newTerm == nil {
-					newTerm = fl.fltrExpr
+					newTerm = fltrExpr
 				} else {
-					newTerm = expression.NewAnd(newTerm, fl.fltrExpr)
+					newTerm = expression.NewAnd(newTerm, fltrExpr)
 				}
 
-				if fl.origExpr != nil {
+				if origExpr != nil {
 					if newOrigTerm == nil {
-						newOrigTerm = fl.origExpr
+						newOrigTerm = origExpr
 					} else {
-						newOrigTerm = expression.NewAnd(newOrigTerm, fl.origExpr)
+						newOrigTerm = expression.NewAnd(newOrigTerm, origExpr)
 					}
 				}
 
-				isJoin = isJoin || fl.isJoin()
+				isJoin = isJoin || fl.IsJoin()
 			}
 		}
 

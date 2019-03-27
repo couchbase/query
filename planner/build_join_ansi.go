@@ -224,7 +224,7 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 		}
 	}
 
-	err = combineFilters(baseKeyspace, true)
+	err = CombineFilters(baseKeyspace, true)
 	if err != nil {
 		return err
 	}
@@ -272,9 +272,9 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 
 	var primaryJoinKeys expression.Expression
 
-	for _, fltr := range baseKeyspace.filters {
-		if fltr.isOnclause() {
-			if eqFltr, ok := fltr.fltrExpr.(*expression.Eq); ok {
+	for _, fltr := range baseKeyspace.Filters() {
+		if fltr.IsOnclause() {
+			if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
 				if eqFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()
 					primaryJoinKeys = eqFltr.Second()
@@ -284,7 +284,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 					primaryJoinKeys = eqFltr.First()
 					break
 				}
-			} else if inFltr, ok := fltr.fltrExpr.(*expression.In); ok {
+			} else if inFltr, ok := fltr.FltrExpr().(*expression.In); ok {
 				if inFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()
 					primaryJoinKeys = inFltr.Second()
@@ -299,7 +299,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		switch e := err.(type) {
 		case errors.Error:
 			if e.Code() == errors.NO_ANSI_JOIN &&
-				baseKeyspace.dnfPred != nil && baseKeyspace.onclause != nil {
+				baseKeyspace.DnfPred() != nil && baseKeyspace.Onclause() != nil {
 
 				// did not find an appropriate index path using both
 				// on clause and where clause filters, try using just
@@ -404,6 +404,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	child plan.Operator, buildExprs expression.Expressions, probeExprs expression.Expressions, buildAliases []string, err error) {
 
 	var ksterm *algebra.KeyspaceTerm
+	var keyspace string
 	var defaultBuildRight bool
 
 	if ksterm = algebra.GetKeyspaceTerm(right); ksterm != nil {
@@ -418,6 +419,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		if ksterm.Keys() != nil && ksterm.Keys().Static() == nil {
 			return nil, nil, nil, nil, nil
 		}
+		keyspace = ksterm.Keyspace()
 	case *algebra.ExpressionTerm:
 		// hash join cannot handle expression term with any correlated references
 		if right.IsCorrelated() {
@@ -455,8 +457,8 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 
 	alias := right.Alias()
 
-	keyspaceNames := make(map[string]bool, 1)
-	keyspaceNames[alias] = true
+	keyspaceNames := make(map[string]string, 1)
+	keyspaceNames[alias] = keyspace
 
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 
@@ -465,12 +467,12 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	rightExprs := make(expression.Expressions, 0, 4)
 
 	// look for equality join predicates
-	for _, fltr := range baseKeyspace.filters {
-		if !fltr.isJoin() {
+	for _, fltr := range baseKeyspace.Filters() {
+		if !fltr.IsJoin() {
 			continue
 		}
 
-		if eqFltr, ok := fltr.fltrExpr.(*expression.Eq); ok {
+		if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
 			if !eqFltr.First().Indexable() || !eqFltr.Second().Indexable() {
 				continue
 			}
@@ -577,8 +579,8 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		child = plan.NewSequence(children...)
 		buildAliases = make([]string, 0, len(this.baseKeyspaces))
 		for _, kspace := range this.baseKeyspaces {
-			if kspace.PlanDone() && kspace.name != alias {
-				buildAliases = append(buildAliases, kspace.name)
+			if kspace.PlanDone() && kspace.Name() != alias {
+				buildAliases = append(buildAliases, kspace.Name())
 			}
 		}
 	}

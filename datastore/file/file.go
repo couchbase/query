@@ -114,6 +114,10 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return []datastore.Inferencer{s.inferencer}, nil
 }
 
+func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS")
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "AuditInfo")
 }
@@ -348,6 +352,18 @@ func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 		return 0, errors.NewFileDatastoreError(er, "")
 	}
 	return int64(len(dirEntries)), nil
+}
+
+func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	dirEntries, er := ioutil.ReadDir(b.path())
+	if er != nil {
+		return 0, errors.NewFileDatastoreError(er, "")
+	}
+	var size int64
+	for _, ent := range dirEntries {
+		size += ent.Size()
+	}
+	return size, nil
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {

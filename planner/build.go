@@ -14,16 +14,30 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool, namedArgs map[string]value.Value,
-	positionalArgs value.Values, indexApiVersion int, featureControls uint64) (plan.Operator, error) {
+	positionalArgs value.Values, indexApiVersion int, featureControls uint64) (
+	plan.Operator, error) {
+
+	// request id in planner is separate from request id in execution context
+	requestId, err := util.UUIDV3()
+	if err != nil {
+		return nil, err
+	}
 	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs,
-		indexApiVersion, featureControls)
+		indexApiVersion, featureControls, requestId)
+	if distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) && util.IsFeatureEnabled(featureControls, util.N1QL_CBO) {
+		builder.useCBO = true
+	}
+
 	o, err := stmt.Accept(builder)
 
 	if err != nil {
@@ -61,6 +75,12 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 var _MAP_KEYSPACE_CAP = 4
 
 const (
+	OPT_SELEC_NOT_AVAIL = -1.0 // selectivity is not available
+	OPT_COST_NOT_AVAIL  = -1.0 // cost is not available
+	OPT_CARD_NOT_AVAIL  = -1.0 // cardinality is not available
+)
+
+const (
 	BUILDER_WHERE_IS_TRUE  = 1 << iota // WHERE clause is TRUE
 	BUILDER_WHERE_IS_FALSE             // WHERE clause is FALSE
 )
@@ -73,6 +93,7 @@ type builder struct {
 	namespace         string
 	indexApiVersion   int
 	featureControls   uint64
+	requestId         string
 	subquery          bool
 	correlated        bool
 	maxParallelism    int
@@ -92,10 +113,11 @@ type builder struct {
 	orderScan         plan.SecondaryScan
 	namedArgs         map[string]value.Value
 	positionalArgs    value.Values
-	baseKeyspaces     map[string]*baseKeyspace
+	baseKeyspaces     map[string]*base.BaseKeyspace
 	pushableOnclause  expression.Expression // combined ON-clause from all inner joins
 	builderFlags      uint32
 	indexAdvisor      bool
+	useCBO            bool
 }
 
 type indexPushDowns struct {
@@ -138,7 +160,7 @@ func (this *builder) restoreIndexPushDowns(idxPushDowns *indexPushDowns, paginat
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values, indexApiVersion int,
-	featureControls uint64) *builder {
+	featureControls uint64, requestId string) *builder {
 	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
@@ -149,6 +171,7 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 		positionalArgs:  positionalArgs,
 		indexApiVersion: indexApiVersion,
 		featureControls: featureControls,
+		requestId:       requestId,
 	}
 
 	return rv

@@ -138,3 +138,19 @@ func NewPartitionIndexNotSupportedError() Error {
 	return &err{level: EXCEPTION, ICode: PARTITION_INDEX_NOT_SUPPORTED, IKey: "plan.partition_index_not_supported",
 		InternalMsg: fmt.Sprintf("PARTITION index is not supported by indexer."), InternalCaller: CallerN(1)}
 }
+
+// errors for CBO (cost-based optimizer) starts at 4600
+
+const CBO_ERROR = 4600
+
+func NewCBOError(ikey, what string) Error {
+	return &err{level: EXCEPTION, ICode: CBO_ERROR, IKey: ikey,
+		InternalMsg: fmt.Sprintf("Error occured during cost-based optimization: %s", what), InternalCaller: CallerN(1)}
+}
+
+const INDEX_STAT_ERROR = 4610
+
+func NewIndexStatError(name, what string) Error {
+	return &err{level: EXCEPTION, ICode: INDEX_STAT_ERROR, IKey: "optimizer.index_stat_error",
+		InternalMsg: fmt.Sprintf("Invalid index statistics for index %s: %s", name, what), InternalCaller: CallerN(1)}
+}

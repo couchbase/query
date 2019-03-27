@@ -48,6 +48,7 @@ type Datastore interface {
 	SetLogLevel(level logging.Level)                                                                     // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)                                            // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                                                           // List of schema inference providers
+	StatUpdater() (StatUpdater, errors.Error)                                                            // Statistics Updater
 	UserInfo() (value.Value, errors.Error)                                                               // The users, and their roles. JSON data.
 	GetUserInfoAll() ([]User, errors.Error)                                                              // Get information about all the users.
 	PutUserInfo(u *User) errors.Error                                                                    // Set information for a specific user.
@@ -144,7 +145,8 @@ type Keyspace interface {
 	ScopeId() string      // Id of the scope that contains this keyspace
 	Scope() Scope         // Backpointer to scope
 
-	Count(context QueryContext) (int64, errors.Error) // Number of key-value entries in this keyspace
+	Count(context QueryContext) (int64, errors.Error) // count of all documents
+	Size(context QueryContext) (int64, errors.Error)  // size of all documents
 	Indexer(name IndexType) (Indexer, errors.Error)   // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
 	Indexers() ([]Indexer, errors.Error)              // List of index providers
 

@@ -15,16 +15,17 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 // gather keyspace references in a FROM clause (by walking the algebra AST tree)
 type keyspaceFinder struct {
-	baseKeyspaces    map[string]*baseKeyspace
+	baseKeyspaces    map[string]*base.BaseKeyspace
 	pushableOnclause expression.Expression
 	unnestDepends    map[string]*expression.Identifier
 }
 
-func newKeyspaceFinder(baseKeyspaces map[string]*baseKeyspace, primary string) *keyspaceFinder {
+func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary string) *keyspaceFinder {
 	rv := &keyspaceFinder{
 		baseKeyspaces: baseKeyspaces,
 	}
@@ -33,11 +34,11 @@ func newKeyspaceFinder(baseKeyspaces map[string]*baseKeyspace, primary string) *
 	return rv
 }
 
-func (this *keyspaceFinder) addKeyspaceAlias(alias string) error {
+func (this *keyspaceFinder) addKeyspaceAlias(alias, keyspace string) error {
 	if _, ok := this.baseKeyspaces[alias]; ok {
 		return errors.NewPlanInternalError(fmt.Sprintf("addKeyspaceAlias: duplicate keyspace %s", alias))
 	}
-	newBaseKeyspace := newBaseKeyspace(alias)
+	newBaseKeyspace := base.NewBaseKeyspace(alias, keyspace)
 	this.baseKeyspaces[alias] = newBaseKeyspace
 	return nil
 }
@@ -82,7 +83,7 @@ func (this *keyspaceFinder) VisitSubselect(node *algebra.Subselect) (interface{}
 }
 
 func (this *keyspaceFinder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	return nil, this.addKeyspaceAlias(node.Alias())
+	return nil, this.addKeyspaceAlias(node.Alias(), node.Keyspace())
 }
 
 func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
@@ -90,11 +91,11 @@ func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (i
 		return node.KeyspaceTerm().Accept(this)
 	}
 
-	return nil, this.addKeyspaceAlias(node.Alias())
+	return nil, this.addKeyspaceAlias(node.Alias(), "")
 }
 
 func (this *keyspaceFinder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	return nil, this.addKeyspaceAlias(node.Alias())
+	return nil, this.addKeyspaceAlias(node.Alias(), "")
 }
 
 func (this *keyspaceFinder) VisitJoin(node *algebra.Join) (interface{}, error) {
@@ -135,7 +136,7 @@ func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, erro
 		return nil, err
 	}
 
-	err = this.addKeyspaceAlias(node.Alias())
+	err = this.addKeyspaceAlias(node.Alias(), "")
 	if err != nil {
 		return nil, err
 	}

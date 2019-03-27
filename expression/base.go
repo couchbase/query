@@ -25,6 +25,8 @@ const (
 	EXPR_VALUE_NULL
 	EXPR_DYNAMIC_IN
 	EXPR_CAN_FLATTEN
+	EXPR_OR_FROM_NE
+	EXPR_DERIVED_RANGE
 )
 
 /*
@@ -141,6 +143,22 @@ func (this *ExpressionBase) IsDynamicIn() bool {
 
 func (this *ExpressionBase) SetDynamicIn() {
 	this.exprFlags |= EXPR_DYNAMIC_IN
+}
+
+func (this *ExpressionBase) IsOrFromNE() bool {
+	return (this.exprFlags & EXPR_OR_FROM_NE) != 0
+}
+
+func (this *ExpressionBase) SetOrFromNE() {
+	this.exprFlags |= EXPR_OR_FROM_NE
+}
+
+func (this *ExpressionBase) IsDerivedRange() bool {
+	return (this.exprFlags & EXPR_DERIVED_RANGE) != 0
+}
+
+func (this *ExpressionBase) SetDerivedRange() {
+	this.exprFlags |= EXPR_DERIVED_RANGE
 }
 
 /*

@@ -19,11 +19,12 @@ import (
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace, id expression.Expression,
+	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, id expression.Expression,
 	searchSargables []*indexEntry) (plan.SecondaryScan, int, error) {
 
 	if this.cover != nil && !node.IsAnsiNest() {
@@ -44,7 +45,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		this.resetPushDowns()
 	}
 
-	pred := baseKeyspace.dnfPred
+	pred := baseKeyspace.DnfPred()
 
 	err := this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
 	if err != nil {
@@ -55,7 +56,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
 	}
 
-	indexes = minimalIndexes(indexes, true, pred)
+	indexes = this.minimalIndexes(indexes, true, pred)
 
 	var orderEntry *indexEntry
 	var limit expression.Expression
@@ -143,7 +144,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 
 		scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
-			this.offset, this.limit, indexProjection, indexKeyOrders, nil, nil, nil)
+			this.offset, this.limit, indexProjection, indexKeyOrders, nil, nil, nil, entry.cost, entry.cardinality)
 
 		if orderEntry != nil && index == orderEntry.index {
 			scans[0] = scan
@@ -277,8 +278,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			n = max
 		}
 
-		entry := &indexEntry{
-			index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false, _PUSHDOWN_NONE}
+		entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false)
 		all[index] = entry
 
 		if min > 0 {
@@ -323,22 +323,55 @@ func indexPartitionKeys(index datastore.Index,
 	return partitionKeys, err
 }
 
-func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
+func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
 	pred expression.Expression) map[datastore.Index]*indexEntry {
 
 	for s, se := range sargables {
+		useCBO := this.useCBO
+		if useCBO {
+			if se.cost < 0 {
+				cost, _, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans)
+				if e != nil {
+					useCBO = false
+				} else {
+					se.cost = cost
+					se.cardinality = card
+				}
+			}
+		}
+
 		for t, te := range sargables {
 			if t == s {
 				continue
 			}
 
-			if narrowerOrEquivalent(se, te, shortest, pred) {
-				if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
-					te.PushDownProperty() > se.PushDownProperty() {
-					delete(sargables, s)
-					break
+			if useCBO {
+				if te.cost < 0 {
+					cost, _, card, e := indexScanCost(te.index, te.sargKeys, this.requestId, te.spans)
+					if e != nil {
+						useCBO = false
+					} else {
+						te.cost = cost
+						te.cardinality = card
+					}
 				}
-				delete(sargables, t)
+
+				// consider pushdown property before considering cost
+				se_pushdown := se.PushDownProperty()
+				te_pushdown := te.PushDownProperty()
+				if se_pushdown > te_pushdown ||
+					((se_pushdown == te_pushdown) && (se.cost < te.cost)) {
+					delete(sargables, t)
+				}
+			} else {
+				if narrowerOrEquivalent(se, te, shortest, pred) {
+					if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
+						te.PushDownProperty() > se.PushDownProperty() {
+						delete(sargables, s)
+						break
+					}
+					delete(sargables, t)
+				}
 			}
 		}
 	}
@@ -409,16 +442,16 @@ outer:
 		(se.cond != nil && te.cond == nil && len(se.sargKeys) == len(te.sargKeys))))
 }
 
-func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, underHash bool, sargables map[datastore.Index]*indexEntry) error {
+func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool, sargables map[datastore.Index]*indexEntry) error {
 
-	pred := baseKeyspace.dnfPred
+	pred := baseKeyspace.DnfPred()
 	isOrPred := false
 	orIsJoin := false
 	if !underHash {
 		if _, ok := pred.(*expression.Or); ok {
 			isOrPred = true
-			for _, fl := range baseKeyspace.filters {
-				if fl.isJoin() {
+			for _, fl := range baseKeyspace.Filters() {
+				if fl.IsJoin() {
 					orIsJoin = true
 					break
 				}
@@ -432,9 +465,9 @@ func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, underHash bool, sar
 		var err error
 
 		if isOrPred {
-			spans, exactSpans, err = SargFor(baseKeyspace.dnfPred, se.keys, se.minKeys, orIsJoin, baseKeyspace.name)
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys, se.minKeys, orIsJoin, this.useCBO, baseKeyspace)
 		} else {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.filters, se.keys, se.minKeys, underHash, baseKeyspace.name)
+			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys, se.minKeys, underHash, this.useCBO, baseKeyspace)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},

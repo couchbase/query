@@ -62,13 +62,16 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 		range2.High = expression.EMPTY_ARRAY_EXPR
 	}
 
+	selec := this.getSelec(pred)
 	range2.Inclusion = datastore.LOW
+	range2.Selec1 = selec
+	range2.Selec2 = OPT_SELEC_NOT_AVAIL
 	span := plan.NewSpan2(nil, plan.Ranges2{range2}, exact)
 	return NewTermSpans(span), nil
 }
 
 func likeSpans(pred expression.LikeFunction) SargSpans {
-	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW)
+	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW, optDefLikeSelec(), OPT_SELEC_NOT_AVAIL, 0)
 
 	switch pred := pred.(type) {
 	case *expression.Like:

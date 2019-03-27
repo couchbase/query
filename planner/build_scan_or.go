@@ -17,9 +17,10 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
+func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression, pred *expression.Or, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	scan plan.SecondaryScan, sargLength int, err error) {
@@ -37,7 +38,7 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *baseK
 	return this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
 }
 
-func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
+func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression, pred *expression.Or, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	plan.SecondaryScan, int, error) {
@@ -99,8 +100,8 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		this.where = op
 		this.limit = limit
 
-		baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, join)
+		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
+		_, err := ClassifyExpr(op, baseKeyspaces, join, this.useCBO)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -110,12 +111,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 				addUnnestPreds(baseKeyspaces, baseKeyspace)
 			}
 
-			err = combineFilters(baseKeyspace, join)
+			err = CombineFilters(baseKeyspace, join)
 			if err != nil {
 				return nil, 0, err
 			}
 
-			if baseKeyspace.dnfPred == nil {
+			if baseKeyspace.DnfPred() == nil {
 				if join {
 					// for ANSI JOIN, it's possible that one subterm of the OR only contains
 					// references to other keyspaces, in which case we cannot use any index

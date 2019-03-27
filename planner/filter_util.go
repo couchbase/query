@@ -1,4 +1,4 @@
-//  Copyright (c) 2017 Couchbase, Inc.
+//  Copyright (c) 2018 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -10,112 +10,31 @@
 package planner
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
-
-const (
-	FLTR_IS_JOIN     = 1 << iota // is this originally a join filter
-	FLTR_IS_ONCLAUSE             // is this an ON-clause filter for ANSI JOIN
-	FLTR_IS_DERIVED              // is this a derived filter
-	FLTR_IS_UNNEST               // is this ann unnest filter (inherited)
-)
-
-type Filter struct {
-	fltrExpr  expression.Expression // filter expression
-	origExpr  expression.Expression // original filter expression
-	keyspaces map[string]bool       // keyspace references
-	fltrFlags uint32
-}
-
-type Filters []*Filter
-
-func newFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]bool, isOnclause bool, isJoin bool) *Filter {
-	rv := &Filter{
-		fltrExpr:  fltrExpr,
-		origExpr:  origExpr,
-		keyspaces: keyspaces,
-	}
-
-	if isOnclause {
-		rv.fltrFlags |= FLTR_IS_ONCLAUSE
-	}
-	if isJoin {
-		rv.fltrFlags |= FLTR_IS_JOIN
-	}
-
-	return rv
-}
-
-func (this *Filter) Copy() *Filter {
-	rv := &Filter{
-		fltrExpr:  this.fltrExpr.Copy(),
-		fltrFlags: this.fltrFlags,
-	}
-
-	if this.origExpr != nil {
-		rv.origExpr = this.origExpr.Copy()
-	}
-
-	rv.keyspaces = make(map[string]bool, len(this.keyspaces))
-	for key, value := range this.keyspaces {
-		rv.keyspaces[key] = value
-	}
-
-	return rv
-}
-
-func (this *Filter) isOnclause() bool {
-	return (this.fltrFlags & FLTR_IS_ONCLAUSE) != 0
-}
-
-func (this *Filter) isJoin() bool {
-	return (this.fltrFlags & FLTR_IS_JOIN) != 0
-}
-
-func (this *Filter) isDerived() bool {
-	return (this.fltrFlags & FLTR_IS_DERIVED) != 0
-}
-
-func (this *Filter) isUnnest() bool {
-	return (this.fltrFlags & FLTR_IS_UNNEST) != 0
-}
-
-func (this *Filter) setUnnest() {
-	this.fltrFlags |= FLTR_IS_UNNEST
-}
-
-// check whether the join filter is a single join filter involving any of the keyspaces provided
-func (this *Filter) singleJoinFilter(unnestKeyspaces map[string]bool) bool {
-	for ks, _ := range this.keyspaces {
-		if _, ok := unnestKeyspaces[ks]; !ok {
-			return false
-		}
-	}
-
-	return true
-}
 
 // Combine an array of filters into a single expression by ANDing each filter expression,
 // perform transformation on each filter, and if an OR filter is involved, perform DNF
 // transformation on the combined filter
-func combineFilters(baseKeyspace *baseKeyspace, includeOnclause bool) error {
+func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause bool) error {
 	var err error
 	var predHasOr, onHasOr bool
 	var dnfPred, origPred, onclause expression.Expression
 
-	for _, fl := range baseKeyspace.filters {
-		if fl.isOnclause() {
+	for _, fl := range baseKeyspace.Filters() {
+		fltrExpr := fl.FltrExpr()
+		origExpr := fl.OrigExpr()
+
+		if fl.IsOnclause() {
 			if onclause == nil {
-				onclause = fl.fltrExpr
+				onclause = fltrExpr
 			} else {
-				onclause = expression.NewAnd(onclause, fl.fltrExpr)
+				onclause = expression.NewAnd(onclause, fltrExpr)
 			}
 
-			if _, ok := fl.fltrExpr.(*expression.Or); ok {
+			if _, ok := fltrExpr.(*expression.Or); ok {
 				onHasOr = true
 			}
 
@@ -125,20 +44,20 @@ func combineFilters(baseKeyspace *baseKeyspace, includeOnclause bool) error {
 		}
 
 		if dnfPred == nil {
-			dnfPred = fl.fltrExpr
+			dnfPred = fltrExpr
 		} else {
-			dnfPred = expression.NewAnd(dnfPred, fl.fltrExpr)
+			dnfPred = expression.NewAnd(dnfPred, fltrExpr)
 		}
 
-		if fl.origExpr != nil {
+		if origExpr != nil {
 			if origPred == nil {
-				origPred = fl.origExpr
+				origPred = origExpr
 			} else {
-				origPred = expression.NewAnd(origPred, fl.origExpr)
+				origPred = expression.NewAnd(origPred, origExpr)
 			}
 		}
 
-		if _, ok := fl.fltrExpr.(*expression.Or); ok {
+		if _, ok := fltrExpr.(*expression.Or); ok {
 			predHasOr = true
 		}
 	}
@@ -159,91 +78,7 @@ func combineFilters(baseKeyspace *baseKeyspace, includeOnclause bool) error {
 		}
 	}
 
-	baseKeyspace.dnfPred = dnfPred
-	baseKeyspace.origPred = origPred
-	baseKeyspace.onclause = onclause
-
-	return nil
-}
-
-// Once a keyspace has been visited, join filters referring to this keyspace can remove
-// this keyspace reference since it's now "available", and if there are no other
-// keyspace references the join filter can be moved to filters
-func (this *builder) moveJoinFilters(keyspace string, baseKeyspace *baseKeyspace) error {
-	compact := false
-	for i, jfl := range baseKeyspace.joinfilters {
-		delete(jfl.keyspaces, keyspace)
-		if len(jfl.keyspaces) == 1 {
-			for ksName, _ := range jfl.keyspaces {
-				if baseKeyspace.name != ksName {
-					return errors.NewPlanInternalError(fmt.Sprintf("moveJoinFilters: keyspace mismatch: %s vs %s", baseKeyspace.name, ksName))
-				}
-				break
-			}
-
-			// move to filters
-			baseKeyspace.filters = append(baseKeyspace.filters, jfl)
-			baseKeyspace.joinfilters[i] = nil
-			compact = true
-		}
-	}
-
-	if compact == true {
-		curlen := len(baseKeyspace.joinfilters)
-		curlen = trimJoinFilters(baseKeyspace.joinfilters, curlen)
-		newlen := curlen
-		for i := 0; i < curlen; i++ {
-			if i >= newlen {
-				break
-			}
-			if baseKeyspace.joinfilters[i] == nil {
-				if i < newlen-1 {
-					baseKeyspace.joinfilters[i] = baseKeyspace.joinfilters[newlen-1]
-				}
-				baseKeyspace.joinfilters[newlen-1] = nil
-				newlen = trimJoinFilters(baseKeyspace.joinfilters, newlen-1)
-			}
-		}
-		baseKeyspace.joinfilters = baseKeyspace.joinfilters[:newlen]
-	}
-
-	return nil
-}
-
-// trim nil entries at the end of joinfilters slice
-func trimJoinFilters(joinfilters Filters, curlen int) (newlen int) {
-	newlen = curlen
-	if newlen == 0 {
-		return
-	}
-
-	for {
-		if joinfilters[newlen-1] == nil {
-			newlen--
-			if newlen == 0 {
-				return
-			}
-		} else {
-			return
-		}
-	}
-}
-
-func (this *builder) processKeyspaceDone(keyspace string) error {
-	var err error
-	for _, baseKeyspace := range this.baseKeyspaces {
-		if baseKeyspace.PlanDone() {
-			continue
-		} else if keyspace == baseKeyspace.name {
-			baseKeyspace.SetPlanDone()
-			continue
-		}
-
-		err = this.moveJoinFilters(keyspace, baseKeyspace)
-		if err != nil {
-			return err
-		}
-	}
+	baseKeyspace.SetPreds(dnfPred, origPred, onclause)
 
 	return nil
 }
@@ -262,7 +97,7 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 
 // derive IS NOT NULL filters for a keyspace based on join filters in the
 // WHERE clause as well as ON-clause of inner joins
-func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace, indexApiVersion int) error {
+func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, indexApiVersion int) error {
 
 	// first gather leading index key from all indexes for this keyspace
 	indexes := _INDEX_POOL.Get()
@@ -276,7 +111,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace
 		return nil
 	}
 
-	formalizer := expression.NewSelfFormalizer(baseKeyspace.name, nil)
+	formalizer := expression.NewSelfFormalizer(baseKeyspace.Name(), nil)
 	keyMap := make(map[string]*idxKeyDerive, len(indexes))
 
 	for _, index := range indexes {
@@ -318,9 +153,9 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace
 
 	// next check existing filters
 	terms := make(expression.Expressions, 0, 3)
-	for _, fl := range baseKeyspace.filters {
+	for _, fl := range baseKeyspace.Filters() {
 		terms = terms[:0]
-		pred := fl.fltrExpr
+		pred := fl.FltrExpr()
 		if not, ok := pred.(*expression.Not); ok {
 			pred = not.Operand()
 		}
@@ -359,12 +194,12 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace
 	}
 
 	// next check all join filters
-	newFilters := make(Filters, 0, n)
-	keyspaceNames := make(map[string]bool, 1)
-	keyspaceNames[baseKeyspace.name] = true
-	for _, jfl := range baseKeyspace.joinfilters {
+	newFilters := make(base.Filters, 0, n)
+	keyspaceNames := make(map[string]string, 1)
+	keyspaceNames[baseKeyspace.Name()] = baseKeyspace.Keyspace()
+	for _, jfl := range baseKeyspace.JoinFilters() {
 		terms = terms[:0]
-		pred := jfl.fltrExpr
+		pred := jfl.FltrExpr()
 		if not, ok := pred.(*expression.Not); ok {
 			pred = not.Operand()
 		}
@@ -405,7 +240,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace
 					continue
 				} else {
 					keyMap[val].derive = false
-					newFilters = addDerivedFilter(term, keyspaceNames, jfl.isOnclause(), newFilters)
+					newFilters = base.AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters)
 				}
 			} else {
 				simple := false
@@ -430,7 +265,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace
 					min, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false)
 					if min > 0 {
 						keyMap[val].derive = false
-						newFilters = addDerivedFilter(term, keyspaceNames, jfl.isOnclause(), newFilters)
+						newFilters = base.AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters)
 					}
 				}
 			}
@@ -438,18 +273,8 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *baseKeyspace
 	}
 
 	if len(newFilters) > 0 {
-		baseKeyspace.filters = append(baseKeyspace.filters, newFilters...)
+		baseKeyspace.AddFilters(newFilters)
 	}
 
 	return nil
-}
-
-func addDerivedFilter(term expression.Expression, keyspaceNames map[string]bool, isOnclause bool, newFilters Filters) Filters {
-
-	newExpr := expression.NewIsNotNull(term)
-	newFilter := newFilter(newExpr, newExpr, keyspaceNames, isOnclause, false)
-	newFilter.fltrFlags |= FLTR_IS_DERIVED
-	newFilters = append(newFilters, newFilter)
-
-	return newFilters
 }

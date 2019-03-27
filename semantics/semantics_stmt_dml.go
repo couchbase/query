@@ -11,7 +11,6 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 )
 
@@ -212,36 +211,5 @@ func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (r interface{}, err erro
 		}
 	}
 
-	return nil, stmt.MapExpressions(this)
-}
-
-func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
-	return stmt.Statement().Accept(this)
-}
-
-func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
-	if !this.hasSemFlag(_SEM_ENTERPRISE) {
-		return nil, errors.NewEnterpirseFeature("Advise", "semantics.visit_advise")
-	}
-	if !distributed.RemoteAccess().Enabled(distributed.NEW_INDEXADVISOR) {
-		return nil, errors.NewSemanticsError(nil, "The Advisor feature is enabled only in developer preview.")
-	}
-	switch stmt.Statement().Type() {
-	case "SELECT", "DELETE", "MERGE", "UPDATE":
-		return stmt.Statement().Accept(this)
-	default:
-		return nil, errors.NewAdviseUnsupportedStmtError("semantics.visit_advise")
-	}
-}
-
-func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
-	return stmt.Statement().Accept(this)
-}
-
-func (this *SemChecker) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
-	return nil, stmt.MapExpressions(this)
-}
-
-func (this *SemChecker) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
 }

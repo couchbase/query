@@ -39,6 +39,27 @@ type indexEntry struct {
 	spans            SargSpans
 	exactSpans       bool
 	pushDownProperty PushDownProperties
+	cost             float64
+	cardinality      float64
+}
+
+func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
+	minKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
+	exactSpans bool) *indexEntry {
+	return &indexEntry{
+		index:            index,
+		keys:             keys,
+		sargKeys:         sargKeys,
+		partitionKeys:    partitionKeys,
+		minKeys:          minKeys,
+		sumKeys:          sumKeys,
+		cond:             cond,
+		origCond:         origCond,
+		spans:            spans,
+		pushDownProperty: _PUSHDOWN_NONE,
+		cost:             OPT_COST_NOT_AVAIL,
+		cardinality:      OPT_CARD_NOT_AVAIL,
+	}
 }
 
 func (this *indexEntry) Copy() *indexEntry {
@@ -53,6 +74,8 @@ func (this *indexEntry) Copy() *indexEntry {
 		spans:            CopySpans(this.spans),
 		exactSpans:       this.exactSpans,
 		pushDownProperty: this.pushDownProperty,
+		cost:             this.cost,
+		cardinality:      this.cardinality,
 	}
 
 	return rv

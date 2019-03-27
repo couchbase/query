@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
@@ -39,9 +40,9 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.limit = limit
 	this.offset = nil
 	this.requirePrimaryKey = true
-	this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
-	baseKeyspace := newBaseKeyspace(ksref.Alias())
-	this.baseKeyspaces[baseKeyspace.name] = baseKeyspace
+	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
+	baseKeyspace := base.NewBaseKeyspace(ksref.Alias(), ksref.Keyspace())
+	this.baseKeyspaces[baseKeyspace.Name()] = baseKeyspace
 
 	// Process where clause
 	if this.where != nil {

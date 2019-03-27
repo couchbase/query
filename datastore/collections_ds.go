@@ -355,6 +355,10 @@ func (ks *CollectionsKeyspace) Count(context QueryContext) (int64, errors.Error)
 	return int64(len(ks.docs)), nil
 }
 
+func (ks *CollectionsKeyspace) Size(context QueryContext) (int64, errors.Error) {
+	return int64(len(ks.docs)) * 25, nil // assume 25-bytes per document (similar to mock)
+}
+
 func (ks *CollectionsKeyspace) Indexer(name IndexType) (Indexer, errors.Error) {
 	if name == GSI {
 		return ks.indexer, nil

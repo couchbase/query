@@ -58,6 +58,7 @@ const (
 	MERGE
 	INFER
 	FTS_SEARCH
+	UPDATE_STAT
 
 	// Server layer
 	INSTANTIATE
@@ -96,6 +97,7 @@ var _PHASE_NAMES = []string{
 	MERGE:        "merge",
 	INFER:        "inferKeySpace",
 	FTS_SEARCH:   "ftsSearch",
+	UPDATE_STAT:  "updateStatistics",
 
 	INSTANTIATE: "instantiate",
 	PARSE:       "parse",

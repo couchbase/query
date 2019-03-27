@@ -40,13 +40,15 @@ type IndexScan3 struct {
 	limit        expression.Expression
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
+	cost         float64
+	cardinality  float64
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
 	reverse, distinct, dynamicIn bool, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) *IndexScan3 {
+	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64) *IndexScan3 {
 	flags := uint32(0)
 	if reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN
@@ -70,6 +72,8 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		limit:        limit,
 		covers:       covers,
 		filterCovers: filterCovers,
+		cost:         cost,
+		cardinality:  cardinality,
 	}
 }
 
@@ -187,6 +191,14 @@ func (this *IndexScan3) Covering() bool {
 	return len(this.covers) > 0
 }
 
+func (this *IndexScan3) Cost() float64 {
+	return this.cost
+}
+
+func (this *IndexScan3) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *IndexScan3) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
@@ -258,6 +270,14 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["filter_covers"] = fc
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -285,6 +305,8 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Limit        string                 `json:"limit"`
 		Covers       []string               `json:"covers"`
 		FilterCovers map[string]interface{} `json:"filter_covers"`
+		Cost         float64                `json:"cost"`
+		Cardinality  float64                `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -357,6 +379,9 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 			this.filterCovers[c] = value.NewValue(v)
 		}
 	}
+
+	this.cost = _unmarshalled.Cost
+	this.cardinality = _unmarshalled.Cardinality
 
 	this.indexer, err = k.Indexer(_unmarshalled.Using)
 	if err != nil {

@@ -56,6 +56,10 @@ func (b *requestLogKeyspace) Count(context datastore.QueryContext) (int64, error
 	return int64(server.RequestsCount() + count), nil
 }
 
+func (b *requestLogKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	return -1, nil
+}
+
 func (b *requestLogKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	return b.indexer, nil
 }

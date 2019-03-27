@@ -11,12 +11,14 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 type sarg struct {
 	key          expression.Expression
-	keyspaceName string
+	baseKeyspace *base.BaseKeyspace
 	isJoin       bool
+	doSelec      bool
 }
 
 func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
@@ -31,8 +33,8 @@ func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
 
 	if pred.Indexable() {
 		// make sure the expression does NOT reference current keyspace
-		keyspaceNames := make(map[string]bool, 1)
-		keyspaceNames[this.keyspaceName] = true
+		keyspaceNames := make(map[string]string, 1)
+		keyspaceNames[this.baseKeyspace.Name()] = ""
 		keyspaces, err := expression.CountKeySpaces(pred, keyspaceNames)
 		if err == nil && len(keyspaces) == 0 {
 			return pred.Copy()
@@ -40,6 +42,38 @@ func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
 	}
 
 	return nil
+}
+
+func (this *sarg) getSelec(pred expression.Expression) float64 {
+	if !this.doSelec {
+		return OPT_SELEC_NOT_AVAIL
+	}
+
+	var array bool
+	if _, ok := pred.(*expression.Any); ok {
+		array = true
+	} else if _, ok := pred.(*expression.AnyEvery); ok {
+		array = true
+	}
+
+	for _, fl := range this.baseKeyspace.Filters() {
+		if pred.EquivalentTo(fl.FltrExpr()) {
+			if array {
+				return fl.ArraySelec()
+			}
+			return fl.Selec()
+		}
+	}
+
+	// if this is a subterm of an OR, it won't be in filters
+	keyspaces := make(map[string]string, 1)
+	keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+	sel, arrSel, _ := optExprSelec(keyspaces, pred)
+
+	if array {
+		return arrSel
+	}
+	return sel
 }
 
 // Arithmetic

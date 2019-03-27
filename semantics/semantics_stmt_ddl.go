@@ -32,11 +32,3 @@ func (this *SemChecker) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, 
 func (this *SemChecker) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
 }
-
-func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
-	return nil, stmt.MapExpressions(this)
-}
-
-func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
-	return nil, stmt.MapExpressions(this)
-}

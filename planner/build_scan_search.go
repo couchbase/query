@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -38,12 +39,12 @@ func collectFTSSearch(alias string, ftsSearch map[string]*search.Search,
 }
 
 func (this *builder) buildSearchCoveringScan(searchSargables []*indexEntry, node *algebra.KeyspaceTerm,
-	baseKeyspace *baseKeyspace, id expression.Expression) (plan.SecondaryScan, int, error) {
+	baseKeyspace *base.BaseKeyspace, id expression.Expression) (plan.SecondaryScan, int, error) {
 	if this.cover == nil || len(searchSargables) != 1 || !searchSargables[0].exactSpans {
 		return nil, 0, nil
 	}
 
-	pred := baseKeyspace.dnfPred
+	pred := baseKeyspace.DnfPred()
 	entry := searchSargables[0]
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
@@ -221,8 +222,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 			if n > 0 {
 				exact = exact && !qprams
 				if entry == nil || size < esize {
-					entry = &indexEntry{
-						index, keys, keys, nil, 1, 1, cond, origCond, nil, exact, _PUSHDOWN_NONE}
+					entry = newIndexEntry(index, keys, keys, nil, 1, 1, cond, origCond, nil, exact)
 					esize = size
 				}
 			}

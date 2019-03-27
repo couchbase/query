@@ -138,4 +138,7 @@ type Visitor interface {
 	// Index Advisor
 	VisitIndexAdvice(op *IndexAdvice) (interface{}, error)
 	VisitAdvise(op *Advise) (interface{}, error)
+
+	// Update Statistics
+	VisitUpdateStatistics(op *UpdateStatistics) (interface{}, error)
 }

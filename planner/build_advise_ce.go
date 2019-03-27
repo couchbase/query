@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 
 	"fmt"
 )
@@ -42,7 +43,7 @@ func (this *builder) appendQueryInfo(scan plan.Operator, node *algebra.KeyspaceT
 func (this *builder) enableUnnest(alias string) {
 }
 
-func (this *builder) collectPredicates(baseKeyspace *baseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
+func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
 	return nil
 }
 

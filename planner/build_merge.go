@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
@@ -21,11 +22,11 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.subChildren = make([]plan.Operator, 0, 8)
 	source := stmt.Source()
 
-	this.baseKeyspaces = make(map[string]*baseKeyspace, _MAP_KEYSPACE_CAP)
-	sourceKeyspace := newBaseKeyspace(source.Alias())
-	this.baseKeyspaces[sourceKeyspace.name] = sourceKeyspace
-	targetKeyspace := newBaseKeyspace(stmt.KeyspaceRef().Alias())
-	this.baseKeyspaces[targetKeyspace.name] = targetKeyspace
+	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
+	sourceKeyspace := base.NewBaseKeyspace(source.Alias(), source.Keyspace())
+	this.baseKeyspaces[sourceKeyspace.Name()] = sourceKeyspace
+	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Keyspace())
+	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
 
 	var left algebra.SimpleFromTerm
 	var err error

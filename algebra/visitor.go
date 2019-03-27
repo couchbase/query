@@ -74,6 +74,11 @@ type Visitor interface {
 	VisitCreateFunction(stmt *CreateFunction) (interface{}, error)
 	VisitDropFunction(stmt *DropFunction) (interface{}, error)
 	VisitExecuteFunction(stmt *ExecuteFunction) (interface{}, error)
+
+	/*
+	   Visitor for UPDATE STATISTICS statements.
+	*/
+	VisitUpdateStatistics(stmt *UpdateStatistics) (interface{}, error)
 }
 
 type NodeVisitor interface {

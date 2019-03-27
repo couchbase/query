@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
@@ -37,7 +38,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 
 	if this.order != nil {
 		keys := expression.Expressions{id}
-		entry := &indexEntry{primary, keys, keys, nil, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, _PUSHDOWN_NONE}
+		entry := newIndexEntry(primary, keys, keys, nil, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact)
 		ok := true
 		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); ok {
 			this.maxParallelism = 1
@@ -76,17 +77,16 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 		return nil, err
 	}
 
-	entry := &indexEntry{primary, keys, keys, partitionKeys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true, _PUSHDOWN_NONE}
+	entry := newIndexEntry(primary, keys, keys, partitionKeys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true)
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
-	baseKeyspace := newBaseKeyspace(node.Alias())
-	keyspaces := make(map[string]bool, 1)
-	keyspaces[node.Alias()] = true
-	newfilter := newFilter(pred, pred, keyspaces, false, false)
-	baseKeyspace.filters = Filters{newfilter}
-	baseKeyspace.dnfPred = pred
-	baseKeyspace.origPred = nil
+	baseKeyspace := base.NewBaseKeyspace(node.Alias(), node.Keyspace())
+	keyspaces := make(map[string]string, 1)
+	keyspaces[node.Alias()] = node.Keyspace()
+	newfilter := base.NewFilter(pred, pred, keyspaces, false, false)
+	baseKeyspace.AddFilter(newfilter)
+	baseKeyspace.SetPreds(pred, nil, nil)
 	op, _, err := this.buildCoveringScan(secondaries, node, baseKeyspace, id)
 	return op, err
 }

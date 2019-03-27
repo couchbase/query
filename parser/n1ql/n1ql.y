@@ -60,7 +60,7 @@ projection       *algebra.Projection
 order            *algebra.Order
 sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
-indexKeyTerm    *algebra.IndexKeyTerm
+indexKeyTerm     *algebra.IndexKeyTerm
 indexKeyTerms    algebra.IndexKeyTerms
 partitionTerm   *algebra.IndexPartitionTerm
 groupTerm       *algebra.GroupTerm
@@ -70,6 +70,7 @@ windowFrame     *algebra.WindowFrame
 windowFrameExtents    algebra.WindowFrameExtents
 windowFrameExtent *algebra.WindowFrameExtent
 
+updStatistics    *algebra.UpdateStatistics
 
 keyspaceRef      *algebra.KeyspaceRef
 
@@ -404,6 +405,7 @@ tokOffset	 int
 %type <statement>        stmt_body
 %type <statement>        stmt advise explain prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        infer infer_keyspace
+%type <statement>        update_statistics
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
 %type <statement>        role_stmt grant_role revoke_role
@@ -439,8 +441,11 @@ tokOffset	 int
 %type <indexKeyTerms>    index_terms
 %type <expr>             expr_input all_expr
 
+%type <exprs>            update_stat_terms
+%type <expr>             update_stat_term
+
 %type <inferenceType>    opt_infer_using
-%type <val>              infer_with opt_infer_with
+%type <val>              infer_ustat_with opt_infer_ustat_with
 
 %type <ss>               user_list
 %type <ss>               keyspace_list
@@ -503,6 +508,8 @@ dml_stmt
 ddl_stmt
 |
 infer
+|
+update_statistics
 |
 role_stmt
 |
@@ -600,7 +607,7 @@ infer_keyspace
 ;
 
 infer_keyspace:
-INFER opt_keyspace keyspace_ref opt_infer_using opt_infer_with
+INFER opt_keyspace keyspace_ref opt_infer_using opt_infer_ustat_with
 {
     $$ = algebra.NewInferKeyspace($3, $4, $5)
 }
@@ -621,16 +628,16 @@ opt_infer_using:
 }
 ;
 
-opt_infer_with:
+opt_infer_ustat_with:
 /* empty */
 {
     $$ = nil
 }
 |
-infer_with
+infer_ustat_with
 ;
 
-infer_with:
+infer_ustat_with:
 WITH expr
 {
     $$ = $2.Value()
@@ -2489,6 +2496,41 @@ EXECUTE FUNCTION func_name LPAREN opt_exprs RPAREN
 {
     $$ = algebra.NewExecuteFunction($3, $5)
 }
+;
+
+/*************************************************
+ *
+ * UPDATE STATISTICS
+ *
+ *************************************************/
+
+update_statistics:
+UPDATE STATISTICS opt_for named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
+{
+    $$ = algebra.NewUpdateStatistics($4, $6, $8)
+}
+;
+
+opt_for:
+/* empty */
+|
+FOR
+;
+
+update_stat_terms:
+update_stat_term
+{
+    $$ = expression.Expressions{$1}
+}
+|
+update_stat_terms COMMA update_stat_term
+{
+    $$ = append($1, $3)
+}
+;
+
+update_stat_term:
+index_term_expr
 ;
 
 /*************************************************

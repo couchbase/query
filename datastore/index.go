@@ -33,8 +33,9 @@ const (
 	INDEX_API_1   = 1
 	INDEX_API_2   = 2
 	INDEX_API_3   = 3
+	INDEX_API_4   = 4
 	INDEX_API_MIN = INDEX_API_1
-	INDEX_API_MAX = INDEX_API_3
+	INDEX_API_MAX = INDEX_API_4
 )
 
 type Indexer interface {
@@ -366,6 +367,50 @@ type Indexer3 interface {
 ////////////////////////////////////////////////////////////////////////
 //
 // End of Index API3.
+//
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+//
+// Index API4 introduced in Mad-Hatter for Index Statistics for CBO
+//
+////////////////////////////////////////////////////////////////////////
+
+type IndexStatType string
+
+const (
+	IX_STAT_NUM_PAGES     IndexStatType = "NUM_PAGES"
+	IX_STAT_NUM_ITEMS     IndexStatType = "NUM_ITEMS"
+	IX_STAT_RES_RATIO     IndexStatType = "RESIDENT_RATIO"
+	IX_STAT_NUM_INSERT    IndexStatType = "NUM_INSERT"
+	IX_STAT_NUM_DELETE    IndexStatType = "NUM_DELETE"
+	IX_STAT_AVG_ITEM_SIZE IndexStatType = "AVG_ITEM_SIZE"
+	IX_STAT_AVG_PAGE_SIZE IndexStatType = "AVG_PAGE_SIZE"
+	IX_STAT_PARTITION_ID  IndexStatType = "PARTITION_ID"
+)
+
+func (indexStatType IndexStatType) String() string {
+	return string(indexStatType)
+}
+
+type IndexStorageMode string
+
+const (
+	INDEX_MODE_MOI    IndexStorageMode = "MOI"
+	INDEX_MODE_PLASMA IndexStorageMode = "PLASMA"
+)
+
+type Index4 interface {
+	Index3
+
+	StorageMode() (IndexStorageMode, errors.Error)
+	LeadKeyHistogram(requestId string) (*Histogram, errors.Error)
+	StorageStatistics(requestid string) ([]map[IndexStatType]value.Value, errors.Error)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// End of Index API4.
 //
 ////////////////////////////////////////////////////////////////////////
 

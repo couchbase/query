@@ -35,7 +35,7 @@ func (this *TermSpans) CreateScan(
 	index datastore.Index, term *algebra.KeyspaceTerm, indexApiVersion int, reverse, distinct, overlap,
 	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
 	indexOrder plan.IndexKeyOrders, indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
+	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
@@ -43,12 +43,12 @@ func (this *TermSpans) CreateScan(
 		dynamicIn := this.spans.HasDynamicIn()
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)
 
 			return plan.NewDistinctScan(limit, offset, scan)
 		} else {
 			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)
 		}
 
 	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index, indexApiVersion) {
@@ -299,6 +299,8 @@ func constrainSpan(span1, span2 *plan.Span2) {
 			span1.Ranges[0].Low = span2.Ranges[0].Low
 			span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
 				(span2.Ranges[0].Inclusion & datastore.LOW)
+			span1.Ranges[0].Selec1 = span2.Ranges[0].Selec1
+			span1.Ranges[0].SetCheckSpecialSpan()
 		} else {
 			// Keep the greater or unknown low bound from
 			// span1 and span2
@@ -327,9 +329,12 @@ func constrainSpan(span1, span2 *plan.Span2) {
 				span1.Ranges[0].Low = span2.Ranges[0].Low
 				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
 					(span2.Ranges[0].Inclusion & datastore.LOW)
+				span1.Ranges[0].Selec1 = span2.Ranges[0].Selec1
+				span1.Ranges[0].SetCheckSpecialSpan()
 			} else if low1 != nil && low2 != nil && res == 0 {
 				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
 					(span1.Ranges[0].Inclusion & span2.Ranges[0].Inclusion & datastore.LOW)
+				span1.Ranges[0].SetCheckSpecialSpan()
 			}
 		}
 	}
@@ -343,6 +348,8 @@ func constrainSpan(span1, span2 *plan.Span2) {
 			span1.Ranges[0].High = span2.Ranges[0].High
 			span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
 				(span2.Ranges[0].Inclusion & datastore.HIGH)
+			span1.Ranges[0].Selec2 = span2.Ranges[0].Selec2
+			span1.Ranges[0].SetCheckSpecialSpan()
 		} else {
 			// Keep the lesser or unknown high bound from
 			// span1 and span2
@@ -362,9 +369,12 @@ func constrainSpan(span1, span2 *plan.Span2) {
 				span1.Ranges[0].High = span2.Ranges[0].High
 				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
 					(span2.Ranges[0].Inclusion & datastore.HIGH)
+				span1.Ranges[0].Selec2 = span2.Ranges[0].Selec2
+				span1.Ranges[0].SetCheckSpecialSpan()
 			} else if high1 != nil && high2 != nil && res == 0 {
 				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
 					(span1.Ranges[0].Inclusion & span2.Ranges[0].Inclusion & datastore.HIGH)
+				span1.Ranges[0].SetCheckSpecialSpan()
 			}
 		}
 	}
@@ -403,6 +413,7 @@ func streamline(cspans plan.Spans2) SargSpans {
 		if cspans[0].Empty() {
 			return _EMPTY_SPANS
 		}
+		checkSpecialSpan(cspans[0])
 		return NewTermSpans(cspans...)
 	}
 
@@ -415,6 +426,7 @@ func streamline(cspans plan.Spans2) SargSpans {
 		if _, found := hash[str]; !found && !cspan.Empty() {
 			hash[str] = cspan
 			spans = append(spans, cspan)
+			checkSpecialSpan(cspan)
 		}
 	}
 
@@ -430,6 +442,38 @@ func streamline(cspans plan.Spans2) SargSpans {
 	}
 
 	return NewTermSpans(spans...)
+}
+
+func checkSpecialSpan(span *plan.Span2) {
+	if span == nil {
+		return
+	}
+
+	// only the first range is ever affected
+	rg := span.Ranges[0]
+	if rg.HasCheckSpecialSpan() {
+		rg.ClearSpecialFlags()
+		setSpecialSpan(rg)
+		rg.UnsetCheckSpecialSpan()
+	}
+}
+
+func setSpecialSpan(rg *plan.Range2) {
+	if rg.EquivalentTo(_SELF_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_SELF_SPAN
+	} else if rg.EquivalentTo(_FULL_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_FULL_SPAN
+	} else if rg.EquivalentTo(_WHOLE_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_WHOLE_SPAN
+	} else if rg.EquivalentTo(_VALUED_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_VALUED_SPAN
+	} else if rg.EquivalentTo(_EMPTY_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_EMPTY_SPAN
+	} else if rg.EquivalentTo(_NULL_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_NULL_SPAN
+	} else if rg.EquivalentTo(_MISSING_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_MISSING_SPAN
+	}
 }
 
 func ConvertSpans2ToSpan(spans2 plan.Spans2, total int) (plan.Spans, bool) {

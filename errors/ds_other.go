@@ -62,3 +62,8 @@ func NewOtherNoBuckets(dsName string) Error {
 	return &err{level: EXCEPTION, ICode: 16021, IKey: "datastore.other.no_buckets",
 		InternalMsg: "Datastore " + dsName + "contains no buckets that contain scopes.", InternalCaller: CallerN(1)}
 }
+
+func NewStatUpdaterNotFoundError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 16030, IKey: "datastore.other.statUpdater_not_found", ICause: e,
+		InternalMsg: "StatUpdater not found", InternalCaller: CallerN(1)}
+}

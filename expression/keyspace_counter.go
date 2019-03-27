@@ -16,7 +16,7 @@ import (
 )
 
 // gather (and count) keyspace references for an expression
-func CountKeySpaces(expr Expression, baseKeyspaces map[string]bool) (map[string]bool, error) {
+func CountKeySpaces(expr Expression, baseKeyspaces map[string]string) (map[string]string, error) {
 
 	counter := newKeyspaceCounter(baseKeyspaces)
 	_, err := expr.Accept(counter)
@@ -30,14 +30,14 @@ func CountKeySpaces(expr Expression, baseKeyspaces map[string]bool) (map[string]
 type keyspaceCounter struct {
 	TraverserBase
 
-	baseKeyspaces map[string]bool
-	keyspaces     map[string]bool
+	baseKeyspaces map[string]string
+	keyspaces     map[string]string
 }
 
-func newKeyspaceCounter(baseKeyspaces map[string]bool) *keyspaceCounter {
+func newKeyspaceCounter(baseKeyspaces map[string]string) *keyspaceCounter {
 	rv := &keyspaceCounter{
 		baseKeyspaces: baseKeyspaces,
-		keyspaces:     make(map[string]bool, len(baseKeyspaces)),
+		keyspaces:     make(map[string]string, len(baseKeyspaces)),
 	}
 
 	rv.traverser = rv
@@ -58,7 +58,7 @@ func (this *keyspaceCounter) VisitIdentifier(expr *Identifier) (interface{}, err
 
 	if _, ok := this.baseKeyspaces[keyspace]; ok {
 		if _, ok = this.keyspaces[keyspace]; !ok {
-			this.keyspaces[keyspace] = true
+			this.keyspaces[keyspace] = this.baseKeyspaces[keyspace]
 		}
 	}
 

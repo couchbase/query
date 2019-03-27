@@ -55,6 +55,10 @@ func (b *applicableRolesKeyspace) Count(context datastore.QueryContext) (int64, 
 	return int64(numFound), nil
 }
 
+func (b *applicableRolesKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	return -1, nil
+}
+
 func (b *applicableRolesKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	return b.indexer, nil
 }

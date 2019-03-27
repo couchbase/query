@@ -23,15 +23,21 @@ func (this *sarg) VisitLE(pred *expression.LE) (interface{}, error) {
 	var expr expression.Expression
 	range2 := &plan.Range2{}
 
+	selec := this.getSelec(pred)
+
 	if pred.First().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.Second())
 		range2.Low = expression.NULL_EXPR
 		range2.High = expr
 		range2.Inclusion = datastore.HIGH
+		range2.Selec1 = OPT_SELEC_NOT_AVAIL
+		range2.Selec2 = selec
 	} else if pred.Second().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.First())
 		range2.Low = expr
 		range2.Inclusion = datastore.LOW
+		range2.Selec1 = selec
+		range2.Selec2 = OPT_SELEC_NOT_AVAIL
 	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil
 	} else {

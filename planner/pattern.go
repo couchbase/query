@@ -15,13 +15,14 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 )
 
-func (this *builder) PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.Index,
+func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datastore.Index,
 	formalizer *expression.Formalizer) error {
 
-	pred := baseKeyspace.origPred
+	pred := baseKeyspace.OrigPred()
 
 	suffixes := _PATTERN_INDEX_POOL.Get()
 	defer _PATTERN_INDEX_POOL.Put(suffixes)
@@ -48,19 +49,18 @@ func (this *builder) PatternFor(baseKeyspace *baseKeyspace, indexes []datastore.
 	}
 
 	// update filters list in baseKeyspace since new filters are generated above
-	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-	_, err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces, false)
+	baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
+	_, err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces, false, this.useCBO)
 	if err != nil {
 		return err
 	}
 
-	newKeyspace, ok := baseKeyspaces[baseKeyspace.name]
+	newKeyspace, ok := baseKeyspaces[baseKeyspace.Name()]
 	if !ok {
-		return errors.NewPlanInternalError(fmt.Sprintf("PatternFor: missing baseKeyspace %s", baseKeyspace.name))
+		return errors.NewPlanInternalError(fmt.Sprintf("PatternFor: missing baseKeyspace %s", baseKeyspace.Name()))
 	}
-	baseKeyspace.filters = newKeyspace.filters
-	baseKeyspace.joinfilters = newKeyspace.joinfilters
-	err = combineFilters(baseKeyspace, true)
+	baseKeyspace.SetFilters(newKeyspace.Filters(), newKeyspace.JoinFilters())
+	err = CombineFilters(baseKeyspace, true)
 	if err != nil {
 		return err
 	}

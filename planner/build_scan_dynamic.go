@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 )
 
@@ -66,8 +67,8 @@ outer:
 		return nil, 0, err
 	}
 
-	baseKeyspaces := copyBaseKeyspaces(this.baseKeyspaces)
-	_, err = ClassifyExpr(newPred, baseKeyspaces, false)
+	baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
+	_, err = ClassifyExpr(newPred, baseKeyspaces, false, this.useCBO)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -75,7 +76,7 @@ outer:
 	if !ok {
 		return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildDynamicScan: missing baseKeyspace %s", node.Alias()))
 	}
-	err = combineFilters(baseKeyspace, true)
+	err = CombineFilters(baseKeyspace, true)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -48,10 +48,10 @@ func (this *chkNullRej) setAlias(alias string) {
 }
 
 func (this *chkNullRej) hasReferences(expr expression.Expression) bool {
-	keyspaceNames := make(map[string]bool, len(this.bindingVars)+1)
-	keyspaceNames[this.alias] = true
+	keyspaceNames := make(map[string]string, len(this.bindingVars)+1)
+	keyspaceNames[this.alias] = ""
 	for _, bvar := range this.bindingVars {
-		keyspaceNames[bvar] = true
+		keyspaceNames[bvar] = ""
 	}
 	keyspaces, err := expression.CountKeySpaces(expr, keyspaceNames)
 	if err != nil {

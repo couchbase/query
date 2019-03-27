@@ -382,15 +382,22 @@ func (this *scanIdxCol) VisitExecuteFunction(op *plan.ExecuteFunction) (interfac
 	return nil, nil
 }
 
+// IndexFtsSearch
 func (this *scanIdxCol) VisitIndexFtsSearch(op *plan.IndexFtsSearch) (interface{}, error) {
 	return nil, nil
 }
 
+// Index Advisor
 func (this *scanIdxCol) VisitAdvise(op *plan.Advise) (interface{}, error) {
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexAdvice(op *plan.IndexAdvice) (interface{}, error) {
+	return nil, nil
+}
+
+// Update Statistics
+func (this *scanIdxCol) VisitUpdateStatistics(op *plan.UpdateStatistics) (interface{}, error) {
 	return nil, nil
 }
 

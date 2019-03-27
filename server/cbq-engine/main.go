@@ -39,6 +39,18 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+const (
+	_DEF_REQUEST_CAP            = 256
+	_DEF_SCAN_CAP               = 512
+	_DEF_PIPELINE_CAP           = 512
+	_DEF_PIPELINE_BATCH         = 16
+	_DEF_COMPLETED_THRESHOLD    = 1000
+	_DEF_COMPLETED_LIMIT        = 4000
+	_DEF_PREPARED_LIMIT         = 16384
+	_DEF_FUNCTIONS_LIMIT        = 16384
+	_DEF_DICTIONARY_CACHE_LIMIT = 16384
+)
+
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
 var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (http://URL or stub:)")
 var ACCTSTORE = flag.String("acctstore", "gometrics:", "Accounting store address (http://URL or stub:)")
@@ -48,9 +60,9 @@ var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var PRETTY = flag.Bool("pretty", false, "Pretty output")
-var REQUEST_CAP = flag.Int("request-cap", 256, "Maximum number of queued requests per logical CPU")
+var REQUEST_CAP = flag.Int("request-cap", _DEF_REQUEST_CAP, "Maximum number of queued requests per logical CPU")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
-var SCAN_CAP = flag.Int64("scan-cap", 512, "Maximum buffer size for index scans; use zero or negative value to disable")
+var SCAN_CAP = flag.Int64("scan-cap", _DEF_SCAN_CAP, "Maximum buffer size for index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
 var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to disable")
@@ -67,8 +79,8 @@ var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, 
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
-var PIPELINE_CAP = flag.Int64("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
-var PIPELINE_BATCH = flag.Int("pipeline-batch", 16, "Number of items execution operators can batch")
+var PIPELINE_CAP = flag.Int64("pipeline-cap", _DEF_PIPELINE_CAP, "Maximum number of items each execution operator can buffer")
+var PIPELINE_BATCH = flag.Int("pipeline-batch", _DEF_PIPELINE_BATCH, "Number of items execution operators can batch")
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "Max Index API")
 var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
@@ -78,19 +90,22 @@ var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
 // Monitoring API
-var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed query lasting longer than this many milliseconds")
-var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
+var COMPLETED_THRESHOLD = flag.Int("completed-threshold", _DEF_COMPLETED_THRESHOLD, "cache completed query lasting longer than this many milliseconds")
+var COMPLETED_LIMIT = flag.Int("completed-limit", _DEF_COMPLETED_LIMIT, "maximum number of completed requests")
 
-var PREPARED_LIMIT = flag.Int("prepared-limit", 16384, "maximum number of prepared statements")
+var PREPARED_LIMIT = flag.Int("prepared-limit", _DEF_PREPARED_LIMIT, "maximum number of prepared statements")
 var AUTO_PREPARE = flag.Bool("auto-prepare", false, "Silently prepare ad hoc statements if possible")
 
-var FUNCTIONS_LIMIT = flag.Int("functions-limit", 16384, "maximum number of cached functions")
+var FUNCTIONS_LIMIT = flag.Int("functions-limit", _DEF_FUNCTIONS_LIMIT, "maximum number of cached functions")
 
 // GOGC
 var _GOGC_PERCENT = 200
 
 // profiler, to use instead of the REST endpoint if needed
 // var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
+
+// Dictionary Cache
+var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_CACHE_LIMIT, "maximum number of entries in dictionary cache")
 
 func init() {
 	debug.SetGCPercent(_GOGC_PERCENT)
@@ -204,10 +219,18 @@ func main() {
 	if *PREPARED_LIMIT <= 0 {
 		logging.Errorp("Ignoring invalid prepared statement cache size",
 			logging.Pair{"value", *PREPARED_LIMIT})
-		*PREPARED_LIMIT = 16384
+		*PREPARED_LIMIT = _DEF_PREPARED_LIMIT
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
 	functions.FunctionsSetLimit(*FUNCTIONS_LIMIT)
+
+	if *DICTIONARY_CACHE_LIMIT <= 0 {
+		logging.Errorp("Ignoring invalid dictionary cache size",
+			logging.Pair{"value", *DICTIONARY_CACHE_LIMIT})
+		*DICTIONARY_CACHE_LIMIT = _DEF_DICTIONARY_CACHE_LIMIT
+	}
+	// Initialize dictionary cache
+	server.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 

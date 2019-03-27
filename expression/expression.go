@@ -219,6 +219,26 @@ type Expression interface {
 	SetDynamicIn()
 
 	/*
+	   OR clause from NE
+	*/
+	IsOrFromNE() bool
+
+	/*
+	   Set OR clause from NE
+	*/
+	SetOrFromNE()
+
+	/*
+	   Derived range (GT/GE AND LT/LE)
+	*/
+	IsDerivedRange() bool
+
+	/*
+	   Set derived range
+	*/
+	SetDerivedRange()
+
+	/*
 	   Enable in-list evaluation optimization (using hash table)
 	*/
 	EnableInlistHash(context Context)

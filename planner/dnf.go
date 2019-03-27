@@ -40,8 +40,10 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 		return nil, err
 	}
 
-	return expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
-		expression.NewLE(expr.First(), expr.Third())), nil
+	exp := expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
+		expression.NewLE(expr.First(), expr.Third()))
+	exp.SetDerivedRange()
+	return exp, nil
 }
 
 func (this *DNF) VisitLike(expr *expression.Like) (interface{}, error) {
@@ -170,6 +172,7 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	case *expression.Eq:
 		exp = expression.NewOr(expression.NewLT(operand.First(), operand.Second()),
 			expression.NewLT(operand.Second(), operand.First()))
+		exp.SetOrFromNE()
 	case *expression.LT:
 		exp = expression.NewLE(operand.Second(), operand.First())
 	case *expression.LE:
@@ -208,18 +211,22 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 		exp = expression.NewAnd(
 			expression.NewGT(expr.Operand(), expression.TRUE_EXPR),
 			expression.NewLT(expr.Operand(), expression.EMPTY_STRING_EXPR))
+		exp.SetDerivedRange()
 	case *expression.IsString:
 		exp = expression.NewAnd(
 			expression.NewGE(expr.Operand(), expression.EMPTY_STRING_EXPR),
 			expression.NewLT(expr.Operand(), expression.EMPTY_ARRAY_EXPR))
+		exp.SetDerivedRange()
 	case *expression.IsArray:
 		exp = expression.NewAnd(
 			expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR),
 			expression.NewLT(expr.Operand(), _EMPTY_OBJECT_EXPR))
+		exp.SetDerivedRange()
 	case *expression.IsObject:
 		exp = expression.NewAnd(
 			expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR),
 			expr)
+		exp.SetDerivedRange()
 		return exp, nil // Avoid infinite recursion
 	default:
 		return expr, nil // Avoid infinite recursion
@@ -495,6 +502,7 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	bytes[last]++
 	lt := expression.NewLT(expr.First(), expression.NewConstant(string(bytes)))
 	and := expression.NewAnd(ge, lt)
+	and.SetDerivedRange()
 	return and, nil
 }
 

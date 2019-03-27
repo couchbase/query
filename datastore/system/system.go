@@ -111,6 +111,10 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 
+func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS")
+}
+
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "AuditInfo")
 }

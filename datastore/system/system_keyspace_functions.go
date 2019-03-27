@@ -50,6 +50,10 @@ func (b *functionsKeyspace) Count(context datastore.QueryContext) (int64, errors
 	}
 }
 
+func (b *functionsKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
+	return -1, nil
+}
+
 func (b *functionsKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	return b.si, nil
 }

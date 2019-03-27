@@ -17,19 +17,38 @@ import (
 	"github.com/couchbase/query/expression/parser"
 )
 
+const (
+	RANGE_CHECK_SPECIAL_SPAN = 1 << iota
+	RANGE_SELF_SPAN
+	RANGE_FULL_SPAN
+	RANGE_WHOLE_SPAN
+	RANGE_VALUED_SPAN
+	RANGE_EMPTY_SPAN
+	RANGE_MISSING_SPAN
+	RANGE_NULL_SPAN
+)
+
+const RANGE_SPECIAL_FLAGS = (RANGE_SELF_SPAN | RANGE_FULL_SPAN | RANGE_WHOLE_SPAN | RANGE_VALUED_SPAN | RANGE_EMPTY_SPAN | RANGE_MISSING_SPAN | RANGE_NULL_SPAN)
+
 type Ranges2 []*Range2
 
 type Range2 struct {
 	Low       expression.Expression
 	High      expression.Expression
 	Inclusion datastore.Inclusion
+	Selec1    float64
+	Selec2    float64
+	Flags     uint32
 }
 
-func NewRange2(low, high expression.Expression, incl datastore.Inclusion) *Range2 {
+func NewRange2(low, high expression.Expression, incl datastore.Inclusion, selec1, selec2 float64, flags uint32) *Range2 {
 	return &Range2{
 		Low:       low,
 		High:      high,
 		Inclusion: incl,
+		Selec1:    selec1,
+		Selec2:    selec2,
+		Flags:     flags,
 	}
 }
 
@@ -38,6 +57,9 @@ func (this *Range2) Copy() *Range2 {
 		Low:       expression.Copy(this.Low),
 		High:      expression.Copy(this.High),
 		Inclusion: this.Inclusion,
+		Selec1:    this.Selec1,
+		Selec2:    this.Selec2,
+		Flags:     this.Flags,
 	}
 }
 
@@ -49,6 +71,26 @@ func (this *Range2) EquivalentTo(other *Range2) bool {
 
 func (this *Range2) EqualRange() bool {
 	return (this.Inclusion == datastore.BOTH) && (this.Low != nil && this.High != nil && (this.Low == this.High || this.Low.EquivalentTo(this.High)))
+}
+
+func (this *Range2) HasCheckSpecialSpan() bool {
+	return (this.Flags & RANGE_CHECK_SPECIAL_SPAN) != 0
+}
+
+func (this *Range2) SetCheckSpecialSpan() {
+	this.Flags |= RANGE_CHECK_SPECIAL_SPAN
+}
+
+func (this *Range2) UnsetCheckSpecialSpan() {
+	this.Flags &^= RANGE_CHECK_SPECIAL_SPAN
+}
+
+func (this *Range2) HasSpecialFlags() bool {
+	return (this.Flags & RANGE_SPECIAL_FLAGS) != 0
+}
+
+func (this *Range2) ClearSpecialFlags() {
+	this.Flags &^= RANGE_SPECIAL_FLAGS
 }
 
 func (this *Range2) MarshalJSON() ([]byte, error) {

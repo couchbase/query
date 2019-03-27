@@ -15,16 +15,17 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 // Perform ANSI OUTER JOIN to ANSI INNER JOIN transforation on all nodes in a FROM clause (by walking the algebra AST tree)
 type ansijoinOuterToInner struct {
-	baseKeyspaces    map[string]*baseKeyspace
+	baseKeyspaces    map[string]*base.BaseKeyspace
 	unnests          []*algebra.Unnest
 	pushableOnclause expression.Expression
 }
 
-func newAnsijoinOuterToInner(baseKeyspaces map[string]*baseKeyspace, unnests []*algebra.Unnest) *ansijoinOuterToInner {
+func newAnsijoinOuterToInner(baseKeyspaces map[string]*base.BaseKeyspace, unnests []*algebra.Unnest) *ansijoinOuterToInner {
 	return &ansijoinOuterToInner{
 		baseKeyspaces: baseKeyspaces,
 		unnests:       unnests,
@@ -75,14 +76,14 @@ func (this *ansijoinOuterToInner) visitAnsiJoin(left algebra.FromTerm, outer boo
 
 		// the filters and joinfilters attached to each keyspace at this point
 		// are from either WHERE clause or pushable ON clauses
-		for _, fl := range baseKeyspace.filters {
-			if nullRejExpr(chkNullRej, fl.fltrExpr) {
+		for _, fl := range baseKeyspace.Filters() {
+			if nullRejExpr(chkNullRej, fl.FltrExpr()) {
 				return true, nil
 			}
 		}
 
-		for _, jfl := range baseKeyspace.joinfilters {
-			if nullRejExpr(chkNullRej, jfl.fltrExpr) {
+		for _, jfl := range baseKeyspace.JoinFilters() {
+			if nullRejExpr(chkNullRej, jfl.FltrExpr()) {
 				return true, nil
 			}
 		}

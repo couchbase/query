@@ -15,12 +15,13 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, baseKeyspace *baseKeyspace,
+	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression) (plan.SecondaryScan, int, error) {
 
 	if this.cover == nil {
@@ -29,8 +30,8 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
-	pred := baseKeyspace.dnfPred
-	origPred := baseKeyspace.origPred
+	pred := baseKeyspace.DnfPred()
+	origPred := baseKeyspace.OrigPred()
 
 	arrays := _ARRAY_POOL.Get()
 	defer _ARRAY_POOL.Put(arrays)
@@ -88,37 +89,77 @@ outer:
 		return nil, 0, nil
 	}
 
-	// Avoid array indexes if possible
-	if len(arrays) < len(covering) {
-		for a, _ := range arrays {
-			delete(covering, a)
+	useCBO := this.useCBO
+	if useCBO {
+		for c, _ := range covering {
+			entry := indexes[c]
+			if entry.cost < 0 {
+				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.requestId, entry.spans)
+				if e != nil {
+					useCBO = false
+				} else {
+					entry.cost = cost
+					entry.cardinality = card
+				}
+			}
 		}
 	}
 
-	// Keep indexes with max sumKeys
-	sumKeys := 0
-	for c, _ := range covering {
-		if max := indexes[c].sumKeys; max > sumKeys {
-			sumKeys = max
-		}
-	}
-
-	for c, _ := range covering {
-		if indexes[c].sumKeys < sumKeys {
-			delete(covering, c)
-		}
-	}
-
-	// Use shortest remaining index
 	var index datastore.Index
-	minLen := 0
-	for c, _ := range covering {
-		cLen := len(c.RangeKey())
-		if index == nil ||
-			indexes[c].PushDownProperty() > indexes[index].PushDownProperty() ||
-			cLen < minLen || (cLen == minLen && c.Condition() != nil) {
-			index = c
-			minLen = cLen
+	if useCBO {
+		for c, _ := range covering {
+			// consider pushdown property before considering cost
+			if index == nil {
+				index = c
+			} else {
+				c_pushdown := indexes[c].PushDownProperty()
+				i_pushdown := indexes[index].PushDownProperty()
+				if (c_pushdown > i_pushdown) ||
+					((c_pushdown == i_pushdown) &&
+						(indexes[c].cost < indexes[index].cost)) {
+					index = c
+				}
+			}
+		}
+	} else {
+		// Avoid array indexes if possible
+		if len(arrays) < len(covering) {
+			for a, _ := range arrays {
+				delete(covering, a)
+			}
+		}
+
+		// Keep indexes with max sumKeys
+		sumKeys := 0
+		for c, _ := range covering {
+			if max := indexes[c].sumKeys; max > sumKeys {
+				sumKeys = max
+			}
+		}
+
+		for c, _ := range covering {
+			if indexes[c].sumKeys < sumKeys {
+				delete(covering, c)
+			}
+		}
+
+		// Use shortest remaining index
+		minLen := 0
+		for c, _ := range covering {
+			cLen := len(c.RangeKey())
+			if index == nil {
+				index = c
+				minLen = cLen
+			} else {
+				c_pushdown := indexes[c].PushDownProperty()
+				i_pushdown := indexes[index].PushDownProperty()
+				if (c_pushdown > i_pushdown) ||
+					((c_pushdown == i_pushdown) &&
+						(cLen < minLen || (cLen == minLen && c.Condition() != nil))) {
+					index = c
+					minLen = cLen
+				}
+			}
 		}
 	}
 
@@ -166,7 +207,8 @@ outer:
 
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, projDistinct, pred.MayOverlapSpans(), false,
-		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers)
+		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
+		entry.cost, entry.cardinality)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -244,7 +286,8 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(),
-		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers)
+		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers,
+		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
@@ -133,7 +134,7 @@ func (this *builder) enableUnnest(alias string) {
 	}
 }
 
-func (this *builder) collectPredicates(baseKeyspace *baseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
+func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
 	if !this.indexAdvisor {
 		return nil
 	}
@@ -146,9 +147,9 @@ func (this *builder) collectPredicates(baseKeyspace *baseKeyspace, keyspace data
 			orTerms, _ := flattenOr(or)
 		outer:
 			for _, op := range orTerms.Operands() {
-				baseKeyspacesCopy := copyBaseKeyspaces(this.baseKeyspaces)
+				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 
-				_, err := ClassifyExpr(op, baseKeyspacesCopy, ansijoin)
+				_, err := ClassifyExpr(op, baseKeyspacesCopy, ansijoin, this.useCBO)
 				if err != nil {
 					continue outer
 				}
@@ -158,30 +159,30 @@ func (this *builder) collectPredicates(baseKeyspace *baseKeyspace, keyspace data
 					addUnnestPreds(baseKeyspacesCopy, bk)
 				}
 
-				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.filters), getFilterInfos(bk.joinfilters), baseKeyspace.onclause, pred)
+				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()), getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(), pred)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
-			baseKeyspacesCopy := copyBaseKeyspaces(this.baseKeyspaces)
-			_, err := ClassifyExpr(pred, baseKeyspacesCopy, false)
+			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
+			_, err := ClassifyExpr(pred, baseKeyspacesCopy, false, this.useCBO)
 			if err != nil {
 				return err
 			}
 			baseKeyspaceCopy, _ := baseKeyspacesCopy[node.Alias()]
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.filters), getFilterInfos(baseKeyspaceCopy.joinfilters), baseKeyspace.onclause, pred)
+			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()), getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(), pred)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		}
-	} else if _, ok := baseKeyspace.dnfPred.(*expression.Or); !ok {
-		p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.filters), getFilterInfos(baseKeyspace.joinfilters), baseKeyspace.onclause, baseKeyspace.dnfPred)
+	} else if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
+		p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred())
 		this.keyspaceInfos = append(this.keyspaceInfos, p)
 	}
 	return nil
 }
 
-func getFilterInfos(filters Filters) iaplan.FilterInfos {
+func getFilterInfos(filters base.Filters) iaplan.FilterInfos {
 	exprs := make(iaplan.FilterInfos, 0, len(filters))
 	for _, f := range filters {
-		exprs = append(exprs, iaplan.NewFilterInfo(f.fltrExpr.Copy(), f.fltrFlags == FLTR_IS_UNNEST))
+		exprs = append(exprs, iaplan.NewFilterInfo(f.FltrExpr().Copy(), f.IsUnnest()))
 	}
 	return exprs
 }

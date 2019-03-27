@@ -604,6 +604,8 @@ func (this *builder) VisitDropFunction(plan *plan.DropFunction) (interface{}, er
 func (this *builder) VisitExecuteFunction(plan *plan.ExecuteFunction) (interface{}, error) {
 	return NewExecuteFunction(plan, this.context), nil
 }
+
+// IndexFtsSearch
 func (this *builder) VisitIndexFtsSearch(plan *plan.IndexFtsSearch) (interface{}, error) {
 	this.setScannedIndexes(plan.Term())
 	this.setAliasMap(plan.Term())
@@ -617,4 +619,9 @@ func (this *builder) VisitIndexAdvice(plan *plan.IndexAdvice) (interface{}, erro
 
 func (this *builder) VisitAdvise(plan *plan.Advise) (interface{}, error) {
 	return NewAdviseIndex(plan, this.context), nil
+}
+
+// Update Statistics
+func (this *builder) VisitUpdateStatistics(plan *plan.UpdateStatistics) (interface{}, error) {
+	return NewUpdateStatistics(plan, this.context), nil
 }
