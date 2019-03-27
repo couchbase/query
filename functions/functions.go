@@ -27,6 +27,7 @@ const (
 	_MISSING Language = iota
 	INLINE
 	GOLANG
+	JAVASCRIPT
 	_SIZER
 )
 

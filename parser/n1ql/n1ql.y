@@ -11,6 +11,7 @@ import "github.com/couchbase/query/expression/search"
 import "github.com/couchbase/query/functions"
 import "github.com/couchbase/query/functions/inline"
 import "github.com/couchbase/query/functions/golang"
+import "github.com/couchbase/query/functions/javascript"
 import "github.com/couchbase/query/value"
 
 func logDebugGrammar(format string, v ...interface{}) {
@@ -181,6 +182,7 @@ tokOffset	 int
 %token INTERSECT
 %token INTO
 %token IS
+%token JAVASCRIPT
 %token JOIN
 %token KEY
 %token KEYS
@@ -2443,11 +2445,21 @@ LANGUAGE INLINE AS expr
 }
 |
 LANGUAGE GOLANG AS LBRACE STR COMMA STR RBRACE
-{   
+{
     body, err := golang.NewGolangBody($5, $7)
     if err != nil {
         yylex.Error(err.Error())
-    } else { 
+    } else {
+        $$ = body
+    }
+}
+|
+LANGUAGE JAVASCRIPT AS LBRACE STR COMMA STR RBRACE
+{
+    body, err := javascript.NewJavascriptBody($5, $7)
+    if err != nil {
+        yylex.Error(err.Error())
+    } else {
         $$ = body
     }
 }

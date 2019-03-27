@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
+	"github.com/couchbase/query/functions/javascript"
 	globalName "github.com/couchbase/query/functions/metakv"
 )
 
@@ -21,6 +22,7 @@ func Init() {
 	functions.Constructor = newGlobalFunction
 	golang.Init()
 	inline.Init()
+	javascript.Init()
 }
 
 // TODO switch to collections context

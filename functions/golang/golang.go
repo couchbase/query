@@ -58,7 +58,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 	}
 
 	if !enabled || !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_GOLANG_UDF) {
-		return nil, errors.NewFunctionsDisabledError()
+		return nil, errors.NewFunctionsDisabledError("golang")
 	}
 
 	path := _PATH + funcBody.library
@@ -104,7 +104,7 @@ func (this *golangBody) execError(err error, name string) errors.Error {
 
 func NewGolangBody(library, object string) (functions.FunctionBody, errors.Error) {
 	if !enabled || !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_GOLANG_UDF) {
-		return nil, errors.NewFunctionsDisabledError()
+		return nil, errors.NewFunctionsDisabledError("golang")
 	}
 	return &golangBody{library: library, object: object}, nil
 }

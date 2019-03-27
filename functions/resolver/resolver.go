@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
+	"github.com/couchbase/query/functions/javascript"
 )
 
 func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) {
@@ -74,6 +75,27 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
 		}
 		body, newErr := golang.NewGolangBody(_unmarshalled.Library, _unmarshalled.Object)
+		if body != nil {
+			newErr = body.SetVarNames(_unmarshalled.Parameters)
+		}
+		return body, newErr
+
+	case "javascript":
+
+		var _unmarshalled struct {
+			_          string   `json:"#language"`
+			Parameters []string `json:"parameters"`
+			Library    string   `json:"library"`
+			Object     string   `json:"object"`
+		}
+		err := json.Unmarshal(bytes, &_unmarshalled)
+		if err != nil {
+			return nil, errors.NewFunctionEncodingError("decode body", name, err)
+		}
+		if _unmarshalled.Object == "" || _unmarshalled.Library == "" {
+			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
+		}
+		body, newErr := javascript.NewJavascriptBody(_unmarshalled.Library, _unmarshalled.Object)
 		if body != nil {
 			newErr = body.SetVarNames(_unmarshalled.Parameters)
 		}

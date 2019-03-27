@@ -99,9 +99,9 @@ func NewFunctionEncodingError(what string, name string, reason error) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewFunctionsDisabledError() Error {
+func NewFunctionsDisabledError(what string) Error {
 	return &err{level: EXCEPTION, ICode: 10108, IKey: "function.golang.disabled.error",
-		InternalMsg: "Golang functions are disabled", InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("%v functions are disabled", what), InternalCaller: CallerN(1)}
 }
 
 func NewFunctionExecutionError(what string, name string, reason error) Error {

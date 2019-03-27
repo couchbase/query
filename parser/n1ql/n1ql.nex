@@ -215,6 +215,7 @@
 /[iI][nN][tT][eE][rR][sS][eE][cC][tT]/		 { yylex.logToken(yylex.Text(), "INTERSECT"); return INTERSECT }
 /[iI][nN][tT][oO]/				 { yylex.logToken(yylex.Text(), "INTO"); return INTO }
 /[iI][sS]/					 { yylex.logToken(yylex.Text(), "IS"); return IS }
+/[jJ][aA][vV][aA][sS][cC][rR][iI][pP][tT]/	 { yylex.logToken(yylex.Text(), "JAVASCRIPT"); return JAVASCRIPT }
 /[jJ][oO][iI][nN]/				 { yylex.logToken(yylex.Text(), "JOIN"); return JOIN }
 /[kK][eE][yY]/					 { yylex.logToken(yylex.Text(), "KEY"); return KEY }
 /[kK][eE][yY][sS]/				 { yylex.logToken(yylex.Text(), "KEYS"); return KEYS }
