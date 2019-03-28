@@ -11,7 +11,6 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/errors"
 )
 
 func (this *SemChecker) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
@@ -27,8 +26,5 @@ func (this *SemChecker) VisitExpressionTerm(node *algebra.ExpressionTerm) (inter
 }
 
 func (this *SemChecker) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	if node.Subquery().IsCorrelated() {
-		return nil, errors.NewNoCorrelatedSubqTermError(node.Alias())
-	}
 	return node.Subquery().Accept(this)
 }
