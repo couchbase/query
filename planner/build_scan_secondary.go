@@ -405,7 +405,8 @@ outer:
 	}
 
 	return se.sumKeys > te.sumKeys ||
-		(shortest && (len(se.keys) <= len(te.keys)))
+		(shortest && ((len(se.keys) <= len(te.keys)) ||
+		(se.cond != nil && te.cond == nil && len(se.sargKeys) == len(te.sargKeys))))
 }
 
 func (this *builder) sargIndexes(baseKeyspace *baseKeyspace, underHash bool, sargables map[datastore.Index]*indexEntry) error {
