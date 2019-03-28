@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/couchbase/gocb"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
+	gocb "gopkg.in/couchbase/gocb.v1"
 )
 
 /*
