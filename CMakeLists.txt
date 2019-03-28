@@ -26,12 +26,18 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 
 SET (GOVERSION 1.11.4)
-
+SET (LDFLAGS)
 IF (APPLE)
+  # Suppress warning from FindCouchbaseGo
   IF (${GOVERSION} VERSION_LESS ${GO_MAC_MINIMUM_VERSION})
     SET (GOVERSION ${GO_MAC_MINIMUM_VERSION})
   ENDIF ()
-ENDIF()
+
+  # On OS X 10.11 (El Capitan) upwards we can no longer use DYLD_LIBRARY_PATH to locate
+  # runtime dependencies. Instead add the location of libcurl etc to the actual
+  # binary itself.
+  SET (LDFLAGS " ${LDFLAGS} -extldflags '-Wl,-rpath,@executable_path/../lib'")
+ENDIF ()
 
 IF (NOT CBQ_ONLY)
   GoYacc (GOVERSION 1.7.6 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
@@ -42,6 +48,7 @@ IF (NOT CBQ_ONLY)
     DEPENDS n1ql-yacc INSTALL_PATH bin
     CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR}"
     CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR}"
+    LDFLAGS "${LDFLAGS}"
     GOVERSION ${GOVERSION}
     GOTAGS ${_gotags})
 
