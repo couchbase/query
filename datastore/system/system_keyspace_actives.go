@@ -133,6 +133,11 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if p != nil {
 					item.SetField("phaseOperators", p)
 				}
+				p = request.Output().FmtPhaseTimes()
+				if p != nil {
+					item.SetField("phaseTimes", p)
+				}
+
 				if request.Prepared() != nil {
 					p := request.Prepared()
 					item.SetField("preparedName", p.Name())
@@ -141,9 +146,6 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				prof := request.Profile()
 				if prof == server.ProfUnset {
 					prof = server.GetProfile()
-				}
-				if prof != server.ProfOff {
-					item.SetField("phaseTimes", request.Output().FmtPhaseTimes())
 				}
 				credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
 				if credsString != "" {

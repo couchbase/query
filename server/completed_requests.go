@@ -370,6 +370,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	}
 	re.PhaseCounts = request.FmtPhaseCounts()
 	re.PhaseOperators = request.FmtPhaseOperators()
+	re.PhaseTimes = request.FmtPhaseTimes()
 
 	// in order not to bloat service memory, we only
 	// store timings if they are turned on at the service
@@ -384,9 +385,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	if prof == ProfUnset {
 		prof = server.Profile()
 	}
-	if prof != ProfOff {
-		re.PhaseTimes = request.FmtPhaseTimes()
-	}
+
 	if prof == ProfOn {
 		re.Timings = request.GetTimings()
 		request.SetTimings(nil)

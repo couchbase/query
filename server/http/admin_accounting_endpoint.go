@@ -535,12 +535,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 			reqMap["phaseOperators"] = p
 		}
 		if profiling {
+			reqMap["phaseTimes"] = request.Output().FmtPhaseTimes()
+
 			prof := request.Profile()
 			if prof == server.ProfUnset {
 				prof = endpoint.server.Profile()
-			}
-			if prof != server.ProfOff {
-				reqMap["phaseTimes"] = request.Output().FmtPhaseTimes()
 			}
 			t := request.GetTimings()
 
