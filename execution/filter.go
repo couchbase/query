@@ -19,6 +19,7 @@ import (
 
 type Filter struct {
 	base
+	docs     uint64
 	plan     *plan.Filter
 	aliasMap map[string]string
 }
@@ -30,6 +31,7 @@ func NewFilter(plan *plan.Filter, context *Context, aliasMap map[string]string) 
 	}
 
 	newBase(&rv.base, context)
+	rv.execPhase = FILTER
 	rv.output = rv
 	return rv
 }
@@ -62,6 +64,11 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	if val.Truth() {
+		this.docs++
+		if this.docs > _PHASE_UPDATE_COUNT {
+			context.AddPhaseCount(FILTER, this.docs)
+			this.docs = 0
+		}
 		return this.sendItem(item)
 	} else {
 		return true
@@ -70,6 +77,10 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 
 func (this *Filter) afterItems(context *Context) {
 	this.plan.Condition().ResetMemory(context)
+	if this.docs > 0 {
+		context.AddPhaseCount(FILTER, this.docs)
+		this.docs = 0
+	}
 }
 
 func (this *Filter) MarshalJSON() ([]byte, error) {

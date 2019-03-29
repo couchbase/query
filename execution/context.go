@@ -49,6 +49,7 @@ const (
 	HASH_NEST
 	COUNT
 	INDEX_COUNT
+	FILTER
 	SORT
 	INSERT
 	DELETE
@@ -87,6 +88,7 @@ var _PHASE_NAMES = []string{
 	COUNT:        "count",
 	INDEX_COUNT:  "indexCount",
 	SORT:         "sort",
+	FILTER:       "filter",
 	INSERT:       "insert",
 	DELETE:       "delete",
 	UPDATE:       "update",
