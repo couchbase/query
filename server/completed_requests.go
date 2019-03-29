@@ -153,6 +153,8 @@ func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}) e
 		_, err = newUser(condition)
 	case "client":
 		_, err = newClient(condition)
+	case "context":
+		_, err = newContext(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -181,6 +183,8 @@ func RequestsAddQualifier(name string, condition interface{}) errors.Error {
 		q, err = newUser(condition)
 	case "client":
 		q, err = newClient(condition)
+	case "context":
+		q, err = newContext(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -664,4 +668,45 @@ func (this *client) evaluate(request *BaseRequest, req *http.Request) bool {
 	// assuming that address is a valid IPv4 or IPv6 address, this is a
 	// quick and dirty way to ignore the port part of the RemoteAddress()
 	return this.address == request.RemoteAddr()[0:len(this.address)]
+}
+
+// 6- client contex ID
+type context struct {
+	id string
+}
+
+func newContext(c interface{}) (*context, errors.Error) {
+	switch c.(type) {
+	case string:
+		return &context{id: c.(string)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("context", c)
+}
+
+func (this *context) name() string {
+	return "context"
+}
+
+func (this *context) unique() bool {
+	return false
+}
+
+func (this *context) condition() interface{} {
+	return this.id
+}
+
+func (this *context) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case string:
+		return c.(string) == this.id
+	}
+	return false
+}
+
+func (this *context) checkCondition(c interface{}) errors.Error {
+	return nil
+}
+
+func (this *context) evaluate(request *BaseRequest, req *http.Request) bool {
+	return this.id == request.ClientContextId()
 }
