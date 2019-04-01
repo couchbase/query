@@ -39,7 +39,7 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
-	//	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -264,7 +264,7 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 	query.SetCredentials(_ALL_USERS)
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
-	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
+	//      query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
 
 	if !mockServer.server.ServiceRequest(query) {
@@ -334,6 +334,8 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+
+	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 
 	server.SetWhitelist(curlWhitelist)
 
