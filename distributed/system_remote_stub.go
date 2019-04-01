@@ -67,6 +67,7 @@ func (this systemRemoteStub) GetNodeNames() []string {
 }
 
 // check capability
+// for standalone engines (where this applies) all capabilities are enabled by default for testing purposes
 func (this systemRemoteStub) Enabled(capability Capability) bool {
-	return false
+	return true
 }
