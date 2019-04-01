@@ -1015,14 +1015,16 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), name)
 	if qerr != nil {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
+	} else {
+		rv.gsiIndexer.SetConnectionSecurityConfig(connSecConfig)
 	}
-	rv.gsiIndexer.SetConnectionSecurityConfig(connSecConfig)
 
 	rv.ftsIndexer, qerr = ftsclient.NewFTSIndexer(p.store.URL(), p.Name(), name)
 	if qerr != nil {
 		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", name, qerr)
+	} else {
+		rv.ftsIndexer.SetConnectionSecurityConfig(connSecConfig)
 	}
-	rv.ftsIndexer.SetConnectionSecurityConfig(connSecConfig)
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
 	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
@@ -1491,9 +1493,10 @@ func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 	b.gsiIndexer, err = gsi.NewGSIIndexer(url, poolName, b.Name())
 	if err == nil {
 		logging.Infof(" GSI Indexer loaded ")
+
+		// We know the connSecConfig is present, because we checked when the keyspace was created.
+		b.gsiIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 	}
-	// We know the connSecConfig is present, because we checked when the keyspace was created.
-	b.gsiIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 }
 
 func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
@@ -1501,9 +1504,10 @@ func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
 	b.ftsIndexer, err = ftsclient.NewFTSIndexer(url, poolName, b.Name())
 	if err == nil {
 		logging.Infof(" FTS Indexer loaded ")
+
+		// We know the connSecConfig is present, because we checked when the keyspace was created.
+		b.ftsIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 	}
-	// We know the connSecConfig is present, because we checked when the keyspace was created.
-	b.ftsIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 }
 
 func (b *keyspace) loadIndexes() (err errors.Error) {

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	json "github.com/couchbase/go_json"
+	"github.com/couchbase/indexing/secondary/common"
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	"github.com/couchbase/query/auth"
@@ -219,12 +220,16 @@ as defined in server/server.go.
 */
 func Start(site, pool, namespace string) *MockServer {
 
+	common.EnableStandaloneTest()
+	nullSecurityConfig := &datastore.ConnectionSecurityConfig{}
+
 	mockServer := &MockServer{}
 	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	ds.SetConnectionSecurityConfig(nullSecurityConfig)
 	datastore.SetDatastore(ds)
 
 	sys, err := system.NewDatastore(ds)
@@ -232,6 +237,7 @@ func Start(site, pool, namespace string) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	sys.SetConnectionSecurityConfig(nullSecurityConfig)
 
 	configstore, err := config_resolver.NewConfigstore("stub:")
 	if err != nil {
