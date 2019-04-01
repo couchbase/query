@@ -528,8 +528,11 @@ var capabilities = map[distributed.Capability]string{
 // a capability is enabled if we are part of a cluster and we find it enabled
 // on each cluster that's reachable
 func (this *systemRemoteHttp) Enabled(capability distributed.Capability) bool {
+
+	// if we are running standalone, enable all features, as we don't have to contend with
+	// any other node, and we don't have a cluster manager to ask anyway
 	if len(this.WhoAmI()) == 0 {
-		return false
+		return true
 	}
 	clusters, err := this.configStore.ClusterNames()
 	if err != nil {
