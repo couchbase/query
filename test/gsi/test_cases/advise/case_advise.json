@@ -1,0 +1,261 @@
+[
+  {
+    "statements": "advise select * from shellTest where test_id = \"advise\" limit 2",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest where test_id = \"advise\" limit 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where test_id = \"advise\" and c11 < 2",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest where test_id = \"advise\" and c11 < 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where c11 = 4 and c12 between 10 and 40 and test_id = \"advise\"",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_c12_test_id ON `shellTest`(`c11`,`c12`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality, 3. not less than/between/not greater than, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest where c11 = 4 and c12 between 10 and 40 and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where (c11 in [1, 2, 3, 4] or c12 in [20, 30]) and test_id = \"advise\"",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. in, 8. flavor for partial index."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. in, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest where (c11 in [1, 2, 3, 4] or c12 in [20, 30]) and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" where s1.test_id = \"advise\"",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a11_test_id ON `shellTest`(DISTINCT `a11`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. array predicate, 8. flavor for partial index."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id ON `shellTest`(length(`a22`)) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 7. function index, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" where s1.test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_c12_test_id ON `shellTest`(`c11`,`c12`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality, 4. less than/between/greater than, 8. flavor for partial index."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. array predicate, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. array predicate, 8. flavor for partial index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "select * from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END"
+      }
+    ]
+  },
+  {
+    "statements": "advise merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = \"matched\"",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality, 8. flavor for partial index."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c22 ON `shellTest`(`c22`)",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = \"matched\""
+      }
+    ]
+  },
+  {
+    "statements": "advise update shellTest set type=\"left\" where length(a21) < 3 and c21 = 3 and c22 > 30",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c21_c22_length_a21 ON `shellTest`(`c21`,`c22`,length(`a21`))",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. equality, 4. less than/between/greater than, 7. function index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "update shellTest set type=\"left\" where length(a21) < 3 and c21 = 3 and c22 > 30"
+      }
+    ]
+  },
+  {
+    "statements": "advise delete from shellTest where c22 in [22, 32] and type like \"%igh%\" and c12 is not missing",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. in, 6. not null/not missing/valued, 7. function index."
+                }
+              ]
+            }
+          ]
+        },
+        "query": "delete from shellTest where c22 in [22, 32] and type like \"%igh%\" and c12 is not missing"
+      }
+    ]
+  }
+]
+
