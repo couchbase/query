@@ -56,6 +56,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		cond:             cond,
 		origCond:         origCond,
 		spans:            spans,
+		exactSpans:       exactSpans,
 		pushDownProperty: _PUSHDOWN_NONE,
 		cost:             OPT_COST_NOT_AVAIL,
 		cardinality:      OPT_CARD_NOT_AVAIL,
