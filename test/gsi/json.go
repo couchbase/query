@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -77,6 +78,8 @@ type MockQuery struct {
 }
 
 type MockServer struct {
+	sync.RWMutex
+	prepDone  map[string]bool
 	server    *server.Server
 	acctstore accounting.AccountingStore
 }
@@ -264,7 +267,7 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 	query.SetCredentials(_ALL_USERS)
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
-	//      query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
+	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
 
 	if !mockServer.server.ServiceRequest(query) {
@@ -285,6 +288,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	nullSecurityConfig := &datastore.ConnectionSecurityConfig{}
 
 	mockServer := &MockServer{}
+	mockServer.prepDone = make(map[string]bool)
 	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -335,9 +339,8 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		os.Exit(1)
 	}
 
-	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
-
 	server.SetWhitelist(curlWhitelist)
+	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 
 	prepareds.PreparedsReprepareInit(ds, sys)
 	server.SetKeepAlive(1 << 10)
@@ -658,9 +661,25 @@ func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, e
 	if errActual != nil || len(resultsActual) != 1 {
 		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
 	}
-	RunStmt(qc, "DELETE FROM system:prepareds")
 	ra := resultsActual[0].(map[string]interface{})
-	return prepareds.DecodePrepared("", ra["encoded_plan"].(string), true, false, nil)
+
+	// if already tried decodeing just get on with it
+	qc.RLock()
+	done := qc.prepDone[statement]
+	qc.RUnlock()
+	if done {
+		return prepareds.GetPrepared(value.NewValue(ra["name"].(string)), 0, nil)
+	}
+
+	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
+	rv, err := prepareds.DecodePrepared("", ra["encoded_plan"].(string), true, false, nil)
+	if err != nil {
+		return rv, err
+	}
+	qc.Lock()
+	qc.prepDone[statement] = true
+	qc.Unlock()
+	return rv, err
 }
 
 /*

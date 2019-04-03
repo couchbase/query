@@ -282,8 +282,9 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 	go idx.ScanEntries("", nitems, datastore.UNBOUNDED, nil, conn)
 	for {
 		v, ok := conn.Sender().GetEntry()
-		if !ok {
-			// Channel closed => Scan complete
+		if !ok || v == nil {
+
+			// Closed or Stopped
 			return
 		}
 
