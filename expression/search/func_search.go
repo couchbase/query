@@ -133,7 +133,7 @@ func (this *FTSQuery) Apply(context expression.Context, args ...value.Value) (va
 			v1, user, err = ProcessHostname(this.FtsCache, hostname, idxName)
 			if user == "" {
 				hname, _ := url.Parse(v1.String())
-				user = this.getCredentials(context, hname.Hostname()+":"+hname.Port())
+				user = this.getCredentials(context, hostname_go(hname)+":"+port_go(hname))
 			}
 		} else {
 			// Round robin through the cache
