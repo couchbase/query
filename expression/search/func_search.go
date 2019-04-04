@@ -114,13 +114,14 @@ func (this *FTSQuery) Apply(context expression.Context, args ...value.Value) (va
 
 	search := args[1].String()
 	idxName := args[0].Actual().(string)
-	user = getCredentials(context)
 
 	// If no host is given then get one
 	// If the cache contains a list of FTS nodes already
 	iter := 0
 	for {
 		if len(this.FtsCache) == 0 || errC != nil {
+			// Get current node auth credentials
+			user = this.getCredentials(context, "")
 			// This is called when cache is empty
 			err = this.PopulateFTSCache(context, user)
 			if err != nil {
@@ -131,11 +132,15 @@ func (this *FTSQuery) Apply(context expression.Context, args ...value.Value) (va
 		if hostname != "" {
 			v1, user, err = ProcessHostname(this.FtsCache, hostname, idxName)
 			if user == "" {
-				user = getCredentials(context)
+				hname, _ := url.Parse(v1.String())
+				user = this.getCredentials(context, hname.Hostname()+":"+hname.Port())
 			}
 		} else {
 			// Round robin through the cache
-			v1 = ftsUrl(this.FtsCache[this.counter].nodeIp, idxName, this.FtsCache[this.counter].portNo)
+			host := this.FtsCache[this.counter].nodeIp
+			port := this.FtsCache[this.counter].portNo
+			v1 = ftsUrl(host, idxName, port)
+			user = this.getCredentials(context, host+":"+portStr(port))
 			this.counter = (this.counter + 1) % int64(len(this.FtsCache))
 		}
 
@@ -344,13 +349,14 @@ func (this *FTSQuery) PopulateFTSCache(context expression.Context, user string) 
 func ftsUrl(nodeIp, index string, portNo int64) value.Value {
 	return value.NewValue("http://" + nodeIp + ":" + portStr(portNo) + _FTS_PATH + index + _QUERY_PATH)
 }
-func getCredentials(context expression.Context) (user string) {
+func (this *FTSQuery) getCredentials(context expression.Context, hname string) (user string) {
 	// Get the credentials
 	// If there are input credentials in the hostname then use those
 	// Otherwise always use current credentials (the first one)
+	// This depends on which node we are sending the request to
 	up := context.(expression.CurlContext).Credentials()
 	if up == nil {
-		up = context.(expression.CurlContext).UrlCredentials()
+		up = context.(expression.CurlContext).UrlCredentials(hname)
 	}
 	for i, k := range up {
 		if i != "" && k != "" {

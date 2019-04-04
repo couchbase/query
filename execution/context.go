@@ -271,13 +271,17 @@ func (this *Context) Credentials() auth.Credentials {
 	return this.credentials
 }
 
-func (this *Context) UrlCredentials() auth.Credentials {
+func (this *Context) UrlCredentials(urlS string) auth.Credentials {
 	// For the cases where the request doesnt have credentials but uses an auth
 	// token or x509 certs, we need to derive the credentials to be able to query
 	// the fts index.
-	dUrl, _ := url.Parse(this.DatastoreURL())
+	if urlS == "" {
+		dUrl, _ := url.Parse(this.DatastoreURL())
+		urlS = dUrl.Hostname() + ":" + dUrl.Port()
+	}
+
 	authenticator := cbauth.Default
-	u, p, _ := authenticator.GetHTTPServiceAuth(dUrl.Hostname() + ":" + dUrl.Port())
+	u, p, _ := authenticator.GetHTTPServiceAuth(urlS)
 	return auth.Credentials{u: p}
 }
 
