@@ -23,10 +23,10 @@ import (
 
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.indexAdvisor = true
+	this.maxParallelism = 1
 	this.queryInfos = make(map[algebra.Statement]*iaplan.QueryInfo, 1)
-
 	stmt.Statement().Accept(this)
-	indexadvisor.AdviseIdxs(this.queryInfos)
+	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion))
 	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos), stmt.Query()), nil
 }
 
@@ -61,7 +61,7 @@ func (this *builder) extractPredicates(where, on expression.Expression) {
 func (this *builder) extractIndexJoin(index datastore.Index, node *algebra.KeyspaceTerm, cover bool) {
 	if this.indexAdvisor {
 		if index != nil {
-			info := extractInfo(index, node)
+			info := extractInfo(index, node.Keyspace(), node.Alias(), false)
 			if cover { //covering index
 				info.SetIdxStatusCovering()
 			}
@@ -214,4 +214,54 @@ func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryId
 			q.AddToUnnestMap(expression.NewStringer().Visit(unnest.Expression()), unnest.Expression())
 		}
 	}
+}
+
+func extractDeferredIdxes(queryInfos map[algebra.Statement]*iaplan.QueryInfo, indexApiVersion int) map[string]iaplan.IndexInfos {
+	if len(queryInfos) == 0 {
+		return nil
+	}
+
+	infoMap := make(map[string]iaplan.IndexInfos, 1)
+	for _, queryInfo := range queryInfos {
+		for _, keyspaceInfo := range queryInfo.GetKeyspaceInfos() {
+			if _, ok := infoMap[keyspaceInfo.GetName()]; !ok {
+				//use nil value to mark one keyspace has been processed and no deferred indexes are found or errors occur.
+				infoMap[keyspaceInfo.GetName()] = getDeferredIndexes(keyspaceInfo.GetKeyspace(), keyspaceInfo.GetAlias(), indexApiVersion)
+			}
+		}
+	}
+	return infoMap
+}
+
+func getDeferredIndexes(keyspace datastore.Keyspace, alias string, indexApiVersion int) iaplan.IndexInfos {
+	var infos iaplan.IndexInfos
+	indexers, err := keyspace.Indexers()
+	if err != nil {
+		return nil
+	}
+
+	for _, indexer := range indexers {
+		idxes, err := indexer.Indexes()
+		if err != nil {
+			return nil
+		}
+
+		for _, idx := range idxes {
+			state, _, er := idx.State()
+			if er != nil || state != datastore.DEFERRED || idx.IsPrimary() {
+				continue
+			}
+
+			if !useIndex2API(idx, indexApiVersion) && indexHasDesc(idx) && idx.IsPrimary() {
+				continue
+			}
+
+			if infos == nil {
+				infos = make(iaplan.IndexInfos, 0, 1)
+			}
+
+			infos = append(infos, extractInfo(idx, keyspace.Name(), alias, true))
+		}
+	}
+	return infos
 }

@@ -51,12 +51,12 @@ func (this *scanIdxCol) addIndexInfo(indexInfo *iaplan.IndexInfo) {
 }
 
 func (this *scanIdxCol) VisitPrimaryScan(op *plan.PrimaryScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
@@ -65,17 +65,17 @@ func (this *scanIdxCol) VisitParentScan(op *plan.ParentScan) (interface{}, error
 }
 
 func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
@@ -96,17 +96,17 @@ func (this *scanIdxCol) VisitCountScan(op *plan.CountScan) (interface{}, error) 
 }
 
 func (this *scanIdxCol) VisitIndexCountScan(op *plan.IndexCountScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexCountScan2(op *plan.IndexCountScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexCountDistinctScan2(op *plan.IndexCountDistinctScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node))
+	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
 	return nil, nil
 }
 
@@ -401,8 +401,8 @@ func (this *scanIdxCol) VisitUpdateStatistics(op *plan.UpdateStatistics) (interf
 	return nil, nil
 }
 
-func formalizeIndexKeys(node *algebra.KeyspaceTerm, keys expression.Expressions) expression.Expressions {
-	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
+func formalizeIndexKeys(alias string, keys expression.Expressions) expression.Expressions {
+	formalizer := expression.NewSelfFormalizer(alias, nil)
 	keys = keys.Copy()
 
 	for i, key := range keys {
@@ -433,15 +433,15 @@ func formalizeExpr(formalizer *expression.Formalizer, key expression.Expression)
 	return key, nil
 }
 
-func extractInfo(index datastore.Index, node *algebra.KeyspaceTerm) *iaplan.IndexInfo {
+func extractInfo(index datastore.Index, keyspace, keyspaceAlias string, deferred bool) *iaplan.IndexInfo {
 	if index == nil {
 		return nil
 	}
-	info := iaplan.NewIndexInfo(index.Name(), node.Keyspace(), index.IsPrimary(), "", nil, "")
+	info := iaplan.NewIndexInfo(index.Name(), keyspace, index.IsPrimary(), "", nil, "", deferred)
 	if index2, ok := index.(datastore.Index2); ok {
-		info.SetFormalizedKeyExprs(formalizeIndexKeys(node, getIndexKeyExpressions(index2.RangeKey2())))
+		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, getIndexKeyExpressions(index2.RangeKey2())))
 	} else {
-		info.SetFormalizedKeyExprs(formalizeIndexKeys(node, index.RangeKey()))
+		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
 	}
 	info.SetKeyStrings(getIndexKeyStringArray(index))
 	info.SetCondition(index.Condition())
