@@ -508,10 +508,10 @@ func parseUrl(u string) (host string, username string, password string, err erro
 	}
 	password, _ = url.User.Password()
 	if password == "" {
-		logging.Warnf("No password found in url <ud>%s</ud>.", u)
+		logging.Warnf("No password found in url <ud>%s</ud>", u)
 	}
 	if url.User.Username() == "" {
-		logging.Warnf("No username found in url <ud>%s</ud>.", u)
+		logging.Warnf("No username found in url <ud>%s</ud>", u)
 	}
 	return url.Host, url.User.Username(), password, nil
 }

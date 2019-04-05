@@ -82,7 +82,7 @@ func doParse(lex *lexer) {
 			// Log this error
 			buf := make([]byte, 2048)
 			n := runtime.Stack(buf, false)
-			logging.Errorf("Error while parsing: %v\n%s", r, string(buf[0:n]))
+			logging.Errorf("Error while parsing: %v %s", r, string(buf[0:n]))
 		}
 		lex.nex.Stop()
 	}()

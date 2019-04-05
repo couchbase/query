@@ -166,7 +166,7 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 
 	// Setup callback function for metakv settings changes
 	callb := func(cfg queryMetakv.Config) {
-		logging.Infof("Settings notifier from metakv\n")
+		logging.Infof("Settings notifier from metakv")
 
 		// SetParamValuesForAll accepts a full-set or subset of global configuration
 		// and updates those fields.

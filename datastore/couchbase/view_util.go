@@ -62,7 +62,8 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, stop chan
 	defer func() {
 		r := recover()
 		if r != nil {
-			logging.Errorf("View Walking Panic: %v\n%s", r, debug.Stack())
+			logging.Errorf("View Walking Panic: %v ", r)
+			logging.Errorf("Stack: %s ", debug.Stack())
 			errs <- errors.NewCbViewsAccessError(nil, "Panic In walking view "+view)
 		}
 	}()

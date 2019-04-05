@@ -122,7 +122,7 @@ func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, erro
 
 	addrs, err := net.LookupHost(name)
 	if err != nil {
-		logging.Infof("Error looking up hostname: %v\n", err)
+		logging.Infof("Error looking up hostname: %v", err)
 	}
 
 	hostname = strings.Join(addrs, ",")

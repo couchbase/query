@@ -69,7 +69,7 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 
 	metaKvCallback := func(path string, val []byte, rev interface{}) error {
 		if path == QuerySettingsMetaPath {
-			logging.Infof("New settings received: %s\n", string(val))
+			logging.Infof("New settings received: %s", string(val))
 
 			// To be able to process these settings correctly, convert to a map
 			// from string to value.Value.
