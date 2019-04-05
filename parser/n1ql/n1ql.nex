@@ -81,7 +81,7 @@
 		    yylex.logToken(yylex.Text(), "BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */
 		  }
 
-/"--"[^\n\r]*/	  { yylex.logToken(yylex.Text(), "LINE_COMMENT (length=%d)", len(yylex.Text())) /* eat up line comment */ }
+/--[^\n\r]*/	  { yylex.logToken(yylex.Text(), "LINE_COMMENT (length=%d)", len(yylex.Text())) /* eat up line comment */ }
 
 /[ \t\n\r\f]+/	  { yylex.logToken(yylex.Text(), "WHITESPACE (count=%d)", len(yylex.Text())) /* eat up whitespace */ }
 

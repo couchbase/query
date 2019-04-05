@@ -923,18 +923,16 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// "--"[^\n\r]*
-	{[]bool{false, false, false, false, true, true}, []func(rune) int{ // Transitions
+	// --[^\n\r]*
+	{[]bool{false, false, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 10:
 				return -1
 			case 13:
 				return -1
-			case 34:
-				return 1
 			case 45:
-				return -1
+				return 1
 			}
 			return -1
 		},
@@ -943,8 +941,6 @@ var dfas = []dfa{
 			case 10:
 				return -1
 			case 13:
-				return -1
-			case 34:
 				return -1
 			case 45:
 				return 2
@@ -957,53 +953,23 @@ var dfas = []dfa{
 				return -1
 			case 13:
 				return -1
-			case 34:
+			case 45:
+				return 3
+			}
+			return 3
+		},
+		func(r rune) int {
+			switch r {
+			case 10:
+				return -1
+			case 13:
 				return -1
 			case 45:
 				return 3
 			}
-			return -1
+			return 3
 		},
-		func(r rune) int {
-			switch r {
-			case 10:
-				return -1
-			case 13:
-				return -1
-			case 34:
-				return 4
-			case 45:
-				return -1
-			}
-			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 10:
-				return -1
-			case 13:
-				return -1
-			case 34:
-				return 5
-			case 45:
-				return 5
-			}
-			return 5
-		},
-		func(r rune) int {
-			switch r {
-			case 10:
-				return -1
-			case 13:
-				return -1
-			case 34:
-				return 5
-			case 45:
-				return 5
-			}
-			return 5
-		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1}, nil},
 
 	// [ \t\n\r\f]+
 	{[]bool{false, true}, []func(rune) int{ // Transitions
