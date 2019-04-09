@@ -116,7 +116,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, f
 	// Return first online primary index
 	indexers, er := keyspace.Indexers()
 	if er != nil {
-		return nil, err
+		return nil, er
 	}
 
 	for _, indexer := range indexers {
