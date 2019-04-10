@@ -154,3 +154,44 @@ func NewIndexStatError(name, what string) Error {
 	return &err{level: EXCEPTION, ICode: INDEX_STAT_ERROR, IKey: "optimizer.index_stat_error",
 		InternalMsg: fmt.Sprintf("Invalid index statistics for index %s: %s", name, what), InternalCaller: CallerN(1)}
 }
+
+// errors for data dictionary starts at 4900
+
+const DICT_ENCODING_ERROR = 4901
+
+func NewDictionaryEncodingError(what string, name string, reason error) Error {
+	return &err{level: EXCEPTION, ICode: DICT_ENCODING_ERROR, IKey: "dictionary.encoding_error", ICause: reason,
+		InternalMsg:    fmt.Sprintf("Cound not %s data dictionary entry for %s due to %v", what, name, reason),
+		InternalCaller: CallerN(1)}
+}
+
+const DICT_MISSING_ERROR = 4902
+
+func NewMissingDictionaryError(name string) Error {
+	return &err{level: EXCEPTION, ICode: DICT_MISSING_ERROR, IKey: "dictionary.missing_error",
+		InternalMsg: fmt.Sprintf("Dictionary entry for %s not found", name), InternalCaller: CallerN(1)}
+}
+
+const DICT_METAKV_ERROR = 4903
+
+func NewDictMetaKVError(name string, reason error) Error {
+	return &err{level: EXCEPTION, ICode: DICT_METAKV_ERROR, IKey: "dictionary.metakv_error", ICause: reason,
+		InternalMsg:    fmt.Sprintf("Cound not access dictionary cache info for %s due to %v", name, reason),
+		InternalCaller: CallerN(1)}
+}
+
+const DICT_METAKV_COUNTER_ERROR = 4904
+
+func NewDictMetaKVChangeCounterError(reason error) Error {
+	return &err{level: EXCEPTION, ICode: DICT_METAKV_COUNTER_ERROR, IKey: "dictionary.metakv_counter_error", ICause: reason,
+		InternalMsg:    fmt.Sprintf("Cound not access dictionary cache change counter due to %v", reason),
+		InternalCaller: CallerN(1)}
+}
+
+const DICT_KEYSPACE_MISMATCH_ERROR = 4905
+
+func NewDictKeyspaceMismatchError(ks1, ks2 string) Error {
+	return &err{level: EXCEPTION, ICode: DICT_KEYSPACE_MISMATCH_ERROR, IKey: "dictionary.keyspace_mismatch_error",
+		InternalMsg:    fmt.Sprintf("Decoded dictionary entry for keyspace %s does not match %s", ks2, ks1),
+		InternalCaller: CallerN(1)}
+}
