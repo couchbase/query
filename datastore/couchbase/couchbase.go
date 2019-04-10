@@ -465,6 +465,15 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 
 func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionSecurityConfig) {
 	s.connSecConfig = connSecConfig
+	if connSecConfig.ClusterEncryptionConfig.EncryptData {
+		err := s.client.InitTLS(connSecConfig.CertFile)
+		if err != nil {
+			logging.Errorf("Unable to initialize TLS using cert file %s. Aborting security update.", connSecConfig.CertFile)
+			return
+		}
+	} else {
+		s.client.ClearTLS()
+	}
 	// Implementation based on SetLogLevel(), above.
 	for _, n := range s.namespaceCache {
 		defer n.lock.Unlock()
@@ -473,6 +482,11 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 			if k.cbKeyspace == nil {
 				continue
 			}
+
+			// Make new TLS settings take effect in the buckets.
+			k.cbKeyspace.cbbucket.RefreshFully()
+
+			// Pass new settings to indexers.
 			indexers, _ := k.cbKeyspace.Indexers()
 			if len(indexers) > 0 {
 				for _, idxr := range indexers {
