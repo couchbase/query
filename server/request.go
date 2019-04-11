@@ -18,7 +18,6 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
@@ -829,15 +828,6 @@ func (this *BaseRequest) EventUsers() []string {
 	for user := range userToPassword {
 		ret[index] = user
 		index++
-	}
-	return ret
-}
-
-// For audit.Auditable interface.
-func (this *BaseRequest) EventNodeName() string {
-	ret := distributed.RemoteAccess().WhoAmI()
-	if ret == "" {
-		ret = "local_node"
 	}
 	return ret
 }

@@ -177,6 +177,7 @@ func main() {
 	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR)
 
 	// ditto for distributed access for monitoring
+	// also distributed is used by many init() functions and should be done as early as possible
 	prof, ctrl, err := monitoringInit(configstore)
 	if err != nil {
 		logging.Errorp(err.Error())

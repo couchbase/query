@@ -376,31 +376,37 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminDecodingError(err)
 		}
 
-		distribute := settings["distribute"]
-		if distribute != nil {
-			delete(settings, "distribute")
-		}
-
+		errP := settingsWorkHorse(settings, srvr)
 		af.Values = settings
-
-		if errP := server.ProcessSettings(settings, srvr); errP != nil {
+		if errP != nil {
 			return nil, errP
 		}
-
-		if distribute != nil {
-			body, _ := json.Marshal(settings)
-			go distributed.RemoteAccess().DoRemoteOps([]string{}, "settings", "POST", "", string(body),
-				func(warn errors.Error) {
-					if warn != nil {
-						logging.Infof("failed to distribute settings <ud>%v</ud>", settings)
-					}
-				}, distributed.NO_CREDS, "")
-		}
-
 		return fillSettings(settings, srvr), nil
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
+}
+
+func settingsWorkHorse(settings map[string]interface{}, srvr *server.Server) errors.Error {
+	distribute := settings["distribute"]
+	if distribute != nil {
+		delete(settings, "distribute")
+	}
+
+	if errP := server.ProcessSettings(settings, srvr); errP != nil {
+		return errP
+	}
+
+	if distribute != nil {
+		body, _ := json.Marshal(settings)
+		go distributed.RemoteAccess().DoRemoteOps([]string{}, "settings", "POST", "", string(body),
+			func(warn errors.Error) {
+				if warn != nil {
+					logging.Infof("failed to distribute settings <ud>%v</ud>", settings)
+				}
+			}, distributed.NO_CREDS, "")
+	}
+	return nil
 }
 
 func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {
@@ -416,7 +422,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.TIMEOUTSETTING] = srvr.Timeout()
 	settings[server.KEEPALIVELENGTH] = srvr.KeepAlive()
 	settings[server.LOGLEVEL] = srvr.LogLevel()
-	threshold, _ := server.RequestsGetQualifier("threshold")
+	threshold, _ := server.RequestsGetQualifier("threshold", "")
 	settings[server.CMPTHRESHOLD] = threshold
 	settings[server.CMPLIMIT] = server.RequestsLimit()
 	settings[server.CMPOBJECT] = server.RequestsGetQualifiers()

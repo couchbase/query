@@ -154,6 +154,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.UserAgent != "" {
 					item.SetField("userAgent", entry.UserAgent)
 				}
+				if entry.Tag != "" {
+					item.SetField("~tag", entry.Tag)
+				}
 				if entry.Errors != nil {
 					errors := make([]value.Value, len(entry.Errors))
 					for i, e := range entry.Errors {

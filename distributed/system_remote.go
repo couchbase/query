@@ -49,6 +49,9 @@ type SystemRemoteAccess interface {
 
 	// is a specific feature available in all clusters?
 	Enabled(capability Capability) bool
+
+	// dynamically change settings
+	Settings(settings map[string]interface{}) errors.Error
 }
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,

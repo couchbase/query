@@ -64,6 +64,7 @@ type RequestLogEntry struct {
 	Users           string
 	RemoteAddr      string
 	UserAgent       string
+	Tag             string
 }
 
 type qualifier interface {
@@ -77,9 +78,9 @@ type qualifier interface {
 
 type RequestLog struct {
 	sync.RWMutex
-	qualifiers []qualifier
-
-	cache *util.GenCache
+	qualifiers       []qualifier
+	taggedQualifiers map[string][]qualifier
+	cache            *util.GenCache
 }
 
 var requestLog = &RequestLog{}
@@ -100,6 +101,7 @@ func RequestsInit(threshold int, limit int) {
 	if aErr == nil {
 		requestLog.qualifiers = append(requestLog.qualifiers, aq)
 	}
+	requestLog.taggedQualifiers = make(map[string][]qualifier)
 
 	requestLog.cache = util.NewGenCache(limit)
 }
@@ -114,16 +116,33 @@ func RequestsSetLimit(limit int) {
 	requestLog.cache.SetLimit(limit)
 }
 
-func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}) errors.Error {
+func (this *RequestLog) getQualList(tag string) []qualifier {
+	if tag == "" {
+		return this.qualifiers
+	} else {
+		return this.taggedQualifiers[tag]
+	}
+}
+
+func (this *RequestLog) setQualList(quals []qualifier, tag string) {
+	if tag == "" {
+		this.qualifiers = quals
+	} else {
+		this.taggedQualifiers[tag] = quals
+	}
+}
+
+func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}, tag string) errors.Error {
 	var err errors.Error
 
 	requestLog.Lock()
 	defer requestLog.Unlock()
-	for _, q := range requestLog.qualifiers {
+	quals := requestLog.getQualList(tag)
+	for _, q := range quals {
 		if q.name() == name {
 			switch op {
 			case CMP_OP_ADD:
-				if q.unique() || q.isCondition(condition) {
+				if q.unique() || tag != "" || q.isCondition(condition) {
 					return errors.NewCompletedQualifierExists(name)
 				}
 			case CMP_OP_UPD:
@@ -161,14 +180,22 @@ func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}) e
 	return err
 }
 
-func RequestsAddQualifier(name string, condition interface{}) errors.Error {
+func RequestsAddQualifier(name string, condition interface{}, tag string) errors.Error {
 	var q qualifier
 	var err errors.Error
 
 	requestLog.Lock()
 	defer requestLog.Unlock()
-	for _, q := range requestLog.qualifiers {
-		if q.name() == name && (q.unique() || q.isCondition(condition)) {
+	quals := requestLog.getQualList(tag)
+
+	// create tag if missing
+	if quals == nil {
+		requestLog.taggedQualifiers[tag] = make([]qualifier, 0)
+		quals = requestLog.taggedQualifiers[tag]
+	}
+
+	for _, q := range quals {
+		if q.name() == name && (q.unique() || tag != "" || q.isCondition(condition)) {
 			return errors.NewCompletedQualifierExists(name)
 		}
 	}
@@ -189,19 +216,24 @@ func RequestsAddQualifier(name string, condition interface{}) errors.Error {
 		return errors.NewCompletedQualifierUnknown(name)
 	}
 	if err == nil && q != nil {
-		requestLog.qualifiers = append(requestLog.qualifiers, q)
+		requestLog.setQualList(append(quals, q), tag)
 	}
 	return err
 }
 
-func RequestsUpdateQualifier(name string, condition interface{}) errors.Error {
+func RequestsUpdateQualifier(name string, condition interface{}, tag string) errors.Error {
 	var nq qualifier
 	var err errors.Error
 
 	iq := -1
 	requestLog.Lock()
 	defer requestLog.Unlock()
-	for i, q := range requestLog.qualifiers {
+	quals := requestLog.getQualList(tag)
+	if quals == nil {
+		return errors.NewCompletedQualifierNotFound(name, "")
+	}
+
+	for i, q := range quals {
 		if q.name() == name {
 			if !q.unique() {
 				return errors.NewCompletedQualifierNotUnique(name)
@@ -220,37 +252,56 @@ func RequestsUpdateQualifier(name string, condition interface{}) errors.Error {
 		return errors.NewCompletedQualifierUnknown(name)
 	}
 	if err == nil && nq != nil {
-		requestLog.qualifiers[iq] = nq
+		quals[iq] = nq
+		requestLog.setQualList(quals, tag)
 	}
 	return err
 }
 
-func RequestsRemoveQualifier(name string, condition interface{}) errors.Error {
+func RequestsRemoveQualifier(name string, condition interface{}, tag string) errors.Error {
 	requestLog.Lock()
 	defer requestLog.Unlock()
 
+	quals := requestLog.getQualList(tag)
+	if quals == nil {
+		return errors.NewCompletedQualifierNotFound(name, "")
+	}
+
 	count := 0
-	for i, q := range requestLog.qualifiers {
+	for i, q := range quals {
 		if q.name() == name {
 			if condition == nil {
-				requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
+				quals = append(quals[:i], quals[i+1:]...)
 				count++
 			} else if q.unique() || q.isCondition(condition) {
-				requestLog.qualifiers = append(requestLog.qualifiers[:i], requestLog.qualifiers[i+1:]...)
-				return nil
+				quals = append(quals[:i], quals[i+1:]...)
+				count++
+				break
 			}
 		}
 	}
 	if count == 0 {
 		return errors.NewCompletedQualifierNotFound(name, condition)
 	}
+
+	// delete tag if empty
+	if tag != "" && len(quals) == 0 {
+		delete(requestLog.taggedQualifiers, tag)
+	} else {
+		requestLog.setQualList(quals, tag)
+	}
 	return nil
 }
 
-func RequestsGetQualifier(name string) (interface{}, errors.Error) {
+func RequestsGetQualifier(name string, tag string) (interface{}, errors.Error) {
 	requestLog.RLock()
 	defer requestLog.RUnlock()
-	for _, q := range requestLog.qualifiers {
+
+	quals := requestLog.getQualList(tag)
+	if quals == nil {
+		return nil, errors.NewCompletedQualifierNotFound(name, nil)
+	}
+	for _, q := range quals {
 		if q.name() == name {
 			if q.unique() {
 				return q.condition(), nil
@@ -261,11 +312,28 @@ func RequestsGetQualifier(name string) (interface{}, errors.Error) {
 	return nil, errors.NewCompletedQualifierNotFound(name, nil)
 }
 
-func RequestsGetQualifiers() map[string]interface{} {
-	qualifiers := make(map[string]interface{})
+func RequestsGetQualifiers() interface{} {
 	requestLog.RLock()
 	defer requestLog.RUnlock()
-	for _, q := range requestLog.qualifiers {
+	if len(requestLog.taggedQualifiers) == 0 {
+		return getQualifiers(requestLog.qualifiers)
+	}
+
+	rv := make([]interface{}, len(requestLog.taggedQualifiers)+1)
+	i := 0
+	for tag, quals := range requestLog.taggedQualifiers {
+		obj := getQualifiers(quals)
+		obj["tag"] = tag
+		rv[i] = obj
+		i++
+	}
+	rv[i] = getQualifiers(requestLog.qualifiers)
+	return rv
+}
+
+func getQualifiers(quals []qualifier) map[string]interface{} {
+	qualifiers := make(map[string]interface{})
+	for _, q := range quals {
 		qEntry := qualifiers[q.name()]
 		if qEntry == nil {
 			qualifiers[q.name()] = q.condition()
@@ -335,12 +403,34 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	requestLog.RLock()
 	defer requestLog.RUnlock()
 
-	// apply all the qualifiers until one is satisfied
+	// first try all tags
+	// all the qualifiers in a tag set must apply
 	doLog := false
-	for _, q := range requestLog.qualifiers {
-		doLog = q.evaluate(request, req)
-		if doLog {
+	tag := ""
+	for n, _ := range requestLog.taggedQualifiers {
+		good := true
+		for _, q := range requestLog.taggedQualifiers[n] {
+			yes := q.evaluate(request, req)
+			if !yes {
+				good = false
+				break
+			}
+		}
+		if good {
+			doLog = true
+			tag = n
 			break
+		}
+	}
+
+	// finally do the untagged
+	// apply all the qualifiers until one is satisfied
+	if !doLog {
+		for _, q := range requestLog.qualifiers {
+			doLog = q.evaluate(request, req)
+			if doLog {
+				break
+			}
 		}
 	}
 
@@ -352,7 +442,6 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	id := request.Id().String()
 	re := &RequestLogEntry{
 		RequestId:       id,
-		ClientId:        request.ClientID().String(),
 		State:           string(request.State()),
 		ElapsedTime:     request_time,
 		ServiceTime:     service_time,
@@ -412,6 +501,14 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	userAgent := request.UserAgent()
 	if userAgent != "" {
 		re.UserAgent = userAgent
+	}
+
+	clientId := request.ClientID().String()
+	if clientId != "" {
+		re.ClientId = clientId
+	}
+	if tag != "" {
+		re.Tag = tag
 	}
 
 	requestLog.cache.Add(re, id, nil)

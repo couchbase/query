@@ -708,6 +708,10 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		if request.PhaseOperators != nil {
 			reqMap["phaseOperators"] = request.PhaseOperators
 		}
+		if request.Tag != "" {
+			reqMap["~tag"] = request.Tag
+		}
+
 		if profiling {
 			if request.PhaseTimes != nil {
 				reqMap["phaseTimes"] = request.PhaseTimes
@@ -787,6 +791,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		}
 		if request.Users != "" {
 			requests[i]["users"] = request.Users
+		}
+		if request.Tag != "" {
+			requests[i]["~tag"] = request.Tag
 		}
 
 		// FIXME more stats

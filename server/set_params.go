@@ -87,7 +87,7 @@ var _SETTERS = map[string]Setter{
 	},
 	CMPTHRESHOLD: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
-		return RequestsUpdateQualifier("threshold", int(value))
+		return RequestsUpdateQualifier("threshold", int(value), "")
 	},
 	CMPLIMIT: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
@@ -150,25 +150,36 @@ func getNumber(o interface{}) float64 {
 
 func setCompleted(s *Server, o interface{}) errors.Error {
 	var res errors.Error
+	var tag string
 
-	for n, v := range o.(map[string]interface{}) {
+	object := o.(map[string]interface{})
+	if tagVal, ok := object["tag"]; ok {
+		tag, ok = tagVal.(string)
+		if !ok {
+			return errors.NewAdminSettingTypeError("tag", tagVal)
+		}
+	}
+	for n, v := range object {
+		if n == "tag" {
+			continue
+		}
 		res = nil
 		switch n[0] {
 		case '+':
 			n = n[1:len(n)]
-			res = RequestsAddQualifier(n, v)
+			res = RequestsAddQualifier(n, v, tag)
 		case '-':
 			n = n[1:len(n)]
-			res = RequestsRemoveQualifier(n, v)
+			res = RequestsRemoveQualifier(n, v, tag)
 		default:
-			res = RequestsUpdateQualifier(n, v)
+			res = RequestsUpdateQualifier(n, v, tag)
 			if res != nil {
 				switch res.Code() {
 				case errors.ADMIN_QUALIFIER_NOT_UNIQUE:
-					RequestsRemoveQualifier(n, nil)
-					res = RequestsAddQualifier(n, v)
+					RequestsRemoveQualifier(n, nil, tag)
+					res = RequestsAddQualifier(n, v, tag)
 				case errors.ADMIN_QUALIFIER_NOT_SET:
-					res = RequestsAddQualifier(n, v)
+					res = RequestsAddQualifier(n, v, tag)
 				}
 			}
 		}

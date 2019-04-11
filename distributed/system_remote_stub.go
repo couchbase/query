@@ -71,3 +71,8 @@ func (this systemRemoteStub) GetNodeNames() []string {
 func (this systemRemoteStub) Enabled(capability Capability) bool {
 	return true
 }
+
+// change settings
+func (this systemRemoteStub) Settings(setting map[string]interface{}) errors.Error {
+	return nil
+}

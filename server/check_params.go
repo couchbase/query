@@ -91,12 +91,25 @@ func checkObject(val interface{}) (bool, errors.Error) {
 }
 
 func checkCompleted(val interface{}) (bool, errors.Error) {
+	var tag string
+
 	object, ok := val.(map[string]interface{})
 	if !ok {
-		return ok, nil
+		return ok, errors.NewAdminSettingTypeError("completed", object)
+	}
+
+	if tagVal, ok := object["tag"]; ok {
+		tag, ok = object["tag"].(string)
+		if !ok {
+			return ok, errors.NewAdminSettingTypeError("tag", tagVal)
+		}
 	}
 	for n, v := range object {
 		var op RequestsOp
+
+		if n == "tag" {
+			continue
+		}
 
 		switch n[0] {
 		case '+':
@@ -108,9 +121,9 @@ func checkCompleted(val interface{}) (bool, errors.Error) {
 		default:
 			op = CMP_OP_UPD
 		}
-		err := RequestsCheckQualifier(n, op, v)
+		err := RequestsCheckQualifier(n, op, v, tag)
 		if err != nil && op == CMP_OP_UPD && err.Code() == errors.ADMIN_QUALIFIER_NOT_SET {
-			err = RequestsCheckQualifier(n, CMP_OP_ADD, v)
+			err = RequestsCheckQualifier(n, CMP_OP_ADD, v, tag)
 		}
 		if err != nil {
 			return false, err

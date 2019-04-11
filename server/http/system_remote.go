@@ -550,3 +550,8 @@ func (this *systemRemoteHttp) Enabled(capability distributed.Capability) bool {
 	}
 	return true
 }
+
+// dynamically change settings
+func (this *systemRemoteHttp) Settings(settings map[string]interface{}) errors.Error {
+	return settingsWorkHorse(settings, _ENDPOINT.server)
+}

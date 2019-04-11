@@ -52,6 +52,8 @@ const (
 	servicePrefix = "/query/service"
 )
 
+var _ENDPOINT *HttpEndpoint
+
 func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	httpAddr, httpsAddr, certFile, keyFile string) *HttpEndpoint {
 	rv := &HttpEndpoint{
@@ -74,6 +76,7 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 
 	rv.setupSSL()
 	rv.registerHandlers(staticPath)
+	_ENDPOINT = rv
 	return rv
 }
 

@@ -25,6 +25,7 @@ import (
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
@@ -158,6 +159,16 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	return rv
+}
+
+// For audit.Auditable interface.
+// Nodename is dependent on the protocol and not the base request
+func (this *httpRequest) EventNodeName() string {
+	ret := distributed.RemoteAccess().WhoAmI()
+	if ret == "" {
+		ret = "local_node"
+	}
+	return ret
 }
 
 // stub for those parameters that have to be handled specially
