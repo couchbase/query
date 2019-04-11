@@ -592,7 +592,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 
 	defaultPool, er := loadNamespace(store, "default")
 	if er != nil {
-		logging.Errorf("Cannot connect to default pool")
+		logging.Errorf("Cannot connect to default pool: %v", er)
 		return nil, er
 	}
 
@@ -626,6 +626,8 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
 			}
 			s.client = client
+		} else {
+			logging.Errorf(" Error while retrieving pool %v", err)
 		}
 	}
 
@@ -876,7 +878,7 @@ func (p *namespace) refresh(changed bool) {
 			client, err = cb.Connect(url)
 		}
 		if err != nil {
-			logging.Errorf("Error connecting to URL %s", url)
+			logging.Errorf("Error connecting to URL %s - %v", url, err)
 			return
 		}
 		// check if the default pool exists
@@ -904,7 +906,7 @@ func (p *namespace) refresh(changed bool) {
 			changed = true
 			ks.cbKeyspace.flags |= _DELETED
 			ks.cbKeyspace.cbbucket.Close()
-			logging.Errorf(" Error retrieving bucket %s", name)
+			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
 			delete(p.keyspaceCache, name)
 
 		} else if ks.cbKeyspace.cbbucket.UUID != newbucket.UUID {
@@ -1428,9 +1430,9 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 
 		if err != nil {
 			if isEExistError(err) {
-				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications", key)
+				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications. Error - %v", key, err)
 			} else {
-				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s.", opToString(op), key, b.Name())
+				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s. Error - %v", opToString(op), key, b.Name(), err)
 			}
 		} else {
 			insertedKeys = append(insertedKeys, kv)
@@ -1496,6 +1498,8 @@ func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 
 		// We know the connSecConfig is present, because we checked when the keyspace was created.
 		b.gsiIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
+	} else {
+		logging.Errorf(" Error while refreshing GSI indexer - %v", err)
 	}
 }
 
@@ -1507,6 +1511,8 @@ func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
 
 		// We know the connSecConfig is present, because we checked when the keyspace was created.
 		b.ftsIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
+	} else {
+		logging.Errorf(" Error while refreshing FTS indexer - %v", err)
 	}
 }
 

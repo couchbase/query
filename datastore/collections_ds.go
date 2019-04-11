@@ -37,8 +37,10 @@ func NewCollectionsNamespace(id string) *CollectionsNamespace {
 	ks.AddDocument("v3", `{ "f1" : "string value C", "f2" : 12 }`)
 
 	indexer, _ := ks.Indexer(GSI)
-	indexer.CreatePrimaryIndex("", "#primary", nil)
-
+	_, err := indexer.CreatePrimaryIndex("", "#primary", nil)
+	if err != nil {
+		logging.Errorf(" Error creating Primary Index - %v ", err)
+	}
 	return cns
 }
 

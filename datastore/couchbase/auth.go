@@ -279,7 +279,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 			logging.Debugf(" Credentials for user <ud>%v</ud>", un)
 			creds, err := s.auth(un, password)
 			if err != nil {
-				logging.Debugf("Unable to authorize <ud>%s</ud>", username)
+				logging.Debugf("Unable to authorize <ud>%s</ud>. Error - %v", username, err)
 			} else {
 				credentialsList = append(credentialsList, creds)
 				if un != "" {

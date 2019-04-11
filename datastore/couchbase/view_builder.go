@@ -210,7 +210,7 @@ func loadViewIndexes(v *viewIndexer) (indexes []datastore.Index, nonUsableIndexe
 				expr, err := parser.Parse(ser)
 				if err != nil {
 					nonUsableIndexes = append(nonUsableIndexes, iname)
-					logging.Errorf("Cannot unmarshal expression for index <ud>%v</ud>", iname)
+					logging.Errorf("Cannot unmarshal expression for index <ud>%v</ud>. Error - %v", iname, err)
 					continue
 				}
 				exprlist = append(exprlist, expr)
@@ -414,7 +414,7 @@ func (idx *viewIndex) putDesignDoc() error {
 	}
 
 	if err := idx.keyspace.cbbucket.PutDDoc(idx.DDocName(), &put); err != nil {
-		logging.Errorf("Unable to store view definition. Map function is: <ud>%v</ud>", view.Map)
+		logging.Errorf("Unable to store view definition. Map function is: <ud>%v</ud>. Error - %v", view.Map, err)
 		return qerrors.NewCbViewDefError(err)
 	}
 
