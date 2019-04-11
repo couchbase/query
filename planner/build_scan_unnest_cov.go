@@ -67,6 +67,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 	if cop != nil {
 		this.coveringScans = append(this.coveringScans, cop)
 		this.coveredUnnests = nil
+		this.resetIndexGroupAggs()
 		return cop, sargLength, nil
 	}
 
