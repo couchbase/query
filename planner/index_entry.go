@@ -46,6 +46,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		index:            this.index,
 		keys:             expression.CopyExpressions(this.keys),
 		sargKeys:         expression.CopyExpressions(this.sargKeys),
+		partitionKeys:    expression.CopyExpressions(this.partitionKeys),
 		minKeys:          this.minKeys,
 		sumKeys:          this.sumKeys,
 		cond:             expression.Copy(this.cond),
