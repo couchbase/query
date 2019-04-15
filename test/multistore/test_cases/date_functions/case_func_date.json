@@ -861,5 +861,45 @@
             "test1": "2017-01-01 00:00:00"
         }
     ]
-    }
-  ]
+    },
+    {
+    "statements": "select DATE_DIFF_STR('2018-09-10 23:59:59','2018-09-11 00:00:01','day') as test1",
+    "results": [
+        {
+            "test1": -1
+        }
+    ]
+    },
+    {
+    "statements": "select DATE_DIFF_STR('2018-09-11 00:00:01','2018-09-10 23:59:59','day') as test1",
+    "results": [
+        {
+            "test1": 1
+        }
+    ]
+    },
+    {
+    "statements": "select DATE_DIFF_ABS_STR('2018-09-10 23:59:59','2018-09-11 00:00:01','day') as test1",
+    "results": [
+        {
+            "test1": 1
+        }
+    ]
+    },
+    {
+    "statements": "select DATE_DIFF_ABS_STR('2018-09-11 00:00:01','2018-09-10 23:59:59','day') as test1",
+    "results": [
+        {
+            "test1": 1
+        }
+    ]
+    },
+  {
+    "statements":"select DATE_DIFF_ABS_MILLIS(str_to_millis('2018-09-10 23:59:59'),str_to_millis('2018-09-11 00:00:01'),'day') as test1",
+    "results": [
+      {
+        "test1": 1
+      }
+    ]
+  }
+]

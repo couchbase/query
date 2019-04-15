@@ -618,6 +618,135 @@ func (this *DateDiffStr) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// DateDiffAbsMillis
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function DATE_DIFF_ABS_MILLIS(expr1,expr2,part).
+It performs date arithmetic. It returns the absolute elapsed time between two
+UNIX timestamps, as an integer whose unit is part. It is always a +ve int.
+This is similar to Oracles date diff arithmetic.
+*/
+type DateDiffAbsMillis struct {
+	TernaryFunctionBase
+}
+
+func NewDateDiffAbsMillis(first, second, third Expression) Function {
+	rv := &DateDiffAbsMillis{
+		*NewTernaryFunctionBase("date_diff_abs_millis", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *DateDiffAbsMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DateDiffAbsMillis) Type() value.Type { return value.NUMBER }
+
+func (this *DateDiffAbsMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *DateDiffAbsMillis) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if date1.Type() != value.NUMBER || date2.Type() != value.NUMBER || part.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	da1 := date1.Actual().(float64)
+	da2 := date2.Actual().(float64)
+	pa := part.Actual().(string)
+	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+
+	return value.NewValue(math.Abs(float64(diff))), nil
+}
+
+func (this *DateDiffAbsMillis) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateDiffAbsMillis(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// DateDiffAbsStr
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function DATE_DIFF_ABS_STR(expr1,expr2,part).
+It performs date arithmetic and returns the absolute elapsed time between two
+date strings in a supported format, as an integer whose unit is
+part. It is always a +ve int.
+This is similar to Oracles date diff arithmetic.
+*/
+type DateDiffAbsStr struct {
+	TernaryFunctionBase
+}
+
+func NewDateDiffAbsStr(first, second, third Expression) Function {
+	rv := &DateDiffAbsStr{
+		*NewTernaryFunctionBase("date_diff_abs_str", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *DateDiffAbsStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DateDiffAbsStr) Type() value.Type { return value.NUMBER }
+
+func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+func (this *DateDiffAbsStr) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if date1.Type() != value.STRING || date2.Type() != value.STRING || part.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	da1 := date1.Actual().(string)
+	t1, err := strToTime(da1)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	da2 := date2.Actual().(string)
+	t2, err := strToTime(da2)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	pa := part.Actual().(string)
+	diff, err := dateDiff(t1, t2, pa)
+	if err != nil {
+		return value.NULL_VALUE, err
+	}
+
+	return value.NewValue(math.Abs(float64(diff))), nil
+}
+
+func (this *DateDiffAbsStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateDiffAbsStr(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // DateFormatStr
 //
 ///////////////////////////////////////////////////
