@@ -83,13 +83,17 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 				return err
 			}
 
+			// Commenting out this call as we do not allow propogating settings unless it is
+			// NS server doing the call
+			// Un-comment if we need to propogate settings set by query.
+
 			// Do a metakv.Set for the values
 			// Set the updates for the given key-value pair for each parameter.
 			// This will enable all other query nodes in the cluster to also get
 			// updated settings.
-			if err := metakv.Set(QuerySettingsMetaPath, val, rev); err != nil {
-				logging.Errorf("ERROR: metakv.Set. Error : %v", err)
-			}
+			//if err := metakv.Set(QuerySettingsMetaPath, val, rev); err != nil {
+			//	logging.Errorf("ERROR: metakv.Set. Error : %v", err)
+			//}
 
 			// Callback function defined by the caller where you can
 			// manipilate the input values.
