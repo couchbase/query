@@ -674,23 +674,27 @@ func (this *AggregateInfo) windowValuePos(op *WindowAggregate, val value.Value, 
 	collation := int64(1)
 	if this.wTerm.WindowFrame().RangeWindowFrame() {
 		pos = cIndex
-
-		var rangeVal, currentObyVal value.Value
-
-		currentObyVal, err = getCachedValue(op.values[cIndex], op.oby[0].Expression(), op.obyTerms[0], op.context)
-		if err != nil || currentObyVal == nil || currentObyVal.Type() != value.NUMBER {
-			return cIndex, true, err
-		}
-
 		if op.oby[0].Descending() {
 			collation = int64(-1)
 		}
 
-		// range add the logicla offset
-		if (direction * collation) < 0 {
-			rangeVal = value.AsNumberValue(currentObyVal).Sub(value.AsNumberValue(val))
+		var rangeVal, currentObyVal value.Value
+
+		currentObyVal, err = getCachedValue(op.values[cIndex], op.oby[0].Expression(), op.obyTerms[0], op.context)
+		if err != nil || currentObyVal == nil ||
+			!(currentObyVal.Type() == value.NUMBER || currentObyVal.Type() <= value.NULL) {
+			return cIndex, true, err
+		}
+
+		// range add the logical offset
+		if currentObyVal.Type() == value.NUMBER {
+			if (direction * collation) < 0 {
+				rangeVal = value.AsNumberValue(currentObyVal).Sub(value.AsNumberValue(val))
+			} else {
+				rangeVal = value.AsNumberValue(currentObyVal).Add(value.AsNumberValue(val))
+			}
 		} else {
-			rangeVal = value.AsNumberValue(currentObyVal).Add(value.AsNumberValue(val))
+			rangeVal = currentObyVal
 		}
 
 		// calcuate physical offset
