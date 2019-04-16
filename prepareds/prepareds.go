@@ -155,7 +155,11 @@ func (this *preparedCache) GetText(text string, offset int) string {
 	if i < 0 {
 		return text
 	}
-	return prepare[:i] + prepare[i+6:] + text[offset:]
+	if i+6 >= offset {
+		return prepare[:i] + text[offset:]
+	} else {
+		return prepare[:i] + prepare[i+6:] + text[offset:]
+	}
 }
 
 const _REALM_SIZE = 256
