@@ -80,6 +80,7 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		}()
 		defer this.conn.Dispose()  // Dispose of the connection
 		defer this.conn.SendStop() // Notify index that I have stopped
+		this.Unlock()
 
 		wg.Add(1)
 		go this.scan(id, context, this.conn, &wg)
