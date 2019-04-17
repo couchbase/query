@@ -398,6 +398,7 @@ type IndexStorageMode string
 const (
 	INDEX_MODE_MOI    IndexStorageMode = "MOI"
 	INDEX_MODE_PLASMA IndexStorageMode = "PLASMA"
+	INDEX_MODE_FDB    IndexStorageMode = "FDB" // legacy forest db
 )
 
 type Index4 interface {
