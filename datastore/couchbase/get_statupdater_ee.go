@@ -10,7 +10,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-// The enterprise edition has access to couchbase/cbq-gui, which
+// The enterprise edition has access to couchbase/query-ee, which
 // includes schema inferencing. This file is only built in with
 // the enterprise edition.
 
