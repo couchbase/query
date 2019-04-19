@@ -10,8 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/couchbase/cbauth"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -549,8 +550,14 @@ func (this *Context) assert(test bool, what string) bool {
 	if test {
 		return true
 	}
+	buf := make([]byte, 1<<16)
+	n := runtime.Stack(buf, false)
+	s := string(buf[0:n])
+	plan, _ := json.Marshal(this.prepared.Operator)
 	logging.Severef("assert failure: %v ", what)
 	logging.Severef("request text:<ud>%v</ud> ", this.prepared.Text())
+	logging.Severef(" request plan: %s ", plan)
+	logging.Severef("stack: %v", s)
 	this.Abort(errors.NewExecutionInternalError(what))
 	return false
 }
