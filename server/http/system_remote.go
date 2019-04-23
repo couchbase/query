@@ -15,6 +15,8 @@ package http
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	goErr "errors"
 	"fmt"
@@ -22,23 +24,92 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 )
 
 // http implementation of SystemRemoteAccess
 type systemRemoteHttp struct {
 	state       clustering.Mode
 	configStore clustering.ConfigurationStore
+
+	// use getCommParams() and setCommParams() to get this pointer
+	commParams unsafe.Pointer // *commParameters
+}
+
+type commParameters struct {
+	client        *http.Client
+	useSecurePort bool
+}
+
+// Returns nil if SetConnectionSecurityConfig has never been called.
+func (this *systemRemoteHttp) getCommParams() *commParameters {
+	curCommParameters := atomic.LoadPointer(&(this.commParams))
+
+	return ((*commParameters)(curCommParameters))
+}
+
+func (this *systemRemoteHttp) setCommParams(cp *commParameters) {
+	curCommParameters := unsafe.Pointer(cp)
+	atomic.StorePointer(&(this.commParams), curCommParameters)
+}
+
+func (this *systemRemoteHttp) SetConnectionSecurityConfig(certFile string, encryptNodeToNodeComms bool) {
+	var cp *commParameters
+	if !encryptNodeToNodeComms {
+		cp = &commParameters{
+			client: &http.Client{
+				Transport: &http.Transport{MaxIdleConnsPerHost: 10},
+				Timeout:   5 * time.Second,
+			},
+			useSecurePort: false,
+		}
+	} else {
+		serverCert, err := ioutil.ReadFile(certFile)
+		if err != nil {
+			logging.Errorf("SystemRemoteHttp.SetCommunictionSecurityConfig: Unable to read cert file %s:%v", certFile, err)
+			return
+		}
+		caPool := x509.NewCertPool()
+		caPool.AppendCertsFromPEM(serverCert)
+		tlsConfig := &tls.Config{RootCAs: caPool}
+
+		cp = &commParameters{
+			client: &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig:     tlsConfig,
+					MaxIdleConnsPerHost: 10,
+				},
+				Timeout: 5 * time.Second,
+			},
+			useSecurePort: true,
+		}
+	}
+	existingCommParams := atomic.SwapPointer(&this.commParams, unsafe.Pointer(cp))
+	var ecp *commParameters = ((*commParameters)(existingCommParams))
+	transport, ok := ecp.client.Transport.(*http.Transport)
+	if ok {
+		transport.CloseIdleConnections()
+	}
 }
 
 func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) distributed.SystemRemoteAccess {
 	return &systemRemoteHttp{
 		configStore: cfgStore,
+		commParams: unsafe.Pointer(&commParameters{
+			client: &http.Client{
+				Transport: &http.Transport{MaxIdleConnsPerHost: 10},
+				Timeout:   5 * time.Second,
+			},
+			useSecurePort: false,
+		}),
 	}
 }
 
@@ -114,6 +185,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 		return
 	}
 
+	cp := this.getCommParams()
 	// no nodes means all nodes
 	if len(nodes) == 0 {
 
@@ -157,7 +229,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					continue
 				}
 
-				body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
+				body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "", cp)
 				if opErr != nil {
 					if warnFn != nil {
 						warnFn(opErr)
@@ -199,7 +271,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "")
+			body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "", cp)
 			if opErr != nil {
 				if warnFn != nil {
 					warnFn(opErr)
@@ -238,7 +310,8 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		return
 	}
 
-	body, opErr := this.doRemoteOp(queryNode, endpoint+"/"+key, command, "", "fetch", creds, authToken)
+	cp := this.getCommParams()
+	body, opErr := this.doRemoteOp(queryNode, endpoint+"/"+key, command, "", "fetch", creds, authToken, cp)
 	if opErr != nil {
 		if warnFn != nil {
 			warnFn(opErr)
@@ -274,6 +347,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 		endpoint = endpoint + "/" + key
 	}
 
+	cp := this.getCommParams()
 	// no nodes means all nodes
 	if len(nodes) == 0 {
 
@@ -316,7 +390,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 					}
 					continue
 				}
-				_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
+				_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
 				if warnFn != nil {
 					warnFn(opErr)
 				}
@@ -340,7 +414,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 				continue
 			}
 
-			_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken)
+			_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
 			if warnFn != nil {
 				warnFn(opErr)
 			}
@@ -368,12 +442,9 @@ func credsAsJSON(creds distributed.Creds) string {
 	return buf.String()
 }
 
-var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: 10}
-var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: 5 * time.Second}
-
 // helper for the REST op
 func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint string, command string, data string, op string,
-	creds distributed.Creds, authToken string) ([]byte, errors.Error) {
+	creds distributed.Creds, authToken string, cp *commParameters) ([]byte, errors.Error) {
 	var reader io.Reader
 
 	if node == nil {
@@ -384,7 +455,12 @@ func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint str
 	}
 
 	numCredentials := len(creds)
-	fullEndpoint := node.ClusterEndpoint() + "/" + endpoint
+	var fullEndpoint string
+	if cp.useSecurePort {
+		fullEndpoint = node.ClusterSecure() + "/" + endpoint
+	} else {
+		fullEndpoint = node.ClusterEndpoint() + "/" + endpoint
+	}
 	if numCredentials > 1 {
 		fullEndpoint += "?creds=" + credsAsJSON(creds)
 	}
@@ -398,7 +474,7 @@ func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint str
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.SetBasicAuth(u, p)
 
-	resp, err := HTTPClient.Do(request)
+	resp, err := cp.client.Do(request)
 	if err != nil {
 		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
 	}
