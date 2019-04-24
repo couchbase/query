@@ -14,7 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
-	// "github.com/couchbase/query/distributed"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -34,9 +34,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	}
 	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs,
 		indexApiVersion, featureControls, requestId)
-	// if distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) && util.IsFeatureEnabled(featureControls, util.N1QL_CBO) {
-	//	builder.useCBO = true
-	// }
+	if distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) && util.IsFeatureEnabled(featureControls, util.N1QL_CBO) {
+		builder.useCBO = true
+	}
 
 	o, err := stmt.Accept(builder)
 
