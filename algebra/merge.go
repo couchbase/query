@@ -432,6 +432,10 @@ func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 		if err != nil {
 			return
 		}
+		if this.expr.IsKeyspace() {
+			this.from = this.expr.KeyspaceTerm()
+			this.expr = nil
+		}
 	}
 
 	keyspace := this.Alias()
