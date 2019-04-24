@@ -80,7 +80,6 @@ type base struct {
 	activeLock     sync.Mutex
 	primed         bool
 	completed      bool
-	inputSet       bool
 }
 
 const _ITEM_CAP = 512
@@ -267,7 +266,6 @@ func (this *base) Input() Operator {
 
 func (this *base) SetInput(op Operator) {
 	this.input = op
-	this.inputSet = true
 }
 
 func (this *base) Output() Operator {
@@ -561,8 +559,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer this.notify() // Notify that I have stopped
 		defer func() { this.batch = nil }()
 
-		if !active || (context.Readonly() && !cons.readonly()) || !context.assert(this.inputSet, "consumer never had input set") ||
-			!context.assert(this.input != nil, "consumer input is nil") {
+		if !active || (context.Readonly() && !cons.readonly()) || !context.assert(this.input != nil, "consumer input is nil") {
 			return
 		}
 

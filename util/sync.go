@@ -90,8 +90,9 @@ func NewFastPool(p *FastPool, f func() interface{}) {
 }
 
 func (p *FastPool) Get() interface{} {
-	if atomic.LoadInt32(&p.useCount) == 0 ||
-		atomic.LoadUint32(&p.getNext)-atomic.LoadUint32(&p.load) > _POOL_LOAD {
+//	if atomic.LoadInt32(&p.useCount) == 0 ||
+//		atomic.LoadUint32(&p.getNext)-atomic.LoadUint32(&p.load) > _POOL_LOAD {
+	if atomic.LoadUint32(&p.getNext)-atomic.LoadUint32(&p.load) > _POOL_LOAD {
 		return p.f()
 	}
 	l := atomic.AddUint32(&p.getNext, 1) % _POOL_SIZE
