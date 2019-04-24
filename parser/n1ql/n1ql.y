@@ -960,8 +960,9 @@ from_term opt_join_type JOIN simple_from_term on_keys
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
         yylex.Error("JOIN must be done on a keyspace.")
+    } else {
+        ksterm.SetJoinKeys($5)
     }
-    ksterm.SetJoinKeys($5)
     $$ = algebra.NewJoin($1, $2, ksterm)
 }
 |
@@ -970,9 +971,10 @@ from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
         yylex.Error("JOIN must be done on a keyspace.")
+    } else {
+        ksterm.SetIndexJoinNest()
+        ksterm.SetJoinKeys($5)
     }
-    ksterm.SetIndexJoinNest()
-    ksterm.SetJoinKeys($5)
     $$ = algebra.NewIndexJoin($1, $2, ksterm, $7)
 }
 |
@@ -981,8 +983,9 @@ from_term opt_join_type NEST simple_from_term on_keys
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
         yylex.Error("NEST must be done on a keyspace.")
+    } else {
+        ksterm.SetJoinKeys($5)
     }
-    ksterm.SetJoinKeys($5)
     $$ = algebra.NewNest($1, $2, ksterm)
 }
 |
@@ -991,9 +994,10 @@ from_term opt_join_type NEST simple_from_term on_key FOR IDENT
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
         yylex.Error("NEST must be done on a keyspace.")
+    } else {
+        ksterm.SetIndexJoinNest()
+        ksterm.SetJoinKeys($5)
     }
-    ksterm.SetIndexJoinNest()
-    ksterm.SetJoinKeys($5)
     $$ = algebra.NewIndexNest($1, $2, ksterm, $7)
 }
 |
