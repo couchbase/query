@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/prepareds"
@@ -224,6 +225,7 @@ func main() {
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
 	functions.FunctionsSetLimit(*FUNCTIONS_LIMIT)
+	constructor.Init()
 
 	if *DICTIONARY_CACHE_LIMIT <= 0 {
 		logging.Errorp("Ignoring invalid dictionary cache size",

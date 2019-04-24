@@ -30,7 +30,7 @@ const _CHANGE_COUNTER = _CHANGE_COUNTER_PATH + "counter"
 var changeCounter int32
 var whoAmI string
 
-func init() {
+func Init() {
 	whoAmI = distributed.RemoteAccess().WhoAmI()
 
 	// setup the change counter if not there

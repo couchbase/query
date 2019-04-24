@@ -17,7 +17,9 @@ import (
 	goerrors "errors"
 	"fmt"
 
+	"github.com/couchbase/eventing-ee/js-evaluator/evaluator-client/adapter"
 	"github.com/couchbase/eventing-ee/js-evaluator/evaluator-client/client"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -34,10 +36,9 @@ type javascriptBody struct {
 }
 
 var enabled = true
-var evaluatorClient client.EvaluatorClient
+var evaluatorClient *client.EvaluatorClient
 
 // FIXME to be sorted
-// - can't have the evaluator created by the client - what about projector and query on the same node?
 // - evaluator client does not yet take arguments
 // - evaluator client does not yet take credentials
 // - indexing issues: identify functions as deterministic and not running N1QL code
@@ -47,11 +48,10 @@ func Init() {
 	var err error
 
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
-	evaluatorClient, err := client.NewEvaluatorClient(&adapter.Configuration{
+	evaluatorClient, err = client.NewEvaluatorClient(&adapter.Configuration{
 		WorkersPerNode:   2,
 		ThreadsPerWorker: 3,
-		HttpPort:         port.Port(9090),
-		NsServerUrl:      "http://locahost:9000",
+		NsServerUrl:      "http://" + distributed.RemoteAccess().WhoAmI(),
 	})
 	if err != nil {
 		logging.Infof("Unable to start javascript evaluator client, err : %v", err)
@@ -60,7 +60,9 @@ func Init() {
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
-	var args, val value.Value
+	//	var args value.Value
+	var res *string
+	var err error
 
 	if !enabled {
 		return nil, errors.NewFunctionsDisabledError("javascript")
@@ -89,11 +91,11 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	*/
 	// FIXME context, credentials
 
-	val, err = evaluatorClient.Evaluate(funcBody.library, funcBody.object)
+	res, err = evaluatorClient.Evaluate(funcBody.library, funcBody.object)
 	if err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {
-		return val, nil
+		return value.NewValue([]byte(*res)), nil
 	}
 }
 

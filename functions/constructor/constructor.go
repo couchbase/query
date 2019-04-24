@@ -20,6 +20,7 @@ import (
 
 func Init() {
 	functions.Constructor = newGlobalFunction
+	globalName.Init()
 	golang.Init()
 	inline.Init()
 	javascript.Init()

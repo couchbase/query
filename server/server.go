@@ -27,7 +27,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
-	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
@@ -38,10 +37,6 @@ import (
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
-
-func init() {
-	constructor.Init()
-}
 
 type Profile int
 
