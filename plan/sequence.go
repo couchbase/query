@@ -98,3 +98,13 @@ func (this *Sequence) verify(prepared *Prepared) bool {
 
 	return true
 }
+
+func (this *Sequence) Cost() float64 {
+	last_child := len(this.children) - 1
+	return this.children[last_child].Cost()
+}
+
+func (this *Sequence) Cardinality() float64 {
+	last_child := len(this.children) - 1
+	return this.children[last_child].Cardinality()
+}

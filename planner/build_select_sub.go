@@ -31,6 +31,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevPushableOnclause := this.pushableOnclause
 	prevBuilderFlags := this.builderFlags
 	prevMaxParallelism := this.maxParallelism
+	prevLastOp := this.lastOp
 
 	indexPushDowns := this.storeIndexPushDowns()
 
@@ -45,6 +46,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.pushableOnclause = prevPushableOnclause
 		this.builderFlags = prevBuilderFlags
 		this.maxParallelism = prevMaxParallelism
+		this.lastOp = prevLastOp
 		this.restoreIndexPushDowns(indexPushDowns, false)
 	}()
 
@@ -56,6 +58,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.pushableOnclause = nil
 	this.builderFlags = 0
 	this.maxParallelism = 0
+	this.lastOp = nil
 
 	this.projection = node.Projection()
 	this.resetIndexGroupAggs()

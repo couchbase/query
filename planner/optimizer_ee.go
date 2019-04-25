@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
@@ -75,4 +76,17 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 	}
 
 	return cost, sel, (sel * nrows), nil
+}
+
+func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
+	return optimizer.CalcFetchCost(keyspace, cardinality)
+}
+
+func getNLJoinCost(left, right plan.Operator) (float64, float64) {
+	return optimizer.CalcNLJoinCost(left, right)
+}
+
+func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
+	buildRight, force bool, selec float64) (float64, float64, bool) {
+	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, selec)
 }

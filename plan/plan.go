@@ -23,6 +23,11 @@ import (
 
 const REPREPARE_CHECK uint64 = math.MaxUint64
 
+const (
+	PLAN_COST_NOT_AVAIL = -1.0 // cost is not available
+	PLAN_CARD_NOT_AVAIL = -1.0 // cardinality is not available
+)
+
 type Operators []Operator
 
 type Operator interface {
@@ -36,6 +41,9 @@ type Operator interface {
 	New() Operator                               // Dynamic constructor; used for unmarshaling
 
 	verify(prepared *Prepared) bool // Check that the operator can reference keyspaces and indexes
+
+	Cost() float64
+	Cardinality() float64
 }
 
 type CoveringOperator interface {

@@ -11,6 +11,7 @@ package util
 
 import (
 	"fmt"
+	"math"
 )
 
 // an implementation of hash table loosely based on google's densehash
@@ -299,4 +300,40 @@ func (this *HashTable) Drop() {
 	}
 	this.count = 0
 	this.distinct = 0
+}
+
+const (
+	NUMBER_NOT_AVAIL = -1.0
+	_ERR_MARGIN      = 0.0000000000001
+)
+
+// calculate number of memcopies due to doubling of hash table
+func GetNumMemCopy(purpose int, size float64) float64 {
+	if size <= 0.0 {
+		return NUMBER_NOT_AVAIL
+	}
+
+	var minN, maxN int
+	var total float64
+
+	switch purpose {
+	case HASH_TABLE_FOR_HASH_JOIN:
+		minN = 10 // 2 ^^ 10 = 1024
+	case HASH_TABLE_FOR_INLIST:
+		minN = 5 // 2 ^^ 5 = 32
+	default:
+		return NUMBER_NOT_AVAIL
+	}
+
+	tSize := size / HTLoadThreshold
+	maxN = int(math.Log2(tSize))
+	if (math.Pow(float64(maxN), 2) - tSize) < _ERR_MARGIN {
+		maxN -= 1
+	}
+
+	if maxN > minN {
+		total = math.Pow(float64(maxN), 2) - math.Pow(float64(minN), 2)
+	}
+
+	return total * HTLoadThreshold
 }

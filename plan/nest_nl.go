@@ -19,20 +19,24 @@ import (
 
 type NLNest struct {
 	readonly
-	outer     bool
-	alias     string
-	onclause  expression.Expression
-	hintError string
-	child     Operator
+	outer       bool
+	alias       string
+	onclause    expression.Expression
+	hintError   string
+	cost        float64
+	cardinality float64
+	child       Operator
 }
 
-func NewNLNest(nest *algebra.AnsiNest, child Operator) *NLNest {
+func NewNLNest(nest *algebra.AnsiNest, child Operator, cost, cardinality float64) *NLNest {
 	rv := &NLNest{
-		outer:     nest.Outer(),
-		alias:     nest.Alias(),
-		onclause:  nest.Onclause(),
-		hintError: nest.HintError(),
-		child:     child,
+		outer:       nest.Outer(),
+		alias:       nest.Alias(),
+		onclause:    nest.Onclause(),
+		hintError:   nest.HintError(),
+		child:       child,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 
 	return rv
@@ -66,6 +70,14 @@ func (this *NLNest) Child() Operator {
 	return this.child
 }
 
+func (this *NLNest) Cost() float64 {
+	return this.cost
+}
+
+func (this *NLNest) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *NLNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -83,6 +95,14 @@ func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["hint_not_followed"] = this.hintError
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	r["~child"] = this.child
 
 	if f != nil {
@@ -93,12 +113,14 @@ func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *NLNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string          `json:"#operator"`
-		Onclause  string          `json:"on_clause"`
-		Outer     bool            `json:"outer"`
-		Alias     string          `json:"alias"`
-		HintError string          `json:"hint_not_followed"`
-		Child     json.RawMessage `json:"~child"`
+		_           string          `json:"#operator"`
+		Onclause    string          `json:"on_clause"`
+		Outer       bool            `json:"outer"`
+		Alias       string          `json:"alias"`
+		HintError   string          `json:"hint_not_followed"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
+		Child       json.RawMessage `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -116,6 +138,18 @@ func (this *NLNest) UnmarshalJSON(body []byte) error {
 	this.outer = _unmarshalled.Outer
 	this.alias = _unmarshalled.Alias
 	this.hintError = _unmarshalled.HintError
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

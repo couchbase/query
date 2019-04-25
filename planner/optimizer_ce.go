@@ -39,3 +39,16 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 	spans SargSpans) (cost float64, sel float64, card float64, err error) {
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
+
+func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
+	return OPT_COST_NOT_AVAIL
+}
+
+func getNLJoinCost(left, right plan.Operator) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
+	buildRight, force bool, selec float64) (float64, float64, bool) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, false
+}

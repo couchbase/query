@@ -20,6 +20,14 @@ func (this *readonly) verify(prepared *Prepared) bool {
 	return true
 }
 
+func (this *readonly) Cost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
+func (this *readonly) Cardinality() float64 {
+	return PLAN_CARD_NOT_AVAIL
+}
+
 type readwrite struct {
 }
 
@@ -29,4 +37,12 @@ func (this *readwrite) Readonly() bool {
 
 func (this *readwrite) verify(prepared *Prepared) bool {
 	return true
+}
+
+func (this *readwrite) Cost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
+func (this *readwrite) Cardinality() float64 {
+	return PLAN_CARD_NOT_AVAIL
 }

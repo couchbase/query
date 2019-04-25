@@ -74,7 +74,12 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 			if err != nil {
 				return err
 			}
-			fetch = plan.NewFetch(keyspace, term, names)
+			fetchCost := OPT_COST_NOT_AVAIL
+			cardinality := scan.Cardinality()
+			if this.useCBO {
+				fetchCost = getFetchCost(keyspace, cardinality)
+			}
+			fetch = plan.NewFetch(keyspace, term, names, fetchCost, cardinality)
 		} else {
 			fetch = plan.NewDummyFetch(keyspace, term)
 		}

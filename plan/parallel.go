@@ -94,3 +94,11 @@ func (this *Parallel) UnmarshalJSON(body []byte) error {
 func (this *Parallel) verify(prepared *Prepared) bool {
 	return this.child.verify(prepared)
 }
+
+func (this *Parallel) Cost() float64 {
+	return this.child.Cost()
+}
+
+func (this *Parallel) Cardinality() float64 {
+	return this.child.Cardinality()
+}

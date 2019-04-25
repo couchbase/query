@@ -380,8 +380,17 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = _unmarshalled.Cost
-	this.cardinality = _unmarshalled.Cardinality
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 
 	this.indexer, err = k.Indexer(_unmarshalled.Using)
 	if err != nil {

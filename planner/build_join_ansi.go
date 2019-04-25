@@ -26,6 +26,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		right = ksterm
 	}
 
+	useCBO := this.useCBO
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
@@ -35,19 +37,34 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 		this.extractPredicates(nil, node.Onclause())
 
+		var hjoin *plan.HashJoin
+		hjCost := float64(OPT_COST_NOT_AVAIL)
+
 		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
-			// currently only consider hash join when USE HASH join hint is specified
-			var hjoin *plan.HashJoin
-			if right.PreferHash() {
+			tryHash := false
+			if useCBO {
+				tryHash = true
+			} else if right.PreferHash() {
+				// only consider hash join when USE HASH hint is specified
+				tryHash = true
+			}
+			if tryHash {
 				hjoin, err = this.buildHashJoin(node)
-				if hjoin != nil || err != nil {
-					return hjoin, err
+				if err != nil {
+					return nil, err
+				}
+				if hjoin != nil {
+					if useCBO {
+						hjCost = hjoin.Cost()
+					} else {
+						return hjoin, nil
+					}
 				}
 			}
 		}
 
 		right.SetUnderNL()
-		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +74,12 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		}
 
 		if len(scans) > 0 {
-			return plan.NewNLJoin(node, plan.NewSequence(scans...)), nil
+			if useCBO && (hjCost > 0.0) && (cost > hjCost) {
+				return hjoin, nil
+			}
+			return plan.NewNLJoin(node, plan.NewSequence(scans...), cost, cardinality), nil
+		} else if hjCost > 0.0 {
+			return hjoin, nil
 		}
 
 		right.UnsetUnderNL()
@@ -105,7 +127,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			node.SetOnclause(newOnclause)
 		}
 
-		return plan.NewNLJoin(node, plan.NewSequence(scans...)), nil
+		return plan.NewNLJoin(node, plan.NewSequence(scans...), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: Unexpected right-hand side node type"))
 	}
@@ -118,6 +140,8 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		right = ksterm
 	}
 
+	useCBO := this.useCBO
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
@@ -127,19 +151,34 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 		this.extractPredicates(nil, node.Onclause())
 
+		var hnest *plan.HashNest
+		hnCost := float64(OPT_COST_NOT_AVAIL)
+
 		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
-			// currently only consider hash nest when USE HASH join hint is specified
-			var hnest *plan.HashNest
-			if right.PreferHash() {
+			tryHash := false
+			if useCBO {
+				tryHash = true
+			} else if right.PreferHash() {
+				// only consider hash nest when USE HASH hint is specified
+				tryHash = true
+			}
+			if tryHash {
 				hnest, err = this.buildHashNest(node)
-				if hnest != nil || err != nil {
-					return hnest, err
+				if err != nil {
+					return nil, err
+				}
+				if hnest != nil {
+					if useCBO {
+						hnCost = hnest.Cost()
+					} else {
+						return hnest, nil
+					}
 				}
 			}
 		}
 
 		right.SetUnderNL()
-		scans, primaryJoinKeys, newOnclause, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +188,12 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		}
 
 		if len(scans) > 0 {
-			return plan.NewNLNest(node, plan.NewSequence(scans...)), nil
+			if useCBO && (hnCost > 0.0) && (cost > hnCost) {
+				return hnest, nil
+			}
+			return plan.NewNLNest(node, plan.NewSequence(scans...), cost, cardinality), nil
+		} else if hnCost > 0.0 {
+			return hnest, nil
 		}
 
 		right.UnsetUnderNL()
@@ -192,7 +236,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 			node.SetOnclause(newOnclause)
 		}
 
-		return plan.NewNLNest(node, plan.NewSequence(scans...)), nil
+		return plan.NewNLNest(node, plan.NewSequence(scans...), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: Unexpected right-hand side node type"))
 	}
@@ -233,17 +277,19 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 }
 
 func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expression.Expression) (
-	[]plan.Operator, expression.Expression, expression.Expression, error) {
+	[]plan.Operator, expression.Expression, expression.Expression, float64, float64, error) {
 
 	children := this.children
 	coveringScans := this.coveringScans
 	countScan := this.countScan
 	orderScan := this.orderScan
+	lastOp := this.lastOp
 	indexPushDowns := this.storeIndexPushDowns()
 	defer func() {
 		this.children = children
 		this.countScan = countScan
 		this.orderScan = orderScan
+		this.lastOp = lastOp
 		this.restoreIndexPushDowns(indexPushDowns, true)
 
 		if len(this.coveringScans) > 0 {
@@ -260,6 +306,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 	this.orderScan = nil
 	this.limit = nil
 	this.offset = nil
+	this.lastOp = nil
 
 	var err error
 
@@ -310,7 +357,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 		}
 
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 		}
 	}
 
@@ -337,12 +384,12 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 			if primaryJoinKeys != nil {
 				primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 				}
 			}
 			newOnclause, err = coverer.Map(newOnclause)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 			}
 		}
 	}
@@ -354,12 +401,12 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 			if primaryJoinKeys != nil {
 				primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 				}
 			}
 			newOnclause, err = coverer.Map(newOnclause)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 			}
 
 			// also need to perform cover transformation for index spans for
@@ -369,27 +416,39 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 				if secondary, ok := child.(plan.SecondaryScan); ok {
 					err := secondary.CoverJoinSpanExpressions(coverer)
 					if err != nil {
-						return nil, nil, nil, err
+						return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 					}
 				}
 			}
 		}
 	}
 
-	return this.children, primaryJoinKeys, newOnclause, nil
+	cost := float64(OPT_COST_NOT_AVAIL)
+	cardinality := float64(OPT_CARD_NOT_AVAIL)
+	useCBO := this.useCBO
+	if useCBO {
+		if len(this.children) > 0 {
+			cost, cardinality = getNLJoinCost(lastOp, this.lastOp)
+		} // TODO: else calculate cost for lookup join
+	} else {
+		cost = OPT_COST_NOT_AVAIL
+		cardinality = OPT_CARD_NOT_AVAIL
+	}
+
+	return this.children, primaryJoinKeys, newOnclause, cost, cardinality, nil
 }
 
 func (this *builder) buildHashJoin(node *algebra.AnsiJoin) (hjoin *plan.HashJoin, err error) {
-	child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(node.Right(), node.Outer(), "join")
+	child, buildExprs, probeExprs, aliases, cost, cardinality, err := this.buildHashJoinScan(node.Right(), node.Outer(), "join")
 	if err != nil || child == nil {
 		// cannot do hash join
 		return nil, err
 	}
-	return plan.NewHashJoin(node, child, buildExprs, probeExprs, aliases), nil
+	return plan.NewHashJoin(node, child, buildExprs, probeExprs, aliases, cost, cardinality), nil
 }
 
 func (this *builder) buildHashNest(node *algebra.AnsiNest) (hnest *plan.HashNest, err error) {
-	child, buildExprs, probeExprs, aliases, err := this.buildHashJoinScan(node.Right(), node.Outer(), "nest")
+	child, buildExprs, probeExprs, aliases, cost, cardinality, err := this.buildHashJoinScan(node.Right(), node.Outer(), "nest")
 	if err != nil || child == nil {
 		// cannot do hash nest
 		return nil, err
@@ -397,11 +456,12 @@ func (this *builder) buildHashNest(node *algebra.AnsiNest) (hnest *plan.HashNest
 	if len(aliases) != 1 {
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashNest: multiple (%d) build aliases", len(aliases)))
 	}
-	return plan.NewHashNest(node, child, buildExprs, probeExprs, aliases[0]), nil
+	return plan.NewHashNest(node, child, buildExprs, probeExprs, aliases[0], cost, cardinality), nil
 }
 
 func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool, op string) (
-	child plan.Operator, buildExprs expression.Expressions, probeExprs expression.Expressions, buildAliases []string, err error) {
+	child plan.Operator, buildExprs expression.Expressions, probeExprs expression.Expressions,
+	buildAliases []string, cost, cardinality float64, err error) {
 
 	var ksterm *algebra.KeyspaceTerm
 	var keyspace string
@@ -417,28 +477,30 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		// expressions does not reference any keyspaces, otherwise hash join cannot be
 		// used.
 		if ksterm.Keys() != nil && ksterm.Keys().Static() == nil {
-			return nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 		}
 		keyspace = ksterm.Keyspace()
 	case *algebra.ExpressionTerm:
 		// hash join cannot handle expression term with any correlated references
 		if right.IsCorrelated() {
-			return nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 		}
 
 		defaultBuildRight = true
 	case *algebra.SubqueryTerm:
 		// hash join cannot handle correlated subquery
 		if right.Subquery().IsCorrelated() {
-			return nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 		}
 
 		defaultBuildRight = true
 	default:
-		return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinScan: unexpected right-hand side node type"))
+		return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinScan: unexpected right-hand side node type"))
 	}
 
+	useCBO := this.useCBO
 	buildRight := false
+	force := true
 	joinHint := right.JoinHint()
 	if joinHint == algebra.USE_HASH_BUILD {
 		buildRight = true
@@ -446,14 +508,17 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		// in case of outer join, cannot build on dominant side
 		// also in case of nest, can only build on right-hand-side
 		if outer || op == "nest" {
-			return nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 		}
 	} else if defaultBuildRight {
 		// for expression term and subquery term, if no USE HASH hint is
 		// specified, then consider hash join/nest with the right-hand side
 		// as build side
 		buildRight = true
+		force = false
 	}
+
+	sel := float64(1.0)
 
 	alias := right.Alias()
 
@@ -480,11 +545,11 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 			// check keyspace references for both sides
 			firstKeyspaces, err := expression.CountKeySpaces(eqFltr.First(), keyspaceNames)
 			if err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 			}
 			secondKeyspaces, err := expression.CountKeySpaces(eqFltr.Second(), keyspaceNames)
 			if err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 			}
 
 			// make sure only one side of the equality predicate references
@@ -498,18 +563,29 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 				secondRef = true
 			}
 
+			found := false
 			if firstRef && !secondRef {
 				rightExprs = append(rightExprs, eqFltr.First())
 				leftExprs = append(leftExprs, eqFltr.Second())
+				found = true
 			} else if !firstRef && secondRef {
 				leftExprs = append(leftExprs, eqFltr.First())
 				rightExprs = append(rightExprs, eqFltr.Second())
+				found = true
+			}
+
+			if useCBO && found {
+				if fltr.Selec() > 0.0 {
+					sel *= fltr.Selec()
+				} else {
+					useCBO = false
+				}
 			}
 		}
 	}
 
 	if len(leftExprs) == 0 || len(rightExprs) == 0 {
-		return nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 	}
 
 	// left hand side is already built
@@ -524,10 +600,12 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	coveringScans := this.coveringScans
 	countScan := this.countScan
 	orderScan := this.orderScan
+	lastOp := this.lastOp
 	indexPushDowns := this.storeIndexPushDowns()
 	defer func() {
 		this.countScan = countScan
 		this.orderScan = orderScan
+		this.lastOp = lastOp
 		this.restoreIndexPushDowns(indexPushDowns, true)
 
 		if len(this.coveringScans) > 0 {
@@ -543,6 +621,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	this.orderScan = nil
 	this.limit = nil
 	this.offset = nil
+	this.lastOp = nil
 
 	children := this.children
 	this.children = make([]plan.Operator, 0, 16)
@@ -550,7 +629,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	// Note that by this point join filters involving keyspaces that's already done planning
 	// are already moved into filters and thus is available for index selection. This is ok
 	// if we are doing nested-loop join. However, for hash join, since both sides of the
-	// hash join are independet of each other, we cannot use join filters for index selection
+	// hash join are independent of each other, we cannot use join filters for index selection
 	// when planning for the right-hand side.
 	if ksterm != nil {
 		ksterm.SetUnderHash()
@@ -563,12 +642,12 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 
 	_, err = right.Accept(this)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 	}
 
 	// if no plan generated, bail out
 	if len(this.children) == 0 {
-		return nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 	}
 
 	if buildRight {
@@ -594,7 +673,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 			for i, _ := range rightExprs {
 				rightExprs[i], err = coverer.Map(rightExprs[i])
 				if err != nil {
-					return nil, nil, nil, nil, err
+					return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 				}
 			}
 		}
@@ -607,10 +686,21 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 			for i, _ := range leftExprs {
 				leftExprs[i], err = coverer.Map(leftExprs[i])
 				if err != nil {
-					return nil, nil, nil, nil, err
+					return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 				}
 			}
 		}
+	}
+
+	if useCBO {
+		var bldRight bool
+		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, sel)
+		if cost > 0.0 && cardinality > 0.0 {
+			buildRight = bldRight
+		}
+	} else {
+		cost = OPT_COST_NOT_AVAIL
+		cardinality = OPT_COST_NOT_AVAIL
 	}
 
 	if buildRight {
@@ -621,7 +711,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		probeExprs = rightExprs
 	}
 
-	return child, buildExprs, probeExprs, buildAliases, nil
+	return child, buildExprs, probeExprs, buildAliases, cost, cardinality, nil
 }
 
 func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression) (
@@ -667,15 +757,18 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 
 	children := this.children
 	subChildren := this.subChildren
+	lastOp := this.lastOp
 	defer func() {
 		this.children = children
 		this.subChildren = subChildren
+		this.lastOp = lastOp
 	}()
 
 	// new slices of this.children and this.subChildren are made in function
 	// VisitSubqueryTerm() or VisitExpressionTerm()
 	this.children = nil
 	this.subChildren = nil
+	this.lastOp = nil
 
 	_, err = node.Accept(this)
 	if err != nil {

@@ -18,16 +18,20 @@ import (
 
 type Fetch struct {
 	readonly
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
-	subPaths []string
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceTerm
+	subPaths    []string
+	cost        float64
+	cardinality float64
 }
 
-func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string, cost, cardinality float64) *Fetch {
 	return &Fetch{
-		keyspace: keyspace,
-		term:     term,
-		subPaths: subPaths,
+		keyspace:    keyspace,
+		term:        term,
+		subPaths:    subPaths,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -100,6 +104,21 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	return err
 }
 
+func (this *Fetch) verify(prepared *Prepared) bool {
+	var res bool
+
+	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
+	return res
+}
+
+func (this *Fetch) Cost() float64 {
+	return this.cost
+}
+
+func (this *Fetch) Cardinality() float64 {
+	return this.cardinality
+}
+
 type DummyFetch struct {
 	readonly
 	keyspace datastore.Keyspace
@@ -169,11 +188,4 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	}
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
-}
-
-func (this *Fetch) verify(prepared *Prepared) bool {
-	var res bool
-
-	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
-	return res
 }

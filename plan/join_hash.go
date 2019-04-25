@@ -26,10 +26,12 @@ type HashJoin struct {
 	probeExprs   expression.Expressions
 	buildAliases []string
 	hintError    string
+	cost         float64
+	cardinality  float64
 }
 
 func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs expression.Expressions,
-	buildAliases []string) *HashJoin {
+	buildAliases []string, cost, cardinality float64) *HashJoin {
 	return &HashJoin{
 		outer:        join.Outer(),
 		onclause:     join.Onclause(),
@@ -38,6 +40,8 @@ func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs 
 		probeExprs:   probeExprs,
 		buildAliases: buildAliases,
 		hintError:    join.HintError(),
+		cost:         cost,
+		cardinality:  cardinality,
 	}
 }
 
@@ -77,6 +81,14 @@ func (this *HashJoin) HintError() string {
 	return this.hintError
 }
 
+func (this *HashJoin) Cost() float64 {
+	return this.cost
+}
+
+func (this *HashJoin) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *HashJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -107,6 +119,14 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 		r["hint_not_followed"] = this.hintError
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	r["~child"] = this.child
 
 	if f != nil {
@@ -124,6 +144,8 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 		ProbeExprs   []string        `json:"probe_exprs"`
 		BuildAliases []string        `json:"build_aliases"`
 		HintError    string          `json:"hint_not_followed"`
+		Cost         float64         `json:"cost"`
+		Cardinality  float64         `json:"cardinality"`
 		Child        json.RawMessage `json:"~child"`
 	}
 
@@ -161,6 +183,18 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 
 	this.buildAliases = _unmarshalled.BuildAliases
 	this.hintError = _unmarshalled.HintError
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {
