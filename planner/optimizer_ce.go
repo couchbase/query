@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
