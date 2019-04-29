@@ -13,9 +13,8 @@ package plan
 
 import (
 	"encoding/json"
-
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
-	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 )
 
 type IndexAdvice struct {
@@ -23,11 +22,11 @@ type IndexAdvice struct {
 	adviceInfos iaplan.IndexAdviceInfos
 }
 
-func NewIndexAdvice(queryInfos map[algebra.Statement]*iaplan.QueryInfo) *IndexAdvice {
+func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo) *IndexAdvice {
 	rv := &IndexAdvice{}
 	rv.adviceInfos = make(iaplan.IndexAdviceInfos, 0, len(queryInfos))
 	for _, v := range queryInfos {
-		adviceInfo := iaplan.NewIndexAdviceInfo(v.GetCurIndexes(), v.GetAdviseIndexes())
+		adviceInfo := iaplan.NewIndexAdviceInfo(v.GetCurIndexes(), v.GetUncoverIndexes(), v.GetCoverIndexes())
 		rv.adviceInfos = append(rv.adviceInfos, adviceInfo)
 	}
 	return rv

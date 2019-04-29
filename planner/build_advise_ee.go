@@ -24,7 +24,7 @@ import (
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.indexAdvisor = true
 	this.maxParallelism = 1
-	this.queryInfos = make(map[algebra.Statement]*iaplan.QueryInfo, 1)
+	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
 	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion))
 	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos), stmt.Query()), nil
@@ -33,7 +33,7 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 type collectQueryInfo struct {
 	keyspaceInfos  iaplan.KeyspaceInfos
 	queryInfo      *iaplan.QueryInfo
-	queryInfos     map[algebra.Statement]*iaplan.QueryInfo
+	queryInfos     map[expression.HasExpressions]*iaplan.QueryInfo
 	indexCollector *scanIdxCol
 }
 
@@ -41,8 +41,16 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 	if this.indexAdvisor {
 		if stmt != nil {
 			this.queryInfo = iaplan.NewQueryInfo(stmt.Type())
-			this.queryInfos[stmt] = this.queryInfo
 			this.keyspaceInfos = iaplan.NewKeyspaceInfos()
+			if s, ok := stmt.(*algebra.Select); ok {
+				if s.Order() != nil {
+					this.queryInfos[s] = this.queryInfo
+				} else {
+					this.queryInfos[s.Subresult()] = this.queryInfo
+				}
+			} else {
+				this.queryInfos[stmt] = this.queryInfo
+			}
 		}
 	}
 }
@@ -159,7 +167,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 					addUnnestPreds(baseKeyspacesCopy, bk)
 				}
 
-				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()), getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(), pred)
+				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()), getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(), pred, true)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
@@ -169,11 +177,11 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				return err
 			}
 			baseKeyspaceCopy, _ := baseKeyspacesCopy[node.Alias()]
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()), getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(), pred)
+			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()), getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(), pred, false)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		}
 	} else if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
-		p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred())
+		p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false)
 		this.keyspaceInfos = append(this.keyspaceInfos, p)
 	}
 	return nil
@@ -216,7 +224,7 @@ func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryId
 	}
 }
 
-func extractDeferredIdxes(queryInfos map[algebra.Statement]*iaplan.QueryInfo, indexApiVersion int) map[string]iaplan.IndexInfos {
+func extractDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, indexApiVersion int) map[string]iaplan.IndexInfos {
 	if len(queryInfos) == 0 {
 		return nil
 	}
