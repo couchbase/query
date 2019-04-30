@@ -201,6 +201,27 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	return rv
 }
 
+func (this *Context) Copy() *Context {
+	return &Context{
+		requestId:        this.requestId,
+		datastore:        this.datastore,
+		systemstore:      this.systemstore,
+		namespace:        this.namespace,
+		readonly:         this.readonly,
+		maxParallelism:   this.maxParallelism,
+		scanCap:          this.scanCap,
+		pipelineCap:      this.pipelineCap,
+		pipelineBatch:    this.pipelineBatch,
+		now:              this.now,
+		credentials:      this.credentials,
+		consistency:      this.consistency,
+		scanVectorSource: this.scanVectorSource,
+		httpRequest:      this.httpRequest,
+		indexApiVersion:  this.indexApiVersion,
+		featureControls:  this.featureControls,
+	}
+}
+
 func (this *Context) OriginalHttpRequest() *http.Request {
 	return this.httpRequest
 }
@@ -420,6 +441,8 @@ func (this *Context) Warning(wrn errors.Error) {
 	this.output.Warning(wrn)
 }
 
+// subquery evaluation
+
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
 	subresults := this.getSubresults()
 	subresult, ok := subresults.get(query)
@@ -545,6 +568,8 @@ func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
 	this.entries[key] = value
 	this.mutex.Unlock()
 }
+
+// assertion checks
 
 func (this *Context) assert(test bool, what string) bool {
 	if test {
