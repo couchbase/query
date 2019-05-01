@@ -695,6 +695,7 @@ func Start_cs(setGlobals bool) *MockServer {
 
 func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testing.T) {
 
+	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 	matches, err := filepath.Glob(filename)
 	if err != nil {
 		t.Errorf("glob failed: %v", err)
