@@ -11,6 +11,8 @@ package expression
 
 import (
 	"time"
+
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -49,4 +51,8 @@ func (this *IndexContext) AuthenticatedUsers() []string {
 
 func (this *IndexContext) DatastoreVersion() string {
 	return "BOGUS_VERSION"
+}
+
+func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
+	return nil, 0, nil
 }

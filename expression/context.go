@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -25,6 +26,7 @@ type Context interface {
 	Now() time.Time
 	AuthenticatedUsers() []string
 	DatastoreVersion() string
+	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error)
 }
 
 type CurlContext interface {

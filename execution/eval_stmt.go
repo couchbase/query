@@ -103,7 +103,7 @@ func (this *internalOutput) FmtPhaseTimes() map[string]interface{} {
 	return nil
 }
 
-func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, readonly bool) (value.Value, uint64, error) {
+func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
 	var outputBuf internalOutput
 	output := &outputBuf
 
@@ -132,7 +132,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	}
 
 	// prep := time.Now()
-	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, false,
+	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery,
 		namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
 	// output.AddPhaseTime(PLAN, time.Since(prep))
 	if err != nil {
