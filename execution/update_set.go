@@ -160,5 +160,7 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 
 func (this *Set) Done() {
 	this.baseDone()
-	_SET_OP_POOL.Put(this)
+	if this.isComplete() {
+		_SET_OP_POOL.Put(this)
+	}
 }

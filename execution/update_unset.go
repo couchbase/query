@@ -149,5 +149,7 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 
 func (this *Unset) Done() {
 	this.baseDone()
-	_UNSET_OP_POOL.Put(this)
+	if this.isComplete() {
+		_UNSET_OP_POOL.Put(this)
+	}
 }

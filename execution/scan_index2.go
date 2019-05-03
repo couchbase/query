@@ -52,8 +52,10 @@ func (this *IndexScan2) Copy() Operator {
 
 func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
@@ -137,7 +139,7 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection, parent value.Value) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 
 	plan := this.plan
 

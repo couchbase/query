@@ -51,8 +51,10 @@ func (this *IndexScan) Copy() Operator {
 
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		this.switchPhase(_EXECTIME)
 		spans := this.plan.Spans()
 		n := len(spans)
@@ -60,7 +62,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 
-		if !active || !context.assert(n != 0, "Index scan has no spans") {
+		if !context.assert(n != 0, "Index scan has no spans") {
 			this.close(context)
 			return
 		}
@@ -152,8 +154,10 @@ func (this *spanScan) Copy() Operator {
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.addExecPhase(INDEX_SCAN, context)       // we have already added the scan operator in the primary scan
@@ -229,7 +233,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, parent value.Value) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation

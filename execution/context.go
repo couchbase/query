@@ -587,7 +587,7 @@ func (this *Context) assert(test bool, what string) bool {
 	return false
 }
 
-func (this *Context) Recover() {
+func (this *Context) Recover(base *base) {
 	err := recover()
 	if err != nil {
 		buf := make([]byte, 1<<16)
@@ -603,6 +603,11 @@ func (this *Context) Recover() {
 		os.Stderr.Sync()
 
 		this.Abort(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
+
+		// signal other operators that we are done, release resources
+		if base != nil {
+			base.release(this)
+		}
 	}
 }
 

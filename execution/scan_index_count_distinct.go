@@ -44,8 +44,10 @@ func (this *IndexCountDistinctScan2) Copy() Operator {
 
 func (this *IndexCountDistinctScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_COUNT, context)

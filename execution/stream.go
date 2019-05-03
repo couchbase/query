@@ -82,5 +82,7 @@ func (this *Stream) MarshalJSON() ([]byte, error) {
 
 func (this *Stream) Done() {
 	this.baseDone()
-	_STREAM_OP_POOL.Put(this)
+	if this.isComplete() {
+		_STREAM_OP_POOL.Put(this)
+	}
 }

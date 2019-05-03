@@ -55,16 +55,14 @@ func (this *Authorize) Copy() Operator {
 
 func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		this.SetKeepAlive(1, context) // terminate early
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(AUTHORIZE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		if !active {
-			this.close(context)
-			return
-		}
 
 		this.switchPhase(_SERVTIME)
 		ds := datastore.GetDatastore()
@@ -130,5 +128,7 @@ func (this *Authorize) Done() {
 		this.child.Done()
 	}
 	this.child = nil
-	_AUTH_OP_POOL.Put(this)
+	if this.isComplete() {
+		_AUTH_OP_POOL.Put(this)
+	}
 }

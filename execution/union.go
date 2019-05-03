@@ -56,15 +56,17 @@ func (this *UnionAll) Copy() Operator {
 
 func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
 
 		n := len(this.children)
-		if !active || !context.assert(n > 0, "Union has no children") {
+		if !context.assert(n > 0, "Union has no children") {
 			return
 		}
 

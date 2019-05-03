@@ -47,6 +47,16 @@ var _PHASENAMES = []string{
 
 type annotatedChannel chan value.AnnotatedValue
 
+type opState int
+
+const (
+	_CREATED = opState(iota)
+	_RUNNING
+	_KILLED
+	_COMPLETED
+	_DONE
+)
+
 type base struct {
 	valueExchange
 	conn           *datastore.IndexConnection
@@ -78,8 +88,7 @@ type base struct {
 	childrenLeft   int32
 	activeCond     sync.Cond
 	activeLock     sync.Mutex
-	primed         bool
-	completed      bool
+	opState        opState
 }
 
 const _ITEM_CAP = 512
@@ -152,7 +161,7 @@ func newSerializedBase(dest *base) {
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
-	dest.serializable = true
+	//	dest.serializable = true
 }
 
 func (this *base) copy(dest *base) {
@@ -227,13 +236,12 @@ func (this *base) baseReopen(context *Context) {
 	this.once.Reset()
 	this.contextTracked = nil
 	this.childrenLeft = 0
-	this.primed = false
 	this.stopped = false
 	this.serialized = false
 	this.doSend = parallelSend
 	this.closeConsumer = false
 	this.activeCond.L.Lock()
-	this.completed = false
+	this.opState = _CREATED
 	this.activeCond.L.Unlock()
 }
 
@@ -352,7 +360,7 @@ func (this *base) SendStop() {
 
 // stop for the terminal operator case
 func (this *base) baseSendStop() {
-	if this.stopped || this.completed {
+	if this.stopped || this.opState > _RUNNING {
 		return
 	}
 	this.switchPhase(_CHANTIME)
@@ -361,7 +369,7 @@ func (this *base) baseSendStop() {
 }
 
 func (this *base) chanSendStop() {
-	if this.completed {
+	if this.opState > _RUNNING {
 		return
 	}
 	this.switchPhase(_CHANTIME)
@@ -374,7 +382,7 @@ func (this *base) chanSendStop() {
 }
 
 func (this *base) connSendStop(conn *datastore.IndexConnection) {
-	if this.completed {
+	if this.opState > _RUNNING {
 		return
 	}
 	this.switchPhase(_CHANTIME)
@@ -530,8 +538,10 @@ type consumer interface {
 
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(this) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		if this.execPhase != PHASES {
 			this.setExecPhase(this.execPhase, context)
 		}
@@ -539,7 +549,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		if this.serialized == true {
 			ok := true
-			if !active || (context.Readonly() && !cons.readonly()) {
+			if context.Readonly() && !cons.readonly() {
 				ok = false
 			} else {
 				ok = cons.beforeItems(context, parent)
@@ -559,7 +569,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer this.notify() // Notify that I have stopped
 		defer func() { this.batch = nil }()
 
-		if !active || (context.Readonly() && !cons.readonly()) || !context.assert(this.input != nil, "consumer input is nil") {
+		if (context.Readonly() && !cons.readonly()) || !context.assert(this.input != nil, "consumer input is nil") {
 			return
 		}
 
@@ -853,15 +863,16 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 // operator state handling
 func (this *base) active() bool {
 	this.activeCond.L.Lock()
-	defer this.activeCond.L.Unlock()
 
 	// we have been killed before we started!
-	if this.completed {
+	if this.opState == _KILLED {
+
 		return false
 	}
 
 	// we are good to go
-	this.primed = true
+	this.opState = _RUNNING
+	this.activeCond.L.Unlock()
 
 	return true
 }
@@ -870,27 +881,37 @@ func (this *base) inactive() {
 	this.activeCond.L.Lock()
 
 	// we are done
-	this.completed = true
+	this.opState = _COMPLETED
 	this.activeCond.L.Unlock()
 
 	// wake up whoever wants to free us
 	this.activeCond.Signal()
 }
 
+// do any op require to release request in case of a panic
+func (this *base) release(context *Context) {
+	// TODO add closes and notifies as part of panic handling (MB-31641)
+	this.inactive()
+}
+
 func (this *base) wait() {
 	this.activeCond.L.Lock()
 
-	// still running, just wait
-	if this.primed && !this.completed {
+	// if it hasn't started, kill it
+	if this.opState == _CREATED {
+		this.opState = _KILLED
+	}
 
+	if this.opState == _RUNNING {
 		// technically this should be in a loop testing for completed
 		// but there's ever going to be one other actor, and all it
 		// does is releases us, so this suffices
 		this.activeCond.Wait()
+
+		// signal that no go routine should touch this operator
+		this.opState = _DONE
 	}
 
-	// signal that no go routine should touch this operator
-	this.completed = true
 	this.activeCond.L.Unlock()
 }
 
@@ -898,17 +919,22 @@ func (this *base) waitComplete() {
 	this.activeCond.L.Lock()
 
 	// still running, just wait
-	if !this.completed {
+	if this.opState != _COMPLETED && this.opState != _DONE {
 
 		// technically this should be in a loop testing for completed
 		// but there's ever going to be one other actor, and all it
 		// does is releases us, so this suffices
 		this.activeCond.Wait()
+
+		// signal that no go routine should touch this operator
+		this.opState = _DONE
 	}
 
-	// signal that no go routine should touch this operator
-	this.completed = true
 	this.activeCond.L.Unlock()
+}
+
+func (this *base) isComplete() bool {
+	return this.opState == _DONE
 }
 
 // profiling

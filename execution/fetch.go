@@ -203,7 +203,9 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 
 func (this *Fetch) Done() {
 	this.baseDone()
-	_FETCH_OP_POOL.Put(this)
+	if this.isComplete() {
+		_FETCH_OP_POOL.Put(this)
+	}
 }
 
 type DummyFetch struct {
@@ -252,5 +254,7 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 
 func (this *DummyFetch) Done() {
 	this.baseDone()
-	_DUMMYFETCH_OP_POOL.Put(this)
+	if this.isComplete() {
+		_DUMMYFETCH_OP_POOL.Put(this)
+	}
 }

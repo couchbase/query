@@ -49,8 +49,10 @@ func (this *PrimaryScan) Copy() Operator {
 
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.setExecPhase(PRIMARY_SCAN, context)
 		defer this.notify() // Notify that I have stopped
@@ -174,7 +176,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 }
 
 func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection, limit int64) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 
 	keyspace := this.plan.Keyspace()
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
@@ -184,7 +186,7 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 }
 
 func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, limit int64, indexEntry *datastore.IndexEntry) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 	ds := &datastore.Span{}
 	// do the scan starting from, but not including, the given index entry:
 	ds.Range = datastore.Range{

@@ -54,8 +54,10 @@ func (this *KeyScan) Copy() Operator {
 
 func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
@@ -101,5 +103,7 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 
 func (this *KeyScan) Done() {
 	this.baseDone()
-	_KEYSCAN_OP_POOL.Put(this)
+	if this.isComplete() {
+		_KEYSCAN_OP_POOL.Put(this)
+	}
 }

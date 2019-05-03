@@ -67,14 +67,16 @@ func (this *Parallel) Copy() Operator {
 
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
 		this.SetKeepAlive(n, context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 
-		if !active || !context.assert(this.child != nil, "Parallel has no child") {
+		if !context.assert(this.child != nil, "Parallel has no child") {
 			this.close(context)
 			return
 		}
@@ -163,7 +165,9 @@ func (this *Parallel) Done() {
 	_PARALLEL_POOL.Put(this.children)
 	this.children = nil
 	this.child = nil
-	_PARALLEL_OP_POOL.Put(this)
+	if this.isComplete() {
+		_PARALLEL_OP_POOL.Put(this)
+	}
 }
 
 var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())

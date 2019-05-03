@@ -57,8 +57,10 @@ func (this *PrimaryScan3) Copy() Operator {
 
 func (this *PrimaryScan3) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.setExecPhase(PRIMARY_SCAN, context)
 		defer this.notify() // Notify that I have stopped
@@ -178,7 +180,7 @@ func (this *PrimaryScan3) scanPrimaryChunk(context *Context, parent value.Value,
 }
 
 func (this *PrimaryScan3) scanEntries(context *Context, conn *datastore.IndexConnection, offset, limit int64) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 
 	index := this.plan.Index()
 	keyspace := this.plan.Keyspace()
@@ -191,7 +193,7 @@ func (this *PrimaryScan3) scanEntries(context *Context, conn *datastore.IndexCon
 }
 
 func (this *PrimaryScan3) scanChunk(context *Context, conn *datastore.IndexConnection, limit int64, indexEntry *datastore.IndexEntry) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 	ds := &datastore.Span{}
 	// do the scan starting from, but not including, the given index entry:
 	ds.Range = datastore.Range{
@@ -218,5 +220,7 @@ func (this *PrimaryScan3) SendStop() {
 
 func (this *PrimaryScan3) Done() {
 	this.baseDone()
-	_PRIMARYSCAN3_OP_POOL.Put(this)
+	if this.isComplete() {
+		_PRIMARYSCAN3_OP_POOL.Put(this)
+	}
 }

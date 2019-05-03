@@ -194,7 +194,9 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 
 func (this *SendUpdate) Done() {
 	this.baseDone()
-	_SENDUPDATE_OP_POOL.Put(this)
+	if this.isComplete() {
+		_SENDUPDATE_OP_POOL.Put(this)
+	}
 }
 
 var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)

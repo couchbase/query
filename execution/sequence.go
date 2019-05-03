@@ -76,14 +76,16 @@ func (this *Sequence) Copy() Operator {
 
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		this.SetKeepAlive(1, context)
 
 		n := len(this.children)
-		if !active || !context.assert(n > 0, "Sequence has no children") {
+		if !context.assert(n > 0, "Sequence has no children") {
 			this.close(context)
 			return
 		}
@@ -157,7 +159,9 @@ func (this *Sequence) Done() {
 	}
 	_SEQUENCE_POOL.Put(this.children)
 	this.children = nil
-	_SEQUENCE_OP_POOL.Put(this)
+	if this.isComplete() {
+		_SEQUENCE_OP_POOL.Put(this)
+	}
 }
 
 var _SEQUENCE_POOL = NewOperatorPool(32)

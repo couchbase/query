@@ -59,8 +59,10 @@ func (this *IndexScan3) Copy() Operator {
 
 func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
@@ -144,7 +146,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, parent value.Value) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 
 	plan := this.plan
 
@@ -303,7 +305,9 @@ func (this *IndexScan3) SendStop() {
 
 func (this *IndexScan3) Done() {
 	this.baseDone()
-	_INDEXSCAN3_OP_POOL.Put(this)
+	if this.isComplete() {
+		_INDEXSCAN3_OP_POOL.Put(this)
+	}
 }
 
 const _FULL_SPAN_FANOUT = 8192

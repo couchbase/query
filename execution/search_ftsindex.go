@@ -61,8 +61,10 @@ func (this *IndexFtsSearch) Copy() Operator {
 
 func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(FTS_SEARCH, context)
@@ -137,7 +139,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnection, parent value.Value) {
-	defer context.Recover() // Recover from any panic
+	defer context.Recover(nil) // Recover from any panic
 
 	scanVector := context.ScanVectorSource().ScanVector(this.plan.Term().Namespace(), this.plan.Term().Keyspace())
 
@@ -204,7 +206,9 @@ func (this *IndexFtsSearch) SendStop() {
 
 func (this *IndexFtsSearch) Done() {
 	this.baseDone()
-	_FTSSEARCH_OP_POOL.Put(this)
+	if this.isComplete() {
+		_FTSSEARCH_OP_POOL.Put(this)
+	}
 }
 
 func SetSearchInfo(aliasMap map[string]string, item value.Value,

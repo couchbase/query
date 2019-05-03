@@ -70,5 +70,7 @@ func (this *Clone) MarshalJSON() ([]byte, error) {
 
 func (this *Clone) Done() {
 	this.baseDone()
-	_CLONE_OP_POOL.Put(this)
+	if this.isComplete() {
+		_CLONE_OP_POOL.Put(this)
+	}
 }

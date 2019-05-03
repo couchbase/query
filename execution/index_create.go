@@ -46,8 +46,10 @@ func (this *CreateIndex) Copy() Operator {
 
 func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)

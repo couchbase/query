@@ -162,5 +162,7 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 
 func (this *SendDelete) Done() {
 	this.baseDone()
-	_SENDDELETE_OP_POOL.Put(this)
+	if this.isComplete() {
+		_SENDDELETE_OP_POOL.Put(this)
+	}
 }

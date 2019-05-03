@@ -209,7 +209,9 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 
 func (this *SendInsert) Done() {
 	this.baseDone()
-	_SENDINSERT_OP_POOL.Put(this)
+	if this.isComplete() {
+		_SENDINSERT_OP_POOL.Put(this)
+	}
 }
 
 var _INSERT_POOL = value.NewPairPool(_BATCH_SIZE)

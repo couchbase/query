@@ -44,15 +44,14 @@ func (this *Explain) Copy() Operator {
 
 func (this *Explain) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer context.Recover() // Recover from any panic
-		active := this.active()
+		defer context.Recover(&this.base) // Recover from any panic
+		if !this.active() {
+			return
+		}
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
-		if !active {
-			return
-		}
 
 		bytes, err := this.plan.MarshalJSON()
 		if err != nil {

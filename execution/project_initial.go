@@ -161,5 +161,7 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 
 func (this *InitialProject) Done() {
 	this.baseDone()
-	_INITPROJ_OP_POOL.Put(this)
+	if this.isComplete() {
+		_INITPROJ_OP_POOL.Put(this)
+	}
 }
