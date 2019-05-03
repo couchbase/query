@@ -752,7 +752,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			positionalArgs = nil
 		}
 
-		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false,
+		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false, true,
 			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls())
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {

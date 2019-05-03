@@ -17,9 +17,9 @@ import (
 )
 
 func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool, namedArgs map[string]value.Value, positionalArgs value.Values,
+	namespace string, subquery, stream bool, namedArgs map[string]value.Value, positionalArgs value.Values,
 	indexApiVersion int, featureControls uint64) (*plan.Prepared, error) {
-	operator, err := Build(stmt, datastore, systemstore, namespace, subquery, namedArgs, positionalArgs,
+	operator, err := Build(stmt, datastore, systemstore, namespace, subquery, stream, namedArgs, positionalArgs,
 		indexApiVersion, featureControls)
 	if err != nil {
 		return nil, err

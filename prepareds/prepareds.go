@@ -666,7 +666,7 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	// since this is a reprepare, no need to check semantics again after parsing.
 	// TODO switch to collections scope
 	prep := time.Now()
-	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(), false,
+	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(), false, true,
 
 		// building prepared statements should not depend on args
 		nil, nil, prepared.IndexApiVersion(), prepared.FeatureControls())

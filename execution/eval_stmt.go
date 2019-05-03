@@ -132,7 +132,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	}
 
 	// prep := time.Now()
-	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery,
+	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
 		namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
 	// output.AddPhaseTime(PLAN, time.Since(prep))
 	if err != nil {

@@ -463,7 +463,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 			namedArgs = nil
 			positionalArgs = nil
 		}
-		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true,
+		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
 			namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
 		if err != nil {
 			return nil, err

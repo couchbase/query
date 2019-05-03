@@ -56,7 +56,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		}
 	}
 
-	prep, err = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false,
+	prep, err = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false, true,
 		this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
 	if err != nil {
 		return nil, err

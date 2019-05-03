@@ -23,7 +23,7 @@ import (
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool, namedArgs map[string]value.Value,
+	namespace string, subquery, stream bool, namedArgs map[string]value.Value,
 	positionalArgs value.Values, indexApiVersion int, featureControls uint64) (
 	plan.Operator, error) {
 
@@ -65,8 +65,10 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		// have privileges that need verification, meaning the Authorize
 		// operator would have been present in any case.
 		op = plan.NewAuthorize(privs, op)
-
-		return plan.NewSequence(op, plan.NewStream()), nil
+		if stream {
+			return plan.NewSequence(op, plan.NewStream()), nil
+		}
+		return op, nil
 	} else {
 		return op, nil
 	}

@@ -60,7 +60,8 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 	recIdxMap := make(map[string]queryList, 1)
 	recCidxMap := make(map[string]queryList, 1)
 	for k, v := range stmtMap {
-		r, _, err := context.(Context).EvaluateStatement(addPrefix(k, "advise "), nil, nil, true, true)
+		r, _, err := context.(Context).EvaluateStatement(addPrefix(k, "advise "),
+			nil, nil, false, true)
 		if err == nil {
 			this.processResult(k, v, r, curMap, recIdxMap, recCidxMap)
 		}
