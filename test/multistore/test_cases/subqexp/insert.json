@@ -1,5 +1,0 @@
-[
-{ "statements":"CREATE PRIMARY INDEX ON orders USING VIEW"} ,
-{ "statements":"DELETE FROM orders WHERE test_id = 'subqexp'"} ,
-{"statements": "INSERT INTO orders (KEY,VALUE) VALUES(\"subqexp_1235\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"lunch\", \"price\": 5.00 }, {\"qty\": 1, \"productId\": \"snack\", \"price\":2.50}, {\"qty\": 1, \"productId\": \"drink\", \"price\":1.50}], \"custId\": \"customer12\", \"id\": \"1235\", \"test_id\" : \"subqexp\" }), VALUES(\"subqexp_1236\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"lunch\", \"price\": 5.00 }, {\"qty\": 1, \"productId\": \"snack\", \"price\":2.50}], \"custId\": \"customer12\", \"id\": \"1236\", \"test_id\" : \"subqexp\" })"}
-]

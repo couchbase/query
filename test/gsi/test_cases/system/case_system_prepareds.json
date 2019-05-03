@@ -1,0 +1,106 @@
+[
+	{
+	"statements": "prepare test from select name, statement, uses from system:prepareds",
+	"ignore": [ "encoded_plan", "indexApiVersion", "featureControls", "namespace" ],
+	"results": [
+        {
+            "name": "test",
+            "operator": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "Authorize",
+                        "privileges": {
+                            "List": [
+                                {
+                                    "Priv": 4,
+                                    "Target": "#system:prepareds"
+                                }
+                            ]
+                        },
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "PrimaryScan",
+                                    "index": "#primary",
+                                    "keyspace": "prepareds",
+                                    "using": "system"
+                                },
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "prepareds"
+                                },
+                                {
+                                    "#operator": "Parallel",
+                                    "~child": {
+                                        "#operator": "Sequence",
+                                        "~children": [
+                                            {
+                                                "#operator": "InitialProject",
+                                                "result_terms": [
+                                                    {
+                                                        "expr": "(`prepareds`.`name`)"
+                                                    },
+                                                    {
+                                                        "expr": "(`prepareds`.`statement`)"
+                                                    },
+                                                    {
+                                                        "expr": "(`prepareds`.`uses`)"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "#operator": "FinalProject"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "#operator": "Stream"
+                    }
+                ]
+            },
+            "signature": {
+                "name": "json",
+                "statement": "json",
+                "uses": "json"
+            },
+            "text": "prepare test from select name, statement, uses from system:prepareds"
+        }
+	]
+	},
+	{
+	"statements": "select name, statement, uses from system:prepareds",
+	"results": [
+       	 {
+            "name": "test",
+            "statement": "prepare test from select name, statement, uses from system:prepareds",
+            "uses": 0
+       	 }
+	]
+	},
+	{
+	"statements": "execute test",
+	"results": [
+       	 {
+            "name": "test",
+            "statement": "prepare test from select name, statement, uses from system:prepareds",
+            "uses": 1
+	 }
+	]
+	},
+	{
+	"statements": "delete from system:prepareds",
+	"results": [
+	]
+	},
+	{
+	"statements": "select name, statement, uses from system:prepareds",
+	"results": [
+	]
+	}
+]

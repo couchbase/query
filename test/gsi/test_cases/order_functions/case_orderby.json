@@ -1,0 +1,180 @@
+[
+ 
+    {
+        "statements": "SELECT id, (orderlines[0].qty + orderlines[1].qty) AS totquant FROM orders WHERE test_id=\"order_func\" ORDER BY totquant, id",
+        "results": [
+        {
+            "id": "1200",
+            "totquant": 2
+        },
+        {
+            "id": "1235",
+            "totquant": 2
+        },
+        {
+            "id": "1236",
+            "totquant": 2
+        },
+        {
+            "id": "1234",
+            "totquant": 3
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id, (orderlines[0].qty + orderlines[1].qty) FROM orders WHERE test_id=\"order_func\" ORDER BY totquant, id",
+        "results": [
+        {
+            "$1": 2,
+            "id": "1200"
+        },
+        {
+            "$1": 3,
+            "id": "1234"
+        },
+        {
+            "$1": 2,
+            "id": "1235"
+        },
+        {
+            "$1": 2,
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id, (orderlines[0].qty + orderlines[1].qty) AS totquant FROM orders WHERE test_id=\"order_func\" ORDER BY totquant DESC, id ASC",
+        "results": [
+        {
+            "id": "1234",
+            "totquant": 3
+        },
+        {
+            "id": "1200",
+            "totquant": 2
+        },
+        {
+            "id": "1235",
+            "totquant": 2
+        },
+        {
+            "id": "1236",
+            "totquant": 2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id, orderlines[0].*, (orderlines[0].qty + orderlines[1].qty) AS totquant FROM orders WHERE test_id=\"order_func\" ORDER BY totquant, id DESC",
+        "results": [
+        {
+            "id": "1236",
+            "productId": "coffee01",
+            "qty": 1,
+            "totquant": 2
+        },
+        {
+            "id": "1235",
+            "productId": "tea111",
+            "qty": 1,
+            "totquant": 2
+        },
+        {
+            "id": "1200",
+            "productId": "coffee01",
+            "qty": 1,
+            "totquant": 2
+        },
+        {
+            "id": "1234",
+            "productId": "coffee01",
+            "qty": 2,
+            "totquant": 3
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT orderlines[1] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[1].qty, orderlines[1].productId",
+        "results": [
+        {
+            "$1": {
+                "productId": "sugar22",
+                "qty": 1
+            }
+        },
+        {
+            "$1": {
+                "productId": "sugar22",
+                "qty": 1
+            }
+        },
+        {
+            "$1": {
+                "productId": "sugar22",
+                "qty": 1
+            }
+        },
+        {
+            "$1": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT 1",
+        "results": [
+        {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT 1 OFFSET 2",
+        "results": [
+        {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id, custId, orderlines[0].productId AS pId FROM orders WHERE test_id=\"order_func\" ORDER BY pId, custId",
+        "results": [
+        {
+            "custId": "customer18",
+            "id": "1200",
+            "pId": "coffee01"
+        },
+        {
+            "custId": "customer312",
+            "id": "1234",
+            "pId": "coffee01"
+        },
+        {
+            "custId": "customer38",
+            "id": "1236",
+            "pId": "coffee01"
+        },
+        {
+            "custId": "customer12",
+            "id": "1235",
+            "pId": "tea111"
+        }
+    ]
+    }
+
+]
+

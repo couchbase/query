@@ -1,0 +1,203 @@
+[
+    {
+        "statements": "SELECT FIRST sale FOR sale IN orderlines END AS first_sale FROM orders WHERE test_id=\"order_func\" ORDER BY first_sale",
+        "results": [
+        {
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        },
+        {
+            "first_sale": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT FIRST sale FOR sale IN orderlines WHEN sale.qty > 1 AND sale.productId = \"coffee01\" END AS dos FROM orders WHERE test_id=\"order_func\" ORDER BY dos",
+        "results": [
+        {},
+        {},
+        {},
+        {
+            "dos": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT ANY thing IN orderlines[1].thing satisfies qty = 1 END AS things, array_length(orderlines), FIRST sale FOR sale IN orderlines END AS first_sale FROM orders WHERE test_id=\"order_func\" ORDER BY id",
+        "results": [
+        {
+            "$1": 2,
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "$1": 2,
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        },
+        {
+            "$1": 2,
+            "first_sale": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        },
+        {
+            "$1": 2,
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE FIRST sale FOR sale IN orderlines WHEN length(orderlines[0].productId) > 6 END AND test_id=\"order_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT FIRST sale FOR sale IN orderlines END AS A FROM orders WHERE poly_length(orderlines[0].productId) > 6 AND test_id=\"order_func\" ORDER BY A",
+        "results": [
+        {
+            "A": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "A": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "A": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id, FIRST sale FOR sale IN orderlines END AS first_sale FROM orders WHERE test_id=\"order_func\" ORDER BY first_sale, id",
+         "results": [
+        {
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 1
+            },
+            "id": "1200"
+        },
+        {
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 1
+            },
+            "id": "1236"
+        },
+        {
+            "first_sale": {
+                "productId": "coffee01",
+                "qty": 2
+            },
+            "id": "1234"
+        },
+        {
+            "first_sale": {
+                "productId": "tea111",
+                "qty": 1
+            },
+            "id": "1235"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT custId, FIRST sale FOR sale IN orderlines WHEN orderlines[0].productId > custId END as chosen_one FROM orders WHERE test_id=\"order_func\" ORDER BY custId",
+        "results": [
+        {
+            "chosen_one": {
+                "productId": "tea111",
+                "qty": 1
+            },
+            "custId": "customer12"
+        },
+        {
+            "custId": "customer18"
+        },
+        {
+            "custId": "customer312"
+        },
+        {
+            "custId": "customer38"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT ANY thing IN orderlines[0].thing satisfies qty = 1 END AS things, FIRST sale FOR sale IN orderlines END as orderlin FROM orders WHERE test_id=\"order_func\" ORDER BY things, orderlin",
+        "results": [
+        {
+            "orderlin": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "orderlin": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "orderlin": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        },
+        {
+            "orderlin": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        }
+    ]
+    }
+]

@@ -1,0 +1,350 @@
+[
+
+    {
+        "statements": "select bitand(1,3)",
+        "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+        "statements":"select bitand(1,3,5,8)",
+        "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+        "statements":"select bitand(-1,-3)",
+        "results": [
+        {
+            "$1": -3
+        }
+    ]
+    },
+    {
+        "statements":"select bitand(-1,MISSING)",
+        "results": [
+        {}
+    ]
+    },
+    {
+        "statements":"select bitand(-1.0,-3)",
+        "results": [
+        {
+            "$1": -3
+        }
+    ]
+    },
+    {
+        "statements":"select bitand(-1.1,-3)",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+    {
+        "statements": "select bitor(1,3)",
+        "results": [
+        {
+            "$1": 3
+        }
+    ]
+    },
+    {
+        "statements":"select bitor(1,3,5,8)",
+        "results": [
+        {
+            "$1": 15
+        }
+    ]
+    },
+    {
+        "statements":"select bitor(-1,-3)",
+        "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+        "statements":"select bitor(-1,MISSING)",
+        "results": [
+        {}
+    ]
+    },
+    {
+        "statements":"select bitor(-1.0,-3)",
+        "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+        "statements":"select bitor(-1.1,-3)",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+     {
+        "statements": "select bitxor(1,3)",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements":"select bitxor(1,3,5,8)",
+        "results": [
+        {
+            "$1": 15
+        }
+    ]
+    },
+    {
+        "statements":"select bitxor(-1,-3)",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements":"select bitxor(-1,MISSING)",
+        "results": [
+        {}
+    ]
+    },
+    {
+        "statements":"select bitxor(-1.0,-3)",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements":"select bitxor(-1.1,-3)",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+    {
+        "statements":"select bitnot(\"a\")",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+    {
+        "statements":"select bitnot(1)",
+        "results": [
+        {
+            "$1": -2
+        }
+    ]
+    },
+    {
+        "statements":"select bitnot(1.0)",
+        "results": [
+        {
+            "$1": -2
+        }
+    ]
+    },
+    {
+        "statements":"select bitnot(0)",
+        "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+        "statements":"select bitnot(-1.0)",
+        "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+        "statements":"select bitnot(1.1)",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(1,1,false)",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(1,-1,false)",
+        "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(-1,1,false)",
+        "results": [
+        {
+            "$1": -2
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(-1,-21,false)",
+        "results": [
+        {
+            "$1": 8796093022207
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(512,-6,false)",
+        "results": [
+        {
+            "$1": 8
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(-1,-64,false)",
+        "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(-1,-64,true)",
+        "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(1,70,true)",
+        "results": [
+        {
+            "$1": 64
+        }
+    ]
+    },
+    {
+        "statements":"select bitset(3,1)",
+        "results": [
+        {
+            "$1": 3
+        }
+    ]
+    },
+    {
+        "statements":"select bitset(3,[3])",
+        "results": [
+        {
+            "$1": 7
+        }
+    ]
+    },
+    {
+        "statements":"select bitset(3,-1)",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+    {
+        "statements":"select bitset(3,[3,4])",
+        "results": [
+        {
+            "$1": 15
+        }
+    ]
+    },
+    {
+        "statements":"select bitshift(bitset(3,17),-8)",
+        "results": [
+        {
+            "$1": 256
+        }
+    ]
+    },
+    {
+        "statements":"select bitclear(15,[1,2])",
+        "results": [
+        {
+            "$1": 12
+        }
+    ]
+    },
+    {
+        "statements":"select bitclear(3,1)",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements":"select bittest(3,[1,3],true)",
+        "results": [
+        {
+            "$1": false
+        }
+    ]
+    },
+    {
+        "statements":"select bittest(3,[1,3],false)",
+        "results": [
+        {
+            "$1": true
+        }
+    ]
+    },
+    {
+        "statements":"select bittest(3,2)",
+        "results": [
+        {
+            "$1": true
+        }
+    ]
+    },
+    {
+        "statements":"select bittest(3,3,false)",
+        "results": [
+        {
+            "$1": false
+        }
+    ]
+    },
+    {
+        "statements":"select bittest(-3,61)",
+        "results": [
+        {
+            "$1": true
+        }
+    ]
+    }
+]
+

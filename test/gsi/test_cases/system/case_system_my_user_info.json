@@ -1,0 +1,25 @@
+[
+	{
+	"statements": "select name from system:my_user_info",
+	"results": [
+		{
+			"name": "OwnerOfproduct"
+		},
+		{
+			"name": "OwnerOfreview"
+		},
+		{
+			"name": "OwnerOfpurchase"
+		},
+		{
+			"name": "OwnerOfcustomer"
+		},
+		{
+			"name": "OwnerOfshellTest"
+		},
+		{
+			"name": "OwnerOforders"
+		}
+	]
+	}
+]

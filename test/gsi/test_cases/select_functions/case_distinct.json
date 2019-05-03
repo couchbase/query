@@ -1,0 +1,13 @@
+[
+	{
+		"statements": "SELECT DISTINCT orderlines[0].productId AS pId FROM orders WHERE test_id=\"select_func\" ORDER BY pId",
+		"results": [
+        {
+            "pId": "coffee01"
+        },
+        {
+            "pId": "tea111"
+        }
+    ]
+	}
+]

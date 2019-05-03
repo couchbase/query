@@ -1,0 +1,35 @@
+[
+    {
+        "statements": "SELECT CASE WHEN 1+1=3 THEN 7+7 WHEN 2+2=5 THEN 8+8 END",
+        "results": [ { "$1": null } ]
+    },
+    {
+        "statements": "SELECT CASE WHEN 1+1=3 THEN 7+7 WHEN 2+2=5 THEN 8+8 ELSE 9+9 END",
+        "results": [ { "$1": 18 } ]
+    },
+    {
+        "statements": "SELECT CASE WHEN 1+1=3 THEN 7+7 WHEN 2+2=4 THEN 8+8 ELSE 9+9 END",
+        "results": [ { "$1": 16 } ]
+    },
+    {
+        "statements": "SELECT CASE WHEN 1+1=2 THEN 7+7 WHEN 2+2=4 THEN 8+8 ELSE 9+9 END",
+        "results": [ { "$1": 14 } ]
+    },
+    {
+        "statements": "SELECT CASE WHEN `shipped-on` IS NOT MISSING THEN `shipped-on` ELSE \"not-shipped-yet\" END AS shipped FROM orders WHERE test_id=\"case_func\" ORDER BY shipped",
+        "results": [
+        {
+            "shipped": null
+        },
+        {
+            "shipped": "2012/01/02"
+        },
+        {
+            "shipped": "not-shipped-yet"
+        },
+        {
+            "shipped": "not-shipped-yet"
+        }
+    ]
+    }
+]

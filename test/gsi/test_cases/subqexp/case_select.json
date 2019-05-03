@@ -1,0 +1,350 @@
+[
+    {
+       "statements": "SELECT a   FROM [] AS a",
+       "results": [
+        ]    
+    },
+    {
+       "statements": "SELECT a   FROM ['abc', 1, 2.5 ] AS a ORDER BY a",
+       "results": [
+        {
+            "a": 1
+        },
+        {
+            "a": 2.5
+        },
+        {
+            "a": "abc"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT a   FROM [{'x':11},{'x':12},'abc'] AS a ORDER BY a",
+       "results": [
+        {
+            "a": "abc"
+        },
+        {
+            "a": {
+                "x": 11
+            }
+        },
+        {
+            "a": {
+                "x": 12
+            }
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT a.x FROM [{'x':11},{'x':12},'abc'] AS a ORDER BY a.x",
+       "results": [
+        {},
+       {
+            "x": 11
+        },
+        {
+            "x": 12
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT p.x FROM {'p':[{'x':11},{'x':12}],'q':'abc','r':null}.p ORDER BY p.x",
+       "results": [
+        {
+            "x": 11
+        },
+        {
+            "x": 12
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT q   FROM {'p':[{'x':11},{'x':12}],'q':'abc','r':null}.q",
+       "results": [
+        {
+            "q": "abc"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT r   FROM {'p':[{'x':11},{'x':12}],'q':'abc','r':null}.r",
+       "results": [
+        {
+            "r": null
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT s   FROM {'p':[{'x':11},{'x':12}],'q':'abc','r':null}.s",
+       "results": [
+        ]    
+    },
+    {
+       "statements": "SELECT id, (SELECT RAW SUM(orderlines.price) FROM orders.orderlines)[0] AS total FROM orders WHERE test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235",
+            "total": 9
+        },
+        {
+            "id": "1236",
+            "total": 7.5
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id, (SELECT orderlines FROM orders.orderlines ORDER BY orderlines.price) orderlines FROM orders WHERE test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235",
+            "orderlines": [
+                {
+                    "orderlines": {
+                        "price": 1.5,
+                        "productId": "drink",
+                        "qty": 1
+                    }
+                },
+                {
+                    "orderlines": {
+                        "price": 2.5,
+                        "productId": "snack",
+                        "qty": 1
+                    }
+                },
+                {
+                    "orderlines": {
+                        "price": 5,
+                        "productId": "lunch",
+                        "qty": 1
+                    }
+                }
+            ]
+        },
+        {
+            "id": "1236",
+            "orderlines": [
+                {
+                    "orderlines": {
+                        "price": 2.5,
+                        "productId": "snack",
+                        "qty": 1
+                    }
+                },
+                {
+                    "orderlines": {
+                        "price": 5,
+                        "productId": "lunch",
+                        "qty": 1
+                    }
+                }
+            ]
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id, (SELECT orderlines FROM orders.orderlines ORDER BY orderlines.price DESC) orderlines FROM orders WHERE test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235",
+            "orderlines": [
+                {
+                    "orderlines": {
+                        "price": 5,
+                        "productId": "lunch",
+                        "qty": 1
+                    }
+                },
+                {
+                    "orderlines": {
+                        "price": 2.5,
+                        "productId": "snack",
+                        "qty": 1
+                    }
+                },
+                {
+                    "orderlines": {
+                        "price": 1.5,
+                        "productId": "drink",
+                        "qty": 1
+                    }
+                }
+            ]
+        },
+        {
+            "id": "1236",
+            "orderlines": [
+                {
+                    "orderlines": {
+                        "price": 5,
+                        "productId": "lunch",
+                        "qty": 1
+                    }
+                },
+                {
+                    "orderlines": {
+                        "price": 2.5,
+                        "productId": "snack",
+                        "qty": 1
+                    }
+                }
+            ]
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id FROM orders WHERE EXISTS (SELECT raw 1 FROM orders.orderlines WHERE orderlines.qty >= 1) AND test_id = 'subqexp' ORDER BY id",
+       "results": [
+       {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id FROM orders WHERE NOT EXISTS (SELECT raw 1 FROM orders.orderlines WHERE orderlines.qty > 1) AND test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id FROM orders WHERE 'lunch' IN (SELECT RAW orderlines.productId FROM orders.orderlines) AND test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id FROM orders WHERE 'drink' IN (SELECT RAW orderlines.productId FROM orders.orderlines) AND test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id, total FROM orders LET total = (SELECT RAW SUM(orderlines.price) FROM orders.orderlines)[0] WHERE test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235",
+            "total": 9
+        },
+        {
+            "id": "1236",
+            "total": 7.5
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT id, total FROM orders WHERE test_id = 'subqexp' GROUP by id LETTING total = (SELECT RAW SUM(orderlines.price) FROM orders.orderlines)[0] ORDER BY id",
+       "error": "Expression (correlated (select raw sum((`orderlines`.`price`)) from (`orders`.`orderlines`))[0]) must depend only on group keys or aggregates."
+    },
+    {
+       "statements": "SELECT id, (SELECT RAW SUM(item.price) FROM items as item)[0] total FROM orders LET items = (SELECT orderlines.* FROM orders.orderlines ORDER BY orderlines.price) WHERE test_id = 'subqexp' ORDER BY id",
+       "results": [
+        {
+            "id": "1235",
+            "total": 9
+        },
+        {
+            "id": "1236",
+            "total": 7.5
+        }
+        ]    
+    },
+    {
+       "statements": "MERGE INTO orders USING orders o USE KEYS ['subqexp_1235', 'subqexp_1236'] ON KEY id WHEN NOT MATCHED THEN INSERT {o.id,'test_id':'subqexp'}"
+    },
+    {
+       "statements": "SELECT id FROM orders USE KEYS ['1235', '1236'] ORDER BY id",
+       "results": [
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+        ]    
+    },
+    {
+       "statements": "DELETE FROM orders USE KEYS ['1235', '1236']"
+    },
+    {
+       "statements": "MERGE INTO orders USING (SELECT 's'||id  AS id FROM orders WHERE test_id = 'subqexp' ) o ON KEY o.id WHEN NOT MATCHED THEN INSERT {o.id,'test_id':'subqexp'}"
+    },
+    {
+       "statements": "SELECT id FROM orders USE KEYS ['s1235', 's1236'] ORDER BY id",
+       "results": [
+        {
+            "id": "s1235"
+        },
+        {
+            "id": "s1236"
+        }
+        ]    
+    },
+    {
+       "statements": "DELETE FROM orders USE KEYS ['s1235', 's1236']"
+    },
+    {
+       "statements": "MERGE INTO orders USING (SELECT 'se'||id  AS id, (SELECT RAW SUM(orderlines.price) FROM orders.orderlines)[0] AS total FROM orders WHERE test_id = 'subqexp') o ON KEY o.id WHEN NOT MATCHED THEN INSERT {o.id, o.total, 'test_id':'subqexp'}"
+    },
+    {
+       "statements": "SELECT id, total FROM orders USE KEYS ['se1235', 'se1236'] ORDER BY id",
+       "results": [
+        {
+            "id": "se1235",
+            "total": 9
+        },
+        {
+            "id": "se1236",
+            "total": 7.5
+        }
+        ]    
+    },
+    {
+       "statements": "DELETE FROM orders USE KEYS ['se1235', 'se1236']"
+    },
+    {
+       "statements": "MERGE INTO orders USING [{'id':'c1235'},{'id':'c1236'}] o ON KEY id WHEN NOT MATCHED THEN INSERT {o.id, 'test_id':'subqexp'}"
+    },
+    {
+       "statements": "SELECT id FROM orders USE KEYS ['c1235', 'c1236'] ORDER BY id",
+       "results": [
+        {
+            "id": "c1235"
+        },
+        {
+            "id": "c1236"
+        }
+        ]    
+    },
+    {
+       "statements": "SELECT (SELECT t.a, p1 FROM (WITH p1 AS ('ABC') SELECT t1.a, p1 FROM data AS t1) AS t) AS proj1 LET data = [{'a':10}]",
+       "results": [
+        {
+            "proj1": [
+                {
+                    "a": 10,
+                    "p1": "ABC"
+                }
+            ]
+        }
+        ]    
+    },
+    {
+       "statements": "DELETE FROM orders USE KEYS ['c1235', 'c1236']"
+    }
+]

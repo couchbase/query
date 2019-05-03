@@ -1,0 +1,242 @@
+[
+    {
+        "description": "simple group by usage",
+        "statements": "select custId, count(*) as c from orders where test_id = \"agg_func\" group by custId order by c, custId",
+      "results": [
+        {
+            "c": 1,
+            "custId": "customer12"
+        },
+        {
+            "c": 1,
+            "custId": "customer18"
+        },
+        {
+            "c": 1,
+            "custId": "customer312"
+        },
+        {
+            "c": 1,
+            "custId": "customer38"
+        }
+    ]  
+    },
+    {
+        "description": "use all aggregate functions, no group by",
+        "statements": "SELECT MIN(unitPrice) AS min, MAX(unitPrice) AS max, ROUND(AVG(unitPrice),5) AS avg, ROUND(SUM(unitPrice),5) AS sum, COUNT(unitPrice) AS count FROM product where test_id = \"agg_func\" ORDER BY min",
+        "results": [
+        {
+            "avg": 87.55629,
+            "count": 900,
+            "max": 2299.99,
+            "min": 0.69,
+            "sum": 78800.66
+        }
+    ]
+   },
+
+    {
+        "description": "use all aggregate functions, this type with group by",
+        "statements": "SELECT color as product_color, MIN(unitPrice) AS min, MAX(unitPrice) AS max, ROUND(AVG(unitPrice),5) AS avg, ROUND(SUM(unitPrice),5) AS sum, COUNT(unitPrice) AS count FROM product where test_id = \"agg_func\" GROUP BY color ORDER BY min, avg limit 5",
+      "results": [
+        {
+            "avg": 91.08,
+            "count": 26,
+            "max": 760,
+            "min": 0.69,
+            "product_color": "fuchsia",
+            "sum": 2368.08
+        },
+        {
+            "avg": 59.67,
+            "count": 28,
+            "max": 349.99,
+            "min": 1.41,
+            "product_color": "red",
+            "sum": 1670.76
+        },
+        {
+            "avg": 118.87778,
+            "count": 36,
+            "max": 1499,
+            "min": 1.41,
+            "product_color": "yellow",
+            "sum": 4279.6
+        },
+        {
+            "avg": 101.69172,
+            "count": 29,
+            "max": 599.99,
+            "min": 1.45,
+            "product_color": "orange",
+            "sum": 2949.06
+        },
+        {
+            "avg": 46.10913,
+            "count": 23,
+            "max": 196.95,
+            "min": 2.39,
+            "product_color": "blue",
+            "sum": 1060.51
+        }
+    ]
+    },
+
+    {
+        "description": "use all aggregate functions, with group by and having",
+        "statements": "SELECT color as product_colori, MIN(unitPrice) AS min, MAX(unitPrice) AS max, ROUND(AVG(unitPrice),5) AS avg, ROUND(SUM(unitPrice),5) AS sum, COUNT(unitPrice) AS count FROM product where test_id = \"agg_func\" GROUP BY color HAVING count(unitPrice) > 34 ORDER BY min, avg ",
+ "results": [
+        {
+            "avg": 118.87778,
+            "count": 36,
+            "max": 1499,
+            "min": 1.41,
+            "product_colori": "yellow",
+            "sum": 4279.6
+        },
+        {
+            "avg": 68.27732,
+            "count": 41,
+            "max": 300,
+            "min": 3.99,
+            "product_colori": "azure",
+            "sum": 2799.37
+        },
+        {
+            "avg": 156.08622,
+            "count": 37,
+            "max": 599,
+            "min": 3.99,
+            "product_colori": "grey",
+            "sum": 5775.19
+        },
+        {
+            "avg": 88.55128,
+            "count": 39,
+            "max": 599.99,
+            "min": 4.57,
+            "product_colori": "black",
+            "sum": 3453.5
+        }
+          ]
+    },
+    {
+      "description": "use all aggregate functions, with group by alias",
+      "statements": "SELECT month, COUNT(*) as order_count FROM product AS p WHERE test_id = \"agg_func\" GROUP BY DATE_PART_STR(dateAdded, \"month\") as month having month > 11",
+      "results": [
+        {
+          "month": 12,
+          "order_count": 63
+        }
+      ]
+    },
+    {
+        "description": "use array aggregate function",
+        "statements": "SELECT array_Agg(id) from orders where test_id = \"agg_func\"",
+        "results": [
+        {
+            "$1": [
+                "1200",
+                "1234",
+                "1235",
+                "1236"
+            ]
+        }
+    ]  
+   },
+    {
+        "statements": "SELECT orderlines[1], count(*) AS count FROM orders where test_id = \"agg_func\" GROUP BY orderlines[1] ORDER BY count",
+   "results": [
+        {
+            "$1": {
+                "productId": "tea111",
+                "qty": 1
+            },
+            "count": 1
+        },
+        {
+            "$1": {
+                "productId": "sugar22",
+                "qty": 1
+            },
+            "count": 3
+        }
+    ]
+    },
+    {
+        "statements": "SELECT orderlines,  count(*) AS count FROM orders where test_id = \"agg_func\" GROUP BY orderlines ORDER BY orderlines",
+   "results": [
+        {
+            "count": 2,
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "count": 1,
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "count": 1,
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "select orderlines as O, count(*) as count from orders where ANY ord IN orderlines SATISFIES ord.productId = \"tea111\" END AND test_id = \"agg_func\" GROUP BY orderlines HAVING ARRAY_LENGTH(orderlines) >=2 ORDER BY O",
+    "results": [
+        {
+            "O": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ],
+            "count": 1
+        },
+        {
+            "O": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ],
+            "count": 1
+        }
+    ]
+    }
+]

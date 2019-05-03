@@ -1,0 +1,256 @@
+[
+  {
+        "statements": "SELECT IFMISSING(`shipped-on`,\"MISSING\") as mis FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY mis",
+        "results": [
+      {
+            "mis": null
+        },
+        {
+            "mis": "2012/01/02"
+        },
+        {
+            "mis": "MISSING"
+        },
+        {
+            "mis": "MISSING"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT IFNULL(`shipped-on`,\"NULL\") as nu FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY nu",
+        "results": [
+        {},
+        {},
+        {
+            "nu": "2012/01/02"
+        },
+        {
+            "nu": "NULL"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT IFMISSINGORNULL(`shipped-on`,\"NOT THERE\") as m_or_n FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY m_or_n",
+        "results": [
+        {
+            "m_or_n": "2012/01/02"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        }
+    ]
+    },
+   {
+     "statements":"SELECT NULLIF(orderlines[0].qty, 2) as n_if FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY n_if",
+     "results": [
+        {
+            "n_if": null
+        },
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        }
+    ]  
+   },
+   {
+        "statements": "SELECT NULLIF(orderlines[0].qty , 1) as n_if FROM orders WHERE id>\"1235\" AND test_id=\"cond_unkn_func\" ORDER BY n_if",
+         "results": [
+        {
+            "n_if": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT MISSINGIF(orderlines[0].qty , 1) as n_if FROM orders WHERE id>\"1235\" AND test_id=\"cond_unkn_func\" ORDER BY n_if",
+        "results": [
+        {}
+    ]
+    },
+   {
+      "statements":"SELECT MISSINGIF(orderlines[0].qty, 2) as n_if FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY n_if",
+      "results": [
+        {},
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        }
+    ]
+  },
+  {
+     "statements":"SELECT MISSINGIF(null,\"n1ql\")",
+     "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+     "statements":"SELECT MISSINGIF(missing,\"n1ql\")",
+     "results": [
+        {}
+    ]
+  },
+  {
+     "statements":"SELECT MISSINGIF(12,\"n1ql\") ",
+     "results": [
+        {
+            "$1": 12
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NULLIF(null,\"n1ql\") ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NULLIF(missing,\"n1ql\") ",
+    "results": [
+        {}
+    ]
+  },
+  {
+    "statements":"SELECT NULLIF(12,\"n1ql\") ",
+    "results": [
+        {
+            "$1": 12
+        }
+    ]
+  },
+  {
+    "statements":"SELECT COALESCE(NULL, `lastName`, `firstName`) as firstNonNull FROM customer WHERE test_id=\"cond_unkn_func\" ORDER BY id DESC",
+    "results": [
+        {
+            "firstNonNull": "Brown"
+        },
+        {
+            "firstNonNull": null
+        }
+    ]
+
+  },
+  {
+    "statements":"SELECT NVL(`lastName`, \"not applicable\") as LastName FROM customer WHERE test_id=\"cond_unkn_func\" ORDER BY id",
+    "results": [
+        {
+            "LastName": "not applicable"
+        },
+        {
+            "LastName": "Brown"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL(`firstName`, \"not applicable\") as FirstName FROM customer WHERE test_id=\"cond_unkn_func\" ",
+    "results": [
+        {
+            "FirstName": "not applicable"
+        },
+        {
+            "FirstName": "not applicable"
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NVL2(`lastName`, `lastName`, `firstName`) as Name FROM customer WHERE test_id=\"cond_unkn_func\" ORDER BY id DESC",
+    "results": [
+        {
+            "Name": "Brown"
+        },
+        {
+            "Name": null
+        }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(`custId`, \"customer38\", \"newCustomer\", \"customer12\", \"VIP\", MISSING) FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY custId",
+    "results": [
+      {
+        "$1": "VIP"
+      },
+      {},
+      {},
+      {
+        "$1": "newCustomer"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(`custId`, \"customer38\", \"newCustomer\", \"customer12\", \"VIP\", \"normal customer\") FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY custId",
+    "results": [
+      {
+        "$1": "VIP"
+      },
+      {
+        "$1": "normal customer"
+      },
+      {
+        "$1": "normal customer"
+      },
+      {
+        "$1": "newCustomer"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(firstName, null, \"not available\", missing, \"not given\") FROM customer WHERE test_id = \"cond_unkn_func\" ORDER BY id",
+    "results": [
+      {
+        "$1": "not available"
+      },
+      {
+        "$1": "not given"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(firstName, missing, \"not available\") FROM customer WHERE test_id = \"cond_unkn_func\" ORDER BY id",
+    "results": [
+      {
+        "$1": null
+      },
+      {
+        "$1": "not available"
+      }
+    ]
+  },
+  {
+    "statements":"SELECT Decode(orderlines, [{\"productId\": \"coffee01\",\"qty\": 1},{ \"productId\": \"sugar22\",\"qty\": 1}], []) FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY id",
+    "results": [
+      {
+        "$1": []
+      },
+      {
+        "$1": null
+      },
+      {
+        "$1": null
+      },
+      {
+        "$1": []
+      }
+    ]
+  }
+]

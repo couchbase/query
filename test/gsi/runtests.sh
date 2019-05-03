@@ -23,4 +23,3 @@ do
     cd ../..
     source ./resetval.sh $*
 done
-

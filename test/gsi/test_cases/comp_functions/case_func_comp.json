@@ -1,0 +1,120 @@
+[
+   {
+      "statements":"SELECT GREATEST(rating,3) as gr FROM review WHERE test_id=\"comp_func\" ORDER BY customerId, productId LIMIT 4",
+      "results": [
+        {
+            "gr": 3
+        },
+        {
+            "gr": 3
+        },
+        {
+            "gr": 3
+        },
+        {
+            "gr": 4
+        }
+    ]
+   },
+   {
+        "statements": "SELECT GREATEST(rating, 2) as gr FROM review WHERE test_id=\"comp_func\" ORDER BY customerId, productId LIMIT 4",
+        "results": [
+        {
+            "gr": 2
+        },
+        {
+            "gr": 2
+        },
+        {
+            "gr": 2
+        },
+        {
+            "gr": 4
+        }
+    ]
+    },
+    {
+        "statements":"SELECT LEAST(rating,3) as gr FROM review WHERE test_id=\"comp_func\" ORDER BY customerId, productId LIMIT 4",
+        "results": [
+        {
+            "gr": 2
+        },
+        {
+            "gr": 0
+        },
+        {
+            "gr": 1
+        },
+        {
+            "gr": 3
+        }
+    ]
+    },
+    {
+        "statements": "SELECT LEAST(rating, 2) as gr FROM review WHERE test_id=\"comp_func\" ORDER BY customerId, productId LIMIT 4",
+        "results": [
+        {
+            "gr": 2
+        },
+        {
+            "gr": 0
+        },
+        {
+            "gr": 1
+        },
+        {
+            "gr": 2
+        }
+    ]
+    },
+   {
+      "statements":"select GREATEST(customerId,\"customer3\") AS gr from review WHERE test_id=\"comp_func\" ORDER by productId,customerId LIMIT 4",
+      "results": [
+        {
+            "gr": "customer3"
+        },
+        {
+            "gr": "customer322"
+        },
+        {
+            "gr": "customer403"
+        },
+        {
+            "gr": "customer438"
+        }
+    ]
+   },
+   {
+     "statements":"select LEAST(customerId,\"customer3\") AS gr from review WHERE test_id=\"comp_func\" ORDER by productId,customerId LIMIT 4",
+     "results": [
+        {
+            "gr": "customer226"
+        },
+        {
+            "gr": "customer3"
+        },
+        {
+            "gr": "customer3"
+        },
+        {
+            "gr": "customer3"
+        }
+    ]
+   },
+   {
+      "statements":"select LEAST(\"Yes\" , 99) AS A ",
+      "results": [
+        {
+            "A": 99
+        }
+    ]
+   },
+   {
+      "statements":"select GREATEST (\"Yes\" , 99) AS A ",
+      "results": [
+        {
+            "A": "Yes"
+        }
+    ]
+   }
+]

@@ -1,0 +1,413 @@
+[
+{
+	"statements":"SELECT JSON_DECODE(\"2\")",
+	"results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+
+{
+	"statements":"SELECT DECODE_JSON(\"2\")",
+	"results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+
+{
+	"statements":"select DECODE_JSON([1,2,3])",
+	 "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements":"select DECODE_JSON(\"\")",
+	"results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements": "SELECT JSON_ENCODE(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"results": [
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT ENCODE_JSON(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"results": [
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODE_JSON([1,2,3])",
+	"results": [
+        {
+            "$1": "[1,2,3]"
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODE_JSON(\"\")",
+	"results": [
+        {
+            "$1": "\"\""
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODED_SIZE(\"\")",
+	"results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODED_SIZE([1,2,3])",
+	"results": [
+        {
+            "$1": 7
+        }
+    ]	
+},
+
+{
+	"statements": "SELECT ENCODED_SIZE(ccInfo) as es from customer ORDER BY es, firstName LIMIT 3",
+	"results": [
+        {
+            "es": 80
+        },
+        {
+            "es": 80
+        },
+        {
+            "es": 80
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(\"\")",
+	"results": [
+        {
+            "$1": 0
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH([1,2,3])",
+  	"results": [
+        {
+            "$1": 3
+        }
+    ]
+},
+
+{
+	"statements": "SELECT POLY_LENGTH(ccInfo) as ccpoly FROM customer ORDER BY firstName LIMIT 3",	
+	"results": [
+        {
+            "ccpoly": 3
+        },
+        {
+            "ccpoly": 3
+        },
+        {
+            "ccpoly": 3
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(missing)",
+  	"results": [
+        {}
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(null)",
+  	"results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(decode_json(\"o\"))",
+  	"results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(NaN())",
+  	"results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(MISSING)",
+  "results": [
+        {
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(NULL)",
+  "results": [
+        {
+            "$1": [
+                null
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(FALSE)",
+  "results": [
+        {
+            "$1": [
+                false
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(TRUE)",
+  "results": [
+        {
+            "$1": [
+                true
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(0)",
+  "results": [
+        {
+            "$1": [
+                0
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(-1.5)",
+  "results": [
+        {
+            "$1": [
+                -1.5
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(10)",
+  "results": [
+        {
+            "$1": [
+                10
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS('hello')",
+  "results": [
+        {
+            "$1": [
+                "hello"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS('Hello, World!'))",
+  "results": [
+        {
+            "$1": [
+                "Hello",
+                "World"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS([NULL, FALSE, TRUE, -1.5, 0, 10, 'Hello, World!']))",
+  "results": [
+        {
+            "$1": [
+                null,
+                false,
+                true,
+                -1.5,
+                0,
+                10,
+                "Hello",
+                "World"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'a': {'b': 'hello', 'c': 'world!'}}))",
+  "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c",
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, {'names':false}))",
+  "results": [
+        {
+            "$1": [
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, 0))",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, {'names':false, 'case':'upper'}))",
+  "results": [
+        {
+            "$1": [
+                "HELLO",
+                "WORLD"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'AA': {'BB': 'HELLO', 'CC': 'WORLD!'}}, {'names':true, 'case':'lower'}))",
+  "results": [
+        {
+            "$1": [
+                "aa",
+                "bb",
+                "cc",
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+    "statements":"select customerId, firstName, lastName from customer where any a in tokens(self) satisfies lower(firstName) = 'joana' end and test_id = 'json_func' order by customerId",
+    "results": [
+        {
+            "customerId": "customer103",
+            "firstName": "Joana",
+            "lastName": "Jenkins"
+        },
+        {
+            "customerId": "customer182",
+            "firstName": "Joana",
+            "lastName": "Moen"
+        },
+        {
+            "customerId": "customer737",
+            "firstName": "Joana",
+            "lastName": "Blick"
+        }
+    ]
+},
+{
+    "statements":"select * from customer where any a in tokens(emailAddress) satisfies lower(a) = 'com' end and any a in tokens(emailAddress) satisfies  lower(a) = 'mitchell' end and test_id = 'json_func'",
+    "results": [
+        {
+            "customer": {
+                "ccInfo": {
+                    "cardExpiry": "2013-09-12",
+                    "cardNumber": "1211-1221-1234-2201",
+                    "cardType": "americanexpress"
+                },
+                "customerId": "customer186",
+                "dateAdded": "2013-09-08T15:52:15Z",
+                "dateLastActive": "2013-10-08T15:52:15Z",
+                "emailAddress": "myrtie.frami@mitchell.com",
+                "firstName": "Wilmer",
+                "lastName": "Pouros",
+                "phoneNumber": "648.071.4568 x58843",
+                "postalCode": "79451",
+                "state": "OK",
+                "test_id": "json_func",
+                "type": "customer"
+            }
+        }
+    ]
+},
+{
+    "statements":"select array_sort(tokens(ccInfo, {'names':true, 'case':'lower'})) AS ccInfo from customer where firstName = 'Wilmer' and test_id = 'json_func'",
+    "results": [
+        {
+            "ccInfo": [
+                "09",
+                "12",
+                "1211",
+                "1221",
+                "1234",
+                "2013",
+                "2201",
+                "americanexpress",
+                "cardexpiry",
+                "cardnumber",
+                "cardtype"
+            ]
+        }
+    ]
+}
+]

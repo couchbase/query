@@ -1,0 +1,101 @@
+[
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT 10 OFFSET 2",
+        "results": [
+          {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+          },
+          {
+            "$1": {
+                "productId": "tea111",
+                "qty": 1
+            }
+          }
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty DESC LIMIT 10 OFFSET 2",
+        "results": [
+          {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+          },
+          {
+            "$1": {
+                "productId": "tea111",
+                "qty": 1
+            }
+          }
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT 10",
+        "results": [
+         {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+         },
+         {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+         },
+         {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+         },
+         {
+            "$1": {
+                "productId": "tea111",
+                "qty": 1
+            }
+         }
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT 0 OFFSET 2",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty DESC LIMIT 0",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT 0 OFFSET 0",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC LIMIT -1 OFFSET 0",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty DESC LIMIT -1",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC OFFSET 4",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC OFFSET 8192 LIMIT 1",
+        "results": [
+        ]
+    }
+]
+

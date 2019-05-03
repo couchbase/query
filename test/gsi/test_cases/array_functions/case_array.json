@@ -1,0 +1,460 @@
+[
+    {
+        "statements": "SELECT ARRAY sale FOR sale IN orderlines END AS full_sale FROM orders WHERE test_id=\"array_func\" ORDER BY full_sale",
+        "results": [
+        {
+            "full_sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "full_sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "full_sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "full_sale": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "statements": "SELECT ARRAY sale FOR sale IN orderlines WHEN orderlines[0].qty > 1 AND orderlines[1].productId = \"tea111\" END AS qtyOVR2 FROM orders WHERE test_id=\"array_func\" ORDER BY qtyOVR2",
+        "results": [
+        {
+            "qtyOVR2": []
+        },
+        {
+            "qtyOVR2": []
+        },
+        {
+            "qtyOVR2": []
+        },
+        {
+            "qtyOVR2": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "statements" : "select DISTINCT (ARRAY ol.productId FOR ol IN orderlines END) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+        "results" : [
+         {
+            "A": [
+                "coffee01",
+                "sugar22"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111"
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22"
+            ]
+        }
+      ]
+    },
+   
+    {
+        "statements" : "select id from orders WHERE ARRAY ol.productId FOR ol IN orderlines END = [ \"coffee01\", \"sugar22\" ] AND test_id=\"array_func\" ORDER BY id",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+
+        "statements" : "SELECT orderlines[0], orderlines[1] FROM orders WHERE orderlines[0].qty > 1 AND orderlines[1].qty < 2  AND custId > 'a' AND id LIKE \"12%\" AND test_id=\"array_func\"",
+        "results": [
+        {
+            "$1": {
+                "productId": "coffee01",
+                "qty": 2
+            },
+            "$2": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT ARRAY sale FOR sale IN orderlines END AS full_sale FROM orders WHERE test_id=\"array_func\" ORDER BY full_sale",
+        "results": [
+        {
+            "full_sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "full_sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "full_sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "full_sale": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT id, ARRAY sale FOR sale IN orderlines WHEN orderlines[0].productId > orderlines[1].productId END as chosen_one FROM orders WHERE test_id=\"array_func\" ORDER BY chosen_one, id",
+        "results": [
+        {
+            "chosen_one": [],
+            "id": "1200"
+        },
+        {
+            "chosen_one": [],
+            "id": "1234"
+        },
+        {
+            "chosen_one": [],
+            "id": "1236"
+        },
+        {
+            "chosen_one": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ],
+            "id": "1235"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT orderlines[0:2] as first_two_sales from orders WHERE test_id=\"array_func\" ORDER BY first_two_sales",
+        "results": [
+        {
+            "first_two_sales": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "first_two_sales": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "first_two_sales": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "first_two_sales": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "statements"  : "SELECT orderlines[0:] sale from orders WHERE test_id=\"array_func\" ORDER BY sale",
+        "results": [
+        {
+            "sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "sale": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "sale": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "statements" : "select id, orderlines[0:2] as highletters from orders where every sale in orderlines satisfies sale.productId > \"query\" end AND test_id=\"array_func\" ORDER BY id",
+        "results": [
+        {
+            "highletters": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ],
+            "id": "1235"
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT id, array_append(array_agg(`shipped-on`), [1,2]) AS shipping FROM orders WHERE test_id=\"array_func\" GROUP BY id ORDER BY id",
+        "results": [
+        {
+            "id": "1200",
+            "shipping": [
+                "2012/01/02",
+                [
+                    1,
+                    2
+                ]
+            ]
+        },
+        {
+            "id": "1234",
+            "shipping": null
+        },
+        {
+            "id": "1235",
+            "shipping": null
+        },
+        {
+            "id": "1236",
+            "shipping": [
+                null,
+                [
+                    1,
+                    2
+                ]
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT id, array_prepend([\"manik\", \"gerald\", \"steve\"], array_agg(`shipped-on`)) AS queryship FROM orders WHERE test_id=\"array_func\" GROUP BY id ORDER BY id",
+        "results": [
+        {
+            "id": "1200",
+            "queryship": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "2012/01/02"
+            ]
+        },
+        {
+            "id": "1234",
+            "queryship": null
+        },
+        {
+            "id": "1235",
+            "queryship": null
+        },
+        {
+            "id": "1236",
+            "queryship": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                null
+            ]
+        }
+    ]
+    },
+    
+    {  
+        "statements" : "select id FROM orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product = \"tea111\" END AND test_id=\"array_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        }
+    ]
+    },
+    
+    {
+       "statements" : "SELECT id FROM orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product = \"tea111\" END AND ANY qty IN ARRAY ol.qty FOR ol IN orderlines END SATISFIES qty > 1 END AND test_id=\"array_func\" ORDER BY id", 
+       "results": [
+        {
+            "id": "1234"
+        }
+    ]
+    },
+    {
+      "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product NOT LIKE \"%tea_11\" END AND test_id=\"array_func\" ORDER BY id", 
+      "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+      ]
+    },
+     {
+         "statements" : "SELECT id FROM orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product NOT LIKE \"tea_11%\" END AND test_id=\"array_func\" ORDER BY id",
+         "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+ }
+]

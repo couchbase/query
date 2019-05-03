@@ -1,0 +1,78 @@
+[
+    {
+        "statements": "select firstName, lastName FROM customer WHERE lastName = \"Casper\" AND test_id=\"alias_func\" ORDER BY customerId",
+        "results": [
+        {
+            "firstName": "Ashley",
+            "lastName": "Casper"
+        }
+    ]
+    },
+    {
+        "statements": "select lastName AS le_derniere_nom FROM customer WHERE lastName = \"Casper\" AND test_id=\"alias_func\" ORDER BY le_derniere_nom",
+        "results": [
+        {
+            "le_derniere_nom": "Casper"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT customer.firstName FROM customer WHERE lastName = \"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {
+            "firstName": "Ashley"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT customer.firstName AS explicit_name FROM customer WHERE lastName = \"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {
+            "explicit_name": "Ashley"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT cust.firstName AS explicit_name FROM customer AS cust WHERE lastName = \"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {
+            "explicit_name": "Ashley"
+        }
+    ] 
+    },
+    {
+        "statements": "SELECT firstName FROM customer AS cust WHERE lastName = \"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {
+            "firstName": "Ashley"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT customer.firstName AS explicit_name FROM customer AS cust WHERE lastName = \"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {}
+    ]
+    },
+    {
+        "statements": "SELECT ccInfo, firstName FROM customer WHERE lastName=\"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {
+            "ccInfo": {
+                "cardExpiry": "2013-09-12",
+                "cardNumber": "1228-1221-1221-1431",
+                "cardType": "americanexpress"
+            },
+            "firstName": "Ashley"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT ccInfo.cardExpiry FROM customer WHERE lastName = \"Casper\" AND test_id=\"alias_func\"",
+        "results": [
+        {
+            "cardExpiry": "2013-09-12"
+        }
+    ]
+    }
+]

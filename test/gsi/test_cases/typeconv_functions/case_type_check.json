@@ -1,0 +1,174 @@
+[
+{
+   "statements":"select IS_ARRAY(orders.orderlines) as a from orders WHERE test_id=\"typeconv_func\" order by a",
+   "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+},
+{
+   "statements":"select IS_ARRAY(orders.id) as a from orders WHERE test_id=\"typeconv_func\" order by a",
+   "results": [
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        }
+    ]
+},
+{
+   "statements":"select IS_ARRAY(null) ",
+   "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+   "statements":"select IS_ARRAY(missing) ",
+   "results": [
+        {}
+    ]
+},
+{
+   "statements":"select IS_ATOM(orders.orderlines) as a from orders WHERE test_id=\"typeconv_func\" order by a ",
+   "results": [
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        }
+    ]
+},
+{
+   "statements":"select IS_ATOM(orders.id) as a from orders WHERE test_id=\"typeconv_func\" order by a ",
+   "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+},
+{
+   "statements":"select IS_BOOLEAN(false) ",
+   "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+   "statements":"select IS_BOOLEAN(1) ",
+   "results": [
+        {
+            "$1": false
+        }
+    ] 
+},
+{
+   "statements":"select IS_NUM(0) ",
+   "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+   "statements":"select IS_NUM([1,2]) ",
+   "results": [
+        {
+            "$1": false
+        }
+    ]
+},
+{
+   "statements":"select IS_OBJ(orders) as a from orders WHERE test_id=\"typeconv_func\"",
+   "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+},
+{
+   "statements":"select is_string(\"\")",
+   "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+    "statements":"SELECT TYPE(ARRAY productId FOR productId IN orderlines END) AS all_products FROM orders WHERE test_id=\"typeconv_func\" ORDER BY all_products ",
+    "results": [
+        {
+            "all_products": "array"
+        },
+        {
+            "all_products": "array"
+        },
+        {
+            "all_products": "array"
+        },
+        {
+            "all_products": "array"
+        }
+    ]
+},
+{
+   "statements":"select (ARRAY TYPE(c) for c in [ 1, \"yes\", true,[1,2], missing, null] END)  as ok ",
+   "results": [
+        {
+            "ok": [
+                "number",
+                "string",
+                "boolean",
+                "array",
+                "missing",
+                "null"
+            ]
+        }
+    ]
+}
+
+]

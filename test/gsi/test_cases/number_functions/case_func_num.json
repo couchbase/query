@@ -1,0 +1,776 @@
+[
+  {
+     "statements":"select abs(-4.599) ",
+     "results": [
+        {
+            "$1": 4.599
+        }
+    ]
+  },
+  {
+     "statements":"select abs(0.0) ",
+     "results": [
+        {
+            "$1": 0
+        }
+    ]
+  },
+  {
+     "statements":"select acos(1.0) ",
+     "results": [
+        {
+            "$1": 0
+        }
+    ]
+  },
+  {
+     "statements":"select acos(-1.0) ",
+     "results": [
+        {
+            "$1": 3.141592653589793
+        }
+    ]
+  },
+  {
+     "statements":"select acos(3) ",
+     "results": [
+        {
+            "$1": "NaN"
+        }
+    ]
+  },
+ {
+     "statements":"SELECT atan(unitPrice/10) as uP FROM product where test_id = \"numberfunc\" ORDER BY uP ASC limit 20",
+     "results": [
+        {
+            "uP": 0.06889080874642887
+        },
+        {
+            "uP": 0.14007658329218683
+        },
+        {
+            "uP": 0.14007658329218683
+        },
+        {
+            "uP": 0.14399642170889201
+        },
+        {
+            "uP": 0.2345992293193999
+        },
+        {
+            "uP": 0.2487398113528484
+        },
+        {
+            "uP": 0.26743628138366415
+        },
+        {
+            "uP": 0.2868633495226784
+        },
+        {
+            "uP": 0.2868633495226784
+        },
+        {
+            "uP": 0.33578367316270535
+        },
+        {
+            "uP": 0.3464405674298596
+        },
+        {
+            "uP": 0.3464405674298596
+        },
+        {
+            "uP": 0.349092133951802
+        },
+        {
+            "uP": 0.349092133951802
+        },
+        {
+            "uP": 0.3543799191234378
+        },
+        {
+            "uP": 0.37098779993526965
+        },
+        {
+            "uP": 0.37359085803573183
+        },
+        {
+            "uP": 0.3796440109929201
+        },
+        {
+            "uP": 0.3796440109929201
+        },
+        {
+            "uP": 0.3796440109929201
+        }
+    ]   
+  },
+  {
+     "statements":"SELECT atan2(unitPrice,10) as uP FROM product where test_id = \"numberfunc\" ORDER BY uP DESC limit 20 ",
+   "results": [
+        {
+            "uP": 1.5664485092008225
+        },
+        {
+            "uP": 1.56412531167943
+        },
+        {
+            "uP": 1.5627964334585938
+        },
+        {
+            "uP": 1.5616596550701336
+        },
+        {
+            "uP": 1.5616596550701336
+        },
+        {
+            "uP": 1.5595921883125596
+        },
+        {
+            "uP": 1.5587630684753162
+        },
+        {
+            "uP": 1.5582968215479926
+        },
+        {
+            "uP": 1.5576391913221408
+        },
+        {
+            "uP": 1.5565115842075
+        },
+        {
+            "uP": 1.5541309253756899
+        },
+        {
+            "uP": 1.5541309253756899
+        },
+        {
+            "uP": 1.5541033866692802
+        },
+        {
+            "uP": 1.5517146736035938
+        },
+        {
+            "uP": 1.5508933080412368
+        },
+        {
+            "uP": 1.5507985929736883
+        },
+        {
+            "uP": 1.5506536012522596
+        },
+        {
+            "uP": 1.5497817449111084
+        },
+        {
+            "uP": 1.5491990805519646
+        },
+        {
+            "uP": 1.5485282932515472
+        }
+    ]  
+  },
+  {
+     "statements":"select cos(PI()/2)",
+     "results": [
+        {
+            "$1": 6.123233995736757e-17
+        }
+    ]
+  },
+  {
+     "statements":"select cos(PI()) ",
+     "results": [
+        {
+            "$1": -1
+        }
+    ]
+  },
+  {
+     "statements":"select sin(PI()/2) ",
+     "results": [
+        {
+            "$1": 1
+        }
+    ]
+  },
+  {
+     "statements":"select sin(PI()) ",
+     "results": [
+        {
+            "$1": 1.2246467991473515e-16
+        }
+    ]
+  },
+  {
+     "statements":"select tan(PI()/2) ",
+     "results": [
+        {
+            "$1": 16331239353195392
+        }
+    ]
+  },
+  {
+     "statements":"select tan(PI()) ",
+     "results": [
+        {
+            "$1": -1.2246467991473515e-16
+        }
+    ]
+  },
+  {
+     "statements":"SELECT tan(unitPrice/100) as UP FROM product where test_id = \"numberfunc\" AND tan(unitPrice/100) > 2 ORDER BY UP limit 10 ",
+     "results": [
+        {
+            "UP": 2.0138325604867267
+        },
+        {
+            "UP": 2.0492077751446085
+        },
+        {
+            "UP": 2.11975014418718
+        },
+        {
+            "UP": 2.1718671324329257
+        },
+        {
+            "UP": 2.1718671324329257
+        },
+        {
+            "UP": 2.224986052180472
+        },
+        {
+            "UP": 2.442509351723311
+        },
+        {
+            "UP": 2.442509351723311
+        },
+        {
+            "UP": 2.569868594555587
+        },
+        {
+            "UP": 2.571390221570827
+        }
+    ]
+  },
+  {
+     "statements":"SELECT cos(unitPrice) as sc FROM product where test_id = \"numberfunc\" ORDER BY sc limit 5 ",
+     "results": [
+        {
+            "sc": -0.999898368924057
+        },
+        {
+            "sc": -0.9998427745803359
+        },
+        {
+            "sc": -0.9998427745803359
+        },
+        {
+            "sc": -0.9994844061922028
+        },
+        {
+            "sc": -0.9992453783208123
+        }
+    ]    
+  },
+  {
+     "statements":"SELECT sin(unitPrice) as sc FROM product where test_id = \"numberfunc\" ORDER BY sc limit 5 ",
+ "results": [
+        {
+            "sc": -0.9999436861830072
+        },
+        {
+            "sc": -0.9999436861830072
+        },
+        {
+            "sc": -0.9999368273099817
+        },
+        {
+            "sc": -0.9999264498913605
+        },
+        {
+            "sc": -0.9998787232348543
+        }
+    ]  
+  },
+  {
+     "statements":"select ceil(1.4) ",
+     "results": [
+        {
+            "$1": 2
+        }
+    ]      
+  },
+  {
+        "statements": "SELECT CEIL(unitPrice+0.5) as sc FROM product where test_id = \"numberfunc\" ORDER BY sc desc limit 10",
+        "results": [
+        {
+            "sc": 2301
+        },
+        {
+            "sc": 1500
+        },
+        {
+            "sc": 1251
+        },
+        {
+            "sc": 1095
+        },
+        {
+            "sc": 1095
+        },
+        {
+            "sc": 893
+        },
+        {
+            "sc": 832
+        },
+        {
+            "sc": 801
+        },
+        {
+            "sc": 761
+        },
+        {
+            "sc": 701
+        }
+    ] 
+     },
+    {
+        "statements": "select PI() ",
+        "results": [
+        {
+            "$1": 3.141592653589793
+        }
+    ]     
+    },
+    {
+        "statements": "select E() ",
+        "results": [
+        {
+            "$1": 2.718281828459045
+        }
+    ]
+    },
+    {
+        "statements": "select POWER(E(),2) ", 
+        "results": [
+        {
+            "$1": 7.3890560989306495
+        }
+    ]
+    },
+    {
+        "statements": "select LN(POWER(E(),2)) ",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements": "select EXP(2) ", 
+        "results": [
+        {
+            "$1": 7.38905609893065
+        }
+    ]
+    },
+    {
+        "statements": "select LN(EXP(2)) ",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements": "select LOG(EXP(10)) ", 
+        "results": [
+        {
+            "$1": 4.342944819032518
+        }
+    ]
+    },
+    {
+        "statements": "select LOG(POWER(10,34)) ",
+        "results": [
+        {
+            "$1": 34
+        }
+    ]
+    },
+    {
+        "statements": "select DEGREES(PI()) ",
+        "results": [
+        {
+            "$1": 180
+        }
+    ] 
+    },
+    {
+        "statements": "select DEGREES(PI()/2)",
+        "results": [
+        {
+            "$1": 90
+        }
+    ]
+    },
+   {
+      "statements":"select DEGREES(-PI()/2)  ",
+      "results": [
+        {
+            "$1": -90
+        }
+    ]
+   },
+   {
+      "statements":"select RADIANS(90) ",
+      "results": [
+        {
+            "$1": 1.5707963267948966
+        }
+    ]
+   },
+   {
+      "statements":"select RADIANS(-180) ",
+      "results": [
+        {
+            "$1": -3.141592653589793
+        }
+    ]
+   },
+   {
+      "statements":"select RADIANS(PI()) ",
+      "results": [
+        {
+            "$1": 0.05483113556160754
+        }
+    ]
+   },
+    {
+        "statements": "SELECT FLOOR(unitPrice+0.5) as sc FROM product where test_id = \"numberfunc\" ORDER BY sc limit 5",
+        "results": [
+        {
+            "sc": 1
+        },
+        {
+            "sc": 1
+        },
+        {
+            "sc": 1
+        },
+        {
+            "sc": 1
+        },
+        {
+            "sc": 2
+        }
+    ]    
+    },
+   {
+       "statements":"select floor(1.7) ",
+       "results": [
+        {
+            "$1": 1
+        }
+    ]
+   },
+   {
+      "statements":"select POWER(12,2)",
+      "results": [
+        {
+            "$1": 144
+        }
+    ]
+   },
+   {
+      "statements":"SELECT power(unitPrice,2) as sc FROM product where test_id = \"numberfunc\" ORDER BY sc desc limit 10 ",
+   "results": [
+        {
+            "sc": 5.289954000099999e+06
+        },
+        {
+            "sc": 2247001
+        },
+        {
+            "sc": 1.5624750001e+06
+        },
+        {
+            "sc": 1.1978426916e+06
+        },
+        {
+            "sc": 1.1978426916e+06
+        },
+        {
+            "sc": 796538.4001
+        },
+        {
+            "sc": 690544.3801000001
+        },
+        {
+            "sc": 639984.0001000001
+        },
+        {
+            "sc": 577600
+        },
+        {
+            "sc": 490000
+        }
+    ]   
+},
+   {
+      "statements":"SELECT power(unitPrice,2) as sc FROM product where test_id = \"numberfunc\" ORDER BY sc asc limit 10",
+      "results": [
+        {
+            "sc": 0.4760999999999999
+        },
+        {
+            "sc": 1.9880999999999998
+        },
+        {
+            "sc": 1.9880999999999998
+        },
+        {
+            "sc": 2.1025
+        },
+        {
+            "sc": 5.7121
+        },
+        {
+            "sc": 6.4516
+        },
+        {
+            "sc": 7.507600000000001
+        },
+        {
+            "sc": 8.7025
+        },
+        {
+            "sc": 8.7025
+        },
+        {
+            "sc": 12.180100000000001
+        }
+    ]
+         },   
+   {
+      "statements":"select random(0.5) ",
+      "results": [
+        {
+            "$1": 0.9451961492941164
+        }
+    ]
+   },
+    {
+        "statements": "SELECT ROUND(12+0.5) as rnd",
+        "results": [
+        {
+            "rnd": 12
+        }   
+       ]
+    },
+    {
+       "statements":"select round(1.2343534) ",
+       "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534) ",
+       "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534,0) ",
+       "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534,3) ",
+       "results": [
+        {
+            "$1": 1.834
+        }
+    ]
+    },
+    {
+       "statements":"select round(8.8343534,-1) ",
+       "results": [
+        {
+            "$1": 10
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534,-1) ",
+       "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+      "statements":"select sign(-1034.992445) ",
+      "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(1034.992445) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(0.292445) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(0.0000111) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(0.0) ",
+      "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+      "statements":"select sign(NaN()) ",
+      "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+      "statements":"select sign(PosInf()) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    }, 
+    {
+      "statements":"select sign(NegInf()) ",
+      "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+        "statements": "SELECT TRUNC(unitPrice+0.5) as trun FROM product where test_id = \"numberfunc\" ORDER BY trun limit 5",
+        "results": [
+         {
+            "trun": 1
+        },
+        {
+            "trun": 1
+        },
+        {
+            "trun": 1
+        },
+        {
+            "trun": 1
+        },
+        {
+            "trun": 2
+        }
+ ]
+    },
+    {
+       "statements":"select sqrt(unitPrice) as sq FROM product where test_id = \"numberfunc\" ORDER BY sq desc limit 10 ",
+      "results": [
+        {
+            "sq": 47.95821097580684
+        },
+        {
+            "sq": 38.71692136521188
+        },
+        {
+            "sq": 35.35519763768829
+        },
+        {
+            "sq": 33.082623837900165
+        },
+        {
+            "sq": 33.082623837900165
+        },
+        {
+            "sq": 29.874571126628748
+        },
+        {
+            "sq": 28.826897162199057
+        },
+        {
+            "sq": 28.284094470214175
+        },
+        {
+            "sq": 27.568097504180443
+        },
+        {
+            "sq": 26.457513110645905
+        }
+    ]    
+},
+    {
+       "statements":"select sqrt(0) ",
+       "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+       "statements":"select sqrt(-1) ",
+       "results": [
+        {
+            "$1": "NaN"
+        }
+    ]
+    },
+    {
+       "statements":"select trunc(-2.2544,2) ",
+       "results": [
+        {
+            "$1": -2.25
+        }
+    ]
+    },
+    {
+       "statements":"select trunc(0.2544,3)",
+       "results": [
+        {
+            "$1": 0.254
+        }
+    ]
+    },
+    {
+       "statements":"select cos(unitPrice) as sc from product where sc > 1 limit 1",
+       "results": [
+       ]
+    }
+ ]

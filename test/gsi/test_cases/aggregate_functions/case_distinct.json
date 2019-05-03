@@ -1,0 +1,241 @@
+[
+ 
+    {
+        "statements": "SELECT DISTINCT custId FROM orders where test_id = \"agg_func\" ORDER BY custId",
+        "results": [
+        {
+            "custId": "customer12"
+        },
+        {
+            "custId": "customer18"
+        },
+        {
+            "custId": "customer312"
+        },
+        {
+            "custId": "customer38"
+        }
+    ]  
+},
+{
+	"statements": "SELECT COUNT(DISTINCT color) AS numcolors, product.categories AS category FROM product WHERE test_id = \"agg_func\" GROUP BY product.categories ORDER BY numcolors, product.categories DESC LIMIT 3",
+	"results":  [
+        {
+            "category": [
+                "Exercise \u0026 Fitness"
+            ],
+            "numcolors": 5
+        },
+        {
+            "category": [
+                "Outdoor Recreation"
+            ],
+            "numcolors": 6
+        },
+        {
+            "category": [
+                "Watches"
+            ],
+            "numcolors": 7
+        }
+    ]
+},
+
+{
+    "statements": "SELECT ARRAY_AGG(DISTINCT color) AS coloroptions,product.categories FROM product WHERE test_id = \"agg_func\" GROUP BY product.categories ORDER BY product.categories, coloroptions LIMIT 2",
+    "results": [
+        {
+            "categories": [
+                "All Sports \u0026 Outdoors"
+            ],
+            "coloroptions": [
+                "azure",
+                "black",
+                "blue",
+                "cyan",
+                "gold",
+                "green",
+                "indigo",
+                "ivory",
+                "lavender",
+                "maroon",
+                "mint green",
+                "olive",
+                "orchid",
+                "pink",
+                "plum",
+                "purple",
+                "red",
+                "sky blue",
+                "tan",
+                "violet",
+                "yellow"
+            ]
+        },
+        {
+            "categories": [
+                "Appliances"
+            ],
+            "coloroptions": [
+                "azure",
+                "black",
+                "blue",
+                "fuchsia",
+                "gold",
+                "green",
+                "grey",
+                "indigo",
+                "ivory",
+                "lavender",
+                "lime",
+                "magenta",
+                "maroon",
+                "mint green",
+                "olive",
+                "orange",
+                "orchid",
+                "pink",
+                "plum",
+                "red",
+                "salmon",
+                "silver",
+                "sky blue",
+                "tan",
+                "teal",
+                "turquoise",
+                "violet",
+                "white",
+                "yellow"
+            ]
+        }
+    ]
+},
+
+{
+    "statements": "SELECT COUNT(DISTINCT color) AS totcolors, COUNT(product.categories) AS totcategories FROM product WHERE test_id = \"agg_func\"",
+    "results": [
+        {
+            "totcategories": 900,
+            "totcolors": 31
+        }
+    ]
+},
+
+{
+    "statements": "SELECT categories, ROUND(SUM(unitPrice), 2) AS totprice FROM product WHERE test_id = \"agg_func\" AND ANY reviewList IN reviewList SATISFIES reviewList LIKE \"%0\" END GROUP BY categories HAVING ROUND(SUM(unitPrice), 2) ORDER BY categories LIMIT 5",
+    "results": [
+        {
+            "categories": [
+                "All Sports \u0026 Outdoors"
+            ],
+            "totprice": 809.77
+        },
+        {
+            "categories": [
+                "Appliances"
+            ],
+            "totprice": 11502.98
+        },
+        {
+            "categories": [
+                "Arts, Crafts \u0026 Sewing"
+            ],
+            "totprice": 2854.93
+        },
+        {
+            "categories": [
+                "Baby"
+            ],
+            "totprice": 2677.96
+        },
+        {
+            "categories": [
+                "Bedding \u0026 Bath"
+            ],
+            "totprice": 71.97
+        }
+    ]
+},
+
+{
+    "statements": "SELECT product.categories CATG, COUNT(*) AS numprods FROM product WHERE test_id = \"agg_func\" GROUP BY product.categories HAVING COUNT(*) BETWEEN 15 and 30 ORDER BY CATG, numprods LIMIT 3",
+    "results": [
+        {
+            "CATG": [
+                "Golf"
+            ],
+            "numprods": 20
+        },
+        {
+            "CATG": [
+                "Hardware"
+            ],
+            "numprods": 20
+        },
+        {
+            "CATG": [
+                "Luggage"
+            ],
+            "numprods": 15
+        }
+    ]
+},
+
+{
+    "statements": "SELECT product.categories AS CATG, COUNT (*) AS numprods FROM product WHERE test_id = \"agg_func\" GROUP BY product.categories ORDER BY CATG,numprods LIMIT 3",
+    "results": [
+        {
+            "CATG": [
+                "All Sports \u0026 Outdoors"
+            ],
+            "numprods": 39
+        },
+        {
+            "CATG": [
+                "Appliances"
+            ],
+            "numprods": 78
+        },
+        {
+            "CATG": [
+                "Arts, Crafts \u0026 Sewing"
+            ],
+            "numprods": 37
+        }
+    ]
+},
+{
+    "statements": "SELECT product.categories AS CATG, COUNT (*) AS numprods FROM product WHERE test_id = \"agg_func\" GROUP BY product.categories ORDER BY numprods,CATG LIMIT 3",
+    "results": [
+        {
+            "CATG": [
+                "Exercise \u0026 Fitness"
+            ],
+            "numprods": 5
+        },
+        {
+            "CATG": [
+                "Bedding \u0026 Bath"
+            ],
+            "numprods": 7
+        },
+        {
+            "CATG": [
+                "Outdoor Recreation"
+            ],
+            "numprods": 7
+        }
+    ]
+},
+{
+    "statements": "SELECT COUNTN(cntn) AS cntn, COUNTN(DISTINCT cntn) AS dcntn, COUNT(cntn) AS cnt, COUNT(DISTINCT cntn) AS dcnt FROM orders WHERE test_id = \"cntn_agg_func\"",
+    "results": [
+        {
+            "cnt": 5,
+            "cntn": 3,
+            "dcnt": 4,
+            "dcntn": 2
+        }
+    ]
+}
+]

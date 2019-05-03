@@ -1,0 +1,335 @@
+[
+    {
+        "statements": "SELECT * FROM purchase USE KEYS \"purchase93_key_func\" ORDER BY purchaseId",
+        "results": [
+        {
+            "purchase": {
+                "customerId": "customer251",
+                "lineItems": [
+                    {
+                        "count": 2,
+                        "product": "product849"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product276"
+                    }
+                ],
+                "purchaseId": "purchase93",
+                "purchasedAt": "2013-12-07T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]  
+    },
+    {
+        "statements": "SELECT * FROM purchase USE KEYS \"purchase9\"|| \"3_key_func\" ORDER BY purchaseId",
+         "results": [
+        {
+            "purchase": {
+                "customerId": "customer251",
+                "lineItems": [
+                    {
+                        "count": 2,
+                        "product": "product849"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product276"
+                    }
+                ],
+                "purchaseId": "purchase93",
+                "purchasedAt": "2013-12-07T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM purchase USE KEYS array_append([\"purchase93_key_func\", \"purchase101_key_func\"], \"purchase1009_key_func\") where purchase.purchaseId = \"purchase1009\" ORDER BY purchase.purchaseId",
+        "results": [
+        {
+            "purchase": {
+                "customerId": "customer976",
+                "lineItems": [
+                    {
+                        "count": 3,
+                        "product": "product569"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product559"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product33"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product261"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product617"
+                    }
+                ],
+                "purchaseId": "purchase1009",
+                "purchasedAt": "2014-03-07T15:52:34Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM purchase USE KEYS [\"purchase93_key_func\", \"purchase1009_key_func\"] ORDER BY purchaseId",
+        "results": [
+        {
+            "purchase": {
+                "customerId": "customer976",
+                "lineItems": [
+                    {
+                        "count": 3,
+                        "product": "product569"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product559"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product33"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product261"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product617"
+                    }
+                ],
+                "purchaseId": "purchase1009",
+                "purchasedAt": "2014-03-07T15:52:34Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        },
+        {
+            "purchase": {
+                "customerId": "customer251",
+                "lineItems": [
+                    {
+                        "count": 2,
+                        "product": "product849"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product276"
+                    }
+                ],
+                "purchaseId": "purchase93",
+                "purchasedAt": "2013-12-07T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM purchase USE PRIMARY KEYS \"purchase101_key_func\" UNNEST purchase.lineItems ORDER BY purchase.customerId",
+        "results": [
+        {
+            "lineItems": {
+                "count": 5,
+                "product": "product414"
+            },
+            "purchase": {
+                "customerId": "customer122",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product414"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product213"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product20"
+                    }
+                ],
+                "purchaseId": "purchase101",
+                "purchasedAt": "2014-05-06T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 5,
+                "product": "product213"
+            },
+            "purchase": {
+                "customerId": "customer122",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product414"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product213"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product20"
+                    }
+                ],
+                "purchaseId": "purchase101",
+                "purchasedAt": "2014-05-06T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 1,
+                "product": "product20"
+            },
+            "purchase": {
+                "customerId": "customer122",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product414"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product213"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product20"
+                    }
+                ],
+                "purchaseId": "purchase101",
+                "purchasedAt": "2014-05-06T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT lineItems.product, pur.purchaseId FROM purchase as pur USE KEYS [\"purchase93_key_func\", \"purchase1009_key_func\"] UNNEST pur.lineItems ORDER BY pur.purchaseId, lineItems.product",
+    "results": [
+        {
+            "product": "product261",
+            "purchaseId": "purchase1009"
+        },
+        {
+            "product": "product33",
+            "purchaseId": "purchase1009"
+        },
+        {
+            "product": "product559",
+            "purchaseId": "purchase1009"
+        },
+        {
+            "product": "product569",
+            "purchaseId": "purchase1009"
+        },
+        {
+            "product": "product617",
+            "purchaseId": "purchase1009"
+        },
+        {
+            "product": "product276",
+            "purchaseId": "purchase93"
+        },
+        {
+            "product": "product849",
+            "purchaseId": "purchase93"
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT * FROM purchase USE KEYS ARRAY c.purchaseId FOR c IN [{\"purchaseId\":\"purchase101_key_func\"},{\"purchaseId\":\"purchase93_key_func\"}] END ORDER BY purchaseId",
+        "results": [
+        {
+            "purchase": {
+                "customerId": "customer122",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product414"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product213"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product20"
+                    }
+                ],
+                "purchaseId": "purchase101",
+                "purchasedAt": "2014-05-06T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        },
+        {
+            "purchase": {
+                "customerId": "customer251",
+                "lineItems": [
+                    {
+                        "count": 2,
+                        "product": "product849"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product276"
+                    }
+                ],
+                "purchaseId": "purchase93",
+                "purchasedAt": "2013-12-07T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT * FROM purchase USE KEYS FIRST c.purchaseId FOR c IN [{\"purchaseId\":\"purchase101_key_func\"},{\"purchaseId\":\"purchase93_key_func\"}] END ORDER BY purchaseId",
+        "results": [
+        {
+            "purchase": {
+                "customerId": "customer122",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product414"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product213"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product20"
+                    }
+                ],
+                "purchaseId": "purchase101",
+                "purchasedAt": "2014-05-06T15:52:32Z",
+                "test_id": "key_func",
+		"type": "purchase"
+            }
+        }
+    ]
+    }
+]

@@ -1,0 +1,95 @@
+[
+ 
+    {
+        "statements": "SELECT 1+1 AS result",
+        "results": [
+        {
+            "result": 2
+        }
+    ]
+    },
+    {
+        "statements": "SELECT 1+1 AS result",
+        "matchStatements": "SELECT 2 AS result"
+    },
+    {
+        "statements": "SELECT 1-1 AS result",
+        "results": [
+        {
+            "result": 0
+        }
+    ]
+    },
+    {
+        "statements": "SELECT 2*3 AS result",
+        "results": [
+        {
+            "result": 6
+        }
+    ]
+    },
+    {
+        "statements": "SELECT 10/2 AS result",
+        "results": [
+        {
+            "result": 5
+        }
+    ]
+    },
+    {
+        "statements": "SELECT 25%5 AS result",
+        "results": [
+        {
+            "result": 0
+        }
+    ]
+    },
+    {
+        "statements": "SELECT \"hello\" || \" \" || \"world\" AS result",
+        "results": [
+        {
+            "result": "hello world"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT -3 AS result",
+        "description": "again this sytnax forces the change sign operator",
+        "results": [
+        {
+            "result": -3
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT 1/0 AS result",
+        "description": "again this sytnax forces the change sign operator",
+        "results": [
+        {
+            "result": null
+        }
+    ]
+    }
+    ,
+    {
+        "statements": "SELECT -1/0 AS result",
+        "description": "again this sytnax forces the change sign operator",
+        "results": [
+        {
+            "result": null
+        }
+    ]
+    }
+    ,
+    {
+        "statements": "SELECT 0/0 AS result",
+        "description": "again this sytnax forces the change sign operator",
+        "results": [
+        {
+            "result": null
+        }
+    ]
+    }
+]
+

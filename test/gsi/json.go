@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	go_er "errors"
 	"fmt"
+	"github.com/couchbase/query/util"
 	"io/ioutil"
 	http_base "net/http"
 	"os"
@@ -41,7 +42,6 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -323,11 +323,11 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		)
 	}
 
-	// Start the completed requests log - keep it small and busy
-	server.RequestsInit(0, 8)
-
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)
+
+	// Start the completed requests log - keep it small and busy
+	server.RequestsInit(0, 8)
 
 	// need to do it before NewServer() or server scope's changes to
 	// the variable and not the package...
@@ -341,7 +341,6 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	}
 
 	server.SetWhitelist(curlWhitelist)
-	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 
 	prepareds.PreparedsReprepareInit(ds, sys)
 	constructor.Init()
@@ -696,6 +695,8 @@ func Start_cs(setGlobals bool) *MockServer {
 }
 
 func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testing.T) {
+	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
+	// Start the completed requests log - keep it small and busy
 
 	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 	matches, err := filepath.Glob(filename)

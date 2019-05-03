@@ -1,0 +1,224 @@
+[
+ {
+   "statements":"select IfINF(PosInf(),2,[1,2])",
+   "results": [
+        {
+            "$1": 2
+        }
+    ]
+  },
+  {
+    "statements":"select IfINF(PosInf(),[1,2])",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+    "statements":"select IfINF(PosInf(),[1,2],4)",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+    "statements":"select IfINF(NegInf(),2,[1,2],4)",
+    "results": [
+        {
+            "$1": 2
+        }
+    ]
+  },
+  {
+    "statements":"select IfNaN(PosInf(),NaN(),1)",
+    "results": [
+        {
+            "$1": "+Infinity"
+        }
+    ]
+  },
+  {
+    "statements":"select IfNaN(NaN(),1)",
+    "results": [
+        {
+            "$1": 1
+        }
+    ]
+  },
+  {
+    "statements":"select IfNaN(NaN(),\"1\") ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+ {
+    "statements":"select IfNaNorINF(NegInf(),2,NaN(),[1,2],4) ",
+    "results": [
+        {
+            "$1": 2
+        }
+    ]
+ },
+ {
+    "statements":"select IfNaNorINF(PosInf(),NaN(),1) ",
+    "results": [
+        {
+            "$1": 1
+        }
+    ]
+ },
+ {
+    "statements":"select NaNIf(missing,[1,2]) ",
+    "results": [
+        {}
+    ]
+ },
+ {
+    "statements":"select NaNIf(null,[1,2]) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+ {
+    "statements":"select NaNIf([1,2,missing],[1,2]) ",
+    "results": [
+        {
+            "$1": [
+                1,
+                2,
+                null
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select NaNIf([1,2,4],[1,2,null])",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+ {
+    "statements":"select NaNIf([1,2],[1,2]) ",
+    "results": [
+        {
+            "$1": "NaN"
+        }
+    ]
+ 
+ },
+ {
+    "statements":"select NaNIf([1,2,null],[1,2,null]) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+ {
+    "statements":"select PosinfIf([1,2,null],[1,2,null]) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+{
+    "statements":"select PosinfIf([1,2],[1,2]) ",
+    "results": [
+        {
+            "$1": "+Infinity"
+        }
+    ]
+ },
+{
+    "statements":"select PosinfIf([1,2,missing],[1,2]) ",
+    "results": [
+        {
+            "$1": [
+                1,
+                2,
+                null
+            ]
+        }
+    ]
+ },
+{
+    "statements":"select PosinfIf(missing,[1,2]) ",
+    "results": [
+        {}
+    ]
+ },
+{
+    "statements":"select PosinfIf(null,[1,2]) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+{
+    "statements":"select NeginfIf(missing,\"a\") ",
+    "results": [
+        {}
+    ]
+ },
+{
+    "statements":"select NeginfIf(null,\"a\") ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+{
+    "statements":"select NeginfIf(\"a\",\"a\") ",
+    "results": [
+        {
+            "$1": "-Infinity"
+        }
+    ]
+ },
+{
+    "statements":"select NeginfIf(PosInf(),PosInf()) ",
+    "results": [
+        {
+            "$1": "-Infinity"
+        }
+    ]
+ },
+{
+    "statements":"select NeginfIf(2+3,5) ",
+    "results": [
+        {
+            "$1": "-Infinity"
+        }
+    ]
+
+ },
+{
+    "statements":"select NaNIf(5-1,2+2) ",
+    "results": [
+        {
+            "$1": "NaN"
+        }
+    ]
+
+ },
+{
+    "statements":"select posinfif([1,2,4-2],[1,2,8-6])  ",
+    "results": [
+        {
+            "$1": "+Infinity"
+        }
+    ]
+
+ }
+]

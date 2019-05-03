@@ -1,0 +1,281 @@
+[
+   {
+        "statements" : "SELECT customer.ccInfo, customer.customerId, purchase.purchaseId, purchase.lineItems from purchase INNER JOIN customer ON KEYS purchase.customerId || \"_\" || purchase.test_id WHERE customer.test_id = \"joins\" ORDER BY purchase.customerId,purchase.purchaseId limit 10",
+"results": [
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 4,
+                    "product": "product438"
+                },
+                {
+                    "count": 5,
+                    "product": "product796"
+                }
+            ],
+            "purchaseId": "purchase1539"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product668"
+                },
+                {
+                    "count": 5,
+                    "product": "product517"
+                },
+                {
+                    "count": 5,
+                    "product": "product773"
+                }
+            ],
+            "purchaseId": "purchase2059"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product175"
+                }
+            ],
+            "purchaseId": "purchase5923"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 3,
+                    "product": "product762"
+                }
+            ],
+            "purchaseId": "purchase8119"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 5,
+                    "product": "product679"
+                },
+                {
+                    "count": 5,
+                    "product": "product669"
+                },
+                {
+                    "count": 2,
+                    "product": "product593"
+                },
+                {
+                    "count": 5,
+                    "product": "product893"
+                },
+                {
+                    "count": 5,
+                    "product": "product826"
+                }
+            ],
+            "purchaseId": "purchase8890"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product557"
+                }
+            ],
+            "purchaseId": "purchase9465"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product365"
+                },
+                {
+                    "count": 1,
+                    "product": "product208"
+                },
+                {
+                    "count": 1,
+                    "product": "product406"
+                },
+                {
+                    "count": 2,
+                    "product": "product167"
+                }
+            ],
+            "purchaseId": "purchase9607"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2012-11-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "discover"
+            },
+            "customerId": "customer0",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product537"
+                },
+                {
+                    "count": 4,
+                    "product": "product445"
+                },
+                {
+                    "count": 3,
+                    "product": "product672"
+                }
+            ],
+            "purchaseId": "purchase969"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2011-10-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "visa"
+            },
+            "customerId": "customer1",
+            "lineItems": [
+                {
+                    "count": 5,
+                    "product": "product732"
+                },
+                {
+                    "count": 5,
+                    "product": "product391"
+                }
+            ],
+            "purchaseId": "purchase2030"
+        },
+        {
+            "ccInfo": {
+                "cardExpiry": "2011-10-12",
+                "cardNumber": "1234-2121-1221-1211",
+                "cardType": "visa"
+            },
+            "customerId": "customer1",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product104"
+                },
+                {
+                    "count": 1,
+                    "product": "product20"
+                },
+                {
+                    "count": 2,
+                    "product": "product211"
+                }
+            ],
+            "purchaseId": "purchase2081"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT META(customer).id oid1, meta(purchase).id oid2 FROM purchase USE KEYS \"purchase0_joins\" INNER JOIN customer ON KEYS purchase.customerId || \"_\" || purchase.test_id where purchase.test_id = \"joins\" order by oid1, oid2",
+    "results": [
+        {
+            "oid1": "customer515_joins",
+            "oid2": "purchase0_joins"
+        }
+    ]  
+    },
+    {
+        "statements": "SELECT META(purchase).id purchase_id, META(product).id product_id FROM purchase INNER JOIN product ON KEYS ARRAY s.product || \"_\" || purchase.test_id FOR s IN purchase.lineItems END where purchase.test_id = \"joins\" ORDER BY purchase_id, product_id limit 5", 
+ "results": [
+        {
+            "product_id": "product701_joins",
+            "purchase_id": "purchase0_joins"
+        },
+        {
+            "product_id": "product85_joins",
+            "purchase_id": "purchase0_joins"
+        },
+        {
+            "product_id": "product284_joins",
+            "purchase_id": "purchase1000_joins"
+        },
+        {
+            "product_id": "product300_joins",
+            "purchase_id": "purchase1000_joins"
+        },
+        {
+            "product_id": "product621_joins",
+            "purchase_id": "purchase1000_joins"
+        }
+    ]
+},
+{    
+    "statements": "SELECT META(purchase).id as purchase_id, meta(product).id as product_id, product.name as name FROM purchase UNNEST purchase.lineItems line INNER JOIN product ON KEYS line.product || \"_\" || purchase.test_id where purchase.test_id = \"joins\" AND product.test_id = \"joins\" ORDER BY purchase_id, product_id, name limit 5 ",
+"results": [
+        {
+            "name": "Aquarius Aq15005 Aquarius 5 Rounded 5-Gallon Aquarium Kit",
+            "product_id": "product701_joins",
+            "purchase_id": "purchase0_joins"
+        },
+        {
+            "name": "Bormioli Rocco Frigoverre Jug with Hermetic Lid, 2-Liters",
+            "product_id": "product85_joins",
+            "purchase_id": "purchase0_joins"
+        },
+        {
+            "name": "Moen 6303BN EASY CLEAN XLT Single Function Showerhead, Brushed Nickel",
+            "product_id": "product284_joins",
+            "purchase_id": "purchase1000_joins"
+        },
+        {
+            "name": "Aviditi Olympia Series K-5030 Elite Single Handle Metal Loop Kitchen Pull-Out Faucet, Chrome",
+            "product_id": "product300_joins",
+            "purchase_id": "purchase1000_joins"
+        },
+        {
+            "name": "Pokémon Black Version 2",
+            "product_id": "product621_joins",
+            "purchase_id": "purchase1000_joins"
+        }
+    ] 
+}
+]

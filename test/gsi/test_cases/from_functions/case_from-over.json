@@ -1,0 +1,313 @@
+[
+    {
+        "statements": "SELECT * FROM orders AS olz UNNEST TO_ARRAY(orderlines[0].productId) AS olzpId WHERE olz.test_id=\"from_func\" ORDER BY olz.id",
+        "results": [
+        {
+            "olz": {
+                "custId": "customer18",
+                "id": "1200",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": "2012/01/02",
+                "test_id": "from_func",
+                "type": "order"
+            },
+            "olzpId": "coffee01"
+        },
+        {
+            "olz": {
+                "custId": "customer312",
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "from_func",
+                "type": "order"
+            },
+            "olzpId": "coffee01"
+        },
+        {
+            "olz": {
+                "custId": "customer12",
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "from_func",
+                "type": "order"
+            },
+            "olzpId": "tea111"
+        },
+        {
+            "olz": {
+                "custId": "customer38",
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "test_id": "from_func",
+                "type": "order"
+            },
+            "olzpId": "coffee01"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT * FROM orders AS ord UNNEST TO_ARRAY(orderlines[1].productId) AS prod1 WHERE prod1=\"sugar22\" AND ord.test_id=\"from_func\" ORDER BY ord.id",
+        "results": [
+        {
+            "ord": {
+                "custId": "customer18",
+                "id": "1200",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": "2012/01/02",
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "prod1": "sugar22"
+        },
+        {
+            "ord": {
+                "custId": "customer12",
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "prod1": "sugar22"
+        },
+        {
+            "ord": {
+                "custId": "customer38",
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "prod1": "sugar22"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT ord.id, ord.custId FROM orders AS ord UNNEST TO_ARRAY(ord.orderlines[1].productId) AS prod1 WHERE prod1=\"tea111\" AND ord.test_id=\"from_func\" ORDER BY ord.id",
+        "results": [
+        {
+            "custId": "customer312",
+            "id": "1234"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT * FROM orders AS ord UNNEST ord.orderlines[0:1] AS prod WHERE ord.orderlines[1].productId=\"tea111\" AND ord.test_id=\"from_func\" ORDER BY ord.id",
+        "results": [
+        {
+            "ord": {
+                "custId": "customer312",
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "prod": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT ord.* FROM orders AS ord UNNEST TO_ARRAY(ord.orderlines[0].qty) AS quant WHERE ord.orderlines[0].productId = \"tea111\" AND ord.test_id=\"from_func\" ORDER BY ord.id",
+        "results": [
+        {
+            "custId": "customer12",
+            "id": "1235",
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ],
+            	"test_id": "from_func",
+		"type": "order"
+        }
+    ]
+    },
+
+
+    {
+        "statements": "SELECT pid AS mostitems, count(*) AS count FROM orders UNNEST TO_ARRAY(orderlines[0].productId) AS pid WHERE orders.test_id=\"from_func\" GROUP BY pid ORDER BY count DESC limit 1",
+        "results": [
+        {
+            "count": 3,
+            "mostitems": "coffee01"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT count(*) AS C FROM orders AS ord UNNEST TO_ARRAY(ord.orderlines[0].qty) AS quant UNNEST TO_ARRAY(ord.orderlines[1].qty) AS quant1 WHERE ord.test_id=\"from_func\" GROUP BY ord.orderlines[0:1].productId",
+        "results": [
+        {
+            "C": 4
+        }
+    ]    
+    },
+    {
+        "statements": "SELECT * FROM orders AS ord UNNEST TO_ARRAY(ord.orderlines[0].productId) AS productId WHERE ord.test_id=\"from_func\" ORDER BY ord.id, productId, ord.customerId",
+        "results": [
+        {
+            "ord": {
+                "custId": "customer18",
+                "id": "1200",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": "2012/01/02",
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "productId": "coffee01"
+        },
+        {
+            "ord": {
+                "custId": "customer312",
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "productId": "coffee01"
+        },
+        {
+            "ord": {
+                "custId": "customer12",
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "productId": "tea111"
+        },
+        {
+            "ord": {
+                "custId": "customer38",
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "test_id": "from_func",
+		"type": "order"
+            },
+            "productId": "coffee01"
+        }
+    ]
+    }
+]

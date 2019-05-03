@@ -400,7 +400,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		if vble == "creds" {
 			// Define credentials as user/pass and convert into
-			//   JSON object credentials
+			//  JSON object credentials
 
 			var creds Credentials
 			args_str := strings.Join(args[1:], " ")

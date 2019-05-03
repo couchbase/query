@@ -1,0 +1,469 @@
+[
+    {
+    	"statements": "SELECT unitPrice, name FROM product WHERE unitPrice IS NOT MISSING AND test_id=\"where_func\" ORDER BY unitPrice, productId LIMIT 3",
+    	"results": [
+        {
+            "name": "SODIAL(TM) Mickey Mouse Face Shape Cookie Cutter",
+            "unitPrice": 0.69
+        },
+        {
+            "name": "Moen YB8099CH Mason Paper Holder, Chrome",
+            "unitPrice": 1.41
+        },
+        {
+            "name": "Moen YB8099CH Mason Paper Holder, Chrome",
+            "unitPrice": 1.41
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT unitPrice, name FROM product WHERE unitPrice IS NOT NULL AND test_id=\"where_func\" ORDER BY unitPrice, productId LIMIT 3",
+    	"results": [
+        {
+            "name": "SODIAL(TM) Mickey Mouse Face Shape Cookie Cutter",
+            "unitPrice": 0.69
+        },
+        {
+            "name": "Moen YB8099CH Mason Paper Holder, Chrome",
+            "unitPrice": 1.41
+        },
+        {
+            "name": "Moen YB8099CH Mason Paper Holder, Chrome",
+            "unitPrice": 1.41
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT unitPrice, name FROM product WHERE unitPrice IS NULL AND test_id=\"where_func\" ORDER BY unitPrice, productId LIMIT 3",
+    	"results": [
+    ]
+    },
+    {	
+    	"statements": "SELECT categories, color FROM product WHERE product.categories[0]=\"Luggage\" AND test_id=\"where_func\" ORDER BY color limit 3",
+    	"results": [
+        {
+            "categories": [
+                "Luggage"
+            ],
+            "color": "azure"
+        },
+        {
+            "categories": [
+                "Luggage"
+            ],
+            "color": "black"
+        },
+        {
+            "categories": [
+                "Luggage"
+            ],
+            "color": "fuchsia"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT productId, color FROM product WHERE unitPrice=183.2 AND productId LIKE \"product1%\" AND test_id=\"where_func\" ORDER BY productId, color",
+    	"results": [
+        {
+            "color": "green",
+            "productId": "product13"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT productId, color, categories FROM product WHERE categories[0] LIKE \"Bed%\" AND test_id=\"where_func\" ORDER BY productId LIMIT 3",
+    	"results": [
+        {
+            "categories": [
+                "Bedding \u0026 Bath"
+            ],
+            "color": "grey",
+            "productId": "product122"
+        },
+        {
+            "categories": [
+                "Bedding \u0026 Bath"
+            ],
+            "color": "gold",
+            "productId": "product123"
+        },
+        {
+            "categories": [
+                "Bedding \u0026 Bath"
+            ],
+            "color": "sky blue",
+            "productId": "product124"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name, color, productId FROM product WHERE reviewList=[\"review1908\", \"review7858\"] AND test_id=\"where_func\" ORDER BY name ",
+    	"results": [
+        {
+            "color": "azure",
+            "name": "Waring Pro IC70 Professional Stainless Steel Large-Capacity Ice Crusher",
+            "productId": "product136"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name, color FROM product WHERE length(name) < 15 AND test_id=\"where_func\" ORDER BY name limit 3",
+    	"results": [
+        {
+            "color": "teal",
+            "name": "Ball Cap Buddy"
+        },
+        {
+            "color": "grey",
+            "name": "Eureka-euro 30"
+        },
+        {
+            "color": "orchid",
+            "name": "FIFA Soccer 13"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name from product as prods WHERE prods.name=\"Ball Cap Buddy\" AND test_id=\"where_func\"",
+    	"results": [
+        {
+            "name": "Ball Cap Buddy"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name, categories[0] AS category FROM product AS prods WHERE prods.unitPrice=183.2 AND test_id=\"where_func\"",
+    	"results": [
+        {
+            "category": "Luggage",
+            "name": "Briggs \u0026 Riley  17 Inch Slim Briefcase,Black,12.5x17x4"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name AS category FROM product AS prods WHERE prods.unitPrice=183.2 AND test_id=\"where_func\"",
+    	"results": [
+        {
+            "category": "Briggs \u0026 Riley  17 Inch Slim Briefcase,Black,12.5x17x4"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name FROM product WHERE (ANY review IN product.reviewList SATISFIES review=\"review1908\" END AND ANY category IN product.categories SATISFIES category=\"Appliances\" END) AND unitPrice>70 AND test_id=\"where_func\" ORDER BY name",
+    	"results": [
+        {
+            "name": "Waring Pro IC70 Professional Stainless Steel Large-Capacity Ice Crusher"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name, reviewList FROM product WHERE (EVERY review in product.reviewList SATISFIES length(review)>9 END) AND test_id=\"where_func\" ORDER BY name limit 3",
+    	"results": [
+        {
+            "name": "24-105mm Travel Coffee Mug / Cup / Thermos with Drinking Lid \u0026 Quality Stainless Steel Interior",
+            "reviewList": [
+                "review1285",
+                "review1340",
+                "review2034",
+                "review2450",
+                "review3058",
+                "review3383",
+                "review5560",
+                "review7187",
+                "review9973"
+            ]
+        },
+        {
+            "name": "25 Foot - Python No Spill Clean and Fill Aquarium Maintenance System",
+            "reviewList": [
+                "review1443",
+                "review1773",
+                "review2508",
+                "review3019",
+                "review4859",
+                "review5249",
+                "review6090",
+                "review7068",
+                "review7086",
+                "review8065",
+                "review8418",
+                "review9958"
+            ]
+        },
+        {
+            "name": "3M Indoor Window Insulator Kit, 1-Window",
+            "reviewList": [
+                "review2042",
+                "review2627",
+                "review3110",
+                "review4880",
+                "review6308",
+                "review7247",
+                "review7340",
+                "review7831",
+                "review8298",
+                "review9221",
+                "review9394"
+            ]
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT name FROM product WHERE ANY review IN reviewList SATISFIES review=\"review2042\" END AND NOT (unitPrice<10) AND test_id=\"where_func\" ORDER BY name",
+    	 "results": [
+        {
+            "name": "3M Indoor Window Insulator Kit, 1-Window"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT custId, id FROM orders WHERE `shipped-on` IS VALUED AND test_id=\"where_func\" ORDER BY id",
+    	"results": [
+        {
+            "custId": "customer18",
+            "id": "1200"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT id FROM orders WHERE `shipped-on` IS NOT NULL AND test_id=\"where_func\" ORDER BY id",
+    	"results": [
+        {
+            "id": "1200"
+        }
+    ]
+    },
+    {
+    	"statements": "SELECT custId, id FROM orders WHERE `shipped-on` IS NOT VALUED AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "custId": "customer312",
+            "id": "1234"
+        },
+        {
+            "custId": "customer12",
+            "id": "1235"
+        },
+        {
+            "custId": "customer38",
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE `shipped-on` IS NULL AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE `shipped-on` IS NOT MISSING AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE `shipped-on` IS MISSING AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE id <> \"1234\" AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE id <= \"1234\" AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1234"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE id > \"1234\" AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT id FROM orders WHERE (id = \"1200\" OR id = \"1236\") AND test_id=\"where_func\" ORDER BY id",
+        "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT customerId, id, orderlines FROM orders WHERE orderlines[0]={\"productId\": \"coffee01\", \"qty\": 2} AND id=\"1234\" AND test_id=\"where_func\"",
+        "results": [
+        {
+            "id": "1234",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+    {   
+        "statements": "SELECT * from orders WHERE (custId LIKE \"customer3%\" OR `shipped-on` IS VALUED) AND type=\"order\" AND test_id=\"where_func\" AND length(custId)>10 ORDER BY id",
+        "results": [
+        {
+            "orders": {
+                "custId": "customer312",
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "test_id": "where_func",
+                "type": "order"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT name from product where every review in reviewList satisfies length(review)>=10 END AND test_id=\"where_func\" ORDER BY name DESC limit 3",
+        "results": [
+        {
+            "name": "adidas Louisville Cardinals White Basketball T-Shirt"
+        },
+        {
+            "name": "[Award Winning] Kidsme Food Feeder (Large size)"
+        },
+        {
+            "name": "Zumba Women's Fitness LLC Pop Racerback Tank Top"
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT id FROM orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product == \"tea111\" END AND test_id=\"where_func\" ORDER BY id",
+        "results" : [
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product <> \"tea111\" END AND test_id=\"where_func\" ORDER BY id",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product != \"tea111\" END AND test_id=\"where_func\" ORDER BY id",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT productId, reviewList FROM product WHERE EVERY review IN reviewList satisfies length(review)>length(productId) END AND test_id=\"where_func\" ORDER BY productId limit 3",
+        "results": [
+        {
+            "productId": "product0",
+            "reviewList": [
+                "review660",
+                "review1332",
+                "review1575",
+                "review2054",
+                "review2566",
+                "review2752",
+                "review4974",
+                "review5566",
+                "review6550",
+                "review7926",
+                "review8226",
+                "review8786"
+            ]
+        },
+        {
+            "productId": "product1",
+            "reviewList": [
+                "review177",
+                "review1077",
+                "review1082",
+                "review1869",
+                "review3884",
+                "review5370",
+                "review6507",
+                "review6920",
+                "review7966",
+                "review8253",
+                "review9156",
+                "review9277"
+            ]
+        },
+        {
+            "productId": "product11",
+            "reviewList": [
+                "review1044",
+                "review1550",
+                "review1753",
+                "review2471",
+                "review3078",
+                "review7747",
+                "review7748"
+            ]
+        }
+    ]
+    }
+]

@@ -1,0 +1,6 @@
+[
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1237_select_func\", {\"type\": \"value\", \"big\":9223372036854775807, \"little\":-9223372036854775807, \"test_id\" : \"select_big_int\" })" },
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1238_select_func\", {\"type\": \"aggr\", \"num\":9223372036854775707, \"test_id\" : \"select_big_int\" })" },
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1239_select_func\", {\"type\": \"aggr\", \"num\":99, \"test_id\" : \"select_big_int\" })" },
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1240_select_func\", {\"type\": \"aggr\", \"num\":1, \"test_id\" : \"select_big_int\" })" }
+]
