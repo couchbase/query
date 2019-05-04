@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/prepareds"
@@ -270,6 +271,7 @@ func Start(site, pool, namespace string) *MockServer {
 		os.Exit(1)
 	}
 	prepareds.PreparedsReprepareInit(ds, sys)
+	constructor.Init()
 	server.SetKeepAlive(1 << 10)
 	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 

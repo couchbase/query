@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/plan"
@@ -343,6 +344,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 
 	prepareds.PreparedsReprepareInit(ds, sys)
+	constructor.Init()
 	server.SetKeepAlive(1 << 10)
 
 	mockServer.server = server
