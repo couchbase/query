@@ -863,6 +863,7 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 // operator state handling
 func (this *base) active() bool {
 	this.activeCond.L.Lock()
+	defer this.activeCond.L.Unlock()
 
 	// we have been killed before we started!
 	if this.opState == _KILLED {
@@ -872,7 +873,6 @@ func (this *base) active() bool {
 
 	// we are good to go
 	this.opState = _RUNNING
-	this.activeCond.L.Unlock()
 
 	return true
 }
