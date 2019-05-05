@@ -156,7 +156,6 @@ const (
 	UPDATES
 	INSERTS
 	DELETES
-	UNKNOWN
 
 	INDEX_SCANS
 	PRIMARY_SCANS
@@ -185,6 +184,9 @@ const (
 	AUDIT_REQUESTS_FILTERED
 	AUDIT_ACTIONS
 	AUDIT_ACTIONS_FAILED
+
+	// unknown is always the last and does not have a corresponding name or metric
+	UNKNOWN
 )
 
 // Define names for all the metrics we are interested in:
@@ -200,7 +202,6 @@ const (
 	_UPDATES = "updates"
 	_INSERTS = "inserts"
 	_DELETES = "deletes"
-	_UNKNOWN = "unknown"
 
 	_INDEX_SCANS   = "index_scans"
 	_PRIMARY_SCANS = "primary_scans"
@@ -247,7 +248,6 @@ var metricNames = []string{
 	_UPDATES,
 	_INSERTS,
 	_DELETES,
-	_UNKNOWN,
 
 	_INDEX_SCANS,
 	_PRIMARY_SCANS,
