@@ -329,6 +329,9 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	// Start the completed requests log - keep it small and busy
 	server.RequestsInit(0, 8)
 
+	// Start the dictionary cache
+	server.InitDictionaryCache(1024)
+
 	// need to do it before NewServer() or server scope's changes to
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())

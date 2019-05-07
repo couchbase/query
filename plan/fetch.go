@@ -73,6 +73,15 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.term.IsUnderNL() {
 		r["nested_loop"] = this.term.IsUnderNL()
 	}
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -81,12 +90,14 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string   `json:"#operator"`
-		Names    string   `json:"namespace"`
-		Keys     string   `json:"keyspace"`
-		As       string   `json:"as"`
-		UnderNL  bool     `json:"nested_loop"`
-		SubPaths []string `json:"subpaths"`
+		_           string   `json:"#operator"`
+		Names       string   `json:"namespace"`
+		Keys        string   `json:"keyspace"`
+		As          string   `json:"as"`
+		UnderNL     bool     `json:"nested_loop"`
+		Cost        float64  `json:"cost"`
+		Cardinality float64  `json:"cardinality"`
+		SubPaths    []string `json:"subpaths"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -95,6 +106,18 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.subPaths = _unmarshalled.SubPaths
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
 	if _unmarshalled.UnderNL {
@@ -121,14 +144,18 @@ func (this *Fetch) Cardinality() float64 {
 
 type DummyFetch struct {
 	readonly
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceTerm
+	cost        float64
+	cardinality float64
 }
 
-func NewDummyFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *DummyFetch {
+func NewDummyFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, cost, cardinality float64) *DummyFetch {
 	return &DummyFetch{
-		keyspace: keyspace,
-		term:     term,
+		keyspace:    keyspace,
+		term:        term,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -152,6 +179,14 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
+func (this *DummyFetch) Cost() float64 {
+	return this.cost
+}
+
+func (this *DummyFetch) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DummyFetch"}
 	r["namespace"] = this.term.Namespace()
@@ -162,6 +197,15 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 	if this.term.IsUnderNL() {
 		r["nested_loop"] = this.term.IsUnderNL()
 	}
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -170,16 +214,30 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_       string `json:"#operator"`
-		Names   string `json:"namespace"`
-		Keys    string `json:"keyspace"`
-		As      string `json:"as"`
-		UnderNL bool   `json:"nested_loop"`
+		_           string  `json:"#operator"`
+		Names       string  `json:"namespace"`
+		Keys        string  `json:"keyspace"`
+		As          string  `json:"as"`
+		UnderNL     bool    `json:"nested_loop"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
+	}
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
 	}
 
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)

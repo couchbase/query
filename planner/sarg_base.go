@@ -68,7 +68,7 @@ func (this *sarg) getSelec(pred expression.Expression) float64 {
 	// if this is a subterm of an OR, it won't be in filters
 	keyspaces := make(map[string]string, 1)
 	keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
-	sel, arrSel, _ := optExprSelec(keyspaces, pred)
+	sel, arrSel := optExprSelec(keyspaces, pred)
 
 	if array {
 		return arrSel

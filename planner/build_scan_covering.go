@@ -93,9 +93,9 @@ outer:
 	if useCBO {
 		for c, _ := range covering {
 			entry := indexes[c]
-			if entry.cost < 0 {
+			if entry.cost <= 0.0 {
 				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.requestId, entry.spans)
-				if e != nil {
+				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					useCBO = false
 				} else {
 					entry.cost = cost

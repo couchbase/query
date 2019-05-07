@@ -11,7 +11,7 @@ package expression
 
 func TrimKeyspace(expr Expression, keyspace string) (Expression, error) {
 	ksTrimmer := newKeyspaceTrimmer(keyspace)
-	newExpr, err := ksTrimmer.Map(expr)
+	newExpr, err := ksTrimmer.Map(expr.Copy())
 	if err != nil {
 		return nil, err
 	}

@@ -63,8 +63,12 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 				return _VALUED_SPANS, nil
 			}
 
+			selec := OPT_SELEC_NOT_AVAIL
+			if this.doSelec {
+				selec = optDefInSelec(this.baseKeyspace.Keyspace())
+			}
 			static.SetDynamicIn()
-			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH, optDefInSelec(), OPT_SELEC_NOT_AVAIL, 0)
+			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 			return NewTermSpans(span), nil
 		}
@@ -88,7 +92,10 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			continue
 		}
 
-		selec, _, _ := optExprSelec(keyspaces, static)
+		selec := OPT_SELEC_NOT_AVAIL
+		if this.doSelec {
+			selec, _ = optExprSelec(keyspaces, static)
+		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		span := plan.NewSpan2(nil, plan.Ranges2{range2}, (val != nil))
 		spans = append(spans, span)

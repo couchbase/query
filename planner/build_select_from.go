@@ -175,12 +175,18 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			return nil, err
 		}
 
-		fetchCost := OPT_COST_NOT_AVAIL
+		cost := scan.Cost()
 		cardinality := scan.Cardinality()
-		if this.useCBO {
-			fetchCost = getFetchCost(keyspace, cardinality)
+		if this.useCBO && (cost > 0.0) {
+			fetchCost := getFetchCost(keyspace, cardinality)
+			if fetchCost > 0.0 {
+				cost += fetchCost
+			} else {
+				cost = OPT_COST_NOT_AVAIL
+				cardinality = OPT_CARD_NOT_AVAIL
+			}
 		}
-		fetch := plan.NewFetch(keyspace, node, names, fetchCost, cardinality)
+		fetch := plan.NewFetch(keyspace, node, names, cost, cardinality)
 		this.children = append(this.children, fetch)
 		this.lastOp = fetch
 	}

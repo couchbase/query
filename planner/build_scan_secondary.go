@@ -329,9 +329,9 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	for s, se := range sargables {
 		useCBO := this.useCBO
 		if useCBO {
-			if se.cost < 0 {
+			if se.cost <= 0.0 {
 				cost, _, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans)
-				if e != nil {
+				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					useCBO = false
 				} else {
 					se.cost = cost
@@ -346,19 +346,21 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 
 			if useCBO {
-				if te.cost < 0 {
+				if te.cost <= 0 {
 					cost, _, card, e := indexScanCost(te.index, te.sargKeys, this.requestId, te.spans)
-					if e != nil {
+					if e != nil || (cost <= 0.0 || card <= 0.0) {
 						useCBO = false
 					} else {
 						te.cost = cost
 						te.cardinality = card
 					}
 				}
+			}
 
+			se_pushdown := se.PushDownProperty()
+			te_pushdown := te.PushDownProperty()
+			if useCBO {
 				// consider pushdown property before considering cost
-				se_pushdown := se.PushDownProperty()
-				te_pushdown := te.PushDownProperty()
 				if se_pushdown > te_pushdown ||
 					((se_pushdown == te_pushdown) && (se.cost < te.cost)) {
 					delete(sargables, t)
@@ -366,7 +368,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			} else {
 				if narrowerOrEquivalent(se, te, shortest, pred) {
 					if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
-						te.PushDownProperty() > se.PushDownProperty() {
+						te_pushdown > se_pushdown {
 						delete(sargables, s)
 						break
 					}

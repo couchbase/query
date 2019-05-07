@@ -449,7 +449,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 	for kspace, _ := range keyspaces {
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
 			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, this.isOnclause, isJoin)
-			if this.doSelec {
+			if this.doSelec && !baseKspace.IsPrimaryUnnest() {
 				optCalcSelectivity(filter)
 			}
 

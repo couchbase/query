@@ -24,16 +24,20 @@ func optCalcSelectivity(filter *base.Filter) {
 }
 
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
-	float64, float64, bool) {
-	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, false
+	float64, float64) {
+	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
-func optDefInSelec() float64 {
+func optDefInSelec(keyspace string) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
-func optDefLikeSelec() float64 {
+func optDefLikeSelec(keyspace string) float64 {
 	return OPT_SELEC_NOT_AVAIL
+}
+
+func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,

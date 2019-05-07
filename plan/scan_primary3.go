@@ -21,31 +21,35 @@ import (
 
 type PrimaryScan3 struct {
 	readonly
-	index      datastore.PrimaryIndex3
-	indexer    datastore.Indexer
-	keyspace   datastore.Keyspace
-	term       *algebra.KeyspaceTerm
-	groupAggs  *IndexGroupAggregates
-	projection *IndexProjection
-	orderTerms IndexKeyOrders
-	offset     expression.Expression
-	limit      expression.Expression
+	index       datastore.PrimaryIndex3
+	indexer     datastore.Indexer
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceTerm
+	groupAggs   *IndexGroupAggregates
+	projection  *IndexProjection
+	orderTerms  IndexKeyOrders
+	offset      expression.Expression
+	limit       expression.Expression
+	cost        float64
+	cardinality float64
 }
 
 func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
-	groupAggs *IndexGroupAggregates) *PrimaryScan3 {
+	groupAggs *IndexGroupAggregates, cost, cardinality float64) *PrimaryScan3 {
 	return &PrimaryScan3{
-		index:      index,
-		indexer:    index.Indexer(),
-		keyspace:   keyspace,
-		term:       term,
-		groupAggs:  groupAggs,
-		projection: projection,
-		orderTerms: orderTerms,
-		offset:     offset,
-		limit:      limit,
+		index:       index,
+		indexer:     index.Indexer(),
+		keyspace:    keyspace,
+		term:        term,
+		groupAggs:   groupAggs,
+		projection:  projection,
+		orderTerms:  orderTerms,
+		offset:      offset,
+		limit:       limit,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -101,6 +105,14 @@ func (this *PrimaryScan3) SetOffset(offset expression.Expression) {
 	this.offset = offset
 }
 
+func (this *PrimaryScan3) Cost() float64 {
+	return this.cost
+}
+
+func (this *PrimaryScan3) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -136,6 +148,14 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 		r["index_group_aggs"] = this.groupAggs
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -144,17 +164,19 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_          string                `json:"#operator"`
-		Index      string                `json:"index"`
-		Names      string                `json:"namespace"`
-		Keys       string                `json:"keyspace"`
-		As         string                `json:"as"`
-		Using      datastore.IndexType   `json:"using"`
-		GroupAggs  *IndexGroupAggregates `json:"index_group_aggs"`
-		Projection *IndexProjection      `json:"index_projection"`
-		OrderTerms IndexKeyOrders        `json:"index_order"`
-		Offset     string                `json:"offset"`
-		Limit      string                `json:"limit"`
+		_           string                `json:"#operator"`
+		Index       string                `json:"index"`
+		Names       string                `json:"namespace"`
+		Keys        string                `json:"keyspace"`
+		As          string                `json:"as"`
+		Using       datastore.IndexType   `json:"using"`
+		GroupAggs   *IndexGroupAggregates `json:"index_group_aggs"`
+		Projection  *IndexProjection      `json:"index_projection"`
+		OrderTerms  IndexKeyOrders        `json:"index_order"`
+		Offset      string                `json:"offset"`
+		Limit       string                `json:"limit"`
+		Cost        float64               `json:"cost"`
+		Cardinality float64               `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -178,6 +200,18 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
 	}
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)

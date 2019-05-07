@@ -48,8 +48,9 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	}
 
 	if primary3, ok := primary.(datastore.PrimaryIndex3); ok && useIndex3API(primary, this.indexApiVersion) {
+		cost, cardinality := primaryIndexScanCost(primary, this.requestId)
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
-			plan.NewIndexProjection(0, true), indexOrder, nil), nil
+			plan.NewIndexProjection(0, true), indexOrder, nil, cost, cardinality), nil
 	}
 
 	var limit expression.Expression

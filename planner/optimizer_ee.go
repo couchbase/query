@@ -26,16 +26,24 @@ func optCalcSelectivity(filter *base.Filter) {
 }
 
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
-	float64, float64, bool) {
-	return optimizer.ExprSelec(keyspaces, pred)
+	float64, float64) {
+	sel, arrSel, def := optimizer.ExprSelec(keyspaces, pred)
+	if def {
+		return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
+	}
+	return sel, arrSel
 }
 
-func optDefInSelec() float64 {
-	return optimizer.DEF_IN_SEL
+func optDefInSelec(keyspace string) float64 {
+	return optimizer.DefInSelec(keyspace)
 }
 
-func optDefLikeSelec() float64 {
-	return optimizer.DEF_LIKE_SEL
+func optDefLikeSelec(keyspace string) float64 {
+	return optimizer.DefLikeSelec(keyspace)
+}
+
+func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
+	return optimizer.CalcPrimaryIndexScanCost(primary, requestId)
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,

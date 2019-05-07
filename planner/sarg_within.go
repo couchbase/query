@@ -63,10 +63,13 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 			continue
 		}
 
+		selec := OPT_SELEC_NOT_AVAIL
+		if this.doSelec {
+			selec = optDefInSelec(this.baseKeyspace.Keyspace())
+		}
 		expr := expression.NewConstant(val)
-		range2 := plan.NewRange2(expr, expr, datastore.BOTH, optDefInSelec(), OPT_SELEC_NOT_AVAIL, 0)
+		range2 := plan.NewRange2(expr, expr, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
-		spans = append(spans, span)
 		spans = append(spans, span)
 	}
 

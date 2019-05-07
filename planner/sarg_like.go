@@ -43,7 +43,11 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	}
 
 	if re == nil {
-		return likeSpans(pred), nil
+		selec := OPT_SELEC_NOT_AVAIL
+		if this.doSelec {
+			selec = optDefLikeSelec(this.baseKeyspace.Keyspace())
+		}
+		return likeSpans(pred, selec), nil
 	}
 
 	exact := false
@@ -70,8 +74,8 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	return NewTermSpans(span), nil
 }
 
-func likeSpans(pred expression.LikeFunction) SargSpans {
-	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW, optDefLikeSelec(), OPT_SELEC_NOT_AVAIL, 0)
+func likeSpans(pred expression.LikeFunction, selec float64) SargSpans {
+	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW, selec, OPT_SELEC_NOT_AVAIL, 0)
 
 	switch pred := pred.(type) {
 	case *expression.Like:
