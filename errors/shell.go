@@ -233,6 +233,7 @@ func NewShellErrorJsonMarshal(msg string) Error {
 func NewShellErrorJsonUnmarshal(msg string) Error {
 	return &err{level: EXCEPTION, ICode: JSON_UNMARSHAL, IKey: "shell.json.unmarshal.error", InternalMsg: JSON_UNMARSHAL_MSG + msg, InternalCaller: CallerN(1)}
 }
+
 func NewShellErrorDriverQueryMethod(msg string) Error {
 	return &err{level: EXCEPTION, ICode: DRIVER_QUERY, IKey: "shell.driver.query.method.error", InternalMsg: DRIVER_QUERY_MSG + msg, InternalCaller: CallerN(1)}
 }
@@ -253,10 +254,10 @@ func NewShellErrorCmdLineArgs(msg string) Error {
 	return &err{level: EXCEPTION, ICode: CMD_LINE_ARG, IKey: "shell.command.line.args", InternalMsg: CMD_LINE_ARG_MSG + msg, InternalCaller: CallerN(1)}
 }
 
-func NewShellErrorUnkownError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: UNKNOWN_ERROR, IKey: "shell.internal.error.uncaptured", InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
-}
-
 func NewShellErrorInvalidInputArguments(msg string) Error {
 	return &err{level: EXCEPTION, ICode: INVALID_INPUT_ARGUMENTS, IKey: "shell.invalid.input.arguments", InternalMsg: INVALID_INPUT_ARGUMENTS_MSG + msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorUnkownError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: UNKNOWN_ERROR, IKey: "shell.internal.error.uncaptured", InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
 }

@@ -56,7 +56,7 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 
 	// Window Aggregation is EE feature only
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
-		return errors.NewEnterpirseFeature("Window function", "semantics.visit_aggregate_function")
+		return errors.NewEnterpriseFeature("Window function", "semantics.visit_aggregate_function")
 	}
 
 	// Aggregate syntax has second argument check semantics

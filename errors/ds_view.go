@@ -59,15 +59,7 @@ func NewCbViewDefError(e error) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewDatastoreNoUserSupplied() Error {
-	return &err{level: EXCEPTION, ICode: 13010, IKey: "datastore.couchbase.no_user",
-		InternalMsg: "No user supplied for query.", InternalCaller: CallerN(1)}
-}
-
-func NewDatastoreInvalidUsernamePassword() Error {
-	return &err{level: EXCEPTION, ICode: 13011, IKey: "datastore.couchbase.invalid_username_password",
-		InternalMsg: "Invalid username/password.", InternalCaller: CallerN(1)}
-}
+// Error codes 13010-13011 are retired. Do not reuse.
 
 func NewDatastoreClusterError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13012, IKey: "datastore.couchbase.cluster_error", ICause: e,

@@ -18,10 +18,7 @@ func NewCbConnectionError(e error, msg string) Error {
 
 }
 
-func NewCbUrlParseError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 12001, IKey: "datastore.couchbase.url_parse", ICause: e,
-		InternalMsg: "Cannot parse url " + msg, InternalCaller: CallerN(1)}
-}
+// Error code 12001 is retired. Do not reuse.
 
 func NewCbNamespaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12002, IKey: "datastore.couchbase.namespace_not_found", ICause: e,
@@ -48,10 +45,7 @@ func NewCbKeyspaceCountError(e error, msg string) Error {
 		InternalMsg: "Failed to get keyspace count " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewCbNoKeysFetchError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 12007, IKey: "datastore.couchbase.no_keys_fetch", ICause: e,
-		InternalMsg: "No keys to fetch " + msg, InternalCaller: CallerN(1)}
-}
+// Error code 12007 is retired. Do not reuse.
 
 func NewCbBulkGetError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12008, IKey: "datastore.couchbase.bulk_get_error", ICause: e,
@@ -63,10 +57,7 @@ func NewCbDMLError(e error, msg string) Error {
 		InternalMsg: "DML Error, possible causes include CAS mismatch or concurrent modification" + msg, InternalCaller: CallerN(1)}
 }
 
-func NewCbNoKeysInsertError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 12010, IKey: "datastore.couchbase.no_keys_insert", ICause: e,
-		InternalMsg: "No keys to insert " + msg, InternalCaller: CallerN(1)}
-}
+// Error code 12010 is retired. Do not reuse.
 
 func NewCbDeleteFailedError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12011, IKey: "datastore.couchbase.delete_failed", ICause: e,
@@ -83,10 +74,7 @@ func NewCbBucketTypeNotSupportedError(e error, msg string) Error {
 		InternalMsg: "This bucket type is not supported " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewCbIndexStateError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 12014, IKey: "datastore.couchbase.index_state_error",
-		InternalMsg: msg, InternalCaller: CallerN(1)}
-}
+// Error code 12014 is retired. Do not reuse.
 
 const INDEX_SCAN_TIMEOUT = 12015
 

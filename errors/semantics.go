@@ -50,13 +50,8 @@ func NewJoinNestNoUseIndexError(op string, alias string, iKey string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-const SUBQ_TERM_NO_CORRELATION = 3140
-
-func NewNoCorrelatedSubqTermError(alias string) Error {
-	return &err{level: EXCEPTION, ICode: SUBQ_TERM_NO_CORRELATION, IKey: "semantics.from_term_no_corr_subq",
-		InternalMsg:    fmt.Sprintf("FROM clause subquery term (%s) cannot be correlated.", alias),
-		InternalCaller: CallerN(1)}
-}
+// Error code 3140 is retired. Do not reuse.
+// const SUBQ_TERM_NO_CORRELATION = 3140
 
 const MERGE_INSERT_NO_KEY = 3150
 
@@ -106,13 +101,8 @@ func NewMixedJoinError(op1 string, alias1 string, op2 string, alias2 string, iKe
 		InternalCaller: CallerN(1)}
 }
 
-const ANSI_KEYSPACE_ONLY = 3210
-
-func NewAnsiKeyspaceOnlyError(op string, alias string, iKey string) error {
-	return &err{level: EXCEPTION, ICode: ANSI_KEYSPACE_ONLY, IKey: iKey,
-		InternalMsg:    fmt.Sprintf("ANSI %s (on %s) must be done on a keyspace.", op, alias),
-		InternalCaller: CallerN(1)}
-}
+// Error code 3210 is retired. Do not reuse.
+// const ANSI_KEYSPACE_ONLY = 3210
 
 const WINDOW_SEMANTIC_ERROR = 3220
 
@@ -124,24 +114,19 @@ func NewWindowSemanticError(fname, wclause, cause, iKey string) Error {
 
 const ENTERPRISE_FEATURE = 3230
 
-func NewEnterpirseFeature(opmsg, iKey string) Error {
+func NewEnterpriseFeature(opmsg, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: ENTERPRISE_FEATURE, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("%s is enterprise level feature.", opmsg),
 		InternalCaller: CallerN(1)}
 }
 
-const UNSUPPORTED_PATH_TYPE = 3240
+// Error code 3240 is retired. Do not reuse.
+// const UNSUPPORTED_PATH_TYPE = 3240
 
-func NewUnsupportedPath(base error) Error {
-	return &err{level: EXCEPTION, ICode: UNSUPPORTED_PATH_TYPE, IKey: "semantics.path.unsupported",
-		InternalMsg:    fmt.Sprintf("Unsupported path type: %v", base),
-		InternalCaller: CallerN(1)}
-}
-
-const ADVISE_UNSURPORTED_STMT = 3250
+const ADVISE_UNSUPPORTED_STMT = 3250
 
 func NewAdviseUnsupportedStmtError(iKey string) Error {
-	return &err{level: EXCEPTION, ICode: ADVISE_UNSURPORTED_STMT, IKey: iKey,
+	return &err{level: EXCEPTION, ICode: ADVISE_UNSUPPORTED_STMT, IKey: iKey,
 		InternalMsg: fmt.Sprintf("Advise supports SELECT, MERGE, UPDATE and DELETE statements only."), InternalCaller: CallerN(1)}
 }
 

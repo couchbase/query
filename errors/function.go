@@ -17,6 +17,7 @@ const (
 	//FTS errors
 	FTS_MISSING_PORT = 10003
 	NODE_ACCESS_ERR  = 10004
+	NODE_SERVICE_ERR = 10005
 )
 
 func NewFTSMissingPortErr(e string) Error {
@@ -32,7 +33,7 @@ func NewNodeInfoAccessErr(e string) Error {
 }
 
 func NewNodeServiceErr(e string) Error {
-	return &err{level: EXCEPTION, ICode: NODE_ACCESS_ERR, IKey: "node.service.error", ICause: fmt.Errorf("%v", e),
+	return &err{level: EXCEPTION, ICode: NODE_SERVICE_ERR, IKey: "node.service.error", ICause: fmt.Errorf("%v", e),
 		InternalMsg:    fmt.Sprintf("No FTS node in server %v", e),
 		InternalCaller: CallerN(1)}
 }

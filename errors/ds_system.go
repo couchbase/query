@@ -21,11 +21,7 @@ func NewSystemDatastoreError(e error, msg string) Error {
 
 }
 
-func NewSystemNamespaceNotFoundError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 11001, IKey: "datastore.system.namespace_not_found", ICause: e,
-		InternalMsg: "Datastore : namespace not found " + msg, InternalCaller: CallerN(1)}
-
-}
+// Error code 11011 is retired. Do not reuse.
 
 func NewSystemKeyspaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 11002, IKey: "datastore.system.keyspace_not_found", ICause: e,

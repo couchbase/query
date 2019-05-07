@@ -134,10 +134,7 @@ func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
 			"Use scan_vectors instead. Keyspaces: %v", buckets), InternalCaller: CallerN(1)}
 }
 
-func NewNoValueForKey(key string) Error {
-	return &err{level: EXCEPTION, ICode: 5200, IKey: "execution.no_value_for_key",
-		InternalMsg: fmt.Sprintf("Unable to find a value for key %s.", key), InternalCaller: CallerN(1)}
-}
+// Error code 5200 is retired. Do not reuse.
 
 func NewUserNotFoundError(u string) Error {
 	return &err{level: EXCEPTION, ICode: 5210, IKey: "execution.user_not_found",
@@ -192,11 +189,7 @@ func NewUserWithNoRoles(user string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewHashTableMaxSizeExceeded() Error {
-	return &err{level: EXCEPTION, ICode: 5290, IKey: "execution.hash_table_max_size_exceeded",
-		InternalMsg:    fmt.Sprintf("Maximum hash table size exceeded"),
-		InternalCaller: CallerN(1)}
-}
+// Error code 5290 is retired. Do not reuse.
 
 func NewHashTablePutError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 5300, IKey: "execution.hash_table_put_error", ICause: e,

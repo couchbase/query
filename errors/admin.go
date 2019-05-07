@@ -36,7 +36,7 @@ func NewAdminEncodingError(e error) Error {
 }
 
 func NewAdminUnknownSettingError(setting string) Error {
-	return &err{level: EXCEPTION, ICode: 2032, IKey: "admin.unknown_setting",
+	return &err{level: EXCEPTION, ICode: 2031, IKey: "admin.unknown_setting",
 		InternalMsg: fmt.Sprintf("Unknown setting: %s", setting), InternalCaller: CallerN(1)}
 }
 
@@ -115,12 +115,12 @@ func NewAdminCredsError(creds string, e error) Error {
 
 // completed requests qualifier settings
 func NewCompletedQualifierExists(what string) Error {
-	return &err{level: EXCEPTION, ICode: 2160, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: 2160, IKey: "admin.accounting.completed.already_exists",
 		InternalMsg: "Completed requests qualifier already set: " + what, InternalCaller: CallerN(1)}
 }
 
 func NewCompletedQualifierUnknown(what string) Error {
-	return &err{level: EXCEPTION, ICode: 2170, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: 2170, IKey: "admin.accounting.completed.unknown",
 		InternalMsg: "Completed requests qualifier unknown: " + what, InternalCaller: CallerN(1)}
 }
 
@@ -132,14 +132,14 @@ func NewCompletedQualifierNotFound(what string, cond interface{}) Error {
 	if cond != nil {
 		condString = fmt.Sprintf(" %v", cond)
 	}
-	return &err{level: EXCEPTION, ICode: ADMIN_QUALIFIER_NOT_SET, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: ADMIN_QUALIFIER_NOT_SET, IKey: "admin.accounting.completed.not_found",
 		InternalMsg: "Completed requests qualifier not set: " + what + condString, InternalCaller: CallerN(1)}
 }
 
 const ADMIN_QUALIFIER_NOT_UNIQUE = 2190
 
 func NewCompletedQualifierNotUnique(what string) Error {
-	return &err{level: EXCEPTION, ICode: ADMIN_QUALIFIER_NOT_UNIQUE, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: ADMIN_QUALIFIER_NOT_UNIQUE, IKey: "admin.accounting.completed.not_unique",
 		InternalMsg: "Completed requests qualifier can only be deployed once: " + what, InternalCaller: CallerN(1)}
 }
 
@@ -149,7 +149,7 @@ func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
 	if cond != nil {
 		condString = fmt.Sprintf(" %v", cond)
 	}
-	return &err{level: EXCEPTION, ICode: 2200, IKey: "admin.accounting.completed",
+	return &err{level: EXCEPTION, ICode: 2200, IKey: "admin.accounting.completed.invalid",
 		InternalMsg: "Completed requests qualifier " + what + " cannot accept argument " + condString, InternalCaller: CallerN(1)}
 }
 
