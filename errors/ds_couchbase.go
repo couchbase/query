@@ -42,14 +42,14 @@ func NewCbIndexerNotImplementedError(e error, msg string) Error {
 
 func NewCbKeyspaceCountError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12006, IKey: "datastore.couchbase.keyspace_count_error", ICause: e,
-		InternalMsg: "Failed to get keyspace count " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Failed to get keyspace count " + msg, InternalCaller: CallerN(1), retry: true}
 }
 
 // Error code 12007 is retired. Do not reuse.
 
 func NewCbBulkGetError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12008, IKey: "datastore.couchbase.bulk_get_error", ICause: e,
-		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: true}
 }
 
 func NewCbDMLError(e error, msg string) Error {
@@ -87,7 +87,7 @@ const INDEX_NOT_FOUND = 12016
 
 func NewCbIndexNotFoundError(e error) Error {
 	return &err{level: EXCEPTION, ICode: INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e,
-		InternalMsg: "Index Not Found", InternalCaller: CallerN(1)}
+		InternalMsg: "Index Not Found", InternalCaller: CallerN(1), retry: true}
 }
 
 const GET_RANDOM_ENTRY_ERROR = 12017
@@ -119,10 +119,10 @@ func NewCbScopeNotFoundError(e error, msg string) Error {
 
 func NewCbKeyspaceSizeError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12022, IKey: "datastore.couchbase.keyspace_size_error", ICause: e,
-		InternalMsg: "Failed to get keyspace size " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Failed to get keyspace size " + msg, InternalCaller: CallerN(1), retry: true}
 }
 
 func NewCbSecurityConfigNotProvided(bucket string) Error {
 	return &err{level: EXCEPTION, ICode: 12023, IKey: "datastore.couchbase.security_config_not_provided",
-		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1)}
+		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: true}
 }

@@ -72,6 +72,6 @@ func NewDatastoreUnableToRetrieveRoles(e error) Error {
 }
 
 func NewDatastoreInsufficientCredentials(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 13014, IKey: "datastore.couchbase.insufficient_credentiasl",
+	return &err{level: EXCEPTION, ICode: 13014, IKey: "datastore.couchbase.insufficient_credentials",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }

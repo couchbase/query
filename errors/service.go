@@ -63,7 +63,8 @@ func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 }
 
 func NewTimeoutError(timeout time.Duration) Error {
-	return &err{level: EXCEPTION, ICode: 1080, IKey: "timeout", InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: 1080, IKey: "timeout", InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout),
+		InternalCaller: CallerN(1), retry: true}
 }
 
 func NewServiceErrorInvalidJSON(e error) Error {

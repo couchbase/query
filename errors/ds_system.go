@@ -64,7 +64,7 @@ func NewSystemRemoteWarning(e error, op string, ks string) Error {
 
 func NewSystemUnableToRetrieveError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 11009, IKey: "datastore.system.unable_to_retrieve", ICause: e,
-		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1)}
+		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: true}
 }
 
 func NewSystemUnableToUpdateError(e error) Error {

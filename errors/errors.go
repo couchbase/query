@@ -47,6 +47,7 @@ type Error interface {
 	IsWarning() bool
 	OnceOnly() bool
 	Object() map[string]interface{}
+	Retry() bool
 }
 
 type ErrorChannel chan Error
@@ -89,6 +90,7 @@ type err struct {
 	InternalCaller string
 	level          int
 	onceOnly       bool
+	retry          bool // Retrying this query might be useful.
 }
 
 func (e *err) Error() string {
@@ -113,6 +115,9 @@ func (e *err) Object() map[string]interface{} {
 	if e.ICause != nil {
 		m["cause"] = e.ICause.Error()
 	}
+	if e.retry {
+		m["retry"] = true
+	}
 	return m
 }
 
@@ -129,6 +134,9 @@ func (e *err) MarshalJSON() ([]byte, error) {
 		!strings.HasPrefix("e.InternalCaller", "unknown:") {
 		m["caller"] = e.InternalCaller
 	}
+	if e.retry {
+		m["retry"] = true
+	}
 	return json.Marshal(m)
 }
 
@@ -138,6 +146,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 		Code    int32  `json:"code"`
 		Key     string `json:"key"`
 		Message string `json:"message"`
+		Retry   bool   `json:"retry"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -149,6 +158,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 	e.IKey = _unmarshalled.Key
 	e.InternalMsg = _unmarshalled.Message
 	e.InternalCaller = _unmarshalled.Caller
+	e.retry = _unmarshalled.Retry
 	return nil
 }
 
@@ -178,6 +188,10 @@ func (e *err) Cause() error {
 
 func (e *err) OnceOnly() bool {
 	return e.onceOnly
+}
+
+func (e *err) Retry() bool {
+	return e.retry
 }
 
 // only put errors in the reserved range here (7000-9999)

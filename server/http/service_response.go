@@ -69,6 +69,8 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusBadRequest
 	case 1120:
 		return http.StatusNotAcceptable
+	case 13014:
+		return http.StatusUnauthorized
 	case 3000: // parse error range
 		return http.StatusBadRequest
 	case 4000, errors.NO_SUCH_PREPARED: // plan error range
@@ -391,6 +393,9 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 	m := map[string]interface{}{
 		"code": err.Code(),
 		"msg":  err.Error(),
+	}
+	if err.Retry() {
+		m["retry"] = true
 	}
 
 	var er error
