@@ -525,8 +525,6 @@ ADVISE opt_index stmt
 
 opt_index:
 /* empty */
-{
-}
 |
 INDEX
 {
