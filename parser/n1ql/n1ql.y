@@ -517,9 +517,20 @@ function_stmt
 ;
 
 advise:
-ADVISE stmt
+ADVISE opt_index stmt
 {
-    $$ = algebra.NewAdvise($2, yylex.(*lexer).Remainder($<tokOffset>1))
+    $$ = algebra.NewAdvise($3, yylex.(*lexer).Remainder($<tokOffset>1))
+}
+;
+
+opt_index:
+/* empty */
+{
+}
+|
+INDEX
+{
+    yylex.(*lexer).setOffset($<tokOffset>1)
 }
 ;
 
