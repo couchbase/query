@@ -569,10 +569,10 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer this.notify() // Notify that I have stopped
 		defer func() { this.batch = nil }()
 
-		if (context.Readonly() && !cons.readonly()) {
+		if context.Readonly() && !cons.readonly() {
 
-		// TODO reinstate assertion on inputs: except all seems to run without one?
-		// || !context.assert(this.input != nil, "consumer input is nil") {
+			// TODO reinstate assertion on inputs: except all seems to run without one?
+			// || !context.assert(this.input != nil, "consumer input is nil") {
 			return
 		}
 

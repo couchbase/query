@@ -88,6 +88,15 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		// for right hand side of nested-loop join we don't want to include parent values
 		// in the returned scope value
 		scope_value := parent
+		covers := this.plan.Covers()
+		lcovers := len(covers)
+
+		var entryKeys []int
+		proj := this.plan.Projection()
+		if proj != nil {
+			entryKeys = proj.EntryKeys
+		}
+
 		if this.plan.Term().IsUnderNL() {
 			scope_value = nil
 		}
@@ -98,25 +107,23 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				if entry != nil {
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 					covers := this.plan.Covers()
-					if len(covers) > 0 {
+					if lcovers > 0 {
 
 						for c, v := range this.plan.FilterCovers() {
 							av.SetCover(c.Text(), v)
 						}
 
-						var entryKeys []int
-						proj := this.plan.Projection()
-						if proj != nil {
-							entryKeys = proj.EntryKeys
-						}
-
 						// Matches planner.builder.buildCoveringScan()
 						for i, ek := range entry.EntryKey {
-							j := i
-							if i < len(entryKeys) {
-								j = entryKeys[i]
+							if proj == nil || i < len(entryKeys) {
+								if i < len(entryKeys) {
+									i = entryKeys[i]
+								}
+
+								if i < lcovers {
+									av.SetCover(covers[i].Text(), ek)
+								}
 							}
-							av.SetCover(covers[j].Text(), ek)
 						}
 
 						// Matches planner.builder.buildCoveringScan()
