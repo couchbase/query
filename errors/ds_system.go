@@ -74,7 +74,8 @@ func NewSystemUnableToUpdateError(e error) Error {
 
 func NewSystemFilteredRowsWarning(keyspace string) Error {
 	return &err{level: WARNING, ICode: 11011, IKey: "datastore.system.filtered_keyspaces", onceOnly: true,
-		InternalMsg:    fmt.Sprintf("One or more documents were excluded from the %s bucket because of insufficient user permissions.", keyspace),
+		InternalMsg: fmt.Sprintf("One or more documents were excluded from the %s bucket because of insufficient user permissions. "+
+			"In an EE system, add the query_system_catalog role to see all rows. In a CE system, add the administrator role to see all rows.", keyspace),
 		InternalCaller: CallerN(1)}
 }
 
