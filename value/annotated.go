@@ -11,6 +11,7 @@ package value
 
 import (
 	"io"
+	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/util"
@@ -18,17 +19,16 @@ import (
 
 type AnnotatedValues []AnnotatedValue
 
-var annotatedPool util.FastPool
+var annotatedPool util.LocklessPool
 
 func init() {
-	util.NewFastPool(&annotatedPool, func() interface{} {
-		return &annotatedValue{}
+	util.NewLocklessPool(&annotatedPool, func() unsafe.Pointer {
+		return unsafe.Pointer(&annotatedValue{})
 	})
 }
 
 func newAnnotatedValue() *annotatedValue {
-	rv := annotatedPool.Get().(*annotatedValue)
-	*rv = annotatedValue{}
+	rv := (*annotatedValue)(annotatedPool.Get())
 	rv.refCnt = 1
 	return rv
 }
@@ -256,5 +256,5 @@ func (this *annotatedValue) Recycle() {
 	}
 	this.attachments = nil
 	this.bit = 0
-	annotatedPool.Put(this)
+	annotatedPool.Put(unsafe.Pointer(this))
 }

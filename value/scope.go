@@ -11,6 +11,7 @@ package value
 
 import (
 	"io"
+	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/util"
@@ -27,17 +28,16 @@ type ScopeValue struct {
 	parent Value
 }
 
-var scopePool util.FastPool
+var scopePool util.LocklessPool
 
 func init() {
-	util.NewFastPool(&scopePool, func() interface{} {
-		return &ScopeValue{}
+	util.NewLocklessPool(&scopePool, func() unsafe.Pointer {
+		return unsafe.Pointer(&ScopeValue{})
 	})
 }
 
 func newScopeValue() *ScopeValue {
-	rv := scopePool.Get().(*ScopeValue)
-	*rv = ScopeValue{}
+	rv := (*ScopeValue)(scopePool.Get())
 	rv.refCnt = 1
 	return rv
 }
@@ -167,5 +167,5 @@ func (this *ScopeValue) Recycle() {
 		this.parent.Recycle()
 		this.parent = nil
 	}
-	scopePool.Put(this)
+	scopePool.Put(unsafe.Pointer(this))
 }

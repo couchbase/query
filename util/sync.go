@@ -15,6 +15,7 @@ package util
 
 import (
 	"sync"
+	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
@@ -58,19 +59,17 @@ func (o *Once) Reset() {
 	atomic.StoreUint32(&o.done, 0)
 }
 
-const _POOL_SIZE = 16
-const _POOL_LOAD = 16
-const _POOL_MAX = 1024
+const _POOL_BUCKETS = 16
+const _POOL_SIZE = 1024
 
 type FastPool struct {
 	getNext   uint32
 	putNext   uint32
-	load      uint32
 	useCount  int32
 	freeCount int32
 	f         func() interface{}
-	pool      [_POOL_SIZE]poolList
-	free      [_POOL_SIZE]poolList
+	pool      [_POOL_BUCKETS]poolList
+	free      [_POOL_BUCKETS]poolList
 }
 
 type poolList struct {
@@ -90,20 +89,18 @@ func NewFastPool(p *FastPool, f func() interface{}) {
 }
 
 func (p *FastPool) Get() interface{} {
-	if atomic.LoadInt32(&p.useCount) == 0 ||
-		atomic.LoadUint32(&p.getNext)-atomic.LoadUint32(&p.load) > _POOL_LOAD {
+	if atomic.LoadInt32(&p.useCount) == 0 {
 		return p.f()
 	}
-	l := atomic.AddUint32(&p.getNext, 1) % _POOL_SIZE
+	l := atomic.AddUint32(&p.getNext, 1) % _POOL_BUCKETS
 	e := p.pool[l].Get()
-	atomic.AddUint32(&p.load, 1)
 	if e == nil {
 		return p.f()
 	}
 	atomic.AddInt32(&p.useCount, -1)
 	rv := e.entry
 	e.entry = nil
-	if atomic.LoadInt32(&p.freeCount) < _POOL_MAX {
+	if atomic.LoadInt32(&p.freeCount) < _POOL_SIZE {
 		atomic.AddInt32(&p.freeCount, 1)
 		p.free[l].Put(e)
 	}
@@ -111,10 +108,10 @@ func (p *FastPool) Get() interface{} {
 }
 
 func (p *FastPool) Put(s interface{}) {
-	if atomic.LoadInt32(&p.useCount) >= _POOL_MAX {
+	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
 		return
 	}
-	l := atomic.AddUint32(&p.putNext, 1) % _POOL_SIZE
+	l := atomic.AddUint32(&p.putNext, 1) % _POOL_BUCKETS
 	e := p.free[l].Get()
 	if e == nil {
 		e = &poolEntry{}
@@ -152,4 +149,38 @@ func (l *poolList) Put(e *poolEntry) {
 	}
 	l.tail = e
 	l.Unlock()
+}
+
+type LocklessPool struct {
+	getNext uint32
+	putNext uint32
+	f       func() unsafe.Pointer
+	pool    [_POOL_SIZE]unsafe.Pointer
+}
+
+func NewLocklessPool(p *LocklessPool, f func() unsafe.Pointer) {
+	*p = LocklessPool{}
+	p.f = f
+}
+
+func (p *LocklessPool) Get() unsafe.Pointer {
+	l := atomic.LoadUint32(&p.getNext) % _POOL_BUCKETS
+	e := atomic.SwapPointer(&p.pool[l], nil)
+
+	// niet
+	if e == nil {
+		return p.f()
+	} else {
+
+		// move to the next slot
+		atomic.AddUint32(&p.getNext, 1)
+		return e
+	}
+
+	return e
+}
+
+func (p *LocklessPool) Put(s unsafe.Pointer) {
+	l := (atomic.AddUint32(&p.putNext, 1) - 1) % _POOL_BUCKETS
+	atomic.StorePointer(&p.pool[l], s)
 }
