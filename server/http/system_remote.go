@@ -327,7 +327,7 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		return
 	}
 
-	if docFn != nil {
+	if docFn != nil && doc != nil {
 		docFn(doc)
 	}
 }
