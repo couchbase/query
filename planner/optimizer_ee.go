@@ -90,6 +90,10 @@ func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
 	return optimizer.CalcFetchCost(keyspace, cardinality)
 }
 
+func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64) {
+	return optimizer.CalcDistinctScanCost(index, cardinality)
+}
+
 func getNLJoinCost(left, right plan.Operator) (float64, float64) {
 	return optimizer.CalcNLJoinCost(left, right)
 }

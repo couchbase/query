@@ -49,6 +49,10 @@ func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
 	return OPT_COST_NOT_AVAIL
 }
 
+func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getNLJoinCost(left, right plan.Operator) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }

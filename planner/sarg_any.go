@@ -37,6 +37,11 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
+	selec := OPT_SELEC_NOT_AVAIL
+	if this.doSelec {
+		selec = this.getSelec(pred)
+	}
+
 	array, ok := all.Array().(*expression.Array)
 	if !ok {
 		bindings := pred.Bindings()
@@ -48,7 +53,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
 		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
-			this.baseKeyspace, variable.Alias())
+			this.baseKeyspace, variable.Alias(), selec)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -67,15 +72,26 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 
 	// Array Index key can have only single binding
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
-		this.baseKeyspace, array.Bindings()[0].Variable())
+		this.baseKeyspace, array.Bindings()[0].Variable(), selec)
 }
 
-func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
-	alias string) (SargSpans, error) {
+func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
+	baseKeyspace *base.BaseKeyspace, alias string, selec float64) (SargSpans, error) {
 
 	sp, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace)
-	if err != nil || sp == nil || !sp.Exact() {
+	if err != nil || sp == nil {
 		return sp, err
+	}
+
+	if tsp, ok := sp.(*TermSpans); ok && tsp.Size() == 1 {
+		spans := tsp.Spans()
+		if len(spans[0].Ranges) == 1 {
+			spans[0].Ranges[0].Selec1 = selec
+		}
+	}
+
+	if !sp.Exact() {
+		return sp, nil
 	}
 
 	exprs := expression.Expressions{key}

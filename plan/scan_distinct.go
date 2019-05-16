@@ -20,16 +20,20 @@ import (
 // DistinctScan scans multiple indexes and distincts the results.
 type DistinctScan struct {
 	readonly
-	scan   SecondaryScan
-	limit  expression.Expression
-	offset expression.Expression
+	scan        SecondaryScan
+	limit       expression.Expression
+	offset      expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan) *DistinctScan {
+func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan, cost, cardinality float64) *DistinctScan {
 	return &DistinctScan{
-		scan:   scan,
-		limit:  limit,
-		offset: offset,
+		scan:        scan,
+		limit:       limit,
+		offset:      offset,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -74,6 +78,14 @@ func (this *DistinctScan) SetLimit(limit expression.Expression) {
 	this.scan.SetLimit(limit)
 }
 
+func (this *DistinctScan) Cost() float64 {
+	return this.cost
+}
+
+func (this *DistinctScan) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *DistinctScan) SetOffset(offset expression.Expression) {
 	this.offset = offset
 	this.scan.SetOffset(offset)
@@ -112,6 +124,14 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 		r["offset"] = expression.NewStringer().Visit(this.offset)
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -120,10 +140,12 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string          `json:"#operator"`
-		Scan   json.RawMessage `json:"scan"`
-		Limit  string          `json:"limit"`
-		Offset string          `json:"offset"`
+		_           string          `json:"#operator"`
+		Scan        json.RawMessage `json:"scan"`
+		Limit       string          `json:"limit"`
+		Offset      string          `json:"offset"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -159,6 +181,18 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
 	}
 
 	return nil

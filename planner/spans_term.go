@@ -45,7 +45,17 @@ func (this *TermSpans) CreateScan(
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)
 
-			return plan.NewDistinctScan(limit, offset, scan)
+			if cost > 0.0 && cardinality > 0.0 {
+				distCost, distCard := getDistinctScanCost(index, cardinality)
+				if distCost > 0.0 && distCard > 0.0 {
+					cost += distCost
+					cardinality = distCard
+				} else {
+					cost = OPT_COST_NOT_AVAIL
+					cardinality = OPT_CARD_NOT_AVAIL
+				}
+			}
+			return plan.NewDistinctScan(limit, offset, scan, cost, cardinality)
 		} else {
 			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)
@@ -60,7 +70,7 @@ func (this *TermSpans) CreateScan(
 		if distScan {
 			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, false, false, nil, nil,
 				projection, covers, filterCovers)
-			return plan.NewDistinctScan(limit, offset, scan)
+			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 		} else {
 			return plan.NewIndexScan2(index2, term, this.spans, reverse, distinct, false, offset, limit,
 				projection, covers, filterCovers)
@@ -78,7 +88,7 @@ func (this *TermSpans) CreateScan(
 
 		if distScan || (len(spans) > 1 && !exact) {
 			scan := plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers)
-			return plan.NewDistinctScan(limit, offset, scan)
+			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 		} else {
 			return plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers)
 		}
