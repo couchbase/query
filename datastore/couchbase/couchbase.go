@@ -1225,9 +1225,13 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 
 func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedValue {
 	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
-	flags := binary.BigEndian.Uint32(v.Extras[0:4])
 
-	expiration := uint32(0)
+	var flags, expiration uint32
+
+	if len(v.Extras) >= 4 {
+		flags = binary.BigEndian.Uint32(v.Extras[0:4])
+	}
+
 	if len(v.Extras) >= 8 {
 		expiration = binary.BigEndian.Uint32(v.Extras[4:8])
 	}
