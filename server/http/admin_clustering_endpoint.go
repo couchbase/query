@@ -60,6 +60,8 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 	settingsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doSettings)
 	}
+	indexHandler := this.wrapHandlerFuncWithAdminAuth(pprof.Index)
+	profileHandler := this.wrapHandlerFuncWithAdminAuth(pprof.Profile)
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -72,19 +74,48 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 		clustersPrefix + "/{cluster}":              {handler: clusterHandler, methods: []string{"GET", "PUT", "DELETE"}},
 		clustersPrefix + "/{cluster}/nodes":        {handler: nodesHandler, methods: []string{"GET", "POST"}},
 		clustersPrefix + "/{cluster}/nodes/{node}": {handler: nodeHandler, methods: []string{"GET", "PUT", "DELETE"}},
-		"/debug/pprof/":                            {handler: pprof.Index, methods: []string{"GET"}},
-		"/debug/pprof/profile":                     {handler: pprof.Profile, methods: []string{"GET"}},
+		"/debug/pprof/":                            {handler: indexHandler, methods: []string{"GET"}},
+		"/debug/pprof/profile":                     {handler: profileHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
 		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
-	this.mux.Handle("/debug/pprof/block", pprof.Handler("block"))
-	this.mux.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
-	this.mux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
-	this.mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-	this.mux.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+	this.mux.Handle("/debug/pprof/block", newAdminAuthHandlerWrapper(this, pprof.Handler("block")))
+	this.mux.Handle("/debug/pprof/goroutine", newAdminAuthHandlerWrapper(this, pprof.Handler("goroutine")))
+	this.mux.Handle("/debug/pprof/threadcreate", newAdminAuthHandlerWrapper(this, pprof.Handler("threadcreate")))
+	this.mux.Handle("/debug/pprof/heap", newAdminAuthHandlerWrapper(this, pprof.Handler("heap")))
+	this.mux.Handle("/debug/pprof/mutex", newAdminAuthHandlerWrapper(this, pprof.Handler("mutex")))
 
+}
+
+func (this *HttpEndpoint) wrapHandlerFuncWithAdminAuth(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		authErr := this.hasAdminAuth(request)
+		if authErr != nil {
+			writeError(writer, authErr)
+			return
+		}
+		f(writer, request)
+	}
+}
+
+func newAdminAuthHandlerWrapper(endpoint *HttpEndpoint, baseHandler http.Handler) http.Handler {
+	return &adminAuthHandlerWrapper{baseHandler: baseHandler, endpoint: endpoint}
+}
+
+type adminAuthHandlerWrapper struct {
+	baseHandler http.Handler
+	endpoint    *HttpEndpoint
+}
+
+func (wrapper *adminAuthHandlerWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	authErr := wrapper.endpoint.hasAdminAuth(r)
+	if authErr != nil {
+		writeError(rw, authErr)
+		return
+	}
+	wrapper.baseHandler.ServeHTTP(rw, r)
 }
 
 func (this *HttpEndpoint) doConfigStore() (clustering.ConfigurationStore, errors.Error) {
