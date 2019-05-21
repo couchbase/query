@@ -7,9 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-//  build enterprise,go1.10
-
-// +build ignore
+// +build enterprise,go1.10
 
 package javascript
 
@@ -17,8 +15,8 @@ import (
 	goerrors "errors"
 	"fmt"
 
-	"github.com/couchbase/eventing-ee/js-evaluator/evaluator-client/adapter"
-	"github.com/couchbase/eventing-ee/js-evaluator/evaluator-client/client"
+	"github.com/couchbase/eventing-ee/js-evaluator/defs"
+	"github.com/couchbase/eventing-ee/js-evaluator/n1ql-client"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
@@ -36,33 +34,41 @@ type javascriptBody struct {
 }
 
 var enabled = true
-var evaluatorClient *client.EvaluatorClient
+var evaluator defs.Evaluator
 
 // FIXME to be sorted
-// - evaluator client does not yet take arguments
 // - evaluator client does not yet take credentials
 // - indexing issues: identify functions as deterministic and not running N1QL code
 // - deadly embrace between evaluator an n1ql services consuming each other's processes
 
 func Init() {
-	var err error
-
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
-	evaluatorClient, err = client.NewEvaluatorClient(&adapter.Configuration{
-		WorkersPerNode:   2,
-		ThreadsPerWorker: 3,
-		NsServerUrl:      "http://" + distributed.RemoteAccess().WhoAmI(),
-	})
-	if err != nil {
-		logging.Infof("Unable to start javascript evaluator client, err : %v", err)
+
+	engine := n1ql_client.SingleInstance
+	config := make(map[defs.Config]interface{})
+	config[defs.WorkersPerNode] = 2
+	config[defs.ThreadsPerWorker] = 3
+	config[defs.NsServerURL] = "http://" + distributed.RemoteAccess().WhoAmI()
+
+	err := engine.Configure(config)
+	if err.Err == nil {
+		err = engine.Start()
+	}
+
+	if err.Err != nil {
+		logging.Infof("Unable to start javascript evaluator client, err : %v", err.Err)
 		enabled = false
+	} else {
+		evaluator = engine.Fetch()
+		if evaluator == nil {
+			logging.Infof("Unable to retrieve javascript evaluator")
+			enabled = false
+		}
 	}
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
-	//	var args value.Value
-	var res *string
-	var err error
+	var args []interface{}
 
 	if !enabled {
 		return nil, errors.NewFunctionsDisabledError("javascript")
@@ -75,27 +81,21 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), funcName)
 	}
 
-	/* FIXME currently not supported by the evaluator API
-	if len(funcBody.varNames) != 0 {
-		if len(values) != len(funcBody.varNames) {
-			return nil, errors.NewArgumentsMismatchError(funcName)
-		}
-		argsObj := make(map[string]interface{}, len(values))
-		for i, _ := range values {
-			argsObj[funcBody.varNames[i]] = values[i]
-		}
-		args = value.NewValue(argsObj)
-	} else {
-		args = value.NewValue(values)
+	if len(funcBody.varNames) != 0 && len(values) != len(funcBody.varNames) {
+		return nil, errors.NewArgumentsMismatchError(funcName)
 	}
-	*/
-	// FIXME context, credentials
+	for i, _ := range values {
+		args = append(args, values[i])
+	}
 
-	res, err = evaluatorClient.Evaluate(funcBody.library, funcBody.object)
-	if err != nil {
-		return nil, funcBody.execError(err, funcName)
+	// FIXME credentials
+	opts := map[defs.Option]interface{}{defs.SideEffects: modifiers&functions.READONLY == 0}
+
+	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
+	if err.Err != nil {
+		return nil, funcBody.execError(err.Err, funcName)
 	} else {
-		return value.NewValue([]byte(*res)), nil
+		return value.NewValue(res), nil
 	}
 }
 

@@ -193,9 +193,9 @@ func (name *mockName) ResetStorage() {
 
 // function primitives
 func AddFunction(name FunctionName, body FunctionBody) errors.Error {
-	//	if !distributed.RemoteAccess().Enabled(distributed.NEW_INLINE_FUNCTIONS) {
-	//		return errors.NewFunctionsDisabledError("all")
-	//	}
+	if !distributed.RemoteAccess().Enabled(distributed.NEW_INLINE_FUNCTIONS) {
+		return errors.NewFunctionsDisabledError("all")
+	}
 
 	// add the function
 	err := name.Save(body)
@@ -236,9 +236,9 @@ func AddFunction(name FunctionName, body FunctionBody) errors.Error {
 }
 
 func DeleteFunction(name FunctionName) errors.Error {
-	//	if !distributed.RemoteAccess().Enabled(distributed.NEW_INLINE_FUNCTIONS) {
-	//		return errors.NewFunctionsDisabledError("all")
-	//	}
+	if !distributed.RemoteAccess().Enabled(distributed.NEW_INLINE_FUNCTIONS) {
+		return errors.NewFunctionsDisabledError("all")
+	}
 
 	// do the delete
 	err := name.Delete()
@@ -307,9 +307,9 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	// we copy the body pointer to allow cache entry changes after we load
 	var body FunctionBody
 
-	//	if !distributed.RemoteAccess().Enabled(distributed.NEW_INLINE_FUNCTIONS) {
-	//		return nil, errors.NewFunctionsDisabledError("all")
-	//	}
+	if !distributed.RemoteAccess().Enabled(distributed.NEW_INLINE_FUNCTIONS) {
+		return nil, errors.NewFunctionsDisabledError("all")
+	}
 
 	// get the body from the cache
 	key := name.Key()
