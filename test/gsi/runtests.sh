@@ -19,7 +19,7 @@ do
 #    fi
     source ./exportval.sh $*
     cd $i
-    go test  -tags enterprise ./...
+    go test -v -tags enterprise ./...
     cd ../..
     source ./resetval.sh $*
 done

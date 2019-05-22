@@ -5,7 +5,7 @@ go clean -testcache
 ./bucket_create.sh 100
 
 cd ../
-go test ./...
+go test -v ./...
 
 #Run gsi
 cd test/gsi
