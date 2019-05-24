@@ -229,6 +229,8 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		keyspace_flags := ident_flags & IDENT_IS_KEYSPACE
 		variable_flags := ident_flags & IDENT_IS_VARIABLE
 		unnest_flags := ident_flags & IDENT_IS_UNNEST_ALIAS
+		expr_term_flags := ident_flags & IDENT_IS_EXPR_TERM
+		subq_term_flags := ident_flags & IDENT_IS_SUBQ_TERM
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -241,6 +243,12 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			}
 			if unnest_flags != 0 && !expr.IsUnnestAlias() {
 				expr.SetUnnestAlias(true)
+			}
+			if expr_term_flags != 0 && !expr.IsExprTermAlias() {
+				expr.SetExprTermAlias(true)
+			}
+			if subq_term_flags != 0 && !expr.IsSubqTermAlias() {
+				expr.SetSubqTermAlias(true)
 			}
 			return expr, nil
 		}
@@ -491,6 +499,18 @@ func (this *Formalizer) SetAllowedAlias(alias string, isKeyspace bool) {
 // alias must be non-empty
 func (this *Formalizer) SetAllowedUnnestAlias(alias string) {
 	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_UNNEST_ALIAS)
+	this.allowed.SetField(alias, value.NewValue(ident_flags))
+}
+
+// alias must be non-empty
+func (this *Formalizer) SetAllowedExprTermAlias(alias string) {
+	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_EXPR_TERM)
+	this.allowed.SetField(alias, value.NewValue(ident_flags))
+}
+
+// alias must be non-empty
+func (this *Formalizer) SetAllowedSubqTermAlias(alias string) {
+	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_SUBQ_TERM)
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }
 

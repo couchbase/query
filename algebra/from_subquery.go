@@ -93,6 +93,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return
 	}
 
+	f.SetAllowedSubqTermAlias(alias)
 	f.SetAlias(this.Alias())
 	return
 }

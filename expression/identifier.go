@@ -22,6 +22,8 @@ const (
 	IDENT_IS_VARIABLE                 // binding variable
 	IDENT_IS_PROJ_ALIAS               // alias used in projection
 	IDENT_IS_UNNEST_ALIAS             // UNNEST alias
+	IDENT_IS_EXPR_TERM                // expression term
+	IDENT_IS_SUBQ_TERM                // subquery term
 )
 
 /*
@@ -231,6 +233,30 @@ func (this *Identifier) SetUnnestAlias(unnestAlias bool) {
 		this.identFlags |= IDENT_IS_UNNEST_ALIAS
 	} else {
 		this.identFlags &^= IDENT_IS_UNNEST_ALIAS
+	}
+}
+
+func (this *Identifier) IsExprTermAlias() bool {
+	return (this.identFlags & IDENT_IS_EXPR_TERM) != 0
+}
+
+func (this *Identifier) SetExprTermAlias(exprAlias bool) {
+	if exprAlias {
+		this.identFlags |= IDENT_IS_EXPR_TERM
+	} else {
+		this.identFlags &^= IDENT_IS_EXPR_TERM
+	}
+}
+
+func (this *Identifier) IsSubqTermAlias() bool {
+	return (this.identFlags & IDENT_IS_SUBQ_TERM) != 0
+}
+
+func (this *Identifier) SetSubqTermAlias(subqAlias bool) {
+	if subqAlias {
+		this.identFlags |= IDENT_IS_SUBQ_TERM
+	} else {
+		this.identFlags &^= IDENT_IS_SUBQ_TERM
 	}
 }
 

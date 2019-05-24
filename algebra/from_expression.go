@@ -149,7 +149,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		}
 	}
 
-	f.SetAllowedAlias(alias, true)
+	f.SetAllowedExprTermAlias(alias)
 	f.SetAlias(this.as)
 	return
 }
