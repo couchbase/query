@@ -35,6 +35,7 @@ import (
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
@@ -50,6 +51,7 @@ const (
 	_DEF_PREPARED_LIMIT         = 16384
 	_DEF_FUNCTIONS_LIMIT        = 16384
 	_DEF_DICTIONARY_CACHE_LIMIT = 16384
+	_DEF_TASKS_LIMIT            = 16384
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
@@ -98,6 +100,7 @@ var PREPARED_LIMIT = flag.Int("prepared-limit", _DEF_PREPARED_LIMIT, "maximum nu
 var AUTO_PREPARE = flag.Bool("auto-prepare", false, "Silently prepare ad hoc statements if possible")
 
 var FUNCTIONS_LIMIT = flag.Int("functions-limit", _DEF_FUNCTIONS_LIMIT, "maximum number of cached functions")
+var TASKS_LIMIT = flag.Int("tasks-limit", _DEF_TASKS_LIMIT, "maximum number of cached tasks")
 
 // GOGC
 var _GOGC_PERCENT = 200
@@ -225,6 +228,7 @@ func main() {
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
 	functions.FunctionsSetLimit(*FUNCTIONS_LIMIT)
+	scheduler.SchedulerSetLimit(*TASKS_LIMIT)
 	constructor.Init()
 
 	if *DICTIONARY_CACHE_LIMIT <= 0 {

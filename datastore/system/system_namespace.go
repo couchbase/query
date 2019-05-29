@@ -130,6 +130,13 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[funcs.Name()] = funcs
 
+	tasksCache, e := newTasksCacheKeyspace(p)
+	if e != nil {
+		return e
+	}
+
+	p.keyspaces[tasksCache.Name()] = tasksCache
+
 	reqs, e := newRequestsKeyspace(p)
 	if e != nil {
 		return e

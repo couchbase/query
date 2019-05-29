@@ -37,6 +37,7 @@ const KEYSPACE_NAME_USER_INFO = "user_info"
 const KEYSPACE_NAME_MY_USER_INFO = "my_user_info"
 const KEYSPACE_NAME_NODES = "nodes"
 const KEYSPACE_NAME_APPLICABLE_ROLES = "applicable_roles"
+const KEYSPACE_NAME_TASKS_CACHE = "tasks_cache"
 
 // TODO, sync with fetch timeout
 const scanTimeout = 30 * time.Second

@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/scheduler"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
 	"github.com/couchbase/query/util"
 )
@@ -134,6 +135,11 @@ var _SETTERS = map[string]Setter{
 	FUNCLIMIT: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		functions.FunctionsSetLimit(int(value))
+		return nil
+	},
+	TASKLIMIT: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		scheduler.SchedulerSetLimit(int(value))
 		return nil
 	},
 }

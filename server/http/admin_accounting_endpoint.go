@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
@@ -34,6 +35,7 @@ const (
 	requestsPrefix   = adminPrefix + "/active_requests"
 	completedsPrefix = adminPrefix + "/completed_requests"
 	functionsPrefix  = adminPrefix + "/functions_cache"
+	tasksPrefix      = adminPrefix + "/tasks_cache"
 	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
 )
@@ -84,14 +86,23 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	completedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doCompletedIndex)
 	}
-	functionIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doFunctionIndex)
+	functionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doFunctionsIndex)
 	}
 	functionHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doFunction)
 	}
 	functionsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doFunctions)
+	}
+	tasksIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doTasksIndex)
+	}
+	taskHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doTask)
+	}
+	tasksHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doTasks)
 	}
 	routeMap := map[string]struct {
 		handler handlerFunc
@@ -108,10 +119,13 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
 		functionsPrefix:                       {handler: functionsHandler, methods: []string{"GET"}},
 		functionsPrefix + "/{name}":           {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
+		tasksPrefix:                           {handler: tasksHandler, methods: []string{"GET"}},
+		tasksPrefix + "/{name}":               {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
 		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/function_cache":     {handler: functionIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/functions_cache":    {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -461,6 +475,114 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		}
 
 		functions.FunctionsForeach(snapshot, nil)
+		return data, nil
+
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	name := vars["name"]
+
+	af.EventTypeId = audit.API_ADMIN_TASKS
+	af.Name = name
+
+	if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("tasks_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+		scheduler.DeleteTask(name)
+		return true, nil
+	} else if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:tasks_cache, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
+		err := verifyCredentialsFromRequest("task_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		var itemMap map[string]interface{}
+
+		scheduler.TaskDo(name, func(entry *scheduler.TaskEntry) {
+			itemMap = map[string]interface{}{
+				"class":      entry.Class,
+				"subClass":   entry.SubClass,
+				"name":       entry.Name,
+				"id":         entry.Id,
+				"state":      entry.State,
+				"submitTime": entry.PostTime.String(),
+				"delay":      entry.Delay.String(),
+			}
+			if entry.Results != nil {
+				itemMap["results"] = entry.Results
+			}
+			if entry.Errors != nil {
+				itemMap["errors"] = entry.Errors
+			}
+			if !entry.StartTime.IsZero() {
+				itemMap["startTime"] = entry.StartTime.String()
+			}
+			if !entry.EndTime.IsZero() {
+				itemMap["stopTime"] = entry.EndTime.String()
+			}
+		})
+		return itemMap, nil
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_TASKS
+	switch req.Method {
+	case "GET":
+		err := verifyCredentialsFromRequest("tasks_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		numTasks := scheduler.CountTasks()
+		data := make([]map[string]interface{}, numTasks)
+		i := 0
+
+		snapshot := func(name string, d *scheduler.TaskEntry) bool {
+
+			// FIXME quick hack to avoid overruns
+			if i >= numTasks {
+				return false
+			}
+			data[i] = map[string]interface{}{}
+			data[i]["class"] = d.Class
+			data[i]["subClass"] = d.SubClass
+			data[i]["name"] = d.Name
+			data[i]["id"] = d.Id
+			data[i]["state"] = d.State
+			if d.Results != nil {
+				data[i]["results"] = d.Results
+			}
+			if d.Errors != nil {
+				data[i]["errors"] = d.Errors
+			}
+			data[i]["submitTime"] = d.PostTime.String()
+			data[i]["delay"] = d.Delay.String()
+			if !d.StartTime.IsZero() {
+				data[i]["startTime"] = d.StartTime.String()
+			}
+			if !d.EndTime.IsZero() {
+				data[i]["stopTime"] = d.EndTime.String()
+			}
+			i++
+			return true
+		}
+
+		scheduler.TasksForeach(snapshot, nil)
 		return data, nil
 
 	default:
@@ -848,9 +970,13 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return completed, nil
 }
 
-func doFunctionIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_INDEXES_FUNCTIONS
 	return functions.NameFunctions(), nil
+}
+func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_TASKS
+	return scheduler.NameTasks(), nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {
