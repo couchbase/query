@@ -134,7 +134,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			}
 		}
 
-		scans, newOnclause, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
+		scans, newOnclause, cost, cardinality, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +143,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			node.SetOnclause(newOnclause)
 		}
 
-		return plan.NewNLJoin(node, plan.NewSequence(scans...), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL), nil
+		return plan.NewNLJoin(node, plan.NewSequence(scans...), cost, cardinality), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: Unexpected right-hand side node type"))
 	}
@@ -259,7 +259,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 			}
 		}
 
-		scans, newOnclause, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
+		scans, newOnclause, cost, cardinality, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +268,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 			node.SetOnclause(newOnclause)
 		}
 
-		return plan.NewNLNest(node, plan.NewSequence(scans...), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL), nil
+		return plan.NewNLNest(node, plan.NewSequence(scans...), cost, cardinality), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: Unexpected right-hand side node type"))
 	}
@@ -765,7 +765,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 }
 
 func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression) (
-	[]plan.Operator, expression.Expression, error) {
+	[]plan.Operator, expression.Expression, float64, float64, error) {
 
 	var newOnclause expression.Expression
 	var err error
@@ -778,24 +778,24 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 		if term, ok := node.(*algebra.ExpressionTerm); ok {
 			exprTerm = term
 			if exprTerm.IsCorrelated() {
-				fromExpr = exprTerm.ExpressionTerm()
+				fromExpr = exprTerm.ExpressionTerm().Copy()
 			}
 		}
 
-		newOnclause = onclause
+		newOnclause = onclause.Copy()
 
 		for _, op := range this.coveringScans {
 			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 
 			newOnclause, err = coverer.Map(newOnclause)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 			}
 
 			if fromExpr != nil {
 				fromExpr, err = coverer.Map(fromExpr)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 				}
 			}
 		}
@@ -822,10 +822,17 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 
 	_, err = node.Accept(this)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 	}
 
-	return this.children, newOnclause, nil
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+
+	if this.useCBO {
+		cost, cardinality = getSimpleFromTermCost(lastOp, this.lastOp)
+	}
+
+	return this.children, newOnclause, cost, cardinality, nil
 }
 
 // if both nested-loop join and hash join are to be attempted (in case of CBO),

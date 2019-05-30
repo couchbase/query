@@ -111,13 +111,14 @@ type Histogram struct {
 	docCount    int64
 	sampleSize  int64
 	resolution  float32
+	fdistincts  float64
 	avgArrayLen float32
 	distrib     DistBins
 	ovrflow     OverflowBins
 }
 
 func (this *Histogram) SetHistogram(version int32, keyspace string, key expression.Expression,
-	docCount, sampleSize int64, resolution float32, avgArrayLen float32,
+	docCount, sampleSize int64, resolution float32, fdistincts float64, avgArrayLen float32,
 	distrib DistBins, ovrflow OverflowBins) {
 	this.version = version
 	this.keyspace = keyspace
@@ -125,6 +126,7 @@ func (this *Histogram) SetHistogram(version int32, keyspace string, key expressi
 	this.docCount = docCount
 	this.sampleSize = sampleSize
 	this.resolution = resolution
+	this.fdistincts = fdistincts
 	this.avgArrayLen = avgArrayLen
 	this.distrib = distrib
 	this.ovrflow = ovrflow
@@ -154,6 +156,10 @@ func (this *Histogram) SampleSize() int64 {
 
 func (this *Histogram) Resolution() float32 {
 	return this.resolution
+}
+
+func (this *Histogram) Fdistincts() float64 {
+	return this.fdistincts
 }
 
 func (this *Histogram) AvgArrayLen() float32 {

@@ -94,6 +94,10 @@ func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, f
 	return optimizer.CalcDistinctScanCost(index, cardinality)
 }
 
+func getExpressionScanCost(expr expression.Expression, keyspaces map[string]string) (float64, float64) {
+	return optimizer.CalcExpressionScanCost(expr, keyspaces)
+}
+
 func getNLJoinCost(left, right plan.Operator) (float64, float64) {
 	return optimizer.CalcNLJoinCost(left, right)
 }
@@ -101,4 +105,8 @@ func getNLJoinCost(left, right plan.Operator) (float64, float64) {
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
 	buildRight, force bool, selec float64) (float64, float64, bool) {
 	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, selec)
+}
+
+func getSimpleFromTermCost(left, right plan.Operator) (float64, float64) {
+	return optimizer.CalcSimpleFromTermCost(left, right)
 }

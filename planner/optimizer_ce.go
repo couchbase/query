@@ -53,6 +53,10 @@ func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, f
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
+func getExpressionScanCost(expr expression.Expression, keyspaces map[string]string) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getNLJoinCost(left, right plan.Operator) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
@@ -60,4 +64,8 @@ func getNLJoinCost(left, right plan.Operator) (float64, float64) {
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
 	buildRight, force bool, selec float64) (float64, float64, bool) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, false
+}
+
+func getSimpleFromTermCost(left, right plan.Operator) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }

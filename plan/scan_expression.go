@@ -18,16 +18,20 @@ import (
 
 type ExpressionScan struct {
 	readonly
-	fromExpr   expression.Expression
-	alias      string
-	correlated bool
+	fromExpr    expression.Expression
+	alias       string
+	correlated  bool
+	cost        float64
+	cardinality float64
 }
 
-func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool) *ExpressionScan {
+func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool, cost, cardinality float64) *ExpressionScan {
 	return &ExpressionScan{
-		fromExpr:   fromExpr,
-		alias:      alias,
-		correlated: correlated,
+		fromExpr:    fromExpr,
+		alias:       alias,
+		correlated:  correlated,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -51,6 +55,14 @@ func (this *ExpressionScan) IsCorrelated() bool {
 	return this.correlated
 }
 
+func (this *ExpressionScan) Cost() float64 {
+	return this.cost
+}
+
+func (this *ExpressionScan) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -62,6 +74,12 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if !this.correlated {
 		r["uncorrelated"] = !this.correlated
 	}
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -70,10 +88,12 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string `json:"#operator"`
-		FromExpr     string `json:"expr"`
-		Alias        string `json:"alias"`
-		UnCorrelated bool   `json:"uncorrelated"`
+		_            string  `json:"#operator"`
+		FromExpr     string  `json:"expr"`
+		Alias        string  `json:"alias"`
+		UnCorrelated bool    `json:"uncorrelated"`
+		Cost         float64 `json:"cost"`
+		Cardinality  float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -91,6 +111,18 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	// we set correlated to be true just to be safe, i.e., if
 	// no info in the plan, then assume correlated is true.
 	this.correlated = !_unmarshalled.UnCorrelated
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 
 	return err
 }
