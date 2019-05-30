@@ -428,6 +428,35 @@
         "query": "select st.a11, score from shellTest st let score = IFMISSING(st.c11.rob,0) + IFMISSING(st.c12.matt,0) + IFMISSING(p.c21.emma,0) + IFMISSING(p.c22.ali,0) where score > 0 and test_id = \"advise\" order by score asc LIMIT 50"
       }
     ]
+  },
+  {
+    "statements": "advise select type from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20",
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id_type ON `shellTest`(`c22`,DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END,`type`) WHERE `test_id` = 'advise'"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id ON `shellTest`(`c22`,DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END) WHERE `test_id` = 'advise'",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 5. array predicate, 8. flavor for partial index."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select type from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20"
+      }
+    ]
   }
 ]
 
