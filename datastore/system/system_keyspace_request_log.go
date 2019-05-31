@@ -114,7 +114,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					"resultCount":     entry.ResultCount,
 					"resultSize":      entry.ResultSize,
 					"errorCount":      entry.ErrorCount,
-					"requestTime":     entry.Time.String(),
+					"requestTime":     entry.Time.Format(expression.DEFAULT_FORMAT),
 					"scanConsistency": entry.ScanConsistency,
 				})
 				if node != "" {

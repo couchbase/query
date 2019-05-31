@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
@@ -642,7 +643,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 			reqMap["preparedName"] = p.Name()
 			reqMap["preparedText"] = p.Text()
 		}
-		reqMap["requestTime"] = request.RequestTime().String()
+		reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State()
@@ -740,7 +741,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 			requests[i]["preparedName"] = p.Name()
 			requests[i]["preparedStatement"] = p.Text()
 		}
-		requests[i]["requestTime"] = request.RequestTime().String()
+		requests[i]["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
@@ -818,7 +819,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 			reqMap["preparedName"] = request.PreparedName
 			reqMap["preparedText"] = request.PreparedText
 		}
-		reqMap["requestTime"] = request.Time.String()
+		reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = request.ElapsedTime.String()
 		reqMap["serviceTime"] = request.ServiceTime.String()
 		reqMap["resultCount"] = request.ResultCount
@@ -899,7 +900,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 			requests[i]["preparedName"] = request.PreparedName
 			requests[i]["preparedText"] = request.PreparedText
 		}
-		requests[i]["requestTime"] = request.Time.String()
+		requests[i]["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = request.ElapsedTime.String()
 		requests[i]["serviceTime"] = request.ServiceTime.String()
 		requests[i]["resultCount"] = request.ResultCount

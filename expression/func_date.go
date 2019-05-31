@@ -119,7 +119,7 @@ func (this *ClockStr) Value() value.Value {
 }
 
 func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, error) {
-	fmt := _DEFAULT_FORMAT
+	fmt := DEFAULT_FORMAT
 
 	if len(args) > 0 {
 		fv := args[0]
@@ -197,7 +197,7 @@ func (this *ClockTZ) Value() value.Value {
 }
 
 func (this *ClockTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
-	fmt := _DEFAULT_FORMAT
+	fmt := DEFAULT_FORMAT
 
 	// Get current time
 	timeVal := time.Now()
@@ -296,7 +296,7 @@ func (this *ClockUTC) Value() value.Value {
 }
 
 func (this *ClockUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
-	fmt := _DEFAULT_FORMAT
+	fmt := DEFAULT_FORMAT
 
 	if len(args) > 0 {
 		fv := args[0]
@@ -1776,7 +1776,7 @@ func (this *NowStr) Value() value.Value {
 }
 
 func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, error) {
-	fmt := _DEFAULT_FORMAT
+	fmt := DEFAULT_FORMAT
 
 	if len(args) > 0 {
 		fv := args[0]
@@ -1856,7 +1856,7 @@ func (this *NowTZ) Value() value.Value {
 }
 
 func (this *NowTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
-	fmt := _DEFAULT_FORMAT
+	fmt := DEFAULT_FORMAT
 	now := context.Now()
 
 	tz := args[0]
@@ -1953,7 +1953,7 @@ func (this *NowUTC) Value() value.Value {
 }
 
 func (this *NowUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
-	fmt := _DEFAULT_FORMAT
+	fmt := DEFAULT_FORMAT
 
 	if len(args) > 0 {
 		fv := args[0]
@@ -2538,7 +2538,7 @@ func strToTimeFormat(s string) (time.Time, string, error) {
 		}
 	}
 
-	return t, _DEFAULT_FORMAT, err
+	return t, DEFAULT_FORMAT, err
 }
 
 /*
@@ -2588,12 +2588,12 @@ var _DATE_FORMATS = []string{
 /*
 Represents the default format of the time string.
 */
-const _DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
+const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 
 /*
 Represents a value of the default format.
 */
-var _DEFAULT_FMT_VALUE = value.NewValue(_DEFAULT_FORMAT)
+var _DEFAULT_FMT_VALUE = value.NewValue(DEFAULT_FORMAT)
 
 /*
 This function returns the part of the time string that is

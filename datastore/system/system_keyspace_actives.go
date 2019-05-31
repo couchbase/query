@@ -113,7 +113,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 				item = value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
-					"requestTime":     request.RequestTime().String(),
+					"requestTime":     request.RequestTime().Format(expression.DEFAULT_FORMAT),
 					"elapsedTime":     time.Since(request.RequestTime()).String(),
 					"executionTime":   time.Since(request.ServiceTime()).String(),
 					"state":           request.State(),

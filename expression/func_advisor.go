@@ -11,9 +11,22 @@ package expression
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/couchbase/query/distributed"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/scheduler"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+)
+
+const (
+	_CLASS    = "advisor"
+	_ANALYZE  = "analyze"
+	_MAXCOUNT = 20000
 )
 
 type Advisor struct {
@@ -51,6 +64,61 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 		return value.MISSING_VALUE, nil
 	}
 
+	/*
+		Advisor({ “action” : “start”,
+		  “profile”: ”john”,
+		  “response” : “3s”,
+		  “duration” : “10m” ,
+		  “query_count” : 20000})
+	*/
+	if arg.Type() == value.OBJECT {
+		actual := value.NewValue(arg).Actual().(map[string]interface{})
+		val, ok := actual["action"]
+		if ok {
+			val = strings.ToLower(value.NewValue(val).Actual().(string))
+			if val == "start" {
+				sessionName, err := util.UUIDV3()
+				if err != nil {
+					return nil, err
+				}
+
+				profile, response_limit, duration, query_count, err := this.getSettingInfo(actual)
+				if err != nil {
+					return nil, err
+				}
+
+				settings_start := getSettings(profile, sessionName, response_limit, true)
+				distributed.RemoteAccess().Settings(settings_start)
+
+				settings_stop := getSettings(profile, sessionName, response_limit, false)
+				err = this.scheduleTask(sessionName, duration, context, settings_stop, analyzeWorkload(profile, response_limit, duration.Seconds(), query_count))
+				if err != nil {
+					return nil, err
+				}
+
+				m := make(map[string]interface{}, 1)
+				m["session"] = sessionName
+				return value.NewValue(m), nil
+			} else if val == "get" {
+				sessionName, err := this.getSession(actual)
+				if err != nil {
+					return nil, err
+				}
+				return getResults(sessionName, context)
+			} else if val == "purge" {
+				sessionName, err := this.getSession(actual)
+				if err != nil {
+					return nil, err
+				}
+				return purgeResults(sessionName, context)
+			} else {
+				return nil, fmt.Errorf("%s() not valid argument for 'action'", this.Name())
+			}
+		} else {
+			return nil, fmt.Errorf("%s() missing argument for 'action'", this.Name())
+		}
+	}
+
 	stmtMap := this.extractStrs(arg)
 	if stmtMap == nil {
 		return value.NULL_VALUE, nil
@@ -72,7 +140,152 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 	if err == nil {
 		return value.NewValue(bytes), nil
 	}
+
 	return nil, nil
+}
+
+func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context1 Context, settings map[string]interface{}, query string) error {
+	return scheduler.ScheduleTask(sessionName, _CLASS, _ANALYZE, duration,
+		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+			// stop monitoring
+			distributed.RemoteAccess().Settings(settings)
+			// collect completed requests
+			res, _, err := context.EvaluateStatement(query, nil, nil, false, true)
+			if err != nil {
+				return nil, []errors.Error{errors.NewError(err, "")}
+			}
+			return res, nil
+		},
+
+		// stop task
+		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+			// stop monitoring
+			distributed.RemoteAccess().Settings(settings)
+			// return nothing
+			return nil, nil
+		}, nil, context1)
+}
+
+func analyzeWorkload(profile, response_limit string, delta, query_count float64) string {
+	start_time := time.Now().Format(DEFAULT_FORMAT)
+	workload := "SELECT RAW statement from system:completed_requests where "
+	if len(profile) > 0 {
+		workload += "users like \"%" + profile + "%\" and "
+	}
+	if response_limit != "" {
+		workload += "str_to_duration(elapsedTime)/1000000 > " + response_limit + " and "
+	}
+
+	workload += "requestTime between \"" + start_time + "\" and DATE_ADD_STR(\"" + start_time + "\", " + strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") "
+	workload += "order by requestTime limit " + strconv.FormatFloat(query_count, 'f', 0, 64)
+	return "SELECT RAW Advisor((" + workload + "))"
+}
+
+func getResults(sessionName string, context Context) (value.Value, error) {
+	query := "select raw results from system:tasks_cache where name = \"" + sessionName + "\" and ANY v in results satisfies v <> {} END"
+	r, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, true)
+	if err == nil {
+		return value.NewValue(r), nil
+	}
+	return nil, err
+}
+
+func purgeResults(sessionName string, context Context) (value.Value, error) {
+	query := "DELETE from system:tasks_cache where name = \"" + sessionName + "\""
+	_, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
+	return value.NULL_VALUE, err
+}
+
+func getSettings(profile, tag, response_limit string, start bool) map[string]interface{} {
+	n, _ := strconv.ParseInt(response_limit, 10, 64)
+	settings := make(map[string]interface{}, 2)
+	tagMap := make(map[string]interface{}, 3)
+	if start {
+		if len(profile) > 0 {
+			tagMap["user"] = profile
+		}
+		if n > 0 || (len(profile) == 0 && n == 0) {
+			tagMap["threshold"] = n
+		}
+
+		tagMap["tag"] = tag
+	} else {
+		if len(profile) > 0 {
+			tagMap["-user"] = profile
+		}
+		if n > 0 || (len(profile) == 0 && n == 0) {
+			tagMap["-threshold"] = n
+		}
+
+		tagMap["tag"] = tag
+	}
+
+	settings["completed"] = tagMap
+	settings["distribute"] = true
+	return settings
+}
+
+func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response_limit string, duration time.Duration, query_count float64, err error) {
+	val1, ok := m["profile"]
+	if ok {
+		if val1 == nil || val1.(value.Value).Type() != value.STRING {
+			err = fmt.Errorf("%s() not valid argument for 'profile'", this.Name())
+			return
+		} else {
+			profile = val1.(value.Value).Actual().(string)
+		}
+	}
+
+	//duration is mandatory
+	val2, ok := m["duration"]
+	if !ok || (ok && (val2 == nil || val2.(value.Value).Type() != value.STRING)) {
+		err = fmt.Errorf("%s() not valid argument for 'duration'", this.Name())
+		return
+	}
+
+	duration, err = time.ParseDuration(val2.(value.Value).Actual().(string))
+	if err != nil {
+		return
+	}
+
+	val3, ok := m["response"]
+	if ok {
+		if val3 == nil || val3.(value.Value).Type() != value.STRING {
+			err = fmt.Errorf("%s() not valid argument for 'response'", this.Name())
+			return
+		} else {
+			var r time.Duration
+			r, err = time.ParseDuration(val3.(value.Value).Actual().(string))
+			if err != nil {
+				return
+			}
+			//threshold is in millisecond
+			response_limit = strconv.FormatFloat(r.Seconds()*1000, 'f', 0, 64)
+		}
+	}
+
+	val4, ok := m["query_count"]
+	if ok {
+		if val4 == nil || val4.(value.Value).Type() != value.NUMBER {
+			err = fmt.Errorf("%s() not valid argument for 'query_count'", this.Name())
+			return
+		} else {
+			query_count = val4.(value.Value).Actual().(float64)
+		}
+	} else {
+		query_count = _MAXCOUNT
+	}
+
+	return
+}
+
+func (this *Advisor) getSession(m map[string]interface{}) (string, error) {
+	val, ok := m["session"]
+	if !ok || (ok && (val == nil || val.(value.Value).Type() != value.STRING)) {
+		return "", fmt.Errorf("%s() not valid argument for 'session'", this.Name())
+	}
+
+	return val.(value.Value).Actual().(string), nil
 }
 
 func (this *Advisor) processResult(q string, t int, res value.Value, curMap, recIdxMap, recCidxMap map[string]queryList) {
