@@ -159,13 +159,9 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
-	outer_values := parent
-	if !this.plan.Term().IsUnderNL() {
-		outer_values = nil
-	}
 
 	groupAggs := plan.GroupAggs()
-	dspans, empty, err := evalSpan3(plan.Spans(), outer_values, plan.HasDynamicInSpan(), context)
+	dspans, empty, err := evalSpan3(plan.Spans(), parent, plan.HasDynamicInSpan(), context)
 
 	// empty span with Index aggregation is present and no group by requies produce default row.
 	// Therefore, do IndexScan

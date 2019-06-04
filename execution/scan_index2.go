@@ -151,11 +151,7 @@ func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection, 
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
-	outer_values := parent
-	if !this.plan.Term().IsUnderNL() {
-		outer_values = nil
-	}
-	dspans, empty, err := evalSpan2(plan.Spans(), outer_values, context)
+	dspans, empty, err := evalSpan2(plan.Spans(), parent, context)
 	if err != nil || empty {
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "span"))

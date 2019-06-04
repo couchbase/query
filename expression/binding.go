@@ -24,14 +24,15 @@ type Binding struct {
 	variable     string     `json:"var"`
 	expr         Expression `json:"expr"`
 	descend      bool       `json:"desc"`
+	static       bool       `json:"static"`
 }
 
 func NewBinding(nameVariable, variable string, expr Expression, descend bool) *Binding {
-	return &Binding{nameVariable, variable, expr, descend}
+	return &Binding{nameVariable, variable, expr, descend, false}
 }
 
 func NewSimpleBinding(variable string, expr Expression) *Binding {
-	return &Binding{"", variable, expr, false}
+	return &Binding{"", variable, expr, false, false}
 }
 
 func (this *Binding) Copy() *Binding {
@@ -40,6 +41,7 @@ func (this *Binding) Copy() *Binding {
 		variable:     this.variable,
 		expr:         this.expr.Copy(),
 		descend:      this.descend,
+		static:       this.static,
 	}
 }
 
@@ -63,6 +65,14 @@ func (this *Binding) Descend() bool {
 	return this.descend
 }
 
+func (this *Binding) Static() bool {
+	return this.static
+}
+
+func (this *Binding) SetStatic(s bool) {
+	this.static = s
+}
+
 func (this *Binding) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 4)
 	if this.nameVariable != "" {
@@ -72,6 +82,9 @@ func (this *Binding) MarshalJSON() ([]byte, error) {
 	r["expr"] = this.expr.String()
 	if this.descend {
 		r["desc"] = this.descend
+	}
+	if this.static {
+		r["static"] = this.static
 	}
 
 	return json.Marshal(r)
@@ -160,11 +173,17 @@ func (this Bindings) Identifiers() Expressions {
 		if b.nameVariable != "" {
 			id = NewIdentifier(b.nameVariable)
 			id.SetBindingVariable(true)
+			if b.static {
+				id.SetStaticVariable(true)
+			}
 			exprs = append(exprs, id)
 		}
 
 		id = NewIdentifier(b.variable)
 		id.SetBindingVariable(true)
+		if b.static {
+			id.SetStaticVariable(true)
+		}
 		exprs = append(exprs, id)
 	}
 

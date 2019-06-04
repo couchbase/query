@@ -24,6 +24,7 @@ const (
 	IDENT_IS_UNNEST_ALIAS             // UNNEST alias
 	IDENT_IS_EXPR_TERM                // expression term
 	IDENT_IS_SUBQ_TERM                // subquery term
+	IDENT_IS_STATIC_VAR               // top level variable (CTE, function parameter...)
 )
 
 /*
@@ -74,6 +75,9 @@ func (this *Identifier) Value() value.Value {
 }
 
 func (this *Identifier) Static() Expression {
+	if this.identFlags&IDENT_IS_STATIC_VAR != 0 {
+		return this
+	}
 	return nil
 }
 
@@ -151,6 +155,9 @@ func (this *Identifier) SurvivesGrouping(groupKeys Expressions, allowed *value.S
 			this.SetProjectionAlias(true)
 		} else if (allow_flags & IDENT_IS_VARIABLE) != 0 {
 			this.SetBindingVariable(true)
+			if (allow_flags & IDENT_IS_STATIC_VAR) != 0 {
+				this.SetStaticVariable(true)
+			}
 		}
 		return true, nil
 	}
@@ -209,6 +216,18 @@ func (this *Identifier) SetBindingVariable(bindingVariable bool) {
 		this.identFlags |= IDENT_IS_VARIABLE
 	} else {
 		this.identFlags &^= IDENT_IS_VARIABLE
+	}
+}
+
+func (this *Identifier) IsStaticVariable() bool {
+	return (this.identFlags & IDENT_IS_STATIC_VAR) != 0
+}
+
+func (this *Identifier) SetStaticVariable(bindingVariable bool) {
+	if bindingVariable {
+		this.identFlags |= IDENT_IS_STATIC_VAR
+	} else {
+		this.identFlags &^= IDENT_IS_STATIC_VAR
 	}
 }
 

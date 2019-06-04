@@ -1353,6 +1353,7 @@ with_term:
 alias AS paren_expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
+    $$.SetStatic(true)
 }
 ;
 

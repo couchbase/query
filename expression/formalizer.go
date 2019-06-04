@@ -241,6 +241,9 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if variable_flags != 0 && !expr.IsBindingVariable() {
 				expr.SetBindingVariable(true)
 			}
+			if variable_flags != 0 && !expr.IsStaticVariable() {
+				expr.SetStaticVariable(true)
+			}
 			if unnest_flags != 0 && !expr.IsUnnestAlias() {
 				expr.SetUnnestAlias(true)
 			}

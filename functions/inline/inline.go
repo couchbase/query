@@ -83,12 +83,15 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	*/
 	c := expression.NewConstant("")
 	if len(vars) == 0 {
-		bindings = expression.Bindings{expression.NewSimpleBinding("args", c)}
+		args := expression.NewSimpleBinding("args", c)
+		args.SetStatic(true)
+		bindings = expression.Bindings{args}
 	} else {
 		bindings = make(expression.Bindings, len(vars))
 		i := 0
 		for v, _ := range vars {
 			bindings[i] = expression.NewSimpleBinding(vars[v], c)
+			bindings[i].SetStatic(true)
 			i++
 		}
 	}
