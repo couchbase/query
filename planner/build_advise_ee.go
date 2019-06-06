@@ -12,6 +12,8 @@
 package planner
 
 import (
+	"strings"
+
 	"github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/algebra"
@@ -144,6 +146,10 @@ func (this *builder) enableUnnest(alias string) {
 
 func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
 	if !this.indexAdvisor {
+		return nil
+	}
+	//not advise index to system keyspace
+	if strings.ToLower(keyspace.Namespace().Name()) == "#system" {
 		return nil
 	}
 	if baseKeyspace == nil {
