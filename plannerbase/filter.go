@@ -23,7 +23,11 @@ const (
 	FLTR_IS_UNNEST                 // is this ann unnest filter (inherited)
 	FLTR_SELEC_DONE                // calculation of selectivity is done
 	FLTR_HAS_DEF_SELEC             // has default selectivity
+	FLTR_IN_INDEX_SPAN             // used in index span
+	FLTR_IN_HASH_JOIN              // used as join filter for hash join
 )
+
+const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
 
 type Filter struct {
 	fltrExpr  expression.Expression // filter expression
@@ -107,6 +111,26 @@ func (this *Filter) HasDefSelec() bool {
 
 func (this *Filter) SetDefSelec() {
 	this.fltrFlags |= FLTR_HAS_DEF_SELEC
+}
+
+func (this *Filter) HasIndexFlag() bool {
+	return (this.fltrFlags & FLTR_IN_INDEX_SPAN) != 0
+}
+
+func (this *Filter) HasHJFlag() bool {
+	return (this.fltrFlags & FLTR_IN_HASH_JOIN) != 0
+}
+
+func (this *Filter) SetIndexFlag() {
+	this.fltrFlags |= FLTR_IN_INDEX_SPAN
+}
+
+func (this *Filter) SetHJFlag() {
+	this.fltrFlags |= FLTR_IN_HASH_JOIN
+}
+
+func (this *Filter) HasPlanFlags() bool {
+	return (this.fltrFlags & TEMP_PLAN_FLAGS) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {
@@ -218,5 +242,11 @@ func trimJoinFilters(joinfilters Filters, curlen int) (newlen int) {
 		} else {
 			return
 		}
+	}
+}
+
+func (this Filters) ClearPlanFlags() {
+	for _, fltr := range this {
+		fltr.fltrFlags &^= TEMP_PLAN_FLAGS
 	}
 }

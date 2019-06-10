@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -32,15 +33,25 @@ func NewTermSpans(spans ...*plan.Span2) *TermSpans {
 }
 
 func (this *TermSpans) CreateScan(
-	index datastore.Index, term *algebra.KeyspaceTerm, indexApiVersion int, reverse, distinct, overlap,
-	array bool, offset, limit expression.Expression, projection *plan.IndexProjection,
-	indexOrder plan.IndexKeyOrders, indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64) plan.SecondaryScan {
+	index datastore.Index, term *algebra.KeyspaceTerm, indexApiVersion int,
+	reverse, distinct, overlap, array bool, offset, limit expression.Expression,
+	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
+	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value,
+	filters base.Filters, cost, cardinality float64) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		dynamicIn := this.spans.HasDynamicIn()
+		if (filters != nil) && (cost > 0.0) && (cardinality > 0.0) {
+			keys := index.RangeKey()
+			if index.IsPrimary() {
+				meta := expression.NewMeta(expression.NewIdentifier(term.Alias()))
+				keys = append(keys, meta)
+			}
+			optMarkIndexFilters(keys, this.spans, filters)
+		}
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)

@@ -42,6 +42,10 @@ func optDefLikeSelec(keyspace string) float64 {
 	return optimizer.DefLikeSelec(keyspace)
 }
 
+func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2, filters base.Filters) {
+	optimizer.MarkIndexFilters(keys, spans, filters)
+}
+
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
 	return optimizer.CalcPrimaryIndexScanCost(primary, requestId)
 }
@@ -98,15 +102,15 @@ func getExpressionScanCost(expr expression.Expression, keyspaces map[string]stri
 	return optimizer.CalcExpressionScanCost(expr, keyspaces)
 }
 
-func getNLJoinCost(left, right plan.Operator) (float64, float64) {
-	return optimizer.CalcNLJoinCost(left, right)
+func getNLJoinCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
+	return optimizer.CalcNLJoinCost(left, right, filters)
 }
 
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
-	buildRight, force bool, selec float64) (float64, float64, bool) {
-	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, selec)
+	buildRight, force bool, filters base.Filters) (float64, float64, bool) {
+	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, filters)
 }
 
-func getSimpleFromTermCost(left, right plan.Operator) (float64, float64) {
-	return optimizer.CalcSimpleFromTermCost(left, right)
+func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
+	return optimizer.CalcSimpleFromTermCost(left, right, filters)
 }

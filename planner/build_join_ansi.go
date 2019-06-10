@@ -460,7 +460,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 	useCBO := this.useCBO
 	if useCBO {
 		if len(this.children) > 0 {
-			cost, cardinality = getNLJoinCost(lastOp, this.lastOp)
+			cost, cardinality = getNLJoinCost(lastOp, this.lastOp, baseKeyspace.Filters())
 		} // TODO: else calculate cost for lookup join
 	}
 
@@ -559,21 +559,23 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		force = false
 	}
 
-	sel := float64(1.0)
-
 	alias := right.Alias()
 
 	keyspaceNames := make(map[string]string, 1)
 	keyspaceNames[alias] = keyspace
 
 	baseKeyspace, _ := this.baseKeyspaces[alias]
+	filters := baseKeyspace.Filters()
+	if filters != nil {
+		filters.ClearPlanFlags()
+	}
 
 	// expressions for building and probing
 	leftExprs := make(expression.Expressions, 0, 4)
 	rightExprs := make(expression.Expressions, 0, 4)
 
 	// look for equality join predicates
-	for _, fltr := range baseKeyspace.Filters() {
+	for _, fltr := range filters {
 		if !fltr.IsJoin() {
 			continue
 		}
@@ -617,7 +619,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 
 			if useCBO && found {
 				if fltr.Selec() > 0.0 {
-					sel *= fltr.Selec()
+					fltr.SetHJFlag()
 				} else {
 					useCBO = false
 				}
@@ -744,7 +746,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 
 	if useCBO {
 		var bldRight bool
-		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, sel)
+		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, filters)
 		if cost > 0.0 && cardinality > 0.0 {
 			buildRight = bldRight
 		}
@@ -769,6 +771,12 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 
 	var newOnclause expression.Expression
 	var err error
+
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	filters := baseKeyspace.Filters()
+	if filters != nil {
+		filters.ClearPlanFlags()
+	}
 
 	// perform covering transformation
 	if len(this.coveringScans) > 0 {
@@ -829,7 +837,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	cardinality := OPT_CARD_NOT_AVAIL
 
 	if this.useCBO {
-		cost, cardinality = getSimpleFromTermCost(lastOp, this.lastOp)
+		cost, cardinality = getSimpleFromTermCost(lastOp, this.lastOp, filters)
 	}
 
 	return this.children, newOnclause, cost, cardinality, nil

@@ -206,9 +206,13 @@ outer:
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
 	// build plan for IndexScan
+	filters := baseKeyspace.Filters()
+	if filters != nil {
+		filters.ClearPlanFlags()
+	}
 	scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, projDistinct, pred.MayOverlapSpans(), false,
 		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
-		entry.cost, entry.cardinality)
+		filters, entry.cost, entry.cardinality)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -287,7 +291,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers,
-		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+		nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
