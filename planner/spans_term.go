@@ -45,12 +45,34 @@ func (this *TermSpans) CreateScan(
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		dynamicIn := this.spans.HasDynamicIn()
 		if (filters != nil) && (cost > 0.0) && (cardinality > 0.0) {
-			keys := index.RangeKey()
+			var err error
+			keys := index.RangeKey().Copy()
+			if len(keys) > 0 {
+				formalizer := expression.NewSelfFormalizer(term.Alias(), nil)
+
+				for i, key := range keys {
+					key = key.Copy()
+
+					formalizer.SetIndexScope()
+					key, err = formalizer.Map(key)
+					formalizer.ClearIndexScope()
+					if err != nil {
+						break
+					}
+
+					keys[i] = key
+				}
+			}
 			if index.IsPrimary() {
 				meta := expression.NewMeta(expression.NewIdentifier(term.Alias()))
 				keys = append(keys, meta)
 			}
-			optMarkIndexFilters(keys, this.spans, filters)
+			if err != nil {
+				cost = OPT_COST_NOT_AVAIL
+				cardinality = OPT_CARD_NOT_AVAIL
+			} else {
+				optMarkIndexFilters(keys, this.spans, filters)
+			}
 		}
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
