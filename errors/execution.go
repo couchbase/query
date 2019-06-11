@@ -216,3 +216,11 @@ func NewMergeMultiInsertError(key string) Error {
 		InternalMsg:    fmt.Sprintf("Multiple INSERT of the same document (document key '%s') in a MERGE statement", key),
 		InternalCaller: CallerN(1)}
 }
+
+const SUBQUERY_BUILD = 5370
+
+func NewSubqueryBuildError(e error) Error {
+	return &err{level: EXCEPTION, ICode: SUBQUERY_BUILD, IKey: "execution.subquery.build", ICause: e,
+		InternalMsg:    "Unable to run subquery",
+		InternalCaller: CallerN(1)}
+}

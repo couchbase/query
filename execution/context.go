@@ -406,6 +406,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true,
 			namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
 		if err != nil {
+			// Generate our own error for this subquery, in addition to whatever the query above is doing.
+			this.Error(errors.NewSubqueryBuildError(err))
 			return nil, err
 		}
 
@@ -415,6 +417,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	pipeline, err := Build(subplan.(plan.Operator), this)
 	if err != nil {
+		// Generate our own error for this subquery, in addition to whatever the query above is doing.
+		this.Error(errors.NewSubqueryBuildError(err))
 		return nil, err
 	}
 
