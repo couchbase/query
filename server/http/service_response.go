@@ -79,6 +79,8 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusConflict
 	case 5000:
 		return http.StatusInternalServerError
+	case errors.SUBQUERY_BUILD:
+		return http.StatusUnprocessableEntity
 	case 10000:
 		return http.StatusUnauthorized
 	default:

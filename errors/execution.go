@@ -230,3 +230,11 @@ func NewUpdateStatisticsError(msg string) Error {
 		InternalMsg:    msg,
 		InternalCaller: CallerN(1)}
 }
+
+const SUBQUERY_BUILD = 5370
+
+func NewSubqueryBuildError(e error) Error {
+	return &err{level: EXCEPTION, ICode: SUBQUERY_BUILD, IKey: "execution.subquery.build", ICause: e,
+		InternalMsg:    "Unable to run subquery",
+		InternalCaller: CallerN(1)}
+}
