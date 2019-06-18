@@ -25,6 +25,8 @@ import (
 
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.indexAdvisor = true
+	//Temporarily turn off CBO for rule-based advisor
+	this.useCBO = false
 	this.maxParallelism = 1
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
