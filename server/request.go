@@ -26,19 +26,33 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type State string
+type State int32
 
 const (
-	RUNNING   State = "running"
-	SUCCESS   State = "success"
-	ERRORS    State = "errors"
-	COMPLETED State = "completed"
-	STOPPED   State = "stopped"
-	TIMEOUT   State = "timeout"
-	CLOSED    State = "closed"
-	FATAL     State = "fatal"
-	ABORTED   State = "aborted"
+	SUBMITTED State = iota
+	RUNNING
+	SUCCESS
+	ERRORS
+	COMPLETED
+	STOPPED
+	TIMEOUT
+	CLOSED
+	FATAL
+	ABORTED
 )
+
+var states = [...]string{
+	"submitted",
+	"running",
+	"success",
+	"errors",
+	"completed",
+	"stopped",
+	"timeout",
+	"closed",
+	"fatal",
+	"aborted",
+}
 
 type Request interface {
 	Id() RequestID
@@ -270,7 +284,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.serviceTime = time.Now()
 	rv.results.Add(1)
-	rv.state = RUNNING
+	rv.state = SUBMITTED
 	rv.aborted = false
 	rv.stopResult = make(chan bool, 1)
 	rv.stopExecute = make(chan bool, 1)
@@ -502,13 +516,18 @@ func (this *BaseRequest) State() State {
 	return this.state
 }
 
+func (this State) StateName() string {
+	return states[int(this)]
+}
+
 func (this *BaseRequest) Halted() bool {
 
 	// we purposly do not take the lock
 	// as this is used repeatedly in Execution()
 	// if we mistakenly report the State as RUNNING,
 	// we'll catch the right state in other places...
-	return this.state != RUNNING
+	state := State(atomic.LoadInt32((*int32)(&this.state)))
+	return state != RUNNING && state != SUBMITTED
 }
 
 func (this *BaseRequest) Credentials() auth.Credentials {
@@ -537,6 +556,7 @@ func (this *BaseRequest) SetUserAgent(userAgent string) {
 
 func (this *BaseRequest) Servicing() {
 	this.serviceTime = time.Now()
+	this.state = RUNNING
 }
 
 func (this *BaseRequest) Fatal(err errors.Error) {

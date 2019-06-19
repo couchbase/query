@@ -108,7 +108,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeClientContextID(prefix)
 	this.writeErrors(prefix, indent)
 	this.writeWarnings(prefix, indent)
-	this.writeState("", prefix)
+	this.writeState(this.State(), prefix)
 
 	this.markTimeOfCompletion(time.Now())
 
@@ -296,10 +296,6 @@ func (this *httpRequest) writeString(s string) bool {
 }
 
 func (this *httpRequest) writeState(state server.State, prefix string) bool {
-	if state == "" {
-		state = this.State()
-	}
-
 	if state == server.COMPLETED {
 		if this.errorCount == 0 {
 			state = server.SUCCESS
@@ -311,7 +307,7 @@ func (this *httpRequest) writeState(state server.State, prefix string) bool {
 	return this.writeString(",\n") &&
 		this.writeString(prefix) &&
 		this.writeString("\"status\": \"") &&
-		this.writeString(string(state)) &&
+		this.writeString(state.StateName()) &&
 		this.writeString("\"")
 }
 

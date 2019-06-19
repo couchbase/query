@@ -646,7 +646,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
-		reqMap["state"] = request.State()
+		reqMap["state"] = request.State().StateName()
 		reqMap["scanConsistency"] = request.ScanConsistency()
 
 		p := request.Output().FmtPhaseCounts()
@@ -744,7 +744,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
-		requests[i]["state"] = request.State()
+		requests[i]["state"] = request.State().StateName()
 		requests[i]["scanConsistency"] = request.ScanConsistency()
 
 		credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())

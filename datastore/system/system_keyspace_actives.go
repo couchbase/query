@@ -116,7 +116,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					"requestTime":     request.RequestTime().Format(expression.DEFAULT_FORMAT),
 					"elapsedTime":     time.Since(request.RequestTime()).String(),
 					"executionTime":   time.Since(request.ServiceTime()).String(),
-					"state":           request.State(),
+					"state":           request.State().StateName(),
 					"scanConsistency": request.ScanConsistency(),
 				})
 				if node != "" {
