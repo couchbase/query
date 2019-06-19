@@ -417,6 +417,7 @@ outer:
 	for _, tk := range te.sargKeys {
 		for _, sk := range se.sargKeys {
 			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
+				nfcmatch++
 				continue outer
 			}
 		}
