@@ -493,3 +493,11 @@ func (this *valueExchange) isStopped() bool {
 	this.oLock.Unlock()
 	return rv
 }
+
+// are we waiting?
+func (this *valueExchange) isWaiting() bool {
+	this.oLock.Lock()
+	rv := this.mustSignal
+	this.oLock.Unlock()
+	return rv
+}

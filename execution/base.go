@@ -360,7 +360,7 @@ func (this *base) SendStop() {
 
 // stop for the terminal operator case
 func (this *base) baseSendStop() {
-	if this.stopped || this.opState > _RUNNING {
+	if (this.stopped && !this.valueExchange.isWaiting()) || this.opState > _RUNNING {
 		return
 	}
 	this.switchPhase(_CHANTIME)
@@ -425,6 +425,9 @@ func (this *base) getItem() (value.AnnotatedValue, bool) {
 }
 
 func (this *base) getItemOp(op Operator) (value.AnnotatedValue, bool) {
+	if this.stopped {
+		return nil, false
+	}
 	this.switchPhase(_CHANTIME)
 	val, ok := this.ValueExchange().getItem(op.ValueExchange())
 	this.switchPhase(_EXECTIME)
