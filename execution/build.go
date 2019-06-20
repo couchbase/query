@@ -374,6 +374,9 @@ func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, er
 		return nil, e
 	}
 
+	if plan.Distinct() {
+		return checkOp(NewIntersect(plan, this.context, first.(Operator), second.(Operator)), this.context)
+	}
 	return checkOp(NewIntersectAll(plan, this.context, first.(Operator), second.(Operator)), this.context)
 }
 

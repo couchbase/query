@@ -15,14 +15,16 @@ import (
 
 type IntersectAll struct {
 	readonly
-	first  Operator
-	second Operator
+	first    Operator
+	second   Operator
+	distinct bool
 }
 
-func NewIntersectAll(first, second Operator) *IntersectAll {
+func NewIntersectAll(first, second Operator, distinct bool) *IntersectAll {
 	return &IntersectAll{
-		first:  first,
-		second: second,
+		first:    first,
+		second:   second,
+		distinct: distinct,
 	}
 }
 
@@ -42,6 +44,10 @@ func (this *IntersectAll) Second() Operator {
 	return this.second
 }
 
+func (this *IntersectAll) Distinct() bool {
+	return this.distinct
+}
+
 func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -53,15 +59,19 @@ func (this *IntersectAll) MarshalBase(f func(map[string]interface{})) map[string
 	} else {
 		r["first"] = this.first
 		r["second"] = this.second
+		if this.distinct {
+			r["distinct"] = this.distinct
+		}
 	}
 	return r
 }
 
 func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string          `json:"#operator"`
-		First  json.RawMessage `json:"first"`
-		Second json.RawMessage `json:"second"`
+		_        string          `json:"#operator"`
+		First    json.RawMessage `json:"first"`
+		Second   json.RawMessage `json:"second"`
+		Distinct bool            `json:"distinct"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -88,6 +98,10 @@ func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if _unmarshalled.Distinct {
+		this.distinct = true
 	}
 
 	return err

@@ -95,7 +95,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	}
 
 	this.maxParallelism = 0
-	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator)), nil
+	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator), true), nil
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
@@ -113,11 +113,6 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 		return nil, err
 	}
 
-	// Inject DISTINCT into second term
-	setOpDistinct := this.setOpDistinct
-	this.setOpDistinct = true
-	defer func() { this.setOpDistinct = setOpDistinct }()
-
 	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
@@ -125,7 +120,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	}
 
 	this.maxParallelism = 0
-	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator)), nil
+	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator), false), nil
 }
 
 func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
