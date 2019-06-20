@@ -31,7 +31,9 @@ func NewRenamer(from, to Bindings) *Renamer {
 					names = make(map[string]*Identifier, len(from))
 				}
 
-				names[f.variable] = NewIdentifier(t.variable)
+				ident := NewIdentifier(t.variable)
+				ident.SetBindingVariable(true)
+				names[f.variable] = ident
 			}
 
 			if f.nameVariable != t.nameVariable {
@@ -39,7 +41,9 @@ func NewRenamer(from, to Bindings) *Renamer {
 					names = make(map[string]*Identifier, len(from))
 				}
 
-				names[f.nameVariable] = NewIdentifier(t.nameVariable)
+				ident := NewIdentifier(t.nameVariable)
+				ident.SetBindingVariable(true)
+				names[f.nameVariable] = ident
 			}
 		}
 	}
