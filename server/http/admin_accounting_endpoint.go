@@ -825,6 +825,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		reqMap["resultCount"] = request.ResultCount
 		reqMap["resultSize"] = request.ResultSize
 		reqMap["errorCount"] = request.ErrorCount
+		if request.Mutations != 0 {
+			reqMap["mutations"] = request.Mutations
+		}
 		if request.PhaseCounts != nil {
 			reqMap["phaseCounts"] = request.PhaseCounts
 		}
@@ -906,6 +909,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		requests[i]["resultCount"] = request.ResultCount
 		requests[i]["resultSize"] = request.ResultSize
 		requests[i]["errorCount"] = request.ErrorCount
+		if request.Mutations != 0 {
+			requests[i]["mutations"] = request.Mutations
+		}
 		if request.PhaseCounts != nil {
 			requests[i]["phaseCounts"] = request.PhaseCounts
 		}

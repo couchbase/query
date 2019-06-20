@@ -130,6 +130,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					item.SetField("preparedName", entry.PreparedName)
 					item.SetField("preparedText", entry.PreparedText)
 				}
+				if entry.Mutations != 0 {
+					item.SetField("mutations", entry.Mutations)
+				}
 				if entry.PhaseTimes != nil {
 					item.SetField("phaseTimes", entry.PhaseTimes)
 				}

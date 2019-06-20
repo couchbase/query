@@ -52,6 +52,7 @@ type RequestLogEntry struct {
 	ResultSize      int
 	ErrorCount      int
 	Errors          []errors.Error
+	Mutations       uint64
 	PreparedName    string
 	PreparedText    string
 	Time            time.Time
@@ -451,6 +452,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		Errors:          request.Errors(),
 		Time:            time.Now(),
 		ScanConsistency: string(request.ScanConsistency()),
+		Mutations:       request.MutationCount(),
 	}
 	stmt := request.Statement()
 	if stmt != "" {
