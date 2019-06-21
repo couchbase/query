@@ -1,5 +1,5 @@
 #!/bin/bash
-
+verbose=$1
 Site=http://127.0.0.1:8091/pools/nodes/
 Auth=Administrator:password
 flag=`curl -s -u $Auth $Site | awk '{print match($0,"fts")}'`;
@@ -19,7 +19,7 @@ do
 #    fi
     source ./exportval.sh $*
     cd $i
-    go test -v -tags enterprise ./...
+    go test $verbose -p 1 -tags enterprise ./...
     cd ../..
     source ./resetval.sh $*
 done

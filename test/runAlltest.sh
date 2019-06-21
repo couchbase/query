@@ -1,15 +1,16 @@
 #!/bin/bash
 go clean -testcache
+verbose=$1
 
 ./bucket_delete.sh
 ./bucket_create.sh 100
 
 cd ../
-go test -v ./...
+go test $verbose ./...
 
 #Run gsi
 cd test/gsi
-./runtests.sh
+./runtests.sh $verbose
 
 cd ../
 ./bucket_delete.sh
