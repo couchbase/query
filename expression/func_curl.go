@@ -965,7 +965,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 		if len(dURL) > 0 {
 			disallow, err := sliceContains(dURL, url)
 			if err == nil && disallow {
-				return fmt.Errorf("URL end point isn't whitelisted " + url + ".")
+				return fmt.Errorf("URL end point isnt whitelisted " + url + ".")
 			} else {
 				if err != nil {
 					return err
@@ -994,7 +994,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 	// URL is not present in disallowed url and is not in allowed_urls.
 	// If it reaches here, then the url isnt in the allowed_urls or the prefix_urls, and is also
 	// not in the disallowed urls.
-	return fmt.Errorf("URL end point isn't whitelisted " + url + ". Please make sure to whitelist the URL on the UI.")
+	return fmt.Errorf("URL end point isnt whitelisted " + url + ". Please make sure to whitelist the URL on the UI.")
 
 }
 
