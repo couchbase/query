@@ -149,6 +149,12 @@ func NewMeta(operands ...Expression) Function {
 		*NewFunctionBase("meta", operands...),
 	}
 
+	if len(operands) > 0 {
+		if ident, ok := operands[0].(*Identifier); ok {
+			ident.SetKeyspaceAlias(true)
+		}
+	}
+
 	rv.expr = rv
 	return rv
 }

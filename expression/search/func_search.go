@@ -528,7 +528,9 @@ func (this *Search) SetVerify(v SearchVerify, err error) {
 }
 
 func (this *Search) Keyspace() *expression.Identifier {
-	return expression.NewIdentifier(this.KeyspaceAlias())
+	ident := expression.NewIdentifier(this.KeyspaceAlias())
+	ident.SetKeyspaceAlias(true)
+	return ident
 }
 
 func (this *Search) KeyspaceAlias() string {

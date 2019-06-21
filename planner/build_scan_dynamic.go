@@ -43,6 +43,7 @@ func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm,
 	var index datastore.Index
 	var dk *dynamicKey
 	alias := expression.NewIdentifier(node.Alias())
+	alias.SetKeyspaceAlias(true)
 
 outer:
 	for i, e := range arrays {

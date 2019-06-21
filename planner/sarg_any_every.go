@@ -50,6 +50,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		}
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
+		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
 			this.baseKeyspace, variable.Alias(), selec)
 	}
