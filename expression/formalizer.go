@@ -228,6 +228,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		ident_flags := uint32(ident_val.ActualForIndex().(int64))
 		keyspace_flags := ident_flags & IDENT_IS_KEYSPACE
 		variable_flags := ident_flags & IDENT_IS_VARIABLE
+		static_flags := ident_flags & IDENT_IS_STATIC_VAR
 		unnest_flags := ident_flags & IDENT_IS_UNNEST_ALIAS
 		expr_term_flags := ident_flags & IDENT_IS_EXPR_TERM
 		subq_term_flags := ident_flags & IDENT_IS_SUBQ_TERM
@@ -241,7 +242,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if variable_flags != 0 && !expr.IsBindingVariable() {
 				expr.SetBindingVariable(true)
 			}
-			if variable_flags != 0 && !expr.IsStaticVariable() {
+			if static_flags != 0 && !expr.IsStaticVariable() {
 				expr.SetStaticVariable(true)
 			}
 			if unnest_flags != 0 && !expr.IsUnnestAlias() {
@@ -374,6 +375,9 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		}
 
 		ident_flags |= IDENT_IS_VARIABLE
+		if b.Static() {
+			ident_flags |= IDENT_IS_STATIC_VAR
+		}
 		ident_val := value.NewValue(ident_flags)
 		allowed.SetField(b.Variable(), ident_val)
 		aliases.SetField(b.Variable(), ident_val)

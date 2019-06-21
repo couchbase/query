@@ -75,7 +75,7 @@ func (this *Identifier) Value() value.Value {
 }
 
 func (this *Identifier) Static() Expression {
-	if this.identFlags&IDENT_IS_STATIC_VAR != 0 {
+	if (this.identFlags & IDENT_IS_STATIC_VAR) != 0 {
 		return this
 	}
 	return nil
