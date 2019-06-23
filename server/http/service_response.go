@@ -149,6 +149,12 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 		stopped = true
 	case <-this.httpCloseNotify:
 		this.SetState(server.CLOSED)
+		op := this.StopNotify()
+
+		// stop the operators
+		if op != nil {
+			op.SendStop()
+		}
 
 		// wait for operator before continuing
 		<-this.Results()
