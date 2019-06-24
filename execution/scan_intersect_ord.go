@@ -111,7 +111,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			go scan.RunOnce(context, parent)
 		}
 
-		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
+		limit := int64(-1)
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)

@@ -180,7 +180,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	} else if scans[0] == nil {
 		return plan.NewIntersectScan(limit, scans[1:]...), sargLength, nil
 	} else {
-		scan = plan.NewOrderedIntersectScan(limit, scans...)
+		scan = plan.NewOrderedIntersectScan(nil, scans...)
 		this.orderScan = scan
 		return scan, sargLength, nil
 	}

@@ -426,7 +426,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 				scans = append(ordered.Scans(), scans[1:]...)
 			}
 
-			secondary = plan.NewOrderedIntersectScan(limit, scans...)
+			secondary = plan.NewOrderedIntersectScan(nil, scans...)
 		}
 	}
 
