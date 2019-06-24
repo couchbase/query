@@ -93,7 +93,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		ops := make([]plan.Operator, 0, 5)
 
 		if act.Where() != nil {
-			ops = append(ops, plan.NewFilter(act.Where()))
+			filter := this.addMergeFilter(act.Where())
+			ops = append(ops, filter)
 		}
 
 		ops = append(ops, plan.NewClone(ksref.Alias()))
@@ -115,7 +116,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		ops := make([]plan.Operator, 0, 4)
 
 		if act.Where() != nil {
-			ops = append(ops, plan.NewFilter(act.Where()))
+			filter := this.addMergeFilter(act.Where())
+			ops = append(ops, filter)
 		}
 
 		ops = append(ops, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
@@ -127,7 +129,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		ops := make([]plan.Operator, 0, 4)
 
 		if act.Where() != nil {
-			ops = append(ops, plan.NewFilter(act.Where()))
+			filter := this.addMergeFilter(act.Where())
+			ops = append(ops, filter)
 		}
 
 		var keyExpr expression.Expression
@@ -142,6 +145,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if stmt.IsOnKey() {
 		merge := plan.NewMerge(keyspace, ksref, stmt.On(), update, delete, insert)
+		this.lastOp = merge
 		this.subChildren = append(this.subChildren, merge)
 	} else {
 		// use ANSI JOIN to handle the ON-clause
@@ -168,6 +172,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 
 		merge := plan.NewMerge(keyspace, ksref, nil, update, delete, insert)
+		this.lastOp = merge
 		this.subChildren = append(this.subChildren, merge)
 	}
 
@@ -187,4 +192,17 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	return plan.NewSequence(this.children...), nil
+}
+
+func (this *builder) addMergeFilter(pred expression.Expression) *plan.Filter {
+	cost := float64(OPT_COST_NOT_AVAIL)
+	cardinality := float64(OPT_CARD_NOT_AVAIL)
+
+	if this.useCBO {
+		cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+	}
+
+	filter := plan.NewFilter(pred, cost, cardinality)
+	this.lastOp = filter
+	return filter
 }

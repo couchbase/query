@@ -18,12 +18,16 @@ import (
 
 type Filter struct {
 	readonly
-	cond expression.Expression
+	cond        expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewFilter(cond expression.Expression) *Filter {
+func NewFilter(cond expression.Expression, cost, cardinality float64) *Filter {
 	return &Filter{
-		cond: cond,
+		cond:        cond,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -39,6 +43,14 @@ func (this *Filter) Condition() expression.Expression {
 	return this.cond
 }
 
+func (this *Filter) Cost() float64 {
+	return this.cost
+}
+
+func (this *Filter) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Filter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -46,6 +58,14 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Filter"}
 	r["condition"] = expression.NewStringer().Visit(this.cond)
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -54,8 +74,10 @@ func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Filter) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Condition string `json:"condition"`
+		_           string  `json:"#operator"`
+		Condition   string  `json:"condition"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -65,7 +87,22 @@ func (this *Filter) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Condition != "" {
 		this.cond, err = parser.Parse(_unmarshalled.Condition)
+		if err != nil {
+			return err
+		}
 	}
 
-	return err
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
+
+	return nil
 }

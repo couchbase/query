@@ -47,7 +47,11 @@ func (this *TermSpans) CreateScan(
 		if (filters != nil) && (cost > 0.0) && (cardinality > 0.0) {
 			var err error
 			keys := index.RangeKey().Copy()
-			if len(keys) > 0 {
+			condition := index.Condition()
+			if condition != nil {
+				condition = condition.Copy()
+			}
+			if len(keys) > 0 || condition != nil {
 				formalizer := expression.NewSelfFormalizer(term.Alias(), nil)
 
 				for i, key := range keys {
@@ -62,6 +66,10 @@ func (this *TermSpans) CreateScan(
 
 					keys[i] = key
 				}
+
+				if condition != nil && err == nil {
+					condition, err = formalizer.Map(condition)
+				}
 			}
 			if index.IsPrimary() {
 				meta := expression.NewMeta(expression.NewIdentifier(term.Alias()))
@@ -71,7 +79,7 @@ func (this *TermSpans) CreateScan(
 				cost = OPT_COST_NOT_AVAIL
 				cardinality = OPT_CARD_NOT_AVAIL
 			} else {
-				optMarkIndexFilters(keys, this.spans, filters)
+				optMarkIndexFilters(keys, this.spans, condition, filters)
 			}
 		}
 		if distScan && indexGroupAggs == nil {

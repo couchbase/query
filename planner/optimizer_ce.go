@@ -36,7 +36,8 @@ func optDefLikeSelec(keyspace string) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
-func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2, filters base.Filters) {
+func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
+	condition expression.Expression, filters base.Filters) {
 	// no-op
 }
 
@@ -71,5 +72,14 @@ func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expressio
 }
 
 func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getFilterCost(lastOp plan.Operator, expr expression.Expression,
+	baseKeyspaces map[string]*base.BaseKeyspace) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getLetCost(lastOp plan.Operator) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }

@@ -18,12 +18,16 @@ import (
 
 type Let struct {
 	readonly
-	bindings expression.Bindings
+	bindings    expression.Bindings
+	cost        float64
+	cardinality float64
 }
 
-func NewLet(bindings expression.Bindings) *Let {
+func NewLet(bindings expression.Bindings, cost, cardinality float64) *Let {
 	return &Let{
-		bindings: bindings,
+		bindings:    bindings,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -39,6 +43,14 @@ func (this *Let) Bindings() expression.Bindings {
 	return this.bindings
 }
 
+func (this *Let) Cost() float64 {
+	return this.cost
+}
+
+func (this *Let) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Let) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -46,6 +58,12 @@ func (this *Let) MarshalJSON() ([]byte, error) {
 func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Let"}
 	r["bindings"] = this.bindings
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -54,8 +72,10 @@ func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Let) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string          `json:"#operator"`
-		Bindings json.RawMessage `json:"bindings"`
+		_           string          `json:"#operator"`
+		Bindings    json.RawMessage `json:"bindings"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -64,5 +84,20 @@ func (this *Let) UnmarshalJSON(body []byte) error {
 	}
 
 	this.bindings, err = unmarshal.UnmarshalBindings(_unmarshalled.Bindings)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
+
+	return nil
 }

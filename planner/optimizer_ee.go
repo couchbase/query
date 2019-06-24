@@ -42,8 +42,9 @@ func optDefLikeSelec(keyspace string) float64 {
 	return optimizer.DefLikeSelec(keyspace)
 }
 
-func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2, filters base.Filters) {
-	optimizer.MarkIndexFilters(keys, spans, filters)
+func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
+	condition expression.Expression, filters base.Filters) {
+	optimizer.MarkIndexFilters(keys, spans, condition, filters)
 }
 
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
@@ -113,4 +114,23 @@ func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expressio
 
 func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
 	return optimizer.CalcSimpleFromTermCost(left, right, filters)
+}
+
+func getFilterCost(lastOp plan.Operator, expr expression.Expression,
+	baseKeyspaces map[string]*base.BaseKeyspace) (float64, float64) {
+
+	// perform expression transformation, but no DNF transformation
+	var err error
+	dnfExpr := expr.Copy()
+	dnf := NewDNF(dnfExpr, true, false)
+	dnfExpr, err = dnf.Map(dnfExpr)
+	if err != nil {
+		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+	}
+
+	return optimizer.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces)
+}
+
+func getLetCost(lastOp plan.Operator) (float64, float64) {
+	return optimizer.CalcLetCost(lastOp)
 }

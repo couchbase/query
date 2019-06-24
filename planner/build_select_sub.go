@@ -277,6 +277,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 }
 
 func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {
+	cost := float64(OPT_COST_NOT_AVAIL)
+	cardinality := float64(OPT_CARD_NOT_AVAIL)
+
 	if let != nil && pred != nil {
 	outer:
 		for {
@@ -288,18 +291,37 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 			}
 
 			// Predicate does NOT depend on LET
-			this.subChildren = append(this.subChildren, plan.NewFilter(pred))
-			this.subChildren = append(this.subChildren, plan.NewLet(let))
+			if this.useCBO {
+				cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+			}
+			filter := plan.NewFilter(pred, cost, cardinality)
+			this.lastOp = filter
+			if this.useCBO {
+				cost, cardinality = getLetCost(this.lastOp)
+			}
+			letop := plan.NewLet(let, cost, cardinality)
+			this.lastOp = letop
+			this.subChildren = append(this.subChildren, filter, letop)
 			return
 		}
 	}
 
 	if let != nil {
-		this.subChildren = append(this.subChildren, plan.NewLet(let))
+		if this.useCBO {
+			cost, cardinality = getLetCost(this.lastOp)
+		}
+		letop := plan.NewLet(let, cost, cardinality)
+		this.lastOp = letop
+		this.subChildren = append(this.subChildren, letop)
 	}
 
 	if pred != nil {
-		this.subChildren = append(this.subChildren, plan.NewFilter(pred))
+		if this.useCBO {
+			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+		}
+		filter := plan.NewFilter(pred, cost, cardinality)
+		this.lastOp = filter
+		this.subChildren = append(this.subChildren, filter)
 	}
 }
 

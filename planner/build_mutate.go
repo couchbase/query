@@ -95,7 +95,16 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	}
 
 	if this.where != nil {
-		this.subChildren = append(this.subChildren, plan.NewFilter(this.where))
+		cost := float64(OPT_COST_NOT_AVAIL)
+		cardinality := float64(OPT_CARD_NOT_AVAIL)
+
+		if this.useCBO {
+			cost, cardinality = getFilterCost(this.lastOp, this.where, this.baseKeyspaces)
+		}
+
+		filter := plan.NewFilter(this.where, cost, cardinality)
+		this.subChildren = append(this.subChildren, filter)
+		this.lastOp = filter
 	}
 
 	return nil
