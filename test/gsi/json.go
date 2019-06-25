@@ -63,6 +63,7 @@ var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
 var curlWhitelist = map[string]interface{}{"all_access": true}
 var NodeServices = "pools/default/nodeServices"
+var Subpath_advise = []string{"indexes", "covering_indexes"}
 
 func init() {
 
@@ -550,11 +551,24 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 		v, ok = c["results"]
 		if ok {
-			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i)
-			if okres != nil {
-				errstring = okres
-				return
+			if isAdvise, ok := c["advise"]; ok {
+				if isAdvise, ok := isAdvise.(bool); ok && isAdvise {
+					resultsExpected := v.([]interface{})
+					for _, sub := range Subpath_advise {
+						okres := doResultsMatch(getAdviseResults(sub, resultsActual), getAdviseResults(sub, resultsExpected), ordered, statements, fname, i)
+						if okres != nil {
+							errstring = okres
+							return
+						}
+					}
+				}
+			} else {
+				resultsExpected := v.([]interface{})
+				okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i)
+				if okres != nil {
+					errstring = okres
+					return
+				}
 			}
 		}
 	}
@@ -727,4 +741,49 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 
 func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
 	return Run(mockServer, q, Namespace_CBS, nil, nil)
+}
+
+func getAdviseResults(subpath string, result []interface{}) []interface{} {
+	for _, v := range result {
+		v, ok := value.NewValue(v).Actual().(map[string]interface{})
+		if !ok {
+			continue
+		}
+		v1, ok := v["advice"]
+		if !ok {
+			continue
+		}
+		v1a, ok := value.NewValue(v1).Actual().(map[string]interface{})
+		if !ok {
+			continue
+		}
+		v2, ok := v1a["adviseinfo"]
+		if !ok {
+			continue
+		}
+		v2a, ok := value.NewValue(v2).Actual().([]interface{})
+		if !ok {
+			continue
+		}
+		for _, v3 := range v2a {
+			v3, ok := value.NewValue(v3).Actual().(map[string]interface{})
+			if !ok {
+				continue
+			}
+			for k4, v4 := range v3 {
+				if k4 == "recommended_indexes" {
+					v4, ok := value.NewValue(v4).Actual().(map[string]interface{})
+					if !ok {
+						continue
+					}
+					for k5, v5 := range v4 {
+						if k5 == subpath {
+							return value.NewValue(v5).Actual().([]interface{})
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

@@ -198,7 +198,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 func getFilterInfos(filters base.Filters) iaplan.FilterInfos {
 	exprs := make(iaplan.FilterInfos, 0, len(filters))
 	for _, f := range filters {
-		exprs = append(exprs, iaplan.NewFilterInfo(f.FltrExpr().Copy(), f.IsUnnest()))
+		exprs = append(exprs, iaplan.NewFilterInfo(f.FltrExpr().Copy(), f.IsUnnest(), f.IsDerived()))
 	}
 	return exprs
 }
