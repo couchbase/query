@@ -498,7 +498,7 @@ func (this *httpRequest) EventStatus() string {
 		}
 	}
 
-	return string(state)
+	return state.StateName()
 }
 
 // For audit.Auditable interface.
