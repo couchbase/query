@@ -331,11 +331,12 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, pred expression.Exp
 	}
 
 	nfcmatch := 0
+	nkmatch := 0
 outer:
 	for _, tk := range te.sargKeys {
 		for _, sk := range se.sargKeys {
 			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
-				nfcmatch++
+				nkmatch++
 				continue outer
 			}
 		}
@@ -359,7 +360,7 @@ outer:
 		}
 	}
 
-	if len(te.sargKeys) == nfcmatch {
+	if len(te.sargKeys) == nfcmatch || (shortest && len(te.sargKeys) == (nfcmatch+nkmatch)) {
 		return true
 	}
 
