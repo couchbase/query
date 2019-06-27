@@ -32,7 +32,7 @@ func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 		return nil, errors.NewEnterpriseFeature("Advise", "semantics.visit_advise")
 	}
 	if !distributed.RemoteAccess().Enabled(distributed.NEW_INDEXADVISOR) {
-		return nil, errors.NewSemanticsError(nil, "The Advisor feature is enabled only in developer preview.")
+		return nil, errors.NewMHDPOnlyFeature("Advisor", "semantics.visit_advise")
 	}
 	switch stmt.Statement().Type() {
 	case "SELECT", "DELETE", "MERGE", "UPDATE":
@@ -55,5 +55,11 @@ func (this *SemChecker) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interfa
 }
 
 func (this *SemChecker) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("Update Statistics", "semantics.visit_update_statistics")
+	}
+	if !distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) {
+		return nil, errors.NewMHDPOnlyFeature("Update Statistics", "semantics.visit_update_statistics")
+	}
 	return nil, stmt.MapExpressions(this)
 }
