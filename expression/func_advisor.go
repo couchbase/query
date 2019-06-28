@@ -24,10 +24,25 @@ import (
 )
 
 const (
-	_CLASS    = "advisor"
-	_ANALYZE  = "analyze"
-	_MAXCOUNT = 20000
+	_CLASS     = "advisor"
+	_ANALYZE   = "analyze"
+	_ACTIVE    = "active"
+	_COMPLETED = "completed"
+	_ALL       = "all"
+	_MAXCOUNT  = 20000
 )
+
+func queryDict() func(string) string {
+	innerMap := map[string]string{
+		_ACTIVE:    " and state in [\"running\", \"scheduled\"]",
+		_COMPLETED: " and state = \"completed\"",
+		_ALL:       "",
+	}
+
+	return func(key string) string {
+		return innerMap[key]
+	}
+}
 
 type Advisor struct {
 	UnaryFunctionBase
@@ -104,13 +119,29 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 				if err != nil {
 					return nil, err
 				}
+
 				return getResults(sessionName, context)
-			} else if val == "purge" {
+			} else if val == "purge" || val == "abort" {
 				sessionName, err := this.getSession(actual)
 				if err != nil {
 					return nil, err
 				}
-				return purgeResults(sessionName, context)
+
+				return purgeResults(sessionName, context, false)
+			} else if val == "list" {
+				status, err := this.getStatus(actual)
+				if err != nil {
+					return nil, err
+				}
+
+				return listSessions(status, context)
+			} else if val == "stop" {
+				sessionName, err := this.getSession(actual)
+				if err != nil {
+					return nil, err
+				}
+
+				return purgeResults(sessionName, context, true)
 			} else {
 				return nil, fmt.Errorf("%s() not valid argument for 'action'", this.Name())
 			}
@@ -144,7 +175,7 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 	return nil, nil
 }
 
-func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context1 Context, settings map[string]interface{}, query string) error {
+func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{}, query string) error {
 	return scheduler.ScheduleTask(sessionName, _CLASS, _ANALYZE, duration,
 		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
 			// stop monitoring
@@ -161,9 +192,13 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
-			// return nothing
-			return nil, nil
-		}, nil, context1)
+			// collect completed requests afterwards
+			res, _, err := context.EvaluateStatement(query, nil, nil, false, true)
+			if err != nil {
+				return nil, []errors.Error{errors.NewError(err, "")}
+			}
+			return res, nil
+		}, nil, context)
 }
 
 func analyzeWorkload(profile, response_limit string, delta, query_count float64) string {
@@ -182,7 +217,7 @@ func analyzeWorkload(profile, response_limit string, delta, query_count float64)
 }
 
 func getResults(sessionName string, context Context) (value.Value, error) {
-	query := "select raw results from system:tasks_cache where name = \"" + sessionName + "\" and ANY v in results satisfies v <> {} END"
+	query := "select raw results from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\" and ANY v in results satisfies v <> {} END"
 	r, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, true)
 	if err == nil {
 		return value.NewValue(r), nil
@@ -190,10 +225,27 @@ func getResults(sessionName string, context Context) (value.Value, error) {
 	return nil, err
 }
 
-func purgeResults(sessionName string, context Context) (value.Value, error) {
-	query := "DELETE from system:tasks_cache where name = \"" + sessionName + "\""
+func purgeResults(sessionName string, context Context, analysis bool) (value.Value, error) {
+	query := "DELETE from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\""
 	_, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
+	if !analysis {
+		//For purge and abort, scheduler.stop func will run upon deletion when task is not nil.
+		//Need to run deleting for another time to reset scheduler.stop to nil and delete the entry.
+		if err == nil {
+			_, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
+			return value.NULL_VALUE, err
+		}
+	}
 	return value.NULL_VALUE, err
+}
+
+func listSessions(status string, context Context) (value.Value, error) {
+	query := "select * from system:tasks_cache where class = \"" + _CLASS + "\"" + queryDict()(status)
+	r, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, true)
+	if err == nil {
+		return value.NewValue(r), nil
+	}
+	return nil, err
 }
 
 func getSettings(profile, tag, response_limit string, start bool) map[string]interface{} {
@@ -285,7 +337,21 @@ func (this *Advisor) getSession(m map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("%s() not valid argument for 'session'", this.Name())
 	}
 
-	return val.(value.Value).Actual().(string), nil
+	return strings.ToLower(val.(value.Value).Actual().(string)), nil
+}
+
+func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
+	val, ok := m["status"]
+	if !ok {
+		return _ALL, nil
+	}
+	if ok && val.(value.Value).Type() == value.STRING {
+		status := strings.ToLower(val.(value.Value).Actual().(string))
+		if status == _ACTIVE || status == _COMPLETED || status == _ALL {
+			return status, nil
+		}
+	}
+	return "", fmt.Errorf("%s() not valid argument for 'status'", this.Name())
 }
 
 func (this *Advisor) processResult(q string, t int, res value.Value, curMap, recIdxMap, recCidxMap map[string]queryList) {
