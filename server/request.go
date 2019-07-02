@@ -500,7 +500,7 @@ func (this *BaseRequest) SetState(state State) {
 	// to STOPPED or COMPLETED to allow the request to close
 	// gracefully on timeout or network errors and report the
 	// right state
-	if (this.state == TIMEOUT || this.state == CLOSED) &&
+	if (this.state == TIMEOUT || this.state == CLOSED || this.state == STOPPED) &&
 		(state == STOPPED || state == COMPLETED) {
 		return
 	}

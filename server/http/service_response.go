@@ -127,7 +127,6 @@ func (this *httpRequest) markTimeOfCompletion(now time.Time) {
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
-	var stopped bool
 	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
 	this.setHttpCode(http.StatusOK)
@@ -139,26 +138,17 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 	// wait for somebody to tell us we're done, or toast
 	select {
 	case <-this.Results():
-		this.SetState(server.COMPLETED)
-		stopped = false
+		this.Stop(server.COMPLETED)
 	case <-this.StopExecute():
-		this.SetState(server.STOPPED)
+		this.Stop(server.STOPPED)
 
 		// wait for operator before continuing
 		<-this.Results()
-		stopped = true
 	case <-this.httpCloseNotify:
-		this.SetState(server.CLOSED)
-		op := this.StopNotify()
-
-		// stop the operators
-		if op != nil {
-			op.SendStop()
-		}
+		this.Stop(server.CLOSED)
 
 		// wait for operator before continuing
 		<-this.Results()
-		stopped = false
 	}
 
 	now := time.Now()
@@ -168,9 +158,6 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 	state := this.State()
 	this.writeSuffix(srvr, state, this.prefix, this.indent)
 	this.writer.noMoreData()
-	if !stopped {
-		this.Stop(server.COMPLETED)
-	}
 	this.Alert()
 }
 

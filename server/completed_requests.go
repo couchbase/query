@@ -443,7 +443,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	id := request.Id().String()
 	re := &RequestLogEntry{
 		RequestId:       id,
-		State:           string(request.State()),
+		State:           request.State().StateName(),
 		ElapsedTime:     request_time,
 		ServiceTime:     service_time,
 		ResultCount:     result_count,
