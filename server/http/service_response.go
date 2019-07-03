@@ -140,7 +140,6 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 	case <-this.Results():
 		this.Stop(server.COMPLETED)
 	case <-this.StopExecute():
-		this.Stop(server.STOPPED)
 
 		// wait for operator before continuing
 		<-this.Results()
