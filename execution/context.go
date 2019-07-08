@@ -444,35 +444,66 @@ func (this *Context) Warning(wrn errors.Error) {
 // subquery evaluation
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
+	var subplan interface{}
+	planFound := false
+
 	subresults := this.getSubresults()
 	subresult, ok := subresults.get(query)
 	if ok {
 		return subresult.(value.Value), nil
 	}
 
-	subplans := this.getSubplans()
-	subplan, planFound := subplans.get(query)
+	// MB-34749 make subquery plans a property of the prepared statement
+	if this.IsPrepared() {
+		this.prepared.RLock()
+		subplan, planFound = this.prepared.GetSubqueryPlan(query)
+		this.prepared.RUnlock()
 
-	if !planFound {
-		var err error
+		if !planFound {
+			var err error
 
-		// MB-32140: do not replace named/positional arguments with its value for prepared statements
-		namedArgs := this.namedArgs
-		positionalArgs := this.positionalArgs
-		if this.IsPrepared() {
-			namedArgs = nil
-			positionalArgs = nil
+			this.prepared.Lock()
+
+			// check again, just in case somebody has done it while we were waiting
+			subplan, planFound = this.prepared.GetSubqueryPlan(query)
+
+			if !planFound {
+
+				// MB-32140: do not replace named/positional arguments with its value for prepared statements
+				subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
+					nil, nil, this.indexApiVersion, this.featureControls)
+				if err != nil {
+					this.prepared.Unlock()
+
+					// Generate our own error for this subquery, in addition to whatever the query above is doing.
+					this.Error(errors.NewSubqueryBuildError(err))
+					return nil, err
+				}
+
+				// Cache plan
+				this.prepared.SetSubqueryPlan(query, subplan)
+			}
+			this.prepared.Unlock()
 		}
-		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
-			namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
-		if err != nil {
-			// Generate our own error for this subquery, in addition to whatever the query above is doing.
-			this.Error(errors.NewSubqueryBuildError(err))
-			return nil, err
-		}
+	} else {
+		subplans := this.getSubplans()
+		subplan, planFound := subplans.get(query)
 
-		// Cache plan
-		subplans.set(query, subplan)
+		if !planFound {
+			var err error
+
+			subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
+				this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
+			if err != nil {
+
+				// Generate our own error for this subquery, in addition to whatever the query above is doing.
+				this.Error(errors.NewSubqueryBuildError(err))
+				return nil, err
+			}
+
+			// Cache plan
+			subplans.set(query, subplan)
+		}
 	}
 
 	pipeline, err := Build(subplan.(plan.Operator), this)

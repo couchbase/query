@@ -14,7 +14,9 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"sync"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/value"
 )
@@ -30,8 +32,10 @@ type Prepared struct {
 	featureControls uint64
 	namespace       string // TODO change into scope
 
-	indexers   []idxVersion // for reprepare checking
-	namespaces []nsVersion
+	indexers      []idxVersion // for reprepare checking
+	namespaces    []nsVersion
+	subqueryPlans map[*algebra.Select]interface{}
+	sync.RWMutex
 }
 
 type idxVersion struct {
@@ -241,4 +245,21 @@ func (this *Prepared) MetadataCheck() bool {
 
 func (this *Prepared) Verify() bool {
 	return this.Operator.verify(this)
+}
+
+// must be called with the prepared read locked
+func (this *Prepared) GetSubqueryPlan(key *algebra.Select) (interface{}, bool) {
+	if this.subqueryPlans == nil {
+		return nil, false
+	}
+	rv, ok := this.subqueryPlans[key]
+	return rv, ok
+}
+
+// must be called with the prepared write locked
+func (this *Prepared) SetSubqueryPlan(key *algebra.Select, value interface{}) {
+	if this.subqueryPlans == nil {
+		this.subqueryPlans = make(map[*algebra.Select]interface{})
+	}
+	this.subqueryPlans[key] = value
 }
