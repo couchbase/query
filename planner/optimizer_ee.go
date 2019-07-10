@@ -34,12 +34,12 @@ func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	return sel, arrSel
 }
 
-func optDefInSelec(keyspace string) float64 {
-	return optimizer.DefInSelec(keyspace)
+func optDefInSelec(keyspace, key string) float64 {
+	return optimizer.DefInSelec(keyspace, key)
 }
 
-func optDefLikeSelec(keyspace string) float64 {
-	return optimizer.DefLikeSelec(keyspace)
+func optDefLikeSelec(keyspace, key string) float64 {
+	return optimizer.DefLikeSelec(keyspace, key)
 }
 
 func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,

@@ -28,11 +28,11 @@ func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
-func optDefInSelec(keyspace string) float64 {
+func optDefInSelec(keyspace, key string) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
-func optDefLikeSelec(keyspace string) float64 {
+func optDefLikeSelec(keyspace, key string) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 

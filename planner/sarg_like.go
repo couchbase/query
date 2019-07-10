@@ -45,7 +45,7 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	if re == nil {
 		selec := OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			selec = optDefLikeSelec(this.baseKeyspace.Keyspace())
+			selec = optDefLikeSelec(this.baseKeyspace.Keyspace(), this.key.String())
 		}
 		return likeSpans(pred, selec), nil
 	}
