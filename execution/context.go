@@ -487,7 +487,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		}
 	} else {
 		subplans := this.getSubplans()
-		subplan, planFound := subplans.get(query)
+		subplan, planFound = subplans.get(query)
 
 		if !planFound {
 			var err error
