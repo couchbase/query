@@ -68,7 +68,7 @@ func (this *ExecuteFunction) Signature() value.Value {
 Returns nil.
 */
 func (this *ExecuteFunction) Formalize() error {
-	return nil
+	return this.MapExpressions(expression.NewFormalizer("", nil))
 }
 
 /*
