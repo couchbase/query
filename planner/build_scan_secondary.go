@@ -331,13 +331,16 @@ func indexPartitionKeys(index datastore.Index,
 func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
 	pred expression.Expression) map[datastore.Index]*indexEntry {
 
+	useCBO := this.useCBO
+	var skip1, skip2 bool
+
 	for s, se := range sargables {
-		useCBO := this.useCBO
 		if useCBO {
+			skip1 = false
 			if se.cost <= 0.0 {
 				cost, _, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans)
 				if e != nil || (cost <= 0.0 || card <= 0.0) {
-					useCBO = false
+					skip1 = true
 				} else {
 					se.cost = cost
 					se.cardinality = card
@@ -351,10 +354,11 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 
 			if useCBO {
+				skip2 = false
 				if te.cost <= 0 {
 					cost, _, card, e := indexScanCost(te.index, te.sargKeys, this.requestId, te.spans)
 					if e != nil || (cost <= 0.0 || card <= 0.0) {
-						useCBO = false
+						skip2 = true
 					} else {
 						te.cost = cost
 						te.cardinality = card
@@ -364,7 +368,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 
 			se_pushdown := se.PushDownProperty()
 			te_pushdown := te.PushDownProperty()
-			if useCBO {
+			if useCBO && !skip1 && !skip2 {
 				// consider pushdown property before considering cost
 				if se_pushdown > te_pushdown ||
 					((se_pushdown == te_pushdown) && (se.cost < te.cost)) {
