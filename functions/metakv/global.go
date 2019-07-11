@@ -168,7 +168,17 @@ func (name *globalName) Save(body functions.FunctionBody) errors.Error {
 }
 
 func (name *globalName) Delete() errors.Error {
-	err := metakv.Delete(_FUNC_PATH+name.Key(), nil)
+	// Delete() does not currently throw an error on missing key, so load first
+	val, _, err := metakv.Get(_FUNC_PATH + name.Key())
+
+	// Get does not return a not found error - just nil, nil
+	if val == nil && err == nil {
+		return errors.NewMissingFunctionError(name.Name())
+	} else if err != nil {
+		return errors.NewMetaKVError(name.Name(), err)
+	}
+
+	err = metakv.Delete(_FUNC_PATH+name.Key(), nil)
 	if isNotFoundError(err) {
 		return errors.NewMissingFunctionError(name.Name())
 	} else if err != nil {
