@@ -13,7 +13,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
                   }
                 ]
               }
@@ -38,7 +38,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -63,7 +63,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_c12_test_id ON `shellTest`(`c11`,`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 3. not less than/between/not greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 4. not less than/between/not greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -88,11 +88,11 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. in, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 3. in, 10. flavor for partial index."
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. in, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 3. in, 10. flavor for partial index."
                   }
                 ]
               }
@@ -117,11 +117,11 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 10. flavor for partial index."
                   }
                 ]
               }
@@ -154,11 +154,11 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 10. flavor for partial index."
                   }
                 ]
               }
@@ -188,11 +188,11 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
+                    "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued."
                   },
                   {
                     "index_statement": "CREATE INDEX adv_length_a22_test_id ON `shellTest`(length((`a22`))) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 8. function index, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 9. function index, 10. flavor for partial index."
                   }
                 ]
               }
@@ -217,7 +217,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 5. array predicate, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 10. flavor for partial index."
                   }
                 ]
               }
@@ -242,7 +242,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 5. array predicate, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 6. array predicate, 10. flavor for partial index."
                   }
                 ]
               }
@@ -267,11 +267,11 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c22 ON `shellTest`(`c22`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
                   }
                 ]
               }
@@ -279,6 +279,91 @@
           ]
         },
         "query": "merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = a1.type"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT lang FROM shellTest s UNNEST SPLIT(s.LanguageWorkedWith, ';') lang WHERE s.PurchaseWhat = 'NA' AND lang != 'NA' group by lang",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "SELECT lang FROM shellTest s UNNEST SPLIT(s.LanguageWorkedWith, ';') lang WHERE s.PurchaseWhat = 'NA' AND lang != 'NA' group by lang"
+      }
+    ]
+  },
+  {
+    "statements":"advise SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE y.flight IS NOT NULL",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY y.flight FOR y IN x.special_flights END) FOR x IN schedule END)"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY y.flight FOR y IN x.special_flights END) FOR x IN schedule END)",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE y.flight IS NOT NULL"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE x.flight IS NOT NULL",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY x.flight FOR x IN schedule END)",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE x.flight IS NOT NULL"
       }
     ]
   },
@@ -296,7 +381,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c21_c22_length_a21 ON `shellTest`(`c21`,`c22`,length((`a21`)))",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 4. less than/between/greater than, 8. function index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 5. less than/between/greater than, 9. function index."
                   }
                 ]
               }
@@ -326,7 +411,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. in, 7. not null/not missing/valued, 8. function index."
+                    "recommending_rule": "Index keys follow order of predicate types: 3. in, 8. not null/not missing/valued, 9. function index."
                   }
                 ]
               }
@@ -356,7 +441,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
                   }
                 ]
               }
@@ -386,7 +471,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_c12_test_id ON `shellTest`(`c11`,`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 3. not less than/between/not greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 4. not less than/between/not greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -416,7 +501,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -446,7 +531,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -476,7 +561,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifmissing_p123484991 ON `shellTest`(ifmissing(((`c11`).`rob`), 0)+ifmissing(((`c12`).`matt`), 0)+ifmissing((((`p`).`c21`).`emma`), 0)+ifmissing((((`p`).`c22`).`ali`), 0)) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 4. less than/between/greater than, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -506,7 +591,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id ON `shellTest`(`c22`,DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. equality, 5. array predicate, 9. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 6. array predicate, 10. flavor for partial index."
                   }
                 ]
               }

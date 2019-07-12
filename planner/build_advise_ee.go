@@ -140,7 +140,7 @@ func (this *builder) enableUnnest(alias string) {
 	if this.indexAdvisor {
 		if this.queryInfo.ContainsUnnest() {
 			this.queryInfo.InitializeUnnestMap()
-			collectInnerUnnestMap(this.from, this.queryInfo, expression.NewIdentifier(alias))
+			collectInnerUnnestMap(this.from, this.queryInfo, expression.NewIdentifier(alias), 1)
 			this.queryInfo.SetUnnest(false)
 		}
 	}
@@ -215,21 +215,24 @@ func (this *builder) processadviseJF(alias string) {
 	}
 }
 
-func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryIdentifier *expression.Identifier) {
+func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
 	joinTerm, ok := from.(algebra.JoinTerm)
 	if !ok {
-		return
+		return 0
 	}
 
-	collectInnerUnnestMap(joinTerm.Left(), q, primaryIdentifier)
+	level = collectInnerUnnestMap(joinTerm.Left(), q, primaryIdentifier, level)
 	unnest, ok := joinTerm.(*algebra.Unnest)
 	if ok && !unnest.Outer() {
-		q.AddToUnnestMap(unnest.Alias(), unnest.Expression())
 		// to add the top level expression which should belong to the unnest filters
 		if unnest.Expression().DependsOn(primaryIdentifier) {
-			q.AddToUnnestMap(expression.NewStringer().Visit(unnest.Expression()), unnest.Expression())
+			q.AddToUnnestMap(expression.NewStringer().Visit(unnest.Expression()), unnest.Expression(), level)
+			level += 1
 		}
+		q.AddToUnnestMap(unnest.Alias(), unnest.Expression(), level)
+		level += 1
 	}
+	return level
 }
 
 func extractDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, indexApiVersion int) map[string]iaplan.IndexInfos {
