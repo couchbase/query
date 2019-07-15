@@ -19,6 +19,7 @@ func TestAdvise(t *testing.T) {
 	runMatch("insert.json", false, false, qc, t)
 
 	runMatch("case_advise.json", false, false, qc, t)
+	runMatch("case_advise_edgecase.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
 	_, _, errcs := runStmt(qc, "delete from shellTest where test_id IN [\"advise\"]")
