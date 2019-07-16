@@ -36,9 +36,11 @@ func TestN1qlFts(t *testing.T) {
 		t.Logf("did not expect err %s", err.Error())
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(time.Second * 1)
 
 	runMatch("case_fts.json", false, false, qc, t)
+
+	time.Sleep(time.Second * 1)
 
 	err = deleteFTSIndex()
 	if err != nil {

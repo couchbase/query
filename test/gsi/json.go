@@ -86,6 +86,10 @@ type MockServer struct {
 	acctstore accounting.AccountingStore
 }
 
+func SetConsistencyParam(consistency_parameter datastore.ScanConsistency) {
+	Consistency_parameter = consistency_parameter
+}
+
 func (this *MockQuery) OriginalHttpRequest() *http_base.Request {
 	return nil
 }
@@ -205,7 +209,7 @@ as defined in the server request.go.
 func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
-	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
+	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
@@ -242,7 +246,7 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
-	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
+	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

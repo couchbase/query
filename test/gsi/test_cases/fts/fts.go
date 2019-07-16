@@ -10,14 +10,15 @@
 package n1qlFts
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 )
@@ -33,7 +34,9 @@ func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Erro
 }
 
 func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {
+	gsi.SetConsistencyParam(datastore.AT_PLUS)
 	gsi.RunMatch(filename, prepared, explain, qc, t)
+	gsi.SetConsistencyParam(datastore.AT_PLUS)
 }
 
 func isFTSPresent() bool {
@@ -67,7 +70,7 @@ func isFTSPresent() bool {
 
 func setupftsIndex() error {
 
-	reader := strings.NewReader(
+	b := []byte(
 		`{
 	"type": "fulltext-index",
 		"name": "fts_index",
@@ -124,25 +127,32 @@ func setupftsIndex() error {
 	"sourceParams": {}
 }`)
 
-	request, err := http.NewRequest("PUT", gsi.Site_CBS+gsi.Auth_param+"@"+gsi.FTS_CBS+gsi.FTS_API_PATH+IndexName, reader)
+	body := bytes.NewReader(b)
+
+	request, err := http.NewRequest("PUT", gsi.Site_CBS+gsi.FTS_CBS+gsi.FTS_API_PATH+IndexName, body)
 	if err != nil {
 		return err
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(request)
+	request.SetBasicAuth("Administrator", "password")
+	request.Header.Set("Cache-Control", "no-cache")
+	request.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	respbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
 	var data map[string]interface{}
 
-	err = json.Unmarshal(body, &data)
+	err = json.Unmarshal(respbody, &data)
 	if err != nil {
 		return err
 	}
@@ -151,7 +161,6 @@ func setupftsIndex() error {
 		return fmt.Errorf(" Failed to create FTS index ")
 	}
 
-	time.Sleep(time.Millisecond * 10)
 	return nil
 }
 
@@ -183,6 +192,5 @@ func deleteFTSIndex() error {
 		return fmt.Errorf(" Failed to delete FTS index ")
 	}
 
-	time.Sleep(time.Millisecond * 10)
 	return nil
 }

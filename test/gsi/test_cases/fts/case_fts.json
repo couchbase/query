@@ -1,12 +1,13 @@
 [{
-  "statements": "SELECT a.id from SEARCH_QUERY(\"fts_index\",{\"explain\":false,\"fields\": [\"*\"],\"highlight\": {}, \"query\": {\"query\": \"briefcase\"}}).hits a order by a.id",
-  "results": [
-    {
-      "id": "product0_n1qlfts"
-    },
-    {
-      "id": "product1_n1qlfts"
-    }
+    "statements": "SELECT meta().id from product p where search(p,\"briefcase\") order by meta().id",
+    "results": [
+      {
+        "id": "product0_n1qlfts"
+      },
+      {
+        "id": "product1_n1qlfts"
+      }
 
-  ]
-}]
+    ]
+  }
+]
