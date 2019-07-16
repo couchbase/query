@@ -232,10 +232,6 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 		}
 	}
 
-	// no group
-	if len(this.group.By()) == 0 {
-		return true, 0
-	}
 	// Check group keys matching leading keys. If equality predicate that index key can be skipped in group
 	nMatched := 0
 	nGroupMatched := 0
