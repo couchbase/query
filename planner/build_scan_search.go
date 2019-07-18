@@ -192,7 +192,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 		}
 
 		var mappings interface{}
-		var n int
+		var n, en int
 		var size, esize int64
 		var exact bool
 		var entry *indexEntry
@@ -221,9 +221,10 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 
 			if n > 0 {
 				//		exact = exact && !qprams
-				if entry == nil || size < esize {
+				if entry == nil || n > en || size < esize {
 					entry = newIndexEntry(index, keys, keys, nil, 1, 1, cond, origCond, nil, exact)
 					esize = size
+					en = n
 				}
 			}
 		}
