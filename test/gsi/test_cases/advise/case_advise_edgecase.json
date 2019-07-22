@@ -113,5 +113,30 @@
         "query": "select a[1:3] from shellTest AS a where a is not null"
       }
     ]
+  },
+  {
+    "statements": "advise SELECT * FROM shellTest AS c WHERE ANY p IN OBJECT_PAIRS(c.productIds) SATISFIES [p.name, ARRAY_COUNT(p.val) > 0, c.metadata.configurations.[p.name].enabled, ARRAY_CONTAINS(IFMISSINGORNULL(c.deletedFor, []),p.name)] = [\"US\", TRUE, FALSE, FALSE] END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_DISTINCT_object_pairs_productIds_name_array_count_val_metada4251025607 ON `shellTest`(DISTINCT ARRAY [p.name, 0 < array_count((`p`.`val`)), metadata.configurations.[p.name].enabled, array_contains(ifmissingornull((`deletedFor`), []), (`p`.`name`))] FOR p in object_pairs((`productIds`)) END)",
+                    "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "SELECT * FROM shellTest AS c WHERE ANY p IN OBJECT_PAIRS(c.productIds) SATISFIES [p.name, ARRAY_COUNT(p.val) > 0, c.metadata.configurations.[p.name].enabled, ARRAY_CONTAINS(IFMISSINGORNULL(c.deletedFor, []),p.name)] = [\"US\", TRUE, FALSE, FALSE] END"
+      }
+    ]
   }
 ]
