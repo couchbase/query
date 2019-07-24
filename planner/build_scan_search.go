@@ -156,7 +156,7 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 
 	if this.order != nil {
 		this.resetOffsetLimit()
-	} else {
+	} else if this.hasOffsetOrLimit() {
 		index := searchSargables[0].index.(datastore.FTSIndex)
 		sfn, _ := searchSargables[0].sargKeys[0].(*search.Search)
 		if !index.Pageable(nil, offset, limit, sfn.Query(), sfn.Options()) {
