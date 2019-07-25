@@ -343,7 +343,11 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 	this.resetIndexGroupAggs()
 	this.resetProjection()
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
-		this.resetOffsetLimit()
+		if node.Right().JoinHint() == algebra.USE_HASH_PROBE {
+			this.resetOrderOffsetLimit()
+		} else {
+			this.resetOffsetLimit()
+		}
 	} else {
 		this.resetOrderOffsetLimit()
 	}
@@ -469,7 +473,9 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 	this.resetIndexGroupAggs()
 	this.resetProjection()
 
-	if this.hasOffsetOrLimit() && !node.Outer() {
+	if node.Right().JoinHint() == algebra.USE_HASH_PROBE {
+		this.resetOrderOffsetLimit()
+	} else if this.hasOffsetOrLimit() && !node.Outer() {
 		this.resetOffsetLimit()
 	}
 
