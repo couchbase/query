@@ -229,7 +229,6 @@ func main() {
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
 	functions.FunctionsSetLimit(*FUNCTIONS_LIMIT)
 	scheduler.SchedulerSetLimit(*TASKS_LIMIT)
-	constructor.Init()
 
 	if *DICTIONARY_CACHE_LIMIT <= 0 {
 		logging.Errorp("Ignoring invalid dictionary cache size",
@@ -305,6 +304,7 @@ func main() {
 		)
 		os.Exit(1)
 	}
+	constructor.Init(endpoint.Mux())
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()

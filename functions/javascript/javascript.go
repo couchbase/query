@@ -14,6 +14,7 @@ package javascript
 import (
 	goerrors "errors"
 	"fmt"
+	"net/http"
 
 	"github.com/couchbase/eventing-ee/js-evaluator/defs"
 	"github.com/couchbase/eventing-ee/js-evaluator/n1ql-client"
@@ -22,6 +23,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
+	"github.com/gorilla/mux"
 )
 
 type javascript struct {
@@ -41,7 +43,7 @@ var evaluator defs.Evaluator
 // - indexing issues: identify functions as deterministic and not running N1QL code
 // - deadly embrace between evaluator an n1ql services consuming each other's processes
 
-func Init() {
+func Init(mux *mux.Router) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 
 	engine := n1ql_client.SingleInstance
@@ -52,7 +54,13 @@ func Init() {
 
 	err := engine.Configure(config)
 	if err.Err == nil {
-		err = engine.Start()
+		if mux != nil {
+			localMux := &jsMux{mux: mux}
+			err = engine.RegisterUI(localMux)
+		}
+		if err.Err == nil {
+			err = engine.Start()
+		}
 	}
 
 	if err.Err != nil {
@@ -65,6 +73,14 @@ func Init() {
 			enabled = false
 		}
 	}
+}
+
+type jsMux struct {
+	mux *mux.Router
+}
+
+func (this *jsMux) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	this.mux.HandleFunc(pattern, handler).Methods("GET", "POST", "DELETE")
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
@@ -93,14 +109,17 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
 	if err.Err != nil {
-		return nil, funcBody.execError(err.Err, funcName)
+		return nil, funcBody.execError(err.Err, err.Details, funcName)
 	} else {
 		return value.NewValue(res), nil
 	}
 }
 
-func (this *javascriptBody) execError(err error, name string) errors.Error {
+func (this *javascriptBody) execError(err error, details fmt.Stringer, name string) errors.Error {
 	return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
+
+		//		TODO disabled until clear content differentiation between Err and Details
+		//		name, fmt.Errorf("%v %v", err, details))
 		name, err)
 }
 

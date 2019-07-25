@@ -16,14 +16,15 @@ import (
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
 	globalName "github.com/couchbase/query/functions/metakv"
+	"github.com/gorilla/mux"
 )
 
-func Init() {
+func Init(mux *mux.Router) {
 	functions.Constructor = newGlobalFunction
 	globalName.Init()
 	golang.Init()
 	inline.Init()
-	javascript.Init()
+	javascript.Init(mux)
 }
 
 // TODO switch to collections context

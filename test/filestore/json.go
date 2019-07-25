@@ -235,7 +235,7 @@ func Start(site, pool, namespace string) *MockServer {
 		os.Exit(1)
 	}
 	prepareds.PreparedsReprepareInit(ds, sys)
-	constructor.Init()
+	constructor.Init(nil)
 
 	server.SetKeepAlive(1 << 10)
 	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)

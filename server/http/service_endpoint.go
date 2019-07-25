@@ -81,6 +81,10 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	return rv
 }
 
+func (this *HttpEndpoint) Mux() *mux.Router {
+	return this.mux
+}
+
 func (this *HttpEndpoint) Listen() error {
 	ln, err := net.Listen("tcp", this.httpAddr)
 	if err == nil {
