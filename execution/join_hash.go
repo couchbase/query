@@ -249,7 +249,8 @@ func (this *HashJoin) SendStop() {
 func (this *HashJoin) Done() {
 	this.baseDone()
 	if this.child != nil {
-		this.child.Done()
+		child := this.child
+		this.child = nil
+		child.Done()
 	}
-	this.child = nil
 }

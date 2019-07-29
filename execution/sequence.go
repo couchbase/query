@@ -153,9 +153,9 @@ func (this *Sequence) reopen(context *Context) {
 
 func (this *Sequence) Done() {
 	this.baseDone()
-	for c, _ := range this.children {
-		this.children[c].Done()
+	for c, child := range this.children {
 		this.children[c] = nil
+		child.Done()
 	}
 	_SEQUENCE_POOL.Put(this.children)
 	this.children = nil

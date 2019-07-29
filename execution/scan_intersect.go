@@ -242,8 +242,8 @@ func (this *IntersectScan) reopen(context *Context) {
 func (this *IntersectScan) Done() {
 	this.baseDone()
 	for s, scan := range this.scans {
-		scan.Done()
 		this.scans[s] = nil
+		scan.Done()
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil

@@ -222,11 +222,13 @@ func (this *OrderLimit) Done() {
 	this.Order.Done()
 	this.Order = nil
 	if this.limit != nil {
-		this.limit.Done()
+		limit := this.limit
 		this.limit = nil
+		limit.Done()
 	}
 	if this.offset != nil {
-		this.offset.Done()
+		offset := this.offset
 		this.offset = nil
+		offset.Done()
 	}
 }

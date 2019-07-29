@@ -174,9 +174,10 @@ func (this *DistinctScan) reopen(context *Context) {
 func (this *DistinctScan) Done() {
 	this.baseDone()
 	if this.scan != nil {
-		this.scan.Done()
+		scan := this.scan
+		this.scan = nil
+		scan.Done()
 	}
-	this.scan = nil
 }
 
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

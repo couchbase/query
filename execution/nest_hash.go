@@ -180,7 +180,8 @@ func (this *HashNest) SendStop() {
 func (this *HashNest) Done() {
 	this.baseDone()
 	if this.child != nil {
-		this.child.Done()
+		child := this.child
+		this.child = nil
+		child.Done()
 	}
-	this.child = nil
 }

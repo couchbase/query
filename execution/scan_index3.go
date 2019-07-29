@@ -308,6 +308,7 @@ func (this *IndexScan3) SendStop() {
 
 func (this *IndexScan3) Done() {
 	this.baseDone()
+	this.conn = nil
 	if this.isComplete() {
 		_INDEXSCAN3_OP_POOL.Put(this)
 	}

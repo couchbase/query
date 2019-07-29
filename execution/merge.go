@@ -350,16 +350,19 @@ func (this *Merge) reopen(context *Context) {
 func (this *Merge) Done() {
 	this.baseDone()
 	if this.update != nil {
-		this.update.Done()
+		update := this.update
 		this.update = nil
+		update.Done()
 	}
 	if this.delete != nil {
-		this.delete.Done()
+		delete := this.delete
 		this.delete = nil
+		delete.Done()
 	}
 	if this.insert != nil {
-		this.insert.Done()
+		insert := this.insert
 		this.insert = nil
+		insert.Done()
 	}
 	_MERGE_OPERATOR_POOL.Put(this.children)
 	this.children = nil

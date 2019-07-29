@@ -51,8 +51,9 @@ type opState int
 
 const (
 	_CREATED = opState(iota)
-	_RUNNING
 	_KILLED
+	_RUNNING
+	_STOPPING
 	_COMPLETED
 	_DONE
 )
@@ -360,37 +361,62 @@ func (this *base) SendStop() {
 
 // stop for the terminal operator case
 func (this *base) baseSendStop() {
-	if (this.stopped && !this.valueExchange.isWaiting()) || this.opState > _RUNNING {
+	if this.stopped && !this.valueExchange.isWaiting() {
 		return
 	}
-	this.switchPhase(_CHANTIME)
-	this.valueExchange.sendStop()
-	this.switchPhase(_EXECTIME)
+
+	this.activeCond.L.Lock()
+	if this.opState == _CREATED {
+		this.opState = _KILLED
+		this.activeCond.L.Unlock()
+	} else if this.opState == _RUNNING {
+		this.opState = _STOPPING
+		this.activeCond.L.Unlock()
+		this.switchPhase(_CHANTIME)
+		this.valueExchange.sendStop()
+		this.switchPhase(_EXECTIME)
+	} else {
+		this.activeCond.L.Unlock()
+	}
 }
 
 func (this *base) chanSendStop() {
-	if this.opState > _RUNNING {
-		return
+	this.activeCond.L.Lock()
+	if this.opState == _CREATED {
+		this.opState = _KILLED
+		this.activeCond.L.Unlock()
+	} else if this.opState == _RUNNING {
+		this.opState = _STOPPING
+		this.activeCond.L.Unlock()
+		this.switchPhase(_CHANTIME)
+		this.valueExchange.sendStop()
+		select {
+		case this.stopChannel <- 0:
+		default:
+		}
+		this.switchPhase(_EXECTIME)
+	} else {
+		this.activeCond.L.Unlock()
 	}
-	this.switchPhase(_CHANTIME)
-	this.valueExchange.sendStop()
-	select {
-	case this.stopChannel <- 0:
-	default:
-	}
-	this.switchPhase(_EXECTIME)
 }
 
 func (this *base) connSendStop(conn *datastore.IndexConnection) {
-	if this.opState > _RUNNING {
-		return
+	this.activeCond.L.Lock()
+	if this.opState == _CREATED {
+		this.opState = _KILLED
+		this.activeCond.L.Unlock()
+	} else if this.opState == _RUNNING {
+		this.opState = _STOPPING
+		this.activeCond.L.Unlock()
+		this.switchPhase(_CHANTIME)
+		this.valueExchange.sendStop()
+		if conn != nil {
+			conn.SendStop()
+		}
+		this.switchPhase(_EXECTIME)
+	} else {
+		this.activeCond.L.Unlock()
 	}
-	this.switchPhase(_CHANTIME)
-	this.valueExchange.sendStop()
-	if conn != nil {
-		conn.SendStop()
-	}
-	this.switchPhase(_EXECTIME)
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {

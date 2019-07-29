@@ -220,6 +220,7 @@ func (this *PrimaryScan3) SendStop() {
 
 func (this *PrimaryScan3) Done() {
 	this.baseDone()
+	this.conn = nil
 	if this.isComplete() {
 		_PRIMARYSCAN3_OP_POOL.Put(this)
 	}

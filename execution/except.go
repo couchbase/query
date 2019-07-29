@@ -135,11 +135,13 @@ func (this *ExceptAll) reopen(context *Context) {
 func (this *ExceptAll) Done() {
 	this.baseDone()
 	if this.first != nil {
-		this.first.Done()
+		first := this.first
+		this.first = nil
+		first.Done()
 	}
 	if this.second != nil {
-		this.second.Done()
+		second := this.second
+		this.second = nil
+		second.Done()
 	}
-	this.first = nil
-	this.second = nil
 }

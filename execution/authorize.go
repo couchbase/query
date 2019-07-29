@@ -125,9 +125,10 @@ func (this *Authorize) reopen(context *Context) {
 func (this *Authorize) Done() {
 	this.baseDone()
 	if this.child != nil {
-		this.child.Done()
+		child := this.child
+		this.child = nil
+		child.Done()
 	}
-	this.child = nil
 	if this.isComplete() {
 		_AUTH_OP_POOL.Put(this)
 	}

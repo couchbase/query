@@ -122,8 +122,8 @@ func (this *UnionAll) reopen(context *Context) {
 func (this *UnionAll) Done() {
 	this.baseDone()
 	for c, child := range this.children {
-		child.Done()
 		this.children[c] = nil
+		child.Done()
 	}
 	_UNION_POOL.Put(this.children)
 	this.children = nil

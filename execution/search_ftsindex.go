@@ -206,6 +206,7 @@ func (this *IndexFtsSearch) SendStop() {
 
 func (this *IndexFtsSearch) Done() {
 	this.baseDone()
+	this.conn = nil
 	if this.isComplete() {
 		_FTSSEARCH_OP_POOL.Put(this)
 	}

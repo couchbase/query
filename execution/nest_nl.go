@@ -213,7 +213,8 @@ func (this *NLNest) reopen(context *Context) {
 func (this *NLNest) Done() {
 	this.baseDone()
 	if this.child != nil {
-		this.child.Done()
+		child := this.child
+		this.child = nil
+		child.Done()
 	}
-	this.child = nil
 }
