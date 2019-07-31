@@ -25,9 +25,15 @@ type IndexAdvice struct {
 func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo) *IndexAdvice {
 	rv := &IndexAdvice{}
 	rv.adviceInfos = make(iaplan.IndexAdviceInfos, 0, len(queryInfos))
+	qLen := len(queryInfos)
+	cnt := 0
 	for _, v := range queryInfos {
+		cnt += 1
 		adviceInfo := iaplan.NewIndexAdviceInfo(v.GetCurIndexes(), v.GetUncoverIndexes(), v.GetCoverIndexes())
-		rv.adviceInfos = append(rv.adviceInfos, adviceInfo)
+		//MB-35353: get rid of multiple empty entryies when there are subquries
+		if qLen == 1 || (qLen > 1 && (!adviceInfo.IndexesEmpty() || len(rv.adviceInfos) == 0 && cnt == qLen)) {
+			rv.adviceInfos = append(rv.adviceInfos, adviceInfo)
+		}
 	}
 	return rv
 }

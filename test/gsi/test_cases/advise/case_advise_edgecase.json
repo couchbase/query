@@ -138,5 +138,30 @@
         "query": "SELECT * FROM shellTest AS c WHERE ANY p IN OBJECT_PAIRS(c.productIds) SATISFIES [p.name, ARRAY_COUNT(p.val) > 0, c.metadata.configurations.[p.name].enabled, ARRAY_CONTAINS(IFMISSINGORNULL(c.deletedFor, []),p.name)] = [\"US\", TRUE, FALSE, FALSE] END"
       }
     ]
+  },
+  {
+    "statements": "advise select * from (select * from shellTest where a11 > 0) sub",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select * from (select * from shellTest where a11 > 0) sub"
+      }
+    ]
   }
 ]
