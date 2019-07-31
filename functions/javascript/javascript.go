@@ -14,7 +14,6 @@ package javascript
 import (
 	goerrors "errors"
 	"fmt"
-	"net/http"
 
 	"github.com/couchbase/eventing-ee/js-evaluator/defs"
 	"github.com/couchbase/eventing-ee/js-evaluator/n1ql-client"
@@ -55,8 +54,8 @@ func Init(mux *mux.Router) {
 	err := engine.Configure(config)
 	if err.Err == nil {
 		if mux != nil {
-			localMux := &jsMux{mux: mux}
-			err = engine.RegisterUI(localMux)
+			handle := engine.UIHandler()
+			mux.NewRoute().PathPrefix(handle.Path()).Methods("GET", "POST", "PUT", "DELETE").HandlerFunc(handle.Handler())
 		}
 		if err.Err == nil {
 			err = engine.Start()
@@ -73,14 +72,6 @@ func Init(mux *mux.Router) {
 			enabled = false
 		}
 	}
-}
-
-type jsMux struct {
-	mux *mux.Router
-}
-
-func (this *jsMux) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	this.mux.HandleFunc(pattern, handler).Methods("GET", "POST", "DELETE")
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
