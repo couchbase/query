@@ -75,8 +75,11 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 	buildHT := false
 	sa := second.Actual().([]interface{})
 
-	inlistContext := context.(InlistContext)
-	inlistHash := inlistContext.GetInlistHash(this)
+	var inlistHash *InlistHash
+	if inlistContext, ok := context.(InlistContext); ok {
+		inlistHash = inlistContext.GetInlistHash(this)
+	}
+
 	if inlistHash != nil {
 		inlistHash.hashLock.Lock()
 		if inlistHash.ChkHash() {
@@ -162,18 +165,20 @@ func (this *In) Constructor() FunctionConstructor {
 }
 
 func (this *In) EnableInlistHash(context Context) {
-	inlistContext := context.(InlistContext)
-	inlistContext.EnableInlistHash(this)
-	for _, child := range this.expr.Children() {
-		child.EnableInlistHash(context)
+	if inlistContext, ok := context.(InlistContext); ok {
+		inlistContext.EnableInlistHash(this)
+		for _, child := range this.expr.Children() {
+			child.EnableInlistHash(context)
+		}
 	}
 }
 
 func (this *In) ResetMemory(context Context) {
-	inlistContext := context.(InlistContext)
-	inlistContext.RemoveInlistHash(this)
-	for _, child := range this.expr.Children() {
-		child.ResetMemory(context)
+	if inlistContext, ok := context.(InlistContext); ok {
+		inlistContext.RemoveInlistHash(this)
+		for _, child := range this.expr.Children() {
+			child.ResetMemory(context)
+		}
 	}
 }
 
