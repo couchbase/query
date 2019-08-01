@@ -46,7 +46,7 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cos
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 

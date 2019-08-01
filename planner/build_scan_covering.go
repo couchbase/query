@@ -94,7 +94,7 @@ outer:
 		for c, _ := range covering {
 			entry := indexes[c]
 			if entry.cost <= 0.0 {
-				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.requestId, entry.spans)
+				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.requestId, entry.spans, node.Alias())
 				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					useCBO = false
 				} else {

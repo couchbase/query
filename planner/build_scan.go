@@ -272,7 +272,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		return nil, 0, err
 	}
 
-	minimals := this.minimalIndexes(sargables, false, pred)
+	minimals := this.minimalIndexes(sargables, false, pred, node.Alias())
 
 	var searchFns map[string]*search.Search
 	var searchSargables []*indexEntry

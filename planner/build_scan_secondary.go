@@ -56,7 +56,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
 	}
 
-	indexes = this.minimalIndexes(indexes, true, pred)
+	indexes = this.minimalIndexes(indexes, true, pred, node.Alias())
 
 	var orderEntry *indexEntry
 	var limit expression.Expression
@@ -329,7 +329,7 @@ func indexPartitionKeys(index datastore.Index,
 }
 
 func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
-	pred expression.Expression) map[datastore.Index]*indexEntry {
+	pred expression.Expression, alias string) map[datastore.Index]*indexEntry {
 
 	useCBO := this.useCBO
 	var skip1, skip2 bool
@@ -338,7 +338,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		if useCBO {
 			skip1 = false
 			if se.cost <= 0.0 {
-				cost, _, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans)
+				cost, _, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans, alias)
 				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					skip1 = true
 				} else {
@@ -356,7 +356,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			if useCBO {
 				skip2 = false
 				if te.cost <= 0 {
-					cost, _, card, e := indexScanCost(te.index, te.sargKeys, this.requestId, te.spans)
+					cost, _, card, e := indexScanCost(te.index, te.sargKeys, this.requestId, te.spans, alias)
 					if e != nil || (cost <= 0.0 || card <= 0.0) {
 						skip2 = true
 					} else {

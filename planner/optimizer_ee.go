@@ -52,24 +52,24 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cos
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		return optimizer.CalcIndexScanCost(index, sargKeys, requestId, spans.spans)
+		return optimizer.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias)
 	case *IntersectSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, false)
+		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false)
 	case *UnionSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, true)
+		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, true)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
 func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans []SargSpans, union bool) (cost float64, sel float64, card float64, err error) {
+	spans []SargSpans, alias string, union bool) (cost float64, sel float64, card float64, err error) {
 	var nrows float64
 	for i, span := range spans {
-		tcost, tsel, tcard, e := indexScanCost(index, sargKeys, requestId, span)
+		tcost, tsel, tcard, e := indexScanCost(index, sargKeys, requestId, span, alias)
 		if e != nil {
 			return tcost, tsel, tcard, e
 		}

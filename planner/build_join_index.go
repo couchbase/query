@@ -136,7 +136,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		return nil, nil, nil, err
 	}
 
-	minimals := this.minimalIndexes(sargables, false, pred)
+	minimals := this.minimalIndexes(sargables, false, pred, node.Alias())
 	if len(minimals) == 0 {
 		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
@@ -184,7 +184,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 		}
 	}
 
-	secondaries = this.minimalIndexes(secondaries, true, pred)
+	secondaries = this.minimalIndexes(secondaries, true, pred, node.Alias())
 
 	for index, _ := range secondaries {
 		return index, nil, nil, nil
