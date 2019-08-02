@@ -87,7 +87,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin bool, keyspaceName
 		}
 	}
 
-	if err != nil || !expression.IsCovered(pred, alias, exprs) {
+	if err != nil || !expression.IsVarCovered(pred, alias, exprs) {
 		sp.SetExact(false)
 	}
 

@@ -49,6 +49,7 @@ const (
 type coveredOptions struct {
 	skip    bool
 	trickle bool
+	chkvar  bool
 }
 
 func (this *ExpressionBase) String() string {
