@@ -349,6 +349,11 @@ Function rather than method to make sure we don't pick up
 ExpressionBase.CoveredBy() in error
 */
 func IsCovered(expr Expression, keyspace string, exprs Expressions) bool {
-	isCovered := expr.CoveredBy(keyspace, exprs, CoveredOptions{skip: false, trickle: false})
+	isCovered := expr.CoveredBy(keyspace, exprs, CoveredOptions{skip: false, trickle: false, chkvar: false})
+	return isCovered == CoveredSkip || isCovered == CoveredEquiv || isCovered == CoveredTrue
+}
+
+func IsVarCovered(expr Expression, keyspace string, exprs Expressions) bool {
+	isCovered := expr.CoveredBy(keyspace, exprs, CoveredOptions{skip: false, trickle: false, chkvar: true})
 	return isCovered == CoveredSkip || isCovered == CoveredEquiv || isCovered == CoveredTrue
 }

@@ -1,0 +1,35 @@
+[
+    {
+        "testcase": "ANY clause NOT covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements":"SELECT RAW meta().id FROM shellTest WHERE type=\"doc\" AND owner=\"xyz\" AND ANY v IN Names SATISFIES (v.fname='John' AND v.lname ='Doe') END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT RAW meta().id FROM shellTest WHERE type=\"doc\" AND owner=\"xyz\" AND ANY v IN Names SATISFIES (v.fname='John') END",
+        "results": [
+    ]
+    }
+]
+
