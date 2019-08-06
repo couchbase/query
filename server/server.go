@@ -653,8 +653,55 @@ func (this *Server) serviceRequest(request Request) {
 		prepared, request.IndexApiVersion(), request.FeatureControls())
 
 	context.SetWhitelist(this.whitelist)
-	context.SetPrepared(request.Prepared() != nil)
 
+	if request.AutoExecute() == value.TRUE {
+		res, _, er := context.EvaluatePrepared(prepared, false)
+		if er != nil {
+			error, ok := er.(errors.Error)
+			if ok {
+				request.Fail(error)
+			} else {
+				request.Fail(errors.NewError(er, ""))
+			}
+		} else {
+			var name string
+
+			actual, ok := res.Actual().([]interface{})
+			if ok {
+				fields, ok := actual[0].(map[string]interface{})
+				if ok {
+					name, _ = fields["name"].(string)
+				}
+			}
+			if name != "" {
+				var reprepTime time.Duration
+
+				prepared, er = prepareds.GetPrepared(value.NewValue(name), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
+				if reprepTime > 0 {
+					request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
+				}
+			} else {
+				er = errors.NewUnrecognizedPreparedError(fmt.Errorf("auto_execute did not produce a prepared statement"))
+			}
+			if er != nil {
+				error, ok := er.(errors.Error)
+				if ok {
+					request.Fail(error)
+				} else {
+					request.Fail(errors.NewError(er, ""))
+				}
+			} else {
+				request.SetPrepared(prepared)
+				context.ChangePrepared(prepared)
+			}
+		}
+		if er != nil {
+			request.Failed(this)
+			return
+		}
+	}
+
+	context.SetPrepared(request.Prepared() != nil)
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
 	if er != nil {
@@ -711,7 +758,8 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 
 	namedArgs := request.NamedArgs()
 	positionalArgs := request.PositionalArgs()
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+	autoExecute := request.AutoExecute() == value.TRUE
+	if len(namedArgs) > 0 || len(positionalArgs) > 0 || autoExecute {
 		autoPrepare = false
 	}
 
@@ -739,20 +787,23 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, errors.NewSemanticsError(err, "")
 		}
 
-		isprepare := false
+		isPrepare := false
 		if _, ok := stmt.(*algebra.Prepare); ok {
-			isprepare = true
+			isPrepare = true
+		} else {
+			autoExecute = false
+			request.SetAutoExecute(value.FALSE)
 		}
 
 		prep := time.Now()
 
 		// MB-24871: do not replace named/positional parameters with value for prepare statement
-		if isprepare {
+		if isPrepare {
 			namedArgs = nil
 			positionalArgs = nil
 		}
 
-		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false, true,
+		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, autoExecute, !autoExecute,
 			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls())
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {
@@ -821,29 +872,35 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			}
 		default:
 
-			// even though this is not a prepared statement, add the
-			// text for the benefit of context.Recover(): we can
-			// output the text in case of crashes
-			prepared.SetText(request.Statement())
-
-			// set the type for all statements bar prepare
-			// (doing otherwise would have accounting track prepares
-			// as if they were executions)
-			if isprepare {
-				request.SetIsPrepare(true)
-			} else {
+			if isPrepare && autoExecute {
+				request.SetIsPrepare(false)
 				request.SetType(stmt.Type())
+			} else {
 
-				// if autoPrepare is on and this statement is eligible
-				// save it for the benefit of others
-				if autoPrepare {
-					prepared.SetName(name)
-					prepared.SetIndexApiVersion(request.IndexApiVersion())
-					prepared.SetFeatureControls(request.FeatureControls())
-					prepared.SetNamespace(request.Namespace()) // TODO switch to collections scope
-					// trigger prepare metrics recording
-					if prepareds.AddAutoPreparePlan(stmt, prepared) {
-						request.SetPrepared(prepared)
+				// even though this is not a prepared statement, add the
+				// text for the benefit of context.Recover(): we can
+				// output the text in case of crashes
+				prepared.SetText(request.Statement())
+
+				// set the type for all statements bar prepare
+				// (doing otherwise would have accounting track prepares
+				// as if they were executions)
+				if isPrepare {
+					request.SetIsPrepare(true)
+				} else {
+					request.SetType(stmt.Type())
+
+					// if autoPrepare is on and this statement is eligible
+					// save it for the benefit of others
+					if autoPrepare {
+						prepared.SetName(name)
+						prepared.SetIndexApiVersion(request.IndexApiVersion())
+						prepared.SetFeatureControls(request.FeatureControls())
+						prepared.SetNamespace(request.Namespace()) // TODO switch to collections scope
+						// trigger prepare metrics recording
+						if prepareds.AddAutoPreparePlan(stmt, prepared) {
+							request.SetPrepared(prepared)
+						}
 					}
 				}
 			}

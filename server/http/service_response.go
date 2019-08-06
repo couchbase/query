@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
@@ -174,6 +175,7 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value,
 	return this.writeString("{\n") &&
 		this.writeRequestID(prefix) &&
 		this.writeClientContextID(prefix) &&
+		this.writePrepared(prefix, indent) &&
 		this.writeSignature(srvr.Signature(), signature, prefix, indent) &&
 		this.writeString(",\n") &&
 		this.writeString(prefix) &&
@@ -190,6 +192,16 @@ func (this *httpRequest) writeClientContextID(prefix string) bool {
 	}
 	return this.writeString(",\n") && this.writeString(prefix) &&
 		this.writeString("\"clientContextID\": \"") && this.writeString(this.ClientID().String()) && this.writeString("\"")
+}
+
+func (this *httpRequest) writePrepared(prefix, indent string) bool {
+	prepared := this.Prepared()
+	if this.AutoExecute() != value.TRUE || prepared == nil {
+		return true
+	}
+	host := distributed.RemoteAccess().WhoAmI()
+	name := distributed.RemoteAccess().MakeKey(host, prepared.Name())
+	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"prepared\": \"") && this.writeString(name) && this.writeString("\"")
 }
 
 func (this *httpRequest) writeSignature(server_flag bool, signature value.Value, prefix, indent string) bool {

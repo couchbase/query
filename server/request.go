@@ -104,6 +104,8 @@ type Request interface {
 	SetFeatureControls(controls uint64)
 	AutoPrepare() value.Tristate
 	SetAutoPrepare(a value.Tristate)
+	AutoExecute() value.Tristate
+	SetAutoExecute(a value.Tristate)
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -251,6 +253,7 @@ type BaseRequest struct {
 	indexApiVersion int    // Index API version
 	featureControls uint64 // feature bit controls
 	autoPrepare     value.Tristate
+	autoExecute     value.Tristate
 }
 
 type requestIDImpl struct {
@@ -719,6 +722,14 @@ func (this *BaseRequest) SetAutoPrepare(a value.Tristate) {
 
 func (this *BaseRequest) AutoPrepare() value.Tristate {
 	return this.autoPrepare
+}
+
+func (this *BaseRequest) SetAutoExecute(a value.Tristate) {
+	this.autoExecute = a
+}
+
+func (this *BaseRequest) AutoExecute() value.Tristate {
+	return this.autoExecute
 }
 
 func (this *BaseRequest) Results() chan bool {

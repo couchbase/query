@@ -241,6 +241,10 @@ func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
 }
 
+func (this *Context) ChangePrepared(prepared *plan.Prepared) {
+	this.prepared = prepared
+}
+
 func (this *Context) SetWhitelist(val map[string]interface{}) {
 	this.whitelist = val
 }

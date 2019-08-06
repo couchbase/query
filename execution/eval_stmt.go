@@ -206,3 +206,41 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	return results, output.mutationCount, output.err
 }
+
+func (this *Context) EvaluatePrepared(prepared *plan.Prepared, isPrepared bool) (value.Value, uint64, error) {
+	var outputBuf internalOutput
+	output := &outputBuf
+
+	newContext := this.Copy()
+	newContext.output = output
+	newContext.SetPrepared(isPrepared)
+	newContext.prepared = prepared
+	newContext.namedArgs = this.namedArgs
+	newContext.positionalArgs = this.positionalArgs
+
+	build := time.Now()
+	pipeline, err := Build(prepared, newContext)
+	this.output.AddPhaseTime(INSTANTIATE, time.Since(build))
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Collect statements results
+	// FIXME: this should handled by the planner
+	collect := NewCollect(plan.NewCollect(), newContext)
+	sequence := NewSequence(plan.NewSequence(), newContext, pipeline, collect)
+
+	exec := time.Now()
+	sequence.RunOnce(newContext, nil)
+
+	// Await completion
+	collect.waitComplete()
+
+	results := collect.ValuesOnce()
+
+	sequence.Done()
+	this.output.AddPhaseTime(RUN, time.Since(exec))
+
+	return results, output.mutationCount, output.err
+}

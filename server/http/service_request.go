@@ -393,7 +393,23 @@ func handlePretty(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 func handleAutoPrepare(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	autoPrepare, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
-		rv.SetAutoPrepare(autoPrepare)
+		if rv.AutoExecute() == value.TRUE {
+			return errors.NewServiceErrorMultipleValues("auto_execute and auto_prepare")
+		} else {
+			rv.SetAutoPrepare(autoPrepare)
+		}
+	}
+	return err
+}
+
+func handleAutoExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	autoExecute, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		if rv.AutoPrepare() == value.TRUE {
+			return errors.NewServiceErrorMultipleValues("auto_execute and auto_prepare")
+		} else {
+			rv.SetAutoExecute(autoExecute)
+		}
 	}
 	return err
 }
@@ -535,6 +551,7 @@ const ( // Request argument names
 	N1QL_FEAT_CTRL    = "n1ql_feat_ctrl"
 	MAX_INDEX_API     = "max_index_api"
 	AUTO_PREPARE      = "auto_prepare"
+	AUTO_EXECUTE      = "auto_execute"
 )
 
 var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error{
@@ -566,6 +583,7 @@ var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, par
 	N1QL_FEAT_CTRL:    handleN1QLFeatCtrl,
 	MAX_INDEX_API:     handleMaxIndexAPI,
 	AUTO_PREPARE:      handleAutoPrepare,
+	AUTO_EXECUTE:      handleAutoExecute,
 }
 
 func isValidParameter(a string) bool {
