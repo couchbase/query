@@ -105,6 +105,7 @@ type lexer struct {
 	hasSaved         bool
 	saved            int
 	lval             yySymType
+	stop             bool
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -116,6 +117,9 @@ func newLexer(nex *Lexer) *lexer {
 }
 
 func (this *lexer) Lex(lval *yySymType) int {
+	if this.stop {
+		return 0
+	}
 
 	// if we had peeked, return that peeked token
 	if this.hasSaved {
@@ -170,6 +174,11 @@ func (this *lexer) Error(s string) {
 	}
 
 	this.errs = append(this.errs, s)
+}
+
+func (this *lexer) Stop() {
+	this.stop = true
+	this.nex.Stop()
 }
 
 func (this *lexer) ScannerError(s string) {

@@ -3237,12 +3237,14 @@ function_name LPAREN opt_exprs RPAREN opt_nulls_treatment opt_window_clause
 	name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
 	if err != nil {
 	    yylex.Error(err.Error())
+	    yylex.(*lexer).Stop()
 	}
 	f := expression.GetUserDefinedFunction(name)
 	if f != nil {
 		$$ = f.Constructor()($3...)
 	} else {
 		yylex.Error(fmt.Sprintf("Invalid function %s.", $1))
+	    	yylex.(*lexer).Stop()
 	}
     }
 }
@@ -3284,6 +3286,7 @@ long_func_name LPAREN opt_exprs RPAREN
 		$$ = f.Constructor()($3...)
 	} else {
 		yylex.Error(fmt.Sprintf("Invalid function %v", $1))
+		yylex.(*lexer).Stop()
 	}
 }
 ;
