@@ -18,17 +18,8 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
-
-var _INDEXSCAN3_OP_POOL util.FastPool
-
-func init() {
-	util.NewFastPool(&_INDEXSCAN3_OP_POOL, func() interface{} {
-		return &IndexScan3{}
-	})
-}
 
 type IndexScan3 struct {
 	base
@@ -38,7 +29,7 @@ type IndexScan3 struct {
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
-	rv := _INDEXSCAN3_OP_POOL.Get().(*IndexScan3)
+	rv := &IndexScan3{}
 	rv.plan = plan
 
 	newBase(&rv.base, context)
@@ -51,7 +42,7 @@ func (this *IndexScan3) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexScan3) Copy() Operator {
-	rv := _INDEXSCAN3_OP_POOL.Get().(*IndexScan3)
+	rv := &IndexScan3{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
@@ -304,14 +295,6 @@ func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 // send a stop
 func (this *IndexScan3) SendStop() {
 	this.connSendStop(this.conn)
-}
-
-func (this *IndexScan3) Done() {
-	this.baseDone()
-	this.conn = nil
-	if this.isComplete() {
-		_INDEXSCAN3_OP_POOL.Put(this)
-	}
 }
 
 const _FULL_SPAN_FANOUT = 8192

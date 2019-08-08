@@ -934,11 +934,11 @@ func (this *base) wait() {
 		this.opState = _KILLED
 	}
 
-	if this.opState == _RUNNING {
-		// technically this should be in a loop testing for completed
-		// but there's ever going to be one other actor, and all it
-		// does is releases us, so this suffices
+	if this.opState == _RUNNING || this.opState == _STOPPING {
 		this.activeCond.Wait()
+	}
+
+	if this.opState == _COMPLETED {
 
 		// signal that no go routine should touch this operator
 		this.opState = _DONE

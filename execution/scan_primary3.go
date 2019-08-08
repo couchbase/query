@@ -17,17 +17,8 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
-
-var _PRIMARYSCAN3_OP_POOL util.FastPool
-
-func init() {
-	util.NewFastPool(&_PRIMARYSCAN3_OP_POOL, func() interface{} {
-		return &PrimaryScan3{}
-	})
-}
 
 type PrimaryScan3 struct {
 	base
@@ -36,7 +27,7 @@ type PrimaryScan3 struct {
 }
 
 func NewPrimaryScan3(plan *plan.PrimaryScan3, context *Context) *PrimaryScan3 {
-	rv := _PRIMARYSCAN3_OP_POOL.Get().(*PrimaryScan3)
+	rv := &PrimaryScan3{}
 	rv.plan = plan
 
 	newBase(&rv.base, context)
@@ -49,7 +40,7 @@ func (this *PrimaryScan3) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *PrimaryScan3) Copy() Operator {
-	rv := _PRIMARYSCAN3_OP_POOL.Get().(*PrimaryScan3)
+	rv := &PrimaryScan3{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
@@ -216,12 +207,4 @@ func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 // send a stop
 func (this *PrimaryScan3) SendStop() {
 	this.connSendStop(this.conn)
-}
-
-func (this *PrimaryScan3) Done() {
-	this.baseDone()
-	this.conn = nil
-	if this.isComplete() {
-		_PRIMARYSCAN3_OP_POOL.Put(this)
-	}
 }

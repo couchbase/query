@@ -20,17 +20,8 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
-
-var _FTSSEARCH_OP_POOL util.FastPool
-
-func init() {
-	util.NewFastPool(&_FTSSEARCH_OP_POOL, func() interface{} {
-		return &IndexFtsSearch{}
-	})
-}
 
 type IndexFtsSearch struct {
 	base
@@ -40,7 +31,7 @@ type IndexFtsSearch struct {
 }
 
 func NewIndexFtsSearch(plan *plan.IndexFtsSearch, context *Context) *IndexFtsSearch {
-	rv := _FTSSEARCH_OP_POOL.Get().(*IndexFtsSearch)
+	rv := &IndexFtsSearch{}
 	rv.plan = plan
 
 	newBase(&rv.base, context)
@@ -53,7 +44,7 @@ func (this *IndexFtsSearch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexFtsSearch) Copy() Operator {
-	rv := _FTSSEARCH_OP_POOL.Get().(*IndexFtsSearch)
+	rv := &IndexFtsSearch{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
@@ -202,14 +193,6 @@ func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 // send a stop
 func (this *IndexFtsSearch) SendStop() {
 	this.connSendStop(this.conn)
-}
-
-func (this *IndexFtsSearch) Done() {
-	this.baseDone()
-	this.conn = nil
-	if this.isComplete() {
-		_FTSSEARCH_OP_POOL.Put(this)
-	}
 }
 
 func SetSearchInfo(aliasMap map[string]string, item value.Value,
