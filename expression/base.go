@@ -66,6 +66,13 @@ func (this *ExpressionBase) MarshalJSON() ([]byte, error) {
 }
 
 /*
+Make sure expression flags are copied when copying expression
+*/
+func (this *ExpressionBase) BaseCopy(oldExpr Expression) {
+	this.setExprFlags(oldExpr.getExprFlags())
+}
+
+/*
 Evaluate the expression for an indexing context. Support multiple
 return values for array indexing.
 
@@ -84,6 +91,14 @@ if so, whether it is distinct.
 
 func (this *ExpressionBase) IsArrayIndexKey() (bool, bool) {
 	return false, false
+}
+
+func (this *ExpressionBase) getExprFlags() uint32 {
+	return this.exprFlags
+}
+
+func (this *ExpressionBase) setExprFlags(flags uint32) {
+	this.exprFlags = flags
 }
 
 func (this *ExpressionBase) volatile() bool {

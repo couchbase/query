@@ -81,6 +81,7 @@ func (this *ArrayAgg) Copy() expression.Expression {
 			this.Flags(), CopyWindowTerm(this.WindowTerm())),
 	}
 
+	rv.BaseCopy(this)
 	rv.SetExpr(rv)
 	return rv
 }

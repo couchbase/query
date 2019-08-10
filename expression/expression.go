@@ -164,6 +164,11 @@ type Expression interface {
 	Copy() Expression
 
 	/*
+	   base copy.
+	*/
+	BaseCopy(Expression)
+
+	/*
 	   Indicates if this expression may produce multiple
 	   overlapping spans during index sarging. For example, a < 5
 	   OR a < 10 produces overlapping spans. False positives are
@@ -197,6 +202,16 @@ type Expression interface {
 	   Reset the value field of the expression
 	*/
 	ResetValue()
+
+	/*
+	   Get expression flags
+	*/
+	getExprFlags() uint32
+
+	/*
+	   Set expression flags
+	*/
+	setExprFlags(flags uint32)
 
 	/*
 	   Does Value() call generate a MISSING value

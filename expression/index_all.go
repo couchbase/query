@@ -142,7 +142,9 @@ func (this *All) MapChildren(mapper Mapper) error {
 }
 
 func (this *All) Copy() Expression {
-	return NewAll(this.array.Copy(), this.distinct)
+	rv := NewAll(this.array.Copy(), this.distinct)
+	rv.BaseCopy(this)
+	return rv
 }
 
 func (this *All) Array() Expression {

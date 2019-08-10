@@ -83,6 +83,7 @@ func (this *Lag) Copy() expression.Expression {
 		this.nthItem, this.direction,
 	}
 
+	rv.BaseCopy(this)
 	rv.SetExpr(rv)
 	return rv
 }

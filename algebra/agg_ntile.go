@@ -90,6 +90,7 @@ func (this *Ntile) Copy() expression.Expression {
 		this.buckets, this.nrows, this.cbucket, this.cMaxRow,
 	}
 
+	rv.BaseCopy(this)
 	rv.SetExpr(rv)
 	return rv
 }

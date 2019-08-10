@@ -166,5 +166,7 @@ func (this *SimpleCase) MapChildren(mapper Mapper) (err error) {
 }
 
 func (this *SimpleCase) Copy() Expression {
-	return NewSimpleCase(this.searchTerm.Copy(), this.whenTerms.Copy(), Copy(this.elseTerm))
+	rv := NewSimpleCase(this.searchTerm.Copy(), this.whenTerms.Copy(), Copy(this.elseTerm))
+	rv.BaseCopy(this)
+	return rv
 }

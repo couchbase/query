@@ -120,7 +120,9 @@ func (this *Cover) MapChildren(mapper Mapper) error {
 }
 
 func (this *Cover) Copy() Expression {
-	return NewCover(this.covered.Copy())
+	rv := NewCover(this.covered.Copy())
+	rv.BaseCopy(this)
+	return rv
 }
 
 func (this *Cover) Covered() Expression {

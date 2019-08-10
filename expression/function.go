@@ -192,27 +192,31 @@ func (this *FunctionBase) MapChildren(mapper Mapper) error {
 }
 
 func (this *FunctionBase) Copy() Expression {
+	var rv Function
 	function := this.expr.(Function)
 	operands := function.Operands()
 	if len(operands) == 0 {
-		return function.Constructor()()
-	}
-
-	var buf [8]Expression
-	var copies Expressions
-	if len(operands) <= len(buf) {
-		copies = buf[0:len(operands)]
+		rv = function.Constructor()()
 	} else {
-		copies = make(Expressions, len(operands))
-	}
-
-	for i, op := range operands {
-		if op != nil {
-			copies[i] = op.Copy()
+		var buf [8]Expression
+		var copies Expressions
+		if len(operands) <= len(buf) {
+			copies = buf[0:len(operands)]
+		} else {
+			copies = make(Expressions, len(operands))
 		}
+
+		for i, op := range operands {
+			if op != nil {
+				copies[i] = op.Copy()
+			}
+		}
+
+		rv = function.Constructor()(copies...)
 	}
 
-	return function.Constructor()(copies...)
+	rv.BaseCopy(this.expr)
+	return rv
 }
 
 /*
@@ -279,7 +283,9 @@ func (this *NullaryFunctionBase) CoveredBy(keyspace string, exprs Expressions, o
 
 func (this *NullaryFunctionBase) Copy() Expression {
 	function := this.expr.(Function)
-	return function.Constructor()()
+	rv := function.Constructor()()
+	rv.BaseCopy(this.expr)
+	return rv
 }
 
 func (this *NullaryFunctionBase) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (

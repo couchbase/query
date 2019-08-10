@@ -79,6 +79,7 @@ func (this *LastValue) Copy() expression.Expression {
 		this.nthItem,
 	}
 
+	rv.BaseCopy(this)
 	rv.SetExpr(rv)
 	return rv
 }

@@ -191,7 +191,9 @@ func (this *Array) DependsOn(other Expression) bool {
 }
 
 func (this *Array) Copy() Expression {
-	return NewArray(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
+	rv := NewArray(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
+	rv.BaseCopy(this)
+	return rv
 }
 
 func (this *Array) identityEval(item value.Value, context Context) (value.Value, error) {

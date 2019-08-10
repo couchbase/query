@@ -95,5 +95,7 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *First) Copy() Expression {
-	return NewFirst(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
+	rv := NewFirst(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
+	rv.BaseCopy(this)
+	return rv
 }

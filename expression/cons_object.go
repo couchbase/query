@@ -157,7 +157,9 @@ func (this *ObjectConstruct) Copy() Expression {
 		copies[name.Copy()] = value.Copy()
 	}
 
-	return NewObjectConstruct(copies)
+	rv := NewObjectConstruct(copies)
+	rv.BaseCopy(this)
+	return rv
 }
 
 func (this *ObjectConstruct) Mapping() map[Expression]Expression {

@@ -149,5 +149,7 @@ func (this *SearchedCase) MapChildren(mapper Mapper) (err error) {
 }
 
 func (this *SearchedCase) Copy() Expression {
-	return NewSearchedCase(this.whenTerms.Copy(), Copy(this.elseTerm))
+	rv := NewSearchedCase(this.whenTerms.Copy(), Copy(this.elseTerm))
+	rv.BaseCopy(this)
+	return rv
 }

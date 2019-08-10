@@ -113,6 +113,8 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 func (this *Object) Copy() Expression {
-	return NewObject(this.nameMapping.Copy(), this.valueMapping.Copy(),
+	rv := NewObject(this.nameMapping.Copy(), this.valueMapping.Copy(),
 		this.bindings.Copy(), Copy(this.when))
+	rv.BaseCopy(this)
+	return rv
 }
