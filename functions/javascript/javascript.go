@@ -92,7 +92,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		return nil, errors.NewArgumentsMismatchError(funcName)
 	}
 	for i, _ := range values {
-		args = append(args, values[i])
+		args = append(args, values[i].Actual())
 	}
 
 	// FIXME credentials
