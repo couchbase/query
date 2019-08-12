@@ -254,6 +254,16 @@ type Expression interface {
 	SetDerivedRange()
 
 	/*
+	   Derived from LIKE
+	*/
+	IsDerivedFromLike() bool
+
+	/*
+	   Set derived from LIKE
+	*/
+	SetDerivedFromLike()
+
+	/*
 	   Enable in-list evaluation optimization (using hash table)
 	*/
 	EnableInlistHash(context Context)

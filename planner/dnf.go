@@ -501,6 +501,8 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	bytes := []byte(prefix)
 	bytes[last]++
 	lt := expression.NewLT(expr.First(), expression.NewConstant(string(bytes)))
+	ge.SetDerivedFromLike()
+	lt.SetDerivedFromLike()
 	and := expression.NewAnd(ge, lt)
 	and.SetDerivedRange()
 	return and, nil

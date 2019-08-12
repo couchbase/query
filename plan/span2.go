@@ -26,9 +26,10 @@ const (
 	RANGE_EMPTY_SPAN
 	RANGE_MISSING_SPAN
 	RANGE_NULL_SPAN
+	RANGE_DERIVED_FROM_LIKE
 )
 
-const RANGE_SPECIAL_FLAGS = (RANGE_SELF_SPAN | RANGE_FULL_SPAN | RANGE_WHOLE_SPAN | RANGE_VALUED_SPAN | RANGE_EMPTY_SPAN | RANGE_MISSING_SPAN | RANGE_NULL_SPAN)
+const RANGE_SPECIAL_SPAN = (RANGE_SELF_SPAN | RANGE_FULL_SPAN | RANGE_WHOLE_SPAN | RANGE_VALUED_SPAN | RANGE_EMPTY_SPAN | RANGE_MISSING_SPAN | RANGE_NULL_SPAN)
 
 type Ranges2 []*Range2
 
@@ -85,12 +86,25 @@ func (this *Range2) UnsetCheckSpecialSpan() {
 	this.Flags &^= RANGE_CHECK_SPECIAL_SPAN
 }
 
-func (this *Range2) HasSpecialFlags() bool {
-	return (this.Flags & RANGE_SPECIAL_FLAGS) != 0
+func (this *Range2) HasSpecialSpan() bool {
+	return (this.Flags & RANGE_SPECIAL_SPAN) != 0
 }
 
-func (this *Range2) ClearSpecialFlags() {
-	this.Flags &^= RANGE_SPECIAL_FLAGS
+func (this *Range2) ClearSpecialSpan() {
+	this.Flags &^= RANGE_SPECIAL_SPAN
+}
+
+func (this *Range2) HasFlag(flag uint32) bool {
+	return (this.Flags & flag) != 0
+}
+
+func (this *Range2) SetFlag(flag uint32) {
+	this.Flags |= flag
+}
+
+// inherit any flags that's not a special span flag
+func (this *Range2) InheritFlags(other *Range2) {
+	this.Flags |= (other.Flags &^ RANGE_SPECIAL_SPAN)
 }
 
 func (this *Range2) MarshalJSON() ([]byte, error) {

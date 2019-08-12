@@ -352,6 +352,7 @@ func constrainSpan(span1, span2 *plan.Span2) {
 				(span2.Ranges[0].Inclusion & datastore.LOW)
 			span1.Ranges[0].Selec1 = span2.Ranges[0].Selec1
 			span1.Ranges[0].SetCheckSpecialSpan()
+			span1.Ranges[0].InheritFlags(span2.Ranges[0])
 		} else {
 			// Keep the greater or unknown low bound from
 			// span1 and span2
@@ -382,10 +383,12 @@ func constrainSpan(span1, span2 *plan.Span2) {
 					(span2.Ranges[0].Inclusion & datastore.LOW)
 				span1.Ranges[0].Selec1 = span2.Ranges[0].Selec1
 				span1.Ranges[0].SetCheckSpecialSpan()
+				span1.Ranges[0].InheritFlags(span2.Ranges[0])
 			} else if low1 != nil && low2 != nil && res == 0 {
 				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
 					(span1.Ranges[0].Inclusion & span2.Ranges[0].Inclusion & datastore.LOW)
 				span1.Ranges[0].SetCheckSpecialSpan()
+				span1.Ranges[0].InheritFlags(span2.Ranges[0])
 			}
 		}
 	}
@@ -401,6 +404,7 @@ func constrainSpan(span1, span2 *plan.Span2) {
 				(span2.Ranges[0].Inclusion & datastore.HIGH)
 			span1.Ranges[0].Selec2 = span2.Ranges[0].Selec2
 			span1.Ranges[0].SetCheckSpecialSpan()
+			span1.Ranges[0].InheritFlags(span2.Ranges[0])
 		} else {
 			// Keep the lesser or unknown high bound from
 			// span1 and span2
@@ -422,10 +426,12 @@ func constrainSpan(span1, span2 *plan.Span2) {
 					(span2.Ranges[0].Inclusion & datastore.HIGH)
 				span1.Ranges[0].Selec2 = span2.Ranges[0].Selec2
 				span1.Ranges[0].SetCheckSpecialSpan()
+				span1.Ranges[0].InheritFlags(span2.Ranges[0])
 			} else if high1 != nil && high2 != nil && res == 0 {
 				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
 					(span1.Ranges[0].Inclusion & span2.Ranges[0].Inclusion & datastore.HIGH)
 				span1.Ranges[0].SetCheckSpecialSpan()
+				span1.Ranges[0].InheritFlags(span2.Ranges[0])
 			}
 		}
 	}
@@ -503,7 +509,7 @@ func checkSpecialSpan(span *plan.Span2) {
 	// only the first range is ever affected
 	rg := span.Ranges[0]
 	if rg.HasCheckSpecialSpan() {
-		rg.ClearSpecialFlags()
+		rg.ClearSpecialSpan()
 		setSpecialSpan(rg)
 		rg.UnsetCheckSpecialSpan()
 	}

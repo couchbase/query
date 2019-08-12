@@ -31,6 +31,9 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 		range2.High = expr
 		range2.Selec1 = OPT_SELEC_NOT_AVAIL
 		range2.Selec2 = selec
+		if pred.IsDerivedFromLike() {
+			range2.SetFlag(plan.RANGE_DERIVED_FROM_LIKE)
+		}
 	} else if pred.Second().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.First())
 		range2.Low = expr

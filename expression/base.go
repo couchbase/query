@@ -27,6 +27,7 @@ const (
 	EXPR_CAN_FLATTEN
 	EXPR_OR_FROM_NE
 	EXPR_DERIVED_RANGE
+	EXPR_DERIVED_FROM_LIKE
 )
 
 /*
@@ -175,6 +176,14 @@ func (this *ExpressionBase) IsDerivedRange() bool {
 
 func (this *ExpressionBase) SetDerivedRange() {
 	this.exprFlags |= EXPR_DERIVED_RANGE
+}
+
+func (this *ExpressionBase) IsDerivedFromLike() bool {
+	return (this.exprFlags & EXPR_DERIVED_FROM_LIKE) != 0
+}
+
+func (this *ExpressionBase) SetDerivedFromLike() {
+	this.exprFlags |= EXPR_DERIVED_FROM_LIKE
 }
 
 /*
