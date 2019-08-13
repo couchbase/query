@@ -51,9 +51,10 @@ type opState int
 
 const (
 	_CREATED = opState(iota)
-	_KILLED
 	_RUNNING
 	_STOPPING
+	_KILLED
+	_STOPPED
 	_COMPLETED
 	_DONE
 )
@@ -899,7 +900,6 @@ func (this *base) active() bool {
 
 	// we have been killed before we started!
 	if this.opState == _KILLED {
-
 		return false
 	}
 
@@ -913,7 +913,16 @@ func (this *base) inactive() {
 	this.activeCond.L.Lock()
 
 	// we are done
-	this.opState = _COMPLETED
+	switch this.opState {
+
+	// technically this can't happen, but for completeness
+	case _CREATED:
+		this.opState = _KILLED
+	case _RUNNING:
+		this.opState = _COMPLETED
+	case _STOPPING:
+		this.opState = _STOPPED
+	}
 	this.activeCond.L.Unlock()
 
 	// wake up whoever wants to free us
@@ -951,15 +960,13 @@ func (this *base) waitComplete() {
 	this.activeCond.L.Lock()
 
 	// still running, just wait
-	if this.opState != _COMPLETED && this.opState != _DONE {
-
-		// technically this should be in a loop testing for completed
-		// but there's ever going to be one other actor, and all it
-		// does is releases us, so this suffices
+	if this.opState == _CREATED || this.opState == _RUNNING || this.opState == _STOPPING {
 		this.activeCond.Wait()
 
 		// signal that no go routine should touch this operator
-		this.opState = _DONE
+		if this.opState == _COMPLETED {
+			this.opState = _DONE
+		}
 	}
 
 	this.activeCond.L.Unlock()

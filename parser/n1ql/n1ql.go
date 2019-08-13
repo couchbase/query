@@ -163,6 +163,9 @@ func (this *lexer) Remainder(offset int) string {
 }
 
 func (this *lexer) Error(s string) {
+	if s == "syntax error" && this.stop {
+		return
+	}
 	if this.lastScannerError != "" {
 		s = s + ": " + this.lastScannerError
 		this.lastScannerError = ""
