@@ -384,6 +384,11 @@ func (this *httpRequest) EventGenericFields() adt.GenericFields {
 	return adt.GetAuditBasicFields(this.req)
 }
 
+// for audit.Auditable interface.
+func (this *httpRequest) EventRemoteAddress() string {
+	return this.req.RemoteAddr
+}
+
 const ( // Request argument names
 	MAX_PARALLELISM   = "max_parallelism"
 	SCAN_CAP          = "scan_cap"

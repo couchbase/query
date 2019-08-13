@@ -30,6 +30,7 @@ type handlerFunc func(http.ResponseWriter, *http.Request)
 func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f apiFunc) {
 	auditFields := audit.ApiAuditFields{
 		GenericFields: adt.GetAuditBasicFields(req),
+		RemoteAddress: req.RemoteAddr,
 		HttpMethod:    req.Method,
 	}
 
