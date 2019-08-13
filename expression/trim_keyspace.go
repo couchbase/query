@@ -49,11 +49,18 @@ func (this *keyspaceTrimmer) VisitField(expr *Field) (interface{}, error) {
 		return nil, err
 	}
 
+	second := expr.Second()
+
 	if first != MISSING_EXPR {
-		return expr, nil
+		if first.EquivalentTo(expr.First()) {
+			return expr, nil
+		}
+
+		rv := NewField(first, second)
+		rv.BaseCopy(expr)
+		return rv, nil
 	}
 
-	second := expr.Second()
 	if fn, ok := second.(*FieldName); ok {
 		return NewIdentifier(fn.Alias()), nil
 	}
