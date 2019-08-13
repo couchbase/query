@@ -37,6 +37,7 @@ func (ma *mockAuditor) metricRegistry() accounting.MetricRegistry {
 // A fixed structure that implements the Auditable interface
 type simpleAuditable struct {
 	genericFields       adt.GenericFields
+	remote              string
 	status              string
 	statement           string
 	eventId             string
@@ -61,6 +62,10 @@ type simpleAuditable struct {
 
 func (sa *simpleAuditable) EventGenericFields() adt.GenericFields {
 	return sa.genericFields
+}
+
+func (sa *simpleAuditable) EventRemoteAddress() string {
+	return sa.remote
 }
 
 func (sa *simpleAuditable) EventStatus() string {
