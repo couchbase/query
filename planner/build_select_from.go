@@ -253,12 +253,13 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	this.resetProjection()
-	this.resetIndexGroupAggs()
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
+		this.group == nil {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
 	} else {
-		this.resetOrderOffsetLimit()
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -297,12 +298,13 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetIndexGroupAggs()
-	this.resetProjection()
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
+		this.group == nil {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
 	} else {
-		this.resetOrderOffsetLimit()
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -340,16 +342,14 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 
 func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetIndexGroupAggs()
-	this.resetProjection()
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() {
-		if node.Right().JoinHint() == algebra.USE_HASH_PROBE {
-			this.resetOrderOffsetLimit()
-		} else {
-			this.resetOffsetLimit()
-		}
+
+	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
+		this.group == nil && node.Right().JoinHint() != algebra.USE_HASH_PROBE {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
+		this.resetOffsetLimit()
 	} else {
-		this.resetOrderOffsetLimit()
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -384,11 +384,12 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	this.resetIndexGroupAggs()
-	this.resetProjection()
-
-	if this.hasOffsetOrLimit() && !node.Outer() {
+	if this.group == nil && this.hasOffsetOrLimit() && !node.Outer() {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
+	} else {
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -428,11 +429,12 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetIndexGroupAggs()
-	this.resetProjection()
-
-	if this.hasOffsetOrLimit() && !node.Outer() {
+	if this.group == nil && this.hasOffsetOrLimit() && !node.Outer() {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
+	} else {
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
@@ -470,13 +472,14 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
 	this.requirePrimaryKey = true
-	this.resetIndexGroupAggs()
-	this.resetProjection()
 
-	if node.Right().JoinHint() == algebra.USE_HASH_PROBE {
-		this.resetOrderOffsetLimit()
-	} else if this.hasOffsetOrLimit() && !node.Outer() {
+	if this.group == nil && node.Right().JoinHint() != algebra.USE_HASH_PROBE &&
+		this.hasOffsetOrLimit() && !node.Outer() {
+		this.resetProjection()
+		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
+	} else {
+		this.resetPushDowns()
 	}
 
 	_, err := node.Left().Accept(this)
