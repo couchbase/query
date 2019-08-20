@@ -107,7 +107,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 		}
 	}
 
-	if err != nil || !expression.IsVarCovered(pred, alias, exprs) {
+	if err != nil || !expression.IsArrayCovered(pred, alias, exprs) {
 		sp.SetExact(false)
 	}
 

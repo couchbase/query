@@ -31,11 +31,8 @@ func TestCover(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ixCover5 on shellTest (email,VMs,join_day) WHERE (10 < join_day)")
 	runStmt(qc, "CREATE INDEX ixCover6 on shellTest(main.status)")
 	runStmt(qc, "CREATE INDEX ixCover7 on shellTest(main.owner)")
-	runStmt(qc, "CREATE INDEX ixCover8 on shellTest(ALL ARRAY v.fname FOR v IN Names END) WHERE type=\"doc\" AND owner=\"xyz\"")
 
 	runMatch("case_cover.json", false, false, qc, t)
-
-	runMatch("case_cover2.json", false, true, qc, t)
 
 	runStmt(qc, "DROP PRIMARY INDEX on shellTest")
 	runStmt(qc, "DROP INDEX shellTest.ixCover")
@@ -45,5 +42,35 @@ func TestCover(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ixCover5")
 	runStmt(qc, "DROP INDEX shellTest.ixCover6")
 	runStmt(qc, "DROP INDEX shellTest.ixCover7")
+
+	runStmt(qc, "CREATE INDEX ixCover8 on shellTest(ALL ARRAY v.fname FOR v IN Names END) WHERE type=\"doc\" AND owner=\"xyz\"")
+	runStmt(qc, "CREATE INDEX ixCover9 on shellTest((DISTINCT (ARRAY (DISTINCT (ARRAY (((v.country) || \".\") || c) FOR c IN (v.cities) END)) FOR v IN visited_places END)))")
+
+	runMatch("case_cover2.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX shellTest.ixCover8")
+	runStmt(qc, "DROP INDEX shellTest.ixCover9")
+
+	runStmt(qc, "CREATE INDEX ixCover10 on shellTest(ALL items)")
+	runStmt(qc, "CREATE INDEX ixCover11 on shellTest(ALL ARRAY [v, zipcode] FOR v IN items2 END)")
+
+	runMatch("case_cover3.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ixCover10")
+	runStmt(qc, "DROP INDEX shellTest.ixCover11")
+
+	runStmt(qc, "CREATE INDEX ixCover12 on shellTest(ALL ARRAY v.f1 FOR v IN items END)")
+
+	runMatch("case_cover4.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ixCover12")
+
+	// include entire array as separate index key to provide cover
+	runStmt(qc, "CREATE INDEX ixCover13 on shellTest(ALL ARRAY v FOR v IN items END, items)")
+	runStmt(qc, "CREATE INDEX ixCover14 on shellTest(ALL ARRAY v.f1 FOR v IN items2 END, items2)")
+
+	runMatch("case_cover5.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ixCover13")
+	runStmt(qc, "DROP INDEX shellTest.ixCover14")
 }
