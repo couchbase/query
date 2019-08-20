@@ -47,15 +47,14 @@ func (this *With) Copy() Operator {
 func (this *With) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		this.SetKeepAlive(1, context) // terminate early
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(RUN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 
-		if !context.assert(this.child != nil, "With has no child") {
+		if !active || !context.assert(this.child != nil, "With has no child") {
+			this.notify()
 			this.close(context)
 			return
 		}

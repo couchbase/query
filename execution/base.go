@@ -47,15 +47,45 @@ var _PHASENAMES = []string{
 
 type annotatedChannel chan value.AnnotatedValue
 
+// Execution operators have a complex life.
+// Though the norm is that they are created, they run and they complete, some
+// are not even designed to run (eg channel), some will be stopped half way, some
+// will be delayed by an overloaded kernel and will only manage to start when the
+// request has in fact completed, and some will not start at all (eg their parent
+// hasn't managed to start).
+
+// Transitioning states and freeing resources is tricky.
+// For starters, cleaning resources can't wait for operators that haven't started to
+// complete, because they may never get to start, leading to a fat deadly embrace.
+// The Done() method therefore does not wait for latecomers.
+// This  means that it is not safe to destruct what hasn't started, because they might
+// come to life later and will need certain information to notify other operators:
+// _KILLED operators will have to clean up after themselves and remove any residual
+// references to other objects so as to help the GC.
+// This also means that ait is not safe to pool _KILLED operators, as they may later
+// come to life
+
+// Conversely, dormant operators should never change state during request execution,
+// because marking them as inactive will terminate early a result stream.
+
+// It should be safe to pool an operator that has successfully been stopped, but
+// our current policy is not to take chances.
+
+// Finally, should a panic occur, it's not safe to clean up, but the operator that
+// is terminating in error should still try to notify other operators, so that a stall
+// can be avoided.
+
 type opState int
 
 const (
 	_CREATED = opState(iota)
+	_DORMANT
 	_RUNNING
 	_STOPPING
+	_PANICKED
 	_KILLED
-	_STOPPED
 	_COMPLETED
+	_STOPPED
 	_DONE
 )
 
@@ -163,7 +193,7 @@ func newSerializedBase(dest *base) {
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
-	//	dest.serializable = true
+	dest.serializable = true
 }
 
 func (this *base) copy(dest *base) {
@@ -204,6 +234,17 @@ func (this *base) close(context *Context) {
 		}
 	}
 	this.inactive()
+
+	// operators that never enter a _RUNNING state have to clean after themselves when they finally go
+	if this.opState == _KILLED {
+		this.valueExchange.dispose()
+		this.stopChannel = nil
+		this.input = nil
+		this.output = nil
+		this.parent = nil
+		this.stop = nil
+		this.contextTracked = nil
+	}
 }
 
 func (this *base) Done() {
@@ -212,13 +253,15 @@ func (this *base) Done() {
 
 func (this *base) baseDone() {
 	this.wait()
-	this.valueExchange.dispose()
-	this.stopChannel = nil
-	this.input = nil
-	this.output = nil
-	this.parent = nil
-	this.stop = nil
-	this.contextTracked = nil
+	if this.opState != _KILLED && this.opState != _PANICKED {
+		this.valueExchange.dispose()
+		this.stopChannel = nil
+		this.input = nil
+		this.output = nil
+		this.parent = nil
+		this.stop = nil
+		this.contextTracked = nil
+	}
 }
 
 // reopen for the terminal operator case
@@ -569,9 +612,7 @@ type consumer interface {
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(this) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		if this.execPhase != PHASES {
 			this.setExecPhase(this.execPhase, context)
 		}
@@ -579,7 +620,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		if this.serialized == true {
 			ok := true
-			if context.Readonly() && !cons.readonly() {
+			if !active || (context.Readonly() && !cons.readonly()) {
 				ok = false
 			} else {
 				ok = cons.beforeItems(context, parent)
@@ -598,6 +639,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer this.close(context)
 		defer this.notify() // Notify that I have stopped
 		defer func() { this.batch = nil }()
+		if !active {
+			return
+		}
 
 		if context.Readonly() && !cons.readonly() {
 
@@ -898,15 +942,20 @@ func (this *base) active() bool {
 	this.activeCond.L.Lock()
 	defer this.activeCond.L.Unlock()
 
-	// we have been killed before we started!
-	if this.opState == _KILLED {
-		return false
+	// we are good to go
+	if this.opState == _CREATED {
+		this.opState = _RUNNING
+		return true
 	}
 
-	// we are good to go
-	this.opState = _RUNNING
+	// we have been killed before we started!
+	return false
+}
 
-	return true
+func (this *base) dormant() {
+	this.activeCond.L.Lock()
+	this.opState = _DORMANT
+	this.activeCond.L.Unlock()
 }
 
 func (this *base) inactive() {
@@ -914,10 +963,6 @@ func (this *base) inactive() {
 
 	// we are done
 	switch this.opState {
-
-	// technically this can't happen, but for completeness
-	case _CREATED:
-		this.opState = _KILLED
 	case _RUNNING:
 		this.opState = _COMPLETED
 	case _STOPPING:
@@ -931,26 +976,49 @@ func (this *base) inactive() {
 
 // do any op require to release request in case of a panic
 func (this *base) release(context *Context) {
-	// TODO add closes and notifies as part of panic handling (MB-31641)
-	this.inactive()
+
+	// signal that we are not in a good place
+	this.activeCond.L.Lock()
+	this.opState = _PANICKED
+	this.activeCond.L.Unlock()
+
+	// release any consumer attached to us
+	if this.output != nil && this.closeConsumer {
+		base := this.output.getBase()
+		serializedClose(this.output, base, context)
+	}
+
+	// release any waiter
+	this.notify()
+
+	// remove any reference we have about anyone else
+	this.stopChannel = nil
+	this.input = nil
+	this.output = nil
+	this.parent = nil
+	this.stop = nil
+	this.contextTracked = nil
 }
 
 func (this *base) wait() {
 	this.activeCond.L.Lock()
 
 	// if it hasn't started, kill it
-	if this.opState == _CREATED {
+	switch this.opState {
+	case _CREATED:
 		this.opState = _KILLED
-	}
-
-	if this.opState == _RUNNING || this.opState == _STOPPING {
-		this.activeCond.Wait()
-	}
-
-	if this.opState == _COMPLETED {
-
-		// signal that no go routine should touch this operator
+	case _DORMANT:
 		this.opState = _DONE
+
+	case _RUNNING:
+	case _STOPPING:
+		this.activeCond.Wait()
+
+		if this.opState == _COMPLETED {
+
+			// signal that no go routine should touch this operator
+			this.opState = _DONE
+		}
 	}
 
 	this.activeCond.L.Unlock()

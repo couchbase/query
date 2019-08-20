@@ -49,12 +49,13 @@ func (this *PrimaryScan3) Copy() Operator {
 func (this *PrimaryScan3) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.setExecPhase(PRIMARY_SCAN, context)
 		defer this.notify() // Notify that I have stopped
+		if !active {
+			return
+		}
 
 		this.scanPrimary(context, parent)
 	})

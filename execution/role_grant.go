@@ -157,15 +157,13 @@ func getUsersMap(users []string) map[string]bool {
 func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
 
-		if context.Readonly() {
+		if !active || context.Readonly() {
 			return
 		}
 

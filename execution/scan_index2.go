@@ -53,14 +53,15 @@ func (this *IndexScan2) Copy() Operator {
 func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer this.notify()                          // Notify that I have stopped
+		if !active {
+			return
+		}
 
 		this.conn = datastore.NewIndexConnection(context)
 		defer this.conn.Dispose()  // Dispose of the connection

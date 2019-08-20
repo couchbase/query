@@ -52,13 +52,14 @@ func (this *Prepare) Copy() Operator {
 func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
+		if !active {
+			return
+		}
 
 		if this.plan.Force() {
 			err := prepareds.AddPrepared(this.plan.Plan())

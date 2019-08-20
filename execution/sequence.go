@@ -77,15 +77,14 @@ func (this *Sequence) Copy() Operator {
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		this.SetKeepAlive(1, context)
 
 		n := len(this.children)
-		if !context.assert(n > 0, "Sequence has no children") {
+		if !active || !context.assert(n > 0, "Sequence has no children") {
+			this.notify()
 			this.close(context)
 			return
 		}

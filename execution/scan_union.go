@@ -57,9 +57,7 @@ func (this *UnionScan) Copy() Operator {
 func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
@@ -69,7 +67,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			this.keys = nil
 		}()
 
-		if !context.assert(len(this.scans) != 0, "Union Scan has no scans") {
+		if !active || !context.assert(len(this.scans) != 0, "Union Scan has no scans") {
 			return
 		}
 		pipelineCap := int(context.GetPipelineCap())
@@ -83,6 +81,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		channel := NewChannel(context)
+		defer channel.Done()
 		this.SetInput(channel)
 
 		for _, scan := range this.scans {

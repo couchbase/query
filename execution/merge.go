@@ -62,24 +62,25 @@ func (this *Merge) Copy() Operator {
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(MERGE, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer this.notify()                          // Notify that I have stopped
 
-		if context.Readonly() {
+		if !active || context.Readonly() {
 			return
 		}
 
 		go this.input.RunOnce(context, parent)
 
 		update, updateInput := this.wrapChild(this.update, context)
+		defer releaseChannel(updateInput)
 		delete, deleteInput := this.wrapChild(this.delete, context)
+		defer releaseChannel(deleteInput)
 		insert, insertInput := this.wrapChild(this.insert, context)
+		defer releaseChannel(insertInput)
 
 		this.children = _MERGE_OPERATOR_POOL.Get()
 		inputs := _MERGE_CHANNEL_POOL.Get()
@@ -284,6 +285,12 @@ func (this *Merge) wrapChild(op Operator, context *Context) (Operator, *Channel)
 	op.SetOutput(this.output)
 	op.SetParent(this)
 	return op, ch
+}
+
+func releaseChannel(ch *Channel) {
+	if ch != nil {
+		ch.Done()
+	}
 }
 
 func (this *Merge) MarshalJSON() ([]byte, error) {

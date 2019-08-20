@@ -21,6 +21,7 @@ type Channel struct {
 func NewChannel(context *Context) *Channel {
 	rv := &Channel{}
 	newBase(&rv.base, context)
+	rv.dormant()
 	rv.output = rv
 	return rv
 }

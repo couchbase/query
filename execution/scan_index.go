@@ -52,9 +52,7 @@ func (this *IndexScan) Copy() Operator {
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		this.switchPhase(_EXECTIME)
 		spans := this.plan.Spans()
 		n := len(spans)
@@ -62,7 +60,8 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		this.setExecPhase(INDEX_SCAN, context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 
-		if !context.assert(n != 0, "Index scan has no spans") {
+		if !active || !context.assert(n != 0, "Index scan has no spans") {
+			this.notify()
 			this.close(context)
 			return
 		}
@@ -155,14 +154,15 @@ func (this *spanScan) Copy() Operator {
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.addExecPhase(INDEX_SCAN, context)       // we have already added the scan operator in the primary scan
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer this.notify()                          // Notify that I have stopped
+		if !active {
+			return
+		}
 
 		this.conn = datastore.NewIndexConnection(context)
 		defer this.conn.Dispose()  // Dispose of the connection

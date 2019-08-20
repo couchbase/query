@@ -48,13 +48,14 @@ func (this *UpdateStatistics) Copy() Operator {
 func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer func() { this.switchPhase(_NOTIME) }()
 		defer this.notify() // Notify that I have stopped
+		if !active {
+			return
+		}
 
 		conn := datastore.NewValueConnection(context)
 		defer notifyConn(conn.StopChannel())

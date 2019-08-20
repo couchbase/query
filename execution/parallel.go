@@ -68,15 +68,14 @@ func (this *Parallel) Copy() Operator {
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
 		this.SetKeepAlive(n, context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 
-		if !context.assert(this.child != nil, "Parallel has no child") {
+		if !active || !context.assert(this.child != nil, "Parallel has no child") {
+			this.notify()
 			this.close(context)
 			return
 		}

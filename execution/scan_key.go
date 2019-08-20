@@ -55,13 +55,14 @@ func (this *KeyScan) Copy() Operator {
 func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
-		if !this.active() {
-			return
-		}
+		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
+		if !active {
+			return
+		}
 
 		keys, e := this.plan.Keys().Evaluate(parent, context)
 		if e != nil {
