@@ -212,6 +212,11 @@ type Expression interface {
 	   Set identifier flags
 	*/
 	SetIdentFlags(aliases map[string]bool, flags uint32)
+
+	/*
+	   ExpressionBase
+	*/
+	ExprBase() *ExpressionBase
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {
@@ -294,19 +299,4 @@ func Equivalents(exprs1, exprs2 Expressions) bool {
 	}
 
 	return true
-}
-
-/*
-Wrapper for CoveredBy - to be used by the planner
-Function rather than method to make sure we don't pick up
-ExpressionBase.CoveredBy() in error
-*/
-func IsCovered(expr Expression, keyspace string, exprs Expressions) bool {
-	isCovered := expr.CoveredBy(keyspace, exprs, coveredOptions{skip: false, trickle: false, chkvar: false})
-	return isCovered == CoveredSkip || isCovered == CoveredEquiv || isCovered == CoveredTrue
-}
-
-func IsVarCovered(expr Expression, keyspace string, exprs Expressions) bool {
-	isCovered := expr.CoveredBy(keyspace, exprs, coveredOptions{skip: false, trickle: false, chkvar: true})
-	return isCovered == CoveredSkip || isCovered == CoveredEquiv || isCovered == CoveredTrue
 }

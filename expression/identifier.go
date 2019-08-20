@@ -100,7 +100,7 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options co
 	// MB-25317, if this is not the right keyspace, ignore the expression altogether
 	// MB-25370 this only applies for keyspace terms, not variables!
 	if (this.IsKeyspaceAlias() && this.identifier != keyspace) ||
-		this.IsProjectionAlias() || (!options.chkvar && this.IsBindingVariable()) {
+		this.IsProjectionAlias() || (!options.hasCoverBindVar() && this.IsBindingVariable()) {
 		return CoveredSkip
 	}
 
@@ -108,7 +108,7 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options co
 		if this.EquivalentTo(expr) {
 			switch eType := expr.(type) {
 			case *Identifier:
-				if options.chkvar && this.IsBindingVariable() {
+				if options.hasCoverBindVar() && this.IsBindingVariable() {
 					if eType.identifier == keyspace {
 						return CoveredTrue
 					} else {

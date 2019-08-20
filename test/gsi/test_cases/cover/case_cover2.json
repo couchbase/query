@@ -1,6 +1,6 @@
 [
     {
-        "testcase": "ANY clause NOT covered",
+        "testcase": "ANY clause NOT covered (MB-35392)",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -16,7 +16,7 @@
     ]
     },
     {
-        "testcase": "ANY clause covered",
+        "testcase": "ANY clause covered (MB-35392)",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -28,6 +28,22 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
         },
         "statements":"SELECT RAW meta().id FROM shellTest WHERE type=\"doc\" AND owner=\"xyz\" AND ANY v IN Names SATISFIES (v.fname='John') END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause covered (MB-35568)",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT RAW meta().id FROM shellTest WHERE ANY v IN visited_places SATISFIES (ANY c IN v.cities SATISFIES (v.country || \".\" || c) = \"Canada.Toronto\" END) END ORDER BY META().id",
         "results": [
     ]
     }
