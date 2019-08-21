@@ -354,6 +354,41 @@ func init() {
 	flag.StringVar(&batchFlag, "b", defaultval, command.NewShorthandMsg("-batch"))
 }
 
+/*
+   Option        : -analytics or -a
+   Args          : true or false
+   Batch mode for sending queries to Asterix, and auto discovering analytics nodes in a cluster.
+*/
+
+var analyticsFlag bool
+
+func init() {
+	const (
+		defaultval = false
+		usage      = command.UANALYTICS
+	)
+	flag.BoolVar(&analyticsFlag, "analytics", defaultval, usage)
+	flag.BoolVar(&analyticsFlag, "a", defaultval, command.NewShorthandMsg("-analytics"))
+}
+
+/*
+   Option        : -networkconfig or -ncfg
+   Args          : String (default or external supported as of now)
+   Alternate address support for connection to server. Auto indicates that we auto-discover if the input IP is
+   an internal or external address.
+*/
+
+var networkconfigFlag string
+
+func init() {
+	const (
+		defaultval = "auto"
+		usage      = command.UNETWORK
+	)
+	flag.StringVar(&networkconfigFlag, "networkconfig", defaultval, usage)
+	flag.StringVar(&networkconfigFlag, "ncfg", defaultval, command.NewShorthandMsg("-networkconfig"))
+}
+
 var (
 	SERVICE_URL  string
 	DISCONNECT   bool
@@ -409,6 +444,9 @@ func main() {
 			serverFlag = args[0]
 		}
 	}
+
+	n1ql.SetNetworkType(networkconfigFlag)
+	n1ql.SetIsAnalytics(analyticsFlag)
 
 	// call command.ParseURL()
 	var errCode int
@@ -596,11 +634,11 @@ func main() {
 	}
 
 	// If batch flag is enabled
-	if batchFlag != "off" {
-		if strings.ToLower(batchFlag) == "on" {
-			command.BATCH = batchFlag
+	if batchFlag != "off" || analyticsFlag {
+		if strings.ToLower(batchFlag) == "on" || analyticsFlag {
+			command.BATCH = "on"
 			//SET batch mode here
-			err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", batchFlag)
+			err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", "on")
 			if err_code != 0 {
 				s_err := command.HandleError(err_code, err_str)
 				command.PrintError(s_err)

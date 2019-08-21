@@ -37,6 +37,8 @@ const (
 	ULOG        = " File to log commands into. \n\t For example : -logfile temp.txt"
 	USSLVERIFY  = " Skip verification of Certificates. "
 	UBATCH      = " Batch mode for sending queries to the Analytics service. Values : on/off"
+	UANALYTICS  = " Auto discover analytics server from input cluster. Batch mode on. "
+	UNETWORK    = " Choose network address support. \n\tAuto - Use either alternate address or not depending on input. \n\t Default - Use internal address. \n\t external - Use alternate addresses. "
 	UCACERT     = " Path to root ca certificate to verify identity of server. \n\t For example : -cacert ./root/ca.pem"
 	UCERTFILE   = " Path to chain certificate. \n\t For example : -cert ./client/client/chain.pem"
 	UKEYFILE    = " Path to client key file. \n\t For example : -key ./client/client/client.key"

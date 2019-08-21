@@ -71,7 +71,7 @@ const (
 	NO_SUCH_ALIAS       = 141
 	NO_SUCH_ALIAS_MSG   = "Alias does not exist "
 	BATCH_MODE          = 142
-	BATCH_MODE_MSG      = "Error when running in batch mode. Incorrect input value"
+	BATCH_MODE_MSG      = "Error when running in batch mode for Analytics. Incorrect input value"
 	STRING_WRITE        = 143
 	STRING_WRITE_MSG    = "Cannot write to string buffer. "
 
