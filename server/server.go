@@ -172,9 +172,13 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 
 	// set namespaces in parser
 	ns, _ := store.NamespaceNames()
-	nsm := make(map[string]interface{}, len(ns))
+	ss, _ := sys.NamespaceNames()
+	nsm := make(map[string]interface{}, len(ns)+len(ss))
 	for i, _ := range ns {
 		nsm[ns[i]] = true
+	}
+	for i, _ := range ss {
+		nsm[ss[i]] = true
 	}
 	n1ql.SetNamespaces(nsm)
 
