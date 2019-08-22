@@ -90,8 +90,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			go scan.RunOnce(context, parent)
 		}
 
-		limit := evalLimitOffset(this.plan.Limit(), nil, int64(-1), this.plan.Covering(), context)
-		offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
+		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)
+		offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
 		n := len(this.scans)
 		ok := true
 

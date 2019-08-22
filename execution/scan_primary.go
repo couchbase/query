@@ -76,7 +76,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	defer this.conn.Dispose()  // Dispose of the connection
 	defer this.conn.SendStop() // Notify index that I have stopped
 
-	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, false, context)
+	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, false, context)
 
 	go this.scanEntries(context, this.conn, limit)
 

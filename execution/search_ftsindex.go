@@ -177,8 +177,8 @@ func (this *IndexFtsSearch) planToSearchMapping(context *Context,
 			fmt.Sprintf("Search() function Options parameter must be object.")))
 	}
 
-	indexSearchInfo.Offset = evalLimitOffset(psearchInfo.Offset(), nil, int64(0), false, context)
-	indexSearchInfo.Limit = evalLimitOffset(psearchInfo.Limit(), nil, math.MaxInt64, false, context)
+	indexSearchInfo.Offset = evalLimitOffset(psearchInfo.Offset(), parent, int64(0), false, context)
+	indexSearchInfo.Limit = evalLimitOffset(psearchInfo.Limit(), parent, math.MaxInt64, false, context)
 	indexSearchInfo.Order = psearchInfo.Order()
 
 	return

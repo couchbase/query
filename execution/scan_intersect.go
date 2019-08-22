@@ -103,7 +103,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			go scan.RunOnce(context, parent)
 		}
 
-		limit := getLimit(this.plan.Limit(), this.plan.Covering(), context)
+		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)

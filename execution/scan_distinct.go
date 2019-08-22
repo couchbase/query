@@ -84,8 +84,8 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		this.SetInput(this.scan)
 		go this.scan.RunOnce(context, parent)
 
-		limit := evalLimitOffset(this.plan.Limit(), nil, int64(-1), this.plan.Covering(), context)
-		offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
+		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)
+		offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
 		n := 1
 		ok := true
 

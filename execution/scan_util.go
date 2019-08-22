@@ -59,10 +59,6 @@ func notifyConn(stopchannel datastore.StopChannel) {
 	}
 }
 
-func getLimit(limit expression.Expression, covering bool, context *Context) int64 {
-	return evalLimitOffset(limit, nil, int64(-1), covering, context)
-}
-
 func evalLimitOffset(expr expression.Expression, parent value.Value, defval int64, covering bool, context *Context) (val int64) {
 	if expr != nil {
 		val, e := expr.Evaluate(parent, context)

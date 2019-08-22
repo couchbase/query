@@ -161,8 +161,8 @@ func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection, 
 		return
 	}
 
-	offset := evalLimitOffset(this.plan.Offset(), nil, int64(0), this.plan.Covering(), context)
-	limit := evalLimitOffset(this.plan.Limit(), nil, math.MaxInt64, this.plan.Covering(), context)
+	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
+	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), context)
 
 	var indexProjection *datastore.IndexProjection
 
