@@ -24,6 +24,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
+	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
@@ -410,7 +411,8 @@ func makeMockServer() *server.Server {
 	}
 
 	datastore.SetDatastore(store)
-	server, err := server.NewServer(store, nil, nil, nil, "default",
+	sys, err := system.NewDatastore(store)
+	server, err := server.NewServer(store, sys, nil, nil, "default",
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
