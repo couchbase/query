@@ -491,7 +491,7 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 	cost := float64(0.0)
 	cardinality := float64(0.0)
 	selec := float64(1.0)
-	for i, scan := range scans {
+	for _, scan := range scans {
 		scost := scan.Cost()
 		scardinality := scan.Cardinality()
 		if (scost <= 0.0) || (scardinality <= 0.0) {
@@ -504,11 +504,7 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 		if selec1 > 1.0 {
 			selec1 = 1.0
 		}
-		if i == 0 {
-			selec = selec1
-		} else {
-			selec = selec + selec1 - (selec * selec1)
-		}
+		selec = selec * selec1
 	}
 
 	if useCBO {
