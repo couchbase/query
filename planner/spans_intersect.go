@@ -57,7 +57,7 @@ func (this *IntersectSpans) CreateScan(
 	}
 
 	limit = offsetPlusLimit(offset, limit)
-	return plan.NewIntersectScan(limit, scans...)
+	return plan.NewIntersectScan(limit, cost, cardinality, scans...)
 }
 
 func (this *IntersectSpans) Compose(prev SargSpans) SargSpans {

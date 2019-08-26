@@ -419,14 +419,16 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 				}
 				secondary = scans[1]
 			} else {
-				secondary = plan.NewIntersectScan(limit, scans[1:]...)
+				cost, cardinality := this.intersectScanCost(node, scans[1:]...)
+				secondary = plan.NewIntersectScan(limit, cost, cardinality, scans[1:]...)
 			}
 		} else {
 			if ordered, ok := scans[0].(*plan.OrderedIntersectScan); ok {
 				scans = append(ordered.Scans(), scans[1:]...)
 			}
 
-			secondary = plan.NewOrderedIntersectScan(nil, scans...)
+			cost, cardinality := this.intersectScanCost(node, scans...)
+			secondary = plan.NewOrderedIntersectScan(nil, cost, cardinality, scans...)
 		}
 	}
 
@@ -477,6 +479,47 @@ func (this *builder) processWhere(where expression.Expression) (err error) {
 	}
 
 	return
+}
+
+func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan.SecondaryScan) (float64, float64) {
+	docCount, err := this.getDocCount(node)
+	if err != nil {
+		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+	}
+
+	useCBO := true
+	cost := float64(0.0)
+	cardinality := float64(0.0)
+	selec := float64(1.0)
+	for i, scan := range scans {
+		scost := scan.Cost()
+		scardinality := scan.Cardinality()
+		if (scost <= 0.0) || (scardinality <= 0.0) {
+			useCBO = false
+			break
+		}
+
+		cost += scost
+		selec1 := scardinality / docCount
+		if selec1 > 1.0 {
+			selec1 = 1.0
+		}
+		if i == 0 {
+			selec = selec1
+		} else {
+			selec = selec + selec1 - (selec * selec1)
+		}
+	}
+
+	if useCBO {
+		// cost calculated in for loop above
+		cardinality = selec * docCount
+	} else {
+		cost = OPT_COST_NOT_AVAIL
+		cardinality = OPT_CARD_NOT_AVAIL
+	}
+
+	return cost, cardinality
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index, indexApiVersion int) (

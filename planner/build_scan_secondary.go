@@ -178,9 +178,11 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	} else if scans[0] == nil && len(scans) == 2 {
 		return scans[1], sargLength, nil
 	} else if scans[0] == nil {
-		return plan.NewIntersectScan(limit, scans[1:]...), sargLength, nil
+		cost, cardinality := this.intersectScanCost(node, scans[1:]...)
+		return plan.NewIntersectScan(limit, cost, cardinality, scans[1:]...), sargLength, nil
 	} else {
-		scan = plan.NewOrderedIntersectScan(nil, scans...)
+		cost, cardinality := this.intersectScanCost(node, scans...)
+		scan = plan.NewOrderedIntersectScan(nil, cost, cardinality, scans...)
 		this.orderScan = scan
 		return scan, sargLength, nil
 	}

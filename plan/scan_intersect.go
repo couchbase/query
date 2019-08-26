@@ -20,11 +20,13 @@ import (
 // IntersectScan scans multiple indexes and intersects the results.
 type IntersectScan struct {
 	readonly
-	scans []SecondaryScan
-	limit expression.Expression
+	scans       []SecondaryScan
+	limit       expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *IntersectScan {
+func NewIntersectScan(limit expression.Expression, cost, cardinality float64, scans ...SecondaryScan) *IntersectScan {
 	for _, scan := range scans {
 		if scan.Limit() != nil {
 			scan.SetLimit(nil)
@@ -38,15 +40,17 @@ func NewIntersectScan(limit expression.Expression, scans ...SecondaryScan) *Inte
 	n := len(scans)
 	if n > 64 {
 		return NewIntersectScan(
-			limit,
-			NewIntersectScan(nil, scans[0:n/2]...),
-			NewIntersectScan(nil, scans[n/2:]...),
+			limit, cost, cardinality,
+			NewIntersectScan(nil, cost/2.0, cardinality, scans[0:n/2]...),
+			NewIntersectScan(nil, cost/2.0, cardinality, scans[n/2:]...),
 		)
 	}
 
 	return &IntersectScan{
-		scans: scans,
-		limit: limit,
+		scans:       scans,
+		limit:       limit,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -106,6 +110,14 @@ func (this *IntersectScan) Offset() expression.Expression {
 func (this *IntersectScan) SetOffset(limit expression.Expression) {
 }
 
+func (this *IntersectScan) Cost() float64 {
+	return this.cost
+}
+
+func (this *IntersectScan) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *IntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	for _, scan := range this.scans {
 		err := scan.CoverJoinSpanExpressions(coverer)
@@ -142,6 +154,14 @@ func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[strin
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -150,9 +170,11 @@ func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[strin
 
 func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string            `json:"#operator"`
-		Scans []json.RawMessage `json:"scans"`
-		Limit string            `json:"limit"`
+		_           string            `json:"#operator"`
+		Scans       []json.RawMessage `json:"scans"`
+		Limit       string            `json:"limit"`
+		Cost        float64           `json:"cost"`
+		Cardinality float64           `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -185,6 +207,18 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
 	}
 
 	return nil

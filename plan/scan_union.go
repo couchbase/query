@@ -21,12 +21,14 @@ import (
 // UnionScan scans multiple indexes and unions the results.
 type UnionScan struct {
 	readonly
-	scans  []SecondaryScan
-	limit  expression.Expression
-	offset expression.Expression
+	scans       []SecondaryScan
+	limit       expression.Expression
+	offset      expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewUnionScan(limit, offset expression.Expression, scans ...SecondaryScan) *UnionScan {
+func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64, scans ...SecondaryScan) *UnionScan {
 	for _, scan := range scans {
 		if scan.Limit() == nil {
 			limit = nil
@@ -36,9 +38,11 @@ func NewUnionScan(limit, offset expression.Expression, scans ...SecondaryScan) *
 	}
 
 	return &UnionScan{
-		scans:  scans,
-		limit:  limit,
-		offset: offset,
+		scans:       scans,
+		limit:       limit,
+		offset:      offset,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -106,6 +110,14 @@ func (this *UnionScan) SetOffset(offset expression.Expression) {
 	}
 }
 
+func (this *UnionScan) Cost() float64 {
+	return this.cost
+}
+
+func (this *UnionScan) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *UnionScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	for _, scan := range this.scans {
 		err := scan.CoverJoinSpanExpressions(coverer)
@@ -147,7 +159,7 @@ func (this *UnionScan) Streamline() SecondaryScan {
 	case len(this.scans):
 		return this
 	default:
-		scan := NewUnionScan(this.limit, this.offset, scans...)
+		scan := NewUnionScan(this.limit, this.offset, this.cost, this.cardinality, scans...)
 		this.limit = scan.Limit()
 		this.offset = scan.Offset()
 		return scan
@@ -175,6 +187,14 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["offset"] = expression.NewStringer().Visit(this.offset)
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -183,10 +203,12 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string            `json:"#operator"`
-		Scans  []json.RawMessage `json:"scans"`
-		Limit  string            `json:"limit"`
-		Offset string            `json:"offset"`
+		_           string            `json:"#operator"`
+		Scans       []json.RawMessage `json:"scans"`
+		Limit       string            `json:"limit"`
+		Offset      string            `json:"offset"`
+		Cost        float64           `json:"cost"`
+		Cardinality float64           `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -226,6 +248,18 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
 	}
 
 	return nil

@@ -241,3 +241,17 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 
 	return keyspace, nil
 }
+
+func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {
+	keyspace, err := this.getTermKeyspace(node)
+	if err != nil {
+		return 0.0, err
+	}
+
+	docCount, err := keyspace.Count(datastore.NULL_QUERY_CONTEXT)
+	if err != nil {
+		return 0.0, err
+	}
+
+	return float64(docCount), nil
+}

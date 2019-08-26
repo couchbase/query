@@ -56,7 +56,7 @@ func (this *UnionSpans) CreateScan(
 			covers, filterCovers, filters, cost, cardinality)
 	}
 
-	return plan.NewUnionScan(limit, offset, scans...)
+	return plan.NewUnionScan(limit, offset, cost, cardinality, scans...)
 }
 
 func (this *UnionSpans) Compose(prev SargSpans) SargSpans {

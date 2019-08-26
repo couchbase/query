@@ -95,8 +95,17 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		return nil, minSargLength, nil
 	}
 
+	cost := float64(0.0)
+	cardinality := float64(0.0)
+	selec := float64(1.0)
+	useCBO := true
+	docCount, err := this.getDocCount(node)
+	if err != nil || (docCount <= 0.0) {
+		useCBO = false
+	}
+
 	join := node.IsAnsiJoinOp()
-	for _, op := range orTerms.Operands() {
+	for i, op := range orTerms.Operands() {
 		this.where = op
 		this.limit = limit
 
@@ -138,11 +147,37 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 			if minSargLength == 0 || minSargLength > termSargLength {
 				minSargLength = termSargLength
 			}
+
+			scost := scan.Cost()
+			scardinality := scan.Cardinality()
+			if useCBO && ((scost <= 0.0) || (scardinality <= 0.0)) {
+				useCBO = false
+			}
+			if useCBO {
+				cost += scost
+				selec1 := scardinality / docCount
+				if selec1 > 1.0 {
+					selec1 = 1.0
+				}
+				if i == 0 {
+					selec = selec1
+				} else {
+					selec = selec + selec1 - (selec * selec1)
+				}
+			}
 		} else {
 			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildOrScanNoPushdowns: missing basekeyspace %s", node.Alias()))
 		}
 	}
 
-	rv := plan.NewUnionScan(limit, nil, scans...)
+	if useCBO {
+		// cost calculated in for loop above
+		cardinality = selec * docCount
+	} else {
+		cost = OPT_COST_NOT_AVAIL
+		cardinality = OPT_CARD_NOT_AVAIL
+	}
+
+	rv := plan.NewUnionScan(limit, nil, cost, cardinality, scans...)
 	return rv.Streamline(), minSargLength, nil
 }

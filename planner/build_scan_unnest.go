@@ -174,7 +174,8 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	if len(scans) == 1 {
 		return scans[0], 1, nil
 	} else {
-		return plan.NewIntersectScan(nil, scans...), 1, nil
+		cost, cardinality := this.intersectScanCost(node, scans...)
+		return plan.NewIntersectScan(nil, cost, cardinality, scans...), 1, nil
 	}
 }
 
