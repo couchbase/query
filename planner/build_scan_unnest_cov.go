@@ -94,9 +94,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		expression.NewFieldName("id", false))
 
 	entry = entry.Copy()
-	unnestIdent := expression.NewIdentifier(unnest.Alias())
-	unnestIdent.SetUnnestAlias(true)
-	entry.sargKeys = expression.Expressions{unnestIdent}
+	entry.sargKeys = expression.Expressions{expression.NewIdentifier(unnest.Alias())}
 	unAlias := unnest.As()
 	indexArrayKey := entry.keys[0]
 
@@ -254,9 +252,7 @@ func unrollArrayKeys(expr expression.Expression, allDistinct bool, unnest *algeb
 			expr = array.ValueMapping()
 		} else {
 			if !ok {
-				unnestIdent := expression.NewIdentifier(unnest.As())
-				unnestIdent.SetUnnestAlias(true)
-				expr = unnestIdent
+				expr = expression.NewIdentifier(unnest.As())
 			}
 
 			break

@@ -159,12 +159,12 @@ func (this Bindings) Identifiers() Expressions {
 
 		if b.nameVariable != "" {
 			id = NewIdentifier(b.nameVariable)
-			id.SetBindingVariable(true)
+			id.SetCollectionVariable()
 			exprs = append(exprs, id)
 		}
 
 		id = NewIdentifier(b.variable)
-		id.SetBindingVariable(true)
+		id.SetCollectionVariable()
 		exprs = append(exprs, id)
 	}
 

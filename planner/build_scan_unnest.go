@@ -112,13 +112,11 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	primaries[node.Alias()] = expression.NewIdentifier(node.Alias())
 
 	for _, unnest := range unnests {
-		unnestIdent := expression.NewIdentifier(unnest.Alias())
-		unnestIdent.SetUnnestAlias(true)
-		andTerms = append(andTerms, expression.NewIsNotMissing(unnestIdent))
+		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
 
 		for _, kexpr := range primaries {
 			if unnest.Expression().DependsOn(kexpr) {
-				primaries[unnest.Alias()] = unnestIdent
+				primaries[unnest.Alias()] = expression.NewIdentifier(unnest.Alias())
 				break
 			}
 		}
@@ -328,9 +326,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
 		return nil, nil, 0, nil
 	} else {
-		unnestIdent := expression.NewIdentifier(unnest.As())
-		unnestIdent.SetUnnestAlias(true)
-		sargKey = unnestIdent
+		sargKey = expression.NewIdentifier(unnest.As())
 	}
 
 	sargKeys := expression.Expressions{sargKey}

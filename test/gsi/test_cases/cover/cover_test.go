@@ -29,11 +29,8 @@ func TestCover(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ixCover3 on shellTest(x, id)")
 	runStmt(qc, "CREATE INDEX ixCover4 on shellTest(docid, name)")
 	runStmt(qc, "CREATE INDEX ixCover5 on shellTest (email,VMs,join_day) WHERE (10 < join_day)")
-	runStmt(qc, "CREATE INDEX ixCover8 on shellTest(ALL ARRAY v.fname FOR v IN Names END) WHERE type=\"doc\" AND owner=\"xyz\"")
 
 	runMatch("case_cover.json", false, false, qc, t)
-
-	runMatch("case_cover2.json", false, true, qc, t)
 
 	runStmt(qc, "DROP PRIMARY INDEX on shellTest")
 	runStmt(qc, "DROP INDEX shellTest.ixCover")
@@ -41,5 +38,4 @@ func TestCover(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ixCover3")
 	runStmt(qc, "DROP INDEX shellTest.ixCover4")
 	runStmt(qc, "DROP INDEX shellTest.ixCover5")
-	runStmt(qc, "DROP INDEX shellTest.ixCover8")
 }

@@ -119,7 +119,7 @@ func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Form
 	}
 
 	f.SetKeyspace("")
-	f.SetAllowedUnnestAlias(alias)
+	f.SetAllowedAlias(alias, true)
 	f.SetAlias(this.As())
 	return
 }

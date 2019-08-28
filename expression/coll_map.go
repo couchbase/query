@@ -117,9 +117,8 @@ func (this *collMapBase) SurvivesGrouping(groupKeys Expressions, allowed *value.
 	vars := _VARS_POOL.Get()
 	defer _VARS_POOL.Put(vars)
 	allowed = value.NewScopeValue(vars, allowed)
-	allow_flags := value.NewValue(uint32(IDENT_IS_VARIABLE))
 	for _, b := range this.bindings {
-		allowed.SetField(b.Variable(), allow_flags)
+		allowed.SetField(b.Variable(), true)
 	}
 
 	for _, child := range this.Children() {
