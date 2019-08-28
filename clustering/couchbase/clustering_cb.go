@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/go-couchbase"
@@ -32,6 +33,8 @@ import (
 )
 
 const _PREFIX = "couchbase:"
+
+const _GRACE_PERIOD = time.Second
 
 ///////// Notes about Couchbase implementation of Clustering API
 //
@@ -51,6 +54,8 @@ type cbConfigStore struct {
 	whoAmI       string
 	state        clustering.Mode
 	cbConn       *couchbase.Client
+	clusterIds   []string
+	clusters     map[string]*cbCluster
 }
 
 // create a cbConfigStore given the path to a couchbase instance
@@ -62,13 +67,21 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	if err != nil {
 		return nil, errors.NewAdminConnectionError(err, path)
 	}
-	return &cbConfigStore{
+	rv := &cbConfigStore{
 		adminUrl:     path,
 		ourPorts:     map[string]int{},
 		noMoreChecks: false,
 		poolSrvRev:   -999,
 		cbConn:       &c,
-	}, nil
+		clusters:     make(map[string]*cbCluster, 1),
+	}
+
+	// pool names are set once and for all on connection,
+	// so we might just allocate them straight away
+	for _, pool := range rv.getPools() {
+		rv.clusterIds = append(rv.clusterIds, pool.Name)
+	}
+	return rv, nil
 }
 
 // Implement Stringer interface
@@ -116,24 +129,35 @@ func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
 }
 
 func (this *cbConfigStore) ClusterNames() ([]string, errors.Error) {
-	clusterIds := []string{}
-	for _, pool := range this.getPools() {
-		clusterIds = append(clusterIds, pool.Name)
-	}
-	return clusterIds, nil
+	return this.clusterIds, nil
 }
 
 func (this *cbConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
-	_, err := this.cbConn.GetPool(name)
-	if err != nil {
-		return nil, errors.NewAdminGetClusterError(err, name)
+	this.RLock()
+	c, found := this.clusters[name]
+	this.RUnlock()
+	if found {
+		return c, nil
 	}
-	return &cbCluster{
+	for p, _ := range this.clusterIds {
+		found = this.clusterIds[p] == name
+		if found {
+			break
+		}
+	}
+	if !found {
+		return nil, errors.NewAdminGetClusterError(fmt.Errorf("No such pool"), name)
+	}
+	c = &cbCluster{
 		configStore:    this,
 		ClusterName:    name,
 		ConfigstoreURI: this.URL(),
 		DatastoreURI:   this.URL(),
-	}, nil
+	}
+	this.Lock()
+	this.clusters[name] = c
+	this.Unlock()
+	return c, nil
 }
 
 func (this *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
@@ -474,19 +498,21 @@ var n1qlProtocols = map[string]string{
 
 // cbCluster implements clustering.Cluster
 type cbCluster struct {
-	sync.Mutex
-	configStore    clustering.ConfigurationStore `json:"-"`
-	dataStore      datastore.Datastore           `json:"-"`
-	acctStore      accounting.AccountingStore    `json:"-"`
-	ClusterName    string                        `json:"name"`
-	DatastoreURI   string                        `json:"datastore"`
-	ConfigstoreURI string                        `json:"configstore"`
-	AccountingURI  string                        `json:"accountstore"`
-	version        clustering.Version            `json:"-"`
-	VersionString  string                        `json:"version"`
-	queryNodeNames []string                      `json:"-"`
-	queryNodes     map[string]services           `json:"-"`
-	poolSrvRev     int                           `json:"-"`
+	sync.RWMutex
+	configStore       clustering.ConfigurationStore `json:"-"`
+	dataStore         datastore.Datastore           `json:"-"`
+	acctStore         accounting.AccountingStore    `json:"-"`
+	ClusterName       string                        `json:"name"`
+	DatastoreURI      string                        `json:"datastore"`
+	ConfigstoreURI    string                        `json:"configstore"`
+	AccountingURI     string                        `json:"accountstore"`
+	version           clustering.Version            `json:"-"`
+	VersionString     string                        `json:"version"`
+	queryNodeNames    []string                      `json:"-"`
+	queryNodeServices map[string]services           `json:"-"`
+	queryNodes        map[string]*cbQueryNodeConfig `json:"-"`
+	poolSrvRev        int                           `json:"-"`
+	lastCheck         time.Time                     `json:"-"`
 }
 
 // Create a new cbCluster instance
@@ -535,7 +561,6 @@ func (this *cbCluster) Name() string {
 }
 
 func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
-	queryNodeNames := []string{}
 
 	// Get a handle of the go-couchbase connection:
 	configStore, ok := this.configStore.(*cbConfigStore)
@@ -543,19 +568,26 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		return nil, errors.NewAdminConnectionError(nil, this.ConfigurationStoreId())
 	}
 
+	if time.Since(this.lastCheck) <= _GRACE_PERIOD {
+		return this.queryNodeNames, nil
+	}
+
 	poolServices, err := configStore.cbConn.GetPoolServices(this.ClusterName)
 	if err != nil {
-		return queryNodeNames, errors.NewAdminConnectionError(err, this.ConfigurationStoreId())
+		return nil, errors.NewAdminConnectionError(err, this.ConfigurationStoreId())
 	}
 
 	// If pool services rev matches the cluster's rev, return cluster's query node names:
 	if poolServices.Rev == this.poolSrvRev {
+		this.Lock()
+		this.lastCheck = time.Now()
+		this.Unlock()
 		return this.queryNodeNames, nil
 	}
 
 	// If pool services and cluster rev do not match, update the cluster's rev and query node data:
-	queryNodeNames = []string{}
-	queryNodes := map[string]services{}
+	queryNodeNames := []string{}
+	queryNodeServices := map[string]services{}
 	for _, nodeServices := range poolServices.NodesExt {
 		var queryServices services
 		for name, protocol := range n1qlProtocols {
@@ -597,15 +629,17 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		nodeId := hostname + ":" + strconv.Itoa(mgmtPort)
 
 		queryNodeNames = append(queryNodeNames, nodeId)
-		queryNodes[nodeId] = queryServices
+		queryNodeServices[nodeId] = queryServices
 	}
 
 	this.Lock()
 	defer this.Unlock()
 	this.queryNodeNames = queryNodeNames
-	this.queryNodes = queryNodes
+	this.queryNodeServices = queryNodeServices
+	this.queryNodes = make(map[string]*cbQueryNodeConfig)
 
 	this.poolSrvRev = poolServices.Rev
+	this.lastCheck = time.Now()
 	return this.queryNodeNames, nil
 }
 
@@ -614,6 +648,14 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 	if err != nil {
 		return nil, err
 	}
+
+	this.RLock()
+	rv, ok := this.queryNodes[name]
+	this.RUnlock()
+	if ok {
+		return rv, nil
+	}
+
 	qryNodeName := ""
 	for _, q := range qryNodeNames {
 		if name == q {
@@ -638,7 +680,7 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 		queryHost = "[" + queryHost + "]"
 	}
 
-	for protocol, port := range this.queryNodes[qryNodeName] {
+	for protocol, port := range this.queryNodeServices[qryNodeName] {
 		switch protocol {
 		case _HTTP:
 			qryNode.Query = makeURL(protocol, queryHost, port, http.ServicePrefix())
@@ -649,6 +691,9 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 		}
 	}
 
+	this.Lock()
+	this.queryNodes[name] = qryNode
+	this.Unlock()
 	return qryNode, nil
 }
 
