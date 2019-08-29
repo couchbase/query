@@ -217,7 +217,6 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if or, ok := pred.(*expression.Or); ok {
 
 		scan, _, err := this.buildOrScan(node, baseKeyspace, id, or, indexes, primaryKey, formalizer)
-		this.collectPredicates(baseKeyspace, keyspace, node, pred, join)
 
 		if scan != nil || err != nil {
 			return scan, nil, err

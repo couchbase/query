@@ -158,9 +158,22 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		baseKeyspace = this.baseKeyspaces[node.Alias()]
 	}
 
+	if pred == nil {
+		if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
+			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false, nil)
+			this.keyspaceInfos = append(this.keyspaceInfos, p)
+		} else {
+			pred = baseKeyspace.DnfPred()
+		}
+	}
+
 	if pred != nil {
 		if or, ok := pred.(*expression.Or); ok {
 			orTerms, _ := flattenOr(or)
+			var predConjunc expression.Expressions
+			if andTerm, ok := baseKeyspace.OrigPred().(*expression.And); ok {
+				predConjunc = getAndTerms(andTerm)
+			}
 		outer:
 			for _, op := range orTerms.Operands() {
 				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
@@ -174,8 +187,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				if !ansijoin {
 					addUnnestPreds(baseKeyspacesCopy, bk)
 				}
-
-				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()), getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(), pred, true)
+				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()), getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(), op, true, predConjunc)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
@@ -185,14 +197,27 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				return err
 			}
 			baseKeyspaceCopy, _ := baseKeyspacesCopy[node.Alias()]
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()), getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(), pred, false)
+			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()), getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(), pred, false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		}
-	} else if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
-		p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false)
-		this.keyspaceInfos = append(this.keyspaceInfos, p)
 	}
 	return nil
+}
+
+func getAndTerms(pred *expression.And) expression.Expressions {
+	res := make(expression.Expressions, 0, 2)
+	for _, e := range pred.Operands() {
+		if _, ok := e.(*expression.Or); ok {
+			continue
+		} else if _, ok := e.(*expression.Not); ok {
+			continue
+		} else if and, ok := e.(*expression.And); ok {
+			res = append(res, getAndTerms(and)...)
+		} else {
+			res = append(res, e)
+		}
+	}
+	return res
 }
 
 func getFilterInfos(filters base.Filters) iaplan.FilterInfos {

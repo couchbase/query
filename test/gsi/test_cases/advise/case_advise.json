@@ -75,7 +75,7 @@
     ]
   },
   {
-    "statements": "advise select * from shellTest where (c11 in [1, 2, 3, 4] or c12 in [20, 30]) and test_id = \"advise\"",
+    "statements": "advise select c11 from shellTest where (c11 in [1, 2, 3, 4] or c12 between 20 and 30) and test_id = \"advise\"",
     "advise": true,
     "results": [
       {
@@ -85,21 +85,22 @@
           "adviseinfo": [
             {
               "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)"
+                  }
+                ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 3. in, 10. flavor for partial index."
-                  },
-                  {
-                    "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 3. in, 10. flavor for partial index."
+                    "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality), 3. in, 4. not less than/between/not greater than."
                   }
                 ]
               }
             }
           ]
         },
-        "query": "select * from shellTest where (c11 in [1, 2, 3, 4] or c12 in [20, 30]) and test_id = \"advise\""
+        "query": "select c11 from shellTest where (c11 in [1, 2, 3, 4] or c12 between 20 and 30) and test_id = \"advise\""
       }
     ]
   },
@@ -301,7 +302,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (1. leading array index for unnest, 2. equality)."
                   }
                 ]
               }
@@ -531,7 +532,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 10. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/between/greater than), 10. flavor for partial index."
                   }
                 ]
               }
@@ -599,6 +600,65 @@
           ]
         },
         "query": "select type from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\"",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (4. not less than/between/not greater than, 8. not null/not missing/valued), 3. in, 5. less than/between/greater than, 10. flavor for partial index."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/between/greater than), 3. in."
+                  },
+                  {
+                    "index_statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30"
       }
     ]
   }
