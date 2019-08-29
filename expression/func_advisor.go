@@ -232,11 +232,13 @@ func purgeResults(sessionName string, context Context, analysis bool) (value.Val
 		//For purge and abort, scheduler.stop func will run upon deletion when task is not nil.
 		//Need to run deleting for another time to reset scheduler.stop to nil and delete the entry.
 		if err == nil {
-			_, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
-			return value.NULL_VALUE, err
+			_, _, err = context.(Context).EvaluateStatement(query, nil, nil, false, false)
 		}
 	}
-	return value.NULL_VALUE, err
+	if err != nil {
+		return nil, err
+	}
+	return value.EMPTY_ARRAY_VALUE, nil
 }
 
 func listSessions(status string, context Context) (value.Value, error) {
