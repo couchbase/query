@@ -151,8 +151,8 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 	}
 
 	stmtMap := this.extractStrs(arg)
-	if stmtMap == nil {
-		return value.NULL_VALUE, nil
+	if len(stmtMap) == 0 {
+		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
 	curMap := make(map[string]queryList, 1)
@@ -417,6 +417,16 @@ func addPrefix(s, prefix string) string {
 	return s
 }
 
+func validateStmt(s string) bool {
+	s = strings.ToLower(strings.TrimSpace(s))
+	if strings.HasPrefix(s, "advise") ||
+		strings.Contains(s, "system:completed_requests") ||
+		strings.Contains(s, "system:active_requests") {
+		return false
+	}
+	return true
+}
+
 func (this *Advisor) extractStrs(arg value.Value) map[string]int {
 	m := make(map[string]int, 1)
 	actuals := arg.Actual()
@@ -426,16 +436,20 @@ func (this *Advisor) extractStrs(arg value.Value) map[string]int {
 		for _, key := range actuals {
 			k := value.NewValue(key).Actual()
 			if k, ok := k.(string); ok {
-				if _, ok := m[k]; ok {
-					m[k] += 1
-				} else {
-					m[k] = 1
+				if validateStmt(k) {
+					if _, ok := m[k]; ok {
+						m[k] += 1
+					} else {
+						m[k] = 1
 
+					}
 				}
 			}
 		}
 	case string:
-		m[addPrefix(actuals, "advise ")] = 1
+		if validateStmt(actuals) {
+			m[addPrefix(actuals, "advise ")] = 1
+		}
 	default:
 		return nil
 	}
