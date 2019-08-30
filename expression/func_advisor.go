@@ -420,8 +420,7 @@ func addPrefix(s, prefix string) string {
 func validateStmt(s string) bool {
 	s = strings.ToLower(strings.TrimSpace(s))
 	if strings.HasPrefix(s, "advise") ||
-		strings.Contains(s, "system:completed_requests") ||
-		strings.Contains(s, "system:active_requests") {
+		strings.Contains(s, "system:") {
 		return false
 	}
 	return true
