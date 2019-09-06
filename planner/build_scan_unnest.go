@@ -401,18 +401,24 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		return nil, nil, nil, 0, nil
 	}
 
+	n := min
+	if useSkipIndexKeys(index, this.indexApiVersion) {
+		n = max
+	}
+
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-	spans, exactSpans, err := SargFor(pred, sargKeys, max, false, this.useCBO, baseKeyspace)
+	spans, exactSpans, err := SargFor(pred, sargKeys, n, false, this.useCBO, baseKeyspace)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
 
+	entry.sargKeys = sargKeys[0:n]
 	entry.spans = spans
 	entry.exactSpans = exactSpans
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
 	scan := entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
 		nil, nil, indexProjection, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
-	return scan, unnest, newArrayKey, 1, nil
+	return scan, unnest, newArrayKey, n, nil
 }
 
 func minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,

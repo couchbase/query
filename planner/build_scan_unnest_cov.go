@@ -97,7 +97,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	entry = entry.Copy()
 	unnestIdent := expression.NewIdentifier(unnest.Alias())
 	unnestIdent.SetUnnestAlias(true)
-	entry.sargKeys = expression.Expressions{unnestIdent}
+	entry.sargKeys[0] = unnestIdent
 	unAlias := unnest.As()
 	entry.keys[0] = arrayKey
 	indexArrayKey := entry.keys[0]
@@ -127,6 +127,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		if _, ok := entry.keys[0].(*expression.Identifier); ok {
 			unAlias = ""
 		}
+		entry.sargKeys[0] = entry.keys[0]
 	}
 
 	// Array index covers matching UNNEST expressions
