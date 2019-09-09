@@ -661,6 +661,104 @@
         "query": "select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30"
       }
     ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 or x.id > 20 END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY x.id FOR x in a21 END,`type`)"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY x.id FOR x in a21 END)",
+                    "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.id > 20 END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": "No index recommendation at this time."
+            }
+          ]
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 AND x.name IS NOT NULL END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY x.id FOR x in a21 END)",
+                    "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 AND x.name IS NOT NULL END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies (any y in x.fields satisfies y.id < 10 and length(y.name) < 20 END) END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY y.id FOR y in x.fields END) FOR x in a21 END)",
+                    "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select type from shellTest where any x in a21 satisfies (any y in x.fields satisfies y.id < 10 and length(y.name) < 20 END) END"
+      }
+    ]
   }
 ]
 
