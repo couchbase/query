@@ -134,3 +134,8 @@ func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 func getLetCost(lastOp plan.Operator) (float64, float64) {
 	return optimizer.CalcLetCost(lastOp)
 }
+
+func getUnnestPredSelec(pred expression.Expression, alias, variable string, mapping expression.Expression,
+	keyspaces map[string]string) float64 {
+	return optimizer.GetUnnestPredSelec(pred, alias, variable, mapping, keyspaces)
+}

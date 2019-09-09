@@ -380,6 +380,18 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		sargKey = unnestIdent
 	}
 
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	if this.useCBO {
+		keyspaces := make(map[string]string, 1)
+		keyspaces[node.Alias()] = node.Keyspace()
+		for _, fl := range baseKeyspace.Filters() {
+			if fl.IsUnnest() {
+				sel := getUnnestPredSelec(fl.FltrExpr(), node.Alias(), unnest.As(), unnest.Expression(), keyspaces)
+				fl.SetSelec(sel)
+			}
+		}
+	}
+
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 	sargKeys := make(expression.Expressions, 0, len(index.RangeKey()))
 	for i, key := range index.RangeKey() {
@@ -406,18 +418,29 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		n = max
 	}
 
-	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	spans, exactSpans, err := SargFor(pred, sargKeys, n, false, this.useCBO, baseKeyspace)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO {
+		cost, _, cardinality, err = indexScanCost(entry.index, sargKeys, this.requestId, spans, node.Alias())
+		if err != nil {
+			cost = OPT_COST_NOT_AVAIL
+			cardinality = OPT_CARD_NOT_AVAIL
+		}
+	}
+
 	entry.sargKeys = sargKeys[0:n]
 	entry.spans = spans
 	entry.exactSpans = exactSpans
+	entry.cost = cost
+	entry.cardinality = cardinality
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
 	scan := entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
-		nil, nil, indexProjection, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality)
 	return scan, unnest, newArrayKey, n, nil
 }
 
