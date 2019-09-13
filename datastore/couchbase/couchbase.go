@@ -463,20 +463,29 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	return roles, nil
 }
 
-func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionSecurityConfig) {
-	s.connSecConfig = connSecConfig
-	if connSecConfig.ClusterEncryptionConfig.EncryptData {
-		err := s.client.InitTLS(connSecConfig.CertFile)
+func (s *store) SetClientConnectionSecurityConfig() (err error) {
+	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
+		err = s.client.InitTLS(s.connSecConfig.CertFile)
 		if err != nil {
-			logging.Errorf("Unable to initialize TLS using cert file %s. Aborting security update.", connSecConfig.CertFile)
+			err = fmt.Errorf("Unable to initialize TLS using cert file %s. Aborting security update. Error:%v", s.connSecConfig.CertFile, err)
+			logging.Errorf("%v", err)
 			return
 		}
 	} else {
 		s.client.ClearTLS()
 	}
+	return
+
+}
+
+func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionSecurityConfig) {
+	s.connSecConfig = connSecConfig
+	if err := s.SetClientConnectionSecurityConfig(); err != nil {
+		return
+	}
+
 	// Implementation based on SetLogLevel(), above.
 	for _, n := range s.namespaceCache {
-		defer n.lock.Unlock()
 		n.lock.Lock()
 		for _, k := range n.keyspaceCache {
 			if k.cbKeyspace == nil {
@@ -494,6 +503,7 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 				}
 			}
 		}
+		n.lock.Unlock()
 	}
 }
 
@@ -640,6 +650,11 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
 			}
 			s.client = client
+
+			err = s.SetClientConnectionSecurityConfig()
+			if err != nil {
+				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
+			}
 		} else {
 			logging.Errorf(" Error while retrieving pool %v", err)
 		}
@@ -941,6 +956,11 @@ func (p *namespace) reload() {
 			return
 		}
 		p.store.client = client
+
+		err = p.store.SetClientConnectionSecurityConfig()
+		if err != nil {
+			return
+		}
 
 	}
 
