@@ -1,0 +1,51 @@
+[
+    {
+        "testcase": "ANY clause covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT meta().id FROM shellTest WHERE ANY v IN items SATISFIES (v.f1 > 10 AND a = 10 AND b = 20) END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT meta().id FROM shellTest WHERE ANY v IN items SATISFIES (a = 10 AND v.f1 > 10 AND b = 20) END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT meta().id FROM shellTest WHERE ANY v IN items SATISFIES (b = 20 AND v.f1 > 10 AND a = 10) END",
+        "results": [
+    ]
+    }
+]
+

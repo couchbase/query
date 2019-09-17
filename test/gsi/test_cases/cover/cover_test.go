@@ -73,4 +73,10 @@ func TestCover(t *testing.T) {
 
 	runStmt(qc, "DROP INDEX shellTest.ixCover13")
 	runStmt(qc, "DROP INDEX shellTest.ixCover14")
+
+	runStmt(qc, "CREATE INDEX ixCover15 on shellTest(DISTINCT ARRAY v.f1 FOR v IN items WHEN a = 10 AND b = 20 END)")
+
+	runMatch("case_cover6.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ixCover15")
 }

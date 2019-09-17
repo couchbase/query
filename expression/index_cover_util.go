@@ -99,10 +99,6 @@ func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *
 	}
 
 	if array, ok := all.array.(*Array); ok {
-		if array.when != nil {
-			return CoveredFalse
-		}
-
 		if options.hasCoverBindExpr() {
 			for _, b := range array.bindings {
 				if pred.EquivalentTo(b.expr) {
