@@ -73,6 +73,10 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
 	}
 
+	if this.indexAdvisor {
+		this.setKeyspaceFound()
+	}
+
 	var pred, pred2 expression.Expression
 	if join {
 		pred = baseKeyspace.DnfPred()

@@ -240,6 +240,12 @@ func (this *builder) processadviseJF(alias string) {
 	}
 }
 
+func (this *builder) setKeyspaceFound() {
+	if this.indexAdvisor {
+		this.queryInfo.SetKeyspaceFound()
+	}
+}
+
 func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
 	joinTerm, ok := from.(algebra.JoinTerm)
 	if !ok {

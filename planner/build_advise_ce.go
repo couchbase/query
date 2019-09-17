@@ -50,6 +50,9 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 func (this *builder) setUnnest() {
 }
 
+func (this *builder) setKeyspaceFound() {
+}
+
 func (this *builder) processadviseJF(alias string) {
 }
 

@@ -13,6 +13,7 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/expression"
 )
@@ -29,7 +30,7 @@ func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo) 
 	cnt := 0
 	for _, v := range queryInfos {
 		cnt += 1
-		adviceInfo := iaplan.NewIndexAdviceInfo(v.GetCurIndexes(), v.GetUncoverIndexes(), v.GetCoverIndexes())
+		adviceInfo := iaplan.NewIndexAdviceInfo(v.GetCurIndexes(), v.GetUncoverIndexes(), v.GetCoverIndexes(), v.IsKeyspaceFound())
 		//MB-35353: get rid of multiple empty entryies when there are subquries
 		if qLen == 1 || (qLen > 1 && (!adviceInfo.IndexesEmpty() || len(rv.adviceInfos) == 0 && cnt == qLen)) {
 			rv.adviceInfos = append(rv.adviceInfos, adviceInfo)
