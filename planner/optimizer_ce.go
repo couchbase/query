@@ -88,3 +88,7 @@ func getUnnestPredSelec(pred expression.Expression, alias, variable string, mapp
 	keyspaces map[string]string) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
+
+func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost) map[datastore.Index]*base.IndexCost {
+	return indexes
+}

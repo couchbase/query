@@ -56,7 +56,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
 	}
 
-	indexes = this.minimalIndexes(indexes, true, pred, node.Alias())
+	indexes = this.minimalIndexes(indexes, true, pred, node)
 
 	var orderEntry *indexEntry
 	var limit expression.Expression
@@ -331,22 +331,20 @@ func indexPartitionKeys(index datastore.Index,
 }
 
 func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool,
-	pred expression.Expression, alias string) map[datastore.Index]*indexEntry {
+	pred expression.Expression, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
 
+	alias := node.Alias()
 	useCBO := this.useCBO
-	var skip1, skip2 bool
 
 	for s, se := range sargables {
-		if useCBO {
-			skip1 = false
-			if se.cost <= 0.0 {
-				cost, _, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans, alias)
-				if e != nil || (cost <= 0.0 || card <= 0.0) {
-					skip1 = true
-				} else {
-					se.cost = cost
-					se.cardinality = card
-				}
+		if this.useCBO && se.cost <= 0.0 {
+			cost, selec, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans, alias)
+			if e != nil || (cost <= 0.0 || card <= 0.0) {
+				useCBO = false
+			} else {
+				se.cost = cost
+				se.cardinality = card
+				se.selectivity = selec
 			}
 		}
 
@@ -355,38 +353,21 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				continue
 			}
 
-			if useCBO {
-				skip2 = false
-				if te.cost <= 0 {
-					cost, _, card, e := indexScanCost(te.index, te.sargKeys, this.requestId, te.spans, alias)
-					if e != nil || (cost <= 0.0 || card <= 0.0) {
-						skip2 = true
-					} else {
-						te.cost = cost
-						te.cardinality = card
-					}
-				}
-			}
-
 			se_pushdown := se.PushDownProperty()
 			te_pushdown := te.PushDownProperty()
-			if useCBO && !skip1 && !skip2 {
-				// consider pushdown property before considering cost
-				if se_pushdown > te_pushdown ||
-					((se_pushdown == te_pushdown) && (se.cost < te.cost)) {
-					delete(sargables, t)
+			if narrowerOrEquivalent(se, te, shortest, pred) {
+				if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
+					te_pushdown > se_pushdown {
+					delete(sargables, s)
+					break
 				}
-			} else {
-				if narrowerOrEquivalent(se, te, shortest, pred) {
-					if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
-						te_pushdown > se_pushdown {
-						delete(sargables, s)
-						break
-					}
-					delete(sargables, t)
-				}
+				delete(sargables, t)
 			}
 		}
+	}
+
+	if useCBO && !shortest && len(sargables) > 1 {
+		sargables = this.chooseIntersectScan(sargables, node)
 	}
 
 	return sargables
@@ -509,4 +490,42 @@ func indexHasArrayIndexKey(index datastore.Index) bool {
 		}
 	}
 	return false
+}
+
+func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEntry, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
+	keyspace, err := this.getTermKeyspace(node)
+	if err != nil {
+		return sargables
+	}
+
+	indexes := make(map[datastore.Index]*base.IndexCost, len(sargables))
+
+	var bestIndex datastore.Index
+	for s, _ := range sargables {
+		indexes[s] = base.NewIndexCost(sargables[s].cost, sargables[s].cardinality, sargables[s].selectivity)
+		if bestIndex == nil || sargables[s].PushDownProperty() > sargables[bestIndex].PushDownProperty() {
+			bestIndex = s
+		}
+	}
+
+	// if pushdown can be used on an index, use that index
+	if bestIndex != nil && sargables[bestIndex].PushDownProperty() > _PUSHDOWN_NONE {
+		for s, _ := range sargables {
+			if s != bestIndex {
+				delete(sargables, s)
+			}
+		}
+
+		return sargables
+	}
+
+	indexes = optChooseIntersectScan(keyspace, indexes)
+
+	for s, _ := range sargables {
+		if _, ok := indexes[s]; !ok {
+			delete(sargables, s)
+		}
+	}
+
+	return sargables
 }

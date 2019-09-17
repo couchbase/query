@@ -41,6 +41,7 @@ type indexEntry struct {
 	pushDownProperty PushDownProperties
 	cost             float64
 	cardinality      float64
+	selectivity      float64
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
@@ -60,6 +61,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		pushDownProperty: _PUSHDOWN_NONE,
 		cost:             OPT_COST_NOT_AVAIL,
 		cardinality:      OPT_CARD_NOT_AVAIL,
+		selectivity:      OPT_SELEC_NOT_AVAIL,
 	}
 }
 
@@ -78,6 +80,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		pushDownProperty: this.pushDownProperty,
 		cost:             this.cost,
 		cardinality:      this.cardinality,
+		selectivity:      this.selectivity,
 	}
 
 	return rv

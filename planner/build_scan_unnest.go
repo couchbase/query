@@ -157,7 +157,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		entries[index] = indexes[index]
 	}
 
-	entries = minimalIndexesUnnest(entries, ops)
+	entries = this.minimalIndexesUnnest(entries, ops, node)
 
 	var scanBuf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan
@@ -425,8 +425,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	selectivity := OPT_SELEC_NOT_AVAIL
 	if this.useCBO {
-		cost, _, cardinality, err = indexScanCost(entry.index, sargKeys, this.requestId, spans, node.Alias())
+		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.requestId, spans, node.Alias())
 		if err != nil {
 			cost = OPT_COST_NOT_AVAIL
 			cardinality = OPT_CARD_NOT_AVAIL
@@ -438,15 +439,21 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.exactSpans = exactSpans
 	entry.cost = cost
 	entry.cardinality = cardinality
+	entry.selectivity = selectivity
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
 	scan := entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
 		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality)
 	return scan, unnest, newArrayKey, n, nil
 }
 
-func minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
-	ops map[datastore.Index]*opEntry) map[datastore.Index]*indexEntry {
+func (this *builder) minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
+	ops map[datastore.Index]*opEntry, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
+	useCBO := this.useCBO
 	for s, se := range indexes {
+		if useCBO && (se.cost <= 0.0 || se.cardinality <= 0.0) {
+			useCBO = false
+		}
+
 		for t, te := range indexes {
 			if t == s {
 				continue
@@ -454,6 +461,15 @@ func minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
 
 			if narrowerOrEquivalentUnnest(se, te, ops[s], ops[t]) {
 				delete(indexes, t)
+				delete(ops, t)
+			}
+		}
+	}
+
+	if useCBO && len(indexes) > 0 {
+		indexes = this.chooseIntersectScan(indexes, node)
+		for t, _ := range ops {
+			if _, ok := indexes[t]; !ok {
 				delete(ops, t)
 			}
 		}

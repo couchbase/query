@@ -79,7 +79,7 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 			sel = tsel
 			nrows = tnrows
 		} else {
-			tsel = tsel * (nrows / tnrows)
+			tsel = tsel * (tnrows / nrows)
 			if union {
 				sel = sel + tsel - (sel * tsel)
 			} else {
@@ -138,4 +138,8 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 func getUnnestPredSelec(pred expression.Expression, alias, variable string, mapping expression.Expression,
 	keyspaces map[string]string) float64 {
 	return optimizer.GetUnnestPredSelec(pred, alias, variable, mapping, keyspaces)
+}
+
+func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost) map[datastore.Index]*base.IndexCost {
+	return optimizer.ChooseIntersectScan(keyspace, indexes)
 }
