@@ -447,7 +447,7 @@ func (this *Advisor) extractStrs(arg value.Value) map[string]int {
 		}
 	case string:
 		if validateStmt(actuals) {
-			m[addPrefix(actuals, "advise ")] = 1
+			m[actuals] = 1
 		}
 	default:
 		return nil
