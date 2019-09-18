@@ -51,6 +51,7 @@ func (this *Stream) Copy() Operator {
 
 func (this *Stream) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
+	context.CloseResults()
 }
 
 func (this *Stream) beforeItems(context *Context, parent value.Value) bool {
@@ -67,10 +68,6 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 	// item not used past this point
 	item.Recycle()
 	return ok
-}
-
-func (this *Stream) afterItems(context *Context) {
-	context.CloseResults()
 }
 
 func (this *Stream) MarshalJSON() ([]byte, error) {
