@@ -465,7 +465,7 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 						// close this bucket
 						vi.keyspace.Release()
 						// ask the pool to refresh
-						vi.keyspace.namespace.reload()
+						vi.keyspace.namespace.refresh(true)
 						// bucket doesnt exist any more
 						conn.Error(errors.NewCbViewsAccessError(nil, "keyspace "+vi.keyspace.Name()+" or view index missing"))
 						return
