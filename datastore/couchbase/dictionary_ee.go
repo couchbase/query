@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Couchbase, Inc.
+// Copyright (c) 2019 Couchbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you
 // may not use this file except in compliance with the License. You
@@ -11,7 +11,7 @@
 // permissions and limitations under the License.
 //
 // The enterprise edition has access to couchbase/query-ee, which
-// includes update statistics. This file is only built in with
+// includes dictionary cache. This file is only built in with
 // the enterprise edition.
 
 // +build enterprise
@@ -19,11 +19,9 @@
 package couchbase
 
 import (
-	ustat "github.com/couchbase/query-ee/updstat"
-	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query-ee/dictionary"
 )
 
-func GetDefaultStatUpdater(store datastore.Datastore) (datastore.StatUpdater, errors.Error) {
-	return ustat.NewDefaultStatUpdater(store)
+func dropDictCacheEntry(keyspace string) {
+	dictionary.DropKeyspace(keyspace)
 }

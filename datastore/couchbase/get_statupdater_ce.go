@@ -10,8 +10,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-// Currently, the community edition does not have access to schema
-// inferencing, so this stub returns an error.
+// Currently, the community edition does not have access to update
+// statistics, so this stub returns an error.
 
 // +build !enterprise
 

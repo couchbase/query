@@ -1077,6 +1077,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
+		dropDictCacheEntry(name)
 		ks.cbKeyspace.flags |= _DELETED
 		delete(p.keyspaceCache, name)
 
