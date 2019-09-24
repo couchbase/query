@@ -242,7 +242,7 @@
               "recommended_indexes": {
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END) WHERE `test_id` = 'advise'",
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END) WHERE `test_id` = 'advise'",
                     "recommending_rule": "Index keys follow order of predicate types: 6. array predicate, 10. flavor for partial index."
                   }
                 ]
@@ -326,12 +326,12 @@
               "recommended_indexes": {
                 "covering_indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY y.flight FOR y IN x.special_flights END) FOR x IN schedule END)"
+                    "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)"
                   }
                 ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY y.flight FOR y IN x.special_flights END) FOR x IN schedule END)",
+                    "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                     "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                   }
                 ]
@@ -356,7 +356,7 @@
               "recommended_indexes": {
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY x.flight FOR x IN schedule END)",
+                    "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
                     "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                   }
                 ]
@@ -586,12 +586,12 @@
               "recommended_indexes": {
                 "covering_indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id_type ON `shellTest`(`c22`,DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END,`type`) WHERE `test_id` = 'advise'"
+                    "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id_type ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END,`type`) WHERE `test_id` = 'advise'"
                   }
                 ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id ON `shellTest`(`c22`,DISTINCT ARRAY [x, y] FOR x in a21, y in a22 END) WHERE `test_id` = 'advise'",
+                    "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END) WHERE `test_id` = 'advise'",
                     "recommending_rule": "Index keys follow order of predicate types: 2. equality, 6. array predicate, 10. flavor for partial index."
                   }
                 ]
@@ -675,12 +675,12 @@
               "recommended_indexes": {
                 "covering_indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY x.id FOR x in a21 END,`type`)"
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)"
                   }
                 ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY x.id FOR x in a21 END)",
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
                     "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
                   }
                 ]
@@ -723,7 +723,7 @@
               "recommended_indexes": {
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY x.id FOR x in a21 END)",
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
                     "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
                   }
                 ]
@@ -748,7 +748,7 @@
               "recommended_indexes": {
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY y.id FOR y in x.fields END) FOR x in a21 END)",
+                    "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY `y`.`id` FOR y in `x`.`fields` END) FOR x in `a21` END)",
                     "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
                   }
                 ]
