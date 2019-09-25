@@ -712,7 +712,7 @@ func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
 }
 
 func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
-	p.refresh(true)
+	p.refresh()
 	rv := make([]string, 0, len(p.cbNamespace.BucketMap))
 	for name, _ := range p.cbNamespace.BucketMap {
 		rv = append(rv, name)
@@ -884,49 +884,102 @@ func (p *namespace) getPool() *cb.Pool {
 	return p.cbNamespace
 }
 
-func (p *namespace) refresh(changed bool) {
+func (p *namespace) refresh() {
 	// trigger refresh of this pool
 	logging.Debugf("Refreshing pool %s", p.name)
 
 	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
-
-		var client cb.Client
-
-		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
-		url := p.store.URL()
-
-		/*
-			transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
-			cb.HTTPClient.Transport = transport
-		*/
-
-		if p.store.CbAuthInit == true {
-			client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
-		} else {
-			client, err = cb.Connect(url)
+		newpool, err = p.reload1(err)
+		if err == nil {
+			p.reload2(&newpool)
 		}
-		if err != nil {
-			logging.Errorf("Error connecting to URL %s - %v", url, err)
-			return
-		}
-		// check if the default pool exists
-		newpool, err = client.GetPool(p.name)
-		if err != nil {
-			logging.Errorf("Retry Failed Error updating pool name <ud>%s</ud>: Error %v", p.name, err)
-			return
-		}
-		p.store.client = client
-
-		err = p.store.SetClientConnectionSecurityConfig()
-		if err != nil {
-			return
-		}
-
+		return
 	}
+	oldpool := p.getPool()
+	changed := len(oldpool.BucketMap) != len(newpool.BucketMap)
+	if !changed {
+		for on, ob := range oldpool.BucketMap {
+			nb := newpool.BucketMap[on]
+			if nb != nil && nb.UUID == ob.UUID {
+				continue
+			}
+			changed = true
+			break
+		}
+	}
+	if changed {
+		p.reload2(&newpool)
+		return
+	}
+	newpool.Close()
 
 	p.lock.Lock()
-	defer p.lock.Unlock()
+	for _, ks := range p.keyspaceCache {
+		// Not deleted. Check if GSI indexer is available
+		if ks.cbKeyspace.gsiIndexer == nil {
+			ks.cbKeyspace.refreshGSIIndexer(p.store.URL(), p.Name())
+		}
+
+		// Not deleted. Check if FTS indexer is available
+		if ks.cbKeyspace.ftsIndexer == nil {
+			ks.cbKeyspace.refreshFTSIndexer(p.store.URL(), p.Name())
+		}
+	}
+	p.lock.Unlock()
+}
+
+func (p *namespace) reload() {
+	logging.Debugf("Reload %s", p.name)
+
+	newpool, err := p.store.client.GetPool(p.name)
+	if err != nil {
+		newpool, err = p.reload1(err)
+		if err != nil {
+			return
+		}
+	}
+	p.reload2(&newpool)
+}
+
+func (p *namespace) reload1(err error) (cb.Pool, error) {
+	var client cb.Client
+
+	logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
+	url := p.store.URL()
+
+	/*
+		transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
+		cb.HTTPClient.Transport = transport
+	*/
+
+	if p.store.CbAuthInit == true {
+		client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+	} else {
+		client, err = cb.Connect(url)
+	}
+	if err != nil {
+		logging.Errorf("Error connecting to URL %s - %v", url, err)
+		return cb.Pool{}, err
+	}
+	// check if the default pool exists
+	newpool, err := client.GetPool(p.name)
+	if err != nil {
+		logging.Errorf("Retry Failed Error updating pool name <ud>%s</ud>: Error %v", p.name, err)
+		return newpool, err
+	}
+	p.store.client = client
+
+	err = p.store.SetClientConnectionSecurityConfig()
+	if err != nil {
+		return newpool, err
+	}
+
+	return newpool, nil
+}
+
+func (p *namespace) reload2(newpool *cb.Pool) {
+	p.lock.Lock()
 	for name, ks := range p.keyspaceCache {
 		logging.Debugf(" Checking keyspace %s", name)
 		if ks.cbKeyspace == nil {
@@ -937,36 +990,41 @@ func (p *namespace) refresh(changed bool) {
 		}
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
-			changed = true
 			ks.cbKeyspace.flags |= _DELETED
 			ks.cbKeyspace.cbbucket.Close()
 			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
 			delete(p.keyspaceCache, name)
 
 		} else if ks.cbKeyspace.cbbucket.UUID != newbucket.UUID {
-			changed = true
 			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
 			// and release old one
 			ks.cbKeyspace.cbbucket.Close()
 			ks.cbKeyspace.cbbucket = newbucket
+		} else {
+
+			// we are reloading, so close old and set new bucket
+			ks.cbKeyspace.cbbucket.Close()
+			ks.cbKeyspace.cbbucket = newbucket
 		}
+
 		// Not deleted. Check if GSI indexer is available
 		if ks.cbKeyspace.gsiIndexer == nil {
 			ks.cbKeyspace.refreshGSIIndexer(p.store.URL(), p.Name())
 		}
+
 		// Not deleted. Check if FTS indexer is available
 		if ks.cbKeyspace.ftsIndexer == nil {
 			ks.cbKeyspace.refreshFTSIndexer(p.store.URL(), p.Name())
 		}
 	}
+	p.lock.Unlock()
 
-	if changed == true {
-		p.setPool(&newpool)
+	p.getPool().Close()
+	p.setPool(newpool)
 
-		// keyspaces have been reloaded, force full auto reprepare check
-		p.version++
-	}
+	// keyspaces have been reloaded, force full auto reprepare check
+	p.version++
 }
 
 const (
@@ -999,7 +1057,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		// go-couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
-		p.refresh(true)
+		p.reload()
 		cbNamespace = p.getPool()
 
 		// and then check one more time
