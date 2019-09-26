@@ -609,7 +609,10 @@ func (this *systemRemoteHttp) Enabled(capability distributed.Capability) bool {
 
 	// if we are running standalone, enable all features, as we don't have to contend with
 	// any other node, and we don't have a cluster manager to ask anyway
-	if len(this.WhoAmI()) == 0 {
+	if this.state == clustering.STANDALONE ||
+
+		// work out state id WhoAmI() had never been called
+		(this.state == "" && this.WhoAmI() == "") {
 		return true
 	}
 	clusters, err := this.configStore.ClusterNames()
