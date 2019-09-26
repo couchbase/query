@@ -13,7 +13,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
                 ]
               }
@@ -63,7 +63,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_c12_test_id ON `shellTest`(`c11`,`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 4. not less than/between/not greater than, 10. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -93,7 +93,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality), 3. in, 4. not less than/between/not greater than."
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 3. in, 4. not less than/between/not greater than."
                   }
                 ]
               }
@@ -122,7 +122,7 @@
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 10. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 10. flavor for partial index."
                   }
                 ]
               }
@@ -159,7 +159,7 @@
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 10. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 10. flavor for partial index."
                   }
                 ]
               }
@@ -268,11 +268,11 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   },
                   {
                     "index_statement": "CREATE INDEX adv_c22 ON `shellTest`(`c22`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
                 ]
               }
@@ -302,7 +302,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (1. leading array index for unnest, 2. equality)."
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (1. leading array index for unnest, 2. equality/null/missing)."
                   }
                 ]
               }
@@ -382,7 +382,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c21_c22_length_a21 ON `shellTest`(`c21`,`c22`,length((`a21`)))",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 5. less than/between/greater than, 9. function index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than, 9. function index."
                   }
                 ]
               }
@@ -442,7 +442,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
                 ]
               }
@@ -472,7 +472,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c11_c12_test_id ON `shellTest`(`c11`,`c12`) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 4. not less than/between/not greater than, 10. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than, 10. flavor for partial index."
                   }
                 ]
               }
@@ -592,7 +592,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_test_id ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END) WHERE `test_id` = 'advise'",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality, 6. array predicate, 10. flavor for partial index."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 6. array predicate, 10. flavor for partial index."
                   }
                 ]
               }

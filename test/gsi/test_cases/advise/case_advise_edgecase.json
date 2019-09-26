@@ -18,7 +18,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_self1 ON `shellTest`(self[1])",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
                 ]
               }
@@ -48,7 +48,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_self13 ON `shellTest`(self[1 : 3])",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
                 ]
               }
@@ -78,7 +78,7 @@
                 "indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_b13 ON `shellTest`(`b`[1 : 3])",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
                 ]
               }
@@ -221,6 +221,129 @@
           ]
         },
         "query": "SELECT e FROM shellTest st UNNEST st.`a11`. `b12`.`c13` e WHERE e LIKE $pfx GROUP BY e HAVING COUNT(meta(st).id) > 20"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c21 from shellTest where a11 is missing and type=\"advise\"",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING_type_c21 ON `shellTest`(`a11` IS MISSING,`c21`) WHERE `type` = 'advise' AND `a11` IS MISSING"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING_type ON `shellTest`(`a11` IS MISSING) WHERE `type` = 'advise' AND `a11` IS MISSING",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 10. flavor for partial index."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c21 from shellTest where a11 is missing and type=\"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select c21 from shellTest where a11 is missing and (a21 is null or a31 < 10)",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING_a21_a31_c21 ON `shellTest`(`a11` IS MISSING,`a21`,`a31`,`c21`) WHERE `a11` IS MISSING"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING_a21_a31 ON `shellTest`(`a11` IS MISSING,`a21`,`a31`) WHERE `a11` IS MISSING",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 2. equality/null/missing, 5. less than/between/greater than."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c21 from shellTest where a11 is missing and (a21 is null or a31 < 10)"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c21 from shellTest where a21 = 10 and (a11 is missing or c11 is not null)",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a21_a11ISMISSING_c11_c21 ON `shellTest`(`a21`,`a11` IS MISSING,`c11`,`c21`)"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a21_a11ISMISSING_c11 ON `shellTest`(`a21`,`a11` IS MISSING,`c11`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 2. equality/null/missing, 8. not null/not missing/valued."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c21 from shellTest where a21 = 10 and (a11 is missing or c11 is null)"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c21 from shellTest where a11 = 10 or a12 is null or a13 is missing",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  },
+                  {
+                    "index_statement": "CREATE INDEX adv_a12 ON `shellTest`(`a12`)",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  },
+                  {
+                    "index_statement": "CREATE INDEX adv_a13ISMISSING ON `shellTest`(`a13` IS MISSING) WHERE `a13` IS MISSING",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c21 from shellTest where a11 = 10 or a12 is null or a13 is missing"
       }
     ]
   }
