@@ -22,11 +22,16 @@ func CredsString(creds auth.Credentials, req *http.Request) string {
 		credsLen += len(creds)
 	}
 	credsList := make([]string, 0, credsLen)
+	credsMap := make(map[string]bool, credsLen)
 	if credsLen > 1 {
 		for k := range creds {
 			if k == "" {
 				continue
 			}
+			if _, found := credsMap[k]; found {
+				continue
+			}
+			credsMap[k] = true
 			credsList = append(credsList, k)
 		}
 	}
@@ -34,7 +39,10 @@ func CredsString(creds auth.Credentials, req *http.Request) string {
 	if ds != nil {
 		reqName := ds.CredsString(req)
 		if reqName != "" {
-			credsList = append(credsList, reqName)
+			if _, found := credsMap[reqName]; !found {
+				credsMap[reqName] = true
+				credsList = append(credsList, reqName)
+			}
 		}
 	}
 	return strings.Join(credsList, ",")
