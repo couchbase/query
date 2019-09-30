@@ -811,6 +811,12 @@ func (p *namespace) refresh() {
 
 	p.lock.Lock()
 	for _, ks := range p.keyspaceCache {
+
+                // in case a change has kicked in in between checking bucketMaps and cquiring the lock
+                if ks.cbKeyspace == nil {
+                        continue
+                }
+
 		// Not deleted. Check if GSI indexer is available
 		if ks.cbKeyspace.(*keyspace).gsiIndexer == nil {
 			ks.cbKeyspace.(*keyspace).refreshIndexer(p.store.URL(), p.Name())
