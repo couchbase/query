@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/search"
@@ -25,6 +26,8 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		return expr, this.visitAggregateFunction(nexpr)
 	case *search.Search:
 		return expr, this.visitSearchFunction(nexpr)
+	case *expression.Advisor:
+		return expr, this.visitAdvisorFunction(nexpr)
 	default:
 		return expr, expr.MapChildren(this)
 	}
@@ -42,5 +45,12 @@ func (this *SemChecker) visitSearchFunction(search *search.Search) (err error) {
 		return errors.NewSemanticsError(err, fmt.Sprintf("%s operands are invalid.", fnName))
 	}
 
+	return nil
+}
+
+func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err error) {
+	if !distributed.RemoteAccess().Enabled(distributed.NEW_INDEXADVISOR) {
+		return errors.NewMHDPOnlyFeature("Advisor Function", "semantics.visit_advise")
+	}
 	return nil
 }
