@@ -141,6 +141,10 @@ func likeCompile(s string) (re, part *regexp.Regexp, err error) {
 	l := len(s)
 	if l > 0 && s[l-1] != '%' && s[l-1] != '_' {
 		s = s + "$"
+
+		// MB-35979 use $ for pattern ending with \%
+	} else if l > 1 && s[l-2] == '\\' {
+		s = s + "$"
 	}
 	s = "(?ms)" + s
 
