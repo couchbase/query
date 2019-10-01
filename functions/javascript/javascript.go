@@ -108,10 +108,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 func (this *javascriptBody) execError(err error, details fmt.Stringer, name string) errors.Error {
 	return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-
-		//		TODO disabled until clear content differentiation between Err and Details
-		//		name, fmt.Errorf("%v %v", err, details))
-		name, err)
+		name, fmt.Errorf("%v %v", err, details))
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
