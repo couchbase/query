@@ -299,6 +299,7 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 		if err != nil {
 			err = errors.NewAdminConnectionError(newErr, this.poolName)
 		} else {
+			defer pool.Close()
 
 			// If pool services rev matches the cluster's rev, nothing has changed
 			if poolServices.Rev == this.poolSrvRev {
@@ -349,6 +350,9 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 
 	if this.poolName != "" {
 		pool, poolServices, newErr := this.getPoolServices(this.poolName)
+		if newErr != nil {
+			defer pool.Close()
+		}
 
 		if poolServices.Rev == this.poolSrvRev {
 			return this.whoAmI, this.state, nil
@@ -382,6 +386,7 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 			err = newErr
 		}
 		whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
+		pool.Close()
 		if newErr != nil {
 			if err == nil {
 				err = newErr

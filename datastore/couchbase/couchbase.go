@@ -138,6 +138,7 @@ func (info *infoImpl) Topology() ([]string, []errors.Error) {
 			for _, node := range pool.Nodes {
 				nodes = append(nodes, fullhostName(node.Hostname))
 			}
+			pool.Close()
 		} else {
 			errs = append(errs, errors.NewDatastoreClusterError(err, p.Name))
 		}
@@ -253,6 +254,9 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 			if pErr != nil {
 				errs = append(errs, errors.NewDatastoreClusterError(pErr, p.Name))
 			}
+		}
+		if err == nil {
+			pool.Close()
 		}
 	}
 	return map[string]interface{}{}, errs
