@@ -30,7 +30,7 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.maxParallelism = 1
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
-	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion))
+	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion), doDNF(stmt.Statement().Expressions()))
 	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos), stmt.Query()), nil
 }
 
@@ -223,7 +223,7 @@ func getAndTerms(pred *expression.And) expression.Expressions {
 func getFilterInfos(filters base.Filters) iaplan.FilterInfos {
 	exprs := make(iaplan.FilterInfos, 0, len(filters))
 	for _, f := range filters {
-		exprs = append(exprs, iaplan.NewFilterInfo(f.FltrExpr().Copy(), f.IsUnnest(), f.IsDerived()))
+		exprs = append(exprs, iaplan.NewFilterInfo(f.FltrExpr().Copy(), f.IsUnnest(), f.IsDerived(), f.IsJoin()))
 	}
 	return exprs
 }
@@ -314,4 +314,17 @@ func getDeferredIndexes(keyspace datastore.Keyspace, alias string, indexApiVersi
 		}
 	}
 	return infos
+}
+
+func doDNF(stmtExprs expression.Expressions) expression.Expressions {
+	exprs := make(expression.Expressions, 0, len(stmtExprs))
+	for _, e := range stmtExprs {
+		dnf := NewDNF(e, true, true)
+		e, err := dnf.Map(e)
+		if err != nil {
+			return nil
+		}
+		exprs = append(exprs, e)
+	}
+	return exprs
 }
