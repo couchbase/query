@@ -98,10 +98,14 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	cost := float64(0.0)
 	cardinality := float64(0.0)
 	selec := float64(1.0)
-	useCBO := true
-	docCount, err := this.getDocCount(node)
-	if err != nil || (docCount <= 0.0) {
-		useCBO = false
+	docCount := float64(0.0)
+	var err error
+	useCBO := this.useCBO
+	if useCBO {
+		docCount, err = this.getDocCount(node)
+		if err != nil || (docCount <= 0.0) {
+			useCBO = false
+		}
 	}
 
 	join := node.IsAnsiJoinOp()
@@ -110,7 +114,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		this.limit = limit
 
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, join, this.useCBO)
+		_, err = ClassifyExpr(op, baseKeyspaces, join, this.useCBO)
 		if err != nil {
 			return nil, 0, err
 		}

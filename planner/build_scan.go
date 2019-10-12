@@ -490,7 +490,11 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	useCBO := true
+	useCBO := this.useCBO
+	if !useCBO {
+		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+	}
+
 	cost := float64(0.0)
 	cardinality := float64(0.0)
 	selec := float64(1.0)
