@@ -296,7 +296,7 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 	// have we been here before?
 	if this.poolName != "" {
 		pool, poolServices, newErr := this.getPoolServices(this.poolName)
-		if err != nil {
+		if newErr != nil {
 			err = errors.NewAdminConnectionError(newErr, this.poolName)
 		} else {
 			defer pool.Close()
