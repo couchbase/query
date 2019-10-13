@@ -717,10 +717,12 @@ func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
 
 func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	p.refresh()
+	p.nslock.RLock()
 	rv := make([]string, 0, len(p.cbNamespace.BucketMap))
 	for name, _ := range p.cbNamespace.BucketMap {
 		rv = append(rv, name)
 	}
+	p.nslock.RUnlock()
 	return rv, nil
 }
 
@@ -872,16 +874,6 @@ func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
 	return p.keyspaceByName(name)
 }
 
-func (p *namespace) setPool(cbpool *cb.Pool) {
-	p.nslock.Lock()
-	oldPool := p.cbNamespace
-	p.cbNamespace = cbpool
-	p.nslock.Unlock()
-
-	// MB-33185 let go of old pool
-	oldPool.Close()
-}
-
 func (p *namespace) getPool() *cb.Pool {
 	p.nslock.RLock()
 	defer p.nslock.RUnlock()
@@ -900,18 +892,22 @@ func (p *namespace) refresh() {
 		}
 		return
 	}
-	oldpool := p.getPool()
+
+	// MB-36458 do not switch pools as checks are being made
+	p.nslock.RLock()
+	oldpool := p.cbNamespace
 	changed := len(oldpool.BucketMap) != len(newpool.BucketMap)
 	if !changed {
 		for on, ob := range oldpool.BucketMap {
 			nb := newpool.BucketMap[on]
-			if nb != nil && nb.UUID == ob.UUID {
+			if nb != nil && ob != nil && nb.UUID == ob.UUID {
 				continue
 			}
 			changed = true
 			break
 		}
 	}
+	p.nslock.RUnlock()
 	if changed {
 		p.reload2(&newpool)
 		return
@@ -1030,8 +1026,14 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 	}
 	p.lock.Unlock()
 
-	p.getPool().Close()
-	p.setPool(newpool)
+	// MB-36458 switch pool and...
+	p.nslock.Lock()
+	oldPool := p.cbNamespace
+	p.cbNamespace = newpool
+	p.nslock.Unlock()
+
+	// ...MB-33185 let go of old pool when noone is accessing it
+	oldPool.Close()
 
 	// keyspaces have been reloaded, force full auto reprepare check
 	p.version++
