@@ -60,10 +60,10 @@ func (this *collPredBase) CoveredBy(keyspace string, exprs Expressions, options 
 		}
 	}
 
-	// if not checking binding vars (called from IsArrayCovered()), just call
-	// CoveredBy() from ExpressionBase
+	// if not checking binding vars (called from IsArrayCovered()), just
+	// follow logic in ExpressionBase.CoveredBy()
 	if !options.hasCoverBindVar() {
-		return this.ExprBase().CoveredBy(keyspace, exprs, options)
+		return chkCoverChildren(keyspace, exprs, options, this.expr.Children(), false)
 	}
 
 	// check binding expressions

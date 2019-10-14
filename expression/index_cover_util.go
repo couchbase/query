@@ -99,10 +99,6 @@ func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *
 	}
 
 	if array, ok := all.array.(*Array); ok {
-		if array.when != nil {
-			return CoveredFalse
-		}
-
 		if options.hasCoverBindExpr() {
 			for _, b := range array.bindings {
 				if pred.EquivalentTo(b.expr) {
@@ -134,6 +130,47 @@ func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *
 	}
 
 	return CoveredFalse
+}
+
+func chkCoverChildren(keyspace string, exprs Expressions, options coveredOptions,
+	children Expressions, doTrickle bool) Covered {
+
+	rv := CoveredTrue
+	trickle := options.hasCoverTrickle()
+	if doTrickle {
+		options.setCoverTrickle()
+	}
+
+	// MB-22112: we treat the special case where a keyspace is part of the projection list
+	// a keyspace as a single term does not cover by definition
+	// a keyspace as part of a field or a path does cover to delay the decision in terms
+	// further down the path
+	for _, child := range children {
+		switch child.CoveredBy(keyspace, exprs, options) {
+		case CoveredFalse:
+			return CoveredFalse
+
+		// MB-25317: ignore expressions not related to this keyspace
+		case CoveredSkip:
+			options.setCoverSkip()
+
+			// MB-30350 trickle down CoveredSkip to outermost field
+			if trickle {
+				rv = CoveredSkip
+			}
+
+		// MB-25560: this subexpression is already covered, no need to check subsequent terms
+		case CoveredEquiv:
+			options.setCoverSkip()
+
+			// trickle down CoveredEquiv to outermost field
+			if trickle {
+				rv = CoveredEquiv
+			}
+		}
+	}
+
+	return rv
 }
 
 /*
