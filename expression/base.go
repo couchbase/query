@@ -21,7 +21,6 @@ import (
 const (
 	EXPR_IS_CONDITIONAL = 1 << iota
 	EXPR_IS_VOLATILE
-	EXPR_IS_COLL_VAR
 	EXPR_VALUE_MISSING
 	EXPR_VALUE_NULL
 )
@@ -36,22 +35,6 @@ type ExpressionBase struct {
 }
 
 var _NIL_VALUE value.Value
-
-type Covered int
-
-const (
-	CoveredFalse    = Covered(iota) // not covered
-	CoveredContinue                 // covering state can't be established yet, currently unused
-	CoveredSkip                     // expression not relevant for covering, skip to next
-	CoveredEquiv                    // expression is covered, ignore the rest
-	CoveredTrue                     // covered
-)
-
-type coveredOptions struct {
-	isSingle     bool
-	skip         bool
-	trickleEquiv bool
-}
 
 func (this *ExpressionBase) String() string {
 	return NewStringer().Visit(this.expr)
@@ -101,17 +84,6 @@ func (this *ExpressionBase) conditional() bool {
 
 func (this *ExpressionBase) setConditional() {
 	this.exprFlags |= EXPR_IS_CONDITIONAL
-}
-
-/*
-This method indicates if the expression is a collection variable
-*/
-func (this *ExpressionBase) IsCollectionVariable() bool {
-	return (this.exprFlags & EXPR_IS_COLL_VAR) != 0
-}
-
-func (this *ExpressionBase) SetCollectionVariable() {
-	this.exprFlags |= EXPR_IS_COLL_VAR
 }
 
 /*
@@ -335,14 +307,25 @@ by the list of expressions; that is, this expression does not depend
 on any stored data beyond the expressions.
 */
 func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+	var rv Covered
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
-			return CoveredTrue
+			return CoveredEquiv
+		}
+
+		// special handling of array index expression
+		if options.hasCoverArrayKeyOptions() {
+			if all, ok := expr.(*All); ok {
+				rv = chkArrayKeyCover(this.expr, keyspace, exprs, all, options)
+				if rv == CoveredTrue || rv == CoveredEquiv {
+					return rv
+				}
+			}
 		}
 	}
+
 	children := this.expr.Children()
-	options.isSingle = len(children) == 1
-	rv := CoveredTrue
+	rv = CoveredTrue
 
 	// MB-22112: we treat the special case where a keyspace is part of the projection list
 	// a keyspace as a single term does not cover by definition
@@ -355,14 +338,19 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 
 		// MB-25317: ignore expressions not related to this keyspace
 		case CoveredSkip:
-			options.skip = true
+			options.setCoverSkip()
+
+			// MB-30350 trickle down CoveredSkip to outermost field
+			if options.hasCoverTrickle() {
+				rv = CoveredSkip
+			}
 
 		// MB-25560: this subexpression is already covered, no need to check subsequent terms
 		case CoveredEquiv:
-			options.skip = true
+			options.setCoverSkip()
 
 			// trickle down CoveredEquiv to outermost field
-			if options.trickleEquiv {
+			if options.hasCoverTrickle() {
 				rv = CoveredEquiv
 			}
 		}
@@ -527,4 +515,14 @@ func (this *ExpressionBase) ResetValue() {
 	for _, child := range this.expr.Children() {
 		child.ResetValue()
 	}
+}
+
+func (this *ExpressionBase) SetIdentFlags(aliases map[string]bool, flags uint32) {
+	for _, child := range this.expr.Children() {
+		child.SetIdentFlags(aliases, flags)
+	}
+}
+
+func (this *ExpressionBase) ExprBase() *ExpressionBase {
+	return this
 }

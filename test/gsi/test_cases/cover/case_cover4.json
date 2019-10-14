@@ -1,0 +1,67 @@
+[
+    {
+        "testcase": "ANY clause covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT meta().id FROM shellTest WHERE ANY v IN items SATISFIES v.f1 > 10 END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause NOT covered (not exact)",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements":"SELECT meta().id FROM shellTest WHERE ANY v IN items SATISFIES (v.f1 = 10 AND v.f2 = 20) END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT v.f1.sf FROM shellTest AS d UNNEST d.items AS v WHERE v.f1 = 10",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "ANY clause NOT covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements":"SELECT v.f1.sf FROM shellTest AS d UNNEST d.items AS v WHERE v.f1 = 10 and v.f2 = 20",
+        "results": [
+    ]
+    }
+]
+

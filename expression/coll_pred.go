@@ -53,6 +53,35 @@ func (this *collPredBase) EquivalentTo(other Expression) bool {
 		this.satisfies.EquivalentTo(o.Satisfies())
 }
 
+func (this *collPredBase) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+	for _, expr := range exprs {
+		if this.expr.EquivalentTo(expr) {
+			return CoveredEquiv
+		}
+	}
+
+	// if not checking binding vars (called from IsArrayCovered()), just call
+	// CoveredBy() from ExpressionBase
+	if !options.hasCoverBindVar() {
+		return this.ExprBase().CoveredBy(keyspace, exprs, options)
+	}
+
+	// check binding expressions
+	options.setCoverBindExpr()
+	options.unsetCoverSatisfies()
+	for _, b := range this.bindings {
+		switch b.expr.CoveredBy(keyspace, exprs, options) {
+		case CoveredFalse:
+			return CoveredFalse
+		}
+	}
+
+	// check satisfies expression
+	options.unsetCoverBindExpr()
+	options.setCoverSatisfies()
+	return this.satisfies.CoveredBy(keyspace, exprs, options)
+}
+
 func (this *collPredBase) Children() Expressions {
 	d := make(Expressions, 0, 1+len(this.bindings))
 
@@ -89,8 +118,9 @@ func (this *collPredBase) SurvivesGrouping(groupKeys Expressions, allowed *value
 	vars := _VARS_POOL.Get()
 	defer _VARS_POOL.Put(vars)
 	allowed = value.NewScopeValue(vars, allowed)
+	allow_flags := value.NewValue(uint32(IDENT_IS_VARIABLE))
 	for _, b := range this.bindings {
-		allowed.SetField(b.Variable(), true)
+		allowed.SetField(b.Variable(), allow_flags)
 	}
 
 	for _, child := range this.Children() {

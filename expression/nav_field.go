@@ -88,18 +88,35 @@ func (this *Field) EquivalentTo(other Expression) bool {
 }
 
 func (this *Field) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
+	var rv Covered
 	for _, expr := range exprs {
 
 		// MB-25560: if a field is equivalent, no need to check children field / field names
 		if this.expr.EquivalentTo(expr) {
 			return CoveredEquiv
 		}
+
+		// special handling of array index expression
+		if options.hasCoverArrayKeyOptions() {
+			if all, ok := expr.(*All); ok {
+				rv = chkArrayKeyCover(this.expr, keyspace, exprs, all, options)
+				if rv == CoveredTrue || rv == CoveredEquiv {
+					return rv
+				}
+			}
+		}
 	}
+
+	// no need to look at children if requesting binding var or binding expr
+	// (requires exact match)
+	if options.hasCoverBindExpr() || options.hasCoverBindVar() {
+		return CoveredFalse
+	}
+
 	children := this.expr.Children()
-	options.isSingle = len(children) == 1
-	trickleEquiv := options.trickleEquiv
-	options.trickleEquiv = true
-	rv := CoveredTrue
+	trickle := options.hasCoverTrickle()
+	options.setCoverTrickle()
+	rv = CoveredTrue
 
 	// MB-22112: we treat the special case where a keyspace is part of the projection list
 	// a keyspace as a single term does not cover by definition
@@ -112,14 +129,18 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options covered
 
 		// MB-25317: ignore expressions not related to this keyspace
 		case CoveredSkip:
-			options.skip = true
+			options.setCoverSkip()
+
+			if trickle {
+				rv = CoveredSkip
+			}
 
 		// MB-25560: this subexpression is already covered, no need to check subsequent terms
 		case CoveredEquiv:
-			options.skip = true
+			options.setCoverSkip()
 
 			// trickle down CoveredEquiv to outermost field
-			if trickleEquiv {
+			if trickle {
 				rv = CoveredEquiv
 			}
 		}
@@ -300,7 +321,7 @@ func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, options cov
 
 	// MB-25317 / MB-25370 if the identifier preceeding the field name is not the keyspace
 	// then we are skipping this test
-	if options.skip {
+	if options.hasCoverSkip() {
 		return CoveredSkip
 	}
 	for _, expr := range exprs {
