@@ -99,7 +99,7 @@ func (this *NLNest) processItem(item value.AnnotatedValue, context *Context) boo
 	this.child.SetParent(this)
 	this.child.SetStop(nil)
 
-	go this.child.RunOnce(context, item)
+	this.fork(this.child, context, item)
 
 	var right_items value.AnnotatedValues
 	ok := true

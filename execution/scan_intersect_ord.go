@@ -107,7 +107,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
 			scan.SetOutput(channel)
-			go scan.RunOnce(context, parent)
+			this.fork(scan, context, parent)
 		}
 
 		limit := int64(-1)

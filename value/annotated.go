@@ -30,6 +30,9 @@ func init() {
 func newAnnotatedValue() *annotatedValue {
 	rv := (*annotatedValue)(annotatedPool.Get())
 	rv.refCnt = 1
+	rv.bit = 0
+	rv.self = false
+	rv.isOrigCopy = false
 	return rv
 }
 
@@ -67,6 +70,8 @@ type AnnotatedValue interface {
 	SetBit(b uint8)
 	Self() bool
 	SetSelf(s bool)
+	SetProjection(proj Value)
+	Original() AnnotatedValue
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -91,12 +96,15 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 
 type annotatedValue struct {
 	Value
-	attachments map[string]interface{}
-	covers      Value
-	bit         uint8
-	id          interface{}
-	refCnt      int32
-	self        bool
+	attachments   map[string]interface{}
+	covers        Value
+	bit           uint8
+	id            interface{}
+	refCnt        int32
+	self          bool
+	original      Value
+	annotatedOrig AnnotatedValue
+	isOrigCopy    bool
 }
 
 func (this *annotatedValue) String() string {
@@ -237,6 +245,42 @@ func (this *annotatedValue) SetId(id interface{}) {
 	this.id = id
 }
 
+func (this *annotatedValue) SetProjection(proj Value) {
+	this.original = this.Value
+	this.Value = proj
+}
+
+// Originals are not to be recycled
+// For performance purposes, this can only be partially checked.
+func (this *annotatedValue) Original() AnnotatedValue {
+	if this.annotatedOrig != nil {
+		return this.annotatedOrig
+	}
+	val := this.original
+	if val == nil {
+		return this
+	}
+
+	av := newAnnotatedValue()
+	av.isOrigCopy = true
+	switch val := val.(type) {
+	case *annotatedValue:
+		av.Value = val.Value
+		av.covers = this.covers
+		av.attachments = this.attachments
+	case *ScopeValue:
+		av.Value = val
+		av.covers = this.covers
+		av.attachments = this.attachments
+	case Value:
+		av.Value = val
+	default:
+		av.Value = NewValue(val)
+	}
+	this.annotatedOrig = av
+	return av
+}
+
 func (this *annotatedValue) Track() {
 	atomic.AddInt32(&this.refCnt, 1)
 }
@@ -244,17 +288,29 @@ func (this *annotatedValue) Track() {
 func (this *annotatedValue) Recycle() {
 
 	// do no recycle if other scope values are using this value
+	// or if this is an original document hanging off a projecton
 	refcnt := atomic.AddInt32(&this.refCnt, -1)
-	if refcnt > 0 {
+	if refcnt > 0 || this.isOrigCopy {
 		return
 	}
+
 	this.Value.Recycle()
 	this.Value = nil
 	if this.covers != nil {
 		this.covers.Recycle()
 		this.covers = nil
 	}
+	if this.annotatedOrig != nil {
+		val := this.annotatedOrig.(*annotatedValue)
+		val.covers = nil
+		val.attachments = nil
+		annotatedPool.Put(unsafe.Pointer(val))
+		this.annotatedOrig = nil
+	}
+	if this.original != nil {
+		this.original.Recycle()
+		this.original = nil
+	}
 	this.attachments = nil
-	this.bit = 0
 	annotatedPool.Put(unsafe.Pointer(this))
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -623,7 +624,7 @@ type bufferedWriter struct {
 	buffer_pool BufferPool    // buffer manager for our buffers
 	closed      bool
 	header      bool // headers required
-	lastFlush   time.Time
+	lastFlush   util.Time
 }
 
 const _PRINTF_THRESHOLD = 128
@@ -634,7 +635,7 @@ func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
 	w.buffer_pool = bp
 	w.closed = false
 	w.header = true
-	w.lastFlush = time.Now()
+	w.lastFlush = util.Now()
 }
 
 func (this *bufferedWriter) writeBytes(s []byte) bool {
@@ -660,7 +661,7 @@ func (this *bufferedWriter) writeBytes(s []byte) bool {
 		this.buffer.Reset()
 
 		// do the flushing
-		this.lastFlush = time.Now()
+		this.lastFlush = util.Now()
 		w.(http.Flusher).Flush()
 	}
 
@@ -689,7 +690,7 @@ func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
 		this.buffer.Reset()
 
 		// do the flushing
-		this.lastFlush = time.Now()
+		this.lastFlush = util.Now()
 		w.(http.Flusher).Flush()
 	}
 
@@ -714,7 +715,7 @@ func (this *bufferedWriter) timeFlush() {
 	}
 
 	// flush only if time has exceeded
-	if time.Since(this.lastFlush) > 100*time.Millisecond {
+	if util.Since(this.lastFlush) > 100*time.Millisecond {
 		w := this.req.resp // our request's response writer
 
 		// write response header and data buffered so far using request's response writer:
@@ -728,7 +729,7 @@ func (this *bufferedWriter) timeFlush() {
 		this.buffer.Reset()
 
 		// do the flushing
-		this.lastFlush = time.Now()
+		this.lastFlush = util.Now()
 		w.(http.Flusher).Flush()
 	}
 }
@@ -754,7 +755,7 @@ func (this *bufferedWriter) sizeFlush() {
 		this.buffer.Reset()
 
 		// do the flushing
-		this.lastFlush = time.Now()
+		this.lastFlush = util.Now()
 		w.(http.Flusher).Flush()
 	}
 }

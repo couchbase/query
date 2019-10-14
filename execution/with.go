@@ -30,6 +30,7 @@ func NewWith(plan *plan.With, context *Context, child Operator) *With {
 	}
 
 	newBase(&rv.base, context)
+	rv.base.setInline()
 	rv.output = rv
 	return rv
 }
@@ -86,7 +87,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 			wv.SetField(b.Variable(), v)
 		}
 
-		go this.child.RunOnce(context, wv)
+		this.fork(this.child, context, wv)
 	})
 }
 

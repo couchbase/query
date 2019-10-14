@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,12 +25,18 @@ type Filter struct {
 	aliasMap map[string]string
 }
 
-func NewFilter(plan *plan.Filter, context *Context, aliasMap map[string]string) *Filter {
-	rv := &Filter{
-		plan:     plan,
-		aliasMap: aliasMap,
-	}
+var _FILTER_OP_POOL util.FastPool
 
+func init() {
+	util.NewFastPool(&_FILTER_OP_POOL, func() interface{} {
+		return &Filter{}
+	})
+}
+
+func NewFilter(plan *plan.Filter, context *Context, aliasMap map[string]string) *Filter {
+	rv := _FILTER_OP_POOL.Get().(*Filter)
+	rv.plan = plan
+	rv.aliasMap = aliasMap
 	newBase(&rv.base, context)
 	rv.execPhase = FILTER
 	rv.output = rv
@@ -41,7 +48,9 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Filter) Copy() Operator {
-	rv := &Filter{plan: this.plan, aliasMap: this.aliasMap}
+	rv := _FILTER_OP_POOL.Get().(*Filter)
+	rv.plan = this.plan
+	rv.aliasMap = this.aliasMap
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -88,4 +97,14 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *Filter) Done() {
+	this.baseDone()
+	if this.isComplete() {
+		this.docs = 0
+		this.aliasMap = nil
+		this.plan = nil
+		_FILTER_OP_POOL.Put(this)
+	}
 }

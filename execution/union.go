@@ -73,7 +73,7 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 			child.SetOutput(this.output)
 			child.SetStop(nil)
 			child.SetParent(this)
-			go child.RunOnce(context, parent)
+			this.fork(child, context, parent)
 		}
 
 		if !this.childrenWait(n) {

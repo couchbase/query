@@ -741,9 +741,9 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	request.NotifyStop(operator)
-	go operator.RunOnce(context, nil)
-
 	request.SetExecTime(time.Now())
+	operator.RunOnce(context, nil)
+
 	request.Execute(this, prepared.Signature())
 }
 

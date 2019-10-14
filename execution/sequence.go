@@ -51,6 +51,7 @@ func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *S
 	// we'll even use the last child's value exchange and save allocating
 	// an unused one for ourselves
 	newRedirectBase(&rv.base)
+	rv.base.setInline()
 	prevBase.exchangeMove(&rv.base)
 	rv.output = rv
 	return rv
@@ -114,7 +115,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		next.SetParent(this)
 
 		// Run last child
-		go next.RunOnce(context, parent)
+		this.fork(next, context, parent)
 	})
 }
 

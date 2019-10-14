@@ -16,6 +16,17 @@ type Sequence struct {
 }
 
 func NewSequence(children ...Operator) *Sequence {
+	l := len(children)
+	if l > 0 {
+		switch child := children[0].(type) {
+		case *Sequence:
+			if l == 1 {
+				return child
+			}
+			child.children = append(child.children, children[1:]...)
+			return child
+		}
+	}
 	return &Sequence{children}
 }
 

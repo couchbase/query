@@ -65,7 +65,7 @@ func (this *Intersect) beforeItems(context *Context, parent value.Value) bool {
 	distinct := NewDistinct(plan.NewDistinct(), context, true)
 	sequence := NewSequence(plan.NewSequence(), context, this.second, distinct)
 	sequence.SetParent(this)
-	go sequence.RunOnce(context, parent)
+	this.fork(sequence, context, parent)
 
 	// we only need to wait for the first child to end
 	// after that no other value will qualify anyway
@@ -201,7 +201,7 @@ func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool
 	all := NewAll(plan.NewDistinct(), context, true)
 	sequence := NewSequence(plan.NewSequence(), context, this.second, all)
 	sequence.SetParent(this)
-	go sequence.RunOnce(context, parent)
+	this.fork(sequence, context, parent)
 
 	// we only need to wait for the first child to end
 	// after that no other value will qualify anyway

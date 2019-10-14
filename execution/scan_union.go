@@ -87,7 +87,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		for _, scan := range this.scans {
 			scan.SetParent(this)
 			scan.SetOutput(channel)
-			go scan.RunOnce(context, parent)
+			this.fork(scan, context, parent)
 		}
 
 		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)

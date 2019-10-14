@@ -66,14 +66,14 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(MERGE, context)
-		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer this.notify()                          // Notify that I have stopped
+		defer this.switchPhase(_NOTIME) // accrue current phase's time
+		defer this.notify()             // Notify that I have stopped
 
 		if !active || context.Readonly() {
 			return
 		}
 
-		go this.input.RunOnce(context, parent)
+		this.fork(this.input, context, parent)
 
 		update, updateInput := this.wrapChild(this.update, context)
 		defer releaseChannel(updateInput)
@@ -118,7 +118,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		}
 
 		for _, child := range this.children {
-			go child.RunOnce(context, parent)
+			this.fork(child, context, parent)
 		}
 
 		var item value.AnnotatedValue

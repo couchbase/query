@@ -51,3 +51,19 @@ func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s str
 	}
 	return
 }
+
+func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *Context) (rv value.Value, err error) {
+	sv1 := item.GetAttachment(s)
+	switch sv1 := sv1.(type) {
+	case value.Value:
+		rv = sv1
+	default:
+		rv, err = expr.Evaluate(item.Original(), context)
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "getOriginalCachedValue()"))
+			return
+		}
+		item.SetAttachment(s, rv)
+	}
+	return
+}

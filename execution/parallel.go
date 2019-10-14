@@ -49,6 +49,7 @@ func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Paralle
 	} else {
 		newBase(&rv.base, context)
 	}
+	rv.base.setInline()
 	rv.output = rv
 	return rv
 }
@@ -83,11 +84,11 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 		for i := 1; i < n; i++ {
 			this.children[i] = this.child.Copy()
-			go this.runChild(this.children[i], context, parent)
+			this.runChild(this.children[i], context, parent)
 		}
 
 		this.children[0] = this.child
-		go this.runChild(this.children[0], context, parent)
+		this.runChild(this.children[0], context, parent)
 	})
 }
 
@@ -96,7 +97,7 @@ func (this *Parallel) runChild(child Operator, context *Context, parent value.Va
 	child.SetOutput(this.output)
 	child.SetParent(this)
 	child.SetStop(nil)
-	child.RunOnce(context, parent)
+	this.fork(child, context, parent)
 }
 
 func (this *Parallel) MarshalJSON() ([]byte, error) {

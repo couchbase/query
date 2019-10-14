@@ -220,6 +220,7 @@ func (this *scanIdxCol) VisitInitialProject(op *plan.InitialProject) (interface{
 	return nil, nil
 }
 
+// TODO retire
 func (this *scanIdxCol) VisitFinalProject(op *plan.FinalProject) (interface{}, error) {
 	return nil, nil
 }

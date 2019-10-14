@@ -65,7 +65,7 @@ func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
 	distinct := NewDistinct(plan.NewDistinct(), context, true)
 	sequence := NewSequence(plan.NewSequence(), context, this.second, distinct)
 	sequence.SetParent(this)
-	go sequence.RunOnce(context, parent)
+	this.fork(sequence, context, parent)
 
 	if !this.childrenWait(1) {
 		this.notifyStop()

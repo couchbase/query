@@ -7,65 +7,57 @@
             "name": "test",
 	    "namespace": "json",
             "operator": {
-                "#operator": "Sequence",
-                "~children": [
-                    {
-                        "#operator": "Authorize",
-                        "privileges": {
-                            "List": [
-                                {
-                                    "Priv": 4,
-                                    "Target": "#system:prepareds"
-                                }
-                            ]
+                "#operator": "Authorize",
+                "privileges": {
+                    "List": [
+                            {
+                                "Priv": 4,
+                                "Target": "#system:prepareds"
+                            }
+                        ]
+                },
+                "~child": {
+                    "#operator": "Sequence",
+                    "~children": [
+                        {
+                            "#operator": "PrimaryScan",
+                            "index": "#primary",
+                            "keyspace": "prepareds",
+                            "namespace": "#system",
+                            "using": "system"
                         },
-                        "~child": {
-                            "#operator": "Sequence",
-                            "~children": [
-                                {
-                                    "#operator": "PrimaryScan",
-                                    "index": "#primary",
-                                    "keyspace": "prepareds",
-                                    "namespace": "#system",
-                                    "using": "system"
-                                },
-                                {
-                                    "#operator": "Fetch",
-                                    "keyspace": "prepareds",
-                                    "namespace": "#system"
-                                },
-                                {
-                                    "#operator": "Parallel",
-                                    "~child": {
-                                        "#operator": "Sequence",
-                                        "~children": [
+                        {
+                            "#operator": "Fetch",
+                            "keyspace": "prepareds",
+                            "namespace": "#system"
+                        },
+                        {
+                            "#operator": "Parallel",
+                            "~child": {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "InitialProject",
+                                        "result_terms": [
                                             {
-                                                "#operator": "InitialProject",
-                                                "result_terms": [
-                                                    {
-                                                        "expr": "(`prepareds`.`name`)"
-                                                    },
-                                                    {
-                                                        "expr": "(`prepareds`.`statement`)"
-                                                    },
-                                                    {
-                                                        "expr": "(`prepareds`.`uses`)"
-                                                    }
-                                                ]
+                                                "expr": "(`prepareds`.`name`)"
                                             },
                                             {
-                                                "#operator": "FinalProject"
+                                                "expr": "(`prepareds`.`statement`)"
+                                            },
+                                            {
+                                                "expr": "(`prepareds`.`uses`)"
                                             }
                                         ]
                                     }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "#operator": "Stream"
-                    }
-                ]
+                                ]
+                            }
+                        },
+                        {
+	                    "#operator": "Stream"
+	                }
+                    ]
+                }
             },
             "signature": {
                 "name": "json",

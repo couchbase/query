@@ -38,10 +38,10 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/value"
-
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 var REQUIRE_CBAUTH bool // Connection to authorization system must succeed.
@@ -690,8 +690,8 @@ type keyspaceEntry struct {
 	sync.Mutex
 	cbKeyspace *keyspace
 	errCount   int
-	errTime    time.Time
-	lastUse    time.Time
+	errTime    util.Time
+	lastUse    util.Time
 }
 
 const (
@@ -788,7 +788,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		// version change
 		entry.cbKeyspace = nil
 	}
-	entry.lastUse = time.Now()
+	entry.lastUse = util.Now()
 	p.lock.Unlock()
 
 	// 2) serialize the loading by locking the entry
@@ -801,7 +801,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	}
 
 	// 4) if previous loads resulted in errors, throttle requests
-	if entry.errCount > 0 && time.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
+	if entry.errCount > 0 && util.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
 		time.Sleep(_THROTTLING_TIMEOUT)
 	}
 
@@ -811,9 +811,9 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 
 		// We try not to flood the log with errors
 		if entry.errCount == 0 {
-			entry.errTime = time.Now()
-		} else if time.Since(entry.errTime) > _MIN_ERR_INTERVAL {
-			entry.errTime = time.Now()
+			entry.errTime = util.Now()
+		} else if util.Since(entry.errTime) > _MIN_ERR_INTERVAL {
+			entry.errTime = util.Now()
 		}
 		entry.errCount++
 		return nil, err
@@ -994,7 +994,7 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 	for name, ks := range p.keyspaceCache {
 		logging.Debugf(" Checking keyspace %s", name)
 		if ks.cbKeyspace == nil {
-			if time.Since(ks.lastUse) > _CLEANUP_INTERVAL {
+			if util.Since(ks.lastUse) > _CLEANUP_INTERVAL {
 				delete(p.keyspaceCache, name)
 			}
 			continue

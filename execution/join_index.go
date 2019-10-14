@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -144,9 +145,9 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 		return !this.plan.Outer() || this.sendItem(item)
 	}
 
-	t := time.Now()
+	t := util.Now()
 	defer func() {
-		this.joinTime += time.Since(t)
+		this.joinTime += util.Since(t)
 	}()
 
 	covers := this.plan.Covers()
@@ -196,7 +197,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 		return true
 	}
 
-	timer := time.Now()
+	timer := util.Now()
 
 	keyCount := _STRING_KEYCOUNT_POOL.Get()
 	pairMap := _STRING_ANNOTATED_POOL.Get()
@@ -204,7 +205,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
 	defer _STRING_ANNOTATED_POOL.Put(pairMap)
 	defer func() {
-		this.joinTime += time.Since(timer)
+		this.joinTime += util.Since(timer)
 	}()
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)

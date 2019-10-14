@@ -37,6 +37,7 @@ func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Autho
 	rv.plan = plan
 	rv.child = child
 	newRedirectBase(&rv.base)
+	rv.base.setInline()
 	rv.output = rv
 	return rv
 }
@@ -60,7 +61,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.SetKeepAlive(1, context) // terminate early
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(AUTHORIZE, context)
-		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer this.switchPhase(_NOTIME) // accrue current phase's time
 		if !active {
 			this.notify()
 			this.close(context)
@@ -90,7 +91,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.child.SetStop(nil)
 		this.child.SetParent(this)
 
-		go this.child.RunOnce(context, parent)
+		this.fork(this.child, context, parent)
 	})
 }
 

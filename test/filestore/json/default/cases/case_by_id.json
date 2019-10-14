@@ -10,9 +10,6 @@
         "results": [
         {
         "plan": {
-            "#operator": "Sequence",
-            "~children": [
-                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -62,9 +59,7 @@
                                     }
                                 ]
                             }
-                        }
-                    ]
-                },
+                        },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -72,9 +67,6 @@
                             "expr": "(`game`.`id`)"
                         }
                     ]
-                },
-                {
-                    "#operator": "FinalProject"
                 }
             ]
         },
@@ -100,9 +92,6 @@
          "results": [
         {
         "plan": {
-            "#operator": "Sequence",
-            "~children": [
-                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -137,9 +126,7 @@
                                     }
                                 ]
                             }
-                        }
-                    ]
-                },
+                        },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -147,9 +134,6 @@
                             "expr": "(`game`.`id`)"
                         }
                     ]
-                },
-                {
-                    "#operator": "FinalProject"
                 }
             ]
             },
@@ -163,9 +147,6 @@
         "results": [
         {
         "plan": {
-            "#operator": "Sequence",
-            "~children": [
-                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -200,9 +181,7 @@
                                     }
                                 ]
                             }
-                        }
-                    ]
-                },
+                        },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -210,9 +189,6 @@
                             "expr": "(`game`.`id`)"
                         }
                     ]
-                },
-                {
-                    "#operator": "FinalProject"
                 }
             ]
         },
@@ -238,9 +214,6 @@
         "results": [
         {
         "plan": {
-            "#operator": "Sequence",
-            "~children": [
-                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -274,9 +247,7 @@
                                     }
                                 ]
                             }
-                        }
-                    ]
-                },
+                        },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -284,9 +255,6 @@
                             "expr": "(`game`.`id`)"
                         }
                     ]
-                },
-                {
-                    "#operator": "FinalProject"
                 }
             ]
             },
@@ -351,9 +319,6 @@
                                         "expr": "count(*)"
                                     }
                                 ]
-                            },
-                            {
-                                "#operator": "FinalProject"
                             }
                         ]
                     }
@@ -370,9 +335,6 @@
         "results": [
         {
         "plan": {
-            "#operator": "Sequence",
-            "~children": [
-                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -438,9 +400,7 @@
                                     }
                                 ]
                             }
-                        }
-                    ]
-                },
+                        },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -448,9 +408,6 @@
                             "expr": "min((`game`.`score`))"
                         }
                     ]
-                },
-                {
-                    "#operator": "FinalProject"
                 }
             ]
             },
@@ -524,9 +481,6 @@
                                         "expr": "count(*)"
                                     }
                                 ]
-                            },
-                            {
-                                "#operator": "FinalProject"
                             }
                         ]
                     }

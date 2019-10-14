@@ -96,7 +96,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		}
 		av := value.NewAnnotatedValue(sv)
 		av.SetAnnotations(item)
-		av.SetAttachment("projection", v)
+		av.SetProjection(v) //	av.SetAttachment("projection", v)
 		return this.sendItem(av)
 	} else {
 		// Any other projection
@@ -111,7 +111,6 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	pv.SetAnnotations(item)
 
 	p := value.NewValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
-	pv.SetAttachment("projection", p)
 
 	for _, term := range this.plan.Terms() {
 		if term.Result().Alias() != "" {
@@ -149,6 +148,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		}
 	}
 
+	pv.SetProjection(p) //	pv.SetAttachment("projection", p)
 	return this.sendItem(pv)
 }
 

@@ -54,6 +54,10 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 			return nil, er
 		}
 
+		if stream {
+			op = plan.NewSequence(op, plan.NewStream())
+		}
+
 		// Always insert an Authorize operator, even if no privileges need to
 		// be verified.
 		//
@@ -65,11 +69,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		// query is against secured tables anyway, and would therefore
 		// have privileges that need verification, meaning the Authorize
 		// operator would have been present in any case.
-		op = plan.NewAuthorize(privs, op)
-		if stream {
-			return plan.NewSequence(op, plan.NewStream()), nil
-		}
-		return op, nil
+		return plan.NewAuthorize(privs, op), nil
 	} else {
 		return op, nil
 	}

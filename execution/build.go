@@ -325,8 +325,10 @@ func (this *builder) VisitInitialProject(plan *plan.InitialProject) (interface{}
 	return checkOp(NewInitialProject(plan, this.context), this.context)
 }
 
+// TODO retire
 func (this *builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, error) {
-	return checkOp(NewFinalProject(plan, this.context), this.context)
+	// skip operator
+	return NewNoop(), nil
 }
 
 func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (interface{}, error) {
@@ -536,9 +538,25 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+		if !this.context.assert(child != nil, "child operator not created") {
+			return nil, fmt.Errorf("sequence operator has missing child")
+		}
+
+		// skip noops
+		switch child.(type) {
+		case *Noop:
+			continue
+		}
 
 		execChildren = append(execChildren, child.(Operator))
 	}
+
+	if len(execChildren) == 1 {
+		child := execChildren[0]
+		_SEQUENCE_POOL.Put(execChildren)
+		return child.(Operator), nil
+	}
+
 	return checkOp(NewSequence(plan, this.context, execChildren...), this.context)
 }
 

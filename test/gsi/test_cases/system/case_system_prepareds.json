@@ -6,9 +6,6 @@
         {
             "name": "test",
             "operator": {
-                "#operator": "Sequence",
-                "~children": [
-                    {
                         "#operator": "Authorize",
                         "privileges": {
                             "List": [
@@ -49,20 +46,15 @@
                                                         "expr": "(`prepareds`.`uses`)"
                                                     }
                                                 ]
-                                            },
-                                            {
-                                                "#operator": "FinalProject"
                                             }
                                         ]
                                     }
-                                }
+                                },
+		                {
+		                    "#operator": "Stream"
+		                }
                             ]
                         }
-                    },
-                    {
-                        "#operator": "Stream"
-                    }
-                ]
             },
             "signature": {
                 "name": "json",

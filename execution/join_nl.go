@@ -106,7 +106,7 @@ func (this *NLJoin) processItem(item value.AnnotatedValue, context *Context) boo
 	this.child.SetParent(this)
 	this.child.SetStop(nil)
 
-	go this.child.RunOnce(context, item)
+	this.fork(this.child, context, item)
 
 	ok := true
 	matched := false

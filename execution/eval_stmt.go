@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/semantics"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -108,9 +109,9 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	output := &outputBuf
 
 	// TODO leaving profiling in place but commented out just in case
-	// parse := time.Now()
+	// parse := util.Now()
 	stmt, err := n1ql.ParseStatement2(statement, this.namespace) // TODO switch to collections scope
-	// output.AddPhaseTime(PARSE, time.Since(parse))
+	// output.AddPhaseTime(PARSE, util.Since(parse))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -131,10 +132,10 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 		positionalArgs = nil
 	}
 
-	// prep := time.Now()
+	// prep := util.Now()
 	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
 		namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
-	// output.AddPhaseTime(PLAN, time.Since(prep))
+	// output.AddPhaseTime(PLAN, util.Since(prep))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -218,9 +219,9 @@ func (this *Context) EvaluatePrepared(prepared *plan.Prepared, isPrepared bool) 
 	newContext.namedArgs = this.namedArgs
 	newContext.positionalArgs = this.positionalArgs
 
-	build := time.Now()
+	build := util.Now()
 	pipeline, err := Build(prepared, newContext)
-	this.output.AddPhaseTime(INSTANTIATE, time.Since(build))
+	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
 		return nil, 0, err
@@ -231,7 +232,7 @@ func (this *Context) EvaluatePrepared(prepared *plan.Prepared, isPrepared bool) 
 	collect := NewCollect(plan.NewCollect(), newContext)
 	sequence := NewSequence(plan.NewSequence(), newContext, pipeline, collect)
 
-	exec := time.Now()
+	exec := util.Now()
 	sequence.RunOnce(newContext, nil)
 
 	// Await completion
@@ -240,7 +241,7 @@ func (this *Context) EvaluatePrepared(prepared *plan.Prepared, isPrepared bool) 
 	results := collect.ValuesOnce()
 
 	sequence.Done()
-	this.output.AddPhaseTime(RUN, time.Since(exec))
+	this.output.AddPhaseTime(RUN, util.Since(exec))
 
 	return results, output.mutationCount, output.err
 }

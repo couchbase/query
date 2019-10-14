@@ -92,7 +92,9 @@ var _OPERATORS = map[string]Operator{
 	"WindowAggregate": &WindowAggregate{},
 
 	// Project
-	"InitialProject":    &InitialProject{},
+	"InitialProject": &InitialProject{},
+
+	// TODO retire
 	"FinalProject":      &FinalProject{},
 	"IndexCountProject": &IndexCountProject{},
 

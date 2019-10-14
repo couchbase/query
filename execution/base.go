@@ -100,11 +100,12 @@ type base struct {
 	once           util.Once
 	serializable   bool
 	serialized     bool
+	inline         bool
 	doSend         func(this *base, op Operator, item value.AnnotatedValue) bool
 	closeConsumer  bool
 	batch          []value.AnnotatedValue
 	timePhase      timePhases
-	startTime      time.Time
+	startTime      util.Time
 	execPhase      Phases
 	phaseTimes     func(time.Duration)
 	execTime       time.Duration
@@ -196,6 +197,10 @@ func newSerializedBase(dest *base) {
 	dest.serializable = true
 }
 
+func (this *base) setInline() {
+	this.inline = true
+}
+
 func (this *base) copy(dest *base) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, int64(cap(this.valueExchange.items)))
@@ -209,6 +214,7 @@ func (this *base) copy(dest *base) {
 	dest.phaseTimes = this.phaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.serializable = this.serializable
+	dest.inline = this.inline
 	dest.serialized = false
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -382,6 +388,17 @@ func (this *base) SerializeOutput(op Operator, context *Context) {
 	base := op.getBase()
 	base.serialized = true
 	base.contextTracked = context
+}
+
+// fork operator
+func (this *base) fork(op Operator, context *Context, parent value.Value) {
+	if op.getBase().inline {
+		this.switchPhase(_NOTIME)
+		op.RunOnce(context, parent)
+		this.switchPhase(_EXECTIME)
+	} else {
+		go op.RunOnce(context, parent)
+	}
 }
 
 // value and message exchange
@@ -617,7 +634,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			this.setExecPhase(this.execPhase, context)
 		}
 		this.switchPhase(_EXECTIME)
-		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
+		defer this.switchPhase(_NOTIME) // accrue current phase's time
 		if this.serialized == true {
 			ok := true
 			if !active || (context.Readonly() && !cons.readonly()) {
@@ -627,7 +644,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			}
 
 			if ok {
-				go this.input.RunOnce(context, parent)
+				this.fork(this.input, context, parent)
 			}
 
 			if !ok {
@@ -653,7 +670,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		ok := cons.beforeItems(context, parent)
 
 		if ok {
-			go this.input.RunOnce(context, parent)
+			this.switchPhase(_NOTIME)
+			this.fork(this.input, context, parent)
+			this.switchPhase(_EXECTIME)
 		}
 
 		var item value.AnnotatedValue
@@ -1056,7 +1075,7 @@ func (this *base) switchPhase(p timePhases) {
 		return
 	}
 	oldTime := this.startTime
-	this.startTime = time.Now()
+	this.startTime = util.Now()
 
 	// starting or restarting after a stop
 	// either way, no time to accrue as of yet
@@ -1130,7 +1149,7 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	chanTime := this.chanTime
 	servTime := this.servTime
 	if this.timePhase != _NOTIME {
-		d = time.Since(this.startTime)
+		d = util.Since(this.startTime)
 		switch this.timePhase {
 		case _EXECTIME:
 			execTime += d

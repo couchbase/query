@@ -39,7 +39,10 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
 
 	if stmt.Returning() != nil {
-		deleteSubChildren = append(deleteSubChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
+		deleteSubChildren = append(deleteSubChildren, plan.NewInitialProject(stmt.Returning()))
+
+		// TODO retire
+		deleteSubChildren = maybeFinalProject(deleteSubChildren)
 	}
 
 	if stmt.Limit() != nil {

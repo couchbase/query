@@ -86,9 +86,6 @@
                                         "expr": "clock_str(\"2006-01-02\")"
                                     }
                                 ]
-                            },
-                            {
-                                "#operator": "FinalProject"
                             }
                         ]
                     }

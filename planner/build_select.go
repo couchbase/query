@@ -102,7 +102,9 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	// Perform the delayed final projection now, after the ORDER BY
 	if this.delayProjection {
-		children = append(children, plan.NewFinalProject())
+
+		// TODO retire
+		children = maybeFinalProject(children)
 	}
 
 	return plan.NewSequence(children...), nil

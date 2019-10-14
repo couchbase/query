@@ -47,7 +47,11 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
 
 	if stmt.Returning() != nil {
-		updateSubChildren = append(updateSubChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
+		updateSubChildren = append(updateSubChildren, plan.NewInitialProject(stmt.Returning()))
+
+		// TODO retire
+		updateSubChildren = maybeFinalProject(updateSubChildren)
+
 	}
 
 	if stmt.Limit() != nil {

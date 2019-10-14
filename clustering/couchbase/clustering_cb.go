@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/util"
 )
 
 const _PREFIX = "couchbase:"
@@ -518,7 +519,7 @@ type cbCluster struct {
 	queryNodes        map[string]*cbQueryNodeConfig `json:"-"`
 	capabilities      map[string]bool               `json:"-"`
 	poolSrvRev        int                           `json:"-"`
-	lastCheck         time.Time                     `json:"-"`
+	lastCheck         util.Time                     `json:"-"`
 }
 
 // Create a new cbCluster instance
@@ -574,7 +575,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		return nil, errors.NewAdminConnectionError(nil, this.ConfigurationStoreId())
 	}
 
-	if time.Since(this.lastCheck) <= _GRACE_PERIOD {
+	if util.Since(this.lastCheck) <= _GRACE_PERIOD {
 		return this.queryNodeNames, nil
 	}
 
@@ -585,7 +586,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 	if poolServices.Rev == this.poolSrvRev {
 		this.Lock()
-		this.lastCheck = time.Now()
+		this.lastCheck = util.Now()
 		this.Unlock()
 		return this.queryNodeNames, nil
 	}
@@ -672,7 +673,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	this.capabilities = capabilities
 
 	this.poolSrvRev = poolServices.Rev
-	this.lastCheck = time.Now()
+	this.lastCheck = util.Now()
 	return this.queryNodeNames, nil
 }
 

@@ -152,6 +152,9 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
+// Final projection operator is left for backwards compatibility with older versions
+// (just in case prepared plans on mixed versions clusters come in from older engines)
+// TODO It will be retired after mad hatter goes out of support
 type FinalProject struct {
 	readonly
 }

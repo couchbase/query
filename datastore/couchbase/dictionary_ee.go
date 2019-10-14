@@ -37,11 +37,11 @@ const _GRACE_PERIOD = time.Second
 type chkIndexDict struct {
 	sync.RWMutex
 	checking  bool
-	lastCheck time.Time
+	lastCheck util.Time
 }
 
 func (this *chkIndexDict) chkIndex() bool {
-	if time.Since(this.lastCheck) <= _GRACE_PERIOD {
+	if util.Since(this.lastCheck) <= _GRACE_PERIOD {
 		return false
 	}
 
@@ -61,7 +61,7 @@ func (this *chkIndexDict) chkIndex() bool {
 func (this *chkIndexDict) chkDone() {
 	this.Lock()
 	this.checking = false
-	this.lastCheck = time.Now()
+	this.lastCheck = util.Now()
 	this.Unlock()
 }
 

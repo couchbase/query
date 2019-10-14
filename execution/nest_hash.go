@@ -93,7 +93,7 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	this.child.SetParent(this)
 	this.child.SetStop(nil)
 
-	go this.child.RunOnce(context, parent)
+	this.fork(this.child, context, parent)
 
 	return buildHashTab(&(this.base), this.child, this.hashTab,
 		this.plan.BuildExprs(), this.buildVals, context)

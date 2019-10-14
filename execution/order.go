@@ -125,12 +125,12 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 	for i, term := range this.plan.Terms() {
 		s := this.terms[i]
 
-		ev1, e = getCachedValue(v1, term.Expression(), s, this.context)
+		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, this.context)
 		if e != nil {
 			return false
 		}
 
-		ev2, e = getCachedValue(v2, term.Expression(), s, this.context)
+		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, this.context)
 		if e != nil {
 			return false
 		}

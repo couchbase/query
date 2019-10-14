@@ -33,6 +33,7 @@ func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
 	}
 
 	newBase(&rv.base, context)
+	rv.base.setInline()
 	rv.output = rv
 	return rv
 }
@@ -72,7 +73,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			scan.SetOutput(this.output)
 			scan.SetBit(this.bit)
 			this.children = append(this.children, scan)
-			go this.children[i].RunOnce(context, parent)
+			this.fork(this.children[i], context, parent)
 		}
 	})
 }
