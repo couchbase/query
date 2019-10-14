@@ -66,6 +66,7 @@ partitionTerm   *algebra.IndexPartitionTerm
 groupTerm       *algebra.GroupTerm
 groupTerms       algebra.GroupTerms
 windowTerm      *algebra.WindowTerm
+windowTerms      algebra.WindowTerms
 windowFrame     *algebra.WindowFrame
 windowFrameExtents    algebra.WindowFrameExtents
 windowFrameExtent *algebra.WindowFrameExtent
@@ -292,6 +293,7 @@ tokOffset	 int
 %token WHEN
 %token WHERE
 %token WHILE
+%token WINDOW
 %token WITH
 %token WITHIN
 %token WORK
@@ -348,7 +350,7 @@ tokOffset	 int
 %type <binding>          binding with_term
 %type <bindings>         bindings with_list
 
-%type <s>                alias as_alias opt_as_alias variable opt_name
+%type <s>                alias as_alias opt_as_alias variable opt_name opt_window_name
 
 %type <expr>             case_expr simple_or_searched_case simple_case searched_case opt_else
 %type <whenTerms>        when_thens
@@ -457,7 +459,8 @@ tokOffset	 int
 %type <u32>              opt_order_nulls
 %type <b>                first_last nulls
 
-%type <windowTerm>          window_specification window_function_details opt_window_function
+%type <windowTerms>         opt_window_clause window_list
+%type <windowTerm>          window_term window_specification window_function_details opt_window_function
 %type <exprs>               opt_window_partition
 %type <u32>                 window_frame_modifier window_frame_valexpr_modifier opt_window_frame_exclusion
 %type <windowFrame>         opt_window_frame
@@ -813,16 +816,16 @@ select_from
 ;
 
 from_select:
-opt_with from opt_let opt_where opt_group select_clause
+opt_with from opt_let opt_where opt_group opt_window_clause select_clause
 {
-    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6)
+    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6, $7)
 }
 ;
 
 select_from:
-opt_with select_clause opt_from opt_let opt_where opt_group
+opt_with select_clause opt_from opt_let opt_where opt_group opt_window_clause
 {
-    $$ = algebra.NewSubselect($1, $3, $4, $5, $6, $2)
+    $$ = algebra.NewSubselect($1, $3, $4, $5, $6, $7, $2)
 }
 ;
 
@@ -3482,11 +3485,48 @@ DISTINCT expr
  *
  *************************************************/
 
-window_specification:
-LPAREN opt_window_partition opt_order_by opt_window_frame RPAREN
+opt_window_clause:
+/* empty */
+{ $$ = nil }
+|
+WINDOW window_list
 {
-    $$ = algebra.NewWindowTerm($2,$3,$4)
+    $$ = $2
 }
+;
+
+window_list:
+window_term
+{
+    $$ = algebra.WindowTerms{$1}
+}
+|
+window_list COMMA window_term
+{
+    $$ = append($1, $3)
+}
+;
+
+window_term:
+IDENT AS window_specification
+{
+    $$ = $3
+    $$.SetAsWindowName($1)
+}
+;
+
+window_specification:
+LPAREN opt_window_name opt_window_partition opt_order_by opt_window_frame RPAREN
+{
+    $$ = algebra.NewWindowTerm($2,$3,$4,$5, false)
+}
+;
+
+opt_window_name:
+/* empty */
+{ $$ = "" }
+|
+IDENT
 ;
 
 opt_window_partition:
@@ -3658,6 +3698,11 @@ window_function_details
 ;
 
 window_function_details:
+OVER IDENT
+{
+    $$ = algebra.NewWindowTerm($2,nil,nil, nil, true)
+}
+|
 OVER window_specification
 {
     $$ = $2

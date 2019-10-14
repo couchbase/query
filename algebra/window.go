@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/couchbase/query/expression"
@@ -17,25 +18,40 @@ import (
 
 /*
  Window Term
+  windowName    WindowTerm is referenced by WindowName
   partitionBy   PARTITION BY clause
   orderBy       ORDER BY BY clause
-  windowframe   window frame clause
+  windowFrame   window frame clause
+  asWindowName  Alias of window name in WINODW CLAUSE
+  flag          referenced by WINDOW NAME
 */
 
 type WindowTerm struct {
-	partitionBy expression.Expressions
-	orderBy     *Order
-	windowFrame *WindowFrame
+	windowName   string
+	partitionBy  expression.Expressions
+	orderBy      *Order
+	windowFrame  *WindowFrame
+	asWindowName string
+	flag         bool
 }
 
-func NewWindowTerm(pby expression.Expressions, oby *Order, windowFrame *WindowFrame) *WindowTerm {
+type WindowTerms []*WindowTerm
+
+func NewWindowTerm(name string, pby expression.Expressions, oby *Order,
+	windowFrame *WindowFrame, flag bool) *WindowTerm {
 	rv := &WindowTerm{
+		windowName:  name,
 		partitionBy: removeDuplicatePbys(pby),
 		orderBy:     oby,
 		windowFrame: windowFrame,
+		flag:        flag,
 	}
 
 	return rv
+}
+
+func (this *WindowTerm) SetAsWindowName(as string) {
+	this.asWindowName = as
 }
 
 /*
@@ -55,6 +71,9 @@ func (this *WindowTerm) Copy() *WindowTerm {
 	if this.windowFrame != nil {
 		rv.windowFrame = this.windowFrame.Copy()
 	}
+	rv.windowName = this.WindowName()
+	rv.asWindowName = this.AsWindowName()
+	rv.flag = this.flag
 
 	return rv
 }
@@ -88,6 +107,79 @@ func (this *WindowTerm) OrderBy() *Order {
 */
 func (this *WindowTerm) WindowFrame() *WindowFrame {
 	return this.windowFrame
+}
+
+func (this *WindowTerm) WindowName() string {
+	return this.windowName
+}
+
+func (this *WindowTerm) AsWindowName() string {
+	return this.asWindowName
+}
+
+func (this *WindowTerm) RewriteToNewWindowTerm(wterms WindowTerms) (err error) {
+	wterm := this
+	rv := wterm
+	if wterm.WindowName() == "" {
+		return nil
+	}
+
+	if err = wterm.ValidateWindowTerm(wterms, len(wterms)-1, 0); err != nil {
+		return err
+	}
+
+	for i := len(wterms) - 1; i >= 0; i-- {
+		w := wterms[i]
+		if wterm.WindowName() == w.AsWindowName() {
+			if w.partitionBy != nil {
+				rv.partitionBy = w.partitionBy.Copy()
+			}
+
+			if w.orderBy != nil {
+				rv.orderBy = w.orderBy.Copy()
+			}
+
+			if w.windowFrame != nil {
+				rv.windowFrame = w.windowFrame.Copy()
+			}
+
+			if w.WindowName() == "" {
+				return nil
+			}
+			wterm = w
+		}
+	}
+
+	return fmt.Errorf("Not able to translate window %s", rv.WindowName())
+}
+
+func (this *WindowTerm) ValidateWindowTerm(wterms WindowTerms, start, end int) (err error) {
+	wterm := this
+	if wterm.WindowName() == "" {
+		return nil
+	}
+
+	for i := start; i >= end; i-- {
+		w := wterms[i]
+		errStr := ""
+		if wterm.WindowName() == w.AsWindowName() {
+			if len(wterm.PartitionBy()) > 0 {
+				errStr = "partitioning"
+			} else if wterm.OrderBy() != nil && w.OrderBy() != nil {
+				errStr = "ordering"
+			} else if !wterm.flag && w.WindowFrame() != nil {
+				errStr = "framing"
+			}
+			if errStr != "" {
+				return fmt.Errorf("Window %s shall not have a window %s clause", w.AsWindowName(), errStr)
+			}
+			if w.WindowName() == "" {
+				return nil
+			}
+			wterm = w
+		}
+	}
+	return fmt.Errorf("Window %s not in the scope of window clause", wterm.WindowName())
 }
 
 /* Map Expressions
@@ -150,7 +242,20 @@ func (this *WindowTerm) Expressions() expression.Expressions {
 String representantion
 */
 func (this *WindowTerm) String() (s string) {
-	s += " OVER ("
+	return this.wnameString(false)
+}
+
+func (this *WindowTerm) wnameString(flag bool) (s string) {
+	if flag {
+		s += " " + this.AsWindowName() + " AS"
+	} else {
+		s += " OVER"
+	}
+	s += " ("
+	if flag && this.WindowName() != "" {
+		s += " " + this.WindowName() + " "
+	}
+
 	pby := this.PartitionBy()
 
 	// PARTITION BY
@@ -216,6 +321,56 @@ func removeDuplicatePbys(pby expression.Expressions) expression.Expressions {
 	}
 
 	return pby
+}
+
+func (this WindowTerms) ValidateWindowTerms() (err error) {
+	wnames := make(map[string]bool, len(this))
+	for i, w := range this {
+		if _, ok := wnames[w.AsWindowName()]; ok {
+			return fmt.Errorf("Duplicate window clause alias %s.", w.AsWindowName())
+		}
+		wnames[w.AsWindowName()] = true
+		if w.WindowName() == "" && w.partitionBy == nil && w.orderBy == nil && w.windowFrame != nil {
+			return fmt.Errorf("Only window frame clause is not allowed in named window: %s", w.AsWindowName())
+		}
+		if err = w.ValidateWindowTerm(this, i, 0); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (this WindowTerms) Formalize(f *expression.Formalizer) (err error) {
+	return this.MapExpressions(f)
+}
+
+func (this WindowTerms) MapExpressions(mapper expression.Mapper) (err error) {
+	for _, w := range this {
+		if err = w.MapExpressions(mapper); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this WindowTerms) Expressions() (rv expression.Expressions) {
+	for _, w := range this {
+		rv = append(rv, w.Expressions()...)
+	}
+	return rv
+}
+
+func (this WindowTerms) String() (rv string) {
+	for i, w := range this {
+		if i == 0 {
+			rv += "WINDOW "
+		} else {
+			rv += ", "
+		}
+		rv += w.wnameString(true)
+	}
+	return rv
 }
 
 // window frame constants

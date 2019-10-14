@@ -30,6 +30,7 @@ type Subselect struct {
 	where      expression.Expression `json:"where"`
 	group      *Group                `json:"group"`
 	projection *Projection           `json:"projection"`
+	window     WindowTerms           `json:"window"`
 	correlated bool                  `json:"correlated"`
 }
 
@@ -37,8 +38,18 @@ type Subselect struct {
 Constructor.
 */
 func NewSubselect(with expression.Bindings, from FromTerm, let expression.Bindings,
-	where expression.Expression, group *Group, projection *Projection) *Subselect {
-	return &Subselect{with, from, let, where, group, projection, false}
+	where expression.Expression, group *Group, window WindowTerms,
+	projection *Projection) *Subselect {
+
+	return &Subselect{
+		with:       with,
+		from:       from,
+		let:        let,
+		where:      where,
+		group:      group,
+		projection: projection,
+		window:     window,
+		correlated: false}
 }
 
 /*
@@ -105,6 +116,13 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 		}
 	}
 
+	if this.window != nil {
+		if err = this.window.Formalize(f); err != nil {
+			return nil, err
+		}
+
+	}
+
 	f, err = this.projection.Formalize(f)
 	if err != nil {
 		return nil, err
@@ -161,6 +179,12 @@ func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 		}
 	}
 
+	if this.window != nil {
+		if err = this.window.MapExpressions(mapper); err != nil {
+			return
+		}
+	}
+
 	return this.projection.MapExpressions(mapper)
 }
 
@@ -184,6 +208,10 @@ func (this *Subselect) Expressions() expression.Expressions {
 
 	if this.group != nil {
 		exprs = append(exprs, this.group.Expressions()...)
+	}
+
+	if this.window != nil {
+		exprs = append(exprs, this.window.Expressions()...)
 	}
 
 	exprs = append(exprs, this.projection.Expressions()...)
@@ -224,6 +252,10 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
 
 	if this.group != nil {
 		exprs = append(exprs, this.group.Expressions()...)
+	}
+
+	if this.window != nil {
+		exprs = append(exprs, this.window.Expressions()...)
 	}
 
 	exprs = append(exprs, this.projection.Expressions()...)
@@ -267,6 +299,9 @@ func (this *Subselect) String() string {
 
 	if this.group != nil {
 		s += " " + this.group.String()
+	}
+	if this.window != nil {
+		s += " " + this.window.String()
 	}
 
 	return s
@@ -326,6 +361,18 @@ statement.
 */
 func (this *Subselect) Projection() *Projection {
 	return this.projection
+}
+
+/*
+Returns the Window in the subselect
+statement.
+*/
+func (this *Subselect) Window() WindowTerms {
+	return this.window
+}
+
+func (this *Subselect) ResetWindow() {
+	this.window = nil
 }
 
 /*

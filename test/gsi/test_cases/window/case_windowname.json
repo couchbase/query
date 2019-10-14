@@ -1,0 +1,978 @@
+[
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT  d.c1, d.c2, d.c4, SUM(d.c1) OVER() AS w1, SUM(d.c4) OVER wn1 AS w2, SUM(d.c4) OVER(wn2) AS w3 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' WINDOW wn1 AS (PARTITION BY d.c1), wn2 AS (PARTITION BY d.c1, d.c2) ORDER BY COUNT(d.c1) OVER() DESC",
+        "results": [
+            {
+                "c1": "A",
+                "c4": 11,
+                "w1": null,
+                "w2": 186,
+                "w3": 21
+            },
+            {
+                "c1": "A",
+                "c4": 10,
+                "w1": null,
+                "w2": 186,
+                "w3": 21
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c4": 12,
+                "w1": null,
+                "w2": 186,
+                "w3": 25
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c4": 13,
+                "w1": null,
+                "w2": 186,
+                "w3": 25
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c4": 16,
+                "w1": null,
+                "w2": 186,
+                "w3": 45
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c4": 14,
+                "w1": null,
+                "w2": 186,
+                "w3": 45
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c4": 15,
+                "w1": null,
+                "w2": 186,
+                "w3": 45
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c4": 17,
+                "w1": null,
+                "w2": 186,
+                "w3": 95
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c4": 18,
+                "w1": null,
+                "w2": 186,
+                "w3": 95
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c4": 19,
+                "w1": null,
+                "w2": 186,
+                "w3": 95
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c4": 20,
+                "w1": null,
+                "w2": 186,
+                "w3": 95
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c4": 21,
+                "w1": null,
+                "w2": 186,
+                "w3": 95
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT d.c1, d.c3, d.c4, SUM(d.c4) OVER(ORDER BY d.c3) AS w1, SUM(d.c4) OVER wn2 AS w2, SUM(d.c4) OVER(wn1) AS w3 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' WINDOW wn1 AS (ORDER BY d.c1 DESC NULLS FIRST, d.c3 ASC NULLS LAST), wn2 AS (ORDER BY d.c1 DESC NULLS LAST, d.c3 ASC NULLS FIRST)",
+        "results": [
+            {
+                "c1": "A",
+                "c4": 10,
+                "w1": 10,
+                "w2": 10,
+                "w3": 175
+            },
+            {
+                "c1": "A",
+                "c3": null,
+                "c4": 11,
+                "w1": 21,
+                "w2": 21,
+                "w3": 186
+            },
+            {
+                "c1": "A",
+                "c3": true,
+                "c4": 19,
+                "w1": 40,
+                "w2": 40,
+                "w3": 19
+            },
+            {
+                "c1": "A",
+                "c3": 1,
+                "c4": 12,
+                "w1": 52,
+                "w2": 52,
+                "w3": 31
+            },
+            {
+                "c1": "A",
+                "c3": 2,
+                "c4": 13,
+                "w1": 65,
+                "w2": 65,
+                "w3": 44
+            },
+            {
+                "c1": "A",
+                "c3": 3,
+                "c4": 14,
+                "w1": 79,
+                "w2": 79,
+                "w3": 58
+            },
+            {
+                "c1": "A",
+                "c3": 4,
+                "c4": 15,
+                "w1": 94,
+                "w2": 94,
+                "w3": 73
+            },
+            {
+                "c1": "A",
+                "c3": 5,
+                "c4": 16,
+                "w1": 110,
+                "w2": 110,
+                "w3": 89
+            },
+            {
+                "c1": "A",
+                "c3": 6,
+                "c4": 17,
+                "w1": 127,
+                "w2": 127,
+                "w3": 106
+            },
+            {
+                "c1": "A",
+                "c3": 7,
+                "c4": 18,
+                "w1": 145,
+                "w2": 145,
+                "w3": 124
+            },
+            {
+                "c1": "A",
+                "c3": 8,
+                "c4": 20,
+                "w1": 165,
+                "w2": 165,
+                "w3": 144
+            },
+            {
+                "c1": "A",
+                "c3": 9,
+                "c4": 21,
+                "w1": 186,
+                "w2": 186,
+                "w3": 165
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT d.c1, d.c2, d.c3, d.c4, d.c5, SUM(d.c4) OVER(wn1 ORDER BY d.c3) AS w1, SUM(d.c4) OVER(wn2) AS w2, COUNT(d.c4) OVER(wn1 ORDER BY d.c2 DESC NULLS FIRST, d.c3 ASC NULLS LAST) AS w3 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' WINDOW wn1 AS (PARTITION BY d.c1), wn2 AS (wn1 ORDER BY d.c2 DESC NULLS LAST, d.c3 ASC NULLS FIRST)",
+        "results": [
+            {
+                "c1": "A",
+                "c4": 10,
+                "c5": 100,
+                "w1": 10,
+                "w2": 175,
+                "w3": 3
+            },
+            {
+                "c1": "A",
+                "c3": null,
+                "c4": 11,
+                "c5": 101,
+                "w1": 21,
+                "w2": 186,
+                "w3": 4
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": true,
+                "c4": 19,
+                "c5": 109,
+                "w1": 40,
+                "w2": 19,
+                "w3": 5
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 1,
+                "c4": 12,
+                "c5": 102,
+                "w1": 52,
+                "w2": 152,
+                "w3": 1
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 2,
+                "c4": 13,
+                "c5": 103,
+                "w1": 65,
+                "w2": 165,
+                "w3": 2
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 3,
+                "c4": 14,
+                "c5": 104,
+                "w1": 79,
+                "w2": 109,
+                "w3": 10
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 4,
+                "c4": 15,
+                "c5": 105,
+                "w1": 94,
+                "w2": 124,
+                "w3": 11
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 5,
+                "c4": 16,
+                "c5": 106,
+                "w1": 110,
+                "w2": 140,
+                "w3": 12
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 6,
+                "c4": 17,
+                "c5": 107,
+                "w1": 127,
+                "w2": 36,
+                "w3": 6
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 7,
+                "c4": 18,
+                "c5": 108,
+                "w1": 145,
+                "w2": 54,
+                "w3": 7
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 8,
+                "c4": 20,
+                "c5": 110,
+                "w1": 165,
+                "w2": 74,
+                "w3": 8
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 9,
+                "c4": 21,
+                "c5": 110,
+                "w1": 186,
+                "w2": 95,
+                "w3": 9
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT SUM(COUNT(d.c2)) OVER() AS w1, SUM(COUNT(d.c3)) OVER(PARTITION BY MIN(d.c1) ORDER BY MAX(d.c2)) AS w2 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A'",
+        "results": [
+            {
+                "w1": 8,
+                "w2": 10
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT d.c2, COUNT(d.c3) AS a1, COUNT(d.c2) AS a2, MIN(d.c3) AS a3, MAX(d.c4) AS a4, SUM(COUNT(d.c3)) OVER() AS w1, SUM(COUNT(d.c2)) OVER(wn1) AS w2 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' GROUP BY d.c2 WINDOW wn1 AS (PARTITION BY MIN(d.c3) ORDER BY MAX(d.c4))",
+        "results": [
+            {
+                "a1": 0,
+                "a2": 0,
+                "a3": null,
+                "a4": 11,
+                "w1": 10,
+                "w2": 0
+            },
+            {
+                "a1": 5,
+                "a2": 5,
+                "a3": true,
+                "a4": 21,
+                "c2": "Y",
+                "w1": 10,
+                "w2": 5
+            },
+            {
+                "a1": 2,
+                "a2": 0,
+                "a3": 1,
+                "a4": 13,
+                "c2": null,
+                "w1": 10,
+                "w2": 0
+            },
+            {
+                "a1": 3,
+                "a2": 3,
+                "a3": 3,
+                "a4": 16,
+                "c2": "X",
+                "w1": 10,
+                "w2": 3
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT d.c1, d.c2, d.c3, d.c4, d.c5, MIN(d.c5) OVER wn1 AS w1, MAX(d.c5) OVER (wn2 ROWS CURRENT ROW) AS w2, MEAN(d.c5) OVER wn3 AS w3, MEAN(DISTINCT d.c5) OVER (PARTITION BY d.c2, LOWER(d.c1) ORDER BY d.c3, d.c1 ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS w4, FIRST_VALUE(d.c5) OVER (wn4 ORDER BY d.c3, d.c1 ROWS BETWEEN 1 PRECEDING AND 2 FOLLOWING EXCLUDE NO OTHERS) AS w5, RANK() OVER (PARTITION BY d.c4 ORDER BY TO_STRING(d.c1), d.c2 ASC NULLS LAST) AS w6, DENSE_RANK() OVER (wn4 ORDER BY d.c3, d.c4) AS w7 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' WINDOW wn1 AS (PARTITION BY d.c2 ORDER BY d.c3, d.c2 NULLS LAST ROWS UNBOUNDED PRECEDING), wn2 AS (PARTITION BY d.c1, d.c2 ORDER BY d.c3, d.c3 DESC), wn3 AS (PARTITION BY UPPER(d.c1), d.c2, d.c1 ORDER BY d.c3, d.c5 ROWS 1 PRECEDING), wn4 AS (PARTITION BY d.c2)",
+        "results": [
+            {
+                "c1": "A",
+                "c4": 10,
+                "c5": 100,
+                "w1": 100,
+                "w2": 100,
+                "w3": 100,
+                "w4": null,
+                "w5": 100,
+                "w6": 1,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c3": null,
+                "c4": 11,
+                "c5": 101,
+                "w1": 100,
+                "w2": 101,
+                "w3": 100.5,
+                "w4": 100,
+                "w5": 100,
+                "w6": 1,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 1,
+                "c4": 12,
+                "c5": 102,
+                "w1": 102,
+                "w2": 102,
+                "w3": 102,
+                "w4": null,
+                "w5": 102,
+                "w6": 1,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 2,
+                "c4": 13,
+                "c5": 103,
+                "w1": 102,
+                "w2": 103,
+                "w3": 102.5,
+                "w4": 102,
+                "w5": 102,
+                "w6": 1,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 3,
+                "c4": 14,
+                "c5": 104,
+                "w1": 104,
+                "w2": 104,
+                "w3": 104,
+                "w4": null,
+                "w5": 104,
+                "w6": 1,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 4,
+                "c4": 15,
+                "c5": 105,
+                "w1": 104,
+                "w2": 105,
+                "w3": 104.5,
+                "w4": 104,
+                "w5": 104,
+                "w6": 1,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 5,
+                "c4": 16,
+                "c5": 106,
+                "w1": 104,
+                "w2": 106,
+                "w3": 105.5,
+                "w4": 104.5,
+                "w5": 105,
+                "w6": 1,
+                "w7": 3
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 6,
+                "c4": 17,
+                "c5": 107,
+                "w1": 107,
+                "w2": 107,
+                "w3": 108,
+                "w4": 109,
+                "w5": 109,
+                "w6": 1,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 7,
+                "c4": 18,
+                "c5": 108,
+                "w1": 107,
+                "w2": 108,
+                "w3": 107.5,
+                "w4": 108,
+                "w5": 107,
+                "w6": 1,
+                "w7": 3
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": true,
+                "c4": 19,
+                "c5": 109,
+                "w1": 109,
+                "w2": 109,
+                "w3": 109,
+                "w4": null,
+                "w5": 109,
+                "w6": 1,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 8,
+                "c4": 20,
+                "c5": 110,
+                "w1": 107,
+                "w2": 110,
+                "w3": 109,
+                "w4": 108,
+                "w5": 108,
+                "w6": 1,
+                "w7": 4
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 9,
+                "c4": 21,
+                "c5": 110,
+                "w1": 107,
+                "w2": 110,
+                "w3": 110,
+                "w4": 108.5,
+                "w5": 110,
+                "w6": 1,
+                "w7": 5
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT d.c1, d.c2, d.c3, d.c4, d.c5, SUM(d.c5) OVER (wn1 ORDER BY d.c3, d.c1 DESC NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS w1, SUM(DISTINCT d.c5) OVER (PARTITION BY d.c1, d.c2 ORDER BY d.c4, d.c3 ROWS BETWEEN UNBOUNDED PRECEDING AND 2 FOLLOWING) AS w2, AVG(DISTINCT d.c5) OVER (PARTITION BY UPPER(d.c1), d.c2, d.c1 ORDER BY d.c3, d.c5 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS w3, RATIO_TO_REPORT(d.c5) OVER (PARTITION BY d.c2, LOWER(d.c1) ORDER BY d.c3, d.c1 DESC ROWS BETWEEN CURRENT ROW AND CURRENT ROW) AS w4, LAST_VALUE(d.c5) OVER wn3 AS w5, ROW_NUMBER() OVER (PARTITION BY TO_STRING(d.c1) ORDER BY d.c2, d.c3 DESC) AS w6, NTILE(3) OVER (wn2) AS w7 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' WINDOW wn1 AS (PARTITION BY d.c2), wn2 AS (wn1 ORDER BY d.c4, d.c3 NULLS LAST), wn3 AS (PARTITION BY d.c1, d.c2 ORDER BY d.c1, d.c3 ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING EXCLUDE CURRENT ROW)",
+        "results": [
+            {
+                "c1": "A",
+                "c4": 10,
+                "c5": 100,
+                "w1": 100,
+                "w2": 201,
+                "w3": 100.5,
+                "w4": 1,
+                "w5": 101,
+                "w6": 2,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c3": null,
+                "c4": 11,
+                "c5": 101,
+                "w1": 201,
+                "w2": 201,
+                "w3": 100.5,
+                "w4": 1,
+                "w5": 100,
+                "w6": 1,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 1,
+                "c4": 12,
+                "c5": 102,
+                "w1": 102,
+                "w2": 205,
+                "w3": 102.5,
+                "w4": 1,
+                "w5": 103,
+                "w6": 4,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 2,
+                "c4": 13,
+                "c5": 103,
+                "w1": 205,
+                "w2": 205,
+                "w3": 102.5,
+                "w4": 1,
+                "w5": 102,
+                "w6": 3,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 3,
+                "c4": 14,
+                "c5": 104,
+                "w1": 104,
+                "w2": 315,
+                "w3": 105,
+                "w4": 1,
+                "w5": 106,
+                "w6": 7,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 4,
+                "c4": 15,
+                "c5": 105,
+                "w1": 209,
+                "w2": 315,
+                "w3": 105,
+                "w4": 1,
+                "w5": 106,
+                "w6": 6,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 5,
+                "c4": 16,
+                "c5": 106,
+                "w1": 315,
+                "w2": 315,
+                "w3": 105,
+                "w4": 1,
+                "w5": 105,
+                "w6": 5,
+                "w7": 3
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 6,
+                "c4": 17,
+                "c5": 107,
+                "w1": 216,
+                "w2": 324,
+                "w3": 108.5,
+                "w4": 1,
+                "w5": 110,
+                "w6": 11,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 7,
+                "c4": 18,
+                "c5": 108,
+                "w1": 324,
+                "w2": 434,
+                "w3": 108.5,
+                "w4": 1,
+                "w5": 110,
+                "w6": 10,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": true,
+                "c4": 19,
+                "c5": 109,
+                "w1": 109,
+                "w2": 434,
+                "w3": 108.5,
+                "w4": 1,
+                "w5": 110,
+                "w6": 12,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 8,
+                "c4": 20,
+                "c5": 110,
+                "w1": 434,
+                "w2": 434,
+                "w3": 108.5,
+                "w4": 1,
+                "w5": 110,
+                "w6": 9,
+                "w7": 2
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 9,
+                "c4": 21,
+                "c5": 110,
+                "w1": 544,
+                "w2": 434,
+                "w3": 108.5,
+                "w4": 1,
+                "w5": 110,
+                "w6": 8,
+                "w7": 3
+            }
+        ]
+    },
+    {
+        "testcase": "Window Aggregates",
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate'"
+        },
+        "statements": "SELECT d.c1, d.c2, d.c3, d.c4, d.c5, COUNT(d.c5) OVER wn2 AS w1, COUNT(DISTINCT d.c5) OVER wn1 AS w2, COUNTN(d.c5) OVER (PARTITION BY UPPER(d.c1), d.c2, d.c1 ORDER BY d.c5, d.c3 ROWS BETWEEN 1 PRECEDING AND 2 PRECEDING) AS w3, COUNTN(DISTINCT d.c5) OVER (PARTITION BY d.c2, LOWER(d.c1) ORDER BY d.c1, d.c3 ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS w4, NTH_VALUE(d.c5, 2) OVER (wn3 ROWS BETWEEN 2 FOLLOWING AND 4 FOLLOWING EXCLUDE TIES) AS w5, PERCENT_RANK() OVER (PARTITION BY TO_STRING(d.c1) ORDER BY d.c3, d.c2) AS w6, CUME_DIST() OVER (PARTITION BY d.c2 ORDER BY d.c1, d.c3 DESC NULLS FIRST) AS w7 FROM orders AS d WHERE d.test_id = 'window' AND d.c1 = 'A' WINDOW wn1 AS (PARTITION BY d.c1, d.c2 ORDER BY d.c3, d.c4 DESC NULLS LAST ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING), wn2 AS (PARTITION BY d.c2 ORDER BY d.c3, LOWER(d.c1) ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING), wn3 AS (PARTITION BY d.c4, d.c2, d.c1 ORDER BY d.c3)",
+        "results": [
+            {
+                "c1": "A",
+                "c3": null,
+                "c4": 11,
+                "c5": 101,
+                "w1": 1,
+                "w2": 1,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.09090909090909091,
+                "w7": 0.5
+            },
+            {
+                "c1": "A",
+                "c4": 10,
+                "c5": 100,
+                "w1": 2,
+                "w2": 2,
+                "w3": 0,
+                "w4": 1,
+                "w5": null,
+                "w6": 0,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 2,
+                "c4": 13,
+                "c5": 103,
+                "w1": 1,
+                "w2": 1,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.36363636363636365,
+                "w7": 0.5
+            },
+            {
+                "c1": "A",
+                "c2": null,
+                "c3": 1,
+                "c4": 12,
+                "c5": 102,
+                "w1": 2,
+                "w2": 2,
+                "w3": 0,
+                "w4": 1,
+                "w5": null,
+                "w6": 0.2727272727272727,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 5,
+                "c4": 16,
+                "c5": 106,
+                "w1": 1,
+                "w2": 1,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.6363636363636364,
+                "w7": 0.3333333333333333
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 4,
+                "c4": 15,
+                "c5": 105,
+                "w1": 2,
+                "w2": 2,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.5454545454545454,
+                "w7": 0.6666666666666666
+            },
+            {
+                "c1": "A",
+                "c2": "X",
+                "c3": 3,
+                "c4": 14,
+                "c5": 104,
+                "w1": 3,
+                "w2": 3,
+                "w3": 0,
+                "w4": 1,
+                "w5": null,
+                "w6": 0.45454545454545453,
+                "w7": 1
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 9,
+                "c4": 21,
+                "c5": 110,
+                "w1": 1,
+                "w2": 1,
+                "w3": 0,
+                "w4": 1,
+                "w5": null,
+                "w6": 1,
+                "w7": 0.2
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 8,
+                "c4": 20,
+                "c5": 110,
+                "w1": 2,
+                "w2": 1,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.9090909090909091,
+                "w7": 0.4
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 7,
+                "c4": 18,
+                "c5": 108,
+                "w1": 3,
+                "w2": 2,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.8181818181818182,
+                "w7": 0.6
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": 6,
+                "c4": 17,
+                "c5": 107,
+                "w1": 3,
+                "w2": 3,
+                "w3": 0,
+                "w4": 2,
+                "w5": null,
+                "w6": 0.7272727272727273,
+                "w7": 0.8
+            },
+            {
+                "c1": "A",
+                "c2": "Y",
+                "c3": true,
+                "c4": 19,
+                "c5": 109,
+                "w1": 3,
+                "w2": 4,
+                "w3": 0,
+                "w4": 1,
+                "w5": null,
+                "w6": 0.18181818181818182,
+                "w7": 1
+            }
+        ]
+    }
+]

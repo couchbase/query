@@ -48,9 +48,9 @@ func (this *ExpressionTerm) MapExpressions(mapper expression.Mapper) (err error)
 	if this.isKeyspace {
 		return this.keyspaceTerm.MapExpressions(mapper)
 	} else {
-		this.fromExpr, _ = mapper.Map(this.fromExpr)
+		this.fromExpr, err = mapper.Map(this.fromExpr)
 	}
-	return nil
+	return err
 }
 
 /*

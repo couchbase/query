@@ -35009,6 +35009,185 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
 
+	// [wW][iI][nN][dD][oO][wW]
+	{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return 1
+			case 100:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return 1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 73:
+				return 2
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 105:
+				return 2
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 73:
+				return -1
+			case 78:
+				return 3
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return 3
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return 4
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return 4
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return 5
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return 5
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return 6
+			case 100:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return 6
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
+
 	// [wW][iI][tT][hH]
 	{[]bool{false, false, false, false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
@@ -36974,51 +37153,52 @@ OUTER0:
 			}
 		case 225:
 			{
+				yylex.logToken(yylex.Text(), "WINDOW")
+				return WINDOW
+			}
+		case 226:
+			{
 				yylex.logToken(yylex.Text(), "WITH")
 				return WITH
 			}
-		case 226:
+		case 227:
 			{
 				yylex.logToken(yylex.Text(), "WITHIN")
 				return WITHIN
 			}
-		case 227:
+		case 228:
 			{
 				yylex.logToken(yylex.Text(), "WORK")
 				return WORK
 			}
-		case 228:
+		case 229:
 			{
 				yylex.logToken(yylex.Text(), "XOR")
 				return XOR
 			}
-		case 229:
+		case 230:
 			{
 				lval.s = yylex.Text()
 				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 				return IDENT
 			}
-		case 230:
+		case 231:
 			{
 				lval.s = yylex.Text()[1:]
 				yylex.logToken(yylex.Text(), "NAMED_PARAM - %s", lval.s)
 				return NAMED_PARAM
 			}
-		case 231:
+		case 232:
 			{
 				lval.n, _ = strconv.ParseInt(yylex.Text()[1:], 10, 64)
 				yylex.logToken(yylex.Text(), "POSITIONAL_PARAM - %d", lval.n)
 				return POSITIONAL_PARAM
 			}
-		case 232:
+		case 233:
 			{
 				lval.n = 0 // Handled by parser
 				yylex.logToken(yylex.Text(), "NEXT_PARAM - ?")
 				return NEXT_PARAM
-			}
-		case 233:
-			{
-				yylex.curOffset++
 			}
 		case 234:
 			{
@@ -37029,6 +37209,10 @@ OUTER0:
 				yylex.curOffset++
 			}
 		case 236:
+			{
+				yylex.curOffset++
+			}
+		case 237:
 			{
 				/* this we don't know what it is: we'll let
 				   the parser handle it (and most probably throw a syntax error

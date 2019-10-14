@@ -325,6 +325,7 @@
 /[wW][hH][eE][nN]/				 { yylex.logToken(yylex.Text(), "WHEN"); return WHEN }
 /[wW][hH][eE][rR][eE]/				 { yylex.logToken(yylex.Text(), "WHERE"); return WHERE }
 /[wW][hH][iI][lL][eE]/				 { yylex.logToken(yylex.Text(), "WHILE"); return WHILE }
+/[wW][iI][nN][dD][oO][wW]/			 { yylex.logToken(yylex.Text(), "WINDOW"); return WINDOW }
 /[wW][iI][tT][hH]/				 { yylex.logToken(yylex.Text(), "WITH"); return WITH }
 /[wW][iI][tT][hH][iI][nN]/			 { yylex.logToken(yylex.Text(), "WITHIN"); return WITHIN }
 /[wW][oO][rR][kK]/				 { yylex.logToken(yylex.Text(), "WORK"); return WORK }
