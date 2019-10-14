@@ -212,11 +212,6 @@ type Expression interface {
 	   Set identifier flags
 	*/
 	SetIdentFlags(aliases map[string]bool, flags uint32)
-
-	/*
-	   ExpressionBase
-	*/
-	ExprBase() *ExpressionBase
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

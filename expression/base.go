@@ -307,16 +307,16 @@ by the list of expressions; that is, this expression does not depend
 on any stored data beyond the expressions.
 */
 func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
-	var rv Covered
+	chkArray := options.hasCoverArrayKeyOptions()
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
 			return CoveredEquiv
 		}
 
 		// special handling of array index expression
-		if options.hasCoverArrayKeyOptions() {
+		if chkArray {
 			if all, ok := expr.(*All); ok {
-				rv = chkArrayKeyCover(this.expr, keyspace, exprs, all, options)
+				rv := chkArrayKeyCover(this.expr, keyspace, exprs, all, options)
 				if rv == CoveredTrue || rv == CoveredEquiv {
 					return rv
 				}
@@ -324,39 +324,7 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 		}
 	}
 
-	children := this.expr.Children()
-	rv = CoveredTrue
-
-	// MB-22112: we treat the special case where a keyspace is part of the projection list
-	// a keyspace as a single term does not cover by definition
-	// a keyspace as part of a field or a path does cover to delay the decision in terms
-	// further down the path
-	for _, child := range children {
-		switch child.CoveredBy(keyspace, exprs, options) {
-		case CoveredFalse:
-			return CoveredFalse
-
-		// MB-25317: ignore expressions not related to this keyspace
-		case CoveredSkip:
-			options.setCoverSkip()
-
-			// MB-30350 trickle down CoveredSkip to outermost field
-			if options.hasCoverTrickle() {
-				rv = CoveredSkip
-			}
-
-		// MB-25560: this subexpression is already covered, no need to check subsequent terms
-		case CoveredEquiv:
-			options.setCoverSkip()
-
-			// trickle down CoveredEquiv to outermost field
-			if options.hasCoverTrickle() {
-				rv = CoveredEquiv
-			}
-		}
-	}
-
-	return rv
+	return chkCoverChildren(keyspace, exprs, options, this.expr.Children(), false)
 }
 
 /*
@@ -521,8 +489,4 @@ func (this *ExpressionBase) SetIdentFlags(aliases map[string]bool, flags uint32)
 	for _, child := range this.expr.Children() {
 		child.SetIdentFlags(aliases, flags)
 	}
-}
-
-func (this *ExpressionBase) ExprBase() *ExpressionBase {
-	return this
 }

@@ -88,7 +88,7 @@ func (this *Field) EquivalentTo(other Expression) bool {
 }
 
 func (this *Field) CoveredBy(keyspace string, exprs Expressions, options coveredOptions) Covered {
-	var rv Covered
+	chkArray := options.hasCoverArrayKeyOptions()
 	for _, expr := range exprs {
 
 		// MB-25560: if a field is equivalent, no need to check children field / field names
@@ -97,9 +97,9 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options covered
 		}
 
 		// special handling of array index expression
-		if options.hasCoverArrayKeyOptions() {
+		if chkArray {
 			if all, ok := expr.(*All); ok {
-				rv = chkArrayKeyCover(this.expr, keyspace, exprs, all, options)
+				rv := chkArrayKeyCover(this.expr, keyspace, exprs, all, options)
 				if rv == CoveredTrue || rv == CoveredEquiv {
 					return rv
 				}
@@ -113,40 +113,7 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options covered
 		return CoveredFalse
 	}
 
-	children := this.expr.Children()
-	trickle := options.hasCoverTrickle()
-	options.setCoverTrickle()
-	rv = CoveredTrue
-
-	// MB-22112: we treat the special case where a keyspace is part of the projection list
-	// a keyspace as a single term does not cover by definition
-	// a keyspace as part of a field or a path does cover to delay the decision in terms
-	// further down the path
-	for _, child := range children {
-		switch child.CoveredBy(keyspace, exprs, options) {
-		case CoveredFalse:
-			return CoveredFalse
-
-		// MB-25317: ignore expressions not related to this keyspace
-		case CoveredSkip:
-			options.setCoverSkip()
-
-			if trickle {
-				rv = CoveredSkip
-			}
-
-		// MB-25560: this subexpression is already covered, no need to check subsequent terms
-		case CoveredEquiv:
-			options.setCoverSkip()
-
-			// trickle down CoveredEquiv to outermost field
-			if trickle {
-				rv = CoveredEquiv
-			}
-		}
-	}
-
-	return rv
+	return chkCoverChildren(keyspace, exprs, options, this.expr.Children(), true)
 }
 
 /*
