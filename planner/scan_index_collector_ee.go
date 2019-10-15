@@ -437,7 +437,7 @@ func extractInfo(index datastore.Index, keyspace, keyspaceAlias string, deferred
 	if index == nil {
 		return nil
 	}
-	info := iaplan.NewIndexInfo(index.Name(), keyspace, "", index.IsPrimary(), "", nil, "", deferred)
+	info := iaplan.NewIndexInfo(index.Name(), keyspace, keyspaceAlias, index.IsPrimary(), "", nil, "", deferred)
 	if index2, ok := index.(datastore.Index2); ok {
 		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, getIndexKeyExpressions(index2.RangeKey2())))
 	} else {
