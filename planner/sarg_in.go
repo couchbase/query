@@ -67,7 +67,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			if this.doSelec {
 				selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String())
 			}
-			static.SetDynamicIn()
+			static.SetExprFlag(expression.EXPR_DYNAMIC_IN)
 			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 			return NewTermSpans(span), nil

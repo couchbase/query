@@ -54,7 +54,7 @@ func (this *ExpressionBase) MarshalJSON() ([]byte, error) {
 Make sure expression flags are copied when copying expression
 */
 func (this *ExpressionBase) BaseCopy(oldExpr Expression) {
-	this.setExprFlags(oldExpr.getExprFlags())
+	this.setExprFlags(oldExpr.ExprBase().getExprFlags())
 }
 
 /*
@@ -86,6 +86,18 @@ func (this *ExpressionBase) setExprFlags(flags uint32) {
 	this.exprFlags = flags
 }
 
+func (this *ExpressionBase) HasExprFlag(flag uint32) bool {
+	return (this.exprFlags & flag) != 0
+}
+
+func (this *ExpressionBase) SetExprFlag(flag uint32) {
+	this.exprFlags |= flag
+}
+
+func (this *ExpressionBase) UnsetExprFlag(flag uint32) {
+	this.exprFlags &^= flag
+}
+
 func (this *ExpressionBase) volatile() bool {
 	return (this.exprFlags & EXPR_IS_VOLATILE) != 0
 }
@@ -104,70 +116,6 @@ func (this *ExpressionBase) conditional() bool {
 
 func (this *ExpressionBase) setConditional() {
 	this.exprFlags |= EXPR_IS_CONDITIONAL
-}
-
-func (this *ExpressionBase) canFlatten() bool {
-	return (this.exprFlags & EXPR_CAN_FLATTEN) != 0
-}
-
-func (this *ExpressionBase) SetFlatten() {
-	this.exprFlags |= EXPR_CAN_FLATTEN
-}
-
-/*
-This method returns if the expression evaluates to MISSING
-Needs to be called after Value() call on the expression
-*/
-func (this *ExpressionBase) IsValueMissing() bool {
-	return (this.exprFlags & EXPR_VALUE_MISSING) != 0
-}
-
-func (this *ExpressionBase) SetValueMissing() {
-	this.exprFlags |= EXPR_VALUE_MISSING
-}
-
-/*
-This method returns if the expression evaluates to NULL
-Needs to be called after Value() call on the expression
-*/
-func (this *ExpressionBase) IsValueNull() bool {
-	return (this.exprFlags & EXPR_VALUE_NULL) != 0
-}
-
-func (this *ExpressionBase) SetValueNull() {
-	this.exprFlags |= EXPR_VALUE_NULL
-}
-
-func (this *ExpressionBase) IsDynamicIn() bool {
-	return (this.exprFlags & EXPR_DYNAMIC_IN) != 0
-}
-
-func (this *ExpressionBase) SetDynamicIn() {
-	this.exprFlags |= EXPR_DYNAMIC_IN
-}
-
-func (this *ExpressionBase) IsOrFromNE() bool {
-	return (this.exprFlags & EXPR_OR_FROM_NE) != 0
-}
-
-func (this *ExpressionBase) SetOrFromNE() {
-	this.exprFlags |= EXPR_OR_FROM_NE
-}
-
-func (this *ExpressionBase) IsDerivedRange() bool {
-	return (this.exprFlags & EXPR_DERIVED_RANGE) != 0
-}
-
-func (this *ExpressionBase) SetDerivedRange() {
-	this.exprFlags |= EXPR_DERIVED_RANGE
-}
-
-func (this *ExpressionBase) IsDerivedFromLike() bool {
-	return (this.exprFlags & EXPR_DERIVED_FROM_LIKE) != 0
-}
-
-func (this *ExpressionBase) SetDerivedFromLike() {
-	this.exprFlags |= EXPR_DERIVED_FROM_LIKE
 }
 
 /*
@@ -199,13 +147,13 @@ func (this *ExpressionBase) Value() value.Value {
 		}
 
 		if propMissing && cv.Type() == value.MISSING {
-			this.SetValueMissing()
+			this.SetExprFlag(EXPR_VALUE_MISSING)
 			this.value = &cv
 			return *this.value
 		}
 
 		if propNull && cv.Type() == value.NULL {
-			this.SetValueNull()
+			this.SetExprFlag(EXPR_VALUE_NULL)
 			this.value = &cv
 		}
 	}
@@ -229,9 +177,9 @@ func (this *ExpressionBase) Value() value.Value {
 
 	if val != nil {
 		if val.Type() == value.MISSING {
-			this.SetValueMissing()
+			this.SetExprFlag(EXPR_VALUE_MISSING)
 		} else if val.Type() == value.NULL {
-			this.SetValueNull()
+			this.SetExprFlag(EXPR_VALUE_NULL)
 		}
 	}
 

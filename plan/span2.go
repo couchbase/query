@@ -164,8 +164,8 @@ func (this *Range2) UnmarshalJSON(body []byte) error {
 	if _unmarshalled.DynamicIn {
 		if low, ok1 := this.Low.(*expression.ArrayMin); ok1 {
 			if high, ok2 := this.High.(*expression.ArrayMax); ok2 {
-				low.Operand().SetDynamicIn()
-				high.Operand().SetDynamicIn()
+				low.Operand().SetExprFlag(expression.EXPR_DYNAMIC_IN)
+				high.Operand().SetExprFlag(expression.EXPR_DYNAMIC_IN)
 			}
 		}
 	}
@@ -215,10 +215,10 @@ func (this *Range2) String() string {
 
 func (this *Range2) IsDynamicIn() bool {
 	var op1, op2 expression.Expression
-	if low, ok1 := this.Low.(*expression.ArrayMin); ok1 && low.Operand().IsDynamicIn() {
+	if low, ok1 := this.Low.(*expression.ArrayMin); ok1 && low.Operand().HasExprFlag(expression.EXPR_DYNAMIC_IN) {
 		op1 = low.Operand()
 	}
-	if high, ok2 := this.High.(*expression.ArrayMax); ok2 && high.Operand().IsDynamicIn() {
+	if high, ok2 := this.High.(*expression.ArrayMax); ok2 && high.Operand().HasExprFlag(expression.EXPR_DYNAMIC_IN) {
 		op2 = high.Operand()
 	}
 	if op1 != nil && op2 != nil && op1.EquivalentTo(op2) {

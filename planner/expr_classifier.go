@@ -123,7 +123,7 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 	for _, op := range or.Operands() {
 		skip := false
 		cop := op.Value()
-		if op.IsValueMissing() || op.IsValueNull() {
+		if op.HasExprFlag(expression.EXPR_VALUE_MISSING) || op.HasExprFlag(expression.EXPR_VALUE_NULL) {
 			skip = true
 		} else if cop != nil {
 			// TRUE subterm should have been handled above

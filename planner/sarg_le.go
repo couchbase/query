@@ -38,7 +38,7 @@ func (this *sarg) VisitLE(pred *expression.LE) (interface{}, error) {
 		range2.Inclusion = datastore.LOW
 		range2.Selec1 = selec
 		range2.Selec2 = OPT_SELEC_NOT_AVAIL
-		if pred.IsDerivedFromLike() {
+		if pred.HasExprFlag(expression.EXPR_DERIVED_FROM_LIKE) {
 			range2.SetFlag(plan.RANGE_DERIVED_FROM_LIKE)
 		}
 	} else if pred.DependsOn(this.key) {

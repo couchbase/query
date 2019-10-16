@@ -204,74 +204,24 @@ type Expression interface {
 	ResetValue()
 
 	/*
-	   Get expression flags
+	   Check expression flag
 	*/
-	getExprFlags() uint32
+	HasExprFlag(flag uint32) bool
 
 	/*
-	   Set expression flags
+	   Set expression flag
 	*/
-	setExprFlags(flags uint32)
+	SetExprFlag(flag uint32)
 
 	/*
-	   Does Value() call generate a MISSING value
+	   Unset expression flag
 	*/
-	IsValueMissing() bool
-
-	/*
-	   Does Value() call generate a NULL value
-	*/
-	IsValueNull() bool
-
-	/*
-	   Dynamic IN-list expansion
-	*/
-	IsDynamicIn() bool
-
-	/*
-	   Set dynamic IN-list expansion
-	*/
-	SetDynamicIn()
-
-	/*
-	   OR clause from NE
-	*/
-	IsOrFromNE() bool
-
-	/*
-	   Set OR clause from NE
-	*/
-	SetOrFromNE()
-
-	/*
-	   Derived range (GT/GE AND LT/LE)
-	*/
-	IsDerivedRange() bool
-
-	/*
-	   Set derived range
-	*/
-	SetDerivedRange()
-
-	/*
-	   Derived from LIKE
-	*/
-	IsDerivedFromLike() bool
-
-	/*
-	   Set derived from LIKE
-	*/
-	SetDerivedFromLike()
+	UnsetExprFlag(flag uint32)
 
 	/*
 	   Enable in-list evaluation optimization (using hash table)
 	*/
 	EnableInlistHash(context Context)
-
-	/*
-	   Enable single element array flattening optimization
-	*/
-	SetFlatten()
 
 	/*
 	   Reset runtime-alloated memory

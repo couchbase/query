@@ -42,7 +42,7 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 
 	exp := expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
 		expression.NewLE(expr.First(), expr.Third()))
-	exp.SetDerivedRange()
+	exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	return exp, nil
 }
 
@@ -172,7 +172,7 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	case *expression.Eq:
 		exp = expression.NewOr(expression.NewLT(operand.First(), operand.Second()),
 			expression.NewLT(operand.Second(), operand.First()))
-		exp.SetOrFromNE()
+		exp.SetExprFlag(expression.EXPR_OR_FROM_NE)
 	case *expression.LT:
 		exp = expression.NewLE(operand.Second(), operand.First())
 	case *expression.LE:
@@ -211,22 +211,22 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 		exp = expression.NewAnd(
 			expression.NewGT(expr.Operand(), expression.TRUE_EXPR),
 			expression.NewLT(expr.Operand(), expression.EMPTY_STRING_EXPR))
-		exp.SetDerivedRange()
+		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsString:
 		exp = expression.NewAnd(
 			expression.NewGE(expr.Operand(), expression.EMPTY_STRING_EXPR),
 			expression.NewLT(expr.Operand(), expression.EMPTY_ARRAY_EXPR))
-		exp.SetDerivedRange()
+		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsArray:
 		exp = expression.NewAnd(
 			expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR),
 			expression.NewLT(expr.Operand(), _EMPTY_OBJECT_EXPR))
-		exp.SetDerivedRange()
+		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsObject:
 		exp = expression.NewAnd(
 			expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR),
 			expr)
-		exp.SetDerivedRange()
+		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 		return exp, nil // Avoid infinite recursion
 	default:
 		return expr, nil // Avoid infinite recursion
@@ -501,10 +501,10 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	bytes := []byte(prefix)
 	bytes[last]++
 	lt := expression.NewLT(expr.First(), expression.NewConstant(string(bytes)))
-	ge.SetDerivedFromLike()
-	lt.SetDerivedFromLike()
+	ge.SetExprFlag(expression.EXPR_DERIVED_FROM_LIKE)
+	lt.SetExprFlag(expression.EXPR_DERIVED_FROM_LIKE)
 	and := expression.NewAnd(ge, lt)
-	and.SetDerivedRange()
+	and.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	return and, nil
 }
 

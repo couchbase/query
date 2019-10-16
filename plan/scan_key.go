@@ -23,7 +23,7 @@ type KeyScan struct {
 }
 
 func NewKeyScan(keys expression.Expression) *KeyScan {
-	keys.SetFlatten()
+	keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 	return &KeyScan{
 		keys: keys,
 	}
@@ -68,7 +68,7 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	if _unmarshalled.Keys != "" {
 		this.keys, err = parser.Parse(_unmarshalled.Keys)
 		if this.keys != nil {
-			this.keys.SetFlatten()
+			this.keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 		}
 	}
 

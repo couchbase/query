@@ -59,9 +59,9 @@ func (this *Or) Value() value.Value {
 
 	for _, child := range this.Children() {
 		cv := child.Value()
-		if child.IsValueMissing() {
+		if child.HasExprFlag(EXPR_VALUE_MISSING) {
 			valMissing = cv
-		} else if child.IsValueNull() {
+		} else if child.HasExprFlag(EXPR_VALUE_NULL) {
 			valNull = cv
 		} else {
 			if cv == nil {
@@ -88,7 +88,7 @@ func (this *Or) Value() value.Value {
 		if valMissing != nil || valNull != nil {
 			subterms := make(Expressions, 0, len(this.Children()))
 			for _, child := range this.Children() {
-				if !child.IsValueMissing() && !child.IsValueNull() {
+				if !child.HasExprFlag(EXPR_VALUE_MISSING) && !child.HasExprFlag(EXPR_VALUE_NULL) {
 					subterms = append(subterms, child)
 				}
 			}
