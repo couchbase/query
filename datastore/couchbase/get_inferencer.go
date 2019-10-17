@@ -17,9 +17,9 @@
 package couchbase
 
 import (
-	infer "github.com/couchbase/query/inferencer"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	infer "github.com/couchbase/query/inferencer"
 )
 
 func GetDefaultInferencer(store datastore.Datastore) (datastore.Inferencer, errors.Error) {
