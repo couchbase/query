@@ -280,17 +280,16 @@
           "adviseinfo": [
             {
               "recommended_indexes": {
-                "covering_indexes": [
-                  {
-                    "index_statement": "CREATE INDEX adv_a11ISMISSING_a21_a31_c21 ON `shellTest`(`a11` IS MISSING,`a21`,`a31`,`c21`) WHERE `a11` IS MISSING",
-                    "keyspace_alias": "shellTest"
-                  }
-                ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_a11ISMISSING_a21_a31 ON `shellTest`(`a11` IS MISSING,`a21`,`a31`) WHERE `a11` IS MISSING",
+                    "index_statement": "CREATE INDEX adv_a21_a11 ON `shellTest`(`a21`,`a11`)",
                     "keyspace_alias": "shellTest",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 2. equality/null/missing, 5. less than/between/greater than."
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  },
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING_a31 ON `shellTest`(`a11` IS MISSING,`a31`) WHERE `a11` IS MISSING",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than."
                   }
                 ]
               }
@@ -314,13 +313,13 @@
               "recommended_indexes": {
                 "covering_indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_a21_a11ISMISSING_c11_c21 ON `shellTest`(`a21`,`a11` IS MISSING,`c11`,`c21`)",
+                    "index_statement": "CREATE INDEX adv_a21_a11_c11_c21 ON `shellTest`(`a21`,`a11`,`c11`,`c21`)",
                     "keyspace_alias": "shellTest"
                   }
                 ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_a21_a11ISMISSING_c11 ON `shellTest`(`a21`,`a11` IS MISSING,`c11`)",
+                    "index_statement": "CREATE INDEX adv_a21_a11_c11 ON `shellTest`(`a21`,`a11`,`c11`)",
                     "keyspace_alias": "shellTest",
                     "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 2. equality/null/missing, 8. not null/not missing/valued."
                   }
@@ -430,6 +429,164 @@
           ]
         },
         "query": "SELECT meta().id FROM shellTest st WHERE ANY cba IN st.a SATISFIES [cba.type,cba.val,cba.name] = [\"doc\", \"4\", \"word\"] OR [cba.type,cba.val,cba.name] = [\"doc\", \"7\", \"excel\"] OR ([cba.type,cba.val,cba.name] >= [\"ppt\", \"xc\"] AND [cba.type,cba.val,cba.name] < [\"ppt\", SUCCESSOR(\"xc\")]) OR ([cba.type,cba.val,cba.name] >= [\"pdf\", \"paper\"] AND [cba.type,cba.val,cba.name] < [\"pdf\", SUCCESSOR(\"paper\")]) END and st.b is not missing and length(st.c) > 5"
+      }
+    ]
+  },
+  {
+    "statements": "advise select id, name from shellTest where id in [1, 10, 20] and (c < 'x' or c is missing)",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_c_name ON `shellTest`(`id`,`c`,`name`)",
+                    "keyspace_alias": "shellTest"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_c ON `shellTest`(`id`,`c`)",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/between/greater than)."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select id, name from shellTest where id in [1, 10, 20] and (c < 'x' or c is missing)"
+      }
+    ]
+  },
+  {
+    "statements": "advise select id, name from shellTest where id in [1, 10, 20] and (c is missing or c < 'x')",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_c_name ON `shellTest`(`id`,`c`,`name`)",
+                    "keyspace_alias": "shellTest"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_c ON `shellTest`(`id`,`c`)",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/between/greater than)."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select id, name from shellTest where id in [1, 10, 20] and (c is missing or c < 'x')"
+      }
+    ]
+  },
+  {
+    "statements": "advise select id, name from shellTest where id in [1, 10, 20] and c is missing and (a < 10 or a > 20)",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_a_c_name ON `shellTest`(`id`,`a`,`c`,`name`)",
+                    "keyspace_alias": "shellTest"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_a_c ON `shellTest`(`id`,`a`,`c`)",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/between/greater than, 2. equality/null/missing)."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select id, name from shellTest where id in [1, 10, 20] and c is missing and (a < 10 or a > 20)"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c21 from shellTest where a11 is missing or a11 is not null",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING ON `shellTest`(`a11` IS MISSING) WHERE `a11` IS MISSING",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  },
+                  {
+                    "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11`)",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c21 from shellTest where a11 is missing or a11 is not null"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c21 from shellTest where (a11 is missing or a11 is not null) and b is missing",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_a11ISMISSING_b ON `shellTest`(`a11` IS MISSING,`b`) WHERE `a11` IS MISSING",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  },
+                  {
+                    "index_statement": "CREATE INDEX adv_bISMISSING_a11 ON `shellTest`(`b` IS MISSING,`a11`) WHERE `b` IS MISSING",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 8. not null/not missing/valued."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select c21 from shellTest where (a11 is missing or a11 is not null) and b is missing"
       }
     ]
   }
