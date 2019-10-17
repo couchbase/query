@@ -1,0 +1,5 @@
+[
+    {"field0":"string0","field1":null,"field2":212345,"field3":false,"field4":"string4","field5":512345,"field6":true,"field7": "string7","field8":812345,"field9":true},
+    {"field0":12345,"field1":"string1","field2":null,"field3":false,"field4":"string4","field5":512345,"field6":true,"field7": "string7","field8":812345},
+    {"field0":true,"field1":"string1","field2":212345,"field3":null,"field4":"string4","field5":512345,"field6":true,"field7": "string7","field8":812345,"field9":true,"fieldExtra1":true,"fieldExtra2":12345,"fieldExtra3":true,"fieldExtra4":12345,"fieldExtra5":true,"fieldExtra6":12345,"fieldExtra7":true,"fieldExtra8":12345}
+]

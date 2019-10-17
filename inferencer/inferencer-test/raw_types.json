@@ -1,0 +1,15 @@
+[
+    "raw string",
+    12345,
+    true
+    ["raw array",
+     123456,
+     false,
+     ["subArray","with strings"],
+     {
+         "object_in_raw_array": true,
+         "number": 12345
+     }
+    ]
+]    
+      

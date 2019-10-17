@@ -1,0 +1,9 @@
+{
+"requestID": "3996f8c4-5b8b-41e7-ac84-68f5df695b42",
+"signature": null,
+"results": [
+[{"#docs":5891,"$schema":"http://json-schema.org/schema#","Flavor":"","properties":{"abv":{"#docs":5891,"%docs":100,"type":"number"},"brewery_id":{"#docs":5891,"%docs":100,"type":"string"},"category":{"#docs":4423,"%docs":75.08,"type":"string"},"description":{"#docs":5891,"%docs":100,"type":"string"},"ibu":{"#docs":5891,"%docs":100,"type":"number"},"name":{"#docs":5891,"%docs":100,"type":"string"},"srm":{"#docs":5891,"%docs":100,"type":"number"},"style":{"#docs":4423,"%docs":75.08,"type":"string"},"type":{"#docs":5891,"%docs":100,"type":"string"},"upc":{"#docs":5891,"%docs":100,"type":"number"},"updated":{"#docs":5891,"%docs":100,"type":"string"}},"type":"object"},{"#docs":1412,"$schema":"http://json-schema.org/schema#","Flavor":"","properties":{"address":{"#docs":1412,"%docs":100,"items":{"type":"string"},"maxItems":2,"minItems":0,"type":"array"},"city":{"#docs":1412,"%docs":100,"type":"string"},"code":{"#docs":1412,"%docs":100,"type":"string"},"country":{"#docs":1412,"%docs":100,"type":"string"},"description":{"#docs":1412,"%docs":100,"type":"string"},"geo":{"#docs":1289,"%docs":91.28,"properties":{"accuracy":{"#docs":1289,"%docs":100,"type":"string"},"lat":{"#docs":1289,"%docs":100,"type":"number"},"lon":{"#docs":1289,"%docs":100,"type":"number"}},"type":"object"},"name":{"#docs":1412,"%docs":100,"type":"string"},"phone":{"#docs":1412,"%docs":100,"type":"string"},"state":{"#docs":1412,"%docs":100,"type":"string"},"type":{"#docs":1412,"%docs":100,"type":"string"},"updated":{"#docs":1412,"%docs":100,"type":"string"},"website":{"#docs":1412,"%docs":100,"type":"string"}},"type":"object"}]
+],
+"status": "success",
+"metrics": {"elapsedTime": "1.427259s","executionTime": "1.427144s","resultCount": 1,"resultSize": 1614}
+}

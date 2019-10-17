@@ -1,0 +1,6 @@
+[
+  {
+    "code": 0,
+    "msg": "Keyspace infer_test has no documents, schema inference not possible"
+  }
+]

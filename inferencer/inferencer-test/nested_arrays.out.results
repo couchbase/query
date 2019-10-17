@@ -1,0 +1,148 @@
+[
+  [
+    {
+      "#docs": 3,
+      "$schema": "http://json-schema.org/schema#",
+      "Flavor": "",
+      "properties": {
+        "outer_object": {
+          "#docs": 3,
+          "%docs": 100,
+          "properties": {
+            "outer_array": {
+              "#docs": 3,
+              "%docs": 100,
+              "items": [
+                {
+                  "items": [
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "maxItems": 3,
+                      "minItems": 2,
+                      "type": "array"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "#docs": 2,
+                      "$schema": "http://json-schema.org/schema#",
+                      "Flavor": "",
+                      "properties": {
+                        "string_in_object_in_inner_array": {
+                          "#docs": 2,
+                          "%docs": 100,
+                          "type": "string"
+                        },
+                        "string_in_object_in_inner_array2": {
+                          "#docs": 2,
+                          "%docs": 100,
+                          "type": "string"
+                        },
+                        "string_in_object_in_inner_array3": {
+                          "#docs": 2,
+                          "%docs": 100,
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ],
+                  "maxItems": 5,
+                  "minItems": 5,
+                  "type": "array"
+                },
+                {
+                  "items": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "#docs": 1,
+                      "$schema": "http://json-schema.org/schema#",
+                      "Flavor": "`string_in_object_in_inner_array` = \"a string 1\", `string_in_object_in_inner_array2` = \"a string 2\", `string_in_object_in_inner_array3` = \"a string 3\"",
+                      "properties": {
+                        "string_in_object_in_inner_array": {
+                          "#docs": 1,
+                          "%docs": 100,
+                          "samples": [
+                            "a string 1"
+                          ],
+                          "type": "string"
+                        },
+                        "string_in_object_in_inner_array2": {
+                          "#docs": 1,
+                          "%docs": 100,
+                          "samples": [
+                            "a string 2"
+                          ],
+                          "type": "string"
+                        },
+                        "string_in_object_in_inner_array3": {
+                          "#docs": 1,
+                          "%docs": 100,
+                          "samples": [
+                            "a string 3"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "#docs": 3,
+                  "$schema": "http://json-schema.org/schema#",
+                  "Flavor": "",
+                  "properties": {
+                    "string_inside_object_in_outer_array": {
+                      "#docs": 3,
+                      "%docs": 100,
+                      "type": "string"
+                    },
+                    "string_inside_object_in_outer_array2": {
+                      "#docs": 3,
+                      "%docs": 100,
+                      "type": "string"
+                    },
+                    "string_inside_object_in_outer_array3": {
+                      "#docs": 3,
+                      "%docs": 100,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              ],
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "type": {
+          "#docs": 3,
+          "%docs": 100,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  ]
+]

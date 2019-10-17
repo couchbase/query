@@ -1,0 +1,74 @@
+[
+{
+  "outer_object": {
+    "outer_array": [
+      "string inside outer array",
+      {
+        "string_inside_object_in_outer_array": "a string 1",
+        "string_inside_object_in_outer_array2": "a string 2",
+        "string_inside_object_in_outer_array3": "a string 3"
+      },
+      [
+        {
+          "string_in_object_in_inner_array": "a string 1",
+          "string_in_object_in_inner_array2": "a string 2",
+          "string_in_object_in_inner_array3": "a string 3"
+        },
+        388.112,
+        true
+      ]
+    ]
+  },
+  "type": "string in outer object"
+},
+{
+  "outer_object": {
+    "outer_array": [
+      "string inside outer array",
+      {
+        "string_inside_object_in_outer_array": "a string 1",
+        "string_inside_object_in_outer_array2": "a string 2",
+        "string_inside_object_in_outer_array3": "a string 3"
+      },
+      [
+        {
+          "string_in_object_in_inner_array": "a string 1",
+          "string_in_object_in_inner_array2": "a string 2",
+          "string_in_object_in_inner_array3": "a string 3"
+        },
+        388.112,
+          true,
+          ["doubly_nested_array","with strings"],
+          false
+      ]
+    ]
+  },
+  "type": "string in outer object"
+},
+    {
+  "outer_object": {
+    "outer_array": [
+      "string inside outer array",
+      {
+        "string_inside_object_in_outer_array": "a string 1",
+        "string_inside_object_in_outer_array2": "a string 2",
+        "string_inside_object_in_outer_array3": "a string 3"
+      },
+      [
+        {
+          "string_in_object_in_inner_array": "a string 1",
+          "string_in_object_in_inner_array2": "a string 2",
+          "string_in_object_in_inner_array3": "a string 3"
+        },
+        388.112,
+          true,
+          ["doubly_nested_array","with strings","and even more strings"],
+          false
+      ]
+    ]
+  },
+  "type": "string in outer object"
+}
+
+
+]

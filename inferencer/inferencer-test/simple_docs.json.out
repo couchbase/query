@@ -1,0 +1,9 @@
+{
+"requestID": "adce38b5-90f8-4239-9924-b6cc0ac8af83",
+"signature": null,
+"results": [
+],
+"errors": [{"code":0,"msg":"Keyspace infer_test has no documents, schema inference not possible"}],
+"status": "errors",
+"metrics": {"elapsedTime": "12.563ms","executionTime": "12.479ms","resultCount": 0,"resultSize": 0,"errorCount": 1}
+}
