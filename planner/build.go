@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -204,42 +205,41 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 	path := node.Path()
 	path.SetDefaultNamespace(this.namespace)
 	ns := path.Namespace()
-
-	datastore := this.datastore
+	ds := this.datastore
 	if strings.ToLower(ns) == "#system" {
-		datastore = this.systemstore
+		ds = this.systemstore
 	}
-
-	namespace, err := datastore.NamespaceByName(ns)
+	namespace, err := ds.NamespaceByName(ns)
 	if err != nil {
 		return nil, err
 	}
+	keyspace, err := getKeyspace(namespace, path)
 
+	if err != nil && this.indexAdvisor && strings.ToLower(ns) != "#system" &&
+		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
+			strings.Contains(err.TranslationKey(), "scope_not_found") ||
+			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
+		if v, ok := namespace.(datastore.VirtualNamespace); ok {
+			return v.VirtualKeyspaceByName(path.Keyspace())
+		}
+	}
+
+	return keyspace, err
+}
+
+func getKeyspace(namespace datastore.Namespace, path *algebra.Path) (datastore.Keyspace, errors.Error) {
 	if path.IsCollection() {
 		bucket, err := namespace.BucketByName(path.Bucket())
 		if err != nil {
 			return nil, err
 		}
-
 		scope, err := bucket.ScopeByName(path.Scope())
 		if err != nil {
 			return nil, err
 		}
-
-		keyspace, err := scope.KeyspaceByName(path.Keyspace())
-		if err != nil {
-			return nil, err
-		}
-
-		return keyspace, nil
+		return scope.KeyspaceByName(path.Keyspace())
 	}
-
-	keyspace, err := namespace.KeyspaceByName(path.Keyspace())
-	if err != nil {
-		return nil, err
-	}
-
-	return keyspace, nil
+	return namespace.KeyspaceByName(path.Keyspace())
 }
 
 func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {

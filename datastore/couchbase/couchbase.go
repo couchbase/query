@@ -34,6 +34,7 @@ import (
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -730,6 +731,10 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 	return p.keyspaceByName(name)
 }
 
+func (p *namespace) VirtualKeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
+	return virtual.NewVirtualKeyspace(name, p), nil
+}
+
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	var err errors.Error
 
@@ -1221,7 +1226,9 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 		indexers = append(indexers, b.ftsIndexer)
 	}
 
-	indexers = append(indexers, b.viewIndexer)
+	if b.viewIndexer != nil {
+		indexers = append(indexers, b.viewIndexer)
+	}
 	return indexers, nil
 }
 

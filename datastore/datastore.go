@@ -104,6 +104,11 @@ type Namespace interface {
 	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this namespace using the bucket's name
 }
 
+type VirtualNamespace interface {
+	Namespace
+	VirtualKeyspaceByName(name string) (Keyspace, errors.Error)
+}
+
 type Bucket interface {
 	Id() string
 	Name() string
