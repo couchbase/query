@@ -1057,6 +1057,7 @@ type keyspace struct {
 	viewIndexer datastore.Indexer // View index provider
 	gsiIndexer  datastore.Indexer // GSI index provider
 	ftsIndexer  datastore.Indexer // FTS index provider
+	chkIndex    *chkIndexDict
 
 	collectionsManifestUid uint32
 	scopes                 map[string]*scope // scopes by id
@@ -1218,8 +1219,10 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	indexers := make([]datastore.Indexer, 0, 3)
+	var err errors.Error
 	if b.gsiIndexer != nil {
 		indexers = append(indexers, b.gsiIndexer)
+		err = b.checkIndexCache(b.gsiIndexer)
 	}
 
 	if b.ftsIndexer != nil {
@@ -1229,7 +1232,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	if b.viewIndexer != nil {
 		indexers = append(indexers, b.viewIndexer)
 	}
-	return indexers, nil
+	return indexers, err
 }
 
 //

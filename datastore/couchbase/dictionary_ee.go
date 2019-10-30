@@ -19,9 +19,85 @@
 package couchbase
 
 import (
+	"sync"
+	"time"
+
 	"github.com/couchbase/query-ee/dictionary"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 )
 
 func dropDictCacheEntry(keyspace string) {
 	dictionary.DropKeyspace(keyspace)
 }
+
+const _GRACE_PERIOD = time.Second
+
+type chkIndexDict struct {
+	sync.RWMutex
+	checking  bool
+	lastCheck time.Time
+}
+
+func (this *chkIndexDict) chkIndex() bool {
+	if time.Since(this.lastCheck) <= _GRACE_PERIOD {
+		return false
+	}
+
+	this.RLock()
+	if this.checking {
+		this.RUnlock()
+		return false
+	}
+	this.RUnlock()
+
+	this.Lock()
+	this.checking = true
+	this.Unlock()
+	return true
+}
+
+func (this *chkIndexDict) chkDone() {
+	this.Lock()
+	this.checking = false
+	this.lastCheck = time.Now()
+	this.Unlock()
+}
+
+func (this *keyspace) checkIndexCache(indexer datastore.Indexer) errors.Error {
+	if this.chkIndex == nil {
+		this.chkIndex = &chkIndexDict{}
+	}
+	if !this.chkIndex.chkIndex() {
+		return nil
+	}
+
+	defer this.chkIndex.chkDone()
+
+	indexes := _INDEX_NAME_POOL.Get()
+	defer _INDEX_NAME_POOL.Put(indexes)
+
+	idxes, err := indexer.Indexes()
+	if err != nil {
+		return err
+	}
+
+	for _, idx := range idxes {
+		state, _, err := idx.State()
+		if err != nil {
+			return err
+		}
+		if state != datastore.ONLINE {
+			continue
+		}
+
+		indexes[idx.Name()] = true
+	}
+
+	dictionary.CheckIndexes(this.Name(), indexes)
+
+	return nil
+}
+
+var _INDEX_NAME_POOL = util.NewStringBoolPool(256)

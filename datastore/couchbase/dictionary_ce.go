@@ -17,6 +17,19 @@
 
 package couchbase
 
+import (
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+)
+
 func dropDictCacheEntry(keyspace string) {
 	// no-op
+}
+
+type chkIndexDict struct {
+	// dummy struct
+}
+
+func (this *keyspace) checkIndexCache(indexer datastore.Indexer) errors.Error {
+	return nil
 }
