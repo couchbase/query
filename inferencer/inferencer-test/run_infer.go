@@ -95,7 +95,7 @@ func main() {
 	kvRetriever, errr := inferencer.MakeKVRandomDocumentRetriever(*CLUSTER, *USER, *PASSWORD, *BUCKET, "", 1000)
 
 	if errr != nil {
-		fmt.Printf("Error making retriever: %s\n", errr)
+		fmt.Printf("Error making retriever: %s\n", *errr)
 		return
 	}
 

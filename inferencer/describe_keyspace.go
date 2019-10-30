@@ -357,7 +357,7 @@ func (di *DefaultInferencer) InferKeyspace(ks datastore.Keyspace, with value.Val
 		if err != nil {
 			retriever, err2 = MakePrimaryIndexDocumentRetriever(ks, sample_size)
 			if err2 != nil {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Unable to create either random or primary document retriever for keyspace: %s\n%s\n%s\n", ks.Name(), err, err2)))
+				conn.Error(errors.NewWarning(fmt.Sprintf("Unable to create either random or primary document retriever for keyspace: %s\n%s\n%s\n", ks.Name(), *err, *err2)))
 				return
 			}
 		}
@@ -379,7 +379,7 @@ func (di *DefaultInferencer) InferKeyspace(ks datastore.Keyspace, with value.Val
 		if err != nil {
 			retriever, err2 = MakeKeyspaceRandomDocumentRetriever(ks, sample_size)
 			if err2 != nil {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Unable to create either primary or random document retriever for keyspace: %s\n%s\n%s\n", ks.Name(), err, err2)))
+				conn.Error(errors.NewWarning(fmt.Sprintf("Unable to create either primary or random document retriever for keyspace: %s\n%s\n%s\n", ks.Name(), *err, *err2)))
 				return
 			}
 		}
