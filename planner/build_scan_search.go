@@ -15,12 +15,14 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
+// collect SEARCH() functions depends on the keyspace alias
 func collectFTSSearch(alias string, ftsSearch map[string]*search.Search,
 	exprs ...expression.Expression) (err error) {
 	stringer := expression.NewStringer()
@@ -38,8 +40,12 @@ func collectFTSSearch(alias string, ftsSearch map[string]*search.Search,
 	return
 }
 
-func (this *builder) buildSearchCoveringScan(searchSargables []*indexEntry, node *algebra.KeyspaceTerm,
+// Covering Search Accesspath for SEARCH() function
+
+func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *algebra.KeyspaceTerm,
 	baseKeyspace *base.BaseKeyspace, id expression.Expression) (plan.SecondaryScan, int, error) {
+
+	// must be single index and Search Accesspath must be exact and no false positives.
 	if this.cover == nil || len(searchSargables) != 1 || !searchSargables[0].exactSpans {
 		return nil, 0, nil
 	}
@@ -88,6 +94,65 @@ func (this *builder) buildSearchCoveringScan(searchSargables []*indexEntry, node
 	return scan, len(entry.sargKeys), nil
 }
 
+// Covering Search Accesspath for Flex Index
+
+func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntry, node *algebra.KeyspaceTerm,
+	baseKeyspace *base.BaseKeyspace, id expression.Expression) (plan.SecondaryScan, int, error) {
+
+	// no JOINS or no UNNEST
+	if this.cover == nil || len(flex) == 0 || len(this.baseKeyspaces) > 1 {
+		return nil, 0, nil
+	}
+
+	pred := baseKeyspace.DnfPred()
+	alias := node.Alias()
+	coveringExprs := expression.Expressions{pred, id}
+
+	for _, expr := range this.cover.Expressions() {
+		if !expression.IsCovered(expr, alias, coveringExprs) {
+			return nil, 0, nil
+		}
+	}
+
+	// check sargable, exact and no false positive index
+	var bentry *indexEntry
+	for _, entry := range flex {
+		if entry.exactSpans {
+			if bentry == nil || entry.PushDownProperty() > bentry.PushDownProperty() {
+				bentry = entry
+			}
+		}
+	}
+
+	if bentry == nil {
+		return nil, 0, nil
+	}
+
+	// reset group pushdowns
+	if this.group != nil {
+		this.resetPushDowns()
+	}
+
+	// build Covering Search Access path
+	covers := make(expression.Covers, 0, len(coveringExprs))
+	for _, expr := range coveringExprs {
+		covers = append(covers, expression.NewCover(expr))
+	}
+
+	sfn := bentry.sargKeys[0].(*search.Search)
+	searchOrders := this.checkFlexSearchResetPaginations(bentry)
+	this.resetProjection()
+
+	scan := this.CreateFTSSearch(bentry.index, node, sfn, searchOrders, covers, nil)
+	if scan != nil {
+		this.coveringScans = append(this.coveringScans, scan)
+	}
+
+	return scan, len(bentry.sargKeys), nil
+}
+
+// Create FTS search Access Path
+
 func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.KeyspaceTerm,
 	sfn *search.Search, order []string, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
@@ -97,6 +162,7 @@ func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.Keyspa
 			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers)
 }
 
+// SEARCH() function pagination
 func (this *builder) searchPagination(searchSargables []*indexEntry, pred expression.Expression,
 	alias string) (orderEntry *indexEntry, orders []string, err error) {
 
@@ -178,12 +244,17 @@ func getLimitOffset(expr expression.Expression, defval int64) int64 {
 	return defval
 }
 
+//  FTSindex sargablity for SEARCH() function
+
 func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expression.Expression,
 	searchFns map[string]*search.Search, formalizer *expression.Formalizer) (
 	searchSargables []*indexEntry, err error) {
 
-	searchSargables = make([]*indexEntry, 0, len(searchFns))
+	if len(searchFns) == 0 {
+		return
+	}
 
+	searchSargables = make([]*indexEntry, 0, len(searchFns))
 	for _, s := range searchFns {
 		siname := s.IndexName()
 		keys := expression.Expressions{s.Copy()}
@@ -264,4 +335,253 @@ func (this *builder) sargableSearchCondition(index datastore.Index, subset expre
 	}
 
 	return SubsetOf(subset, cond), cond, origCond, nil
+}
+
+// helper function
+
+func (this *builder) flexIndexPushDownProperty(resp *datastore.FTSFlexResponse) (pushDownProperty PushDownProperties) {
+	if (resp.RespFlags & datastore.FTS_FLEXINDEX_EXACT) != 0 {
+		pushDownProperty |= _PUSHDOWN_EXACTSPANS
+	}
+	if (resp.RespFlags & datastore.FTS_FLEXINDEX_LIMIT) != 0 {
+		pushDownProperty |= _PUSHDOWN_LIMIT
+	}
+	if (resp.RespFlags & datastore.FTS_FLEXINDEX_OFFSET) != 0 {
+		pushDownProperty |= _PUSHDOWN_OFFSET
+	}
+	if (resp.RespFlags & datastore.FTS_FLEXINDEX_ORDER) != 0 {
+		pushDownProperty |= _PUSHDOWN_ORDER
+	}
+	return
+}
+
+// build FTS Flex Request
+func (this *builder) buildFTSFlexRequest(alias string, pred expression.Expression,
+	ubs expression.Bindings) (flexRequest *datastore.FTSFlexRequest) {
+
+	pageable := this.hasOrderOrOffsetOrLimit()
+	var flexOrder []*datastore.SortTerm
+
+	// order request
+	if this.order != nil {
+		flexOrder = make([]*datastore.SortTerm, 0, len(this.order.Terms()))
+		var hashProj map[string]expression.Expression
+
+		// handle order using projection alias
+		if this.projection != nil {
+			hashProj = make(map[string]expression.Expression, len(this.projection.Terms()))
+			for _, term := range this.projection.Terms() {
+				hashProj[term.Alias()] = term.Expression()
+			}
+		}
+
+		for _, term := range this.order.Terms() {
+			expr := term.Expression()
+			if _, ok := expr.(*expression.Identifier); ok {
+				expr, _ = hashProj[expr.Alias()]
+			}
+
+			var nullsPos uint32
+			if !term.Descending() && term.NullsPos() {
+				nullsPos |= datastore.ORDER_NULLS_LAST
+			} else if term.Descending() && term.NullsPos() {
+				nullsPos |= datastore.ORDER_NULLS_FIRST
+			}
+
+			flexOrder = append(flexOrder, &datastore.SortTerm{
+				Expr:       expr,
+				Descending: term.Descending(),
+				NullsPos:   nullsPos,
+			})
+		}
+	}
+
+	flexRequest = &datastore.FTSFlexRequest{
+		Keyspace:      alias,
+		Pred:          pred.Copy(),
+		Bindings:      ubs,
+		Opaque:        make(map[string]interface{}, 4),
+		CheckPageable: pageable,
+	}
+
+	if flexRequest.CheckPageable {
+		flexRequest.Order = flexOrder
+		flexRequest.Offset = getLimitOffset(this.offset, int64(0))
+		flexRequest.Limit = getLimitOffset(this.limit, math.MaxInt64)
+	}
+
+	return
+}
+
+// FTS Flex index Saragbility
+func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *datastore.FTSFlexRequest, join bool) (
+	entry *indexEntry, err error) {
+
+	index, ok := idx.(datastore.FTSIndex)
+	if !ok {
+		return
+	}
+
+	// call n1fty to get Search Access Path for given index and predicate
+	var resp *datastore.FTSFlexResponse
+	resp, err = index.SargableFlex("", flexRequest)
+	if err != nil || resp == nil || resp.SearchQuery == "" || (join && len(resp.StaticSargKeys) == 0) {
+		return
+	}
+
+	// handle FTS Flex response
+	var sqe, soe expression.Expression
+
+	keyspaceIdent := expression.NewIdentifier(flexRequest.Keyspace)
+	keyspaceIdent.SetKeyspaceAlias(true)
+
+	sqe, err = parser.Parse(resp.SearchQuery)
+	if err == nil && resp.SearchOptions != "" {
+		soe, err = parser.Parse(resp.SearchOptions)
+
+	}
+	if err != nil {
+		return
+	}
+
+	keys := make(expression.Expressions, 0, len(resp.StaticSargKeys)+len(resp.DynamicSargKeys)+1)
+	keys = append(keys, search.NewSearch(keyspaceIdent, sqe, soe))
+	for _, expr := range resp.StaticSargKeys {
+		keys = append(keys, expr)
+	}
+	for _, expr := range resp.DynamicSargKeys {
+		keys = append(keys, expr)
+	}
+
+	pushDownProperty := this.flexIndexPushDownProperty(resp)
+
+	entry = newIndexEntry(index, keys, keys[0:1], nil,
+		len(resp.StaticSargKeys), len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
+		flexRequest.Cond, flexRequest.OrigCond, nil, isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS))
+	entry.setSearchOrders(resp.SearchOrders)
+	entry.pushDownProperty = pushDownProperty
+	return entry, nil
+}
+
+// minimize FTS Flex Indexes. best=true produces single index
+func (this *builder) minimalFTSFlexIndexes(sargables map[datastore.Index]*indexEntry,
+	best bool) map[datastore.Index]*indexEntry {
+
+	for s, se := range sargables {
+		for t, te := range sargables {
+			if t == s {
+				continue
+			}
+
+			if p := this.purgeFTSFlexIndex(se, te, best); p != nil {
+				delete(sargables, p.index)
+				if p == se {
+					break
+				}
+			}
+		}
+	}
+
+	return sargables
+}
+
+/*
+ purge the FTS Flex indexes
+     best=true
+        keep highest sargable keys (static + dynamic)
+        both equal highest static sargable keys
+        both equal highest pushdwon property
+        both equal random
+    best=false
+        both equal follow best=true
+        one is subset of other keep superset
+        if not keep both
+*/
+
+func (this *builder) purgeFTSFlexIndex(se, te *indexEntry, best bool) (ri *indexEntry) {
+	var s, t *indexEntry
+	if se.sumKeys > te.sumKeys || (se.sumKeys == te.sumKeys && se.minKeys >= te.minKeys) {
+		if best {
+			if te.sumKeys == se.sumKeys && te.minKeys == te.minKeys &&
+				te.PushDownProperty() > se.PushDownProperty() {
+				return se
+			}
+			return te
+		}
+		s = se
+		t = te
+	} else {
+		if best {
+			return se
+		}
+		s = te
+		t = se
+	}
+
+	stringer := expression.NewStringer()
+	hashMap := make(map[string]expression.Expression, s.sumKeys)
+	for _, k := range s.keys[1:] {
+		hashMap[stringer.Visit(k)] = k
+	}
+
+	for _, k := range t.keys[1:] {
+		if _, ok := hashMap[stringer.Visit(k)]; !ok {
+			return nil
+		}
+	}
+
+	if t.sumKeys != s.sumKeys || t.minKeys < s.minKeys || t.PushDownProperty() < s.PushDownProperty() {
+		return t
+	}
+
+	return s
+}
+
+// If SEARCH() function is already hadndled as part of FTS Flex index puerge it
+func (this *builder) minimalSearchIndexes(flex map[datastore.Index]*indexEntry,
+	searchSargables []*indexEntry) (rv []*indexEntry) {
+
+	if len(flex) == 0 || len(searchSargables) == 0 {
+		return searchSargables
+	}
+
+	rv = make([]*indexEntry, 0, len(searchSargables))
+
+outer:
+	for _, entry := range searchSargables {
+		for _, fi := range flex {
+			for _, exp := range fi.keys {
+				if expression.Equivalent(exp, entry.sargKeys[0]) {
+					continue outer
+				}
+			}
+		}
+		rv = append(rv, entry)
+	}
+	return rv
+}
+
+func (this *builder) checkFlexSearchResetPaginations(entry *indexEntry) (seacrhOrders []string) {
+	// check order pushdown and reset
+	if this.order != nil {
+		if entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			seacrhOrders = entry.searchOrders
+			this.maxParallelism = 1
+		} else {
+			this.resetOrderOffsetLimit()
+			return
+		}
+	}
+
+	// check offset push down and convert limit = limit + offset
+	if this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+		this.limit = offsetPlusLimit(this.offset, this.limit)
+		this.resetOffset()
+	}
+
+	// check limit and reset
+	if this.limit != nil && !entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
+		this.resetLimit()
+	}
+	return
 }

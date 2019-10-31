@@ -88,6 +88,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 
 		outName := this.plan.SearchInfo().OutName()
 		covers := this.plan.Covers()
+		lc := len(covers)
 		fc := this.plan.FilterCovers()
 
 		for ok {
@@ -95,7 +96,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 			if cont {
 				if entry != nil {
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
-					if len(covers) > 0 {
+					if lc > 0 {
 						for c, v := range fc {
 							av.SetCover(c.Text(), v)
 						}
@@ -108,8 +109,12 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 							score, _ = smeta.Field("score")
 						}
 
-						av.SetCover(covers[2].Text(), score)
-						av.SetCover(covers[3].Text(), smeta)
+						if lc > 2 {
+							av.SetCover(covers[2].Text(), score)
+						}
+						if lc > 3 {
+							av.SetCover(covers[3].Text(), smeta)
+						}
 						av.SetField(this.plan.Term().Alias(), av)
 					}
 					av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})

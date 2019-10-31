@@ -166,21 +166,40 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 
 	if len(hints) > 0 {
+		// Set processing HINT Indexes
+		this.hintIndexes = true
 		secondary, primary, err = this.buildSubsetScan(
 			keyspace, node, baseKeyspace, id, hints, primaryKey, formalizer, true)
+		this.hintIndexes = false
 		if secondary != nil || primary != nil || err != nil {
+			return
+		}
+	}
+
+	// collect SEARCH() functions that depends on current keyspace in the predicate
+	var searchFns map[string]*search.Search
+	if !node.IsUnderNL() {
+		pred := baseKeyspace.DnfPred()
+		if node.IsAnsiJoinOp() && baseKeyspace.OnclauseOnly() {
+			pred = baseKeyspace.Onclause()
+		}
+
+		searchFns = make(map[string]*search.Search)
+
+		if err = collectFTSSearch(node.Alias(), searchFns, pred); err != nil {
 			return
 		}
 	}
 
 	others := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(others)
-	others, err = allIndexes(keyspace, hints, others, this.indexApiVersion)
+	others, err = allIndexes(keyspace, hints, others, this.indexApiVersion, len(searchFns) > 0)
 	if err != nil {
 		return
 	}
 
-	secondary, primary, err = this.buildSubsetScan(keyspace, node, baseKeyspace, id, others, primaryKey, formalizer, false)
+	secondary, primary, err = this.buildSubsetScan(keyspace, node,
+		baseKeyspace, id, others, primaryKey, formalizer, false)
 
 	if secondary != nil || primary != nil || err != nil {
 		return
@@ -270,19 +289,34 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		pred = baseKeyspace.Onclause()
 	}
 
-	sargables, all, arrays, err := this.sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
+	// collect UNNEST bindings when HINT indexes has FTS index
+	var ubs expression.Bindings
+	if this.hintIndexes && this.from != nil {
+		for _, idx := range indexes {
+			if idx.Type() == datastore.FTS {
+				ubs = make(expression.Bindings, 0, 2)
+				ua := expression.Expressions{expression.NewIdentifier(node.Alias())}
+				_, ubs = this.collectUnnestBindings(this.from, ua, ubs)
+				break
+			}
+		}
+	}
+
+	sargables, all, arrays, flex, err := this.sargableIndexes(indexes, pred, pred, primaryKey,
+		formalizer, ubs, node.IsUnderNL())
 	if err != nil {
 		return nil, 0, err
 	}
 
+	// purge any subset indexe and keep superset indexes
 	minimals := this.minimalIndexes(sargables, false, pred, node)
+	flex = this.minimalFTSFlexIndexes(flex, false)
 
-	var searchFns map[string]*search.Search
+	// pred has SEARCH() function get sargable FTS indexes
 	var searchSargables []*indexEntry
-
+	var searchFns map[string]*search.Search
 	if !node.IsUnderNL() {
 		searchFns = make(map[string]*search.Search)
-
 		if err = collectFTSSearch(node.Alias(), searchFns, pred); err != nil {
 			return nil, 0, err
 		}
@@ -305,14 +339,14 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	var limitPushed bool
 
 	// Try secondary scan
-	if len(minimals) > 0 || len(searchSargables) > 0 {
+	if len(minimals) > 0 || len(searchSargables) > 0 || len(flex) > 0 {
 		if len(this.baseKeyspaces) > 1 {
 			this.resetOffsetLimit()
 			this.resetProjection()
 			this.resetIndexGroupAggs()
 		}
 
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, baseKeyspace,
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, flex, node, baseKeyspace,
 			id, searchSargables)
 		if err != nil {
 			return nil, 0, err
@@ -525,47 +559,80 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 	return cost, cardinality
 }
 
+// helper function check online indexes
+func isValidIndex(idx datastore.Index, indexApiVersion int) bool {
+	state, _, err := idx.State()
+	if err != nil {
+		logging.Errorp("Index selection", logging.Pair{"error", err.Error()})
+		return false
+	}
+
+	if idx.Type() == datastore.FTS {
+		return state == datastore.ONLINE
+	}
+
+	return (state == datastore.ONLINE) && (useIndex2API(idx, indexApiVersion) || !indexHasDesc(idx))
+}
+
+// all HINT indexes
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index, indexApiVersion int) (
 	[]datastore.Index, error) {
 
+	// check if HINT has FTS index refrence
+	var inclFts bool
 	for _, hint := range hints {
-
-		indexer, err := keyspace.Indexer(hint.Using())
-		if err != nil {
-			return nil, err
+		if hint.Using() == datastore.FTS {
+			inclFts = true
+			break
 		}
+	}
 
-		// refresh indexer
-		_, err = indexer.Indexes()
-		if err != nil {
-			return nil, err
-		}
+	indexers, err := keyspace.Indexers()
+	if err != nil {
+		return nil, err
+	}
 
-		index, err := indexer.IndexByName(hint.Name())
-		if err != nil {
-			return nil, err
-		}
-
-		state, _, er := index.State()
-		if er != nil {
-			logging.Errorp("Index selection", logging.Pair{"error", er.Error()})
-		}
-
-		if er != nil || state != datastore.ONLINE {
+	for _, indexer := range indexers {
+		// no FTS index reference in the HINT and indexer is FTS skip the indexer
+		if !inclFts && indexer.Name() == datastore.FTS {
 			continue
 		}
 
-		if !useIndex2API(index, indexApiVersion) && indexHasDesc(index) {
-			continue
+		idxes, err := indexer.Indexes()
+		if err != nil {
+			return nil, err
 		}
 
-		indexes = append(indexes, index)
+		// all HINT indexes. If name is "", consider all indexes on the indexer
+		// duplicates on the HINT will be ignored
+		for _, idx := range idxes {
+			for _, hint := range hints {
+				using := hint.Using()
+				if using == datastore.DEFAULT {
+					using = datastore.GSI
+				}
+				if indexer.Name() == using &&
+					(hint.Name() == "" || hint.Name() == idx.Name()) {
+					if isValidIndex(idx, indexApiVersion) {
+						indexes = append(indexes, idx)
+					}
+					break
+				}
+			}
+		}
 	}
 
 	return indexes, nil
 }
 
-func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, indexApiVersion int) (
+/*
+all the indexes excluding HINT indexes.
+inclFts indicates to include FTS index or not
+        * true  - SEARCH() function is present
+        * false - right side of some JOINs, no SERACH() function
+*/
+
+func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, indexApiVersion int, inclFts bool) (
 	[]datastore.Index, error) {
 
 	indexers, err := keyspace.Indexers()
@@ -583,6 +650,11 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, in
 	}
 
 	for _, indexer := range indexers {
+		// no FTS indexes needed and  indexer is FTS skip the indexer
+		if !inclFts && indexer.Name() == datastore.FTS {
+			continue
+		}
+
 		idxes, err := indexer.Indexes()
 		if err != nil {
 			return nil, err
@@ -594,20 +666,10 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, in
 				continue
 			}
 
-			state, _, er := idx.State()
-			if er != nil {
-				logging.Errorp("Index selection", logging.Pair{"error", er.Error()})
+			if isValidIndex(idx, indexApiVersion) {
+				indexes = append(indexes, idx)
 			}
 
-			if er != nil || state != datastore.ONLINE {
-				continue
-			}
-
-			if !useIndex2API(idx, indexApiVersion) && indexHasDesc(idx) {
-				continue
-			}
-
-			indexes = append(indexes, idx)
 		}
 	}
 

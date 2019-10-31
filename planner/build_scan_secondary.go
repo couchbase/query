@@ -23,21 +23,13 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
+func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, id expression.Expression,
-	searchSargables []*indexEntry) (plan.SecondaryScan, int, error) {
+	searchSargables []*indexEntry) (scan plan.SecondaryScan, sargLength int, err error) {
 
-	if this.cover != nil && !node.IsAnsiNest() {
-		if len(searchSargables) == 1 {
-			scan, sargLength, err := this.buildSearchCoveringScan(searchSargables, node, baseKeyspace, id)
-			if scan != nil || err != nil {
-				return scan, sargLength, err
-			}
-		}
-		scan, sargLength, err := this.buildCoveringScan(indexes, node, baseKeyspace, id)
-		if scan != nil || err != nil {
-			return scan, sargLength, err
-		}
+	scan, sargLength, err = this.buildCovering(indexes, flex, node, baseKeyspace, id, searchSargables)
+	if scan != nil || err != nil {
+		return
 	}
 
 	this.resetProjection()
@@ -47,66 +39,40 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 	pred := baseKeyspace.DnfPred()
 
-	err := this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
+	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	for _, entry := range indexes {
-		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil, pred, node.Alias(), false, false)
+		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
+			pred, node.Alias(), false, false)
 	}
 
 	indexes = this.minimalIndexes(indexes, true, pred, node)
+	// Already done. need only for one index
+	// flex = this.minimalFTSFlexIndexes(flex, true)
+	searchSargables = this.minimalSearchIndexes(flex, searchSargables)
 
-	var orderEntry *indexEntry
-	var limit expression.Expression
-	pushDown := false
-
-	for _, entry := range indexes {
-		if this.order != nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
-			orderEntry = entry
-			this.maxParallelism = 1
-		}
-
-		if !pushDown && len(searchSargables) == 0 &&
-			entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
-			pushDown = true
-		}
-	}
-
-	searchOrderEntry, searchOrders, _ := this.searchPagination(searchSargables, pred, node.Alias())
-	if orderEntry == nil {
-		orderEntry = searchOrderEntry
-	}
-	// No ordering index, disable ORDER and LIMIT pushdown
-	if this.order != nil && orderEntry == nil {
-		this.resetOrderOffsetLimit()
-	}
-
-	if pushDown && len(indexes) > 1 {
-		limit = offsetPlusLimit(this.offset, this.limit)
-		this.resetOffsetLimit()
-	} else if !pushDown && len(searchSargables) == 0 {
-		this.resetOffsetLimit()
-	}
+	orderEntry, limit, searchOrders := this.buildSecondaryScanPushdowns(indexes, flex, searchSargables, pred, node)
 
 	// Ordering scan, if any, will go into scans[0]
 	var scanBuf [16]plan.SecondaryScan
 	var scans []plan.SecondaryScan
-	var scan plan.SecondaryScan
 	var indexProjection *plan.IndexProjection
-	sargLength := 0
+	sargLength = 0
+	cap := len(indexes) + len(flex) + len(searchSargables)
 
-	if len(indexes) <= len(scanBuf) {
+	if cap <= len(scanBuf) {
 		scans = scanBuf[0:1]
 	} else {
-		scans = make([]plan.SecondaryScan, 1, len(indexes))
+		scans = make([]plan.SecondaryScan, 1, cap)
 	}
 
 	if len(indexes) == 1 {
 		for _, entry := range indexes {
 			indexProjection = this.buildIndexProjection(entry, nil, nil, true)
-			if this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+			if cap == 1 && this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
 				this.limit = offsetPlusLimit(this.offset, this.limit)
 				this.resetOffset()
 			}
@@ -162,9 +128,28 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 	}
 
+	// Search() access path for flex indexes
+	for index, entry := range flex {
+		sfn := entry.sargKeys[0].(*search.Search)
+		sOrders := searchOrders
+		if entry != orderEntry {
+			sOrders = nil
+		}
+		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil)
+		if entry == orderEntry {
+			scans[0] = scan
+		} else {
+			scans = append(scans, scan)
+		}
+	}
+
 	for _, entry := range searchSargables {
 		sfn := entry.sargKeys[0].(*search.Search)
-		scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, nil, nil)
+		sOrders := searchOrders
+		if entry != orderEntry {
+			sOrders = nil
+		}
+		scan := this.CreateFTSSearch(entry.index, node, sfn, sOrders, nil, nil)
 		if entry == orderEntry {
 			scans[0] = scan
 		} else {
@@ -188,35 +173,111 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	}
 }
 
+func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Index]*indexEntry,
+	searchSargables []*indexEntry, pred expression.Expression, node *algebra.KeyspaceTerm) (
+	orderEntry *indexEntry, limit expression.Expression, searchOrders []string) {
+
+	// get ordered Index. If any index doesn't have Limit/Offset pushdown those must turned off
+	pushDown := this.hasOffsetOrLimit()
+	for _, entry := range indexes {
+		if this.order != nil && orderEntry == nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			orderEntry = entry
+		}
+
+		if pushDown && ((this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET)) ||
+			(this.limit != nil && !entry.IsPushDownProperty(_PUSHDOWN_LIMIT))) {
+			pushDown = false
+		}
+	}
+
+	for _, entry := range flex {
+		if this.order != nil && orderEntry == nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			orderEntry = entry
+			searchOrders = entry.searchOrders
+		}
+
+		if pushDown && ((this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET)) ||
+			(this.limit != nil && !entry.IsPushDownProperty(_PUSHDOWN_LIMIT))) {
+			pushDown = false
+		}
+	}
+
+	if len(searchSargables) > 0 {
+		if !pushDown {
+			this.resetOffsetLimit()
+		}
+
+		var searchOrderEntry *indexEntry
+
+		searchOrderEntry, searchOrders, _ = this.searchPagination(searchSargables, pred, node.Alias())
+		pushDown = this.hasOffsetOrLimit()
+		if orderEntry == nil {
+			orderEntry = searchOrderEntry
+		}
+	}
+
+	// ordered index found turn off parallelism. If not turn off pushdowns
+	if orderEntry != nil {
+		this.maxParallelism = 1
+	} else if this.order != nil {
+		this.resetOrderOffsetLimit()
+		return nil, nil, nil
+	}
+
+	// if not single index turn off pushdowns and apply on IntersectScan
+	if pushDown && (len(indexes)+len(flex)+len(searchSargables)) > 1 {
+		limit = offsetPlusLimit(this.offset, this.limit)
+		this.resetOffsetLimit()
+	} else if !pushDown {
+		this.resetOffsetLimit()
+	}
+	return
+}
+
 func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	sargables, all, arrays map[datastore.Index]*indexEntry, err error) {
+	primaryKey expression.Expressions, formalizer *expression.Formalizer,
+	ubs expression.Bindings, join bool) (
+	sargables, all, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
 	all = make(map[datastore.Index]*indexEntry, len(indexes))
 	arrays = make(map[datastore.Index]*indexEntry, len(indexes))
 
 	var keys expression.Expressions
+	var entry *indexEntry
+	var flexRequest *datastore.FTSFlexRequest
 
 	for _, index := range indexes {
+		if index.Type() == datastore.FTS {
+			if this.hintIndexes {
+				// FTS Flex index sargability
+				if flexRequest == nil {
+					flex = make(map[datastore.Index]*indexEntry, len(indexes))
+					flexRequest = this.buildFTSFlexRequest(formalizer.Keyspace(), pred, ubs)
+				}
+
+				entry, err = this.sargableFlexSearchIndex(index, flexRequest, join)
+				if err != nil {
+					return
+				}
+
+				if entry != nil {
+					flex[index] = entry
+				}
+			}
+			continue
+		}
+
 		var isArray bool
 
-		if index.Type() == datastore.FTS {
-			continue
-		} else if index.IsPrimary() {
+		if index.IsPrimary() {
 			if primaryKey != nil {
 				keys = primaryKey
 			} else {
 				continue
 			}
 		} else {
-			keys = index.RangeKey()
-
-			if len(keys) == 0 {
-				continue
-			}
-
-			keys = keys.Copy()
+			keys = expression.CopyExpressions(index.RangeKey())
 
 			for i, key := range keys {
 				key = key.Copy()
@@ -285,7 +346,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			n = max
 		}
 
-		entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false)
+		entry = newIndexEntry(index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false)
 		all[index] = entry
 
 		if min > 0 {
@@ -297,7 +358,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 	}
 
-	return sargables, all, arrays, nil
+	return sargables, all, arrays, flex, nil
 }
 
 func indexPartitionKeys(index datastore.Index,
@@ -438,7 +499,8 @@ outer:
 			(se.cond != nil && te.cond == nil && len(se.sargKeys) == len(te.sargKeys))))
 }
 
-func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool, sargables map[datastore.Index]*indexEntry) error {
+func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool,
+	sargables map[datastore.Index]*indexEntry) error {
 
 	pred := baseKeyspace.DnfPred()
 	isOrPred := false
@@ -461,16 +523,20 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var err error
 
 		if isOrPred {
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys, se.minKeys, orIsJoin, this.useCBO, baseKeyspace)
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys,
+				se.minKeys, orIsJoin, this.useCBO, baseKeyspace)
 		} else {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys, se.minKeys, underHash, this.useCBO, baseKeyspace)
+			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
+				se.minKeys, underHash, this.useCBO, baseKeyspace)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},
-				logging.Pair{"sarg_keys", fmt.Sprintf("<ud>%v</ud>", se.sargKeys)}, logging.Pair{"error", err})
+				logging.Pair{"sarg_keys",
+					fmt.Sprintf("<ud>%v</ud>", se.sargKeys)}, logging.Pair{"error", err})
 
-			return errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
-				pred.String(), se.sargKeys.String(), err))
+			return errors.NewPlanError(nil,
+				fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
+					pred.String(), se.sargKeys.String(), err))
 		}
 
 		se.spans = spans
@@ -492,7 +558,9 @@ func indexHasArrayIndexKey(index datastore.Index) bool {
 	return false
 }
 
-func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEntry, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
+func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
+
 	keyspace, err := this.getTermKeyspace(node)
 	if err != nil {
 		return sargables

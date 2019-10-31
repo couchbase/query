@@ -102,7 +102,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	// first gather leading index key from all indexes for this keyspace
 	indexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(indexes)
-	indexes, err := allIndexes(keyspace, nil, indexes, indexApiVersion)
+	indexes, err := allIndexes(keyspace, nil, indexes, indexApiVersion, false)
 	if err != nil {
 		return err
 	}

@@ -121,6 +121,7 @@ type builder struct {
 	builderFlags      uint32
 	indexAdvisor      bool
 	useCBO            bool
+	hintIndexes       bool
 	lastOp            plan.Operator // last operator built, to get cost/cardinality info
 }
 

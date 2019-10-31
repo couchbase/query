@@ -42,6 +42,7 @@ type indexEntry struct {
 	cost             float64
 	cardinality      float64
 	selectivity      float64
+	searchOrders     []string
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
@@ -83,6 +84,8 @@ func (this *indexEntry) Copy() *indexEntry {
 		selectivity:      this.selectivity,
 	}
 
+	copy(rv.searchOrders, this.searchOrders)
+
 	return rv
 }
 
@@ -92,6 +95,10 @@ func (this *indexEntry) PushDownProperty() PushDownProperties {
 
 func (this *indexEntry) IsPushDownProperty(property PushDownProperties) bool {
 	return isPushDownProperty(this.pushDownProperty, property)
+}
+
+func (this *indexEntry) setSearchOrders(so []string) {
+	this.searchOrders = so
 }
 
 func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {
