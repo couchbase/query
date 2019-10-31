@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	go_er "errors"
 	"fmt"
-	"github.com/couchbase/query/util"
 	"io/ioutil"
 	http_base "net/http"
 	"os"
@@ -42,6 +41,7 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -207,7 +207,7 @@ the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
 func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
+	positionalArgs value.Values, userArgs map[string]string) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
 
@@ -227,9 +227,17 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	query.SetSignature(value.TRUE)
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
-	query.SetCredentials(_ALL_USERS)
 	mockServer.server.SetWhitelist(curlWhitelist)
 
+	if userArgs == nil {
+		query.SetCredentials(_ALL_USERS)
+	} else {
+		users := _ALL_USERS
+		for k, v := range userArgs {
+			users[k] = v
+		}
+		query.SetCredentials(users)
+	}
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
@@ -452,6 +460,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		var errActual errors.Error
 		var namedArgs map[string]value.Value
 		var positionalArgs value.Values
+		var userArgs map[string]string
 		if n, ok1 := c["namedArgs"]; ok1 {
 			nv := value.NewValue(n)
 			size := len(nv.Fields())
@@ -470,11 +479,20 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				}
 			}
 		}
+		if u, ok_u := c["userArgs"]; ok_u {
+			uv, ok_uv := value.NewValue(u).Actual().(map[string]interface{})
+			if ok_uv {
+				userArgs = make(map[string]string, len(uv))
+				for user, password := range uv {
+					userArgs[user] = password.(string)
+				}
+			}
+		}
 
 		if prepared {
 			resultsActual, _, errActual = RunPrepared(qc, statements, namespace, namedArgs, positionalArgs)
 		} else {
-			resultsActual, _, errActual = Run(qc, statements, namespace, namedArgs, positionalArgs)
+			resultsActual, _, errActual = Run(qc, statements, namespace, namedArgs, positionalArgs, userArgs)
 		}
 
 		errExpected := ""
@@ -655,7 +673,7 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	}
 
 	explainStmt := "EXPLAIN " + statement
-	resultsActual, _, errActual := Run(qc, explainStmt, namespace, nil, nil)
+	resultsActual, _, errActual := Run(qc, explainStmt, namespace, nil, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return go_er.New(fmt.Sprintf("(%v) error actual: %#v"+
 			", for case file: %v, index: %v", explainStmt, resultsActual, fname, i))
@@ -664,7 +682,7 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	namedParams := make(map[string]value.Value, 1)
 	namedParams["explan"] = value.NewValue(resultsActual[0])
 
-	resultsActual, _, errActual = Run(qc, eStmt, namespace, namedParams, nil)
+	resultsActual, _, errActual = Run(qc, eStmt, namespace, namedParams, nil, nil)
 	if errActual != nil {
 		return go_er.New(fmt.Sprintf("unexpected err: %v, statement: %v"+
 			", for case file: %v, index: %v", errActual, eStmt, fname, i))
@@ -679,7 +697,7 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 
 func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, errors.Error) {
 	prepareStmt := "PREPARE " + statement
-	resultsActual, _, errActual := Run(qc, prepareStmt, namespace, nil, nil)
+	resultsActual, _, errActual := Run(qc, prepareStmt, namespace, nil, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
 	}
@@ -744,7 +762,7 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 }
 
 func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
-	return Run(mockServer, q, Namespace_CBS, nil, nil)
+	return Run(mockServer, q, Namespace_CBS, nil, nil, nil)
 }
 
 func getAdviseResults(subpath string, result []interface{}) []interface{} {

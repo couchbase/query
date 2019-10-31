@@ -1,0 +1,31 @@
+[
+  {
+    "statements": "advise select * from shellTest12345 where test_id = \"advise\" limit 2",
+    "advise": true,
+    "userArgs": {
+      "Administrator": "password"
+    },
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_test_id ON `shellTest12345`(`test_id`)",
+                    "keyspace_alias": "shellTest12345",
+                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select * from shellTest12345 where test_id = \"advise\" limit 2"
+      }
+    ]
+  }
+]

@@ -26,6 +26,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -181,6 +182,10 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 	}
 
 	return
+}
+
+func (p *namespace) VirtualKeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
+	return virtual.NewVirtualKeyspace(name, p), nil
 }
 
 func (p *namespace) MetadataVersion() uint64 {

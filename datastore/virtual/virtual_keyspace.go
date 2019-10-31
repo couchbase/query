@@ -66,11 +66,9 @@ func (this *virtualKeyspace) Size(context datastore.QueryContext) (int64, errors
 func (this *virtualKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	switch name {
 	case datastore.GSI, datastore.DEFAULT:
-		if this.Indexer != nil {
-			return this.indexer, nil
+		if this.indexer == nil {
+			return nil, errors.NewVirtualKSIdxerNotFoundError(nil, "GSI indxer for virtual keyspace.")
 		}
-		return nil, errors.NewVirtualKSIdxerNotFoundError(nil, "GSI indxer for virtual keyspace.")
-
 	default:
 		return nil, errors.NewVirtualKSNotImplementedError(nil, fmt.Sprintf("Type %s indexer for virtual keyspace.", name))
 	}
