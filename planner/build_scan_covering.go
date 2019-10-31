@@ -20,11 +20,38 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+// Covering Scan
+
+func (this *builder) buildCovering(indexes, flex map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, id expression.Expression,
+	searchSargables []*indexEntry) (scan plan.SecondaryScan, sargLength int, err error) {
+
+	// covering turrned off or ANSI NEST
+	if this.cover == nil || node.IsAnsiNest() {
+		return
+	}
+
+	// GSI covering scan
+	scan, sargLength, err = this.buildCoveringScan(indexes, node, baseKeyspace, id)
+	if scan != nil || err != nil {
+		return
+	}
+
+	// Flex FTS covering scan
+	scan, sargLength, err = this.buildFlexSearchCovering(flex, node, baseKeyspace, id)
+	if scan != nil || err != nil {
+		return
+	}
+
+	// FTS SEARCH() covering scan
+	return this.buildSearchCovering(searchSargables, node, baseKeyspace, id)
+}
+
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression) (plan.SecondaryScan, int, error) {
 
-	if this.cover == nil {
+	if this.cover == nil || len(indexes) == 0 {
 		return nil, 0, nil
 	}
 

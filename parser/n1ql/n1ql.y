@@ -434,7 +434,7 @@ tokOffset	 int
 %type <mergeDelete>      merge_delete
 %type <mergeInsert>      merge_insert opt_merge_insert
 
-%type <s>                index_name opt_primary_name
+%type <s>                index_name opt_primary_name opt_index_name
 %type <keyspaceRef>      named_keyspace_ref
 %type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
@@ -1217,7 +1217,7 @@ index_refs COMMA index_ref
 ;
 
 index_ref:
-index_name opt_index_using
+opt_index_name opt_index_using
 {
     $$ = algebra.NewIndexRef($1, $2)
 }
@@ -2259,6 +2259,12 @@ index_name
 
 index_name:
 IDENT
+;
+
+opt_index_name:
+{ $$ = "" }
+|
+index_name
 ;
 
 named_keyspace_ref:

@@ -504,4 +504,29 @@ outer:
 	return len(se.keys) <= len(te.keys)
 }
 
+/*
+ * collect Unnest Bindings that depends on expression
+ *     recursively go through dependent expression
+ *     When detects OUTER JOIN it stops
+ */
+
+func (this *builder) collectUnnestBindings(from algebra.FromTerm, ua expression.Expressions,
+	ub expression.Bindings) (expression.Expressions, expression.Bindings) {
+
+	if joinTerm, ok := from.(algebra.JoinTerm); ok {
+		ua, ub = this.collectUnnestBindings(joinTerm.Left(), ua, ub)
+		if unnest, ok := joinTerm.(*algebra.Unnest); ok && !unnest.Outer() {
+			for _, a := range ua {
+				if unnest.Expression().DependsOn(a) {
+					ua = append(ua, expression.NewIdentifier(unnest.Alias()))
+					ub = append(ub, expression.NewSimpleBinding(unnest.Alias(), unnest.Expression()))
+					return ua, ub
+				}
+			}
+		}
+	}
+
+	return ua, ub
+}
+
 var _UNNEST_POOL = algebra.NewUnnestPool(8)

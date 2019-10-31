@@ -27,35 +27,30 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 
 	indexPushDowns := this.storeIndexPushDowns()
 	if this.cover != nil || this.hasOrderOrOffsetOrLimit() {
-		scan, sargLength, err = this.buildOrScanTryPushdowns(node, baseKeyspace, id, pred,
-			indexes, primaryKey, formalizer)
-		if err != nil || scan != nil {
-			return
+		coveringScans := this.coveringScans
+		scan, sargLength, err = this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
+		if err == nil && scan != nil {
+			// covering scan or pushdown happens use the scan
+			if len(this.coveringScans) > len(coveringScans) || this.countScan != nil ||
+				this.hasOrderOrOffsetOrLimit() {
+				return scan, sargLength, nil
+			}
 		}
 		this.restoreIndexPushDowns(indexPushDowns, true)
 	}
 
-	return this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
-}
-
-func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
-	id expression.Expression, pred *expression.Or, indexes []datastore.Index,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.SecondaryScan, int, error) {
-
-	coveringScans := this.coveringScans
-
-	scan, sargLength, err := this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
-	if err == nil && scan != nil {
-		foundPushdown := len(this.coveringScans) > len(coveringScans) || this.countScan != nil ||
-			this.hasOrderOrOffsetOrLimit()
-
-		if foundPushdown {
-			return scan, sargLength, nil
-		}
+	// Try individual OR terms
+	orScan, orSargLength, orErr := this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+	/*
+	   If combined sargLength is higher than individual or use combined scan
+	   ix1 ON default (c1,c2,c3)  ===> WHERE c1 = 10 AND (c2 = 20 OR (c2 = 30 AND c3 = 40))
+	        Instead of 2 index scans on ix1 do 1 indexscan with 2 spans of different composite ranges
+	*/
+	if err == nil && sargLength >= orSargLength {
+		return scan, sargLength, nil
 	}
 
-	return nil, 0, err
+	return orScan, orSargLength, orErr
 }
 
 func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
