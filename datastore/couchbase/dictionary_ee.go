@@ -75,8 +75,8 @@ func (this *keyspace) checkIndexCache(indexer datastore.Indexer) errors.Error {
 
 	defer this.chkIndex.chkDone()
 
-	indexes := _INDEX_NAME_POOL.Get()
-	defer _INDEX_NAME_POOL.Put(indexes)
+	indexes := _INDEX_ID_POOL.Get()
+	defer _INDEX_ID_POOL.Put(indexes)
 
 	idxes, err := indexer.Indexes()
 	if err != nil {
@@ -95,9 +95,9 @@ func (this *keyspace) checkIndexCache(indexer datastore.Indexer) errors.Error {
 		indexes[idx.Name()] = true
 	}
 
-	dictionary.CheckIndexes(this.Name(), indexes)
+	dictionary.CheckIndexes(this.Id(), indexes)
 
 	return nil
 }
 
-var _INDEX_NAME_POOL = util.NewStringBoolPool(256)
+var _INDEX_ID_POOL = util.NewStringBoolPool(256)
