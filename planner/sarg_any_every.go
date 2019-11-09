@@ -35,10 +35,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		return sp, nil
 	}
 
-	selec := OPT_SELEC_NOT_AVAIL
-	if this.doSelec {
-		selec = this.getSelec(pred)
-	}
+	selec := this.getSelec(pred)
 
 	array, ok := all.Array().(*expression.Array)
 	if !ok {
