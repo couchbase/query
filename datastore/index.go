@@ -446,6 +446,9 @@ type FTSIndex interface {
 
 	// Pageable is allowed
 	Pageable(order []string, offset, limit int64, query, options expression.Expression) bool
+
+	// Transform N1QL predicate to Search() function request
+	SargableFlex(requestId string, request *FTSFlexRequest) (resp *FTSFlexResponse, err errors.Error)
 }
 
 /*
@@ -470,6 +473,50 @@ type Verify interface {
 	 */
 	// item  -- document
 	Evaluate(item value.Value) (bool, errors.Error)
+}
+
+/*
+Handle [NULLS FIRST|LAST] caluse
+*/
+const (
+	ORDER_NULLS_NONE = 1 << iota
+	ORDER_NULLS_FIRST
+	ORDER_NULLS_LAST
+)
+
+type SortTerm struct {
+	Expr       expression.Expression
+	Descending bool
+	NullsPos   uint32
+}
+
+type FTSFlexRequest struct {
+	Keyspace      string                 // keyspace alias name
+	Bindings      expression.Bindings    // Unnest bindings depends on this keyspace
+	Pred          expression.Expression  // predicate depends on the keyspace
+	Opaque        map[string]interface{} // opaque
+	Cond          expression.Expression  // DNF index condition
+	OrigCond      expression.Expression  // Original index condition
+	CheckPageable bool                   // Do pageable check
+	Order         []*SortTerm            // Order terms
+	Offset        int64                  // offset (0 in case of none)
+	Limit         int64                  // limit (MaxInt64 in case of none)
+}
+
+const (
+	FTS_FLEXINDEX_EXACT  = 1 << iota // all the predicates used and transformed and no false positives
+	FTS_FLEXINDEX_LIMIT              // Handle Limit
+	FTS_FLEXINDEX_OFFSET             // Handle Offset
+	FTS_FLEXINDEX_ORDER              // Handle Order
+)
+
+type FTSFlexResponse struct {
+	SearchQuery     string                           // Search query/request
+	SearchOptions   string                           // Search options
+	SearchOrders    []string                         // results are ordered by
+	StaticSargKeys  map[string]expression.Expression // static sargable key paths
+	DynamicSargKeys map[string]expression.Expression // dynamic sargable key paths
+	RespFlags       uint32                           // Response Flags
 }
 
 ////////////////////////////////////////////////////////////////////////
