@@ -96,8 +96,19 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 
 	this.fork(this.child, context, parent)
 
-	return buildHashTab(&(this.base), this.child, this.hashTab,
+	ok := buildHashTab(&(this.base), this.child, this.hashTab,
 		this.plan.BuildExprs(), this.buildVals, context)
+	if !ok {
+		return false
+	}
+
+	// if the build side is empty and this is not an outer join,
+	// no need to activate the probe side.
+	if this.hashTab.Count() == 0 && !this.plan.Outer() {
+		return false
+	}
+
+	return true
 }
 
 func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable,

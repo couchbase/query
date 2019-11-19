@@ -290,6 +290,11 @@ func (this *HashTable) NumBuckets() int {
 	return len(this.entries)
 }
 
+// number of entries in the hash table
+func (this *HashTable) Count() int {
+	return this.count
+}
+
 func (this *HashTable) Drop() {
 	this.mode = HASH_TABLE_DROP
 	for i := 0; i < len(this.entries); i++ {
