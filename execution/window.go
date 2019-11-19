@@ -331,7 +331,12 @@ func (this *AggregateInfo) evaluatePreAggregate(op *WindowAggregate, wf *windowF
 	}
 
 	// aggregate on all set of rows
-	for c := wf.sIndex; c <= wf.eIndex && c < op.nItems; c++ {
+	c := wf.sIndex
+	if c < 0 {
+		c = 0
+	}
+
+	for ; c <= wf.eIndex && c < op.nItems; c++ {
 		if wf.excludeRow(c) {
 			continue
 		}
