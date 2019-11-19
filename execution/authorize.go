@@ -62,9 +62,9 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(AUTHORIZE, context)
 		defer this.switchPhase(_NOTIME) // accrue current phase's time
-		if !active {
+		if !active || !context.assert(this.child != nil, "Authorize has no child") {
 			this.notify()
-			this.close(context)
+			this.fail(context)
 			return
 		}
 
@@ -74,18 +74,13 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 			authenticatedUsers, err := ds.Authorize(this.plan.Privileges(), context.Credentials(), context.OriginalHttpRequest())
 			if err != nil {
 				context.Fatal(err)
-				this.close(context)
+				this.fail(context)
 				return
 			}
 			context.authenticatedUsers = authenticatedUsers
 		}
 
 		this.switchPhase(_EXECTIME)
-
-		if !context.assert(this.child != nil, "Authorize has no child") {
-			this.close(context)
-			return
-		}
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)
 		this.child.SetStop(nil)

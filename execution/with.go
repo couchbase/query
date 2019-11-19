@@ -56,7 +56,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 
 		if !active || !context.assert(this.child != nil, "With has no child") {
 			this.notify()
-			this.close(context)
+			this.fail(context)
 			return
 		}
 

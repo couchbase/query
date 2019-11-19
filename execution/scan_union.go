@@ -63,13 +63,14 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		defer this.switchPhase(_NOTIME)
 		defer this.notify() // Notify that I have stopped
 
+		if !active || !context.assert(len(this.scans) != 0, "Union Scan has no scans") {
+			return
+		}
+
 		defer func() {
 			this.keys = nil
 		}()
 
-		if !active || !context.assert(len(this.scans) != 0, "Union Scan has no scans") {
-			return
-		}
 		pipelineCap := int(context.GetPipelineCap())
 		if pipelineCap <= _STRING_BOOL_POOL.Size() {
 			this.keys = _STRING_BOOL_POOL.Get()
