@@ -53,9 +53,6 @@
                                             "expr": "(`shellTest`.`f3`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -122,9 +119,6 @@
                                             "expr": "(`f2`.`f3`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -179,9 +173,6 @@
                                             "expr": "(`f1`.`f3`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -249,9 +240,6 @@
                                             "expr": "cover ((`shellTest`.`f1`))"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -330,9 +318,6 @@
                                             "expr": "(`d2`.`k3`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -395,9 +380,6 @@
                                             "expr": "cover ((`d`.`x`))"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -480,9 +462,6 @@
                                             "expr": "(`d2`.`k3`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -572,9 +551,6 @@
                                             "expr": "(`d2`.`k3`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -653,9 +629,6 @@
                                             "expr": "cover ((meta(`b2`).`id`))"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -735,9 +708,6 @@
                                             "expr": "((cover ((`shellTest`.`VMs`))[0]).`RAM`)"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -813,9 +783,6 @@
                                             "expr": "cover (((`store`.`main`).`status`))"
                                         }
                                     ]
-                                },
-                                {
-                                    "#operator": "FinalProject"
                                 }
                             ]
                         }
@@ -835,60 +802,55 @@
                 "#operator": "Sequence",
                 "~children": [
                     {
-                        "#operator": "Sequence",
-                        "~children": [
+                        "#operator": "IndexScan3",
+                        "covers": [
+                            "cover ((`shellTest`.`f1`))",
+                            "cover ((`shellTest`.`f2`))",
+                            "cover ((meta(`shellTest`).`id`))"
+                        ],
+                        "index": "ixCover",
+                        "index_projection": {
+                            "entry_keys": [
+                                0,
+                                1
+                            ]
+                        },
+                        "keyspace": "shellTest",
+                        "namespace": "default",
+                        "spans": [
                             {
-                                "#operator": "IndexScan3",
-                                "covers": [
-                                    "cover ((`shellTest`.`f1`))",
-                                    "cover ((`shellTest`.`f2`))",
-                                    "cover ((meta(`shellTest`).`id`))"
-                                ],
-                                "index": "ixCover",
-                                "index_projection": {
-                                    "entry_keys": [
-                                        0,
-                                        1
-                                    ]
-                                },
-                                "keyspace": "shellTest",
-                                "namespace": "default",
-                                "spans": [
+                                "exact": true,
+                                "range": [
                                     {
-                                        "exact": true,
-                                        "range": [
-                                            {
-                                                "high": "10",
-                                                "inclusion": 3,
-                                                "low": "10"
-                                            }
-                                        ]
+                                        "high": "10",
+                                        "inclusion": 3,
+                                        "low": "10"
                                     }
-                                ],
-                                "using": "gsi"
-                            },
-                            {
-                                "#operator": "Parallel",
-                                "~child": {
-                                    "#operator": "Sequence",
-                                    "~children": [
+                                ]
+                            }
+                        ],
+                        "using": "gsi"
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(cover ((`shellTest`.`f1`)) = 10)"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
                                         {
-                                            "#operator": "Filter",
-                                            "condition": "(cover ((`shellTest`.`f1`)) = 10)"
-                                        },
-                                        {
-                                            "#operator": "InitialProject",
-                                            "result_terms": [
-                                                {
-                                                    "as": "o",
-                                                    "expr": "cover ((`shellTest`.`f2`))"
-                                                }
-                                            ]
+                                            "as": "o",
+                                            "expr": "cover ((`shellTest`.`f2`))"
                                         }
                                     ]
                                 }
-                            }
-                        ]
+                            ]
+                        }
                     },
                     {
                         "#operator": "Order",
@@ -897,9 +859,6 @@
                                 "expr": "(`o` + 1)"
                             }
                         ]
-                    },
-                    {
-                        "#operator": "FinalProject"
                     }
                 ]
             },
