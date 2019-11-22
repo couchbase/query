@@ -1124,7 +1124,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	}
 
 	var qerr errors.Error
-	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), name)
+	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), name, connSecConfig)
 	if qerr != nil {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
 	} else {
@@ -1611,7 +1611,7 @@ func (b *keyspace) Release() {
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 	var err error
-	b.gsiIndexer, err = gsi.NewGSIIndexer(url, poolName, b.Name())
+	b.gsiIndexer, err = gsi.NewGSIIndexer(url, poolName, b.Name(), b.namespace.store.connSecConfig)
 	if err == nil {
 		logging.Infof(" GSI Indexer loaded ")
 
