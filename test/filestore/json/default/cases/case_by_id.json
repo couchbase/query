@@ -10,6 +10,9 @@
         "results": [
         {
         "plan": {
+            "#operator": "Sequence",
+            "~children": [
+                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -59,7 +62,9 @@
                                     }
                                 ]
                             }
-                        },
+                        }
+                    ]
+                },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -92,6 +97,9 @@
          "results": [
         {
         "plan": {
+            "#operator": "Sequence",
+            "~children": [
+                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -126,7 +134,9 @@
                                     }
                                 ]
                             }
-                        },
+                        }
+                    ]
+                },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -147,6 +157,9 @@
         "results": [
         {
         "plan": {
+            "#operator": "Sequence",
+            "~children": [
+                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -181,7 +194,9 @@
                                     }
                                 ]
                             }
-                        },
+                        }
+                    ]
+                },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -214,6 +229,9 @@
         "results": [
         {
         "plan": {
+            "#operator": "Sequence",
+            "~children": [
+                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -247,7 +265,9 @@
                                     }
                                 ]
                             }
-                        },
+                        }
+                    ]
+                },
                 {
                     "#operator": "Order",
                     "sort_terms": [
@@ -335,6 +355,9 @@
         "results": [
         {
         "plan": {
+            "#operator": "Sequence",
+            "~children": [
+                {
                     "#operator": "Sequence",
                     "~children": [
                         {
@@ -400,7 +423,9 @@
                                     }
                                 ]
                             }
-                        },
+                        }
+                    ]
+                },
                 {
                     "#operator": "Order",
                     "sort_terms": [

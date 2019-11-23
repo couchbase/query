@@ -6,16 +6,19 @@
         {
             "name": "test",
             "operator": {
-                        "#operator": "Authorize",
-                        "privileges": {
-                            "List": [
-                                {
-                                    "Priv": 4,
-                                    "Target": "#system:prepareds"
-                                }
-                            ]
-                        },
-                        "~child": {
+                "#operator": "Authorize",
+                "privileges": {
+                    "List": [
+                        {
+                            "Priv": 4,
+                            "Target": "#system:prepareds"
+                        }
+                    ]
+                },
+                "~child": {
+                    "#operator": "Sequence",
+                    "~children": [
+                        {
                             "#operator": "Sequence",
                             "~children": [
                                 {
@@ -49,12 +52,14 @@
                                             }
                                         ]
                                     }
-                                },
-		                {
-		                    "#operator": "Stream"
-       		                }
+                                }
                             ]
+                        },
+                        {
+                            "#operator": "Stream"
                         }
+                    ]
+                }
             },
             "signature": {
                 "name": "json",

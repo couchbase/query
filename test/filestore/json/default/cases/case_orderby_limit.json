@@ -25,35 +25,40 @@
         {
 	"plan":
 	    {
-                "#operator": "Sequence",
-                "~children": [
+            "#operator": "Sequence",
+            "~children": [
                 {
-                    "#operator": "PrimaryScan",
-                    "index": "#primary",
-                    "keyspace": "catalog",
-                    "namespace": "default",
-                    "using": "default"
-                },
-                {
-                    "#operator": "Fetch",
-                    "keyspace": "catalog",
-                    "namespace": "default"
-                },
-                {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "Sequence",
-                        "~children": [
-                            {
-                                "#operator": "InitialProject",
-                                "result_terms": [
+                    "#operator": "Sequence",
+                    "~children": [
+                        {
+                            "#operator": "PrimaryScan",
+                            "index": "#primary",
+                            "keyspace": "catalog",
+                            "namespace": "default",
+                            "using": "default"
+                        },
+                        {
+                            "#operator": "Fetch",
+                            "keyspace": "catalog",
+                            "namespace": "default"
+                        },
+                        {
+                            "#operator": "Parallel",
+                            "~child": {
+                                "#operator": "Sequence",
+                                "~children": [
                                     {
-                                        "expr": "(`catalog`.`dimensions`)"
+                                        "#operator": "InitialProject",
+                                        "result_terms": [
+                                            {
+                                                "expr": "(`catalog`.`dimensions`)"
+                                            }
+                                        ]
                                     }
                                 ]
                             }
-                        ]
-                    }
+                        }
+                    ]
                 },
                 {
                     "#operator": "Order",
@@ -90,45 +95,50 @@
         {
 	"plan":
 	    {
-                "#operator": "Sequence",
-                "~children": [
+            "#operator": "Sequence",
+            "~children": [
                 {
-                    "#operator": "PrimaryScan",
-                    "as": "u",
-                    "index": "#primary",
-                    "keyspace": "user_profile",
-                    "namespace": "default",
-                    "using": "default"
-                },
-                {
-                    "#operator": "Fetch",
-                    "as": "u",
-                    "keyspace": "user_profile",
-                    "namespace": "default"
-                },
-                {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "Sequence",
-                        "~children": [
-                            {
-                                "#operator": "InitialProject",
-                                "result_terms": [
+                    "#operator": "Sequence",
+                    "~children": [
+                        {
+                            "#operator": "PrimaryScan",
+                            "as": "u",
+                            "index": "#primary",
+                            "keyspace": "user_profile",
+                            "namespace": "default",
+                            "using": "default"
+                        },
+                        {
+                            "#operator": "Fetch",
+                            "as": "u",
+                            "keyspace": "user_profile",
+                            "namespace": "default"
+                        },
+                        {
+                            "#operator": "Parallel",
+                            "~child": {
+                                "#operator": "Sequence",
+                                "~children": [
                                     {
-                                        "as": "first_name",
-                                        "expr": "((`u`.`personal_details`).`first_name`)"
-                                    },
-                                    {
-                                        "expr": "((`u`.`personal_details`).`state`)"
-                                    },
-                                    {
-                                        "as": "age",
-                                        "expr": "((`u`.`personal_details`).`age`)"
+                                        "#operator": "InitialProject",
+                                        "result_terms": [
+                                            {
+                                                "as": "first_name",
+                                                "expr": "((`u`.`personal_details`).`first_name`)"
+                                            },
+                                            {
+                                                "expr": "((`u`.`personal_details`).`state`)"
+                                            },
+                                            {
+                                                "as": "age",
+                                                "expr": "((`u`.`personal_details`).`age`)"
+                                            }
+                                        ]
                                     }
                                 ]
                             }
-                        ]
-                    }
+                        }
+                    ]
                 },
                 {
                     "#operator": "Order",
@@ -148,9 +158,10 @@
                     "expr": "3"
                 }
             ]
-	},
-	"text": "SELECT personal_details.first_name AS first_name, personal_details.state, personal_details.age AS age FROM default:user_profile AS u ORDER BY age, first_name DESC LIMIT 3"
-        }
+	  },
+	  "text": "SELECT personal_details.first_name AS first_name, personal_details.state, personal_details.age AS age FROM default:user_profile AS u ORDER BY age, first_name DESC LIMIT 3"
+          }
         ]
      }
 ]
+

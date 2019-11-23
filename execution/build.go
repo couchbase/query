@@ -520,6 +520,7 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 	children := plan.Children()
 
+	// if there is a single child, no need for a Sequence operator
 	if len(children) == 1 {
 		child, err := children[0].Accept(this)
 		if err != nil {
@@ -536,9 +537,11 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 	for _, pchild := range children {
 		child, err := pchild.Accept(this)
 		if err != nil {
+			_SEQUENCE_POOL.Put(execChildren)
 			return nil, err
 		}
 		if !this.context.assert(child != nil, "child operator not created") {
+			_SEQUENCE_POOL.Put(execChildren)
 			return nil, fmt.Errorf("sequence operator has missing child")
 		}
 
@@ -557,6 +560,15 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 		return child.(Operator), nil
 	}
 
+	// if the first child is also a Sequence operator, then just tag the
+	// new children onto the children array of the existing Sequence operator
+	// this way we generate one less Sequence operator.
+	if seq, ok := execChildren[0].(*Sequence); ok {
+		seq.children = append(seq.children, execChildren[1:]...)
+		child := execChildren[0]
+		_SEQUENCE_POOL.Put(execChildren)
+		return child.(Operator), nil
+	}
 	return checkOp(NewSequence(plan, this.context, execChildren...), this.context)
 }
 
