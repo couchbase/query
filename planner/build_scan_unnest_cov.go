@@ -181,7 +181,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		return nil, nil, err
 	}
 
-	unnestFilters := make(expression.Expressions, 0, len(filterCovers))
+	unnestFilters := make(expression.Expressions, 0, len(filterCovers)+1)
 	for c, _ := range filterCovers {
 		unnestFilters = append(unnestFilters, c.Covered())
 	}
@@ -222,6 +222,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	array := len(coveredUnnests) > 0
 	duplicates := entry.spans.CanHaveDuplicates(index, this.indexApiVersion, pred.MayOverlapSpans(), array)
 	indexProjection := this.buildIndexProjection(entry, exprs, id, duplicates || array)
+	unnestFilters = append(unnestFilters, expression.NewIsNotMissing(unnestIdent))
 	entry.pushDownProperty = this.indexPushDownProperty(entry, keys, unnestFilters, pred, alias, true, true)
 
 	// Check and reset pagination pushdows
