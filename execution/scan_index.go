@@ -62,7 +62,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 
 		if !active || !context.assert(n != 0, "Index scan has no spans") {
 			this.notify()
-			this.close(context)
+			this.fail(context)
 			return
 		}
 		this.children = _INDEX_SCAN_POOL.Get()

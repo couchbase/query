@@ -85,7 +85,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		n := len(this.children)
 		if !active || !context.assert(n > 0, "Sequence has no children") {
 			this.notify()
-			this.close(context)
+			this.fail(context)
 			return
 		}
 

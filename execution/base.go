@@ -247,6 +247,14 @@ func (this *base) close(context *Context) {
 	}
 }
 
+// flag terminal early failure (when children don't get to start)
+func (this *base) fail(context *Context) {
+	this.close(context)
+	if this.isRoot {
+		context.CloseResults()
+	}
+}
+
 func (this *base) Done() {
 	this.baseDone()
 }
