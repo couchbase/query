@@ -126,7 +126,6 @@ func (this *HttpEndpoint) ListenTLS() error {
 			MinVersion:               cbauthTLSsettings.MinVersion,
 			CipherSuites:             cbauthTLSsettings.CipherSuites,
 			PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
-			NextProtos:               []string{"h2", "http/1.1"},
 		}
 
 		if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
@@ -138,6 +137,17 @@ func (this *HttpEndpoint) ListenTLS() error {
 			caCertPool.AppendCertsFromPEM(caCert)
 			cfg.ClientCAs = caCertPool
 		}
+
+		// In the interest of allowing Go to correctly configure our HTTP2 setup,
+		// we create a false server object and then configure it on that.  This
+		// enables us to get an early warning if our TLS configuration is not
+		// compatible with HTTP2 or could cause TLS negotiation failures.
+		http2Srv := http.Server{TLSConfig: cfg}
+		err = http2.ConfigureServer(&http2Srv, nil)
+		if err != nil {
+			return fmt.Errorf(" Error configuring http2, err: %v", err)
+		}
+		cfg := http2Srv.TLSConfig
 
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
