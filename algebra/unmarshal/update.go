@@ -22,50 +22,9 @@ import (
 /*
 Unmarshals byte array.
 */
-func UnmarshalSetTerm(body []byte) (*algebra.SetTerm, error) {
-	var _unmarshalled struct {
-		Path  string          `json:"path"`
-		Value string          `json:"value"`
-		For   json.RawMessage `json:"path_for"`
-	}
-
-	err := json.Unmarshal(body, &_unmarshalled)
-	if err != nil {
-		return nil, err
-	}
-
-	path_expr, err := parser.Parse(_unmarshalled.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	path, is_path := path_expr.(expression.Path)
-	if !is_path {
-		return nil, fmt.Errorf("UnmarshalSetTerm: cannot resolve path expression from %s",
-			_unmarshalled.Path)
-	}
-
-	value, err := parser.Parse(_unmarshalled.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	var updateFor *algebra.UpdateFor
-	if len(_unmarshalled.For) > 0 {
-		updateFor, err = UnmarshalUpdateFor(_unmarshalled.For)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return algebra.NewSetTerm(path, value, updateFor), nil
-}
-
-/*
-Unmarshals byte array.
-*/
 func UnmarshalSetTerms(body []byte) (algebra.SetTerms, error) {
 	var _unmarshalled []struct {
+		Meta  string          `json:"meta"`
 		Path  string          `json:"path"`
 		Value string          `json:"value"`
 		For   json.RawMessage `json:"path_for"`
@@ -78,6 +37,15 @@ func UnmarshalSetTerms(body []byte) (algebra.SetTerms, error) {
 
 	terms := make(algebra.SetTerms, len(_unmarshalled))
 	for i, term := range _unmarshalled {
+		var metaExpr expression.Expression
+
+		if term.Meta != "" {
+			metaExpr, err = parser.Parse(term.Meta)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		path_expr, err := parser.Parse(term.Path)
 		if err != nil {
 			return nil, err
@@ -102,7 +70,7 @@ func UnmarshalSetTerms(body []byte) (algebra.SetTerms, error) {
 			}
 		}
 
-		terms[i] = algebra.NewSetTerm(path, value, updateFor)
+		terms[i] = algebra.NewSetTerm(path, value, updateFor, metaExpr)
 	}
 
 	return terms, nil

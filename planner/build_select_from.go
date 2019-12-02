@@ -130,6 +130,18 @@ func (this *builder) GetSubPaths(keyspace string) (names []string, err error) {
 		if ok := isValidXattrs(names); !ok {
 			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr or virtual xattr and system xattr")
 		}
+		if len(names) == 0 {
+			var exprs expression.Expressions
+			switch node := this.node.(type) {
+			case *algebra.Update:
+				exprs = node.NonMutatedExpressions()
+			case *algebra.Merge:
+				exprs = node.NonMutatedExpressions()
+			default:
+				exprs = this.node.Expressions()
+			}
+			_, names = expression.MetaExpiration(exprs, keyspace)
+		}
 	}
 	return names, nil
 }

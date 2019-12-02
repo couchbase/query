@@ -27,22 +27,28 @@ Type Pair is a struct that contains key and value
 expressions.
 */
 type Pair struct {
-	Key   expression.Expression
-	Value expression.Expression
+	key     expression.Expression
+	value   expression.Expression
+	options expression.Expression
 }
 
-func NewPair(key, value expression.Expression) *Pair {
+func NewPair(key, value, options expression.Expression) *Pair {
 	return &Pair{
-		Key:   key,
-		Value: value,
+		key:     key,
+		value:   value,
+		options: options,
 	}
 }
+
+/* This function is Object map (key:value)
+ * options are not valid. ignore it
+ */
 
 func MapPairs(pairs Pairs) map[expression.Expression]expression.Expression {
 	mapping := make(map[expression.Expression]expression.Expression, len(pairs))
 
 	for _, pair := range pairs {
-		mapping[pair.Key] = pair.Value
+		mapping[pair.key] = pair.value
 	}
 
 	return mapping
@@ -52,20 +58,47 @@ func MapPairs(pairs Pairs) map[expression.Expression]expression.Expression {
 Applies mapper to the key and value expressions.
 */
 func (this *Pair) MapExpressions(mapper expression.Mapper) (err error) {
-	this.Key, err = mapper.Map(this.Key)
-	if err != nil {
-		return
+	this.key, err = mapper.Map(this.key)
+
+	if err == nil && this.value != nil {
+		this.value, err = mapper.Map(this.value)
 	}
 
-	this.Value, err = mapper.Map(this.Value)
+	if err == nil && this.options != nil {
+		this.options, err = mapper.Map(this.options)
+	}
+
 	return
 }
 
 /*
 Returns all contained Expressions.
 */
-func (this *Pair) Expressions() expression.Expressions {
-	return expression.Expressions{this.Key, this.Value}
+func (this *Pair) Expressions() (exprs expression.Expressions) {
+	exprs = make(expression.Expressions, 0, 3)
+	exprs = append(exprs, this.key)
+
+	if this.value != nil {
+		exprs = append(exprs, this.value)
+	}
+
+	if this.options != nil {
+		exprs = append(exprs, this.options)
+	}
+
+	return
+}
+
+func (this *Pair) Key() expression.Expression {
+	return this.key
+}
+
+func (this *Pair) Value() expression.Expression {
+	return this.value
+}
+
+func (this *Pair) Options() expression.Expression {
+	return this.options
 }
 
 /*
@@ -73,7 +106,8 @@ Creates and returns a new array construct containing
 the key value pair.
 */
 func (this *Pair) Expression() expression.Expression {
-	return expression.NewArrayConstruct(this.Key, this.Value)
+
+	return expression.NewArrayConstruct(this.Expressions()...)
 }
 
 /*
@@ -84,7 +118,7 @@ func (this *Pair) MarshalJSON() ([]byte, error) {
 }
 
 /*
-Applies mapper to multiple key-value pairs.
+Applies mapper to multiple key-value-options pairs.
 */
 func (this Pairs) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, pair := range this {
@@ -101,11 +135,17 @@ func (this Pairs) MapExpressions(mapper expression.Mapper) (err error) {
 Returns all contained Expressions.
 */
 func (this Pairs) Expressions() expression.Expressions {
-	exprs := make(expression.Expressions, len(this)*2)
+	exprs := make(expression.Expressions, 0, len(this)*3)
 
-	for i, pair := range this {
-		exprs[i*2] = pair.Key
-		exprs[i*2+1] = pair.Value
+	for _, pair := range this {
+		exprs = append(exprs, pair.key)
+		if pair.value != nil {
+			exprs = append(exprs, pair.value)
+		}
+
+		if pair.options != nil {
+			exprs = append(exprs, pair.options)
+		}
 	}
 
 	return exprs
@@ -155,20 +195,17 @@ Create a key value pair using the operands of the input
 expression Array construct and return.
 */
 func NewValuesPair(expr expression.Expression) (*Pair, error) {
-	array, ok := expr.(*expression.ArrayConstruct)
-	if !ok {
-		return nil, fmt.Errorf("Invalid VALUES expression %s", expr.String())
+	if array, ok := expr.(*expression.ArrayConstruct); ok {
+		operands := array.Operands()
+		switch len(operands) {
+		case 1:
+			return &Pair{key: operands[0]}, nil
+		case 2:
+			return &Pair{key: operands[0], value: operands[1]}, nil
+		case 3:
+			return &Pair{key: operands[0], value: operands[1], options: operands[2]}, nil
+		}
 	}
 
-	operands := array.Operands()
-	if len(operands) != 2 {
-		return nil, fmt.Errorf("Invalid VALUES expression %s", expr.String())
-	}
-
-	pair := &Pair{
-		Key:   operands[0],
-		Value: operands[1],
-	}
-
-	return pair, nil
+	return nil, fmt.Errorf("Invalid VALUES expression %s", expr.String())
 }

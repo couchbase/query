@@ -78,6 +78,12 @@ func NewInsertKeyTypeError(v value.Value) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewInsertOptionsTypeError(v value.Value) Error {
+	return &err{level: EXCEPTION, ICode: 5071, IKey: "execution.insert_options_type_error",
+		InternalMsg:    fmt.Sprintf("Cannot INSERT non-OBJECT options %v of type %T.", v, v),
+		InternalCaller: CallerN(1)}
+}
+
 func NewUpsertKeyError(v value.Value) Error {
 	return &err{level: EXCEPTION, ICode: 5072, IKey: "execution.upsert_key_error",
 		InternalMsg: fmt.Sprintf("No UPSERT key for %v", v), InternalCaller: CallerN(1)}
@@ -91,6 +97,12 @@ func NewUpsertValueError(v value.Value) Error {
 func NewUpsertKeyTypeError(v value.Value) Error {
 	return &err{level: EXCEPTION, ICode: 5078, IKey: "execution.upsert_key_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-string key %v of type %T.", v, v),
+		InternalCaller: CallerN(1)}
+}
+
+func NewUpsertOptionsTypeError(v value.Value) Error {
+	return &err{level: EXCEPTION, ICode: 5079, IKey: "execution.upsert_options_type_error",
+		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-OBJECT options %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 

@@ -112,7 +112,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	keyExpr := this.plan.Key()
 	valExpr := this.plan.Value()
-	var key, val value.Value
+	optionsExpr := this.plan.Options()
 	var err error
 	var ok bool
 	i := 0
@@ -120,6 +120,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	for _, av := range this.batch {
 		dpairs = dpairs[0 : i+1]
 		dpair := &dpairs[i]
+		var key, val, options value.Value
 
 		if keyExpr != nil {
 			// INSERT ... SELECT
@@ -140,6 +141,15 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			} else {
 				val = av
 			}
+
+			if optionsExpr != nil {
+				options, err = optionsExpr.Evaluate(av, context)
+				if err != nil {
+					context.Error(errors.NewEvaluationError(err,
+						fmt.Sprintf("INSERT value for %v", av.GetValue())))
+					continue
+				}
+			}
 		} else {
 			// INSERT ... VALUES
 			key, ok = av.GetAttachment("key").(value.Value)
@@ -153,6 +163,8 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 				context.Error(errors.NewInsertValueError(av.GetValue()))
 				continue
 			}
+
+			options, _ = av.GetAttachment("options").(value.Value)
 		}
 
 		dpair.Name, ok = key.Actual().(string)
@@ -161,7 +173,13 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			continue
 		}
 
+		if options != nil && options.Type() != value.OBJECT {
+			context.Error(errors.NewInsertOptionsTypeError(options))
+			continue
+		}
+
 		dpair.Value = val
+		dpair.Options = adjustExpiration(options)
 		i++
 	}
 
@@ -184,7 +202,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Capture the inserted keys in case there is a RETURNING clause
 	for _, dp := range dpairs {
-		dv := this.setDocumentKey(dp.Name, value.NewAnnotatedValue(dp.Value), context)
+		dv := this.setDocumentKey(dp.Name, value.NewAnnotatedValue(dp.Value), getExpiration(dp.Options), context)
 		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.SetAnnotations(dv)
 		av.SetField(this.plan.Alias(), dv)

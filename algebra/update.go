@@ -154,6 +154,32 @@ func (this *Update) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Update) NonMutatedExpressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.keys != nil {
+		exprs = append(exprs, this.keys)
+	}
+
+	if this.set != nil {
+		exprs = append(exprs, this.set.NonMutatedExpressions()...)
+	}
+
+	if this.unset != nil {
+		exprs = append(exprs, this.unset.Expressions()...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	return exprs
+}
+
 /*
 Returns all required privileges.
 */

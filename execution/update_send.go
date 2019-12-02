@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -139,6 +140,8 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		pairs = pairs[0 : i+1]
 		pairs[i].Name = key
 
+		var options value.Value
+
 		clone := item.GetAttachment("clone")
 		switch clone := clone.(type) {
 		case value.AnnotatedValue:
@@ -151,7 +154,18 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			cav := value.NewAnnotatedValue(cv)
 			cav.SetAnnotations(av)
 			pairs[i].Value = cav
+
+			if mv := clone.GetAttachment("options"); mv != nil {
+				options, _ = mv.(value.Value)
+			}
+
+			// Adjust expiration to absolute value
+			pairs[i].Options = adjustExpiration(options)
+			// Update in the meta attachment so that it reflects in RETURNING clause
+			setMetaExpiration(cav, pairs[i].Options)
+
 			item.SetField(this.plan.Alias(), cav)
+
 		default:
 			context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone)))
@@ -196,6 +210,41 @@ func (this *SendUpdate) Done() {
 	this.baseDone()
 	if this.isComplete() {
 		_SENDUPDATE_OP_POOL.Put(this)
+	}
+}
+
+func getExpiration(options value.Value) (exptime uint32) {
+	if options != nil && options.Type() == value.OBJECT {
+		if v, ok := options.Field("expiration"); ok && v.Type() == value.NUMBER {
+			expiration := value.AsNumberValue(v).Int64()
+			if expiration > 0 {
+				exptime = uint32(expiration)
+			}
+		}
+	}
+	return
+}
+
+const _MONTH = uint32(30 * 24 * 60 * 60)
+
+func adjustExpiration(options value.Value) value.Value {
+	expiration := getExpiration(options)
+	if expiration > 0 && expiration < _MONTH {
+		expiration += uint32(time.Now().UTC().Unix())
+	}
+
+	if options != nil && options.Type() == value.OBJECT {
+		options.SetField("expiration", expiration)
+	}
+
+	return options
+}
+
+func setMetaExpiration(av value.AnnotatedValue, options value.Value) {
+	if mv := av.GetAttachment("meta"); mv != nil {
+		if m, ok := mv.(map[string]interface{}); ok && m != nil {
+			m["expiration"] = getExpiration(options)
+		}
 	}
 }
 

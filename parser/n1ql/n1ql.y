@@ -219,6 +219,7 @@ tokOffset	 int
 %token OFFSET
 %token ON
 %token OPTION
+%token OPTIONS
 %token OR
 %token ORDER
 %token OTHERS
@@ -358,7 +359,7 @@ tokOffset	 int
 %type <expr>             satisfies
 %type <expr>             opt_when
 
-%type <expr>             function_expr
+%type <expr>             function_expr function_meta_expr
 %type <s>                function_name
 
 %type <functionName>	 func_name long_func_name short_func_name
@@ -413,7 +414,9 @@ tokOffset	 int
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list next_values
-%type <expr>             key_expr opt_value_expr value_expr
+%type <expr>             key_expr_header value_expr_header options_expr_header
+%type <pair>             key_val_expr key_val_options_expr key_val_options_expr_header
+
 %type <projection>       returns returning opt_returning
 %type <set>              set
 %type <setTerm>          set_term
@@ -1602,9 +1605,9 @@ INSERT INTO keyspace_ref opt_values_header values_list opt_returning
     $$ = algebra.NewInsertValues($3, $5, $6)
 }
 |
-INSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_returning
+INSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect opt_returning
 {
-    $$ = algebra.NewInsertSelect($3, $5, $6, $8, $9)
+    $$ = algebra.NewInsertSelect($3, $5.Key(), $5.Value(), $5.Options(), $7, $8)
 }
 ;
 
@@ -1623,15 +1626,13 @@ keyspace_name opt_as_alias
 opt_values_header:
 /* empty */
 |
-LPAREN KEY COMMA VALUE RPAREN
+LPAREN opt_primary KEY COMMA VALUE RPAREN
 |
-LPAREN PRIMARY KEY COMMA VALUE RPAREN
+LPAREN opt_primary KEY COMMA VALUE COMMA OPTIONS RPAREN
 ;
 
 key:
-KEY
-|
-PRIMARY KEY
+opt_primary KEY
 ;
 
 values_list:
@@ -1644,20 +1645,45 @@ values_list COMMA next_values
 ;
 
 values:
-VALUES LPAREN expr COMMA expr RPAREN
+VALUES key_val_expr
 {
-    $$ = algebra.Pairs{&algebra.Pair{Key: $3, Value: $5}}
+    $$ = algebra.Pairs{$2}
+}
+|
+VALUES key_val_options_expr
+{
+    $$ = algebra.Pairs{$2}
 }
 ;
 
 next_values:
 values
 |
-LPAREN expr COMMA expr RPAREN
+key_val_expr
 {
-    $$ = algebra.Pairs{&algebra.Pair{Key: $2, Value: $4}}
+    $$ = algebra.Pairs{$1}
+}
+|
+key_val_options_expr
+{
+    $$ = algebra.Pairs{$1}
 }
 ;
+
+key_val_expr:
+LPAREN expr COMMA expr RPAREN
+{
+    $$ = algebra.NewPair($2, $4, nil)
+}
+;
+
+key_val_options_expr:
+LPAREN expr COMMA expr COMMA expr RPAREN
+{
+    $$ = algebra.NewPair($2, $4, $6)
+}
+;
+
 
 opt_returning:
 /* empty */
@@ -1687,31 +1713,50 @@ raw expr
 }
 ;
 
-key_expr:
+key_expr_header:
 key expr
 {
     $$ = $2
 }
 ;
 
-opt_value_expr:
-/* empty */
+value_expr_header:
+VALUE expr
 {
-    $$ = nil
-}
-|
-value_expr
-{
-    $$ = $1
+    $$ = $2
 }
 ;
 
-value_expr:
-COMMA VALUE expr
+options_expr_header:
+OPTIONS expr
 {
-    $$ = $3
+    $$ = $2
 }
 ;
+
+key_val_options_expr_header:
+key_expr_header
+{
+    $$ = algebra.NewPair($1, nil, nil)
+}
+|
+key_expr_header COMMA value_expr_header
+{
+    $$ = algebra.NewPair($1, $3, nil)
+}
+|
+key_expr_header COMMA value_expr_header COMMA options_expr_header
+{
+    $$ = algebra.NewPair($1, $3, $5)
+}
+|
+key_expr_header COMMA options_expr_header
+{
+    $$ = algebra.NewPair($1, nil, $3)
+}
+;
+
+
 
 
 /*************************************************
@@ -1726,9 +1771,9 @@ UPSERT INTO keyspace_ref opt_values_header values_list opt_returning
     $$ = algebra.NewUpsertValues($3, $5, $6)
 }
 |
-UPSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_returning
+UPSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect opt_returning
 {
-    $$ = algebra.NewUpsertSelect($3, $5, $6, $8, $9)
+    $$ = algebra.NewUpsertSelect($3, $5.Key(), $5.Value(), $5.Options(), $7, $8)
 }
 ;
 
@@ -1792,9 +1837,35 @@ set_terms COMMA set_term
 set_term:
 path EQ expr opt_update_for
 {
-    $$ = algebra.NewSetTerm($1, $3, $4)
+     $$ = algebra.NewSetTerm($1, $3, $4, nil)
+}
+|
+function_meta_expr DOT path EQ expr
+{
+    $$ = nil
+    if $1 != nil && algebra.IsValidMetaMutatePath($3){
+         $$ = algebra.NewSetTerm($3, $5, nil, $1)
+    } else if $1 != nil {
+         yylex.Error(fmt.Sprintf("SET clause has invalid path %s",  $3.String()))
+	 yylex.(*lexer).Stop()
+    }
 }
 ;
+
+function_meta_expr:
+function_name LPAREN opt_exprs RPAREN
+{
+    $$ = nil
+    f, ok := expression.GetFunction($1)
+    if ok && strings.ToLower($1) == "meta" && len($3) >= f.MinArgs() && len($3) <= f.MaxArgs() {
+         $$ = f.Constructor()($3...)
+    } else {
+         yylex.Error(fmt.Sprintf("SET clause has invalid path %s", $1))
+	 yylex.(*lexer).Stop()
+    }
+}
+;
+
 
 opt_update_for:
 /* empty */
@@ -2030,17 +2101,22 @@ opt_where
 merge_insert:
 expr opt_where
 {
-    $$ = algebra.NewMergeInsert(nil, $1, $2)
+    $$ = algebra.NewMergeInsert(nil, $1, nil, $2)
 }
 |
-LPAREN expr COMMA expr RPAREN opt_where
+key_val_expr opt_where
 {
-    $$ = algebra.NewMergeInsert($2, $4, $6)
+    $$ = algebra.NewMergeInsert($1.Key(), $1.Value(), nil, $2)
 }
 |
-LPAREN key_expr value_expr RPAREN opt_where
+key_val_options_expr opt_where
 {
-    $$ = algebra.NewMergeInsert($2, $3, $5)
+    $$ = algebra.NewMergeInsert($1.Key(), $1.Value(), $1.Options(), $2)
+}
+|
+LPAREN key_val_options_expr_header RPAREN opt_where
+{
+    $$ = algebra.NewMergeInsert($2.Key(), $2.Value(), $2.Options(), $4)
 }
 ;
 
@@ -3040,7 +3116,7 @@ members COMMA member
 member:
 expr COLON expr
 {
-    $$ = algebra.NewPair($1, $3)
+    $$ = algebra.NewPair($1, $3, nil)
 }
 |
 expr
@@ -3050,7 +3126,7 @@ expr
         yylex.Error(fmt.Sprintf("Object member missing name or value: %s", $1.String()))
     }
 
-    $$ = algebra.NewPair(expression.NewConstant(name), $1)
+    $$ = algebra.NewPair(expression.NewConstant(name), $1, nil)
 }
 ;
 

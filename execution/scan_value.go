@@ -59,13 +59,13 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 		pairs := this.plan.Values()
 
 		for _, pair := range pairs {
-			key, err := pair.Key.Evaluate(parent, context)
+			key, err := pair.Key().Evaluate(parent, context)
 			if err != nil {
-				context.Error(errors.NewEvaluationError(err, "VALUES"))
+				context.Error(errors.NewEvaluationError(err, "KEY"))
 				return
 			}
 
-			val, err := pair.Value.Evaluate(parent, context)
+			val, err := pair.Value().Evaluate(parent, context)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "VALUES"))
 				return
@@ -74,6 +74,15 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 			av := value.NewAnnotatedValue(nil)
 			av.SetAttachment("key", key)
 			av.SetAttachment("value", val)
+
+			if pair.Options() != nil {
+				options, err := pair.Options().Evaluate(parent, context)
+				if err != nil {
+					context.Error(errors.NewEvaluationError(err, "OPTIONS"))
+					return
+				}
+				av.SetAttachment("options", options)
+			}
 
 			if !this.sendItem(av) {
 				return

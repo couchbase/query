@@ -33,6 +33,7 @@ type Insert struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	key       expression.Expression `json:"key"`
 	value     expression.Expression `json:"value"`
+	options   expression.Expression `json:"options"`
 	values    Pairs                 `json:"values"`
 	query     *Select               `json:"select"`
 	returning *Projection           `json:"returning"`
@@ -49,6 +50,7 @@ func NewInsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection)
 		keyspace:  keyspace,
 		key:       nil,
 		value:     nil,
+		options:   nil,
 		values:    values,
 		query:     nil,
 		returning: returning,
@@ -64,12 +66,13 @@ struct by assigning the input attributes to the fields of the
 struct, and setting values to nil. This represents the insert
 select clause.
 */
-func NewInsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
+func NewInsertSelect(keyspace *KeyspaceRef, key, value, options expression.Expression,
 	query *Select, returning *Projection) *Insert {
 	rv := &Insert{
 		keyspace:  keyspace,
 		key:       key,
 		value:     value,
+		options:   options,
 		values:    nil,
 		query:     query,
 		returning: returning,
@@ -133,6 +136,13 @@ func (this *Insert) MapExpressionsNoSelect(mapper expression.Mapper) (err error)
 		}
 	}
 
+	if this.options != nil {
+		this.options, err = mapper.Map(this.options)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.values != nil {
 		err = this.values.MapExpressions(mapper)
 		if err != nil {
@@ -159,6 +169,10 @@ func (this *Insert) Expressions() expression.Expressions {
 
 	if this.value != nil {
 		exprs = append(exprs, this.value)
+	}
+
+	if this.options != nil {
+		exprs = append(exprs, this.options)
 	}
 
 	if this.values != nil {
@@ -262,6 +276,10 @@ clause.
 */
 func (this *Insert) Value() expression.Expression {
 	return this.value
+}
+
+func (this *Insert) Options() expression.Expression {
+	return this.options
 }
 
 /*

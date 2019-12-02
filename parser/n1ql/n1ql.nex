@@ -249,6 +249,7 @@
 /[oO][fF][fF][sS][eE][tT]/			 { yylex.logToken(yylex.Text(), "OFFSET"); return OFFSET }
 /[oO][nN]/					 { yylex.logToken(yylex.Text(), "ON"); return ON }
 /[oO][pP][tT][iI][oO][nN]/			 { yylex.logToken(yylex.Text(), "OPTION"); return OPTION }
+/[oO][pP][tT][iI][oO][nN][sS]/			 { yylex.logToken(yylex.Text(), "OPTIONS"); return OPTIONS }
 /[oO][rR]/					 { yylex.logToken(yylex.Text(), "OR"); return OR }
 /[oO][rR][dD][eE][rR]/				 { yylex.logToken(yylex.Text(), "ORDER"); return ORDER }
 /[oO][tT][hH][eE][rR][sS]/			 { yylex.logToken(yylex.Text(), "OTHERS"); return OTHERS }

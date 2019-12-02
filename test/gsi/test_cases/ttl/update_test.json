@@ -1,0 +1,77 @@
+[
+    { "statements": "DELETE FROM orders USE KEYS ['ttlk02']"},
+    { "statements": "INSERT INTO orders VALUES ('ttlk02', {'a': 'ttlk02'}, {'expiration': 3000000000})" },
+    { "statements": "UPDATE orders AS o USE KEYS 'ttlk02' SET o.comment = 'xyz'" },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk02"
+             }
+        ]
+    },
+    { "statements": "UPDATE orders AS o USE KEYS 'ttlk02' SET META(o).expiration = 3.1*1000*1000*1000" },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'",
+       "results": [
+             {
+                 "expiration": 3100000000,
+                 "id": "ttlk02"
+             }
+        ]
+    },
+    { "statements": "UPDATE orders AS o USE KEYS 'ttlk02' SET META(o).expiration = META(o).expiration + 1000000 RETURNING META(o).expiration",
+       "results": [
+             {
+                 "expiration": 3101000000
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'",
+       "results": [
+             {
+                 "expiration": 3101000000,
+                 "id": "ttlk02"
+             }
+        ]
+    },
+    { "statements": "UPDATE orders AS o USE KEYS 'ttlk02' SET META(o).expiration = 0 RETURNING META(o).expiration",
+       "results": [
+             {
+                 "expiration": 0
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk02"
+             }
+        ]
+    },
+    { "statements": "UPDATE orders AS o USE KEYS 'ttlk02' SET META(o).expiration = 2.7*1000*1000*1000" },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'",
+       "results": [
+             {
+                 "expiration": 2700000000,
+                 "id": "ttlk02"
+             }
+        ]
+    },
+    { "statements": "UPDATE orders AS o USE KEYS 'ttlk02' SET o.expiration = 100 RETURNING META(o).expiration",
+       "results": [
+             {
+                 "expiration": 0
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk02"
+             }
+        ]
+    },
+    { "statements": "DELETE FROM orders USE KEYS ['ttlk02']"}
+]
