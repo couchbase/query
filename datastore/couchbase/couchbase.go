@@ -1271,7 +1271,7 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 	if fast {
 		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline())
 	} else {
-		if ls > 0 && subPaths[0] != "$document" {
+		if ls > 0 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
 			subPaths = append([]string{"$document"}, subPaths...)
 			noVirtualDocAttr = true
 		}
@@ -1404,12 +1404,19 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 		meta_type = "base64"
 	}
 
-	// Get flags and expiration from the $document virtual xattrs
-	docMeta := xVal["$document"].(map[string]interface{})
+	var flags, exptime uint32
 
-	// Convert unmarshalled int64 values to uint32
-	flags := uint32(value.NewValue(docMeta["flags"]).(value.NumberValue).Int64())
-	exptime := uint32(value.NewValue(docMeta["exptime"]).(value.NumberValue).Int64())
+	if subPaths[0] == "$document" {
+		// Get flags and expiration from the $document virtual xattrs
+		docMeta := xVal["$document"].(map[string]interface{})
+
+		// Convert unmarshalled int64 values to uint32
+		flags = uint32(value.NewValue(docMeta["flags"]).(value.NumberValue).Int64())
+		exptime = uint32(value.NewValue(docMeta["exptime"]).(value.NumberValue).Int64())
+	} else if subPaths[0] == "$document.exptime" {
+		exptime = uint32(value.NewValue(xVal["$document.exptime"]).(value.NumberValue).Int64())
+
+	}
 
 	if noVirtualDocAttr {
 		delete(xVal, "$document")
@@ -1491,6 +1498,15 @@ func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32,
 
 }
 
+func getExpiration(options value.Value) (exptime uint32) {
+	if options != nil && options.Type() == value.OBJECT {
+		if v, ok := options.Field("expiration"); ok && v.Type() == value.NUMBER {
+			exptime = uint32(value.AsNumberValue(v).Int64())
+		}
+	}
+	return
+}
+
 func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors.Error) {
 	if len(inserts) == 0 {
 		return nil, nil
@@ -1502,16 +1518,19 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 	for _, kv := range inserts {
 		key := kv.Name
 		val := kv.Value.ActualForIndex()
+		exptime := int(getExpiration(kv.Options))
 
 		//mv := kv.Value.GetAttachment("meta")
 
 		// TODO Need to also set meta
+
 		switch op {
 
 		case INSERT:
 			var added bool
+
 			// add the key to the backend
-			added, err = b.cbbucket.Add(key, 0, val)
+			added, err = b.cbbucket.Add(key, exptime, val)
 			b.checkRefresh(err)
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
@@ -1538,12 +1557,12 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 			} else {
 
 				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>", key, uint64(cas), flags, val)
-				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), 0, uint64(cas), val)
+				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, uint64(cas), val)
 				b.checkRefresh(err)
 			}
 
 		case UPSERT:
-			err = b.cbbucket.Set(key, 0, val)
+			err = b.cbbucket.Set(key, exptime, val)
 			b.checkRefresh(err)
 		}
 

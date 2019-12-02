@@ -517,7 +517,30 @@ func XattrsNames(exprs Expressions, alias string) (present bool, names []string)
 		}
 		return present, names
 	}
+
 	return present, nil
+}
+
+func MetaExpiration(exprs Expressions, alias string) (present bool, names []string) {
+	var base Expression
+	if alias == "" {
+		base = NewMeta()
+	} else {
+		base = NewMeta(NewIdentifier(alias))
+	}
+
+	mNames := make(map[string]bool, 5)
+	for _, expr := range exprs {
+		expr.FieldNames(base, mNames)
+	}
+
+	for s, _ := range mNames {
+		if s == "expiration" {
+			return true, []string{"$document.exptime"}
+		}
+	}
+
+	return false, nil
 }
 
 func (this *ExpressionBase) ResetValue() {

@@ -919,8 +919,9 @@ func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, c
 	return av
 }
 
-func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue, context *Context) value.AnnotatedValue {
-	item.SetAttachment("meta", map[string]interface{}{"id": key})
+func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue,
+	expiration uint32, context *Context) value.AnnotatedValue {
+	item.SetAttachment("meta", map[string]interface{}{"id": key, "expiration": expiration})
 	item.SetId(key)
 	return item
 }

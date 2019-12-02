@@ -96,8 +96,15 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 		return nil, err
 	}
 
-	t.Path().Set(clone, v, context)
-	return clone, nil
+	if t.Meta() != nil {
+		if opVal, ok := clone.GetAttachment("options").(value.Value); ok && opVal.Type() != value.MISSING {
+			t.Path().Set(opVal, v, context)
+		}
+	} else {
+		t.Path().Set(clone, v, context)
+	}
+
+	return clone, err
 }
 
 func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (

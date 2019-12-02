@@ -1,0 +1,69 @@
+[
+    { "statements": "DELETE FROM orders USE KEYS ['ttlk01','ttlk01-ttlk01','ttlk02','ttlk02-ttlk02', 'ttlk11', 'ttlk11-ttlk11', 'ttlk12', 'ttlk12-ttlk12', 'ttlk21', 'ttlk22']" },
+    { "statements": "UPSERT INTO orders (KEY, VALUE) VALUES ('ttlk01', {'a': 'ttlk01'})" },
+    { "statements": "UPSERT INTO orders (KEY, VALUE, OPTIONS) VALUES ('ttlk02', {'a': 'ttlk02'}, {'expiration': 3000000000})" },
+    { "statements": "UPSERT INTO orders VALUES ('ttlk11', {'a': 'ttlk11'}) RETURNING META().expiration",
+       "results": [
+            {
+                "expiration": 0
+            }
+        ]
+    },
+    { "statements": "UPSERT INTO orders VALUES ('ttlk12', {'a': 'ttlk12'}, {'expiration': 3.1*1000*1000*1000}) RETURNING META().expiration",
+       "results": [
+            {
+                "expiration": 3100000000
+            }
+        ]
+    },
+    { "statements": "UPSERT INTO orders VALUES ('ttlk21', {'a': 'ttlk21'}), VALUES ('ttlk22', {'a': 'ttlk22'}, {'expiration': 2.5*1000*1000*1000})" },
+    { "statements": "UPSERT INTO orders (KEY id, VALUE doc)  SELECT CONCAT(META(o).id,'-',o.a) AS id, o AS doc FROM orders AS o USE KEYS 'ttlk01'" },
+    { "statements": "UPSERT INTO orders (KEY id, VALUE doc, OPTIONS {expiration})  SELECT CONCAT(META(o).id,'-',o.a) AS id, o AS doc, META(o).expiration FROM orders AS o USE KEYS 'ttlk02'" },
+    { "statements": "UPSERT INTO orders (KEY id)  SELECT CONCAT(META(o).id,'-',o.a) AS id FROM orders AS o USE KEYS 'ttlk11'" },
+    { "statements": "UPSERT INTO orders (KEY id, OPTIONS {expiration})  SELECT CONCAT(META(o).id,'-',o.a) AS id, META(o).expiration FROM orders AS o USE KEYS 'ttlk12'" },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk01','ttlk01-ttlk01','ttlk02','ttlk02-ttlk02', 'ttlk11', 'ttlk11-ttlk11', 'ttlk12', 'ttlk12-ttlk12', 'ttlk21', 'ttlk22'] ORDER BY META(o).id",
+       "results": [
+            {
+                 "expiration": 0,
+                 "id": "ttlk01"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk01-ttlk01"
+             },
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk02"
+             },
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk02-ttlk02"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk11"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk11-ttlk11"
+             },
+             {
+                 "expiration": 3100000000,
+                 "id": "ttlk12"
+             },
+             {
+                 "expiration": 3100000000,
+                 "id": "ttlk12-ttlk12"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk21"
+             },
+             {
+                 "expiration": 2500000000,
+                 "id": "ttlk22"
+             }
+        ]
+    },
+    { "statements": "DELETE FROM orders USE KEYS ['ttlk01','ttlk01-ttlk01','ttlk02','ttlk02-ttlk02', 'ttlk11', 'ttlk11-ttlk11', 'ttlk12', 'ttlk12-ttlk12', 'ttlk21', 'ttlk22']" }
+]

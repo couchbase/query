@@ -18,6 +18,7 @@ import (
 )
 
 func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
+	this.node = stmt
 	this.children = make([]plan.Operator, 0, 8)
 	this.subChildren = make([]plan.Operator, 0, 8)
 	source := stmt.Source()
@@ -139,7 +140,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		} else {
 			keyExpr = act.Key()
 		}
-		ops = append(ops, plan.NewSendInsert(keyspace, ksref.Alias(), keyExpr, act.Value(), stmt.Limit()))
+		ops = append(ops, plan.NewSendInsert(keyspace, ksref.Alias(), keyExpr, act.Value(),
+			act.Options(), stmt.Limit()))
 		insert = plan.NewSequence(ops...)
 	}
 

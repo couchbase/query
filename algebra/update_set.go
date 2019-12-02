@@ -52,6 +52,15 @@ func (this *Set) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Set) NonMutatedExpressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+	for _, term := range this.terms {
+		exprs = append(exprs, term.NonMutatedExpressions()...)
+	}
+
+	return exprs
+}
+
 /*
 Fully qualify identifiers for each term in the set terms.
 */
@@ -77,13 +86,28 @@ func (this *Set) Terms() SetTerms {
 type SetTerms []*SetTerm
 
 type SetTerm struct {
+	meta      expression.Expression `json:"meta"`
 	path      expression.Path       `json:"path"`
 	value     expression.Expression `json:"value"`
 	updateFor *UpdateFor            `json:"path_for"`
 }
 
-func NewSetTerm(path expression.Path, value expression.Expression, updateFor *UpdateFor) *SetTerm {
-	return &SetTerm{path, value, updateFor}
+func NewSetTerm(path expression.Path, value expression.Expression, updateFor *UpdateFor,
+	meta expression.Expression) *SetTerm {
+	return &SetTerm{meta, path, value, updateFor}
+}
+
+var _MUTATE_META_PATHS = []string{"expiration"}
+
+func IsValidMetaMutatePath(path expression.Expression) bool {
+	if alias, path, err := expression.PathString(path); err == nil && path == "" {
+		for _, s := range _MUTATE_META_PATHS {
+			if s == alias {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 /*
@@ -91,13 +115,19 @@ Applies mapper to the path and value expressions, and update-for
 in the set term.
 */
 func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
-	path, err := mapper.Map(this.path)
-	if err != nil {
-		return err
+	if this.meta != nil {
+		this.meta, err = mapper.Map(this.meta)
+		if err != nil {
+			return err
+		}
+	}
+
+	path, err1 := mapper.Map(this.path)
+	if err1 != nil {
+		return err1
 	}
 
 	this.path = path.(expression.Path)
-
 	this.value, err = mapper.Map(this.value)
 	if err != nil {
 		return
@@ -116,6 +146,17 @@ Returns all contained Expressions.
 func (this *SetTerm) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 8)
 	exprs = append(exprs, this.path, this.value)
+
+	if this.updateFor != nil {
+		exprs = append(exprs, this.updateFor.Expressions()...)
+	}
+
+	return exprs
+}
+
+func (this *SetTerm) NonMutatedExpressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 8)
+	exprs = append(exprs, this.value)
 
 	if this.updateFor != nil {
 		exprs = append(exprs, this.updateFor.Expressions()...)
@@ -147,12 +188,20 @@ func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 		}
 	}
 
-	path, err := f.Map(this.path)
-	if err != nil {
-		return err
+	if this.meta != nil {
+		// if meta is present don't formalize the path
+		this.meta, err = f.Map(this.meta)
+		if err != nil {
+			return err
+		}
+	} else {
+		path, err := f.Map(this.path)
+		if err != nil {
+			return err
+		}
+		this.path = path.(expression.Path)
 	}
 
-	this.path = path.(expression.Path)
 	this.value, err = f.Map(this.value)
 	return
 }
@@ -162,6 +211,13 @@ Returns the path expression in the SET clause.
 */
 func (this *SetTerm) Path() expression.Path {
 	return this.path
+}
+
+/*
+Returns the Meta portion of expression in the SET clause.
+*/
+func (this *SetTerm) Meta() expression.Expression {
+	return this.meta
 }
 
 /*
@@ -183,8 +239,12 @@ Marshals input into byte array.
 */
 func (this *SetTerm) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 3)
-	r["path"] = expression.NewStringer().Visit(this.path)
-	r["value"] = expression.NewStringer().Visit(this.value)
+	stringer := expression.NewStringer()
+	if this.meta != nil {
+		r["meta"] = stringer.Visit(this.meta)
+	}
+	r["path"] = stringer.Visit(this.path)
+	r["value"] = stringer.Visit(this.value)
 	if this.updateFor != nil {
 		r["path_for"] = this.updateFor
 	}

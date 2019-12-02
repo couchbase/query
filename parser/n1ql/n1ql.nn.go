@@ -22206,6 +22206,242 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
 
+	// [oO][pP][tT][iI][oO][nN][sS]
+	{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return 1
+			case 80:
+				return -1
+			case 83:
+				return -1
+			case 84:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return 1
+			case 112:
+				return -1
+			case 115:
+				return -1
+			case 116:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 80:
+				return 2
+			case 83:
+				return -1
+			case 84:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 112:
+				return 2
+			case 115:
+				return -1
+			case 116:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 80:
+				return -1
+			case 83:
+				return -1
+			case 84:
+				return 3
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 112:
+				return -1
+			case 115:
+				return -1
+			case 116:
+				return 3
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return 4
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 80:
+				return -1
+			case 83:
+				return -1
+			case 84:
+				return -1
+			case 105:
+				return 4
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 112:
+				return -1
+			case 115:
+				return -1
+			case 116:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return 5
+			case 80:
+				return -1
+			case 83:
+				return -1
+			case 84:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return 5
+			case 112:
+				return -1
+			case 115:
+				return -1
+			case 116:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return 6
+			case 79:
+				return -1
+			case 80:
+				return -1
+			case 83:
+				return -1
+			case 84:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return 6
+			case 111:
+				return -1
+			case 112:
+				return -1
+			case 115:
+				return -1
+			case 116:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 80:
+				return -1
+			case 83:
+				return 7
+			case 84:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 112:
+				return -1
+			case 115:
+				return 7
+			case 116:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 73:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 80:
+				return -1
+			case 83:
+				return -1
+			case 84:
+				return -1
+			case 105:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 112:
+				return -1
+			case 115:
+				return -1
+			case 116:
+				return -1
+			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
+
 	// [oO][rR]
 	{[]bool{false, false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
@@ -36800,412 +37036,413 @@ OUTER0:
 			}
 		case 154:
 			{
+				yylex.logToken(yylex.Text(), "OPTIONS")
+				return OPTIONS
+			}
+		case 155:
+			{
 				yylex.logToken(yylex.Text(), "OR")
 				return OR
 			}
-		case 155:
+		case 156:
 			{
 				yylex.logToken(yylex.Text(), "ORDER")
 				return ORDER
 			}
-		case 156:
+		case 157:
 			{
 				yylex.logToken(yylex.Text(), "OTHERS")
 				return OTHERS
 			}
-		case 157:
+		case 158:
 			{
 				yylex.logToken(yylex.Text(), "OUTER")
 				return OUTER
 			}
-		case 158:
+		case 159:
 			{
 				yylex.logToken(yylex.Text(), "OVER")
 				return OVER
 			}
-		case 159:
+		case 160:
 			{
 				yylex.logToken(yylex.Text(), "PARSE")
 				return PARSE
 			}
-		case 160:
+		case 161:
 			{
 				yylex.logToken(yylex.Text(), "PARTITION")
 				return PARTITION
 			}
-		case 161:
+		case 162:
 			{
 				yylex.logToken(yylex.Text(), "PASSWORD")
 				return PASSWORD
 			}
-		case 162:
+		case 163:
 			{
 				yylex.logToken(yylex.Text(), "PATH")
 				return PATH
 			}
-		case 163:
+		case 164:
 			{
 				yylex.logToken(yylex.Text(), "POOL")
 				return POOL
 			}
-		case 164:
+		case 165:
 			{
 				yylex.logToken(yylex.Text(), "PRECEDING")
 				return PRECEDING
 			}
-		case 165:
+		case 166:
 			{
 				yylex.logToken(yylex.Text(), "PREPARE")
 				lval.tokOffset = yylex.curOffset
 				return PREPARE
 			}
-		case 166:
+		case 167:
 			{
 				yylex.logToken(yylex.Text(), "PRIMARY")
 				return PRIMARY
 			}
-		case 167:
+		case 168:
 			{
 				yylex.logToken(yylex.Text(), "PRIVATE")
 				return PRIVATE
 			}
-		case 168:
+		case 169:
 			{
 				yylex.logToken(yylex.Text(), "PRIVILEGE")
 				return PRIVILEGE
 			}
-		case 169:
+		case 170:
 			{
 				yylex.logToken(yylex.Text(), "PROCEDURE")
 				return PROCEDURE
 			}
-		case 170:
+		case 171:
 			{
 				yylex.logToken(yylex.Text(), "PROBE")
 				return PROBE
 			}
-		case 171:
+		case 172:
 			{
 				yylex.logToken(yylex.Text(), "PUBLIC")
 				return PUBLIC
 			}
-		case 172:
+		case 173:
 			{
 				yylex.logToken(yylex.Text(), "RANGE")
 				return RANGE
 			}
-		case 173:
+		case 174:
 			{
 				yylex.logToken(yylex.Text(), "RAW")
 				return RAW
 			}
-		case 174:
+		case 175:
 			{
 				yylex.logToken(yylex.Text(), "REALM")
 				return REALM
 			}
-		case 175:
+		case 176:
 			{
 				yylex.logToken(yylex.Text(), "REDUCE")
 				return REDUCE
 			}
-		case 176:
+		case 177:
 			{
 				yylex.logToken(yylex.Text(), "RENAME")
 				return RENAME
 			}
-		case 177:
+		case 178:
 			{
 				yylex.logToken(yylex.Text(), "RESPECT")
 				return RESPECT
 			}
-		case 178:
+		case 179:
 			{
 				yylex.logToken(yylex.Text(), "RETURN")
 				return RETURN
 			}
-		case 179:
+		case 180:
 			{
 				yylex.logToken(yylex.Text(), "RETURNING")
 				return RETURNING
 			}
-		case 180:
+		case 181:
 			{
 				yylex.logToken(yylex.Text(), "REVOKE")
 				return REVOKE
 			}
-		case 181:
+		case 182:
 			{
 				yylex.logToken(yylex.Text(), "RIGHT")
 				return RIGHT
 			}
-		case 182:
+		case 183:
 			{
 				yylex.logToken(yylex.Text(), "ROLE")
 				return ROLE
 			}
-		case 183:
+		case 184:
 			{
 				yylex.logToken(yylex.Text(), "ROLLBACK")
 				return ROLLBACK
 			}
-		case 184:
+		case 185:
 			{
 				yylex.logToken(yylex.Text(), "ROW")
 				return ROW
 			}
-		case 185:
+		case 186:
 			{
 				yylex.logToken(yylex.Text(), "ROWS")
 				return ROWS
 			}
-		case 186:
+		case 187:
 			{
 				yylex.logToken(yylex.Text(), "SATISFIES")
 				return SATISFIES
 			}
-		case 187:
+		case 188:
 			{
 				yylex.logToken(yylex.Text(), "SCHEMA")
 				return SCHEMA
 			}
-		case 188:
+		case 189:
 			{
 				yylex.logToken(yylex.Text(), "SELECT")
 				return SELECT
 			}
-		case 189:
+		case 190:
 			{
 				yylex.logToken(yylex.Text(), "SELF")
 				return SELF
 			}
-		case 190:
+		case 191:
 			{
 				yylex.logToken(yylex.Text(), "SET")
 				return SET
 			}
-		case 191:
+		case 192:
 			{
 				yylex.logToken(yylex.Text(), "SHOW")
 				return SHOW
 			}
-		case 192:
+		case 193:
 			{
 				yylex.logToken(yylex.Text(), "SOME")
 				return SOME
 			}
-		case 193:
+		case 194:
 			{
 				yylex.logToken(yylex.Text(), "START")
 				return START
 			}
-		case 194:
+		case 195:
 			{
 				yylex.logToken(yylex.Text(), "STATISTICS")
 				return STATISTICS
 			}
-		case 195:
+		case 196:
 			{
 				yylex.logToken(yylex.Text(), "STRING")
 				return STRING
 			}
-		case 196:
+		case 197:
 			{
 				yylex.logToken(yylex.Text(), "SYSTEM")
 				return SYSTEM
 			}
-		case 197:
+		case 198:
 			{
 				yylex.logToken(yylex.Text(), "THEN")
 				return THEN
 			}
-		case 198:
+		case 199:
 			{
 				yylex.logToken(yylex.Text(), "TIES")
 				return TIES
 			}
-		case 199:
+		case 200:
 			{
 				yylex.logToken(yylex.Text(), "TO")
 				return TO
 			}
-		case 200:
+		case 201:
 			{
 				yylex.logToken(yylex.Text(), "TRANSACTION")
 				return TRANSACTION
 			}
-		case 201:
+		case 202:
 			{
 				yylex.logToken(yylex.Text(), "TRIGGER")
 				return TRIGGER
 			}
-		case 202:
+		case 203:
 			{
 				yylex.logToken(yylex.Text(), "TRUE")
 				return TRUE
 			}
-		case 203:
+		case 204:
 			{
 				yylex.logToken(yylex.Text(), "TRUNCATE")
 				return TRUNCATE
 			}
-		case 204:
+		case 205:
 			{
 				yylex.logToken(yylex.Text(), "UNBOUNDED")
 				return UNBOUNDED
 			}
-		case 205:
+		case 206:
 			{
 				yylex.logToken(yylex.Text(), "UNDER")
 				return UNDER
 			}
-		case 206:
+		case 207:
 			{
 				yylex.logToken(yylex.Text(), "UNION")
 				return UNION
 			}
-		case 207:
+		case 208:
 			{
 				yylex.logToken(yylex.Text(), "UNIQUE")
 				return UNIQUE
 			}
-		case 208:
+		case 209:
 			{
 				yylex.logToken(yylex.Text(), "UNKNOWN")
 				return UNKNOWN
 			}
-		case 209:
+		case 210:
 			{
 				yylex.logToken(yylex.Text(), "UNNEST")
 				return UNNEST
 			}
-		case 210:
+		case 211:
 			{
 				yylex.logToken(yylex.Text(), "UNSET")
 				return UNSET
 			}
-		case 211:
+		case 212:
 			{
 				yylex.logToken(yylex.Text(), "UPDATE")
 				return UPDATE
 			}
-		case 212:
+		case 213:
 			{
 				yylex.logToken(yylex.Text(), "UPSERT")
 				return UPSERT
 			}
-		case 213:
+		case 214:
 			{
 				yylex.logToken(yylex.Text(), "USE")
 				return USE
 			}
-		case 214:
+		case 215:
 			{
 				yylex.logToken(yylex.Text(), "USER")
 				return USER
 			}
-		case 215:
+		case 216:
 			{
 				yylex.logToken(yylex.Text(), "USING")
 				return USING
 			}
-		case 216:
+		case 217:
 			{
 				yylex.logToken(yylex.Text(), "VALIDATE")
 				return VALIDATE
 			}
-		case 217:
+		case 218:
 			{
 				yylex.logToken(yylex.Text(), "VALUE")
 				return VALUE
 			}
-		case 218:
+		case 219:
 			{
 				yylex.logToken(yylex.Text(), "VALUED")
 				return VALUED
 			}
-		case 219:
+		case 220:
 			{
 				yylex.logToken(yylex.Text(), "VALUES")
 				return VALUES
 			}
-		case 220:
+		case 221:
 			{
 				yylex.logToken(yylex.Text(), "VIA")
 				return VIA
 			}
-		case 221:
+		case 222:
 			{
 				yylex.logToken(yylex.Text(), "VIEW")
 				return VIEW
 			}
-		case 222:
+		case 223:
 			{
 				yylex.logToken(yylex.Text(), "WHEN")
 				return WHEN
 			}
-		case 223:
+		case 224:
 			{
 				yylex.logToken(yylex.Text(), "WHERE")
 				return WHERE
 			}
-		case 224:
+		case 225:
 			{
 				yylex.logToken(yylex.Text(), "WHILE")
 				return WHILE
 			}
-		case 225:
+		case 226:
 			{
 				yylex.logToken(yylex.Text(), "WINDOW")
 				return WINDOW
 			}
-		case 226:
+		case 227:
 			{
 				yylex.logToken(yylex.Text(), "WITH")
 				return WITH
 			}
-		case 227:
+		case 228:
 			{
 				yylex.logToken(yylex.Text(), "WITHIN")
 				return WITHIN
 			}
-		case 228:
+		case 229:
 			{
 				yylex.logToken(yylex.Text(), "WORK")
 				return WORK
 			}
-		case 229:
+		case 230:
 			{
 				yylex.logToken(yylex.Text(), "XOR")
 				return XOR
 			}
-		case 230:
+		case 231:
 			{
 				lval.s = yylex.Text()
 				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 				return IDENT
 			}
-		case 231:
+		case 232:
 			{
 				lval.s = yylex.Text()[1:]
 				yylex.logToken(yylex.Text(), "NAMED_PARAM - %s", lval.s)
 				return NAMED_PARAM
 			}
-		case 232:
+		case 233:
 			{
 				lval.n, _ = strconv.ParseInt(yylex.Text()[1:], 10, 64)
 				yylex.logToken(yylex.Text(), "POSITIONAL_PARAM - %d", lval.n)
 				return POSITIONAL_PARAM
 			}
-		case 233:
+		case 234:
 			{
 				lval.n = 0 // Handled by parser
 				yylex.logToken(yylex.Text(), "NEXT_PARAM - ?")
 				return NEXT_PARAM
-			}
-		case 234:
-			{
-				yylex.curOffset++
 			}
 		case 235:
 			{
@@ -37216,6 +37453,10 @@ OUTER0:
 				yylex.curOffset++
 			}
 		case 237:
+			{
+				yylex.curOffset++
+			}
+		case 238:
 			{
 				/* this we don't know what it is: we'll let
 				   the parser handle it (and most probably throw a syntax error

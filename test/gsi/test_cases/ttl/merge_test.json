@@ -1,0 +1,173 @@
+[
+    { "statements": "DELETE FROM orders USE KEYS ['ttlk100', 'ttlk101', 'ttlk50', 'ttlk01', 'ttlk02', 'ttlk03', 'ttlk11', 'ttlk12', 'ttlk13', 'ttlk14']"},
+    { "statements": "INSERT INTO orders VALUES ('ttlk100', {'ids': ['ttlk01', 'ttlk02', 'ttlk03', 'ttlk11', 'ttlk12', 'ttlk13', 'ttlk14']}, {'expiration': 3000000000}), VALUES ('ttlk101', {'ids': ['ttlk50', 'ttlk50', 'ttlk50', 'ttlk50', 'ttlk50', 'ttlk50', 'ttlk50']}, {'expiration': 3200000000}), VALUES ('ttlk50', {'a': 'ttlk50'})" },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON KEY s.ids[0] WHEN MATCHED THEN UPDATE SET o.comment = 'xyz' WHEN NOT MATCHED THEN INSERT {'a':s.ids[0]} RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk01"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk01', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk01"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON s.ids[1] = META(o).id WHEN MATCHED THEN UPDATE SET META(o).expiration = META(s).expiration WHEN NOT MATCHED THEN INSERT (s.ids[1], {'a':s.ids[1]}) RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk02"
+             },
+             {
+                 "expiration": 3200000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk02', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk02"
+             },
+             {
+                 "expiration": 3200000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON s.ids[2] = META(o).id WHEN MATCHED THEN UPDATE SET o.expiration = 1 WHEN NOT MATCHED THEN INSERT (s.ids[2], {'a':s.ids[2]}, {'expiration': 3000000000}) RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk03"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk03', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk03"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON s.ids[3] = META(o).id WHEN MATCHED THEN UPDATE SET META(o).expiration = 3000000000 WHEN NOT MATCHED THEN INSERT (KEY s.ids[3]) RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk11"
+             },
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk11', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk11"
+             },
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON s.ids[4] = META(o).id WHEN MATCHED THEN UPDATE SET META(o).expiration = META(s).expiration + 1000000 WHEN NOT MATCHED THEN INSERT (KEY s.ids[4], VALUE {'a':s.ids[4]}) RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk12"
+             },
+             {
+                 "expiration": 3201000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk12', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 0,
+                 "id": "ttlk12"
+             },
+             {
+                 "expiration": 3201000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON s.ids[5] = META(o).id WHEN MATCHED THEN UPDATE SET META(o).expiration = META(s).expiration WHEN NOT MATCHED THEN INSERT (KEY s.ids[5],  OPTIONS {'expiration': 3000000000} ) RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk13"
+             },
+             {
+                 "expiration": 3200000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk13', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk13"
+             },
+             {
+                 "expiration": 3200000000,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "MERGE INTO orders AS o USING orders AS s USE KEYS ['ttlk100', 'ttlk101'] ON s.ids[6] = META(o).id  WHEN MATCHED THEN UPDATE SET o.comment = 'xyz' WHEN NOT MATCHED THEN INSERT (KEY s.ids[6], VALUE {'a':s.ids[6]}, OPTIONS {META(s).expiration}) RETURNING META(o).expiration, META(o).id",
+       "results": [
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk14"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "SELECT META(o).id, META(o).expiration FROM orders AS o USE KEYS ['ttlk14', 'ttlk50']",
+       "results": [
+             {
+                 "expiration": 3000000000,
+                 "id": "ttlk14"
+             },
+             {
+                 "expiration": 0,
+                 "id": "ttlk50"
+             }
+        ]
+    },
+    { "statements": "DELETE FROM orders USE KEYS ['ttlk100', 'ttlk101', 'ttlk50', 'ttlk01', 'ttlk02', 'ttlk03', 'ttlk11', 'ttlk12', 'ttlk13', 'ttlk14']"}
+]

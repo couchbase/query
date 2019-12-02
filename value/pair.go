@@ -11,10 +11,11 @@ package value
 
 type Pairs []Pair
 
-// Key-value pair
+// Key-value-options pair
 type Pair struct {
-	Name  string
-	Value Value
+	Name    string
+	Value   Value
+	Options Value
 }
 
 type AnnotatedPairs []AnnotatedPair

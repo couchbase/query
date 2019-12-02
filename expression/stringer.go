@@ -533,10 +533,9 @@ func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
 
 	if !ok {
 		buf.WriteString("]")
-	}
-
-	if expr.CaseInsensitive() {
-		buf.WriteString("i")
+		if expr.CaseInsensitive() {
+			buf.WriteString("i")
+		}
 	}
 
 	buf.WriteString(")")
@@ -705,6 +704,9 @@ func NewPathToString() *PathToString {
 						rv.path += "."
 					}
 					rv.path += "`" + sv + "`"
+					if expr2.CaseInsensitive() {
+						rv.path += "i"
+					}
 					return expr, nil
 				}
 			}

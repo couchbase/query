@@ -173,7 +173,7 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 			value.NewValue(entry.PrimaryKey))
 
 		// For chained INDEX JOIN's
-		jv := this.setDocumentKey(entry.PrimaryKey, value.NewAnnotatedValue(nil), context)
+		jv := this.setDocumentKey(entry.PrimaryKey, value.NewAnnotatedValue(nil), 0, context)
 		joined.SetField(this.plan.Term().Alias(), jv)
 
 		if !this.sendItem(joined) {

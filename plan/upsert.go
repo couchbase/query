@@ -23,14 +23,16 @@ type SendUpsert struct {
 	alias    string
 	key      expression.Expression
 	value    expression.Expression
+	options  expression.Expression
 }
 
-func NewSendUpsert(keyspace datastore.Keyspace, alias string, key, value expression.Expression) *SendUpsert {
+func NewSendUpsert(keyspace datastore.Keyspace, alias string, key, value, options expression.Expression) *SendUpsert {
 	return &SendUpsert{
 		keyspace: keyspace,
 		alias:    alias,
 		key:      key,
 		value:    value,
+		options:  options,
 	}
 }
 
@@ -58,6 +60,10 @@ func (this *SendUpsert) Value() expression.Expression {
 	return this.value
 }
 
+func (this *SendUpsert) Options() expression.Expression {
+	return this.options
+}
+
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -76,6 +82,10 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["value"] = this.value.String()
 	}
 
+	if this.options != nil {
+		r["options"] = this.options.String()
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -84,12 +94,13 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		KeyExpr   string `json:"key"`
-		ValueExpr string `json:"value"`
-		Keys      string `json:"keyspace"`
-		Names     string `json:"namespace"`
-		Alias     string `json:"alias"`
+		_           string `json:"#operator"`
+		KeyExpr     string `json:"key"`
+		ValueExpr   string `json:"value"`
+		OptionsExpr string `json:"options"`
+		Keys        string `json:"keyspace"`
+		Names       string `json:"namespace"`
+		Alias       string `json:"alias"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -106,6 +117,13 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.ValueExpr != "" {
 		this.value, err = parser.Parse(_unmarshalled.ValueExpr)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.OptionsExpr != "" {
+		this.options, err = parser.Parse(_unmarshalled.OptionsExpr)
 		if err != nil {
 			return err
 		}

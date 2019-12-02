@@ -138,6 +138,24 @@ func (this *Merge) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Merge) NonMutatedExpressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 64)
+
+	exprs = append(exprs, this.source.Expressions()...)
+	exprs = append(exprs, this.on)
+	exprs = append(exprs, this.actions.NonMutatedExpressions()...)
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	if this.returning != nil && this.Actions().Delete() != nil {
+		exprs = append(exprs, this.returning.Expressions()...)
+	}
+
+	return exprs
+}
+
 /*
 Returns all required privileges.
 */
@@ -541,6 +559,24 @@ func (this *MergeActions) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *MergeActions) NonMutatedExpressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.update != nil {
+		exprs = append(exprs, this.update.NonMutatedExpressions()...)
+	}
+
+	if this.delete != nil {
+		exprs = append(exprs, this.delete.Expressions()...)
+	}
+
+	if this.insert != nil {
+		exprs = append(exprs, this.insert.Expressions()...)
+	}
+
+	return exprs
+}
+
 /*
 Determine the privileges requires for the merge actions,
 and add them to 'privs' (which will not be nil).
@@ -674,6 +710,24 @@ func (this *MergeUpdate) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *MergeUpdate) NonMutatedExpressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 8)
+
+	if this.set != nil {
+		exprs = append(exprs, this.set.NonMutatedExpressions()...)
+	}
+
+	if this.unset != nil {
+		exprs = append(exprs, this.unset.Expressions()...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	return exprs
+}
+
 /*
 Fully qualify identifiers for each of the constituent fields
 in the update action of merge statement.
@@ -790,9 +844,10 @@ Type MergeInsert is a struct that contains the value
 and where condition expressions.
 */
 type MergeInsert struct {
-	key   expression.Expression `json:"key"`
-	value expression.Expression `json:"value"`
-	where expression.Expression `json:"where"`
+	key     expression.Expression `json:"key"`
+	value   expression.Expression `json:"value"`
+	options expression.Expression `json:"options"`
+	where   expression.Expression `json:"where"`
 }
 
 /*
@@ -800,8 +855,8 @@ The function NewMergeInsert returns a pointer to the MergeInsert
 struct by assigning the input attributes to the fields of the
 struct.
 */
-func NewMergeInsert(key, value, where expression.Expression) *MergeInsert {
-	return &MergeInsert{key, value, where}
+func NewMergeInsert(key, value, options, where expression.Expression) *MergeInsert {
+	return &MergeInsert{key, value, options, where}
 }
 
 /*
@@ -817,6 +872,13 @@ func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
 
 	if this.value != nil {
 		this.value, err = mapper.Map(this.value)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.options != nil {
+		this.options, err = mapper.Map(this.options)
 		if err != nil {
 			return
 		}
@@ -841,6 +903,10 @@ func (this *MergeInsert) Expressions() expression.Expressions {
 
 	if this.value != nil {
 		exprs = append(exprs, this.value)
+	}
+
+	if this.options != nil {
+		exprs = append(exprs, this.options)
 	}
 
 	if this.where != nil {
@@ -869,6 +935,13 @@ func (this *MergeInsert) Formalize(f *expression.Formalizer) (err error) {
 		}
 	}
 
+	if this.options != nil {
+		this.options, err = f.Map(this.options)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.where != nil {
 		this.where, err = f.Map(this.where)
 	}
@@ -888,6 +961,13 @@ Return the merge insert value expression.
 */
 func (this *MergeInsert) Value() expression.Expression {
 	return this.value
+}
+
+/*
+Return the merge insert options expression.
+*/
+func (this *MergeInsert) Options() expression.Expression {
+	return this.options
 }
 
 /*
