@@ -256,3 +256,17 @@ func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {
 
 	return float64(docCount), nil
 }
+
+func getStaticInt(expr expression.Expression) (int64, bool) {
+	if expr != nil {
+		expVal := expr.Value()
+		if expVal != nil {
+			switch evt := expVal.Actual().(type) {
+			case float64:
+				return int64(evt), true
+			}
+		}
+	}
+
+	return 0, false
+}

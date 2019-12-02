@@ -177,10 +177,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	if stmt.Returning() != nil {
-		this.subChildren = append(this.subChildren, plan.NewInitialProject(stmt.Returning()))
-
-		// TODO retire
-		this.subChildren = maybeFinalProject(this.subChildren)
+		this.subChildren = this.buildDMLProject(stmt.Returning(), this.subChildren)
 	}
 
 	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)

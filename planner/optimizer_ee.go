@@ -13,6 +13,7 @@ package planner
 
 import (
 	"github.com/couchbase/query-ee/optimizer"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -142,4 +143,16 @@ func getUnnestPredSelec(pred expression.Expression, alias, variable string, mapp
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost) map[datastore.Index]*base.IndexCost {
 	return optimizer.ChooseIntersectScan(keyspace, indexes)
+}
+
+func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
+	return optimizer.CalcSortCost(nterms, cardinality, limit, offset)
+}
+
+func getInitialProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
+	return optimizer.CalcInitialProjectionCost(projection, cardinality)
+}
+
+func getIndexCountProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
+	return optimizer.CalcIndexCountProjectionCost(projection, cardinality)
 }

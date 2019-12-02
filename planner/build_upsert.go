@@ -45,11 +45,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	subChildren = append(subChildren, plan.NewSendUpsert(keyspace, ksref.Alias(), stmt.Key(), stmt.Value()))
 
 	if stmt.Returning() != nil {
-		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()))
-
-		// TODO retire
-		subChildren = maybeFinalProject(subChildren)
-
+		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
 	} else {
 		subChildren = append(subChildren, plan.NewDiscard())
 	}

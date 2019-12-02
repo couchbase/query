@@ -28,26 +28,26 @@ type OrderLimit struct {
 	numProcessedRows uint64
 }
 
-func NewOrderLimit(plan *plan.Order, context *Context) *OrderLimit {
+func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 	var rv *OrderLimit
-	if plan.Offset() == nil {
+	if order.Offset() == nil {
 		rv = &OrderLimit{
-			Order:            NewOrder(plan, context),
+			Order:            NewOrder(order, context),
 			offset:           nil,
-			limit:            NewLimit(plan.Limit(), context),
+			limit:            NewLimit(order.Limit(), context),
 			numReturnedRows:  0,
-			fallbackNum:      plan.FallbackNum(),
+			fallbackNum:      plan.OrderFallbackNum(),
 			ignoreInput:      false,
 			fallback:         false,
 			numProcessedRows: 0,
 		}
 	} else {
 		rv = &OrderLimit{
-			Order:            NewOrder(plan, context),
-			offset:           NewOffset(plan.Offset(), context),
-			limit:            NewLimit(plan.Limit(), context),
+			Order:            NewOrder(order, context),
+			offset:           NewOffset(order.Offset(), context),
+			limit:            NewLimit(order.Limit(), context),
 			numReturnedRows:  0,
-			fallbackNum:      plan.FallbackNum(),
+			fallbackNum:      plan.OrderFallbackNum(),
 			ignoreInput:      false,
 			fallback:         false,
 			numProcessedRows: 0,

@@ -221,22 +221,40 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		aggs = this.aggs
 	}
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+
 	if this.countScan == nil {
 		// Add Let and Filter only when group/aggregates are not pushed
 		if this.group == nil {
 			this.addLetAndPredicate(node.Let(), node.Where())
 		}
 
+		last := this.getLastOp()
+
 		if group != nil {
 			this.visitGroup(group, aggs)
+			last = this.getLastOp()
 		}
 
 		if len(windowAggs) > 0 {
 			this.visitWindowAggregates(windowAggs)
+			last = this.getLastOp()
 		}
 
 		projection := node.Projection()
-		this.subChildren = append(this.subChildren, plan.NewInitialProject(projection))
+		if this.useCBO && last != nil {
+			cost = last.Cost()
+			cardinality = last.Cardinality()
+			if cost > 0.0 && cardinality > 0.0 {
+				ipcost, ipcard := getInitialProjectCost(projection, cardinality)
+				if ipcost > 0.0 && ipcard > 0.0 {
+					cost += ipcost
+					cardinality = ipcard
+				}
+			}
+		}
+		this.subChildren = append(this.subChildren, plan.NewInitialProject(projection, cost, cardinality))
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {
@@ -262,7 +280,20 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			this.children = append(this.children, plan.NewDistinct())
 		}
 	} else {
-		this.children = append(this.children, plan.NewIndexCountProject(node.Projection()))
+		last := this.getLastOp()
+		projection := node.Projection()
+		if this.useCBO && last != nil {
+			cost = last.Cost()
+			cardinality = last.Cardinality()
+			if cost > 0.0 && cardinality > 0.0 {
+				icpcost, icpcard := getIndexCountProjectCost(projection, cardinality)
+				if icpcost > 0.0 && icpcard > 0.0 {
+					cost += icpcost
+					cardinality = icpcard
+				}
+			}
+		}
+		this.children = append(this.children, plan.NewIndexCountProject(projection, cost, cardinality))
 	}
 
 	// Serialize the top-level children
@@ -866,4 +897,13 @@ func dereferenceLet(expr expression.Expression, inliner *expression.Inliner, lev
 		expr = expr_new
 	}
 	return expr, nil
+}
+
+func (this *builder) getLastOp() plan.Operator {
+	if len(this.subChildren) > 0 {
+		return this.subChildren[len(this.subChildren)-1]
+	} else if len(this.children) > 0 {
+		return this.children[len(this.children)-1]
+	}
+	return nil
 }

@@ -22,15 +22,19 @@ type InitialProject struct {
 	projection    *algebra.Projection
 	terms         ProjectTerms
 	starTermCount int
+	cost          float64
+	cardinality   float64
 }
 
-func NewInitialProject(projection *algebra.Projection) *InitialProject {
+func NewInitialProject(projection *algebra.Projection, cost, cardinality float64) *InitialProject {
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
 	rv := &InitialProject{
-		projection: projection,
-		terms:      terms,
+		projection:  projection,
+		terms:       terms,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 
 	for i, res := range results {
@@ -66,6 +70,14 @@ func (this *InitialProject) StarTermCount() int {
 	return this.starTermCount
 }
 
+func (this *InitialProject) Cost() float64 {
+	return this.cost
+}
+
+func (this *InitialProject) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -79,6 +91,14 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 
 	if this.projection.Raw() {
 		r["raw"] = this.projection.Raw()
+	}
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
 	}
 
 	s := make([]interface{}, 0, len(this.terms))
@@ -115,8 +135,10 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 			As   string `json:"as"`
 			Star bool   `json:"star"`
 		} `json:"result_terms"`
-		Distinct bool `json:"distinct"`
-		Raw      bool `json:"raw"`
+		Distinct    bool    `json:"distinct"`
+		Raw         bool    `json:"raw"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -148,6 +170,18 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 
 	this.projection = projection
 	this.terms = project_terms
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 
 	return nil
 }
@@ -190,11 +224,13 @@ func (this *FinalProject) UnmarshalJSON([]byte) error {
 
 type IndexCountProject struct {
 	readonly
-	projection *algebra.Projection
-	terms      ProjectTerms
+	projection  *algebra.Projection
+	terms       ProjectTerms
+	cost        float64
+	cardinality float64
 }
 
-func NewIndexCountProject(projection *algebra.Projection) *IndexCountProject {
+func NewIndexCountProject(projection *algebra.Projection, cost, cardinality float64) *IndexCountProject {
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
@@ -205,8 +241,10 @@ func NewIndexCountProject(projection *algebra.Projection) *IndexCountProject {
 	}
 
 	return &IndexCountProject{
-		projection: projection,
-		terms:      terms,
+		projection:  projection,
+		terms:       terms,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -224,6 +262,14 @@ func (this *IndexCountProject) Projection() *algebra.Projection {
 
 func (this *IndexCountProject) Terms() ProjectTerms {
 	return this.terms
+}
+
+func (this *IndexCountProject) Cost() float64 {
+	return this.cost
+}
+
+func (this *IndexCountProject) Cardinality() float64 {
+	return this.cardinality
 }
 
 func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
@@ -253,6 +299,14 @@ func (this *IndexCountProject) MarshalBase(f func(map[string]interface{})) map[s
 		s = append(s, t)
 	}
 	r["result_terms"] = s
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -266,7 +320,9 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 			Expr string `json:"expr"`
 			As   string `json:"as"`
 		} `json:"result_terms"`
-		Raw bool `json:"raw"`
+		Raw         bool    `json:"raw"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -286,6 +342,7 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 		terms[i] = algebra.NewResultTerm(expr, false, term_data.As)
 	}
 	projection := algebra.NewProjection(false, terms)
+	projection.SetRaw(_unmarshalled.Raw)
 	results := projection.Terms()
 	project_terms := make(ProjectTerms, len(results))
 
@@ -297,6 +354,19 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 
 	this.projection = projection
 	this.terms = project_terms
+
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
+
 	return nil
 }
 

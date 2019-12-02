@@ -81,15 +81,41 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	children = append(children, sub.(plan.Operator))
 
 	if stmtOrder != nil && this.order == nil {
+		var limit *plan.Limit
+		var offset *plan.Offset
 		if stmtLimit != nil {
+			limit = plan.NewLimit(stmtLimit)
 			if stmtOffset != nil && this.offset == nil {
-				children = append(children, plan.NewOrder(stmtOrder, plan.NewOffset(stmtOffset), plan.NewLimit(stmtLimit)))
-			} else {
-				children = append(children, plan.NewOrder(stmtOrder, nil, plan.NewLimit(stmtLimit)))
+				offset = plan.NewOffset(stmtOffset)
 			}
-		} else {
-			children = append(children, plan.NewOrder(stmtOrder, nil, nil))
 		}
+		cost := sub.(plan.Operator).Cost()
+		cardinality := sub.(plan.Operator).Cardinality()
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
+			nlimit := int64(0)
+			noffset := int64(0)
+			if stmtLimit != nil {
+				lv, static := getStaticInt(stmtLimit)
+				if static {
+					nlimit = lv
+				}
+			}
+			if stmtOffset != nil {
+				ov, static := getStaticInt(stmtOffset)
+				if static {
+					noffset = ov
+				}
+			}
+			scost, scardinality := getSortCost(len(stmtOrder.Terms()), cardinality, nlimit, noffset)
+			if scost > 0.0 && scardinality > 0.0 {
+				cost += scost
+				cardinality = scardinality
+			} else {
+				cost = OPT_COST_NOT_AVAIL
+				cardinality = OPT_CARD_NOT_AVAIL
+			}
+		}
+		children = append(children, plan.NewOrder(stmtOrder, offset, limit, cost, cardinality))
 	}
 
 	if stmtOffset != nil && this.offset == nil {

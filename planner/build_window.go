@@ -32,7 +32,7 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 		// For each Sort required build Order operator
 		order := wOrderGroup.sortGroups.buildOrder()
 		if order != nil {
-			this.subChildren = append(this.subChildren, plan.NewOrder(order, nil, nil))
+			this.subChildren = append(this.subChildren, plan.NewOrder(order, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
 		}
 
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {

@@ -10,6 +10,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
 )
 
@@ -21,4 +22,28 @@ func maybeFinalProject(children []plan.Operator) []plan.Operator {
 	//	children = append(children, plan.NewFinalProject())
 	// }
 	return children
+}
+
+func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren []plan.Operator) []plan.Operator {
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	last := subChildren[len(subChildren)-1]
+	if this.useCBO && last != nil {
+		cost = last.Cost()
+		cardinality = last.Cardinality()
+		if cost > 0.0 && cardinality > 0.0 {
+			ipcost, ipcard := getInitialProjectCost(projection, cardinality)
+			if ipcost > 0.0 && ipcard > 0.0 {
+				cost += ipcost
+				cardinality = ipcard
+			}
+		}
+	}
+
+	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality))
+
+	// TODO retire
+	subChildren = maybeFinalProject(subChildren)
+
+	return subChildren
 }

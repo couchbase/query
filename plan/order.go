@@ -18,18 +18,22 @@ import (
 
 type Order struct {
 	readonly
-	terms  algebra.SortTerms
-	offset *Offset
-	limit  *Limit
+	terms       algebra.SortTerms
+	offset      *Offset
+	limit       *Limit
+	cost        float64
+	cardinality float64
 }
 
 const _FALLBACK_NUM = 64 * 1024
 
-func NewOrder(order *algebra.Order, offset *Offset, limit *Limit) *Order {
+func NewOrder(order *algebra.Order, offset *Offset, limit *Limit, cost, cardinality float64) *Order {
 	return &Order{
-		terms:  order.Terms(),
-		offset: offset,
-		limit:  limit,
+		terms:       order.Terms(),
+		offset:      offset,
+		limit:       limit,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -75,6 +79,12 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.limit != nil {
 		r["limit"] = this.limit.Expression().String()
 	}
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -89,8 +99,10 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Desc     bool   `json:"desc"`
 			NullsPos bool   `json:"nulls_pos"`
 		} `json:"sort_terms"`
-		offsetExpr string `json:"offset"`
-		limitExpr  string `json:"limit"`
+		offsetExpr  string  `json:"offset"`
+		limitExpr   string  `json:"limit"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -120,6 +132,16 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		}
 		this.limit = NewLimit(limitExpr)
 	}
+	if _unmarshalled.Cost > 0.0 {
+		this.cost = _unmarshalled.Cost
+	} else {
+		this.cost = PLAN_COST_NOT_AVAIL
+	}
+	if _unmarshalled.Cardinality > 0.0 {
+		this.cardinality = _unmarshalled.Cardinality
+	} else {
+		this.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 	return nil
 }
 
@@ -135,6 +157,14 @@ func (this *Order) Limit() *Limit {
 	return this.limit
 }
 
-func (this *Order) FallbackNum() int {
+func (this *Order) Cost() float64 {
+	return this.cost
+}
+
+func (this *Order) Cardinality() float64 {
+	return this.cardinality
+}
+
+func OrderFallbackNum() int {
 	return _FALLBACK_NUM
 }
