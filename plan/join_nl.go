@@ -139,17 +139,8 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 	this.alias = _unmarshalled.Alias
 	this.hintError = _unmarshalled.HintError
 
-	if _unmarshalled.Cost > 0.0 {
-		this.cost = _unmarshalled.Cost
-	} else {
-		this.cost = PLAN_COST_NOT_AVAIL
-	}
-
-	if _unmarshalled.Cardinality > 0.0 {
-		this.cardinality = _unmarshalled.Cardinality
-	} else {
-		this.cardinality = PLAN_CARD_NOT_AVAIL
-	}
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

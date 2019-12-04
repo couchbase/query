@@ -202,17 +202,8 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	if _unmarshalled.Cost > 0.0 {
-		this.cost = _unmarshalled.Cost
-	} else {
-		this.cost = PLAN_COST_NOT_AVAIL
-	}
-
-	if _unmarshalled.Cardinality > 0.0 {
-		this.cardinality = _unmarshalled.Cardinality
-	} else {
-		this.cardinality = PLAN_CARD_NOT_AVAIL
-	}
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	if err != nil {
