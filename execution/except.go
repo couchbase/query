@@ -122,14 +122,15 @@ func (this *ExceptAll) SendStop() {
 	}
 }
 
-func (this *ExceptAll) reopen(context *Context) {
-	this.baseReopen(context)
-	if this.first != nil {
-		this.first.reopen(context)
+func (this *ExceptAll) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv && this.first != nil {
+		rv = this.first.reopen(context)
 	}
-	if this.second != nil {
-		this.second.reopen(context)
+	if rv && this.second != nil {
+		rv = this.second.reopen(context)
 	}
+	return rv
 }
 
 func (this *ExceptAll) Done() {

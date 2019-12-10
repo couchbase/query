@@ -1186,12 +1186,13 @@ func (this *WindowAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *WindowAggregate) reopen(context *Context) {
-	this.baseReopen(context)
+func (this *WindowAggregate) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
 	this.values = _WINDOW_POOL.Get()
 	this.nItems = 0
 	this.cItem = 0
 	this.newPartition = true
+	return rv
 }
 
 func (this *WindowAggregate) recycleValues() {

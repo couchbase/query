@@ -83,7 +83,8 @@ func (this *All) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *All) reopen(context *Context) {
-	this.baseReopen(context)
+func (this *All) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
 	this.mset = value.NewMultiSet(int(context.GetPipelineCap()), false, false)
+	return rv
 }

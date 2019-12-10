@@ -181,11 +181,16 @@ func (this *UnionScan) SendStop() {
 	}
 }
 
-func (this *UnionScan) reopen(context *Context) {
-	this.baseReopen(context)
-	for _, scan := range this.scans {
-		scan.reopen(context)
+func (this *UnionScan) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv {
+		for _, scan := range this.scans {
+			if !scan.reopen(context) {
+				return false
+			}
+		}
 	}
+	return rv
 }
 
 func (this *UnionScan) Done() {

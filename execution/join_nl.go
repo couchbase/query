@@ -92,13 +92,12 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 func (this *NLJoin) processItem(item value.AnnotatedValue, context *Context) bool {
 	defer this.switchPhase(_EXECTIME)
 
-	if (this.ansiFlags & ANSI_REOPEN_CHILD) != 0 {
-		if this.child != nil {
-			this.child.SendStop()
-			this.child.reopen(context)
-		}
-	} else {
-		this.ansiFlags |= ANSI_REOPEN_CHILD
+	if (this.ansiFlags&ANSI_REOPEN_CHILD) != 0 && this.child != nil && !this.child.reopen(context) {
+
+		// If the reopen failed, we should propagate the stop signal to the inner scan again
+		// to terminate any operator that we had successfully restarted
+		this.child.SendStop()
+		return false
 	}
 
 	this.child.SetOutput(this.child)
@@ -107,6 +106,7 @@ func (this *NLJoin) processItem(item value.AnnotatedValue, context *Context) boo
 	this.child.SetStop(nil)
 
 	this.fork(this.child, context, item)
+	this.ansiFlags |= ANSI_REOPEN_CHILD
 
 	ok := true
 	matched := false
@@ -127,6 +127,8 @@ loop:
 					matched = true
 					ok = this.sendItem(joined)
 				}
+
+				// TODO break out and child.SendStop() here for semin-scans
 			} else if child >= 0 {
 				n--
 			} else {
@@ -138,12 +140,13 @@ loop:
 		}
 	}
 
-	if n > 0 {
-		notifyChildren(this.child)
-		this.childrenWaitNoStop(n)
-	}
-
+	// There is no need to terminate the inner scan under normal completion
 	if stopped || !ok {
+		if n > 0 {
+			this.child.SendStop()
+			this.childrenWaitNoStop(n)
+		}
+
 		return false
 	}
 
@@ -227,12 +230,13 @@ func (this *NLJoin) SendStop() {
 	}
 }
 
-func (this *NLJoin) reopen(context *Context) {
-	this.baseReopen(context)
+func (this *NLJoin) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
 	this.ansiFlags &^= ANSI_REOPEN_CHILD
-	if this.child != nil {
+	if rv && this.child != nil {
 		this.child.reopen(context)
 	}
+	return rv
 }
 
 func (this *NLJoin) Done() {

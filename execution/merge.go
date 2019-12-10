@@ -341,17 +341,18 @@ func (this *Merge) SendStop() {
 	}
 }
 
-func (this *Merge) reopen(context *Context) {
-	this.baseReopen(context)
-	if this.update != nil {
-		this.update.reopen(context)
+func (this *Merge) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv && this.update != nil {
+		rv = this.update.reopen(context)
 	}
-	if this.delete != nil {
-		this.delete.reopen(context)
+	if rv && this.delete != nil {
+		rv = this.delete.reopen(context)
 	}
-	if this.insert != nil {
-		this.insert.reopen(context)
+	if rv && this.insert != nil {
+		rv = this.insert.reopen(context)
 	}
+	return rv
 }
 
 func (this *Merge) Done() {
