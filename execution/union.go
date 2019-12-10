@@ -110,11 +110,16 @@ func (this *UnionAll) SendStop() {
 	}
 }
 
-func (this *UnionAll) reopen(context *Context) {
-	this.baseReopen(context)
-	for _, child := range this.children {
-		child.reopen(context)
+func (this *UnionAll) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv {
+		for _, child := range this.children {
+			if !child.reopen(context) {
+				return false
+			}
+		}
 	}
+	return rv
 }
 
 func (this *UnionAll) Done() {

@@ -49,10 +49,10 @@ type Operator interface {
 	SendStop()                                     // Stops the operator
 	Done()                                         // Frees and pools resources
 
-	reopen(context *Context)    // resets operator to initial state
-	close(context *Context)     // the operator is no longer operating!
-	keepAlive(op Operator) bool // operator was set to terminate early
-	stopCh() stopChannel        // Never closed, just garbage-collected
+	reopen(context *Context) bool // resets operator to initial state
+	close(context *Context)       // the operator is no longer operating!
+	keepAlive(op Operator) bool   // operator was set to terminate early
+	stopCh() stopChannel          // Never closed, just garbage-collected
 
 	getBase() *base
 

@@ -183,11 +183,12 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 	return true
 }
 
-func (this *joinBase) reopen(context *Context) {
+func (this *joinBase) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
 	if this.batch != nil {
 		this.releaseBatch(context)
 	}
-	this.baseReopen(context)
+	return rv
 }
 
 var _STRING_KEYCOUNT_POOL = util.NewStringIntPool(_MAP_POOL_CAP)

@@ -78,15 +78,23 @@ type annotatedChannel chan value.AnnotatedValue
 type opState int
 
 const (
+	// not yet active
 	_CREATED = opState(iota)
 	_DORMANT
+
+	// operating
 	_RUNNING
 	_STOPPING
+
+	// terminated
 	_PANICKED
-	_KILLED
 	_COMPLETED
 	_STOPPED
+
+	// disposed
 	_DONE
+	_ENDED
+	_KILLED
 )
 
 type base struct {
@@ -218,8 +226,8 @@ func (this *base) copy(dest *base) {
 // it's the caller's responsability to make sure the operator has
 // stopped, or, at least, will definitely stop: if not this method
 // might wait indefinitely
-func (this *base) reopen(context *Context) {
-	this.baseReopen(context)
+func (this *base) reopen(context *Context) bool {
+	return this.baseReopen(context)
 }
 
 func (this *base) close(context *Context) {
@@ -260,8 +268,30 @@ func (this *base) Done() {
 }
 
 func (this *base) baseDone() {
-	this.wait()
-	if this.opState != _KILLED && this.opState != _PANICKED {
+	this.activeCond.L.Lock()
+
+	// if it hasn't started, kill it
+	switch this.opState {
+	case _CREATED:
+		this.opState = _KILLED
+	case _DORMANT:
+		this.opState = _DONE
+
+	// otherwise wait
+	case _RUNNING:
+	case _STOPPING:
+		this.activeCond.Wait()
+	}
+
+	// from now on, this operator can't be touched
+	switch this.opState {
+	case _COMPLETED:
+		this.opState = _DONE
+	case _STOPPED:
+		this.opState = _ENDED
+	}
+
+	if this.opState == _DONE || this.opState == _ENDED {
 		this.valueExchange.dispose()
 		this.stopChannel = nil
 		this.input = nil
@@ -270,11 +300,25 @@ func (this *base) baseDone() {
 		this.stop = nil
 		this.contextTracked = nil
 	}
+	this.activeCond.L.Unlock()
 }
 
 // reopen for the terminal operator case
-func (this *base) baseReopen(context *Context) {
-	this.wait()
+func (this *base) baseReopen(context *Context) bool {
+	this.activeCond.L.Lock()
+
+	// still running, just wait
+	if this.opState == _CREATED || this.opState == _RUNNING || this.opState == _STOPPING {
+		this.activeCond.Wait()
+	}
+
+	// the request terminated, a stop was sent, or something catastrophic happened
+	// cannot reopen, bail out
+	if this.opState == _DONE || this.opState == _ENDED || this.opState == _KILLED || this.opState == _PANICKED {
+		this.activeCond.L.Unlock()
+		return false
+	}
+
 	if this.stopChannel != nil {
 		// drain the stop channel
 		select {
@@ -285,17 +329,17 @@ func (this *base) baseReopen(context *Context) {
 	if this.conn != nil {
 		this.conn = nil
 	}
-	this.valueExchange.reset()
-	this.once.Reset()
 	this.contextTracked = nil
 	this.childrenLeft = 0
 	this.stopped = false
 	this.serialized = false
 	this.doSend = parallelSend
 	this.closeConsumer = false
-	this.activeCond.L.Lock()
 	this.opState = _CREATED
+	this.valueExchange.reset()
+	this.once.Reset()
 	this.activeCond.L.Unlock()
+	return true
 }
 
 // setUp
@@ -979,7 +1023,7 @@ func (this *base) inactive() {
 	this.activeCond.L.Unlock()
 
 	// wake up whoever wants to free us
-	this.activeCond.Signal()
+	this.activeCond.Broadcast()
 }
 
 // do any op require to release request in case of a panic
@@ -1008,30 +1052,6 @@ func (this *base) release(context *Context) {
 	this.contextTracked = nil
 }
 
-func (this *base) wait() {
-	this.activeCond.L.Lock()
-
-	// if it hasn't started, kill it
-	switch this.opState {
-	case _CREATED:
-		this.opState = _KILLED
-	case _DORMANT:
-		this.opState = _DONE
-
-	case _RUNNING:
-	case _STOPPING:
-		this.activeCond.Wait()
-
-		if this.opState == _COMPLETED {
-
-			// signal that no go routine should touch this operator
-			this.opState = _DONE
-		}
-	}
-
-	this.activeCond.L.Unlock()
-}
-
 func (this *base) waitComplete() {
 	this.activeCond.L.Lock()
 
@@ -1040,8 +1060,11 @@ func (this *base) waitComplete() {
 		this.activeCond.Wait()
 
 		// signal that no go routine should touch this operator
-		if this.opState == _COMPLETED {
+		switch this.opState {
+		case _COMPLETED:
 			this.opState = _DONE
+		case _STOPPED:
+			this.opState = _ENDED
 		}
 	}
 

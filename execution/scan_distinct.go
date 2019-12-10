@@ -165,11 +165,12 @@ func (this *DistinctScan) SendStop() {
 	}
 }
 
-func (this *DistinctScan) reopen(context *Context) {
-	this.baseReopen(context)
-	if this.scan != nil {
-		this.scan.reopen(context)
+func (this *DistinctScan) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv && this.scan != nil {
+		rv = this.scan.reopen(context)
 	}
+	return rv
 }
 
 func (this *DistinctScan) Done() {

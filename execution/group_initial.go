@@ -114,7 +114,8 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *InitialGroup) reopen(context *Context) {
-	this.baseReopen(context)
+func (this *InitialGroup) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
 	this.groups = make(map[string]value.AnnotatedValue)
+	return rv
 }

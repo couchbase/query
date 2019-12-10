@@ -80,7 +80,8 @@ func (this *Collect) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Collect) reopen(context *Context) {
-	this.baseReopen(context)
+func (this *Collect) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
 	this.values = make([]interface{}, 0, _COLLECT_CAP)
+	return rv
 }

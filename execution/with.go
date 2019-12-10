@@ -114,11 +114,12 @@ func (this *With) SendStop() {
 	}
 }
 
-func (this *With) reopen(context *Context) {
-	this.baseReopen(context)
-	if this.child != nil {
-		this.child.reopen(context)
+func (this *With) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv && this.child != nil {
+		rv = this.child.reopen(context)
 	}
+	return rv
 }
 
 func (this *With) Done() {
