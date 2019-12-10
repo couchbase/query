@@ -1,7 +1,22 @@
 #!/bin/bash
 #
-# to build the enterprise version, with schema inferencing, launch this 
+# to build the enterprise version, launch this 
 # as './build.sh -tags "enterprise"
+
+args=$*
+
+enterprise=0
+while [ $# -gt 0 ]; do
+  case $1 in
+    -tags)
+      shift
+      [[ "$1" == "enterprise" ]] && enterprise=1
+      ;;
+  esac
+  shift
+done
+
+set -- $args
 
 echo go get $* -d -v ./...
 go get $* -d -v ./...
@@ -13,6 +28,12 @@ cd ../..
 
 echo go fmt ./...
 go fmt ./...
+if [[ $enterprise == 1 ]]; then
+  echo go fmt ../query-ee/...
+  cd ../query-ee
+  go fmt ./...
+  cd ../query
+fi
 
 echo cd server/cbq-engine
 cd server/cbq-engine
