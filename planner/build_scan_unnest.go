@@ -60,6 +60,10 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
 	op plan.SecondaryScan, sargLength int, err error) {
 
+	if pred == nil {
+		return nil, 0, nil
+	}
+
 	// Enumerate INNER UNNESTs
 	unnests := _UNNEST_POOL.Get()
 	defer _UNNEST_POOL.Put(unnests)
@@ -82,34 +86,6 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	unnestIndexes, arrayKeys := collectUnnestIndexes(pred, indexes, unnestIndexes)
 	if len(unnestIndexes) == 0 {
 		return nil, 0, nil
-	}
-
-	// Add INNER UNNESTs predicates for index selection
-	var andBuf [16]expression.Expression
-	var andTerms []expression.Expression
-
-	nlen := 1 + len(unnests)
-	if nlen <= len(andBuf) {
-		andTerms = andBuf[0:0]
-	} else {
-		andTerms = make(expression.Expressions, 0, nlen)
-	}
-
-	if pred != nil {
-		andTerms = append(andTerms, pred.Copy())
-	}
-
-	for _, unnest := range unnests {
-		unnestIdent := expression.NewIdentifier(unnest.Alias())
-		unnestIdent.SetUnnestAlias(true)
-		andTerms = append(andTerms, expression.NewIsNotMissing(unnestIdent))
-	}
-
-	pred = expression.NewAnd(andTerms...)
-	dnf := NewDNF(pred, true, true)
-	pred, err = dnf.Map(pred)
-	if err != nil {
-		return nil, 0, err
 	}
 
 	cop, sargLength, err := this.buildCoveringUnnestScan(node, pred, indexes, unnestIndexes, arrayKeys, unnests)
@@ -386,7 +362,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		keyspaces[node.Alias()] = node.Keyspace()
 		for _, fl := range baseKeyspace.Filters() {
 			if fl.IsUnnest() {
-				sel := getUnnestPredSelec(fl.FltrExpr(), node.Alias(), unnest.As(), unnest.Expression(), keyspaces)
+				sel := getUnnestPredSelec(fl.FltrExpr(), unnest.As(), unnest.Expression(), keyspaces)
 				fl.SetSelec(sel)
 			}
 		}

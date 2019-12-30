@@ -84,7 +84,7 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getUnnestPredSelec(pred expression.Expression, alias, variable string, mapping expression.Expression,
+func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
 	keyspaces map[string]string) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
