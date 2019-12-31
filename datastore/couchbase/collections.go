@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+// TODO remove
 var _COLLECTIONS_SUPPORTED bool = false
 
 var _COLLECTIONS_NOT_SUPPORTED string = "Collections are not yet supported."

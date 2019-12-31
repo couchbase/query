@@ -45,6 +45,11 @@ func NewNoSuchPreparedError(name string) Error {
 		InternalMsg: fmt.Sprintf("No such prepared statement: %s", name), InternalCaller: CallerN(1)}
 }
 
+func NewNoSuchPreparedWithContextError(name string, queryContext string) Error {
+	return &err{level: EXCEPTION, ICode: NO_SUCH_PREPARED, IKey: "plan.build_prepared.no_such_name",
+		InternalMsg: fmt.Sprintf("No such prepared statement: %s, context %s", name, queryContext), InternalCaller: CallerN(1)}
+}
+
 func NewUnrecognizedPreparedError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 4050, IKey: "plan.build_prepared.unrecognized_prepared",
 		ICause: e, InternalMsg: "Unrecognizable prepared statement", InternalCaller: CallerN(1)}
@@ -70,6 +75,13 @@ const PLAN_NAME_MISMATCH = 4090
 func NewEncodingNameMismatchError(name string) Error {
 	return &err{level: EXCEPTION, ICode: PLAN_NAME_MISMATCH, IKey: "plan.build_prepared.name_not_in_encoded_plan",
 		InternalMsg: fmt.Sprintf("Prepared name in encoded plan parameter is not %s", name), InternalCaller: CallerN(1)}
+}
+
+const PLAN_CONTEXT_MISMATCH = 4091
+
+func NewEncodingContextMismatchError(name string, context string) Error {
+	return &err{level: EXCEPTION, ICode: PLAN_CONTEXT_MISMATCH, IKey: "plan.build_prepared.context_not_in_encoded_plan",
+		InternalMsg: fmt.Sprintf("Prepared context in encoded plan parameter is not %s", context), InternalCaller: CallerN(1)}
 }
 
 const NO_INDEX_JOIN = 4100

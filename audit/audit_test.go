@@ -40,6 +40,7 @@ type simpleAuditable struct {
 	remote              string
 	status              string
 	statement           string
+	queryContext        string
 	eventId             string
 	eventType           string
 	eventUsers          []string
@@ -74,6 +75,10 @@ func (sa *simpleAuditable) EventStatus() string {
 
 func (sa *simpleAuditable) EventStatement() string {
 	return sa.statement
+}
+
+func (sa *simpleAuditable) EventQueryContext() string {
+	return sa.queryContext
 }
 
 func (sa *simpleAuditable) EventId() string {

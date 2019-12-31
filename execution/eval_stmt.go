@@ -110,7 +110,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	// TODO leaving profiling in place but commented out just in case
 	// parse := util.Now()
-	stmt, err := n1ql.ParseStatement2(statement, this.namespace) // TODO switch to collections scope
+	stmt, err := n1ql.ParseStatement2(statement, this.namespace) // TODO switch to collections queryContext
 	// output.AddPhaseTime(PARSE, util.Since(parse))
 	if err != nil {
 		return nil, 0, err
@@ -134,7 +134,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	// prep := util.Now()
 	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
-		namedArgs, positionalArgs, this.indexApiVersion, this.featureControls)
+		namedArgs, positionalArgs, this.indexApiVersion, this.featureControls, this.queryContext)
 	// output.AddPhaseTime(PLAN, util.Since(prep))
 	if err != nil {
 		return nil, 0, err
@@ -156,19 +156,12 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 		var err errors.Error
 
 		exec, _ := stmt.(*algebra.Execute)
-		if exec.Prepared() != nil {
-
-			prepared, err = prepareds.GetPrepared(exec.Prepared(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
-			// if reprepTime > 0 {
-			//        output.AddPhaseTime(REPREPARE, reprepTime)
-			// }
-			if err != nil {
-				return nil, 0, err
-			}
-		} else {
-
-			// this never happens, but for completeness
-			return nil, 0, fmt.Errorf("prepared not specified")
+		prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), this.queryContext, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
+		// if reprepTime > 0 {
+		//        output.AddPhaseTime(REPREPARE, reprepTime)
+		// }
+		if err != nil {
+			return nil, 0, err
 		}
 		isPrepared = true
 

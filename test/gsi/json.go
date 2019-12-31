@@ -708,11 +708,11 @@ func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, e
 	done := qc.prepDone[statement]
 	qc.RUnlock()
 	if done {
-		return prepareds.GetPrepared(value.NewValue(ra["name"].(string)), 0, nil)
+		return prepareds.GetPrepared(ra["name"].(string))
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
-	rv, err := prepareds.DecodePrepared("", ra["encoded_plan"].(string), true, false, nil)
+	rv, err := prepareds.DecodePrepared(ra["name"].(string), ra["encoded_plan"].(string))
 	if err != nil {
 		return rv, err
 	}

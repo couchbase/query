@@ -29,7 +29,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/value"
 
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -282,7 +281,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 		"args":     insertArgs,
 	})
 
-	prepared, _ := prepareds.GetPrepared(value.NewValue(name), 0, nil)
+	prepared, _ := prepareds.GetPrepared(name)
 	if prepared == nil {
 		t.Errorf("Expected to resolve prepared statement with name %v", name)
 		return
@@ -326,7 +325,7 @@ func doPrepare(t *testing.T, name string, stmt string) {
 	})
 
 	// Verify the name is in the prepared cache:
-	prepared, err := prepareds.GetPrepared(value.NewValue(name), 0, nil)
+	prepared, err := prepareds.GetPrepared(name)
 	if err != nil {
 		t.Errorf("Unexpected error looking up prepared: %v", err)
 	}

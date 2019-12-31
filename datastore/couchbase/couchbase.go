@@ -82,6 +82,11 @@ func init() {
 	// start the fetch workers for servicing the BulkGet operations
 	cb.InitBulkGet()
 	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
+
+	// Collections?
+	if _COLLECTIONS_SUPPORTED {
+		cb.EnableCollections = true
+	}
 }
 
 const (

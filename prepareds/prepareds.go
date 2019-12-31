@@ -33,7 +33,6 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/util"
-	"github.com/couchbase/query/value"
 )
 
 // empty plan for backwards compatibility with older SDKs, engines
@@ -120,7 +119,7 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err := DecodePrepared(name, encoded_plan, false, false, nil)
+							_, err := DecodePrepared(name, encoded_plan)
 							if err == nil {
 								count++
 							}
@@ -164,13 +163,14 @@ func (this *preparedCache) GetText(text string, offset int) string {
 
 const _REALM_SIZE = 256
 
-// TODO switch to collections scope
-func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64, namespace string) (string, errors.Error) {
+func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64, namespace string, queryContext string) (string, errors.Error) {
 
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
 	// prepare options are skipped so that prepare and prepare force yield the same
 	// name
+	// name is independent of query context as well, so as to make anonynoums and
+	// named prepared statements behaviour consistent
 
 	var buf [_REALM_SIZE]byte
 	realm := buf[0:0:_REALM_SIZE]
@@ -186,9 +186,15 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 	return name, nil
 }
 
-// TODO switch to collections scope
-func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) (*plan.Prepared, errors.Error) {
-	prep, err := prepareds.getPrepared(value.NewValue(name), OPT_VERIFY, nil)
+func encodeName(name string, queryContext string) string {
+	if queryContext == "" {
+		return name
+	}
+	return name + "(" + queryContext + ")"
+}
+
+func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string, queryContext string) (*plan.Prepared, errors.Error) {
+	prep, err := prepareds.getPrepared(name, queryContext, OPT_VERIFY, nil)
 	if err != nil {
 		if err.Code() == errors.NO_SUCH_PREPARED {
 			return nil, nil
@@ -196,7 +202,7 @@ func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int
 		return nil, err
 	}
 	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls ||
-		prep.Namespace() != namespace || prep.Text() != text {
+		prep.Namespace() != namespace || prep.QueryContext() != queryContext || prep.Text() != text {
 		return nil, nil
 	}
 	return prep, nil
@@ -217,18 +223,13 @@ func PreparedsSetLimit(limit int) {
 	prepareds.cache.SetLimit(limit)
 }
 
-func (this *preparedCache) get(name value.Value, track bool) *CacheEntry {
+func (this *preparedCache) get(fullName string, track bool) *CacheEntry {
 	var cv interface{}
 
-	if name.Type() != value.STRING || !name.Truth() {
-		return nil
-	}
-
-	n := name.Actual().(string)
 	if track {
-		cv = prepareds.cache.Use(n, nil)
+		cv = prepareds.cache.Use(fullName, nil)
 	} else {
-		cv = prepareds.cache.Get(n, nil)
+		cv = prepareds.cache.Get(fullName, nil)
 	}
 	rv, ok := cv.(*CacheEntry)
 	if ok {
@@ -259,7 +260,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 		ce.Uses = 1
 		ce.LastUse = when
 	}
-	prepareds.cache.Add(ce, prepared.Name(), func(entry interface{}) util.Operation {
+	prepareds.cache.Add(ce, encodeName(prepared.Name(), prepared.QueryContext()), func(entry interface{}) util.Operation {
 		var op util.Operation = util.AMEND
 		var cont bool = true
 
@@ -285,7 +286,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 }
 
 // Auto Prepare
-func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64) string {
+func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64, queryContext string) string {
 
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
@@ -295,6 +296,8 @@ func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64
 	realm = strconv.AppendInt(realm, int64(indexApiVersion), 16)
 	realm = append(realm, '_')
 	realm = strconv.AppendInt(realm, int64(featureControls), 16)
+	realm = append(realm, '_')
+	realm = append(realm, queryContext...)
 	name, err := util.UUIDV5(string(realm), text)
 
 	// this never happens
@@ -304,8 +307,7 @@ func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64
 	return name
 }
 
-// TODO switch to collections scope
-func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) *plan.Prepared {
+func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string, queryContext string) *plan.Prepared {
 
 	// for auto prepare, we don't verify or reprepare because that would mean
 	// accepting valid but possibly suboptimal statements
@@ -316,7 +318,7 @@ func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureCo
 	// we'll let the caller handle the planning.
 	// The new statement will have the latest change counters, so until we
 	// have a new index no other planning will be necessary
-	prep, err := prepareds.getPrepared(value.NewValue(name), OPT_TRACK|OPT_METACHECK, nil)
+	prep, err := prepareds.getPrepared(name, "", OPT_TRACK|OPT_METACHECK, nil)
 	if err != nil {
 		if err.Code() != errors.NO_SUCH_PREPARED {
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
@@ -404,11 +406,12 @@ func AddPrepared(prepared *plan.Prepared) errors.Error {
 		}
 		return added
 	})
+	fullName := encodeName(prepared.Name(), prepared.QueryContext())
 	if !added {
 		return errors.NewPreparedNameError(
-			fmt.Sprintf("duplicate name: %s", prepared.Name()))
+			fmt.Sprintf("duplicate name: %s", fullName))
 	} else {
-		distributePrepared(prepared.Name(), prepared.EncodedPlan())
+		distributePrepared(fullName, prepared.EncodedPlan())
 		return nil
 	}
 }
@@ -420,96 +423,96 @@ func DeletePrepared(name string) errors.Error {
 	return errors.NewNoSuchPreparedError(name)
 }
 
-func GetPrepared(prepared_stmt value.Value, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
-	return prepareds.getPrepared(prepared_stmt, options, phaseTime)
+func GetPrepared(fullName string) (*plan.Prepared, errors.Error) {
+	return prepareds.getPrepared(fullName, "", 0, nil)
 }
 
-func (prepareds *preparedCache) getPrepared(prepared_stmt value.Value, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+func GetPreparedWithContext(preparedName string, queryContext string, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+	return prepareds.getPrepared(preparedName, queryContext, options, phaseTime)
+}
+
+func (prepareds *preparedCache) getPrepared(preparedName string, queryContext string, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	var err errors.Error
+	var prepared *plan.Prepared
 
 	track := (options & OPT_TRACK) != 0
 	remote := (options & OPT_REMOTE) != 0
 	verify := (options & (OPT_VERIFY | OPT_METACHECK)) != 0
 	metaCheck := (options & OPT_METACHECK) != 0
-	switch prepared_stmt.Type() {
-	case value.STRING:
-		var prepared *plan.Prepared
 
-		host, name := distributed.RemoteAccess().SplitKey(prepared_stmt.Actual().(string))
-		ce := prepareds.get(value.NewValue(name), track)
-		if ce != nil {
-			prepared = ce.Prepared
-		}
-		if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
-			distributed.RemoteAccess().GetRemoteDoc(host, name, "prepareds", "GET",
-				func(doc map[string]interface{}) {
-					encoded_plan, ok := doc["encoded_plan"].(string)
-					if ok {
-						prepared, err = DecodePrepared(name, encoded_plan, false, false, phaseTime)
-					}
-				},
-				func(warn errors.Error) {
-				}, distributed.NO_CREDS, "")
-		} else if prepared != nil && verify {
-			var good bool
-
-			// things have already been set up
-			// take the short way home
-			if ce.populated {
-
-				// note that it's fine to check and repopulate without a lock
-				// since the structure of the plan tree won't change, nor the
-				// keyspaces and indexers, the worse that is going to happen is
-				// two requests amending the same counter
-				good = prepared.MetadataCheck()
-
-				// counters have changed. fetch new values
-				if !good && !metaCheck {
-					good = prepared.Verify()
+	host, name := distributed.RemoteAccess().SplitKey(preparedName)
+	encodedName := encodeName(name, queryContext)
+	ce := prepareds.get(encodedName, track)
+	if ce != nil {
+		prepared = ce.Prepared
+	}
+	if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
+		distributed.RemoteAccess().GetRemoteDoc(host, encodedName, "prepareds", "GET",
+			func(doc map[string]interface{}) {
+				encoded_plan, ok := doc["encoded_plan"].(string)
+				if ok {
+					prepared, err = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime)
 				}
+			},
+			func(warn errors.Error) {
+			}, distributed.NO_CREDS, "")
+	} else if prepared != nil && verify {
+		var good bool
+
+		// things have already been set up
+		// take the short way home
+		if ce.populated {
+
+			// note that it's fine to check and repopulate without a lock
+			// since the structure of the plan tree won't change, nor the
+			// keyspaces and indexers, the worse that is going to happen is
+			// two requests amending the same counter
+			good = prepared.MetadataCheck()
+
+			// counters have changed. fetch new values
+			if !good && !metaCheck {
+				good = prepared.Verify()
+			}
+		} else {
+
+			// we have to proceed under a lock to avoid multiple
+			// requests populating metadata counters at the same time
+			ce.Lock()
+
+			// check again, somebody might have done it in the interim
+			if ce.populated {
+				good = true
 			} else {
 
-				// we have to proceed under a lock to avoid multiple
-				// requests populating metadata counters at the same time
-				ce.Lock()
-
-				// check again, somebody might have done it in the interim
-				if ce.populated {
-					good = true
-				} else {
-
-					// nada - have to go the long way
-					good = prepared.Verify()
-					if good {
-						ce.populated = true
-					}
-				}
-				ce.Unlock()
-			}
-
-			// after all this, it did not work out!
-			// here we are going to accept multiple requests creating a new
-			// plan concurrently as we don't have a good way to serialize
-			// without blocking the whole prepared cacheline
-			// locking will occur at adding time: both requests will insert,
-			// the last wins
-			if !good && !metaCheck {
-				prepared, err = reprepare(prepared, phaseTime)
-				if err == nil {
-					err = AddPrepared(prepared)
+				// nada - have to go the long way
+				good = prepared.Verify()
+				if good {
+					ce.populated = true
 				}
 			}
+			ce.Unlock()
 		}
-		if err != nil {
-			return nil, err
+
+		// after all this, it did not work out!
+		// here we are going to accept multiple requests creating a new
+		// plan concurrently as we don't have a good way to serialize
+		// without blocking the whole prepared cacheline
+		// locking will occur at adding time: both requests will insert,
+		// the last wins
+		if !good && !metaCheck {
+			prepared, err = reprepare(prepared, phaseTime)
+			if err == nil {
+				err = AddPrepared(prepared)
+			}
 		}
-		if prepared == nil {
-			return nil, errors.NewNoSuchPreparedError(name)
-		}
-		return prepared, nil
-	default:
-		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
+	if err != nil {
+		return nil, err
+	}
+	if prepared == nil {
+		return nil, errors.NewNoSuchPreparedWithContextError(name, queryContext)
+	}
+	return prepared, nil
 }
 
 func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime time.Duration) {
@@ -538,7 +541,11 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 	})
 }
 
-func DecodePrepared(prepared_name string, prepared_stmt string, track bool, distribute bool, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+func DecodePrepared(prepared_name string, prepared_stmt string) (*plan.Prepared, errors.Error) {
+	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil)
+}
+
+func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	added := true
 
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
@@ -565,13 +572,13 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 	// MB-19509 we now have to check that the encoded plan matches
 	// the prepared statement named in the rest API
 	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
-	if prepared.Name() != "" && prepared_name != "" &&
-		prepared_key != prepared.Name() {
+	if prepared_key != prepared.Name() {
 		return nil, errors.NewEncodingNameMismatchError(prepared_name)
 	}
 
-	if prepared.Name() == "" {
-		return prepared, nil
+	// If a query context is specified, it has to match
+	if queryContext != "" && queryContext != prepared.QueryContext() {
+		return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext)
 	}
 
 	// we don't trust anything strangers give us.
@@ -606,9 +613,6 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 		})
 
 	if added {
-		if distribute {
-			distributePrepared(prepared.Name(), prepared_stmt)
-		}
 		return prepared, nil
 	} else {
 		return nil, errors.NewPreparedEncodingMismatchError(prepared_name)
@@ -652,7 +656,7 @@ func distributePrepared(name, plan string) {
 func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	parse := time.Now()
 
-	// TODO switch to collections scope
+	// TODO switch to collections context
 	stmt, err := n1ql.ParseStatement2(prepared.Text(), prepared.Namespace())
 	if phaseTime != nil {
 		*phaseTime += time.Since(parse)
@@ -664,12 +668,11 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	}
 
 	// since this is a reprepare, no need to check semantics again after parsing.
-	// TODO switch to collections scope
 	prep := time.Now()
 	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(), false, true,
 
 		// building prepared statements should not depend on args
-		nil, nil, prepared.IndexApiVersion(), prepared.FeatureControls())
+		nil, nil, prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.QueryContext())
 	if phaseTime != nil {
 		*phaseTime += time.Since(prep)
 	}
@@ -682,7 +685,8 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	pl.SetType(prepared.Type())
 	pl.SetIndexApiVersion(prepared.IndexApiVersion())
 	pl.SetFeatureControls(prepared.FeatureControls())
-	pl.SetNamespace(prepared.Namespace()) // TODO switch to collections scope
+	pl.SetNamespace(prepared.Namespace())
+	pl.SetQueryContext(prepared.QueryContext())
 
 	json_bytes, err := pl.MarshalJSON()
 	if err != nil {

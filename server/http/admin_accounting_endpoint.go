@@ -295,13 +295,13 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminBodyError(err1)
 		}
 
-		prepared, _ := prepareds.GetPrepared(value.NewValue(name), 0, nil)
+		prepared, _ := prepareds.GetPrepared(name)
 
 		// nothing to do if the prepared is there and the plan matches
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err = prepareds.DecodePrepared(name, string(body), false, false, nil)
+		_, err = prepareds.DecodePrepared(name, string(body))
 		if err != nil {
 			return nil, err
 		}
@@ -322,11 +322,14 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
 			itemMap = map[string]interface{}{
-				"name":            name,
+				"name":            entry.Prepared.Name(),
 				"uses":            entry.Uses,
 				"statement":       entry.Prepared.Text(),
 				"indexApiVersion": entry.Prepared.IndexApiVersion(),
 				"featureControls": entry.Prepared.FeatureControls(),
+			}
+			if entry.Prepared.QueryContext() != "" {
+				itemMap["queryContext"] = entry.Prepared.QueryContext()
 			}
 			if entry.Prepared.EncodedPlan() != "" {
 				itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
@@ -375,6 +378,9 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			}
 			data[i] = map[string]interface{}{}
 			data[i]["name"] = d.Prepared.Name()
+			if d.Prepared.QueryContext() != "" {
+				data[i]["queryContext"] = d.Prepared.QueryContext()
+			}
 			if d.Prepared.EncodedPlan() != "" {
 				data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
 			}
@@ -638,6 +644,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if request.Statement() != "" {
 			reqMap["statement"] = request.Statement()
 		}
+		if request.QueryContext() != "" {
+			reqMap["queryContext"] = request.QueryContext()
+		}
 		if request.Prepared() != nil {
 			p := request.Prepared()
 			reqMap["preparedName"] = p.Name()
@@ -812,6 +821,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		}
 		reqMap["state"] = request.State
 		reqMap["scanConsistency"] = request.ScanConsistency
+		if request.QueryContext != "" {
+			reqMap["queryContext"] = request.QueryContext
+		}
 		if request.Statement != "" {
 			reqMap["statement"] = request.Statement
 		}
@@ -898,6 +910,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		requests[i]["scanConsistency"] = request.ScanConsistency
 		if request.Statement != "" {
 			requests[i]["statement"] = request.Statement
+		}
+		if request.QueryContext != "" {
+			requests[i]["queryContext"] = request.QueryContext
 		}
 		if request.PreparedName != "" {
 			requests[i]["preparedName"] = request.PreparedName

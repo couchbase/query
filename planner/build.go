@@ -25,7 +25,7 @@ import (
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery, stream bool, namedArgs map[string]value.Value,
-	positionalArgs value.Values, indexApiVersion int, featureControls uint64) (
+	positionalArgs value.Values, indexApiVersion int, featureControls uint64, queryContext string) (
 	plan.Operator, error) {
 
 	// request id in planner is separate from request id in execution context
@@ -34,7 +34,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		return nil, err
 	}
 	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs,
-		indexApiVersion, featureControls, requestId)
+		indexApiVersion, featureControls, queryContext, requestId)
 	if distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) && util.IsFeatureEnabled(featureControls, util.N1QL_CBO) {
 		builder.useCBO = true
 	}
@@ -96,6 +96,7 @@ type builder struct {
 	namespace         string
 	indexApiVersion   int
 	featureControls   uint64
+	queryContext      string
 	requestId         string
 	subquery          bool
 	correlated        bool
@@ -165,7 +166,7 @@ func (this *builder) restoreIndexPushDowns(idxPushDowns *indexPushDowns, paginat
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values, indexApiVersion int,
-	featureControls uint64, requestId string) *builder {
+	featureControls uint64, queryContext string, requestId string) *builder {
 	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
@@ -176,6 +177,7 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 		positionalArgs:  positionalArgs,
 		indexApiVersion: indexApiVersion,
 		featureControls: featureControls,
+		queryContext:    queryContext,
 		requestId:       requestId,
 	}
 

@@ -188,7 +188,7 @@ func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	var phaseTime time.Duration
 
-	prepared_name, prepared, err := getPrepared(httpArgs, parm, val, &phaseTime)
+	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime)
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -205,10 +205,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
-			// Distributed plans: we don't propagate on encoded_plan parameter
-			// because the client will be using it across all nodes anyway, and
-			// we want to avoid a plan distribution stampede
-			decoded_plan, plan_err = prepareds.DecodePrepared(prepared_name, encoded_plan, (prepared == nil), false, &phaseTime)
+			decoded_plan, plan_err = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan, (prepared == nil), &phaseTime)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {
@@ -473,6 +470,14 @@ func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
+func handleQueryContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	queryContext, err := httpArgs.getStringVal(QUERY_CONTEXT, val)
+	if err == nil {
+		rv.SetQueryContext(queryContext)
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -557,6 +562,7 @@ const ( // Request argument names
 	MAX_INDEX_API     = "max_index_api"
 	AUTO_PREPARE      = "auto_prepare"
 	AUTO_EXECUTE      = "auto_execute"
+	QUERY_CONTEXT     = "query_context"
 )
 
 var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error{
@@ -589,15 +595,19 @@ var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, par
 	MAX_INDEX_API:     handleMaxIndexAPI,
 	AUTO_PREPARE:      handleAutoPrepare,
 	AUTO_EXECUTE:      handleAutoExecute,
+	QUERY_CONTEXT:     handleQueryContext,
+}
+
+// take note while handling: initial parameters will not be found in fields or form values!
+var _INITIAL_PARAMETERS = map[string]bool{
+	N1QL_FEAT_CTRL: true,
+	MAX_INDEX_API:  true,
+	QUERY_CONTEXT:  true,
 }
 
 func isValidParameter(a string) bool {
-	a = util.TrimSpace(a)
 	// Ignore empty (whitespace) parameters. They are harmless.
 	if a == "" {
-		return true
-	}
-	if strings.IndexRune(a, '$') == 0 {
 		return true
 	}
 
@@ -605,19 +615,19 @@ func isValidParameter(a string) bool {
 	return ok
 }
 
-func getPrepared(a httpRequestArgs, parm string, val interface{}, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
-	prepared_field, err := a.getPreparedVal(parm, val)
-	if err != nil || prepared_field == nil {
+func isInitialParameter(a string) bool {
+	_, ok := _INITIAL_PARAMETERS[a]
+	return ok
+}
+
+func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{}, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
+	prepared_name, err := a.getPreparedName(parm, val)
+	if err != nil || prepared_name == "" {
 		return "", nil, err
 	}
 
-	prepared_name, ok := prepared_field.Actual().(string)
-	if !ok {
-		prepared_name = ""
-	}
-
 	// Monitoring API: track prepared statement access
-	prepared, err := prepareds.GetPrepared(prepared_field, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
+	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
 	if err != nil || prepared == nil {
 		return prepared_name, nil, err
 	}
@@ -804,7 +814,7 @@ type httpRequestArgs interface {
 	getString(string, string) (string, errors.Error)
 	getStringVal(field string, v interface{}) (string, errors.Error)
 	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
-	getPreparedVal(field string, v interface{}) (value.Value, errors.Error)
+	getPreparedName(field string, v interface{}) (string, errors.Error)
 	getDuration(string) (time.Duration, errors.Error)
 	getNamedArgs() map[string]value.Value
 	getPositionalArgs() (value.Values, errors.Error)
@@ -842,18 +852,16 @@ func getRequestParams(req *http.Request, urlArgs *urlArgs, jsonArgs *jsonArgs) (
 // urlArgs is an implementation of httpRequestArgs that reads
 // request arguments from a url-encoded http request
 type urlArgs struct {
-	req   *http.Request
-	named map[string]value.Value
+	req     *http.Request
+	initial map[string][]string
+	named   map[string]value.Value
 }
 
 func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 	var named map[string]value.Value
 
 	for arg, val := range req.Form {
-		newArg := util.TrimSpace(strings.ToLower(arg))
-		if !isValidParameter(newArg) {
-			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
-		}
+		newArg := util.TrimSpace(arg)
 		if newArg[0] == '$' {
 			delete(req.Form, arg)
 			switch len(val) {
@@ -861,14 +869,25 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 				//This is an error - there _has_ to be a value for a named argument
 				return nil, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", arg))
 			case 1:
-				named = addNamedArg(named, util.TrimSpace(arg),
-					value.NewValue([]byte(util.TrimSpace(val[0]))))
+				named = addNamedArg(named, newArg, value.NewValue([]byte(util.TrimSpace(val[0]))))
 			default:
 				return nil, errors.NewServiceErrorMultipleValues(arg)
 			}
-		} else if arg != newArg {
+			continue
+		}
+
+		lowerArg := strings.ToLower(newArg)
+		if !isValidParameter(lowerArg) {
+			return nil, errors.NewServiceErrorUnrecognizedParameter(lowerArg)
+		} else if isInitialParameter(lowerArg) {
 			delete(req.Form, arg)
-			req.Form[newArg] = val
+			if urlArgs.initial == nil {
+				urlArgs.initial = make(map[string][]string, 3)
+			}
+			urlArgs.initial[lowerArg] = val
+		} else if arg != lowerArg {
+			delete(req.Form, arg)
+			req.Form[lowerArg] = val
 		}
 	}
 	if req.Form[STATEMENT] == nil && req.Method == "POST" {
@@ -889,6 +908,13 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 func (this *urlArgs) processParameters(rv *httpRequest) errors.Error {
 	var err errors.Error
 
+	// certain parameters need to be handles before all others (eg query_context), because processing others depends on them
+	for parm, val := range this.initial {
+		err = _PARAMETERS[parm](rv, this, parm, val)
+		if err != nil {
+			break
+		}
+	}
 	for parm, val := range this.req.Form {
 		err = _PARAMETERS[parm](rv, this, parm, val)
 		if err != nil {
@@ -1093,22 +1119,18 @@ func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 	return creds_data, err
 }
 
-func (this *urlArgs) getPreparedVal(field string, v interface{}) (value.Value, errors.Error) {
-	var val value.Value
-
+func (this *urlArgs) getPreparedName(field string, v interface{}) (string, errors.Error) {
 	value_field, err := this.getStringVal(field, v)
 	if value_field == "" || err != nil {
-		return val, err
+		return "", err
 	}
 
 	// MB-25351: accept non quoted prepared names (much like the actual PREPARE statement)
-	if value_field[0] != '"' {
-		val = value.NewValue(value_field)
-	} else {
-		val = value.NewValue(strings.Trim(value_field, "\""))
+	if value_field[0] == '"' {
+		value_field = strings.Trim(value_field, "\"")
 	}
 
-	return val, nil
+	return value_field, nil
 }
 
 func (this *urlArgs) getField(field string) []string {
@@ -1131,9 +1153,10 @@ func (this *urlArgs) formValue(field string) (string, errors.Error) {
 // jsonArgs is an implementation of httpRequestArgs that reads
 // request arguments from a json-encoded http request
 type jsonArgs struct {
-	args  map[string]interface{}
-	named map[string]value.Value
-	req   *http.Request
+	args    map[string]interface{}
+	initial map[string]interface{}
+	named   map[string]value.Value
+	req     *http.Request
 }
 
 // create a jsonArgs structure from the given http request.
@@ -1147,16 +1170,25 @@ func newJsonArgs(req *http.Request, p *jsonArgs) (*jsonArgs, errors.Error) {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse JSON"), "JSON request body")
 	}
 	for arg, val := range p.args {
-		newArg := util.TrimSpace(strings.ToLower(arg))
-		if !isValidParameter(newArg) {
-			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
-		}
+		newArg := util.TrimSpace(arg)
 		if newArg[0] == '$' {
 			delete(p.args, arg)
-			p.named = addNamedArg(p.named, arg, value.NewValue(val))
-		} else if arg != newArg {
+			p.named = addNamedArg(p.named, newArg, value.NewValue(val))
+			continue
+		}
+
+		lowerArg := strings.ToLower(arg)
+		if !isValidParameter(lowerArg) {
+			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
+		} else if isInitialParameter(lowerArg) {
 			delete(p.args, arg)
-			p.args[newArg] = val
+			if p.initial == nil {
+				p.initial = make(map[string]interface{}, 3)
+			}
+			p.initial[lowerArg] = val
+		} else if arg != lowerArg {
+			delete(p.args, arg)
+			p.args[lowerArg] = val
 		}
 	}
 	p.req = req
@@ -1166,6 +1198,13 @@ func newJsonArgs(req *http.Request, p *jsonArgs) (*jsonArgs, errors.Error) {
 func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
 	var err errors.Error
 
+	// certain parameters need to be handles before all others (eg query_context), because processing others depends on them
+	for parm, val := range this.initial {
+		err = _PARAMETERS[parm](rv, this, parm, val)
+		if err != nil {
+			break
+		}
+	}
 	for parm, val := range this.args {
 		err = _PARAMETERS[parm](rv, this, parm, val)
 		if err != nil {
@@ -1326,8 +1365,13 @@ func (this *jsonArgs) getString(f string, dflt string) (string, errors.Error) {
 	return value, nil
 }
 
-func (this *jsonArgs) getPreparedVal(field string, v interface{}) (value.Value, errors.Error) {
-	return value.NewValue(v), nil
+func (this *jsonArgs) getPreparedName(field string, v interface{}) (string, errors.Error) {
+	switch v := v.(type) {
+	case string:
+		return v, nil
+	default:
+		return "", errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", v))
+	}
 }
 
 type Encoding int

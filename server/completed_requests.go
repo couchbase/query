@@ -44,6 +44,7 @@ type RequestLogEntry struct {
 	ClientId        string
 	ElapsedTime     time.Duration
 	ServiceTime     time.Duration
+	QueryContext    string
 	Statement       string
 	Plan            *plan.Prepared
 	State           string
@@ -453,6 +454,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		Time:            time.Now(),
 		ScanConsistency: string(request.ScanConsistency()),
 		Mutations:       request.MutationCount(),
+		QueryContext:    request.QueryContext(),
 	}
 	stmt := request.Statement()
 	if stmt != "" {

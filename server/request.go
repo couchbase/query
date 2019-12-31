@@ -106,6 +106,8 @@ type Request interface {
 	SetAutoPrepare(a value.Tristate)
 	AutoExecute() value.Tristate
 	SetAutoExecute(a value.Tristate)
+	SetQueryContext(s string)
+	QueryContext() string
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -254,6 +256,7 @@ type BaseRequest struct {
 	featureControls uint64 // feature bit controls
 	autoPrepare     value.Tristate
 	autoExecute     value.Tristate
+	queryContext    string
 }
 
 type requestIDImpl struct {
@@ -732,6 +735,14 @@ func (this *BaseRequest) AutoExecute() value.Tristate {
 	return this.autoExecute
 }
 
+func (this *BaseRequest) SetQueryContext(s string) {
+	this.queryContext = s
+}
+
+func (this *BaseRequest) QueryContext() string {
+	return this.queryContext
+}
+
 func (this *BaseRequest) Results() chan bool {
 	return this.stopResult
 }
@@ -826,6 +837,11 @@ func (this *BaseRequest) EventStatement() string {
 		return prep.Text()
 	}
 	return this.Statement()
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventQueryContext() string {
+	return this.QueryContext()
 }
 
 // For audit.Auditable interface.

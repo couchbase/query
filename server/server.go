@@ -655,7 +655,7 @@ func (this *Server) serviceRequest(request Request) {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
-		prepared, request.IndexApiVersion(), request.FeatureControls())
+		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext())
 
 	context.SetWhitelist(this.whitelist)
 
@@ -681,7 +681,7 @@ func (this *Server) serviceRequest(request Request) {
 			if name != "" {
 				var reprepTime time.Duration
 
-				prepared, er = prepareds.GetPrepared(value.NewValue(name), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
+				prepared, er = prepareds.GetPreparedWithContext(name, request.QueryContext(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
 				if reprepTime > 0 {
 					request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 				}
@@ -769,9 +769,9 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	}
 
 	if prepared == nil && autoPrepare {
-		name = prepareds.GetAutoPrepareName(request.Statement(), request.IndexApiVersion(), request.FeatureControls())
+		name = prepareds.GetAutoPrepareName(request.Statement(), request.IndexApiVersion(), request.FeatureControls(), request.QueryContext())
 		if name != "" {
-			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(), request.IndexApiVersion(), request.FeatureControls(), request.Namespace()) // TODO switch to collections scope
+			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(), request.IndexApiVersion(), request.FeatureControls(), request.Namespace(), request.QueryContext())
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
@@ -813,7 +813,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		}
 
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, autoExecute, !autoExecute,
-			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls())
+			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext())
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
@@ -826,25 +826,19 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			var err errors.Error
 
 			exec, _ := stmt.(*algebra.Execute)
-			if exec.Prepared() != nil {
 
-				prepared, err = prepareds.GetPrepared(exec.Prepared(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
-				if reprepTime > 0 {
-					request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
-				}
-				if err != nil {
-					return nil, err
-				}
-				request.SetPrepared(prepared)
-
-				// when executing prepared statements, we set the type to that
-				// of the prepared statement
-				request.SetType(prepared.Type())
-			} else {
-
-				// this never happens, but for completeness
-				return nil, errors.NewPlanError(nil, "prepared not specified")
+			prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), request.QueryContext(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
+			if reprepTime > 0 {
+				request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 			}
+			if err != nil {
+				return nil, err
+			}
+			request.SetPrepared(prepared)
+
+			// when executing prepared statements, we set the type to that
+			// of the prepared statement
+			request.SetType(prepared.Type())
 
 			usingArgs := exec.Using()
 			if usingArgs != nil {
@@ -905,7 +899,9 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 						prepared.SetName(name)
 						prepared.SetIndexApiVersion(request.IndexApiVersion())
 						prepared.SetFeatureControls(request.FeatureControls())
-						prepared.SetNamespace(request.Namespace()) // TODO switch to collections scope
+						prepared.SetNamespace(request.Namespace())
+						prepared.SetQueryContext(request.QueryContext())
+
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {
 							request.SetPrepared(prepared)

@@ -136,6 +136,7 @@ type Context struct {
 	namespace          string
 	indexApiVersion    int
 	featureControls    uint64
+	queryContext       string
 	readonly           bool
 	maxParallelism     int
 	scanCap            int64
@@ -166,7 +167,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
 	credentials auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request,
-	prepared *plan.Prepared, indexApiVersion int, featureControls uint64) *Context {
+	prepared *plan.Prepared, indexApiVersion int, featureControls uint64, queryContext string) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -191,6 +192,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		prepared:         prepared,
 		indexApiVersion:  indexApiVersion,
 		featureControls:  featureControls,
+		queryContext:     queryContext,
 		inlistHashMap:    nil,
 	}
 
@@ -475,7 +477,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 				// MB-32140: do not replace named/positional arguments with its value for prepared statements
 				subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
-					nil, nil, this.indexApiVersion, this.featureControls)
+					nil, nil, this.indexApiVersion, this.featureControls, this.queryContext)
 				if err != nil {
 					this.prepared.Unlock()
 
@@ -497,7 +499,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 			var err error
 
 			subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
-				this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
+				this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls, this.queryContext)
 			if err != nil {
 
 				// Generate our own error for this subquery, in addition to whatever the query above is doing.

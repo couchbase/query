@@ -110,6 +110,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					"indexApiVersion": entry.Prepared.IndexApiVersion(),
 					"featuresControl": entry.Prepared.FeatureControls(),
 				}
+				if entry.Prepared.Namespace() != "" {
+					itemMap["namespace"] = entry.Prepared.Namespace()
+				}
 				if entry.Prepared.EncodedPlan() != "" {
 					itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 				}

@@ -50,6 +50,9 @@ type Auditable interface {
 	// The N1QL statement executed.
 	EventStatement() string
 
+	// The query context used to formalize collections
+	EventQueryContext() string
+
 	// Statement id.
 	EventId() string
 
@@ -336,6 +339,7 @@ func stringifyQueryAR(entry n1qlAuditEvent) string {
 
 	str := fmt.Sprintf("RequestID: <ud>%v</ud> ", entry.RequestId)
 	str += fmt.Sprintf("Statement: <ud>%v</ud> ", entry.Statement)
+	str += fmt.Sprintf("QueryContext: <ud>%v</ud> ", entry.QueryContext)
 	str += fmt.Sprintf("NamedArgs: %v ", entry.NamedArgs)
 	str += fmt.Sprintf("PositionalArgs: %v ", entry.PositionalArgs)
 	str += fmt.Sprintf("ClientContextId: <ud>%v</ud> ", entry.ClientContextId)
@@ -511,6 +515,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	remote := parseRemoteFields(event.EventRemoteAddress())
 	requestId := event.EventId()
 	statement := event.EventStatement()
+	queryContext := event.EventQueryContext()
 	namedArgs := event.EventNamedArgs()
 	positionalArgs := event.EventPositionalArgs()
 	clientContextId := event.ClientContextId()
@@ -538,6 +543,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			Remote:          remote,
 			RequestId:       requestId,
 			Statement:       statement,
+			QueryContext:    queryContext,
 			NamedArgs:       namedArgs,
 			PositionalArgs:  positionalArgs,
 			ClientContextId: clientContextId,
@@ -573,6 +579,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			Remote:          remote,
 			RequestId:       requestId,
 			Statement:       statement,
+			QueryContext:    queryContext,
 			NamedArgs:       namedArgs,
 			PositionalArgs:  positionalArgs,
 			ClientContextId: clientContextId,
@@ -686,6 +693,7 @@ type n1qlAuditEvent struct {
 
 	RequestId       string                 `json:"requestId"`
 	Statement       string                 `json:"statement"`
+	QueryContext    string                 `json:"queryContext,omitempty"`
 	NamedArgs       map[string]interface{} `json:"namedArgs,omitempty"`
 	PositionalArgs  []interface{}          `json:"positionalArgs,omitempty"`
 	ClientContextId string                 `json:"clientContextId,omitempty"`

@@ -18,14 +18,14 @@ import (
 
 /*
 Represents the Execute command. The argument to EXECUTE must
-evaluate to a prepared statement or a string. Type Execute
-is a struct that contains a json object value that represents
+evaluate to a string.
+Type Execute is a struct that contains a json object value that represents
 a plan.Prepared.
 */
 type Execute struct {
 	statementBase
 
-	prepared value.Value `json:"prepared"`
+	prepared string `json:"prepared"`
 
 	// this contains either named parameters (a map of values)
 	// or positional (a slice)
@@ -37,17 +37,20 @@ The function NewExecute returns a pointer to the Execute
 struct with the input argument expressions value as a field.
 */
 func NewExecute(prepared expression.Expression, using expression.Expression) *Execute {
-	var preparedValue value.Value
+	preparedString := ""
 
 	switch prepared := prepared.(type) {
 	case *expression.Identifier:
-		preparedValue = value.NewValue(prepared.Alias())
+		preparedString = prepared.Alias()
 	default:
-		preparedValue = prepared.Value()
+		val := prepared.Value()
+		if val != nil {
+			preparedString = val.String()
+		}
 	}
 
 	rv := &Execute{
-		prepared: preparedValue,
+		prepared: preparedString,
 		using:    using,
 	}
 
@@ -65,12 +68,10 @@ func (this *Execute) Accept(visitor Visitor) (interface{}, error) {
 
 /*
 This method returns the shape of the result, which is
-the signature of the input prepared statement.
+unkown at this time and will be evaluated at execution time
 */
 func (this *Execute) Signature() value.Value {
-	signature, _ :=
-		this.prepared.Field("signature")
-	return signature
+	return nil
 }
 
 /*
@@ -112,7 +113,7 @@ func (this *Execute) Privileges() (*auth.Privileges, errors.Error) {
 Returns the input prepared value that represents the prepared
 statement.
 */
-func (this *Execute) Prepared() value.Value {
+func (this *Execute) Prepared() string {
 	return this.prepared
 }
 

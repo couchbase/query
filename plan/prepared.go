@@ -30,7 +30,8 @@ type Prepared struct {
 	reqType         string
 	indexApiVersion int
 	featureControls uint64
-	namespace       string // TODO change into scope
+	namespace       string
+	queryContext    string
 
 	indexers      []idxVersion // for reprepare checking
 	namespaces    []nsVersion
@@ -69,6 +70,7 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	r["indexApiVersion"] = this.indexApiVersion
 	r["featureControls"] = this.featureControls
 	r["namespace"] = this.namespace
+	r["queryContext"] = this.queryContext
 
 	if f != nil {
 		f(r)
@@ -87,6 +89,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 		ApiVersion      int             `json:"indexApiVersion"`
 		FeatureControls uint64          `json:"featureControls"`
 		Namespace       string          `json:"namespace"`
+		QueryContext    string          `json:"queryContext"`
 	}
 
 	var op_type struct {
@@ -116,6 +119,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	this.indexApiVersion = _unmarshalled.ApiVersion
 	this.featureControls = _unmarshalled.FeatureControls
 	this.namespace = _unmarshalled.Namespace
+	this.queryContext = _unmarshalled.QueryContext
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -171,6 +175,14 @@ func (this *Prepared) Namespace() string {
 
 func (this *Prepared) SetNamespace(namespace string) {
 	this.namespace = namespace
+}
+
+func (this *Prepared) QueryContext() string {
+	return this.queryContext
+}
+
+func (this *Prepared) SetQueryContext(queryContext string) {
+	this.queryContext = queryContext
 }
 
 func (this *Prepared) EncodedPlan() string {

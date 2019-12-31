@@ -23,12 +23,10 @@ type PlanCache interface {
 	GetText(text string, offset int) string
 
 	// return the expected statement name generated from the text and options
-	// TODO switch to collections scope
-	GetName(text string, indexApiVersion int, featureControls uint64, namespace string) (string, errors.Error)
+	GetName(text string, indexApiVersion int, featureControls uint64, namespace string, queryContext string) (string, errors.Error)
 
 	// check if plan already exists for name / text / options combo
-	// TODO switch to collections scope
-	GetPlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) (*plan.Prepared, errors.Error)
+	GetPlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string, queryContext string) (*plan.Prepared, errors.Error)
 }
 
 var planCache PlanCache
