@@ -70,6 +70,8 @@ var (
 	SKIPVERIFY = false
 	//Batch flag is used to send queries to the Asterix backend.
 	BATCH = "off"
+	//Output File open in append mode
+	FILE_APPEND_MODE = false
 )
 
 /* Value to store sorted list of keys for shell commands */

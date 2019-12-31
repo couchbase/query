@@ -51,6 +51,12 @@ func (this *Redirect) ExecCommand(args []string) (int, string) {
 		} else {
 			FILE_RW_MODE = true
 			FILE_OUTPUT = args[0]
+			if strings.HasPrefix(FILE_OUTPUT, "+") {
+				FILE_APPEND_MODE = true
+				FILE_OUTPUT = strings.TrimPrefix(FILE_OUTPUT, "+")
+			} else {
+				FILE_APPEND_MODE = false
+			}
 		}
 	}
 	return 0, ""
