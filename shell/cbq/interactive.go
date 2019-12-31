@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/cbq/command"
@@ -339,14 +340,20 @@ func redirectTo(prevFile, prevreset, prevfgRed string) (string, *os.File) {
 	if command.FILE_RW_MODE == true {
 		if prevFile != command.FILE_OUTPUT {
 			prevFile = command.FILE_OUTPUT
-			outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			if command.FILE_APPEND_MODE {
+				outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+			} else {
+				outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			}
+
 			command.SetDispVal("", "")
 			if err != nil {
 				s_err := command.HandleError(errors.FILE_OPEN, err.Error())
 				command.PrintError(s_err)
 				return prevFile, nil
+			} else if command.FILE_APPEND_MODE {
+				io.WriteString(outputFile, "-- <"+time.Now().Format("2006-01-02T15:04:05.999Z07:00")+"> : opened in append mode\n")
 			}
-
 		}
 	} else {
 		command.SetDispVal(prevreset, prevfgRed)
