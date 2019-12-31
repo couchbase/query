@@ -414,20 +414,21 @@ func readAndExec(liner *liner.State) (int, string) {
 		final_input = strings.TrimSuffix(final_input, ";")
 
 		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_RW_MODE == true {
-			prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
 
-			if outputFile == os.Stdout {
-				command.SetDispVal(prevreset, prevfgRed)
-				command.SetWriter(os.Stdout)
-			} else {
-				if outputFile != nil {
-					defer outputFile.Close()
-					command.SetWriter(io.Writer(outputFile))
-				}
+		prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
+
+		if outputFile == os.Stdout {
+			command.SetDispVal(prevreset, prevfgRed)
+			command.SetWriter(os.Stdout)
+		} else {
+			if outputFile != nil {
+				defer outputFile.Close()
+				command.SetWriter(io.Writer(outputFile))
 			}
-			io.WriteString(command.W, final_input+"\n")
+		}
 
+		if command.FILE_RW_MODE == true {
+			io.WriteString(command.W, final_input+"\n")
 		}
 
 		errCode, errStr := dispatch_command(final_input, command.W, false, liner)
