@@ -104,7 +104,7 @@ func TestSimpleSelect(t *testing.T) {
 Insert data into the buckets created earlier
 using the statements in case_insert.json.
 func TestInsertCaseFiles(t *testing.T) {
-	fmt.Println("\n\nInserting values into Buckets \n\n ")
+	fmt.Print("\n\nInserting values into Buckets \n\n ")
 	qc := start_cs()
 	matches, err := filepath.Glob("./case_insert.json")
 	if err != nil {
@@ -120,7 +120,7 @@ func TestInsertCaseFiles(t *testing.T) {
 		if stmt != "" {
 			t.Logf(" %v\n", stmt)
 		}
-		fmt.Println("\nQuery matched: ", m, "\n\n")
+		fmt.Print("\nQuery matched: ", m, "\n\n")
 	}
 }
 */

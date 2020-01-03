@@ -27,7 +27,7 @@ func TestArrayIndex(t *testing.T) {
 
 	qc := start_cs()
 
-	fmt.Println("\n\nInserting values into Bucket for Array Indexing \n\n ")
+	fmt.Print("\n\nInserting values into Bucket for Array Indexing \n\n ")
 	runMatch("insert.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE INDEX reviewlistidx on product(ALL DISTINCT ARRAY r  FOR r IN reviewList END)")

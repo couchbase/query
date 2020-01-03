@@ -29,7 +29,7 @@ func TestXattrs(t *testing.T) {
 
 	runStmt(qc, "create primary index on product")
 
-	fmt.Println("\n\nInserting values into Bucket for Xattrs test \n\n ")
+	fmt.Print("\n\nInserting values into Bucket for Xattrs test \n\n ")
 	runMatch("insert.json", false, false, qc, t)
 
 	gocb_SetupXattr()

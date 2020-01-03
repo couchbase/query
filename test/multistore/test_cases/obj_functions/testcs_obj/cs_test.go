@@ -21,7 +21,7 @@ using the statements in insert_customer.json.
 */
 
 func TestInsertCaseFiles(t *testing.T) {
-	fmt.Println("\n\nInserting values into Bucket for Object Functions \n\n ")
+	fmt.Print("\n\nInserting values into Bucket for Object Functions \n\n ")
 	qc := Start_test()
 	matches, err := filepath.Glob("../insert.json")
 	if err != nil {
@@ -37,7 +37,7 @@ func TestInsertCaseFiles(t *testing.T) {
 		if stmt != "" {
 			t.Logf(" %v\n", stmt)
 		}
-		fmt.Println("\nQuery matched: ", m, "\n\n")
+		fmt.Print("\nQuery matched: ", m, "\n\n")
 	}
 }
 
@@ -57,7 +57,7 @@ func TestAllCaseFiles(t *testing.T) {
 		if stmt != "" {
 			t.Logf(" %v\n", stmt)
 		}
-		fmt.Println("\nQuery matched: ", m, "\n\n")
+		fmt.Print("\nQuery matched: ", m, "\n\n")
 	}
 }
 
