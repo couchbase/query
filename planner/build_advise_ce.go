@@ -25,7 +25,7 @@ type collectQueryInfo struct {
 }
 
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
-	return nil, fmt.Errorf("Not supported.")
+	return nil, fmt.Errorf("Not supported in CE version. Use https://index-advisor.couchbase.com")
 }
 
 func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
