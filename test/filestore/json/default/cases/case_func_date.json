@@ -167,7 +167,7 @@
       "statements":"select DATE_PART_STR(MILLIS_TO_STR(NOW_MILLIS()),\"decade\")",
       "results": [
         {
-            "$1": 201
+            "$1": 202
         }
     ]
     },
@@ -175,7 +175,7 @@
       "statements":"select DATE_PART_STR(NOW_STR(\"2006-01-02 15:04:05\"),\"decade\")",
       "results": [
         {
-            "$1": 201
+            "$1": 202
         }
     ]
     },
@@ -562,7 +562,7 @@
     "statements":"select date_part_Str(clock_local(),'decade')",
     "results": [
         {
-            "$1": 201
+            "$1": 202
         }
     ]
    },
@@ -570,7 +570,7 @@
     "statements":"select date_part_str(now_local(),'decade')",
     "results": [
         {
-            "$1": 201
+            "$1": 202
         }
     ]
    },
