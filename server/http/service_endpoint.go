@@ -76,7 +76,12 @@ func (this *HttpEndpoint) Listen() error {
 	ln, err := net.Listen("tcp", this.httpAddr)
 	if err == nil {
 		this.listener = ln
-		go http.Serve(ln, this.mux)
+		srv := &http.Server{
+			Handler:           this.mux,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       30 * time.Second,
+		}
+		go srv.Serve(ln)
 		logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
 	}
 	return err
@@ -122,7 +127,12 @@ func (this *HttpEndpoint) ListenTLS() error {
 
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
-		go http.Serve(tls_ln, this.mux)
+		srv := &http.Server{
+			Handler:           this.mux,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       30 * time.Second,
+		}
+		go srv.Serve(tls_ln)
 		logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
 	}
 
