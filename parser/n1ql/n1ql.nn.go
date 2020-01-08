@@ -35536,7 +35536,10 @@ func NewLexer(in io.Reader) *Lexer {
 }
 
 func (yyLex *Lexer) Stop() {
-	yyLex.ch_stop <- true
+	select {
+	case yyLex.ch_stop <- true:
+	default:
+	}
 }
 
 // Text returns the matched text.

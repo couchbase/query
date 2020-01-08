@@ -84,7 +84,9 @@ func doParse(lex *lexer) {
 			n := runtime.Stack(buf, false)
 			logging.Errorf("Error while parsing: %v %s", r, string(buf[0:n]))
 		}
-		lex.nex.Stop()
+		if !lex.stop {
+			lex.nex.Stop()
+		}
 	}()
 
 	yyParse(lex)
