@@ -71,7 +71,14 @@ func (this *Range2) EquivalentTo(other *Range2) bool {
 }
 
 func (this *Range2) EqualRange() bool {
-	return (this.Inclusion == datastore.BOTH) && (this.Low != nil && this.High != nil && (this.Low == this.High || this.Low.EquivalentTo(this.High)))
+	return ((this.Inclusion == datastore.BOTH) &&
+		(this.Low != nil && this.High != nil && (this.Low == this.High || this.Low.EquivalentTo(this.High)))) ||
+		this.IsMissingRange()
+}
+
+func (this *Range2) IsMissingRange() bool {
+	return this.Inclusion == datastore.NEITHER && this.Low == nil &&
+		expression.Equivalent(this.High, expression.NULL_EXPR)
 }
 
 func (this *Range2) HasCheckSpecialSpan() bool {

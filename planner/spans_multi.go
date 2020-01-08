@@ -69,18 +69,20 @@ func (this *multiSpansBase) SetExact(exact bool) {
 	}
 }
 
-func (this *multiSpansBase) EquivalenceRangeAt(i int) (eq bool, expr expression.Expression) {
-	for _, s := range this.spans {
-		seq, sexpr := s.EquivalenceRangeAt(i)
+func (this *multiSpansBase) EquivalenceRangeAt(pos int) (eq bool, expr expression.Expression) {
+	missing := false //To mark IS MISSING range
 
-		if !seq || (expr != nil && !sexpr.EquivalentTo(expr)) {
+	for i, s := range this.spans {
+		seq, sexpr := s.EquivalenceRangeAt(pos)
+		if i == 0 && seq {
+			missing = (sexpr == nil)
+			expr = sexpr
+		} else if !seq || !expression.Equivalent(expr, sexpr) {
 			return false, nil
 		}
-
-		expr = sexpr
 	}
 
-	return expr != nil, expr
+	return (expr != nil || missing), expr
 }
 
 func dedupSpans(spans []SargSpans) []SargSpans {
