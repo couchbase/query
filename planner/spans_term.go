@@ -231,18 +231,16 @@ func (this *TermSpans) SkipsLeadingNulls() bool {
 	return true
 }
 
-func (this *TermSpans) EquivalenceRangeAt(i int) (eq bool, expr expression.Expression) {
-	for _, span := range this.spans {
-		if i >= len(span.Ranges) || !span.Ranges[i].EqualRange() {
+func (this *TermSpans) EquivalenceRangeAt(pos int) (eq bool, expr expression.Expression) {
+	for i, span := range this.spans {
+		if pos >= len(span.Ranges) || !span.Ranges[pos].EqualRange() {
 			return false, nil
 		}
 
-		sexpr := span.Ranges[i].Low
-
-		if (sexpr == nil) || (expr != nil && !sexpr.EquivalentTo(expr)) {
+		sexpr := span.Ranges[pos].Low
+		if i > 0 && !expression.Equivalent(expr, sexpr) {
 			return false, nil
 		}
-
 		expr = sexpr
 	}
 
