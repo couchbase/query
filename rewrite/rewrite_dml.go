@@ -84,7 +84,7 @@ func (this *Rewrite) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 		}
 	}
 
-	return stmt, stmt.MapExpressions(this)
+	return stmt, stmt.MapExpressionsNoSelect(this)
 }
 
 func (this *Rewrite) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
@@ -94,7 +94,7 @@ func (this *Rewrite) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		}
 	}
 
-	return stmt, stmt.MapExpressions(this)
+	return stmt, stmt.MapExpressionsNoSelect(this)
 }
 
 func (this *Rewrite) VisitDelete(stmt *algebra.Delete) (r interface{}, err error) {

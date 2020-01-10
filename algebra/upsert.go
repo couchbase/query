@@ -106,6 +106,15 @@ func (this *Upsert) Signature() value.Value {
 Applies mapper to all the expressions in the upsert statement.
 */
 func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.MapExpressionsNoSelect(mapper)
+	if err == nil && this.query != nil {
+		err = this.query.MapExpressions(mapper)
+	}
+
+	return err
+}
+
+func (this *Upsert) MapExpressionsNoSelect(mapper expression.Mapper) (err error) {
 	if this.key != nil {
 		this.key, err = mapper.Map(this.key)
 		if err != nil {
@@ -129,13 +138,6 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 
 	if this.values != nil {
 		err = this.values.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
-	}
-
-	if this.query != nil {
-		err = this.query.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
