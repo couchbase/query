@@ -110,6 +110,15 @@ func (this *Insert) Type() string {
 Applies mapper to all the expressions in the insert statement.
 */
 func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.MapExpressionsNoSelect(mapper)
+	if err == nil && this.query != nil {
+		err = this.query.MapExpressions(mapper)
+	}
+
+	return err
+}
+
+func (this *Insert) MapExpressionsNoSelect(mapper expression.Mapper) (err error) {
 	if this.key != nil {
 		this.key, err = mapper.Map(this.key)
 		if err != nil {
@@ -126,13 +135,6 @@ func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
 
 	if this.values != nil {
 		err = this.values.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
-	}
-
-	if this.query != nil {
-		err = this.query.MapExpressions(mapper)
 		if err != nil {
 			return
 		}

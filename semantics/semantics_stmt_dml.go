@@ -53,7 +53,7 @@ func (this *SemChecker) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 		}
 	}
 
-	return nil, stmt.MapExpressions(this)
+	return nil, stmt.MapExpressionsNoSelect(this)
 }
 
 func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
@@ -63,7 +63,7 @@ func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		}
 	}
 
-	return nil, stmt.MapExpressions(this)
+	return nil, stmt.MapExpressionsNoSelect(this)
 }
 
 func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err error) {
