@@ -92,7 +92,7 @@ func (this *HttpEndpoint) Listen() error {
 		srv := &http.Server{
 			Handler:           this.mux,
 			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       30 * time.Second,
+			//			ReadTimeout:       30 * time.Second,
 		}
 		go srv.Serve(ln)
 		logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
@@ -144,7 +144,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 		srv := &http.Server{
 			Handler:           this.mux,
 			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       30 * time.Second,
+			//			ReadTimeout:       30 * time.Second,
 		}
 		go srv.Serve(tls_ln)
 		logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
