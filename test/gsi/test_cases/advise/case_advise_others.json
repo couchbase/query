@@ -1,0 +1,85 @@
+[
+  {
+    "statements": "advise delete from shellTest where c22 in [22, 32] and type like \"%igh%\" and c12 is not missing",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 3. in, 8. not null/not missing/valued, 9. function index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "delete from shellTest where c22 in [22, 32] and type like \"%igh%\" and c12 is not missing"
+      }
+    ]
+  },
+  {
+    "statements": "advise merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = a1.type",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "keyspace_alias": "shellTest_a1",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c22 ON `shellTest`(`c22`)",
+                  "keyspace_alias": "shellTest_a2",
+                  "recommending_rule": "Index keys follow order of predicate types: 10. non-static join predicate."
+                }
+              ]
+            }
+          }
+        },
+        "query": "merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = a1.type"
+      }
+    ]
+  },
+  {
+    "statements": "advise update shellTest set type=\"left\" where length(a21) < 3 and c21 = 3 and c22 > 30",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c21_c22_length_a21 ON `shellTest`(`c21`,`c22`,length((`a21`)))",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than, 9. function index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "update shellTest set type=\"left\" where length(a21) < 3 and c21 = 3 and c22 > 30"
+      }
+    ]
+  }
+]

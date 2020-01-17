@@ -54,7 +54,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	scan, err := this.selectScan(keyspace, term)
 
-	this.appendQueryInfo(scan, term, len(this.coveringScans) == 0)
+	this.appendQueryInfo(scan, keyspace, term, len(this.coveringScans) == 0)
 
 	if err != nil {
 		return err

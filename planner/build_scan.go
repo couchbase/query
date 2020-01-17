@@ -194,6 +194,10 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		return
 	}
 
+	if this.indexAdvisor {
+		others = this.addVirtualIndexes(others)
+	}
+
 	secondary, primary, err = this.buildSubsetScan(keyspace, node,
 		baseKeyspace, id, others, primaryKey, formalizer, false)
 

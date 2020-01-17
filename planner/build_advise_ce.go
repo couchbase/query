@@ -34,10 +34,10 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 func (this *builder) extractPredicates(where, on expression.Expression) {
 }
 
-func (this *builder) extractIndexJoin(index datastore.Index, node *algebra.KeyspaceTerm, cover bool) {
+func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool) {
 }
 
-func (this *builder) appendQueryInfo(scan plan.Operator, node *algebra.KeyspaceTerm, uncovered bool) {
+func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, uncovered bool) {
 }
 
 func (this *builder) enableUnnest(alias string) {
@@ -56,7 +56,7 @@ func (this *builder) setKeyspaceFound() {
 func (this *builder) processadviseJF(alias string) {
 }
 
-func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order) {
+func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order, aggs algebra.Aggregates) {
 }
 
 func (this *builder) storeCollectQueryInfo() *collectQueryInfo {
@@ -64,4 +64,11 @@ func (this *builder) storeCollectQueryInfo() *collectQueryInfo {
 }
 
 func (this *builder) restoreCollectQueryInfo(info *collectQueryInfo) {
+}
+
+func (this *builder) addVirtualIndexes(others []datastore.Index) []datastore.Index {
+	return nil
+}
+
+func (this *builder) collectPushdownProperty(index datastore.Index, alias string, property PushDownProperties) {
 }

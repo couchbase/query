@@ -10,8 +10,7 @@
         "#operator": "Advise",
         "advice": {
           "#operator": "IndexAdvice",
-          "adviseinfo": [
-            {
+          "adviseinfo": {
               "recommended_indexes": {
                 "indexes": [
                   {
@@ -22,7 +21,6 @@
                 ]
               }
             }
-          ]
         },
         "query": "select * from shellTest12345 where test_id = \"advise\" limit 2"
       }

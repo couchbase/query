@@ -25,7 +25,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 
 	index, covers, filterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
 
-	this.extractIndexJoin(index, node.Right(), covers != nil)
+	this.extractIndexJoin(index, keyspace, node.Right(), covers != nil)
 
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 	index, _, _, err := this.buildJoinScan(keyspace, node.Right(), "nest")
 
-	this.extractIndexJoin(index, node.Right(), false)
+	this.extractIndexJoin(index, keyspace, node.Right(), false)
 
 	if err != nil {
 		return nil, err

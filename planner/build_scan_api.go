@@ -28,7 +28,7 @@ func useIndex3API(index datastore.Index, indexApiVersion int) bool {
 }
 
 func useSkipIndexKeys(index datastore.Index, indexApiVersion int) bool {
-	return useIndex3API(index, indexApiVersion) && index.Type() == datastore.GSI
+	return useIndex3API(index, indexApiVersion) && (index.Type() == datastore.GSI || index.Type() == datastore.VIRTUAL)
 }
 
 func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {

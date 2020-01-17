@@ -27,6 +27,7 @@ func NewVirtualKeyspace(name string, namespace datastore.Namespace) datastore.Ke
 	return &virtualKeyspace{
 		name:      name,
 		namespace: namespace,
+		indexer:   NewVirtualIndexer(namespace.Name(), name),
 	}
 }
 
