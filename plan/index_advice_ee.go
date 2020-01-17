@@ -13,29 +13,44 @@ package plan
 
 import (
 	"encoding/json"
-
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/expression"
 )
 
 type IndexAdvice struct {
 	readonly
-	adviceInfos iaplan.IndexAdviceInfos
+	adviceInfo *iaplan.IndexAdviceInfo
 }
 
-func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo) *IndexAdvice {
+func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, coverIdxes iaplan.IndexInfos) *IndexAdvice {
 	rv := &IndexAdvice{}
-	rv.adviceInfos = make(iaplan.IndexAdviceInfos, 0, len(queryInfos))
-	qLen := len(queryInfos)
-	cnt := 0
+	var curIndexes, recIndexes iaplan.IndexInfos
+	cntKeyspaceNotFound := 0
 	for _, v := range queryInfos {
-		cnt += 1
-		adviceInfo := iaplan.NewIndexAdviceInfo(v.GetCurIndexes(), v.GetUncoverIndexes(), v.GetCoverIndexes(), v.IsKeyspaceFound())
-		//MB-35353: get rid of multiple empty entryies when there are subquries
-		if qLen == 1 || (qLen > 1 && (!adviceInfo.IndexesEmpty() || len(rv.adviceInfos) == 0 && cnt == qLen)) {
-			rv.adviceInfos = append(rv.adviceInfos, adviceInfo)
+		if !v.IsKeyspaceFound() {
+			cntKeyspaceNotFound += 1
+			continue
+		}
+		if len(v.GetCurIndexes()) > 0 {
+			if curIndexes == nil {
+				curIndexes = make(iaplan.IndexInfos, 0, len(v.GetCurIndexes()))
+			}
+			curIndexes = append(curIndexes, v.GetCurIndexes()...)
+		}
+
+		if len(v.GetUncoverIndexes()) > 0 {
+			if recIndexes == nil {
+				recIndexes = make(iaplan.IndexInfos, 0, len(v.GetUncoverIndexes()))
+			}
+			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
 		}
 	}
+
+	if cntKeyspaceNotFound == len(queryInfos) && len(curIndexes) == 0 {
+		curIndexes = nil
+	}
+
+	rv.adviceInfo = iaplan.NewIndexAdviceInfo(curIndexes, recIndexes, coverIdxes)
 	return rv
 }
 
@@ -57,7 +72,7 @@ func (this *IndexAdvice) MarshalJSON() ([]byte, error) {
 
 func (this *IndexAdvice) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexAdvice"}
-	r["adviseinfo"] = this.adviceInfos
+	r["adviseinfo"] = this.adviceInfo
 
 	if f != nil {
 		f(r)
@@ -67,8 +82,8 @@ func (this *IndexAdvice) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *IndexAdvice) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string            `json:"#operator"`
-		AdviceInfos []json.RawMessage `json:"adviseinfo"`
+		_          string          `json:"#operator"`
+		AdviceInfo json.RawMessage `json:"adviseinfo"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -76,17 +91,13 @@ func (this *IndexAdvice) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if len(_unmarshalled.AdviceInfos) > 0 {
-		this.adviceInfos = make(iaplan.IndexAdviceInfos, len(_unmarshalled.AdviceInfos))
-		for _, v := range _unmarshalled.AdviceInfos {
-			r := &iaplan.IndexAdviceInfo{}
-			err = r.UnmarshalJSON(v)
-			if err != nil {
-				return err
-			}
-			this.adviceInfos = append(this.adviceInfos, r)
+	if _unmarshalled.AdviceInfo != nil {
+		r := &iaplan.IndexAdviceInfo{}
+		err = r.UnmarshalJSON(_unmarshalled.AdviceInfo)
+		if err != nil {
+			return err
 		}
+		this.adviceInfo = r
 	}
-
 	return nil
 }

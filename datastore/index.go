@@ -27,6 +27,7 @@ const (
 	GSI     IndexType = "gsi"     // global secondary index
 	FTS     IndexType = "fts"     // full text index
 	SYSTEM  IndexType = "system"  // system keyspace indexes
+	VIRTUAL IndexType = "virtual" // The index is built as a virtual index
 )
 
 const (
@@ -394,9 +395,10 @@ func (indexStatType IndexStatType) String() string {
 type IndexStorageMode string
 
 const (
-	INDEX_MODE_MOI    IndexStorageMode = "MOI"
-	INDEX_MODE_PLASMA IndexStorageMode = "PLASMA"
-	INDEX_MODE_FDB    IndexStorageMode = "FDB" // legacy forest db
+	INDEX_MODE_MOI     IndexStorageMode = "MOI"
+	INDEX_MODE_PLASMA  IndexStorageMode = "PLASMA"
+	INDEX_MODE_FDB     IndexStorageMode = "FDB" // legacy forest db
+	INDEX_MODE_VIRTUAL IndexStorageMode = "VIRTUAL"
 )
 
 type Index4 interface {

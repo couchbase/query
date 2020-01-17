@@ -1,0 +1,170 @@
+[
+  {
+    "statements": "advise select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a1",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 11. flavor for partial index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT lang FROM shellTest s UNNEST SPLIT(s.LanguageWorkedWith, ';') lang WHERE s.PurchaseWhat = 'NA' AND lang != 'NA' group by lang",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
+                  "keyspace_alias": "shellTest_s"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
+                  "keyspace_alias": "shellTest_s",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (1. leading array index for unnest, 2. equality/null/missing)."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT lang FROM shellTest s UNNEST SPLIT(s.LanguageWorkedWith, ';') lang WHERE s.PurchaseWhat = 'NA' AND lang != 'NA' group by lang"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE y.flight IS NOT NULL",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE y.flight IS NOT NULL"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE x.flight IS NOT NULL",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE x.flight IS NOT NULL"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT REVERSE (d.`Number`) FROM shellTest st UNNEST st.`a11`.`b11`.`c11` d WHERE REVERSE (d.`Number`) LIKE $pfx and lower(st.id) < 10",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
+                  "keyspace_alias": "shellTest_st"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
+                  "keyspace_alias": "shellTest_st",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 9. function index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT REVERSE (d.`Number`) FROM shellTest st UNNEST st.`a11`.`b11`.`c11` d WHERE REVERSE (d.`Number`) LIKE $pfx and lower(st.id) < 10"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT e FROM shellTest st UNNEST st.`a11`. `b12`.`c13` e WHERE e LIKE $pfx GROUP BY e HAVING COUNT(meta(st).id) > 20",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
+                  "keyspace_alias": "shellTest_st"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
+                  "keyspace_alias": "shellTest_st",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT e FROM shellTest st UNNEST st.`a11`. `b12`.`c13` e WHERE e LIKE $pfx GROUP BY e HAVING COUNT(meta(st).id) > 20"
+      }
+    ]
+  }
+]

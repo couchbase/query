@@ -46,31 +46,32 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys, unnestF
 	}
 
 	// Check all predicates are part of spans, exact and no false positives possible
-	if !isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
-		return pushDownProperty
+	if isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
+
+		// LIMIT Pushdown is possible when
+		//        *  Query Order By not present
+		//        *  Query Order By matches with Index key order
+		//        *  LIMIT is hint to indexer
+
+		if this.limit != nil && exactLimitOffset {
+			pushDownProperty |= _PUSHDOWN_LIMIT
+		}
+
+		// OFFSET Pushdown is possible when
+		//        *  Index API2
+		//        *  Offset can be pushed based on spans becasue OFFSET needs to be exact NOT hint to indexer
+		//        *  Query Order By not present
+		//        *  Query Order By matches with Index key order
+
+		if this.offset != nil && exactLimitOffset && useIndex2API(entry.index, this.indexApiVersion) &&
+			entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(),
+				!unnest && indexHasArrayIndexKey(entry.index)) {
+			pushDownProperty |= _PUSHDOWN_OFFSET
+		}
 	}
-
-	// LIMIT Pushdown is possible when
-	//        *  Query Order By not present
-	//        *  Query Order By matches with Index key order
-	//        *  LIMIT is hint to indexer
-
-	if this.limit != nil && exactLimitOffset {
-		pushDownProperty |= _PUSHDOWN_LIMIT
+	if this.indexAdvisor && covering {
+		this.collectPushdownProperty(entry.index, alias, pushDownProperty)
 	}
-
-	// OFFSET Pushdown is possible when
-	//        *  Index API2
-	//        *  Offset can be pushed based on spans becasue OFFSET needs to be exact NOT hint to indexer
-	//        *  Query Order By not present
-	//        *  Query Order By matches with Index key order
-
-	if this.offset != nil && exactLimitOffset && useIndex2API(entry.index, this.indexApiVersion) &&
-		entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(),
-			!unnest && indexHasArrayIndexKey(entry.index)) {
-		pushDownProperty |= _PUSHDOWN_OFFSET
-	}
-
 	return pushDownProperty
 }
 

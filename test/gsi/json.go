@@ -783,29 +783,47 @@ func getAdviseResults(subpath string, result []interface{}) []interface{} {
 		if !ok {
 			continue
 		}
-		v2a, ok := value.NewValue(v2).Actual().([]interface{})
+		v2a, ok := value.NewValue(v2).Actual().(map[string]interface{})
 		if !ok {
 			continue
 		}
-		for _, v3 := range v2a {
-			v3, ok := value.NewValue(v3).Actual().(map[string]interface{})
-			if !ok {
-				continue
-			}
-			for k4, v4 := range v3 {
-				if k4 == "recommended_indexes" {
-					v4, ok := value.NewValue(v4).Actual().(map[string]interface{})
-					if !ok {
-						continue
-					}
-					for k5, v5 := range v4 {
-						if k5 == subpath {
-							return value.NewValue(v5).Actual().([]interface{})
-						}
-					}
-				}
-			}
+		v3, ok := v2a["recommended_indexes"]
+		if !ok {
+			continue
 		}
+		v3a, ok := value.NewValue(v3).Actual().(map[string]interface{})
+		if !ok {
+			continue
+		}
+		v4, ok := v3a[subpath]
+		if ok {
+			return value.NewValue(v4).Actual().([]interface{})
+		}
+		//for k4, v4 := range v3a {
+		//	if k4 == subpath {
+		//		return value.NewValue(v4).Actual().([]interface{})
+		//	}
+		//}
+
+		//for _, v3 := range v2a {
+		//	v3, ok := value.NewValue(v3).Actual().(map[string]interface{})
+		//	if !ok {
+		//		continue
+		//	}
+		//	for k4, v4 := range v3 {
+		//		if k4 == "recommended_indexes" {
+		//			v4, ok := value.NewValue(v4).Actual().(map[string]interface{})
+		//			if !ok {
+		//				continue
+		//			}
+		//			for k5, v5 := range v4 {
+		//				if k5 == subpath {
+		//					return value.NewValue(v5).Actual().([]interface{})
+		//				}
+		//			}
+		//		}
+		//	}
+		//}
 	}
 	return nil
 }

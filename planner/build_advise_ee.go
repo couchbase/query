@@ -23,44 +23,100 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
+const (
+	_RECOMMEND = iota
+	_VALIDATE
+)
+
+var pushdownMap = map[PushDownProperties]string{
+	_PUSHDOWN_LIMIT:         "LIMIT pushdown",
+	_PUSHDOWN_OFFSET:        "OFFSET pushdown",
+	_PUSHDOWN_ORDER:         "ORDER pushdown",
+	_PUSHDOWN_GROUPAGGS:     "GROUPBY & AGGREGATES pushdown",
+	_PUSHDOWN_FULLGROUPAGGS: "FULL GROUPBY & AGGREGATES pushdown",
+}
+
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
-	this.indexAdvisor = true
+	this.setAdvisePhase(_RECOMMEND)
 	//Temporarily turn off CBO for rule-based advisor
 	this.useCBO = false
 	this.maxParallelism = 1
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
-	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion), doDNF(stmt.Statement().Expressions()))
-	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos), stmt.Query()), nil
+
+	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion), doDNF(stmt.Statement().Expressions()))
+
+	this.setAdvisePhase(_VALIDATE)
+	//There are covering indexes to be validated:
+	if len(coverIdxMap) > 0 {
+		this.idxCandidates = make([]datastore.Index, 0, len(coverIdxMap))
+		for _, info := range coverIdxMap {
+			idx := info.VirtualIndex()
+			if idx != nil {
+				this.idxCandidates = append(this.idxCandidates, idx)
+			}
+		}
+
+		if len(this.idxCandidates) > 0 {
+			stmt.Statement().Accept(this)
+			if len(this.validatedCoverIdxes) > 0 {
+				this.matchIdxInfos(coverIdxMap)
+			}
+		}
+	}
+	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos, this.validatedCoverIdxes), stmt.Query()), nil
+}
+
+func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
+	for i, info := range this.validatedCoverIdxes {
+		key := info.GetKeyspaceName() + "_" + info.GetAlias() + "_" + info.GetIndexName() + "_virtual"
+		if origInfo, ok := m[key]; ok {
+			this.validatedCoverIdxes[i] = this.matchPushdownProperty(key, origInfo)
+		}
+	}
+	return
 }
 
 type collectQueryInfo struct {
-	keyspaceInfos  iaplan.KeyspaceInfos
-	queryInfo      *iaplan.QueryInfo
-	queryInfos     map[expression.HasExpressions]*iaplan.QueryInfo
-	indexCollector *scanIdxCol
+	keyspaceInfos       iaplan.KeyspaceInfos
+	queryInfo           *iaplan.QueryInfo
+	queryInfos          map[expression.HasExpressions]*iaplan.QueryInfo
+	indexCollector      *scanIdxCol
+	idxCandidates       []datastore.Index
+	validatedCoverIdxes iaplan.IndexInfos
+	pushDownPropMap     map[string]PushDownProperties // key->"keyspace_alias_indexname_typeofIdx" e.g. "default_d_idx1_virtual"
+	advisePhase         int
+}
+
+func (this *builder) setAdvisePhase(op int) {
+	this.indexAdvisor = true
+	this.advisePhase = op
 }
 
 func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 	if this.indexAdvisor {
-		if stmt != nil {
-			this.queryInfo = iaplan.NewQueryInfo(stmt.Type())
-			this.keyspaceInfos = iaplan.NewKeyspaceInfos()
-			if s, ok := stmt.(*algebra.Select); ok {
-				if s.Order() != nil {
-					this.queryInfos[s] = this.queryInfo
+		if this.advisePhase == _RECOMMEND {
+			if stmt != nil {
+				this.queryInfo = iaplan.NewQueryInfo(stmt.Type())
+				this.keyspaceInfos = iaplan.NewKeyspaceInfos()
+				if s, ok := stmt.(*algebra.Select); ok {
+					if s.Order() != nil {
+						this.queryInfos[s] = this.queryInfo
+					} else {
+						this.queryInfos[s.Subresult()] = this.queryInfo
+					}
 				} else {
-					this.queryInfos[s.Subresult()] = this.queryInfo
+					this.queryInfos[stmt] = this.queryInfo
 				}
-			} else {
-				this.queryInfos[stmt] = this.queryInfo
 			}
+		} else {
+			this.validatedCoverIdxes = make(iaplan.IndexInfos, 0, 1)
 		}
 	}
 }
 
 func (this *builder) extractPredicates(where, on expression.Expression) {
-	if this.indexAdvisor {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		if where != nil {
 			this.queryInfo.SetWhere(where)
 		}
@@ -70,42 +126,59 @@ func (this *builder) extractPredicates(where, on expression.Expression) {
 	}
 }
 
-func (this *builder) extractIndexJoin(index datastore.Index, node *algebra.KeyspaceTerm, cover bool) {
+func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool) {
 	if this.indexAdvisor {
 		if index != nil {
-			info := extractInfo(index, node.Keyspace(), node.Alias(), false)
+			info := extractInfo(index, node.Alias(), keyspace, false, this.advisePhase == _VALIDATE)
 			if cover { //covering index
 				info.SetIdxStatusCovering()
 			}
+			if this.advisePhase == _VALIDATE {
+				this.validatedCoverIdxes = append(this.validatedCoverIdxes, info)
+				return
+			}
 			this.queryInfo.SetCurIndex(info)
 		}
-		if !cover {
-			this.keyspaceInfos.SetUncovered()
+		if this.advisePhase == _VALIDATE {
+			if !cover {
+				this.keyspaceInfos.SetUncovered()
+			}
+			this.queryInfo.AppendKeyspaceInfos(this.keyspaceInfos)
+			this.keyspaceInfos = iaplan.NewKeyspaceInfos()
 		}
-		this.queryInfo.AppendKeyspaceInfos(this.keyspaceInfos)
-		this.keyspaceInfos = iaplan.NewKeyspaceInfos()
 	}
 }
 
-func (this *builder) appendQueryInfo(scan plan.Operator, node *algebra.KeyspaceTerm, uncovered bool) {
+func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, uncovered bool) {
 	if this.indexAdvisor {
+		// Index collector collects index information in both recommend and validate phases.
 		if scan != nil {
 			this.indexCollector = NewScanIdxCol()
-			this.indexCollector.setNode(node)
+			this.indexCollector.setKeyspace(keyspace)
+			this.indexCollector.setAlias(node.Alias())
+			this.indexCollector.setValidatePhase(this.advisePhase == _VALIDATE)
 			scan.Accept(this.indexCollector)
-		}
-		if uncovered {
-			this.keyspaceInfos.SetUncovered()
-			if this.indexCollector != nil {
+			if uncovered {
 				this.indexCollector.setUnCovering()
 			}
-		}
-		this.queryInfo.AppendKeyspaceInfos(this.keyspaceInfos)
-		if this.indexCollector != nil {
+			if this.advisePhase == _VALIDATE {
+				if this.indexCollector.isCovering() {
+					this.validatedCoverIdxes = append(this.validatedCoverIdxes, this.indexCollector.indexInfos...)
+				}
+				this.indexCollector = nil
+				return
+			}
 			this.queryInfo.AppendCurIndexes(this.indexCollector.indexInfos, this.indexCollector.covering)
 		}
-		this.keyspaceInfos = iaplan.NewKeyspaceInfos()
-		this.indexCollector = nil
+
+		if this.advisePhase == _RECOMMEND {
+			if uncovered {
+				this.keyspaceInfos.SetUncovered()
+			}
+			this.queryInfo.AppendKeyspaceInfos(this.keyspaceInfos)
+			this.keyspaceInfos = iaplan.NewKeyspaceInfos()
+			this.indexCollector = nil
+		}
 	}
 }
 
@@ -119,8 +192,8 @@ func (this *builder) restoreCollectQueryInfo(info *collectQueryInfo) {
 	this.queryInfo = info.queryInfo
 }
 
-func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order) {
-	if this.indexAdvisor {
+func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order, aggs algebra.Aggregates) {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		if let != nil {
 			this.queryInfo.SetLet(let)
 		}
@@ -133,11 +206,14 @@ func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *al
 		if order != nil {
 			this.queryInfo.SetOrder(order.Terms())
 		}
+		if len(aggs) > 0 {
+			this.queryInfo.SetAggs(aggs)
+		}
 	}
 }
 
 func (this *builder) enableUnnest(alias string) {
-	if this.indexAdvisor {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		if this.queryInfo.ContainsUnnest() {
 			this.queryInfo.InitializeUnnestMap()
 			collectInnerUnnestMap(this.from, this.queryInfo, expression.NewIdentifier(alias), 1)
@@ -147,7 +223,7 @@ func (this *builder) enableUnnest(alias string) {
 }
 
 func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
-	if !this.indexAdvisor {
+	if !(this.indexAdvisor && this.advisePhase == _RECOMMEND) {
 		return nil
 	}
 	//not advise index to system keyspace
@@ -204,6 +280,26 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	return nil
 }
 
+func (this *builder) addVirtualIndexes(others []datastore.Index) []datastore.Index {
+	if len(this.idxCandidates) > 0 {
+		others = append(others, this.idxCandidates...)
+	}
+	return others
+}
+
+func (this *builder) collectPushdownProperty(index datastore.Index, alias string, property PushDownProperties) {
+	if this.advisePhase == _VALIDATE && index.Type() != datastore.VIRTUAL {
+		return
+	}
+	if this.pushDownPropMap == nil {
+		this.pushDownPropMap = make(map[string]PushDownProperties, 1)
+	}
+	key := index.KeyspaceId() + "_" + alias + "_" + index.Name() + "_" + string(index.Type())
+	if _, ok := this.pushDownPropMap[key]; !ok {
+		this.pushDownPropMap[key] = property
+	}
+}
+
 func getAndTerms(pred *expression.And) expression.Expressions {
 	res := make(expression.Expressions, 0, 2)
 	for _, e := range pred.Operands() {
@@ -229,7 +325,7 @@ func getFilterInfos(filters base.Filters) iaplan.FilterInfos {
 }
 
 func (this *builder) setUnnest() {
-	if this.indexAdvisor {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		this.queryInfo.SetUnnest(true)
 	}
 }
@@ -241,9 +337,31 @@ func (this *builder) processadviseJF(alias string) {
 }
 
 func (this *builder) setKeyspaceFound() {
-	if this.indexAdvisor {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		this.queryInfo.SetKeyspaceFound()
 	}
+}
+
+func (this *builder) matchPushdownProperty(key string, idxInfo *iaplan.IndexInfo) *iaplan.IndexInfo {
+	if property, ok := this.pushDownPropMap[key]; ok {
+		if property > _PUSHDOWN_EXACTSPANS {
+			var propertyString string
+			set := _PUSHDOWN_FULLGROUPAGGS
+			for set > _PUSHDOWN_EXACTSPANS {
+				if isPushDownProperty(property, set) {
+					if len(propertyString) > 0 {
+						propertyString += ", "
+					}
+					propertyString += pushdownMap[set]
+				}
+				set >>= 1
+			}
+			if len(propertyString) > 0 {
+				idxInfo.SetPushdown(propertyString)
+			}
+		}
+	}
+	return idxInfo
 }
 
 func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
@@ -310,7 +428,7 @@ func getDeferredIndexes(keyspace datastore.Keyspace, alias string, indexApiVersi
 				infos = make(iaplan.IndexInfos, 0, 1)
 			}
 
-			infos = append(infos, extractInfo(idx, keyspace.Name(), alias, true))
+			infos = append(infos, extractInfo(idx, alias, keyspace, true, false))
 		}
 	}
 	return infos

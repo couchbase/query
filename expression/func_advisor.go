@@ -369,26 +369,26 @@ func (this *Advisor) processResult(q string, t int, res value.Value, curMap, rec
 		if !ok {
 			continue
 		}
-		v2a := value.NewValue(v2).Actual().([]interface{})
-		for _, v3 := range v2a {
-			v3 := value.NewValue(v3).Actual().(map[string]interface{})
-			for k4, v4 := range v3 {
-				if k4 == "recommended_indexes" {
-					v4 := value.NewValue(v4).Actual()
-					v4a, ok := v4.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					for k5, v5 := range v4a {
-						if k5 == "indexes" {
-							addToMap(recIdxMap, v5, q, t)
-						} else if k5 == "covering_indexes" {
-							addToMap(recCidxMap, v5, q, t)
-						}
-					}
-				} else if k4 == "current_indexes" {
-					addToMap(curMap, v4, q, t)
+		v2a, ok := value.NewValue(v2).Actual().(map[string]interface{})
+		if !ok {
+			continue
+		}
+		for k3, v3 := range v2a {
+			if k3 == "recommended_indexes" {
+				v4 := value.NewValue(v3).Actual()
+				v4a, ok := v4.(map[string]interface{})
+				if !ok {
+					continue
 				}
+				for k5, v5 := range v4a {
+					if k5 == "indexes" {
+						addToMap(recIdxMap, v5, q, t)
+					} else if k5 == "covering_indexes" {
+						addToMap(recCidxMap, v5, q, t)
+					}
+				}
+			} else if k3 == "current_indexes" {
+				addToMap(curMap, v3, q, t)
 			}
 		}
 	}

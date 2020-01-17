@@ -13,16 +13,17 @@ package planner
 
 import (
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
-	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
 
 type scanIdxCol struct {
-	node       *algebra.KeyspaceTerm
-	indexInfos iaplan.IndexInfos
-	covering   bool
+	keyspace      datastore.Keyspace
+	alias         string
+	indexInfos    iaplan.IndexInfos
+	covering      bool
+	validatePhase bool
 }
 
 func NewScanIdxCol() *scanIdxCol {
@@ -32,31 +33,46 @@ func NewScanIdxCol() *scanIdxCol {
 	}
 }
 
-func (this *scanIdxCol) setNode(node *algebra.KeyspaceTerm) {
-	this.node = node
+func (this *scanIdxCol) setKeyspace(keyspace datastore.Keyspace) {
+	this.keyspace = keyspace
+}
+
+func (this *scanIdxCol) setAlias(alias string) {
+	this.alias = alias
 }
 
 func (this *scanIdxCol) setUnCovering() {
 	this.covering = false
 }
 
+func (this *scanIdxCol) setValidatePhase(b bool) {
+	this.validatePhase = b
+}
+
+func (this *scanIdxCol) isCovering() bool {
+	return this.covering
+}
+
 func (this *scanIdxCol) addIndexInfo(indexInfo *iaplan.IndexInfo) {
+	if indexInfo == nil {
+		return
+	}
+
 	for _, info := range this.indexInfos {
 		if info.EquivalentTo(indexInfo) {
 			return
 		}
 	}
-
 	this.indexInfos = append(this.indexInfos, indexInfo)
 }
 
 func (this *scanIdxCol) VisitPrimaryScan(op *plan.PrimaryScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, op.Keyspace(), false, this.validatePhase))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, op.Keyspace(), false, this.validatePhase))
 	return nil, nil
 }
 
@@ -65,17 +81,17 @@ func (this *scanIdxCol) VisitParentScan(op *plan.ParentScan) (interface{}, error
 }
 
 func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
@@ -96,17 +112,17 @@ func (this *scanIdxCol) VisitCountScan(op *plan.CountScan) (interface{}, error) 
 }
 
 func (this *scanIdxCol) VisitIndexCountScan(op *plan.IndexCountScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexCountScan2(op *plan.IndexCountScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexCountDistinctScan2(op *plan.IndexCountDistinctScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.node.Keyspace(), this.node.Alias(), false))
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
@@ -385,6 +401,7 @@ func (this *scanIdxCol) VisitExecuteFunction(op *plan.ExecuteFunction) (interfac
 
 // IndexFtsSearch
 func (this *scanIdxCol) VisitIndexFtsSearch(op *plan.IndexFtsSearch) (interface{}, error) {
+	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
@@ -434,19 +451,24 @@ func formalizeExpr(formalizer *expression.Formalizer, key expression.Expression)
 	return key, nil
 }
 
-func extractInfo(index datastore.Index, keyspace, keyspaceAlias string, deferred bool) *iaplan.IndexInfo {
-	if index == nil {
+func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore.Keyspace, deferred, validatePhase bool) *iaplan.IndexInfo {
+	if index == nil || (validatePhase && index.Type() != datastore.VIRTUAL) {
 		return nil
 	}
-	info := iaplan.NewIndexInfo(index.Name(), keyspace, keyspaceAlias, index.IsPrimary(), "", nil, "", deferred)
-	if index2, ok := index.(datastore.Index2); ok {
-		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, getIndexKeyExpressions(index2.RangeKey2())))
-	} else {
-		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
+
+	info := iaplan.NewIndexInfo(index.Name(), keyspaceAlias, keyspace, index.IsPrimary(), "", nil, "", deferred, index.Type())
+	if validatePhase {
+		info.SetVirtual()
+	} else if index.Type() == datastore.GSI {
+		if index2, ok := index.(datastore.Index2); ok {
+			info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, getIndexKeyExpressions(index2.RangeKey2())))
+		} else {
+			info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
+		}
+		info.SetKeyStrings(getIndexKeyStringArray(index))
+		info.SetCondition(index.Condition())
+		info.SetPartition(getIndexPartitionToString(index))
 	}
-	info.SetKeyStrings(getIndexKeyStringArray(index))
-	info.SetCondition(index.Condition())
-	info.SetPartition(getIndexPartitionToString(index))
 	return info
 }
 

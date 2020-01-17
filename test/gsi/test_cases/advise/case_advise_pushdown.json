@@ -1,0 +1,126 @@
+[
+  {
+    "statements": "advise select sum(d) from shellTest where a = 10 and b > 20 group by b",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_b_d ON `shellTest`(`a`,`b`,`d`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select sum(d) from shellTest where a = 10 and b > 20 group by b"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where test_id = \"advise\" order by c11 DESC limit 2",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE INDEX adv_test_id_c11DESC ON `shellTest`(`test_id`,`c11` DESC)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where test_id = \"advise\" order by c11 DESC limit 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_c_b_d ON `shellTest`(`a`,`c`,`b`,`d`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`c`,`b`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than, 8. not null/not missing/valued."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c"
+      }
+    ]
+  },
+  {
+    "statements": "advise select avg(c), sum(DISTINCT d) from shellTest where a = 10 and b < 10 group by b",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_b_d_c ON `shellTest`(`a`,`b`,`d`,`c`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select avg(c), sum(DISTINCT d) from shellTest where a = 10 and b < 10 group by b"
+      }
+    ]
+  }
+]

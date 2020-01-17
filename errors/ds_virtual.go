@@ -24,9 +24,10 @@ func NewVirtualKSIdxerNotFoundError(e error, msg string) Error {
 		InternalMsg: "Virtual keyspace : Indexer not found " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewVirtualIdxerNotFoundError(e error, msg string) Error {
+func NewVirtualIdxNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 17003, IKey: "datastore.virtual.indexer.not_found", ICause: e,
-		InternalMsg: "Virtual Indexer : Indexer not found " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Virtual indexer : Index not found " + msg, InternalCaller: CallerN(1)}
+
 }
 
 func NewVirtualIdxerNotSupportedError(e error, msg string) Error {
@@ -34,7 +35,12 @@ func NewVirtualIdxerNotSupportedError(e error, msg string) Error {
 		InternalMsg: "Virtual Indexer : Not supported " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewVirtualIdxerNotImplementedError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 17005, IKey: "datastore.virtual.indxer.not_implemented", ICause: e,
-		InternalMsg: "Virtual indexer : Not yet implemented " + msg, InternalCaller: CallerN(1)}
+func NewVirtualIdxNotImplementedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 17005, IKey: "datastore.virtual.index.not_implemented", ICause: e,
+		InternalMsg: "Virtual index : Not yet implemented " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewVirtualIdxNotSupportedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 17006, IKey: "datastore.virtual.index.not_supported", ICause: e,
+		InternalMsg: "Virtual Index : Not supported " + msg, InternalCaller: CallerN(1)}
 }

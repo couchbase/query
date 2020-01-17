@@ -160,7 +160,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	scan, err := this.selectScan(keyspace, node)
 
 	uncovered := len(this.coveringScans) == 0 && this.countScan == nil
-	this.appendQueryInfo(scan, node, uncovered)
+	this.appendQueryInfo(scan, keyspace, node, uncovered)
 
 	if err != nil {
 		this.processadviseJF(node.Alias())
