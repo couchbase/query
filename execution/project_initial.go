@@ -55,8 +55,6 @@ func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-var _EMPTY_ANNOTATED_VALUE = value.NewAnnotatedValue(map[string]interface{}{})
-
 func (this *InitialProject) processItem(item value.AnnotatedValue, context *Context) bool {
 	terms := this.plan.Terms()
 	n := len(terms)
@@ -80,7 +78,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			item.SetSelf(true)
 			return this.sendItem(item)
 		} else {
-			return this.sendItem(_EMPTY_ANNOTATED_VALUE)
+			return this.sendItem(value.EMPTY_ANNOTATED_OBJECT)
 		}
 	} else if this.plan.Projection().Raw() {
 		// Raw projection of an expression

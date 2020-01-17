@@ -62,7 +62,7 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		av := _EMPTY_ANNOTATED_VALUE
+		av := value.EMPTY_ANNOTATED_OBJECT
 
 		if parent != nil {
 			cv := value.NewScopeValue(_EMPTY_OBJECT, parent)

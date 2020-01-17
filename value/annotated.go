@@ -20,11 +20,14 @@ import (
 type AnnotatedValues []AnnotatedValue
 
 var annotatedPool util.LocklessPool
+var EMPTY_ANNOTATED_OBJECT AnnotatedValue
 
 func init() {
 	util.NewLocklessPool(&annotatedPool, func() unsafe.Pointer {
 		return unsafe.Pointer(&annotatedValue{})
 	})
+	EMPTY_ANNOTATED_OBJECT = NewAnnotatedValue(map[string]interface{}{})
+	EMPTY_ANNOTATED_OBJECT.(*annotatedValue).noRecycle = true
 }
 
 func newAnnotatedValue() *annotatedValue {
@@ -32,7 +35,7 @@ func newAnnotatedValue() *annotatedValue {
 	rv.refCnt = 1
 	rv.bit = 0
 	rv.self = false
-	rv.isOrigCopy = false
+	rv.noRecycle = false
 	return rv
 }
 
@@ -104,7 +107,7 @@ type annotatedValue struct {
 	self          bool
 	original      Value
 	annotatedOrig AnnotatedValue
-	isOrigCopy    bool
+	noRecycle     bool
 }
 
 func (this *annotatedValue) String() string {
@@ -262,7 +265,7 @@ func (this *annotatedValue) Original() AnnotatedValue {
 	}
 
 	av := newAnnotatedValue()
-	av.isOrigCopy = true
+	av.noRecycle = true
 	switch val := val.(type) {
 	case *annotatedValue:
 		av.Value = val.Value
@@ -290,7 +293,7 @@ func (this *annotatedValue) Recycle() {
 	// do no recycle if other scope values are using this value
 	// or if this is an original document hanging off a projecton
 	refcnt := atomic.AddInt32(&this.refCnt, -1)
-	if refcnt > 0 || this.isOrigCopy {
+	if refcnt > 0 || this.noRecycle {
 		return
 	}
 
