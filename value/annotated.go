@@ -20,11 +20,14 @@ import (
 type AnnotatedValues []AnnotatedValue
 
 var annotatedPool util.LocklessPool
+var EMPTY_ANNOTATED_OBJECT AnnotatedValue
 
 func init() {
 	util.NewLocklessPool(&annotatedPool, func() unsafe.Pointer {
 		return unsafe.Pointer(&annotatedValue{})
 	})
+	EMPTY_ANNOTATED_OBJECT = NewAnnotatedValue(map[string]interface{}{})
+	EMPTY_ANNOTATED_OBJECT.(*annotatedValue).noRecycle = true
 }
 
 func newAnnotatedValue() *annotatedValue {
@@ -97,6 +100,7 @@ type annotatedValue struct {
 	id          interface{}
 	refCnt      int32
 	self        bool
+	noRecycle   bool
 }
 
 func (this *annotatedValue) String() string {
@@ -245,7 +249,7 @@ func (this *annotatedValue) Recycle() {
 
 	// do no recycle if other scope values are using this value
 	refcnt := atomic.AddInt32(&this.refCnt, -1)
-	if refcnt > 0 {
+	if refcnt > 0 || this.noRecycle {
 		return
 	}
 	this.Value.Recycle()
