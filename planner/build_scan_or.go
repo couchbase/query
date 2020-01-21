@@ -110,6 +110,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	join := node.IsAnsiJoinOp()
 	for i, op := range orTerms.Operands() {
+		if op != nil {
+			if val := op.Value(); val != nil && !val.Truth() {
+				continue
+			}
+		}
+
 		this.where = op
 		this.limit = limit
 
