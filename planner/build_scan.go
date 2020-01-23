@@ -63,7 +63,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		hints = _HINT_POOL.Get()
 		defer _HINT_POOL.Put(hints)
 		hints, err = allHints(keyspace, node.Indexes(), hints, this.indexApiVersion)
-		if err != nil {
+		if err != nil && !this.indexAdvisor { //Don't error out for index advisor.
 			return
 		}
 	}
