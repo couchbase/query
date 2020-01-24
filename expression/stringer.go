@@ -20,9 +20,30 @@ import (
 )
 
 type Stringer struct {
+	replacee string
+	replacer string
+	omit     bool
 }
 
 func NewStringer() *Stringer { return &Stringer{} }
+
+/*
+To replace the identifier in expression with the user-defined replacement:
+	replacee: identifier to be replaced
+	replacer: replacement for the identifier to be replaced
+	omit: flag for the expression to skip the identifier replacement or not
+	E.g.:
+	replacee: `a`, replacer: `self`, omit: false:
+	`a`.`b` -> `self`.`b`
+	`a`.`a`.`b` -> `self`.`a`.`b`
+	replacee: `a`, replacer: `self`, omit: true
+	`a`.`a`.`b` -> `a`.`b`
+*/
+func (this *Stringer) SetReplace(replacee, replacer string, omit bool) {
+	this.replacee = replacee
+	this.replacer = replacer
+	this.omit = omit
+}
 
 func (this *Stringer) Visit(expr Expression) string {
 	s, err := expr.Accept(this)
@@ -394,9 +415,15 @@ func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
 
 // Identifier
 func (this *Stringer) VisitIdentifier(expr *Identifier) (interface{}, error) {
+	identifier := expr.identifier
+
+	if this.replacee != "" && this.replacee == identifier {
+		identifier = this.replacer
+	}
+
 	buf := bytes.NewBuffer(make([]byte, 0, len(expr.identifier)+3))
 	buf.WriteString("`")
-	buf.WriteString(expr.identifier)
+	buf.WriteString(identifier)
 	buf.WriteString("`")
 
 	if expr.CaseInsensitive() {
@@ -521,8 +548,12 @@ func (this *Stringer) VisitElement(expr *Element) (interface{}, error) {
 func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(".")
+
+	if first, ok := expr.First().(*Identifier); !ok || this.replacee == "" ||
+		first.identifier != this.replacee || !this.omit {
+		buf.WriteString(this.Visit(expr.First()))
+		buf.WriteString(".")
+	}
 
 	_, ok := expr.Second().(*FieldName)
 	if !ok {
