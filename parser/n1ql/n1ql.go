@@ -26,17 +26,17 @@ func SetNamespaces(ns map[string]interface{}) {
 }
 
 func ParseStatement(input string) (algebra.Statement, error) {
-	return ParseStatement2(input, "default")
+	return ParseStatement2(input, "default", "")
 }
 
-// TODO switch to collections scope
-func ParseStatement2(input string, namespace string) (algebra.Statement, error) {
+func ParseStatement2(input string, namespace string, queryContext string) (algebra.Statement, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
 	lex.parsingStmt = true
 	lex.text = input
 	lex.namespace = namespace
+	lex.queryContext = queryContext
 	lex.nex.ResetOffset()
 	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
@@ -103,7 +103,8 @@ type lexer struct {
 	lastScannerError string
 	text             string
 	offset           int
-	namespace        string // TODO switch to collections scope
+	namespace        string
+	queryContext     string
 	hasSaved         bool
 	saved            int
 	lval             yySymType
@@ -220,7 +221,10 @@ func (this *lexer) countParam() {
 	this.paramCount++
 }
 
-// TODO swith to collections scope
 func (this *lexer) Namespace() string {
 	return this.namespace
+}
+
+func (this *lexer) QueryContext() string {
+	return this.queryContext
 }

@@ -55,8 +55,7 @@ func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
 
 func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "UpdateStatistics"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.node.Keyspace().MarshalKeyspace(r)
 
 	terms := make([]interface{}, 0, len(this.node.Terms()))
 	for _, term := range this.node.Terms() {
@@ -75,11 +74,13 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 
 func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string          `json:"#operator"`
-		Keysp  string          `json:"keyspace"`
-		Namesp string          `json:"namespace"`
-		Terms  []string        `json:"terms"`
-		With   json.RawMessage `json:"with"`
+		_         string          `json:"#operator"`
+		Namespace string          `json:"namespace"`
+		Bucket    string          `json:"bucket"`
+		Scope     string          `json:"scope"`
+		Keyspace  string          `json:"keyspace"`
+		Terms     []string        `json:"terms"`
+		With      json.RawMessage `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -87,12 +88,13 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namesp, _unmarshalled.Keysp)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
-	ksref := algebra.NewKeyspaceRef(_unmarshalled.Namesp, _unmarshalled.Keysp, "")
+	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 
 	var expr expression.Expression
 	terms := make(expression.Expressions, len(_unmarshalled.Terms))

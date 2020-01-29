@@ -179,8 +179,7 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 	r := map[string]interface{}{"#operator": "IndexScan2"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
 
@@ -241,6 +240,8 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 		Index        string                 `json:"index"`
 		IndexId      string                 `json:"index_id"`
 		Namespace    string                 `json:"namespace"`
+		Bucket       string                 `json:"bucket"`
+		Scope        string                 `json:"scope"`
 		Keyspace     string                 `json:"keyspace"`
 		As           string                 `json:"as"`
 		Using        datastore.IndexType    `json:"using"`
@@ -261,12 +262,13 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	k, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Keyspace)
+	k, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Namespace, _unmarshalled.Keyspace, _unmarshalled.As, nil, nil)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}

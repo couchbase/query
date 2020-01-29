@@ -178,14 +178,16 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 type SendUpdate struct {
 	readwrite
 	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceRef
 	alias    string
 	limit    expression.Expression
 }
 
-func NewSendUpdate(keyspace datastore.Keyspace, alias string, limit expression.Expression) *SendUpdate {
+func NewSendUpdate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression) *SendUpdate {
 	return &SendUpdate{
 		keyspace: keyspace,
-		alias:    alias,
+		term:     ksref,
+		alias:    ksref.Alias(),
 		limit:    limit,
 	}
 }
@@ -216,8 +218,7 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 
 func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "SendUpdate"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.term.MarshalKeyspace(r)
 	r["alias"] = this.alias
 
 	if this.limit != nil {
@@ -232,11 +233,13 @@ func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Keys  string `json:"keyspace"`
-		Names string `json:"namespace"`
-		Alias string `json:"alias"`
-		Limit string `json:"limit"`
+		_         string `json:"#operator"`
+		Namespace string `json:"namespace"`
+		Bucket    string `json:"bucket"`
+		Scope     string `json:"scope"`
+		Keyspace  string `json:"keyspace"`
+		Alias     string `json:"alias"`
+		Limit     string `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -253,7 +256,7 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	return err
 }
 

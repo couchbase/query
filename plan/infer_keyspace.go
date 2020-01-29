@@ -53,8 +53,7 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 
 func (this *InferKeyspace) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "InferKeyspace"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 
 	if this.node.With() != nil {
@@ -69,11 +68,13 @@ func (this *InferKeyspace) MarshalBase(f func(map[string]interface{})) map[strin
 
 func (this *InferKeyspace) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string                  `json:"#operator"`
-		Keysp  string                  `json:"keyspace"`
-		Namesp string                  `json:"namespace"`
-		Using  datastore.InferenceType `json:"using"`
-		With   json.RawMessage         `json:"with"`
+		_         string                  `json:"#operator"`
+		Namespace string                  `json:"namespace"`
+		Bucket    string                  `json:"bucket"`
+		Scope     string                  `json:"scope"`
+		Keyspace  string                  `json:"keyspace"`
+		Using     datastore.InferenceType `json:"using"`
+		With      json.RawMessage         `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -81,12 +82,13 @@ func (this *InferKeyspace) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namesp, _unmarshalled.Keysp)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
-	ksref := algebra.NewKeyspaceRef(_unmarshalled.Namesp, _unmarshalled.Keysp, "")
+	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 
 	var with value.Value
 	if len(_unmarshalled.With) > 0 {

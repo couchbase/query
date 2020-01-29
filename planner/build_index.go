@@ -10,8 +10,6 @@
 package planner
 
 import (
-	"strings"
-
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -21,7 +19,7 @@ import (
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +45,7 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 
 func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +89,7 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 
 func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +114,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +143,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -163,28 +161,6 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 	return plan.NewBuildIndexes(keyspace, stmt), nil
 }
 
-func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) {
-	if ns == "" {
-		ns = this.namespace
-	}
-
-	//if strings.ToLower(ns) == "#system" {
-	//return nil, fmt.Errorf("Index operations not allowed on system namespace.")
-	//}
-
-	datastore := this.datastore
-	if strings.ToLower(ns) == "#system" {
-		datastore = this.systemstore
-	}
-	namespace, err := datastore.NamespaceByName(ns)
-	if err != nil {
-		return nil, err
-	}
-
-	keyspace, err := namespace.KeyspaceByName(ks)
-	if err != nil {
-		return nil, err
-	}
-
-	return keyspace, nil
+func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef) (datastore.Keyspace, error) {
+	return datastore.GetKeyspace(ks.Path().Parts()...)
 }

@@ -23,6 +23,7 @@ import (
 
 	json "github.com/couchbase/go_json"
 	adt "github.com/couchbase/goutils/go-cbaudit"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
@@ -473,7 +474,10 @@ func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 func handleQueryContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	queryContext, err := httpArgs.getStringVal(QUERY_CONTEXT, val)
 	if err == nil {
-		rv.SetQueryContext(queryContext)
+		err = algebra.ValidateQueryContext(queryContext)
+		if err == nil {
+			rv.SetQueryContext(queryContext)
+		}
 	}
 	return err
 }

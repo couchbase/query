@@ -82,8 +82,7 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 
 func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Merge"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.ref.MarshalKeyspace(r)
 
 	if this.key != nil {
 		r["key"] = expression.NewStringer().Visit(this.key)
@@ -111,14 +110,16 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Merge) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string          `json:"#operator"`
-		Keys   string          `json:"keyspace"`
-		Names  string          `json:"namespace"`
-		As     string          `json:"as"`
-		Key    string          `json:"key"`
-		Update json.RawMessage `json:"update"`
-		Delete json.RawMessage `json:"delete"`
-		Insert json.RawMessage `json:"insert"`
+		_         string          `json:"#operator"`
+		Namespace string          `json:"namespace"`
+		Bucket    string          `json:"bucket"`
+		Scope     string          `json:"scope"`
+		Keyspace  string          `json:"keyspace"`
+		As        string          `json:"as"`
+		Key       string          `json:"key"`
+		Update    json.RawMessage `json:"update"`
+		Delete    json.RawMessage `json:"delete"`
+		Insert    json.RawMessage `json:"insert"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -126,12 +127,13 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
-	this.ref = algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As)
+	this.ref = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As)
 
 	if _unmarshalled.Key != "" {
 		this.key, err = parser.Parse(_unmarshalled.Key)

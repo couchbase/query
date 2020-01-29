@@ -20,7 +20,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	}
 
 	subChildren := make([]plan.Operator, 0, 4)
-	subChildren = append(subChildren, plan.NewSendUpsert(keyspace, ksref.Alias(), stmt.Key(), stmt.Value(), stmt.Options()))
+	subChildren = append(subChildren, plan.NewSendUpsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options()))
 
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)

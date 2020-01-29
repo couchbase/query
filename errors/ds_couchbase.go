@@ -126,3 +126,8 @@ func NewCbSecurityConfigNotProvided(bucket string) Error {
 	return &err{level: EXCEPTION, ICode: 12023, IKey: "datastore.couchbase.security_config_not_provided",
 		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: true}
 }
+
+func NewCbBucketNoDefaultCollectionError(b string) Error {
+	return &err{level: EXCEPTION, ICode: 12024, IKey: "datastore.couchbase.no_default_collection",
+		InternalMsg: "Bucket " + b + " does not have a default collection", InternalCaller: CallerN(1)}
+}

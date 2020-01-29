@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -207,21 +206,18 @@ func (this *builder) setFalseWhereClause() {
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {
 	path := node.Path()
 	path.SetDefaultNamespace(this.namespace)
-	ns := path.Namespace()
-	ds := this.datastore
-	if strings.ToLower(ns) == "#system" {
-		ds = this.systemstore
-	}
-	namespace, err := ds.NamespaceByName(ns)
-	if err != nil {
-		return nil, err
-	}
-	keyspace, err := getKeyspace(namespace, path)
+	ns := strings.ToLower(path.Namespace())
+	keyspace, err := datastore.GetKeyspace(path.Parts()...)
 
-	if err != nil && this.indexAdvisor && strings.ToLower(ns) != "#system" &&
+	if err != nil && this.indexAdvisor && ns != "#system" &&
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
 			strings.Contains(err.TranslationKey(), "scope_not_found") ||
 			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
+		ds := this.datastore
+		namespace, err := ds.NamespaceByName(ns)
+		if err != nil {
+			return nil, err
+		}
 		if v, ok := namespace.(datastore.VirtualNamespace); ok {
 			if this.indexAdvisor {
 				this.setKeyspaceFound()
@@ -235,21 +231,6 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 	}
 
 	return keyspace, err
-}
-
-func getKeyspace(namespace datastore.Namespace, path *algebra.Path) (datastore.Keyspace, errors.Error) {
-	if path.IsCollection() {
-		bucket, err := namespace.BucketByName(path.Bucket())
-		if err != nil {
-			return nil, err
-		}
-		scope, err := bucket.ScopeByName(path.Scope())
-		if err != nil {
-			return nil, err
-		}
-		return scope.KeyspaceByName(path.Keyspace())
-	}
-	return namespace.KeyspaceByName(path.Keyspace())
 }
 
 func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {

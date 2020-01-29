@@ -65,8 +65,7 @@ func (this *AlterIndex) MarshalBase(f func(map[string]interface{})) map[string]i
 	r := map[string]interface{}{"#operator": "AlterIndex"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 
 	if this.node.With() != nil {
@@ -81,13 +80,15 @@ func (this *AlterIndex) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_       string              `json:"#operator"`
-		Index   string              `json:"index"`
-		IndexId string              `json:"index_id"`
-		Keys    string              `json:"keyspace"`
-		Names   string              `json:"namespace"`
-		Using   datastore.IndexType `json:"using"`
-		With    json.RawMessage     `json:"with"`
+		_         string              `json:"#operator"`
+		Index     string              `json:"index"`
+		IndexId   string              `json:"index_id"`
+		Namespace string              `json:"namespace"`
+		Bucket    string              `json:"bucket"`
+		Scope     string              `json:"scope"`
+		Keyspace  string              `json:"keyspace"`
+		Using     datastore.IndexType `json:"using"`
+		With      json.RawMessage     `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -97,7 +98,8 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 
 	// Build the node
 	// Get the keyspace ref (namespace:keyspace)
-	ksref := algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, "")
+	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 
 	// Get the with clause
 	var with value.Value
@@ -108,7 +110,7 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	this.node = algebra.NewAlterIndex(ksref, _unmarshalled.Index, _unmarshalled.Using, with)
 
 	// Build the index
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}

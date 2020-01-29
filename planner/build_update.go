@@ -19,7 +19,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	this.node = stmt
 
 	ksref := stmt.KeyspaceRef()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		updateSubChildren = append(updateSubChildren, plan.NewUnset(stmt.Unset()))
 	}
 
-	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
+	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref, stmt.Limit()))
 
 	if stmt.Returning() != nil {
 		updateSubChildren = this.buildDMLProject(stmt.Returning(), updateSubChildren)

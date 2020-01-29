@@ -54,8 +54,7 @@ func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
 
 func (this *BuildIndexes) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "BuildIndexes"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 
 	if len(this.node.Names()) > 0 {
@@ -70,11 +69,13 @@ func (this *BuildIndexes) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_       string              `json:"#operator"`
-		Keys    string              `json:"keyspace"`
-		Names   string              `json:"namespace"`
-		Using   datastore.IndexType `json:"using"`
-		Indexes []string            `json:"indexes"`
+		_         string              `json:"#operator"`
+		Namespace string              `json:"namespace"`
+		Bucket    string              `json:"bucket"`
+		Scope     string              `json:"scope"`
+		Keyspace  string              `json:"keyspace"`
+		Using     datastore.IndexType `json:"using"`
+		Indexes   []string            `json:"indexes"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -82,7 +83,8 @@ func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	ksref := algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, "")
+	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 	exprs := make(expression.Expressions, 0, len(_unmarshalled.Indexes))
 	for _, s := range _unmarshalled.Indexes {
 		expr, err := parser.Parse(s)
@@ -94,7 +96,7 @@ func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
 
 	this.node = algebra.NewBuildIndexes(ksref, _unmarshalled.Using, exprs...)
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	return err
 }
 

@@ -111,7 +111,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	// TODO leaving profiling in place but commented out just in case
 	// parse := util.Now()
-	stmt, err := n1ql.ParseStatement2(statement, this.namespace) // TODO switch to collections queryContext
+	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext)
 	// output.AddPhaseTime(PARSE, util.Since(parse))
 	if err != nil {
 		return nil, 0, err

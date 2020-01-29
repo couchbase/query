@@ -113,7 +113,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 		// make a copy of the original KeyspaceTerm with the extra
 		// primaryJoinKeys and construct a JOIN operator
-		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(), nil, right.Indexes())
+		newKeyspaceTerm := algebra.NewKeyspaceTermFromPath(right.Path(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
@@ -243,7 +243,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 		// make a copy of the original KeyspaceTerm with the extra
 		// primaryJoinKeys and construct a NEST operator
-		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(), nil, right.Indexes())
+		newKeyspaceTerm := algebra.NewKeyspaceTermFromPath(right.Path(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil

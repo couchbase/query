@@ -11,42 +11,87 @@ package algebra
 
 import (
 	"strings"
+
+	"github.com/couchbase/query/errors"
 )
 
 // A keyspace path. Supported forms:
-//    customers
+//    customers (needs queryContext)
 //    system:prepareds
-//    default:prepareds
+//    default:customers
 //    default:myBucket.myScope.myCollection
 type Path struct {
-	elements                []string `json:"elements"`
-	firstElementIsNamespace bool     `json:"firstElementIsNamespace"`
+	elements []string `json:"elements"`
 }
 
 // Create a path from a namespace:keyspace combination.
 func NewPathShort(namespace, keyspace string) *Path {
 	return &Path{
-		elements:                []string{namespace, keyspace},
-		firstElementIsNamespace: true,
+		elements: []string{namespace, keyspace},
 	}
 }
 
+// Create a path from a namespace:bucket.scope.keyspace combination
 func NewPathLong(namespace, bucket, scope, keyspace string) *Path {
 	return &Path{
-		elements:                []string{namespace, bucket, scope, keyspace},
-		firstElementIsNamespace: true,
+		elements: []string{namespace, bucket, scope, keyspace},
 	}
 }
 
-// This isn't quite right, but it will do for now.
+// Create a path from three possible combinations:
+// namespace:bucket
+// namespace:keyspace (for backwards compatibility)
+// namespace:bucket.scope.keyspace
+// used for plan unmarshalling
+func NewPathShortOrLong(namespace, bucket, scope, keyspace string) *Path {
+	if keyspace == "" {
+		return &Path{
+			elements: []string{namespace, bucket},
+		}
+	} else if bucket == "" {
+		return &Path{
+			elements: []string{namespace, keyspace},
+		}
+	}
+	return &Path{
+		elements: []string{namespace, bucket, scope, keyspace},
+	}
+}
+
+// Creates a full path from a single identifier and a query context
+// the query context is expected to be of the form
+// blank (namespace is either specified by the namespace parameter or set later)
+// :bucket.scope (namespace is either specified by the namespace parameter or set later)
+// namespace: (produces a short path)
+// namespace:bucket.scope (produces a long path)
+func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
+	if queryContext == "" {
+		return &Path{
+
+			// FIXME this has to be amended once collection privileges are defined
+			// ideally we want the path fully qualified here, as we have been missing
+			// several SetDefaultNamespace calls in planner
+			// elements: []string{namespace, keyspace},
+			elements: []string{"", keyspace},
+		}
+	}
+
+	elems := parseQueryContext(queryContext)
+
+	// FIXME ditto
+	//	if elems[0] == "" {
+	//		elems[0] = namespace
+	//	}
+	return &Path{
+		elements: append(elems, keyspace),
+	}
+}
+
 func (path *Path) Namespace() string {
-	if path.firstElementIsNamespace {
-		return path.elements[0]
-	} else {
-		return ""
-	}
+	return path.elements[0]
 }
 
+// the next three methods are currently unused but left for completeness
 func (path *Path) Bucket() string {
 	if len(path.elements) == 4 {
 		return path.elements[1]
@@ -67,13 +112,18 @@ func (path *Path) IsCollection() bool {
 	return len(path.elements) == 4
 }
 
-// Also, not quite right. But temporary.
+// the keyspace is always the last element of the path
 func (path *Path) Keyspace() string {
 	return path.elements[len(path.elements)-1]
 }
 
+func (path *Path) Parts() []string {
+	return path.elements
+}
+
+// FIXME ideally this should go
 func (path *Path) SetDefaultNamespace(namespace string) {
-	if path.firstElementIsNamespace && path.elements[0] == "" {
+	if path.elements[0] == "" {
 		path.elements[0] = namespace
 	}
 }
@@ -98,7 +148,7 @@ func (path *Path) string(forceBackticks bool) string {
 	for i, s := range path.elements {
 		// The first element, i.e. the namespace, may be an empty string.
 		// That means we can omit it, and the separator after it.
-		if i == 0 && path.firstElementIsNamespace && s == "" {
+		if i == 0 && s == "" {
 			continue
 		}
 		// Wrap any element that contains "." in back-ticks.
@@ -112,7 +162,7 @@ func (path *Path) string(forceBackticks bool) string {
 		// Add a separator. ":" after a namespace, else "."
 		if i < lastIndex {
 			// Need a separator.
-			if i == 0 && path.firstElementIsNamespace {
+			if i == 0 {
 				acc += ":"
 			} else {
 				acc += "."
@@ -120,4 +170,88 @@ func (path *Path) string(forceBackticks bool) string {
 		}
 	}
 	return acc
+}
+
+// this is used for operator marshalling
+// by the time it's called, the namespace is expected to be set
+func (this *Path) marshalKeyspace(m map[string]interface{}) {
+	l := len(this.elements)
+	m["namespace"] = this.elements[0]
+	if l > 2 {
+		m["bucket"] = this.elements[1]
+		m["scope"] = this.elements[2]
+	}
+	m["keyspace"] = this.elements[l-1]
+}
+
+// the queryContext is expected to be syntactically correct as per function below
+// no checks are made, and undesired behaviour will ensue if it isn't
+func parseQueryContext(queryContext string) []string {
+	if queryContext == "" || queryContext == ":" {
+		return []string{""}
+	}
+	elements := []string{}
+	hasNamespace := false
+	start := 0
+	for i, c := range queryContext {
+		switch c {
+		case ':':
+			elements = append(elements, queryContext[0:i])
+			start = i + 1
+			hasNamespace = true
+		case '.':
+			if !hasNamespace {
+				elements = append(elements, "")
+			}
+			elements = append(elements, queryContext[start:i])
+			start = i + 1
+		}
+	}
+	if len(elements) == 0 {
+		elements = append(elements, "")
+	}
+	return elements
+}
+
+// for now the only formats we support are
+// blank
+// namespace:
+// namespace:bucket.scope
+// [:]bucket.scope
+func ValidateQueryContext(queryContext string) errors.Error {
+	hasNamespace := false
+	parts := 0
+	countPart := true
+	for _, c := range queryContext {
+		switch c {
+		case ':':
+			if hasNamespace {
+				return errors.NewQueryContextError("repeated namespace")
+			} else {
+				hasNamespace = true
+				countPart = true
+			}
+		case '.':
+			if countPart {
+				return errors.NewQueryContextError("missing bucket")
+			}
+			if !hasNamespace {
+				parts++ // namespace is implied
+				hasNamespace = true
+				countPart = true
+			}
+		default:
+			if countPart {
+				parts++
+				countPart = false
+				if parts > 3 {
+					return errors.NewQueryContextError("too many context elements")
+				}
+			}
+		}
+		if parts == 2 {
+			return errors.NewQueryContextError("missing scope")
+		}
+	}
+	return nil
 }

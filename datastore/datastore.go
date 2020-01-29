@@ -116,6 +116,7 @@ type Bucket interface {
 	NamespaceId() string
 	Namespace() Namespace
 
+	DefaultKeyspace() (Keyspace, errors.Error)     // Non nil if the bucket allows direct access
 	ScopeIds() ([]string, errors.Error)            // Ids of the scopes contained in this bucket
 	ScopeNames() ([]string, errors.Error)          // Names of the scopes contained in this bucket
 	ScopeById(name string) (Scope, errors.Error)   // Find a scope in this bucket using the scope's id
@@ -190,19 +191,25 @@ func GetSystemstore() Datastore {
 	return _SYSTEMSTORE
 }
 
-func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
+func GetKeyspace(parts ...string) (Keyspace, errors.Error) {
 	var datastore Datastore
 
+	l := len(parts)
+	if l == 0 {
+		return nil, errors.NewDatastoreInvalidPathError("empty path")
+	}
+	namespace := parts[0]
 	if namespace == "#system" {
-		datastore = GetSystemstore()
+		datastore = _SYSTEMSTORE
 	} else {
-		datastore = GetDatastore()
+		datastore = _DATASTORE
 	}
 
 	if datastore == nil {
 		return nil, errors.NewError(nil, "Datastore not set.")
 	}
 
+	// FIXME once SetDefaultNamespace is resolved, this should go
 	if namespace == "" {
 		namespace = "default"
 	}
@@ -212,7 +219,43 @@ func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
 		return nil, err
 	}
 
-	return ns.KeyspaceByName(keyspace)
+	switch len(parts) {
+	case 2:
+		ks, err := ns.KeyspaceByName(parts[1])
+		if err != nil {
+			return nil, err
+		} else {
+
+			// check if the bucket supports collections
+			bucket, ok := ks.(Bucket)
+			if !ok {
+				return ks, err
+			}
+
+			// and if it has a default collection
+			dks, err := bucket.DefaultKeyspace()
+			if err != nil {
+				return nil, err
+			} else if dks == nil {
+				return ks, nil
+			} else {
+				return dks, nil
+			}
+		}
+	case 4:
+		bucket, err := ns.BucketByName(parts[1])
+		if err != nil {
+			return nil, err
+		}
+		scope, err := bucket.ScopeByName(parts[2])
+		if err != nil {
+			return nil, err
+		}
+		return scope.KeyspaceByName(parts[3])
+	default:
+		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
+	}
+
 }
 
 // These structures are generic representations of users and their roles.

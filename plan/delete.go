@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
@@ -20,14 +21,16 @@ import (
 type SendDelete struct {
 	readwrite
 	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceRef
 	alias    string
 	limit    expression.Expression
 }
 
-func NewSendDelete(keyspace datastore.Keyspace, alias string, limit expression.Expression) *SendDelete {
+func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression) *SendDelete {
 	return &SendDelete{
 		keyspace: keyspace,
-		alias:    alias,
+		term:     ksref,
+		alias:    ksref.Alias(),
 		limit:    limit,
 	}
 }
@@ -58,8 +61,7 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 
 func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "SendDelete"}
-	r["namespace"] = this.keyspace.NamespaceId()
-	r["keyspace"] = this.keyspace.Name()
+	this.term.MarshalKeyspace(r)
 	r["alias"] = this.alias
 
 	if this.limit != nil {
@@ -74,11 +76,13 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Names string `json:"namespace"`
-		Keys  string `json:"keyspace"`
-		Alias string `json:"alias"`
-		Limit string `json:"limit"`
+		_         string `json:"#operator"`
+		Namespace string `json:"namespace"`
+		Bucket    string `json:"bucket"`
+		Scope     string `json:"scope"`
+		Keyspace  string `json:"keyspace"`
+		Alias     string `json:"alias"`
+		Limit     string `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -95,7 +99,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 
 	return err
 }

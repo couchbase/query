@@ -81,7 +81,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, plan.NewUnset(act.Unset()))
 		}
 
-		ops = append(ops, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit()))
 		update = plan.NewSequence(ops...)
 	}
 
@@ -121,7 +121,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, filter)
 		}
 
-		ops = append(ops, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
+		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit()))
 		delete = plan.NewSequence(ops...)
 	}
 
@@ -140,7 +140,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		} else {
 			keyExpr = act.Key()
 		}
-		ops = append(ops, plan.NewSendInsert(keyspace, ksref.Alias(), keyExpr, act.Value(),
+		ops = append(ops, plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(),
 			act.Options(), stmt.Limit()))
 		insert = plan.NewSequence(ops...)
 	}
@@ -151,7 +151,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		this.subChildren = append(this.subChildren, merge)
 	} else {
 		// use ANSI JOIN to handle the ON-clause
-		right := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), ksref.As(), nil, stmt.Indexes())
+		right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 		right.SetAnsiJoin()
 		algebra.TransferJoinHint(right, left)
 

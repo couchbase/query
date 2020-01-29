@@ -1049,7 +1049,8 @@ expr opt_as_alias opt_use
               }
               $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
          case *expression.Identifier:
-              ksterm := algebra.NewKeyspaceTerm("", other.Alias(), $2, $3.Keys(), $3.Indexes())
+              ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext()),
+							$2, $3.Keys(), $3.Indexes())
               $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
          default:
               if $3.Keys() != nil || $3.Indexes() != nil {
@@ -1609,14 +1610,14 @@ INSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect op
 ;
 
 keyspace_ref:
-namespace_term keyspace_name opt_as_alias
-{
-    $$ = algebra.NewKeyspaceRef($1, $2, $3)
-}
-|
 keyspace_name opt_as_alias
 {
-    $$ = algebra.NewKeyspaceRef("", $1, $2)
+    $$ = algebra.NewKeyspaceRefWithContext($1, $2, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+}
+|
+keyspace_path opt_as_alias
+{
+    $$ = algebra.NewKeyspaceRefFromPath($1, $2)
 }
 ;
 
@@ -2267,12 +2268,13 @@ index_name
 named_keyspace_ref:
 keyspace_name
 {
-    $$ = algebra.NewKeyspaceRef("", $1, "")
+    $$ = algebra.NewKeyspaceRefWithContext($1, "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
 }
 |
-namespace_name keyspace_name
+namespace_name bucket_name DOT scope_name DOT keyspace_name
 {
-    $$ = algebra.NewKeyspaceRef($1, $2, "")
+    path := algebra.NewPathLong($1, $2, $4, $6)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 ;
 

@@ -257,8 +257,10 @@ func (coll *collection) Release() {
 	// do nothing
 }
 
-func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) map[string]*scope {
+func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
 	scopes := make(map[string]*scope, len(mani.Scopes))
+	var defaultCollection *collection
+
 	for _, s := range mani.Scopes {
 		scope := &scope{
 			id:        s.Name,
@@ -273,8 +275,11 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) map[string]*
 				scope:     scope,
 			}
 			scope.keyspaces[c.Name] = coll
+			if s.Uid == 0 && c.Uid == 0 {
+				defaultCollection = coll
+			}
 		}
 		scopes[s.Name] = scope
 	}
-	return scopes
+	return scopes, defaultCollection
 }

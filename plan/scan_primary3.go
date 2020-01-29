@@ -120,8 +120,7 @@ func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "PrimaryScan3"}
 	r["index"] = this.index.Name()
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
 
 	if this.term.As() != "" {
@@ -166,8 +165,10 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string                `json:"#operator"`
 		Index       string                `json:"index"`
-		Names       string                `json:"namespace"`
-		Keys        string                `json:"keyspace"`
+		Namespace   string                `json:"namespace"`
+		Bucket      string                `json:"bucket"`
+		Scope       string                `json:"scope"`
+		Keyspace    string                `json:"keyspace"`
 		As          string                `json:"as"`
 		Using       datastore.IndexType   `json:"using"`
 		GroupAggs   *IndexGroupAggregates `json:"index_group_aggs"`
@@ -205,12 +206,13 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err

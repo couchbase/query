@@ -17,22 +17,19 @@ import (
 )
 
 /*
-Represents the keyspace-ref used in DML statements. It
-contains three fields namespace, keyspace (bucket) and
-an alias (as).
+Represents the keyspace_ref used in DML statements
 */
 type KeyspaceRef struct {
 	path *Path  `json:"path"`
 	as   string `json:"as"`
 }
 
-/*
-The function NewKeyspaceRef returns a pointer to the
-KeyspaceRef struct by assigning the input attributes
-to the fields of the struct.
-*/
-func NewKeyspaceRef(namespace, keyspace, as string) *KeyspaceRef {
-	return &KeyspaceRef{NewPathShort(namespace, keyspace), as}
+func NewKeyspaceRefFromPath(path *Path, as string) *KeyspaceRef {
+	return &KeyspaceRef{path, as}
+}
+
+func NewKeyspaceRefWithContext(keyspace, as, namespace, queryContext string) *KeyspaceRef {
+	return &KeyspaceRef{NewPathWithContext(keyspace, namespace, queryContext), as}
 }
 
 /*
@@ -50,9 +47,12 @@ func (this *KeyspaceRef) Formalize() (f *expression.Formalizer, err error) {
 	return
 }
 
+func (this *KeyspaceRef) Path() *Path {
+	return this.path
+}
+
 /*
 Returns the namespace string.
-JDODO: should go away
 */
 func (this *KeyspaceRef) Namespace() string {
 	return this.path.Namespace()
@@ -61,7 +61,7 @@ func (this *KeyspaceRef) Namespace() string {
 
 /*
 Set the default namespace.
-JDODO: should go away
+FIXME ideally this should go
 */
 func (this *KeyspaceRef) SetDefaultNamespace(namespace string) {
 	this.path.SetDefaultNamespace(namespace)
@@ -69,7 +69,6 @@ func (this *KeyspaceRef) SetDefaultNamespace(namespace string) {
 
 /*
 Returns the keyspace string.
-JDODO: should go away
 */
 func (this *KeyspaceRef) Keyspace() string {
 	return this.path.Keyspace()
@@ -105,6 +104,10 @@ func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(r)
+}
+
+func (this *KeyspaceRef) MarshalKeyspace(m map[string]interface{}) {
+	this.path.marshalKeyspace(m)
 }
 
 /*

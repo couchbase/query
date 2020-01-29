@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
@@ -20,6 +21,7 @@ import (
 type SendInsert struct {
 	readwrite
 	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceRef
 	alias    string
 	key      expression.Expression
 	value    expression.Expression
@@ -27,11 +29,12 @@ type SendInsert struct {
 	limit    expression.Expression
 }
 
-func NewSendInsert(keyspace datastore.Keyspace, alias string,
+func NewSendInsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	key, value, options, limit expression.Expression) *SendInsert {
 	return &SendInsert{
 		keyspace: keyspace,
-		alias:    alias,
+		term:     ksref,
+		alias:    ksref.Alias(),
 		key:      key,
 		value:    value,
 		options:  options,
@@ -77,8 +80,7 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 
 func (this *SendInsert) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "SendInsert"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.term.MarshalKeyspace(r)
 	r["alias"] = this.alias
 
 	if this.limit != nil {
@@ -109,8 +111,10 @@ func (this *SendInsert) UnmarshalJSON(body []byte) error {
 		KeyExpr     string `json:"key"`
 		ValueExpr   string `json:"value"`
 		OptionsExpr string `json:"options"`
-		Keys        string `json:"keyspace"`
-		Names       string `json:"namespace"`
+		Namespace   string `json:"namespace"`
+		Bucket      string `json:"bucket"`
+		Scope       string `json:"scope"`
+		Keyspace    string `json:"keyspace"`
 		Alias       string `json:"alias"`
 		Limit       string `json:"limit"`
 	}
@@ -150,7 +154,7 @@ func (this *SendInsert) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	return err
 }
 

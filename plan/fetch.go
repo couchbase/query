@@ -61,8 +61,7 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 
 func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Fetch"}
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	if len(this.subPaths) > 0 {
 		r["subpaths"] = this.subPaths
 	}
@@ -91,8 +90,10 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string   `json:"#operator"`
-		Names       string   `json:"namespace"`
-		Keys        string   `json:"keyspace"`
+		Namespace   string   `json:"namespace"`
+		Bucket      string   `json:"bucket"`
+		Scope       string   `json:"scope"`
+		Keyspace    string   `json:"keyspace"`
 		As          string   `json:"as"`
 		UnderNL     bool     `json:"nested_loop"`
 		Cost        float64  `json:"cost"`
@@ -110,11 +111,12 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	return err
 }
 
@@ -180,8 +182,7 @@ func (this *DummyFetch) Cardinality() float64 {
 
 func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DummyFetch"}
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
@@ -206,8 +207,10 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string  `json:"#operator"`
-		Names       string  `json:"namespace"`
-		Keys        string  `json:"keyspace"`
+		Namespace   string  `json:"namespace"`
+		Bucket      string  `json:"bucket"`
+		Scope       string  `json:"scope"`
+		Keyspace    string  `json:"keyspace"`
 		As          string  `json:"as"`
 		UnderNL     bool    `json:"nested_loop"`
 		Cost        float64 `json:"cost"`
@@ -222,10 +225,11 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	return err
 }

@@ -1066,6 +1066,7 @@ type keyspace struct {
 
 	collectionsManifestUid uint32
 	scopes                 map[string]*scope // scopes by id
+	defaultCollection      datastore.Keyspace
 }
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
@@ -1115,10 +1116,15 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		mani, err := cbbucket.GetCollectionsManifest()
 		if err == nil {
 			rv.collectionsManifestUid = uint32(mani.Uid)
-			rv.scopes = buildScopesAndCollections(mani, rv)
+			rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
 		} else {
 			logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
 		}
+	}
+
+	// if we don't have any scope (not even default) revert to old style keyspace
+	if len(rv.scopes) == 0 {
+		rv.defaultCollection = rv
 	}
 
 	logging.Infof("Created New Bucket %s", name)
@@ -1673,6 +1679,18 @@ func (b *keyspace) Scope() datastore.Scope {
 
 func (b *keyspace) ScopeId() string {
 	return ""
+}
+
+func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
+	if _COLLECTIONS_SUPPORTED {
+		if ks.defaultCollection != nil {
+			return ks.defaultCollection, nil
+		} else {
+			return nil, errors.NewCbBucketNoDefaultCollectionError(ks.name)
+		}
+	} else {
+		return ks, nil
+	}
 }
 
 func (ks *keyspace) ScopeIds() ([]string, errors.Error) {

@@ -203,6 +203,7 @@ func Start(site, pool, namespace string) *MockServer {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	datastore.SetSystemstore(sys)
 
 	configstore, err := config_resolver.NewConfigstore("stub:")
 	if err != nil {

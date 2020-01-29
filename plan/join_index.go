@@ -114,8 +114,7 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 
 func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexJoin"}
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	r["on_key"] = expression.NewStringer().Visit(this.term.JoinKeys())
 	r["for"] = this.keyFor
 
@@ -155,14 +154,16 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Names string `json:"namespace"`
-		Keys  string `json:"keyspace"`
-		On    string `json:"on_key"`
-		Outer bool   `json:"outer"`
-		As    string `json:"as"`
-		For   string `json:"for"`
-		Scan  struct {
+		_         string `json:"#operator"`
+		Namespace string `json:"namespace"`
+		Bucket    string `json:"bucket"`
+		Scope     string `json:"scope"`
+		Keyspace  string `json:"keyspace"`
+		On        string `json:"on_key"`
+		Outer     bool   `json:"outer"`
+		As        string `json:"as"`
+		For       string `json:"for"`
+		Scan      struct {
 			Index        string                 `json:"index"`
 			IndexId      string                 `json:"index_id"`
 			Using        datastore.IndexType    `json:"using"`
@@ -190,9 +191,10 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		expression.NewMeta(expression.NewIdentifier(this.keyFor)),
 		expression.NewFieldName("id", false))
 
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}

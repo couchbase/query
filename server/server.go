@@ -780,7 +780,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 
 	if prepared == nil {
 		parse := time.Now()
-		stmt, err := n1ql.ParseStatement2(request.Statement(), namespace) // TODO switch to collections scope
+		stmt, err := n1ql.ParseStatement2(request.Statement(), namespace, request.QueryContext())
 		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")

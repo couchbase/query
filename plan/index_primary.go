@@ -55,8 +55,7 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 
 func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "CreatePrimaryIndex"}
-	r["keyspace"] = this.keyspace.Name()
-	r["namespace"] = this.keyspace.NamespaceId()
+	this.node.Keyspace().MarshalKeyspace(r)
 	r["index"] = this.node.Name()
 	r["using"] = this.node.Using()
 	if this.node.With() != nil {
@@ -78,8 +77,10 @@ func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[
 func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_         string                      `json:"#operator"`
-		Keys      string                      `json:"keyspace"`
-		Names     string                      `json:"namespace"`
+		Namespace string                      `json:"namespace"`
+		Bucket    string                      `json:"bucket"`
+		Scope     string                      `json:"scope"`
+		Keyspace  string                      `json:"keyspace"`
 		Node      *algebra.CreatePrimaryIndex `json:"node"`
 		Index     string                      `json:"index"`
 		Using     datastore.IndexType         `json:"using"`
@@ -112,13 +113,14 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
 	if _unmarshalled.Index != "" {
-		ksref := algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, "")
+		ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+			_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 		this.node = algebra.NewCreatePrimaryIndex(_unmarshalled.Index, ksref,
 			partition, _unmarshalled.Using, with)
 	}

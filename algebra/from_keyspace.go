@@ -51,11 +51,6 @@ type KeyspaceTerm struct {
 	property uint32
 }
 
-func NewKeyspaceTerm(namespace, keyspace string, as string,
-	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{NewPathShort(namespace, keyspace), as, keys, indexes, nil, JOIN_HINT_NONE, 0}
-}
-
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	return &KeyspaceTerm{path, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
@@ -116,19 +111,13 @@ func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
+
+	// FIXME this has to be rewritten once collection privileges are defined
 	namespace := path.Namespace()
-	var bucket string
-	if path.IsCollection() {
-		// Use permissions of bucket for collection.
-		// JTODO: This should actually allow collection-level permissions.
-		bucket = path.Bucket()
-	} else {
-		bucket = path.Keyspace()
-	}
+	fullKeyspace := path.SimpleString()
 	privs := auth.NewPrivileges()
-	fullKeyspace := namespace + ":" + bucket
 	if namespace == "#system" {
-		switch bucket {
+		switch path.Keyspace() {
 		case "user_info", "applicable_roles":
 			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ)
 		case "keyspaces", "indexes", "my_user_info":
@@ -266,13 +255,14 @@ func (this *KeyspaceTerm) Namespace() string {
 
 /*
 Set the namespace string when it is empty.
+FIXME ideally this should go
 */
 func (this *KeyspaceTerm) SetDefaultNamespace(namespace string) {
 	this.path.SetDefaultNamespace(namespace)
 }
 
 /*
-Returns the keyspace string (buckets).
+Returns the keyspace string
 */
 func (this *KeyspaceTerm) Keyspace() string {
 	return this.path.Keyspace()
@@ -481,6 +471,10 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	}
 	r["path"] = this.path
 	return json.Marshal(r)
+}
+
+func (this *KeyspaceTerm) MarshalKeyspace(m map[string]interface{}) {
+	this.path.marshalKeyspace(m)
 }
 
 func (this *KeyspaceTerm) Path() *Path {

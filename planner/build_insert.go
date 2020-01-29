@@ -20,7 +20,7 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	}
 
 	subChildren := make([]plan.Operator, 0, 4)
-	subChildren = append(subChildren, plan.NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), stmt.Value(), stmt.Options(), nil))
+	subChildren = append(subChildren, plan.NewSendInsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(), nil))
 
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)

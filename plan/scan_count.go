@@ -52,8 +52,7 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 
 func (this *CountScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "CountScan"}
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	if f != nil {
 		f(r)
 	}
@@ -62,9 +61,11 @@ func (this *CountScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *CountScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Names string `json:"namespace"`
-		Keys  string `json:"keyspace"`
+		_         string `json:"#operator"`
+		Namespace string `json:"namespace"`
+		Bucket    string `json:"bucket"`
+		Scope     string `json:"scope"`
+		Keyspace  string `json:"keyspace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -72,7 +73,7 @@ func (this *CountScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 
 	return err
 }

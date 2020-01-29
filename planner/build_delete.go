@@ -20,7 +20,8 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	this.where = stmt.Where()
 
 	ksref := stmt.KeyspaceRef()
-	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	ksref.SetDefaultNamespace(this.namespace)
+	keyspace, err := this.getNameKeyspace(ksref)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +37,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	subChildren := this.subChildren
 	deleteSubChildren := make([]plan.Operator, 0, 4)
 
-	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
+	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref, stmt.Limit()))
 
 	if stmt.Returning() != nil {
 		deleteSubChildren = this.buildDMLProject(stmt.Returning(), deleteSubChildren)

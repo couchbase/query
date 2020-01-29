@@ -180,6 +180,10 @@ func (cb *CollectionsBucket) Namespace() Namespace {
 	return cb.namespace
 }
 
+func (cb *CollectionsBucket) DefaultKeyspace() (Keyspace, errors.Error) {
+	return nil, nil
+}
+
 func (cb *CollectionsBucket) ScopeIds() ([]string, errors.Error) {
 	ids := make([]string, len(cb.scopes))
 	ix := 0

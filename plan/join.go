@@ -67,8 +67,7 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 
 func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Join"}
-	r["namespace"] = this.term.Namespace()
-	r["keyspace"] = this.term.Keyspace()
+	this.term.MarshalKeyspace(r)
 	r["on_keys"] = expression.NewStringer().Visit(this.term.JoinKeys())
 
 	if this.outer {
@@ -86,12 +85,14 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Join) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Names string `json:"namespace"`
-		Keys  string `json:"keyspace"`
-		On    string `json:"on_keys"`
-		Outer bool   `json:"outer"`
-		As    string `json:"as"`
+		_         string `json:"#operator"`
+		Namespace string `json:"namespace"`
+		Bucket    string `json:"bucket"`
+		Scope     string `json:"scope"`
+		Keyspace  string `json:"keyspace"`
+		On        string `json:"on_keys"`
+		Outer     bool   `json:"outer"`
+		As        string `json:"as"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -108,9 +109,10 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 	}
 
 	this.outer = _unmarshalled.Outer
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
 	return err
 }
 

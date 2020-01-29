@@ -281,12 +281,8 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 	right := node.Right()
 	right.SetDefaultNamespace(this.namespace)
-	namespace, err := this.datastore.NamespaceByName(right.Namespace())
-	if err != nil {
-		return nil, err
-	}
 
-	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
+	keyspace, err := this.getTermKeyspace(right)
 	if err != nil {
 		return nil, err
 	}
@@ -326,12 +322,8 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 
 	right := node.Right()
 	right.SetDefaultNamespace(this.namespace)
-	namespace, err := this.datastore.NamespaceByName(right.Namespace())
-	if err != nil {
-		return nil, err
-	}
 
-	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
+	keyspace, err := this.getTermKeyspace(right)
 	if err != nil {
 		return nil, err
 	}
@@ -411,12 +403,8 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 
 	right := node.Right()
 	right.SetDefaultNamespace(this.namespace)
-	namespace, err := this.datastore.NamespaceByName(right.Namespace())
-	if err != nil {
-		return nil, err
-	}
 
-	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
+	keyspace, err := this.getTermKeyspace(right)
 	if err != nil {
 		return nil, err
 	}
@@ -456,12 +444,8 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 	right := node.Right()
 	right.SetDefaultNamespace(this.namespace)
-	namespace, err := this.datastore.NamespaceByName(right.Namespace())
-	if err != nil {
-		return nil, err
-	}
 
-	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
+	keyspace, err := this.getTermKeyspace(right)
 	if err != nil {
 		return nil, err
 	}
