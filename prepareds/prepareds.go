@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/util"
 )
 
@@ -661,10 +662,14 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	if phaseTime != nil {
 		*phaseTime += time.Since(parse)
 	}
-	if err != nil {
 
+	if err != nil {
 		// this should never happen: the statement parsed to start with
 		return nil, errors.NewReprepareError(err)
+	}
+
+	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
+		return nil, errors.NewRewriteError(err, "")
 	}
 
 	// since this is a reprepare, no need to check semantics again after parsing.
