@@ -25,7 +25,7 @@ ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
 ENDIF(BUILD_ENTERPRISE)
 
-SET (GOVERSION 1.13.6)
+SET (GOVERSION 1.13.7)
 SET (LDFLAGS)
 IF (APPLE)
   # Suppress warning from FindCouchbaseGo
