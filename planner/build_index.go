@@ -182,9 +182,34 @@ func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) 
 	}
 
 	keyspace, err := namespace.KeyspaceByName(ks)
+	if err != nil && this.indexAdvisor && strings.ToLower(ns) != "#system" &&
+		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
+			strings.Contains(err.TranslationKey(), "scope_not_found") ||
+			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
+		virtualKeyspace, err1 := this.getVirtualKeyspace(strings.ToLower(ns), strings.ToLower(ks))
+		if err1 == nil {
+			return virtualKeyspace, nil
+		}
+	}
+
+	if err == nil && this.indexAdvisor {
+		this.setKeyspaceFound()
+	}
+
+	return keyspace, err
+}
+
+func (this *builder) getVirtualKeyspace(namespaceStr, keySpaceStr string) (datastore.Keyspace, error) {
+	ds := this.datastore
+	namespace, err := ds.NamespaceByName(namespaceStr)
 	if err != nil {
 		return nil, err
 	}
-
-	return keyspace, nil
+	if v, ok := namespace.(datastore.VirtualNamespace); ok {
+		if this.indexAdvisor {
+			this.setKeyspaceFound()
+		}
+		return v.VirtualKeyspaceByName(keySpaceStr)
+	}
+	return nil, errors.NewVirtualKSNotSupportedError(nil, "Namespace "+namespaceStr)
 }

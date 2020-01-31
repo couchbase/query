@@ -18,13 +18,13 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	this.where = stmt.Where()
 	this.node = stmt
 
+	this.initialIndexAdvisor(stmt)
 	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	this.initialIndexAdvisor(stmt)
 	this.extractPredicates(this.where, nil)
 
 	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), true)
