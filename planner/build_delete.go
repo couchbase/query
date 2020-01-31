@@ -19,6 +19,8 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	this.node = stmt
 	this.where = stmt.Where()
 
+	this.initialIndexAdvisor(stmt)
+
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 	keyspace, err := this.getNameKeyspace(ksref)
@@ -26,7 +28,6 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	this.initialIndexAdvisor(stmt)
 	this.extractPredicates(this.where, nil)
 
 	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Returning() != nil)

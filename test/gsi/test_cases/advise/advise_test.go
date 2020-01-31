@@ -20,7 +20,7 @@ func TestAdvise(t *testing.T) {
 
 	runMatch("case_virtual.json", false, false, qc, t)
 	runMatch("case_advise_select.json", false, false, qc, t)
-	//runMatch("case_advise_others.json", false, false, qc, t)
+	runMatch("case_advise_others.json", false, false, qc, t)
 	runMatch("case_advise_edgecase.json", false, false, qc, t)
 	runMatch("case_advise_pushdown.json", false, false, qc, t)
 	//runMatch("case_advise_unnest.json", false, false, qc, t)

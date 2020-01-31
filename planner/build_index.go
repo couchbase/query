@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"strings"
 )
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -162,5 +163,36 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 }
 
 func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef) (datastore.Keyspace, error) {
-	return datastore.GetKeyspace(ks.Path().Parts()...)
+	keyspace, err := datastore.GetKeyspace(ks.Path().Parts()...)
+
+	if err != nil && this.indexAdvisor && ks.Path().Namespace() != "#system" &&
+		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
+			strings.Contains(err.TranslationKey(), "scope_not_found") ||
+			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
+		virtualKeyspace, err1 := this.getVirtualKeyspace(ks.Path().Namespace(), ks.Path().Keyspace())
+		if err1 == nil {
+			return virtualKeyspace, nil
+		}
+	}
+
+	if err == nil && this.indexAdvisor {
+		this.setKeyspaceFound()
+	}
+
+	return keyspace, err
+}
+
+func (this *builder) getVirtualKeyspace(namespaceStr, keySpaceStr string) (datastore.Keyspace, error) {
+	ds := this.datastore
+	namespace, err := ds.NamespaceByName(namespaceStr)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := namespace.(datastore.VirtualNamespace); ok {
+		if this.indexAdvisor {
+			this.setKeyspaceFound()
+		}
+		return v.VirtualKeyspaceByName(keySpaceStr)
+	}
+	return nil, errors.NewVirtualKSNotSupportedError(nil, "Namespace "+namespaceStr)
 }

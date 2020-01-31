@@ -213,16 +213,10 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
 			strings.Contains(err.TranslationKey(), "scope_not_found") ||
 			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
-		ds := this.datastore
-		namespace, err := ds.NamespaceByName(ns)
-		if err != nil {
-			return nil, err
-		}
-		if v, ok := namespace.(datastore.VirtualNamespace); ok {
-			if this.indexAdvisor {
-				this.setKeyspaceFound()
-			}
-			return v.VirtualKeyspaceByName(path.Keyspace())
+
+		virtualKeyspace, err1 := this.getVirtualKeyspace(ns, path.Keyspace())
+		if err1 == nil {
+			return virtualKeyspace, nil
 		}
 	}
 
