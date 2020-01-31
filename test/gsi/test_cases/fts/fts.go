@@ -26,7 +26,7 @@ import (
 var IndexName = "fts_index"
 
 func start_cs() *gsi.MockServer {
-	return gsi.Start_cs(false)
+	return gsi.Start_cs(true)
 }
 
 func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {

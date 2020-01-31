@@ -25,5 +25,5 @@ func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *te
 }
 
 func start_cs() *gsi.MockServer {
-	return gsi.Start_cs(false)
+	return gsi.Start_cs(true)
 }
