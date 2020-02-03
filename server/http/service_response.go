@@ -490,9 +490,6 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 
 	namedArgs := this.NamedArgs()
 	positionalArgs := this.PositionalArgs()
-	if namedArgs == nil && positionalArgs == nil {
-		return true
-	}
 
 	if prefix != "" {
 		newPrefix = "\n" + prefix + indent
@@ -532,6 +529,16 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 	}
 	if err != nil || !this.writer.printf("%s\"scan_consistency\": \"%s\"", newPrefix, string(this.ScanConsistency())) {
 		logging.Infop("Error writing scan_consistency", logging.Pair{"error", err})
+	}
+	needComma = true
+
+	if this.QueryContext() != "" {
+		if needComma && !this.writeString(",") {
+			return false
+		}
+		if err != nil || !this.writer.printf("%s\"queryContext\": \"%s\"", newPrefix, this.QueryContext()) {
+			logging.Infop("Error writing scan_consistency", logging.Pair{"error", err})
+		}
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
