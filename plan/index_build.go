@@ -96,7 +96,7 @@ func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
 
 	this.node = algebra.NewBuildIndexes(ksref, _unmarshalled.Using, exprs...)
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.keyspace, err = datastore.GetKeyspace(ksref.Path().Parts()...)
 	return err
 }
 

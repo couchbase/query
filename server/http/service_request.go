@@ -916,7 +916,7 @@ func (this *urlArgs) processParameters(rv *httpRequest) errors.Error {
 	for parm, val := range this.initial {
 		err = _PARAMETERS[parm](rv, this, parm, val)
 		if err != nil {
-			break
+			return err
 		}
 	}
 	for parm, val := range this.req.Form {
@@ -1206,7 +1206,7 @@ func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
 	for parm, val := range this.initial {
 		err = _PARAMETERS[parm](rv, this, parm, val)
 		if err != nil {
-			break
+			return err
 		}
 	}
 	for parm, val := range this.args {

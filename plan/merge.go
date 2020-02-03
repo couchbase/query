@@ -127,13 +127,13 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.ref = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As)
+
+	this.keyspace, err = datastore.GetKeyspace(this.ref.Path().Parts()...)
 	if err != nil {
 		return err
 	}
-
-	this.ref = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As)
 
 	if _unmarshalled.Key != "" {
 		this.key, err = parser.Parse(_unmarshalled.Key)

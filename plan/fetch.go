@@ -116,7 +116,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	return err
 }
 
@@ -230,6 +230,6 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	return err
 }

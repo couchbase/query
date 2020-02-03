@@ -73,7 +73,9 @@ func (this *CountScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "", nil, nil)
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 
 	return err
 }

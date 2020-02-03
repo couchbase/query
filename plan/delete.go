@@ -99,7 +99,9 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.term = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 
 	return err
 }

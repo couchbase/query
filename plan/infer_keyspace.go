@@ -82,13 +82,12 @@ func (this *InferKeyspace) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
+	this.keyspace, err = datastore.GetKeyspace(ksref.Path().Parts()...)
 	if err != nil {
 		return err
 	}
-
-	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 
 	var with value.Value
 	if len(_unmarshalled.With) > 0 {

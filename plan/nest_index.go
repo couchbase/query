@@ -148,7 +148,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err
 	}

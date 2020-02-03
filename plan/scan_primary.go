@@ -112,13 +112,13 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err

@@ -189,13 +189,12 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 
 	this.searchInfo = _unmarshalled.SearchInfo
 
-	k, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
+	k, err := datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err
 	}
-
-	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()

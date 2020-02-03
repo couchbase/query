@@ -110,7 +110,7 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	this.node = algebra.NewAlterIndex(ksref, _unmarshalled.Index, _unmarshalled.Using, with)
 
 	// Build the index
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.keyspace, err = datastore.GetKeyspace(ksref.Path().Parts()...)
 	if err != nil {
 		return err
 	}

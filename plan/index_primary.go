@@ -113,14 +113,15 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	path := algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope, _unmarshalled.Keyspace)
+	this.keyspace, err = datastore.GetKeyspace(path.Parts()...)
 	if err != nil {
 		return err
 	}
 
 	if _unmarshalled.Index != "" {
-		ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-			_unmarshalled.Scope, _unmarshalled.Keyspace), "")
+		ksref := algebra.NewKeyspaceRefFromPath(path, "")
 		this.node = algebra.NewCreatePrimaryIndex(_unmarshalled.Index, ksref,
 			partition, _unmarshalled.Using, with)
 	}

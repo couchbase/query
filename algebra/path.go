@@ -207,6 +207,9 @@ func parseQueryContext(queryContext string) []string {
 			start = i + 1
 		}
 	}
+	if start < len(queryContext) {
+		elements = append(elements, queryContext[start:])
+	}
 	if len(elements) == 0 {
 		elements = append(elements, "")
 	}
@@ -238,8 +241,8 @@ func ValidateQueryContext(queryContext string) errors.Error {
 			if !hasNamespace {
 				parts++ // namespace is implied
 				hasNamespace = true
-				countPart = true
 			}
+			countPart = true
 		default:
 			if countPart {
 				parts++
@@ -249,9 +252,9 @@ func ValidateQueryContext(queryContext string) errors.Error {
 				}
 			}
 		}
-		if parts == 2 {
-			return errors.NewQueryContextError("missing scope")
-		}
+	}
+	if parts == 2 {
+		return errors.NewQueryContextError("missing scope")
 	}
 	return nil
 }

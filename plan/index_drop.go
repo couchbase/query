@@ -87,7 +87,7 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 	this.node = algebra.NewDropIndex(ksref, _unmarshalled.Name, _unmarshalled.Using)
 
 	// Build this.index.
-	keyspace, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Keyspace)
+	keyspace, err := datastore.GetKeyspace(ksref.Path().Parts()...)
 	if err != nil {
 		return err
 	}
