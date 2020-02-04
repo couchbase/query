@@ -104,6 +104,7 @@ type collection struct {
 	uid       uint32
 	namespace *namespace
 	scope     *scope
+	bucket    datastore.Keyspace
 }
 
 func NewCollection(name string) *collection {
@@ -144,18 +145,38 @@ func (coll *collection) Scope() datastore.Scope {
 }
 
 func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Error) {
+
+	// default collection
+	if coll.bucket != nil {
+		return coll.bucket.Count(context)
+	}
 	return 0, errors.NewNotImplemented("collection.Count()")
 }
 
 func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Error) {
+
+	// default collection
+	if coll.bucket != nil {
+		return coll.bucket.Size(context)
+	}
 	return 0, errors.NewNotImplemented("collection.Size()")
 }
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+
+	// default collection
+	if coll.bucket != nil {
+		return coll.bucket.Indexer(name)
+	}
 	return nil, errors.NewNotImplemented("collection.Indexer()")
 }
 
 func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
+
+	// default collection
+	if coll.bucket != nil {
+		return coll.bucket.Indexers()
+	}
 	return nil, errors.NewNotImplemented("collection.Indexers()")
 }
 
@@ -277,6 +298,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 			scope.keyspaces[c.Name] = coll
 			if s.Uid == 0 && c.Uid == 0 {
 				defaultCollection = coll
+				coll.bucket = bucket
 			}
 		}
 		scopes[s.Name] = scope
