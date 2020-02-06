@@ -178,27 +178,27 @@
         "advice": {
           "#operator": "IndexAdvice",
           "adviseinfo": {
-              "recommended_indexes": {
-                "covering_indexes": [
-                  {
-                    "index_statement": "CREATE INDEX adv_length_a22_test_id_c22 ON `shellTest`(length((`a22`)),`c22`) WHERE `test_id` = 'advise'",
-                    "keyspace_alias": "shellTest_s2"
-                  }
-                ],
-                "indexes": [
-                  {
-                    "index_statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
-                    "keyspace_alias": "shellTest_s1",
-                    "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued."
-                  },
-                  {
-                    "index_statement": "CREATE INDEX adv_length_a22_test_id ON `shellTest`(length((`a22`))) WHERE `test_id` = 'advise'",
-                    "keyspace_alias": "shellTest_s2",
-                    "recommending_rule": "Index keys follow order of predicate types: 9. function index, 11. flavor for partial index."
-                  }
-                ]
-              }
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id_c22 ON `shellTest`(length((`a22`)),`c22`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_s2"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
+                  "keyspace_alias": "shellTest_s1",
+                  "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id ON `shellTest`(length((`a22`))) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_s2",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 11. flavor for partial index."
+                }
+              ]
             }
+          }
         },
         "query": "select s1.*, s2.c22 from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" and s1.id is not null"
       }

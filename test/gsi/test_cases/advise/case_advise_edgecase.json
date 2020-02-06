@@ -326,15 +326,15 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va999292206 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,`b`,length((`c`)))",
+                  "index_statement": "CREATE INDEX adv_length_c_DISTINCT_a_type_val_name_type_val_name_type_val_nam3535815345 ON `shellTest`(length((`c`)),DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,`b`)",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va999292206 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,`b`,length((`c`)))",
+                  "index_statement": "CREATE INDEX adv_length_c_DISTINCT_a_type_val_name_type_val_name_type_val_nam3535815345 ON `shellTest`(length((`c`)),DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,`b`)",
                   "keyspace_alias": "shellTest_st",
-                  "recommending_rule": "Index keys follow order of predicate types: 6. array predicate, 8. not null/not missing/valued, 9. function index."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 6. array predicate, 8. not null/not missing/valued."
                 }
               ]
             }

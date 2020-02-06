@@ -19,7 +19,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 3. in, 8. not null/not missing/valued, 9. function index."
+                  "recommending_rule": "Index keys follow order of predicate types: 3. in, 8. not null/not missing/valued, 9. like."
                 }
               ]
             }
@@ -59,7 +59,7 @@
     ]
   },
   {
-    "statements": "advise update shellTest set type=\"left\" where length(a21) < 3 and c21 = 3 and c22 > 30",
+    "statements": "advise update shellTest set type=\"left\" where length(a21) <= 3 and c21 = 3 and c22 > 30",
     "advise": true,
     "results": [
       {
@@ -70,15 +70,15 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c21_c22_length_a21 ON `shellTest`(`c21`,`c22`,length((`a21`)))",
+                  "index_statement": "CREATE INDEX adv_c21_length_a21_c22 ON `shellTest`(`c21`,length((`a21`)),`c22`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than, 9. function index."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than, 5. less than/between/greater than."
                 }
               ]
             }
           }
         },
-        "query": "update shellTest set type=\"left\" where length(a21) < 3 and c21 = 3 and c22 > 30"
+        "query": "update shellTest set type=\"left\" where length(a21) <= 3 and c21 = 3 and c22 > 30"
       }
     ]
   }
