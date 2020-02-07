@@ -305,6 +305,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.featureControls = util.GetN1qlFeatureControl()
 	rv.id.id, _ = util.UUIDV3()
 	rv.client_id.id = ""
+	rv.SetMaxParallelism(1)
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
