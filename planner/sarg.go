@@ -40,7 +40,7 @@ func sargForOr(or *expression.Or, keys expression.Expressions, max int, isJoin, 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
-		_, max, _ = SargableFor(c, keys, false, true) // Variable length sarging
+		_, max, _, _ = SargableFor(c, keys, false, true) // Variable length sarging
 		s, ex, err := SargFor(c, keys, max, isJoin, doSelec, baseKeyspace)
 		if err != nil {
 			return nil, false, err
