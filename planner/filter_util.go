@@ -262,7 +262,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 						continue
 					}
 
-					min, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false)
+					min, _, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false)
 					if min > 0 {
 						keyMap[val].derive = false
 						newFilters = base.AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters)
