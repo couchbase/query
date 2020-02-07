@@ -68,7 +68,7 @@ var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Ma
 var SCAN_CAP = flag.Int64("scan-cap", _DEF_SCAN_CAP, "Maximum buffer size for index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
 var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servicer count")
-var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to disable")
+var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to use maximum")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
 var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
@@ -201,15 +201,13 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
+	numCPU := runtime.NumCPU()
 	if *ENTERPRISE && os.Getenv("GOMAXPROCS") == "" {
-		runtime.GOMAXPROCS(runtime.NumCPU())
+		runtime.GOMAXPROCS(numCPU)
 	}
 
 	if !*ENTERPRISE {
-		var numCPU int
-		if os.Getenv("GOMAXPROCS") == "" {
-			numCPU = runtime.NumCPU()
-		} else {
+		if os.Getenv("GOMAXPROCS") != "" {
 			numCPU = runtime.GOMAXPROCS(0)
 		}
 
@@ -279,7 +277,7 @@ func main() {
 	logging.Infop("cbq-engine started",
 		logging.Pair{"version", util.VERSION},
 		logging.Pair{"datastore", *DATASTORE},
-		logging.Pair{"max-concurrency", runtime.GOMAXPROCS(0)},
+		logging.Pair{"max-concurrency", numProcs},
 		logging.Pair{"loglevel", logging.LogLevel().String()},
 		logging.Pair{"servicers", server.Servicers()},
 		logging.Pair{"plus-servicers", server.PlusServicers()},
@@ -289,6 +287,7 @@ func main() {
 		logging.Pair{"request-cap", *REQUEST_CAP},
 		logging.Pair{"request-size-cap", server.RequestSizeCap()},
 		logging.Pair{"max-index-api", server.MaxIndexAPI()},
+		logging.Pair{"max-parallelism", server.MaxParallelism()},
 		logging.Pair{"n1ql_feat_cntrl", util.GetN1qlFeatureControl()},
 		logging.Pair{"timeout", server.Timeout()},
 	)

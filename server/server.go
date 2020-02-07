@@ -266,9 +266,16 @@ func (this *Server) MaxParallelism() int {
 }
 
 func (this *Server) SetMaxParallelism(maxParallelism int) {
-	if maxParallelism <= 0 {
-		maxParallelism = runtime.NumCPU()
+	numProcs := runtime.NumCPU()
+	if os.Getenv("GOMAXPROCS") != "" {
+		numProcs = runtime.GOMAXPROCS(0)
 	}
+
+	// maxParallelism zero or negative or exceeds number of allowed procs limit to numProcs
+	if maxParallelism <= 0 || maxParallelism > numProcs {
+		maxParallelism = numProcs
+	}
+
 	atomic.StoreInt64(&this.maxParallelism, int64(maxParallelism))
 }
 
@@ -646,7 +653,7 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	maxParallelism := request.MaxParallelism()
-	if maxParallelism <= 0 {
+	if maxParallelism <= 0 || maxParallelism > this.MaxParallelism() {
 		maxParallelism = this.MaxParallelism()
 	}
 
