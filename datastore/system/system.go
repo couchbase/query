@@ -173,6 +173,9 @@ func (this *systemKeyspaceBase) Namespace() datastore.Namespace {
 	return this.namespace
 }
 
+// System keyspaces do not implement the KeyspaceMetadata interface because they don't implement collections and scopes
+// They will have to if this changes
+
 type systemIndexer struct {
 	keyspace datastore.Keyspace
 	primary  datastore.PrimaryIndex

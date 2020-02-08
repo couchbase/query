@@ -94,7 +94,6 @@ type Namespace interface {
 	KeyspaceNames() ([]string, errors.Error)             // Names of the keyspaces contained in this namespace
 	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this namespace using the keyspace's id
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this namespace using the keyspace's name
-	MetadataVersion() uint64                             // Current version of the metadata
 
 	// For keyspaces that are more deeply nested.
 	// Namespaces contain Buckets contain Scopes contain Keyspaces, which are collections.
@@ -169,6 +168,11 @@ type Keyspace interface {
 	Delete(deletes []string, context QueryContext) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
 
 	Release() // Release any resources held by this object
+}
+
+type KeyspaceMetadata interface {
+	MetadataVersion() uint64 // A counter that shows the current version of the list of objects contained within
+	FullName() string        // FullName is a unique identifier across all of the stores. We choose the path of the object
 }
 
 // Globally accessible Datastore instance

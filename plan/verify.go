@@ -13,6 +13,7 @@ package plan
 
 import (
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 func verifyIndex(index datastore.Index, indexer datastore.Indexer, prepared *Prepared) bool {
@@ -42,8 +43,30 @@ func verifyIndex(index datastore.Index, indexer datastore.Indexer, prepared *Pre
 }
 
 func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.Keyspace, bool) {
-	namespace := keyspace.Namespace()
-	ks, err := namespace.KeyspaceById(keyspace.Id())
+	var ks datastore.Keyspace
+	var err errors.Error
+	var meta datastore.KeyspaceMetadata
+
+	scope := keyspace.Scope()
+
+	// for collections, go all the way up to the namespace and find your way back
+	// for buckets, we only need to check the namespace
+	if scope != nil {
+		bucket := scope.Bucket()
+		namespace := bucket.Namespace()
+		b, _ := namespace.BucketById(bucket.Id())
+		if b != nil {
+			s, _ := b.ScopeById(scope.Id())
+			if s != nil {
+				ks, err = s.KeyspaceById(keyspace.Id())
+				meta = b.(datastore.KeyspaceMetadata)
+			}
+		}
+	} else {
+		namespace := keyspace.Namespace()
+		ks, err = namespace.KeyspaceById(keyspace.Id())
+		meta = namespace.(datastore.KeyspaceMetadata)
+	}
 
 	if ks == nil || err != nil {
 		return keyspace, false
@@ -51,7 +74,7 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 
 	// amend prepared statement version so that next time we avoid checks
 	if prepared != nil {
-		prepared.addNamespace(namespace)
+		prepared.addKeyspaceMetadata(meta)
 	}
 
 	// return newly found keyspace just in case it has been refreshed

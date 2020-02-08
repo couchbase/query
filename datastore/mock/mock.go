@@ -192,6 +192,10 @@ func (p *namespace) MetadataVersion() uint64 {
 	return 0
 }
 
+func (p *namespace) FullName() string {
+	return p.name
+}
+
 func (p *namespace) BucketIds() ([]string, errors.Error) {
 	return datastore.NO_STRINGS, nil
 }
@@ -237,6 +241,14 @@ func (b *keyspace) Id() string {
 }
 
 func (b *keyspace) Name() string {
+	return b.name
+}
+
+func (b *keyspace) MetadataVersion() uint64 {
+	return 0
+}
+
+func (b *keyspace) Label() string {
 	return b.name
 }
 

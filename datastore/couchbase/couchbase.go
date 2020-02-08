@@ -19,6 +19,7 @@ package couchbase
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,6 +31,7 @@ import (
 	"github.com/couchbase/cbauth"
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached"
+	"github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
@@ -852,8 +854,13 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 
 }
 
+// namespace implements KeyspaceMetadata
 func (p *namespace) MetadataVersion() uint64 {
 	return p.version
+}
+
+func (p *namespace) FullName() string {
+	return p.name
 }
 
 func (p *namespace) BucketIds() ([]string, errors.Error) {
@@ -1057,6 +1064,7 @@ const (
 type keyspace struct {
 	namespace   *namespace
 	name        string
+	fullName    string
 	cbbucket    *cb.Bucket
 	flags       int
 	viewIndexer datastore.Indexer // View index provider
@@ -1064,7 +1072,7 @@ type keyspace struct {
 	ftsIndexer  datastore.Indexer // FTS index provider
 	chkIndex    *chkIndexDict
 
-	collectionsManifestUid uint32
+	collectionsManifestUid uint64
 	scopes                 map[string]*scope // scopes by id
 	defaultCollection      datastore.Keyspace
 }
@@ -1105,6 +1113,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	rv := &keyspace{
 		namespace: p,
 		name:      name,
+		fullName:  p.Name() + ":" + name,
 		cbbucket:  cbbucket,
 	}
 
@@ -1115,7 +1124,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	if _COLLECTIONS_SUPPORTED {
 		mani, err := cbbucket.GetCollectionsManifest()
 		if err == nil {
-			rv.collectionsManifestUid = uint32(mani.Uid)
+			rv.collectionsManifestUid = mani.Uid
 			rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
 		} else {
 			logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
@@ -1191,8 +1200,26 @@ func (b *keyspace) Name() string {
 	return b.name
 }
 
+// keyspace (as a bucket) implements KeyspaceMetadata
+func (b *keyspace) MetadataVersion() uint64 {
+
+	// this bucket doesn't exist anymore, fail any prepared verify
+	if b.flags&_DELETED != 0 {
+		return math.MaxUint64
+	}
+	return b.collectionsManifestUid
+}
+
+func (b *keyspace) FullName() string {
+	return b.fullName
+}
+
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	count, err := b.cbbucket.GetCount(true)
+	return b.count(context)
+}
+
+func (b *keyspace) count(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
+	count, err := b.cbbucket.GetCount(true, clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+err.Error())
@@ -1201,7 +1228,11 @@ func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 }
 
 func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
-	size, err := b.cbbucket.GetSize(true)
+	return b.size(context)
+}
+
+func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
+	size, err := b.cbbucket.GetSize(true, clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceSizeError(nil, "keyspace "+b.Name()+"Error "+err.Error())
@@ -1255,7 +1286,11 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 //
 
 func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
-	resp, err := k.cbbucket.GetRandomDoc()
+	return k.getRandomEntry()
+}
+
+func (k *keyspace) getRandomEntry(clientContext ...*memcached.ClientContext) (string, value.Value, errors.Error) {
+	resp, err := k.cbbucket.GetRandomDoc(clientContext...)
 
 	if err != nil {
 		k.checkRefresh(err)
@@ -1267,6 +1302,11 @@ func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) []errors.Error {
+	return b.fetch(keys, fetchMap, context, subPaths)
+}
+
+func (b *keyspace) fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPaths []string, clientContext ...*memcached.ClientContext) []errors.Error {
 	var noVirtualDocAttr bool
 	var bulkResponse map[string]*gomemcached.MCResponse
 	var mcr *gomemcached.MCResponse
@@ -1280,7 +1320,7 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 	ls := len(subPaths)
 	fast := l == 1 && ls == 0
 	if fast {
-		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline())
+		mcr, err = b.cbbucket.GetsMC(keys[0], context.GetReqDeadline(), clientContext...)
 	} else {
 		if ls > 0 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
 			subPaths = append([]string{"$document"}, subPaths...)
@@ -1288,9 +1328,9 @@ func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 		}
 
 		if l == 1 {
-			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), subPaths)
+			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), subPaths, clientContext...)
 		} else {
-			bulkResponse, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), subPaths)
+			bulkResponse, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), subPaths, clientContext...)
 			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 		}
 	}
@@ -1518,7 +1558,7 @@ func getExpiration(options value.Value) (exptime uint32) {
 	return
 }
 
-func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspace) performOp(op int, inserts []value.Pair, clientContext ...*memcached.ClientContext) ([]value.Pair, errors.Error) {
 	if len(inserts) == 0 {
 		return nil, nil
 	}
@@ -1541,7 +1581,7 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 			var added bool
 
 			// add the key to the backend
-			added, err = b.cbbucket.Add(key, exptime, val)
+			added, err = b.cbbucket.Add(key, exptime, val, clientContext...)
 			b.checkRefresh(err)
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
@@ -1568,12 +1608,12 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 			} else {
 
 				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>", key, uint64(cas), flags, val)
-				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, uint64(cas), val)
+				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, uint64(cas), val, clientContext...)
 				b.checkRefresh(err)
 			}
 
 		case UPSERT:
-			err = b.cbbucket.Set(key, exptime, val)
+			err = b.cbbucket.Set(key, exptime, val, clientContext...)
 			b.checkRefresh(err)
 		}
 
@@ -1610,13 +1650,17 @@ func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 }
 
 func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+	return b.delete(deletes, context)
+}
+
+func (b *keyspace) delete(deletes []string, context datastore.QueryContext, clientContext ...*memcached.ClientContext) ([]string, errors.Error) {
 
 	failedDeletes := make([]string, 0)
 	actualDeletes := make([]string, 0)
 	var err error
 
 	for _, key := range deletes {
-		if err = b.cbbucket.Delete(key); err != nil {
+		if err = b.cbbucket.Delete(key, clientContext...); err != nil {
 			b.checkRefresh(err)
 			if !isNotFoundError(err) {
 				logging.Infof("Failed to delete key <ud>%s</ud> Error %s", key, err)

@@ -10,14 +10,11 @@
 package couchbase
 
 import (
-	"fmt"
-
 	cb "github.com/couchbase/go-couchbase"
-	"github.com/couchbase/gomemcached"
+	"github.com/couchbase/gomemcached/client" // package name is memcached
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -104,7 +101,8 @@ type collection struct {
 	uid       uint32
 	namespace *namespace
 	scope     *scope
-	bucket    datastore.Keyspace
+	bucket    *keyspace
+	isDefault bool
 }
 
 func NewCollection(name string) *collection {
@@ -147,26 +145,27 @@ func (coll *collection) Scope() datastore.Scope {
 func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Error) {
 
 	// default collection
-	if coll.bucket != nil {
-		return coll.bucket.Count(context)
+	if coll.isDefault {
+		return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid})
 	}
-	return 0, errors.NewNotImplemented("collection.Count()")
+	return -1, errors.NewNotImplemented("collection.Count()")
 }
 
 func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Error) {
 
 	// default collection
-	if coll.bucket != nil {
-		return coll.bucket.Size(context)
+	if coll.isDefault {
+		return coll.bucket.size(context, &memcached.ClientContext{CollId: coll.uid})
 	}
-	return 0, errors.NewNotImplemented("collection.Size()")
+	return -1, errors.NewNotImplemented("collection.Size()")
 }
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 
 	// default collection
-	if coll.bucket != nil {
-		return coll.bucket.Indexer(name)
+	if coll.isDefault {
+		k := datastore.Keyspace(coll.bucket)
+		return k.Indexer(name)
 	}
 	return nil, errors.NewNotImplemented("collection.Indexer()")
 }
@@ -174,104 +173,40 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
 
 	// default collection
-	if coll.bucket != nil {
-		return coll.bucket.Indexers()
+	if coll.isDefault {
+		k := datastore.Keyspace(coll.bucket)
+		return k.Indexers()
 	}
 	return nil, errors.NewNotImplemented("collection.Indexers()")
 }
 
-func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string) []errors.Error {
-	var noVirtualDocAttr bool
-	var bulkResponse map[string]*gomemcached.MCResponse
-	var mcr *gomemcached.MCResponse
-	var err error
+func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
 
-	l := len(keys)
-	if l == 0 {
-		return nil
+	// default collection
+	if coll.isDefault {
+		return coll.bucket.getRandomEntry(&memcached.ClientContext{CollId: coll.uid})
 	}
-
-	cbbucket := coll.scope.bucket.cbbucket
-	ls := len(subPaths)
-	fast := l == 1 && ls == 0
-	if fast {
-		mcr, err = cbbucket.GetsMCFromCollection(coll.uid, keys[0], context.GetReqDeadline())
-	} else {
-		if ls > 0 && subPaths[0] != "$document" {
-			subPaths = append([]string{"$document"}, subPaths...)
-			noVirtualDocAttr = true
-		}
-
-		if l == 1 {
-			// TODO: fetch from collection using subdoc.
-			//mcr, err = cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), subPaths)
-			mcr = nil
-			err = fmt.Errorf("Subdoc fetch not supported for collections")
-		} else {
-			// TODO: fetch from collection using GetBulk
-			//bulkResponse, err = cbbucket.GetBulk(keys, context.GetReqDeadline(), subPaths)
-			//defer cbbucket.ReleaseGetBulkPools(bulkResponse)
-			bulkResponse = nil
-			err = fmt.Errorf("Bulk GET not supported for collections")
-		}
-	}
-
-	if err != nil {
-		coll.scope.bucket.checkRefresh(err)
-
-		// Ignore "Not found" keys
-		if !isNotFoundError(err) {
-			if cb.IsReadTimeOutError(err) {
-				logging.Errorf(err.Error())
-			}
-			return []errors.Error{errors.NewCbBulkGetError(err, "")}
-		}
-	}
-
-	if fast {
-		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = doFetch(keys[0], mcr)
-		}
-
-	} else if l == 1 {
-		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, subPaths, noVirtualDocAttr)
-		}
-	} else {
-		i := 0
-		if ls > 0 {
-			for k, v := range bulkResponse {
-				fetchMap[k] = getSubDocFetchResults(k, v, subPaths, noVirtualDocAttr)
-				i++
-			}
-		} else {
-			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, v)
-				i++
-			}
-			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
-		}
-	}
-
-	return nil
+	return "", nil, errors.NewNotImplemented("collection.GetRandomEntry()")
 }
 
-// Used by DML statements
-// For insert and upsert, nil input keys are replaced with auto-generated keys
+func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string) []errors.Error {
+	return coll.bucket.fetch(keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid})
+}
+
 func (coll *collection) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("collection.Insert()")
+	return coll.bucket.performOp(INSERT, inserts, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("collection.Update()")
+	return coll.bucket.performOp(UPDATE, updates, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("collection.Upsert()")
+	return coll.bucket.performOp(UPSERT, upserts, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
-	return nil, errors.NewNotImplemented("collection.Delete()")
+	return coll.bucket.delete(deletes, context, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Release() {
@@ -296,9 +231,20 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				scope:     scope,
 			}
 			scope.keyspaces[c.Name] = coll
+			coll.bucket = bucket
 			if s.Uid == 0 && c.Uid == 0 {
-				defaultCollection = coll
-				coll.bucket = bucket
+				coll.isDefault = true
+
+				// the default collection has the bucket name to represent itself as the bucket
+				// this is to differentiate from the default collection being addressed explicitly
+				defaultCollection = &collection{
+					id:        bucket.name,
+					namespace: bucket.namespace,
+					uid:       uint32(c.Uid),
+					scope:     scope,
+					bucket:    bucket,
+					isDefault: true,
+				}
 			}
 		}
 		scopes[s.Name] = scope

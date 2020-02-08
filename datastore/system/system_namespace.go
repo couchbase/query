@@ -65,6 +65,10 @@ func (p *namespace) MetadataVersion() uint64 {
 	return 0
 }
 
+func (p *namespace) FullName() string {
+	return p.name
+}
+
 // newNamespace creates a new namespace.
 func newNamespace(s *store) (*namespace, errors.Error) {
 	p := new(namespace)

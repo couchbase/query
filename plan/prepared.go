@@ -34,7 +34,7 @@ type Prepared struct {
 	queryContext    string
 
 	indexers      []idxVersion // for reprepare checking
-	namespaces    []nsVersion
+	keyspaces     []ksVersion
 	subqueryPlans map[*algebra.Select]interface{}
 	sync.RWMutex
 }
@@ -44,9 +44,9 @@ type idxVersion struct {
 	version uint64
 }
 
-type nsVersion struct {
-	namespace datastore.Namespace
-	version   uint64
+type ksVersion struct {
+	ksMeta  datastore.KeyspaceMetadata
+	version uint64
 }
 
 func NewPrepared(operator Operator, signature value.Value) *Prepared {
@@ -224,16 +224,16 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 }
 
 // Locking is handled by the top level caller!
-func (this *Prepared) addNamespace(namespace datastore.Namespace) {
-	version := namespace.MetadataVersion()
-	for i, ns := range this.namespaces {
-		if ns.namespace.Name() == namespace.Name() {
-			this.namespaces[i].namespace = namespace
-			this.namespaces[i].version = version
+func (this *Prepared) addKeyspaceMetadata(ksMeta datastore.KeyspaceMetadata) {
+	version := ksMeta.MetadataVersion()
+	for i, ks := range this.keyspaces {
+		if ks.ksMeta.FullName() == ksMeta.FullName() {
+			this.keyspaces[i].ksMeta = ksMeta
+			this.keyspaces[i].version = version
 			return
 		}
 	}
-	this.namespaces = append(this.namespaces, nsVersion{namespace, version})
+	this.keyspaces = append(this.keyspaces, ksVersion{ksMeta, version})
 }
 
 func (this *Prepared) MetadataCheck() bool {
@@ -247,8 +247,9 @@ func (this *Prepared) MetadataCheck() bool {
 	}
 
 	// now check that metadata is good for the namespaces involved
-	for _, ns := range this.namespaces {
-		if ns.namespace.MetadataVersion() != ns.version {
+	// if the bucket has been deleted, the version is expected to be different
+	for _, ks := range this.keyspaces {
+		if ks.ksMeta.MetadataVersion() != ks.version {
 			return false
 		}
 	}

@@ -263,6 +263,10 @@ func (p *namespace) MetadataVersion() uint64 {
 	return 0
 }
 
+func (p *namespace) FullName() string {
+	return p.name
+}
+
 func (p *namespace) path() string {
 	return filepath.Join(p.store.path, p.name)
 }
@@ -353,6 +357,14 @@ func (b *keyspace) Scope() datastore.Scope {
 
 func (b *keyspace) ScopeId() string {
 	return ""
+}
+
+func (b *keyspace) MetadataVersion() uint64 {
+	return 0
+}
+
+func (b *keyspace) Label() string {
+	return b.name
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
