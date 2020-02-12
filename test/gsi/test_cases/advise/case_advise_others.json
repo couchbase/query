@@ -19,7 +19,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 3. in, 8. not null/not missing/valued, 9. like."
+                  "recommending_rule": "Index keys follow order of predicate types: 3. in, 7. not null/not missing/valued, 8. like."
                 }
               ]
             }
@@ -48,7 +48,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_c22 ON `shellTest`(`c22`)",
                   "keyspace_alias": "shellTest_a2",
-                  "recommending_rule": "Index keys follow order of predicate types: 10. non-static join predicate."
+                  "recommending_rule": "Index keys follow order of predicate types: 9. non-static join predicate."
                 }
               ]
             }
@@ -72,7 +72,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_c21_length_a21_c22 ON `shellTest`(`c21`,length((`a21`)),`c22`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than, 5. less than/between/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than, 5. less than/greater than."
                 }
               ]
             }

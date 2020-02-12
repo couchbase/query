@@ -24,24 +24,20 @@ type IndexAdvice struct {
 
 func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, coverIdxes iaplan.IndexInfos) *IndexAdvice {
 	rv := &IndexAdvice{}
-	var curIndexes, recIndexes iaplan.IndexInfos
 	cntKeyspaceNotFound := 0
+	curIndexes := make(iaplan.IndexInfos, 0, 1) //initialize to distinguish between nil and empty for error message
+	recIndexes := make(iaplan.IndexInfos, 0, 1)
+
 	for _, v := range queryInfos {
 		if !v.IsKeyspaceFound() {
 			cntKeyspaceNotFound += 1
 			continue
 		}
 		if len(v.GetCurIndexes()) > 0 {
-			if curIndexes == nil {
-				curIndexes = make(iaplan.IndexInfos, 0, len(v.GetCurIndexes()))
-			}
 			curIndexes = append(curIndexes, v.GetCurIndexes()...)
 		}
 
 		if len(v.GetUncoverIndexes()) > 0 {
-			if recIndexes == nil {
-				recIndexes = make(iaplan.IndexInfos, 0, len(v.GetUncoverIndexes()))
-			}
 			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
 		}
 	}

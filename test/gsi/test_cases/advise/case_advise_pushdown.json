@@ -20,7 +20,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
               ]
             }
@@ -82,7 +82,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`c`,`b`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than, 8. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }
               ]
             }
@@ -113,7 +113,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
               ]
             }
@@ -144,7 +144,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_country_name ON `default`(`country`,`name`)",
                   "keyspace_alias": "default",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 8. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 7. not null/not missing/valued."
                 }
               ]
             }

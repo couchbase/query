@@ -103,7 +103,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_self ON `shellTest`(self)",
                   "keyspace_alias": "shellTest_a",
-                  "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
                 }
               ]
             }
@@ -127,7 +127,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_DISTINCT_object_pairs_productIds_name_array_count_val_metada4251025607 ON `shellTest`(DISTINCT ARRAY [`p`.`name`, 0 < array_count((`p`.`val`)), `metadata`.`configurations`.[`p`.`name`].`enabled`, array_contains(ifmissingornull((`deletedFor`), []), (`p`.`name`))] FOR p in object_pairs((`productIds`)) END)",
                   "keyspace_alias": "shellTest_c",
-                  "recommending_rule": "Index keys follow order of predicate types: 6. array predicate."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
               ]
             }
@@ -151,7 +151,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
               ]
             }
@@ -181,7 +181,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a11ISMISSING_type ON `shellTest`(`a11` IS MISSING) WHERE `type` = 'advise' AND `a11` IS MISSING",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 11. flavor for partial index."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 10. flavor for partial index."
                 }
               ]
             }
@@ -210,7 +210,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a11ISMISSING_a31 ON `shellTest`(`a11` IS MISSING,`a31`) WHERE `a11` IS MISSING",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/between/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
               ]
             }
@@ -240,7 +240,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_a21_a11_c11 ON `shellTest`(`a21`,`a11`,`c11`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 2. equality/null/missing, 8. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 2. equality/null/missing, 7. not null/not missing/valued."
                 }
               ]
             }
@@ -285,7 +285,7 @@
     ]
   },
   {
-    "statements": "advise SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode = IFNULL($guestCode, '') OR guestCode = '') AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.level,s.size, s.num] = [$level, $size, $num] END)",
+    "statements": "advise SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode = IFNULL($guestCode, '') OR guestCode = '') AND checkinTime BETWEEN $startTime AND $endTime",
     "advise": true,
     "results": [
       {
@@ -296,21 +296,51 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_guestCode_checkinTime_DISTINCT_rooms_level_size_num_array_di1747996179 ON `shellTest`(`guestCode`,`checkinTime`,DISTINCT ARRAY [`s`.`level`, `s`.`size`, `s`.`num`] FOR s in `rooms` END,array_distinct(ifmissing((array_star((`rooms`)).`num`), [])))",
+                  "index_statement": "CREATE INDEX adv_guestCode_checkinTime_array_distinct_ifmissing_array_star_rooms_num ON `shellTest`(`guestCode`,`checkinTime`,array_distinct(ifmissing((array_star((`rooms`)).`num`), [])))",
                   "keyspace_alias": "shellTest_p"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_guestCode_checkinTime_DISTINCT_rooms_level_size_num ON `shellTest`(`guestCode`,`checkinTime`,DISTINCT ARRAY [`s`.`level`, `s`.`size`, `s`.`num`] FOR s in `rooms` END)",
+                  "index_statement": "CREATE INDEX adv_guestCode_checkinTime ON `shellTest`(`guestCode`,`checkinTime`)",
                   "keyspace_alias": "shellTest_p",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than, 6. array predicate)."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than)."
                 }
               ]
             }
           }
         },
-        "query": "SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode = IFNULL($guestCode, '') OR guestCode = '') AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.level,s.size, s.num] = [$level, $size, $num] END)"
+        "query": "SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode = IFNULL($guestCode, '') OR guestCode = '') AND checkinTime BETWEEN $startTime AND $endTime"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode <5 OR guestCode >10) AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.level,s.size, s.num] = [$level, $size, $num] END)",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_rooms_level_size_num_checkinTime_guestCode_array_di1747996179 ON `shellTest`(DISTINCT ARRAY [`s`.`level`, `s`.`size`, `s`.`num`] FOR s in `rooms` END,`checkinTime`,`guestCode`,array_distinct(ifmissing((array_star((`rooms`)).`num`), [])))",
+                  "keyspace_alias": "shellTest_p"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_rooms_level_size_num_checkinTime_guestCode ON `shellTest`(DISTINCT ARRAY [`s`.`level`, `s`.`size`, `s`.`num`] FOR s in `rooms` END,`checkinTime`,`guestCode`)",
+                  "keyspace_alias": "shellTest_p",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than, 5. less than/greater than)."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode <5 OR guestCode >10) AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.level,s.size, s.num] = [$level, $size, $num] END)"
       }
     ]
   },
@@ -326,15 +356,15 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_length_c_DISTINCT_a_type_val_name_type_val_name_type_val_nam3535815345 ON `shellTest`(length((`c`)),DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,`b`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va1738526945 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,length((`c`)),`b`)",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_length_c_DISTINCT_a_type_val_name_type_val_name_type_val_nam3535815345 ON `shellTest`(length((`c`)),DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,`b`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va1738526945 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,length((`c`)),`b`)",
                   "keyspace_alias": "shellTest_st",
-                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than, 6. array predicate, 8. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }
               ]
             }
@@ -364,7 +394,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_id_c ON `shellTest`(`id`,`c`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/between/greater than)."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/greater than)."
                 }
               ]
             }
@@ -394,7 +424,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_id_c ON `shellTest`(`id`,`c`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/between/greater than)."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/greater than)."
                 }
               ]
             }
@@ -424,7 +454,7 @@
                 {
                   "index_statement": "CREATE INDEX adv_id_a_c ON `shellTest`(`id`,`a`,`c`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/between/greater than, 2. equality/null/missing)."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (3. in, 5. less than/greater than, 2. equality/null/missing)."
                 }
               ]
             }
@@ -453,13 +483,29 @@
                 {
                   "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
                 }
               ]
             }
           }
         },
         "query": "select c21 from shellTest where a11 is missing or a11 is not null"
+      }
+    ]
+  },
+  {
+    "statements": "advise select count(*) from shellTest",
+    "advise":true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": "No secondary index recommendation at this time, primary index may apply."
+          }
+        },
+        "query": "select count(*) from shellTest"
       }
     ]
   }
