@@ -522,12 +522,24 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var exactSpans bool
 		var err error
 
+		useFilters := true
 		if isOrPred {
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys,
-				se.minKeys, orIsJoin, this.useCBO, baseKeyspace)
+			useFilters = false
 		} else {
+			for _, key := range se.keys {
+				if _, ok := key.(*expression.And); ok {
+					useFilters = false
+					break
+				}
+			}
+		}
+
+		if useFilters {
 			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
 				se.minKeys, underHash, this.useCBO, baseKeyspace)
+		} else {
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys,
+				se.minKeys, orIsJoin, this.useCBO, baseKeyspace)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},
