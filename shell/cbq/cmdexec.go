@@ -64,10 +64,10 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 		batch_run = true
 
 		err_code, err_str := dispatch_command(stringBuffer.String(), w, interactive, liner)
+		stringBuffer.Reset()
 		if err_code != 0 {
 			return err_code, err_str
 		}
-		stringBuffer.Reset()
 
 	} else {
 		//This block handles the shell commands
