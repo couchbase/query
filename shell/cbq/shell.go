@@ -357,7 +357,7 @@ func init() {
 /*
    Option        : -analytics or -a
    Args          : true or false
-   Batch mode for sending queries to Asterix, and auto discovering analytics nodes in a cluster.
+   Used to send queries to Asterix/auto discovering analytics nodes in a cluster.
 */
 
 var analyticsFlag bool
@@ -402,6 +402,12 @@ func main() {
 
 	// Initialize Global buffer to store queries for batch mode.
 	stringBuffer.Write([]byte(""))
+	command.BATCH = batchFlag
+	err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", batchFlag)
+	if err_code != 0 {
+		s_err := command.HandleError(err_code, err_str)
+		command.PrintError(s_err)
+	}
 
 	if *prettyFlag {
 		n1ql.SetQueryParams("pretty", "true")
@@ -631,26 +637,6 @@ func main() {
 
 	if timeoutFlag != "0ms" && timeoutFlag != "" {
 		n1ql.SetQueryParams("timeout", timeoutFlag)
-	}
-
-	// If batch flag is enabled
-	if batchFlag != "off" || analyticsFlag {
-		if strings.ToLower(batchFlag) == "on" || analyticsFlag {
-			command.BATCH = "on"
-			//SET batch mode here
-			err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", "on")
-			if err_code != 0 {
-				s_err := command.HandleError(err_code, err_str)
-				command.PrintError(s_err)
-
-			}
-		} else {
-			s_err := command.HandleError(errors.BATCH_MODE, "")
-			command.PrintError(s_err)
-		}
-
-	} else {
-		command.BATCH = batchFlag
 	}
 
 	n1ql.SetCBUserAgentHeader("CBQ/" + command.SHELL_VERSION)
