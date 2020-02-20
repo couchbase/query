@@ -486,20 +486,20 @@ func getIndexKeyExpressions(keys datastore.IndexKeys) expression.Expressions {
 }
 
 func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
+	stringer := expression.NewStringer()
 	if index2, ok2 := index.(datastore.Index2); ok2 {
 		keys := index2.RangeKey2()
 		rv = make([]string, len(keys))
 		desc = make([]bool, len(keys))
 		for i, kp := range keys {
-			s := expression.NewStringer().Visit(kp.Expr)
-			rv[i] = s
+			rv[i] = stringer.Visit(kp.Expr)
 			desc[i] = kp.Desc
 		}
 	} else {
 		rv = make([]string, len(index.RangeKey()))
 		desc = make([]bool, len(index.RangeKey()))
 		for i, kp := range index.RangeKey() {
-			rv[i] = expression.NewStringer().Visit(kp)
+			rv[i] = stringer.Visit(kp)
 		}
 	}
 	return
@@ -515,12 +515,13 @@ func getIndexPartitionToString(index datastore.Index) (rv string) {
 		return
 	}
 
+	stringer := expression.NewStringer()
 	rv = string(partition.Strategy) + "("
 	for i, expr := range partition.Exprs {
 		if i > 0 {
 			rv += ","
 		}
-		rv += expression.NewStringer().Visit(expr)
+		rv += stringer.Visit(expr)
 	}
 	rv += ")"
 	return
