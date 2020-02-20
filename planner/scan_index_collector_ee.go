@@ -481,20 +481,19 @@ func getIndexKeyExpressions(keys datastore.IndexKeys) expression.Expressions {
 	return indexKeyExprs
 }
 
-func getIndexKeyStringArray(index datastore.Index) (rv []string) {
+func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
 	if index2, ok2 := index.(datastore.Index2); ok2 {
 		keys := index2.RangeKey2()
 		rv = make([]string, len(keys))
+		desc = make([]bool, len(keys))
 		for i, kp := range keys {
 			s := expression.NewStringer().Visit(kp.Expr)
-			if kp.Desc {
-				s += " DESC"
-			}
 			rv[i] = s
+			desc[i] = kp.Desc
 		}
-
 	} else {
 		rv = make([]string, len(index.RangeKey()))
+		desc = make([]bool, len(index.RangeKey()))
 		for i, kp := range index.RangeKey() {
 			rv[i] = expression.NewStringer().Visit(kp)
 		}
