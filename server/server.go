@@ -661,7 +661,7 @@ func (this *Server) serviceRequest(request Request) {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
-		prepared, request.IndexApiVersion(), request.FeatureControls())
+		prepared, request.IndexApiVersion(), request.FeatureControls(), request.UseFts())
 
 	context.SetWhitelist(this.whitelist)
 
@@ -775,9 +775,14 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	}
 
 	if prepared == nil && autoPrepare {
-		name = prepareds.GetAutoPrepareName(request.Statement(), request.IndexApiVersion(), request.FeatureControls())
+		var prepContext planner.PrepareContext
+		planner.NewPrepareContext(&prepContext, request.Id().String(), nil, nil,
+			request.IndexApiVersion(), request.FeatureControls(), request.UseFts())
+
+		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
-			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(), request.IndexApiVersion(), request.FeatureControls(), request.Namespace()) // TODO switch to collections scope
+			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(),
+				request.Namespace(), &prepContext)
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
@@ -814,8 +819,12 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			positionalArgs = nil
 		}
 
+		var prepContext planner.PrepareContext
+		planner.NewPrepareContext(&prepContext, request.Id().String(), namedArgs,
+			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts())
+
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, autoExecute, !autoExecute,
-			namedArgs, positionalArgs, request.IndexApiVersion(), request.FeatureControls())
+			&prepContext)
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
@@ -908,6 +917,8 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 						prepared.SetIndexApiVersion(request.IndexApiVersion())
 						prepared.SetFeatureControls(request.FeatureControls())
 						prepared.SetNamespace(request.Namespace()) // TODO switch to collections scope
+						prepared.SetUseFts(request.UseFts())
+
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {
 							request.SetPrepared(prepared)

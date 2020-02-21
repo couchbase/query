@@ -58,7 +58,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 	allindexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(allindexes)
-	allindexes, err := allIndexes(keyspace, nil, allindexes, this.indexApiVersion, false)
+	allindexes, err := allIndexes(keyspace, nil, allindexes, this.context.IndexApiVersion(), false)
 	if err != nil && !this.indexAdvisor {
 		return nil, nil, nil, err
 	}

@@ -129,6 +129,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.Statement() != "" {
 					item.SetField("statement", request.Statement())
 				}
+				if request.UseFts() {
+					item.SetField("useFts", request.UseFts())
+				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)

@@ -121,7 +121,8 @@ outer:
 		for c, _ := range covering {
 			entry := indexes[c]
 			if entry.cost <= 0.0 {
-				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.requestId, entry.spans, node.Alias())
+				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.context.RequestId(),
+					entry.spans, node.Alias())
 				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					useCBO = false
 				} else {
@@ -209,7 +210,7 @@ outer:
 	}
 
 	arrayIndex := arrays[index]
-	duplicates := entry.spans.CanHaveDuplicates(index, this.indexApiVersion, pred.MayOverlapSpans(), false)
+	duplicates := entry.spans.CanHaveDuplicates(index, this.context.IndexApiVersion(), pred.MayOverlapSpans(), false)
 	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || arrayIndex || duplicates)
 
 	// Check and reset pagination pushdows
@@ -237,7 +238,7 @@ outer:
 	if filters != nil {
 		filters.ClearPlanFlags()
 	}
-	scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, projDistinct, pred.MayOverlapSpans(), false,
+	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), false,
 		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
 		filters, entry.cost, entry.cardinality)
 	if scan != nil {
@@ -278,8 +279,8 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	// Aggregates supported pre-Index3
-	if (useIndex3API(entry.index, this.indexApiVersion) &&
-		util.IsFeatureEnabled(this.featureControls, util.N1QL_GROUPAGG_PUSHDOWN)) || !this.oldAggregates ||
+	if (useIndex3API(entry.index, this.context.IndexApiVersion()) &&
+		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_GROUPAGG_PUSHDOWN)) || !this.oldAggregates ||
 		!entry.IsPushDownProperty(_PUSHDOWN_GROUPAGGS) {
 		return nil
 	}
@@ -316,7 +317,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	}
 
 	this.maxParallelism = 1
-	scan := entry.spans.CreateScan(entry.index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(),
+	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers,
 		nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 	if scan != nil {

@@ -118,7 +118,7 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 
 	if distinct {
 		countIndex2, ok := countIndex.(datastore.CountIndex2)
-		if ok && useIndex2API(entry.index, this.indexApiVersion) && countIndex2.CanCountDistinct() {
+		if ok && useIndex2API(entry.index, this.context.IndexApiVersion()) && countIndex2.CanCountDistinct() {
 			this.maxParallelism = 1
 			return plan.NewIndexCountDistinctScan2(countIndex2, node, termSpans.Spans(), covers, filterCovers)
 		}
@@ -126,7 +126,7 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 		return nil
 	}
 
-	if countIndex2, ok := countIndex.(datastore.CountIndex2); ok && useIndex2API(entry.index, this.indexApiVersion) {
+	if countIndex2, ok := countIndex.(datastore.CountIndex2); ok && useIndex2API(entry.index, this.context.IndexApiVersion()) {
 		this.maxParallelism = 1
 		return plan.NewIndexCountScan2(countIndex2, node, termSpans.Spans(), covers, filterCovers)
 	}

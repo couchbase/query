@@ -523,7 +523,18 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		if err != nil || !this.writer.printf("%s\"positionalArgs\": %s", newPrefix, e) {
 			logging.Infop("Error writing positional args", logging.Pair{"error", err})
 		}
+		needComma = true
 	}
+
+	if this.UseFts() {
+		if needComma && !this.writeString(",") {
+			return false
+		}
+		if err != nil || !this.writer.printf("%s\"use_fts\": \"%v\"", newPrefix, this.UseFts()) {
+			logging.Infop("Error writing use_fts", logging.Pair{"error", err})
+		}
+	}
+
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
 		return false
 	}

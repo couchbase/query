@@ -44,7 +44,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		origOnclause := node.Onclause()
 		hjCost := float64(OPT_COST_NOT_AVAIL)
 
-		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			tryHash := false
 			if useCBO {
 				tryHash = true
@@ -123,7 +123,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			return nil, err
 		}
 
-		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
 			if !right.PreferNL() {
@@ -174,7 +174,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		origOnclause := node.Onclause()
 		hnCost := float64(OPT_COST_NOT_AVAIL)
 
-		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			tryHash := false
 			if useCBO {
 				tryHash = true
@@ -248,7 +248,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		if util.IsFeatureEnabled(this.featureControls, util.N1QL_HASH_JOIN) {
+		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
 			if !right.PreferNL() {

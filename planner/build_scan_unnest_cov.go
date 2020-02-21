@@ -220,7 +220,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// Covering UNNEST index using ALL ARRAY key
 	array := len(coveredUnnests) > 0
-	duplicates := entry.spans.CanHaveDuplicates(index, this.indexApiVersion, pred.MayOverlapSpans(), array)
+	duplicates := entry.spans.CanHaveDuplicates(index, this.context.IndexApiVersion(), pred.MayOverlapSpans(), array)
 	indexProjection := this.buildIndexProjection(entry, exprs, id, duplicates || array)
 	unnestFilters = append(unnestFilters, expression.NewIsNotMissing(unnestIdent))
 	entry.pushDownProperty = this.indexPushDownProperty(entry, keys, unnestFilters, pred, alias, true, true)
@@ -245,7 +245,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, true, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
-	scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, projDistinct, pred.MayOverlapSpans(), array,
+	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), array,
 		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
 		nil, entry.cost, entry.cardinality)
 	if scan != nil {

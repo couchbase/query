@@ -30,7 +30,8 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.maxParallelism = 1
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
-	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion), doDNF(stmt.Statement().Expressions()))
+	indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()),
+		doDNF(stmt.Statement().Expressions()))
 	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos), stmt.Query()), nil
 }
 

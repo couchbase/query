@@ -648,6 +648,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State().StateName()
 		reqMap["scanConsistency"] = request.ScanConsistency()
+		if request.UseFts() {
+			reqMap["useFts"] = request.UseFts()
+		}
 
 		p := request.Output().FmtPhaseCounts()
 		if p != nil {
@@ -812,6 +815,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		}
 		reqMap["state"] = request.State
 		reqMap["scanConsistency"] = request.ScanConsistency
+		if request.UseFts {
+			reqMap["useFts"] = request.UseFts
+		}
 		if request.Statement != "" {
 			reqMap["statement"] = request.Statement
 		}

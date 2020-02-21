@@ -165,7 +165,7 @@ func (this *preparedCache) GetText(text string, offset int) string {
 const _REALM_SIZE = 256
 
 // TODO switch to collections scope
-func (this *preparedCache) GetName(text string, indexApiVersion int, featureControls uint64, namespace string) (string, errors.Error) {
+func (this *preparedCache) GetName(text, namespace string, context *planner.PrepareContext) (string, errors.Error) {
 
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
@@ -174,9 +174,11 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 
 	var buf [_REALM_SIZE]byte
 	realm := buf[0:0:_REALM_SIZE]
-	realm = strconv.AppendInt(realm, int64(indexApiVersion), 16)
+	realm = strconv.AppendInt(realm, int64(context.IndexApiVersion()), 16)
 	realm = append(realm, '_')
-	realm = strconv.AppendInt(realm, int64(featureControls), 16)
+	realm = strconv.AppendInt(realm, int64(context.FeatureControls()), 16)
+	realm = append(realm, '_')
+	realm = strconv.AppendBool(realm, context.UseFts())
 	realm = append(realm, '_')
 	realm = append(realm, namespace...)
 	name, err := util.UUIDV5(string(realm), text)
@@ -187,7 +189,7 @@ func (this *preparedCache) GetName(text string, indexApiVersion int, featureCont
 }
 
 // TODO switch to collections scope
-func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) (*plan.Prepared, errors.Error) {
+func (this *preparedCache) GetPlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
 	prep, err := prepareds.getPrepared(value.NewValue(name), OPT_VERIFY, nil)
 	if err != nil {
 		if err.Code() == errors.NO_SUCH_PREPARED {
@@ -195,8 +197,8 @@ func (this *preparedCache) GetPlan(name string, text string, indexApiVersion int
 		}
 		return nil, err
 	}
-	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls ||
-		prep.Namespace() != namespace || prep.Text() != text {
+	if prep.IndexApiVersion() != context.IndexApiVersion() || prep.FeatureControls() != context.FeatureControls() ||
+		prep.Namespace() != namespace || prep.Text() != text || prep.UseFts() != context.UseFts() {
 		return nil, nil
 	}
 	return prep, nil
@@ -285,16 +287,19 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 }
 
 // Auto Prepare
-func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64) string {
+func GetAutoPrepareName(text string, context *planner.PrepareContext) string {
 
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
 
 	var buf [_REALM_SIZE]byte
 	realm := buf[0:0:_REALM_SIZE]
-	realm = strconv.AppendInt(realm, int64(indexApiVersion), 16)
+	realm = strconv.AppendInt(realm, int64(context.IndexApiVersion()), 16)
 	realm = append(realm, '_')
-	realm = strconv.AppendInt(realm, int64(featureControls), 16)
+	realm = strconv.AppendInt(realm, int64(context.FeatureControls()), 16)
+	realm = append(realm, '_')
+	realm = strconv.AppendBool(realm, context.UseFts())
+	realm = append(realm, '_')
 	name, err := util.UUIDV5(string(realm), text)
 
 	// this never happens
@@ -305,7 +310,7 @@ func GetAutoPrepareName(text string, indexApiVersion int, featureControls uint64
 }
 
 // TODO switch to collections scope
-func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureControls uint64, namespace string) *plan.Prepared {
+func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareContext) *plan.Prepared {
 
 	// for auto prepare, we don't verify or reprepare because that would mean
 	// accepting valid but possibly suboptimal statements
@@ -329,7 +334,8 @@ func GetAutoPreparePlan(name string, text string, indexApiVersion int, featureCo
 		logging.Infof("Auto Prepare found mismatching name and statement %v %v", name, text)
 		return nil
 	}
-	if prep.IndexApiVersion() != indexApiVersion || prep.FeatureControls() != featureControls || prep.Namespace() != namespace {
+	if prep.IndexApiVersion() != context.IndexApiVersion() || prep.FeatureControls() != context.FeatureControls() ||
+		prep.Namespace() != namespace || prep.UseFts() != context.UseFts() {
 		return nil
 	}
 	return prep
@@ -666,10 +672,18 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	// since this is a reprepare, no need to check semantics again after parsing.
 	// TODO switch to collections scope
 	prep := time.Now()
-	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(), false, true,
+	requestId, err := util.UUIDV3()
+	if err != nil {
+		return nil, errors.NewReprepareError(fmt.Errorf("Context is nil"))
+	}
 
-		// building prepared statements should not depend on args
-		nil, nil, prepared.IndexApiVersion(), prepared.FeatureControls())
+	// building prepared statements should not depend on args
+	var prepContext planner.PrepareContext
+	planner.NewPrepareContext(&prepContext, requestId, nil, nil,
+		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts())
+
+	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
+		false, true, &prepContext)
 	if phaseTime != nil {
 		*phaseTime += time.Since(prep)
 	}
@@ -683,6 +697,8 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	pl.SetIndexApiVersion(prepared.IndexApiVersion())
 	pl.SetFeatureControls(prepared.FeatureControls())
 	pl.SetNamespace(prepared.Namespace()) // TODO switch to collections scope
+	pl.SetNamespace(prepared.Namespace())
+	pl.SetUseFts(prepared.UseFts())
 
 	json_bytes, err := pl.MarshalJSON()
 	if err != nil {

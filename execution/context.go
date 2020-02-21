@@ -136,6 +136,7 @@ type Context struct {
 	namespace          string
 	indexApiVersion    int
 	featureControls    uint64
+	useFts             bool
 	readonly           bool
 	maxParallelism     int
 	scanCap            int64
@@ -166,7 +167,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
 	credentials auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request,
-	prepared *plan.Prepared, indexApiVersion int, featureControls uint64) *Context {
+	prepared *plan.Prepared, indexApiVersion int, featureControls uint64, useFts bool) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -191,6 +192,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		prepared:         prepared,
 		indexApiVersion:  indexApiVersion,
 		featureControls:  featureControls,
+		useFts:           useFts,
 		inlistHashMap:    nil,
 	}
 
@@ -219,6 +221,7 @@ func (this *Context) Copy() *Context {
 		httpRequest:      this.httpRequest,
 		indexApiVersion:  this.indexApiVersion,
 		featureControls:  this.featureControls,
+		useFts:           this.useFts,
 	}
 }
 
@@ -474,8 +477,12 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 			if !planFound {
 
 				// MB-32140: do not replace named/positional arguments with its value for prepared statements
-				subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
-					nil, nil, this.indexApiVersion, this.featureControls)
+				var prepContext planner.PrepareContext
+				planner.NewPrepareContext(&prepContext, this.requestId, nil, nil,
+					this.indexApiVersion, this.featureControls, this.useFts)
+				subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
+					true, false, &prepContext)
+
 				if err != nil {
 					this.prepared.Unlock()
 
@@ -496,8 +503,12 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		if !planFound {
 			var err error
 
+			var prepContext planner.PrepareContext
+			planner.NewPrepareContext(&prepContext, this.requestId, this.namedArgs,
+				this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts)
 			subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
-				this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls)
+				&prepContext)
+
 			if err != nil {
 
 				// Generate our own error for this subquery, in addition to whatever the query above is doing.

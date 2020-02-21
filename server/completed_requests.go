@@ -48,6 +48,7 @@ type RequestLogEntry struct {
 	Plan            *plan.Prepared
 	State           string
 	ScanConsistency string
+	UseFts          bool
 	ResultCount     int
 	ResultSize      int
 	ErrorCount      int
@@ -452,6 +453,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		Errors:          request.Errors(),
 		Time:            time.Now(),
 		ScanConsistency: string(request.ScanConsistency()),
+		UseFts:          request.UseFts(),
 		Mutations:       request.MutationCount(),
 	}
 	stmt := request.Statement()

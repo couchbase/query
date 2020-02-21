@@ -473,6 +473,14 @@ func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
+func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	useFts, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetUseFts(useFts == value.TRUE)
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -557,6 +565,7 @@ const ( // Request argument names
 	MAX_INDEX_API     = "max_index_api"
 	AUTO_PREPARE      = "auto_prepare"
 	AUTO_EXECUTE      = "auto_execute"
+	USE_FTS           = "use_fts"
 )
 
 var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error{
@@ -589,6 +598,13 @@ var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, par
 	MAX_INDEX_API:     handleMaxIndexAPI,
 	AUTO_PREPARE:      handleAutoPrepare,
 	AUTO_EXECUTE:      handleAutoExecute,
+	USE_FTS:           handleUseFts,
+}
+
+// take note while handling: initial parameters will not be found in fields or form values!
+var _INITIAL_PARAMETERS = map[string]bool{
+	N1QL_FEAT_CTRL: true,
+	MAX_INDEX_API:  true,
 }
 
 func isValidParameter(a string) bool {
