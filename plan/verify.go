@@ -54,12 +54,21 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 	if scope != nil {
 		bucket := scope.Bucket()
 		namespace := bucket.Namespace()
-		b, _ := namespace.BucketById(bucket.Id())
-		if b != nil {
-			s, _ := b.ScopeById(scope.Id())
-			if s != nil {
-				ks, err = s.KeyspaceById(keyspace.Id())
-				meta = b.(datastore.KeyspaceMetadata)
+		d, _ := bucket.DefaultKeyspace()
+
+		// if this is the default collection for a bucket, we're done
+		if d != nil && d.Name() == keyspace.Name() && d.Id() == keyspace.Id() {
+			ks = d
+			namespace := keyspace.Namespace()
+			meta = namespace.(datastore.KeyspaceMetadata)
+		} else {
+			b, _ := namespace.BucketById(bucket.Id())
+			if b != nil {
+				s, _ := b.ScopeById(scope.Id())
+				if s != nil {
+					ks, err = s.KeyspaceById(keyspace.Id())
+					meta = b.(datastore.KeyspaceMetadata)
+				}
 			}
 		}
 	} else {
