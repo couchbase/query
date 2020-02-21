@@ -64,10 +64,10 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	hash := node.IsUnderHash()
 
 	var hints []datastore.Index
-	if len(node.Indexes()) > 0 {
+	if len(node.Indexes()) > 0 || this.context.UseFts() {
 		hints = _HINT_POOL.Get()
 		defer _HINT_POOL.Put(hints)
-		hints, err = allHints(keyspace, node.Indexes(), hints, this.indexApiVersion)
+		hints, err = allHints(keyspace, node.Indexes(), hints, this.context.IndexApiVersion(), this.context.UseFts())
 		if err != nil {
 			return
 		}
@@ -102,7 +102,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		if !join {
 			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
-				err = deriveNotNullFilter(keyspace, baseKeyspace, this.indexApiVersion)
+				err = deriveNotNullFilter(keyspace, baseKeyspace, this.context.IndexApiVersion())
 				if err != nil {
 					return nil, nil, err
 				}
@@ -194,7 +194,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	others := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(others)
-	others, err = allIndexes(keyspace, hints, others, this.indexApiVersion, len(searchFns) > 0)
+	others, err = allIndexes(keyspace, hints, others, this.context.IndexApiVersion(), len(searchFns) > 0)
 	if err != nil {
 		return
 	}
@@ -483,7 +483,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 
 	pred = pred.Copy()
 
-	for name, value := range this.namedArgs {
+	for name, value := range this.context.NamedArgs() {
 		nameExpr := algebra.NewNamedParameter(name)
 		valueExpr := expression.NewConstant(value)
 		pred, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
@@ -492,7 +492,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 		}
 	}
 
-	for pos, value := range this.positionalArgs {
+	for pos, value := range this.context.PositionalArgs() {
 		posExpr := algebra.NewPositionalParameter(pos + 1)
 		valueExpr := expression.NewConstant(value)
 		pred, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
@@ -580,14 +580,15 @@ func isValidIndex(idx datastore.Index, indexApiVersion int) bool {
 }
 
 // all HINT indexes
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index, indexApiVersion int) (
+func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index, indexApiVersion int, useFts bool) (
 	[]datastore.Index, error) {
 
 	// check if HINT has FTS index refrence
-	var inclFts bool
+	var hintFts bool
+
 	for _, hint := range hints {
 		if hint.Using() == datastore.FTS {
-			inclFts = true
+			hintFts = true
 			break
 		}
 	}
@@ -598,8 +599,8 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 	}
 
 	for _, indexer := range indexers {
-		// no FTS index reference in the HINT and indexer is FTS skip the indexer
-		if !inclFts && indexer.Name() == datastore.FTS {
+		// neither FTS index reference in the HINT nor useFts set skip FTS indexer
+		if !hintFts && !useFts && indexer.Name() == datastore.FTS {
 			continue
 		}
 
@@ -611,6 +612,15 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 		// all HINT indexes. If name is "", consider all indexes on the indexer
 		// duplicates on the HINT will be ignored
 		for _, idx := range idxes {
+			/* When one or more FTS indexes is specified in the USE INDEX hint,
+			   USE_FTS query parameter does not take effect. When no FTS indexes is specified in the
+			   USE INDEX hint (or no hint specified), USE_FTS query parameter takes effect.
+			*/
+			if !hintFts && useFts && indexer.Name() == datastore.FTS && isValidIndex(idx, indexApiVersion) {
+				indexes = append(indexes, idx)
+				continue
+			}
+
 			for _, hint := range hints {
 				using := hint.Using()
 				if using == datastore.DEFAULT {

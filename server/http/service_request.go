@@ -482,6 +482,14 @@ func handleQueryContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, 
 	return err
 }
 
+func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	useFts, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetUseFts(useFts == value.TRUE)
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -567,6 +575,7 @@ const ( // Request argument names
 	AUTO_PREPARE      = "auto_prepare"
 	AUTO_EXECUTE      = "auto_execute"
 	QUERY_CONTEXT     = "query_context"
+	USE_FTS           = "use_fts"
 )
 
 var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error{
@@ -600,6 +609,7 @@ var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, par
 	AUTO_PREPARE:      handleAutoPrepare,
 	AUTO_EXECUTE:      handleAutoExecute,
 	QUERY_CONTEXT:     handleQueryContext,
+	USE_FTS:           handleUseFts,
 }
 
 // take note while handling: initial parameters will not be found in fields or form values!

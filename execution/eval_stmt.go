@@ -137,9 +137,11 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 		positionalArgs = nil
 	}
 
-	// prep := util.Now()
+	var prepContext planner.PrepareContext
+	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
+		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts)
 	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
-		namedArgs, positionalArgs, this.indexApiVersion, this.featureControls, this.queryContext)
+		&prepContext)
 	// output.AddPhaseTime(PLAN, util.Since(prep))
 	if err != nil {
 		return nil, 0, err

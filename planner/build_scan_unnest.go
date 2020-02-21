@@ -390,7 +390,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	}
 
 	n := min
-	if useSkipIndexKeys(index, this.indexApiVersion) {
+	if useSkipIndexKeys(index, this.context.IndexApiVersion()) {
 		n = max
 	}
 
@@ -403,7 +403,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	cardinality := OPT_CARD_NOT_AVAIL
 	selectivity := OPT_SELEC_NOT_AVAIL
 	if this.useCBO {
-		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.requestId, spans, node.Alias())
+		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(), spans, node.Alias())
 		if err != nil {
 			cost = OPT_COST_NOT_AVAIL
 			cardinality = OPT_CARD_NOT_AVAIL
@@ -417,7 +417,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.cardinality = cardinality
 	entry.selectivity = selectivity
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
-	scan := entry.spans.CreateScan(index, node, this.indexApiVersion, false, false, pred.MayOverlapSpans(), false,
+	scan := entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(), false,
 		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality)
 	return scan, unnest, newArrayKey, n, nil
 }

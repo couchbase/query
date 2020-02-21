@@ -113,7 +113,7 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		if filters != nil {
 			filters.ClearPlanFlags()
 		}
-		scan = entry.spans.CreateScan(index, node, this.indexApiVersion, false, false,
+		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection,
 			indexKeyOrders, nil, nil, nil, filters, entry.cost, entry.cardinality)
 
@@ -338,7 +338,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			return
 		}
 
-		skip := useSkipIndexKeys(index, this.indexApiVersion)
+		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		min, max, sum := SargableFor(pred, keys, false, skip)
 
 		n := min
@@ -399,7 +399,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 
 	for s, se := range sargables {
 		if this.useCBO && se.cost <= 0.0 {
-			cost, selec, card, e := indexScanCost(se.index, se.sargKeys, this.requestId, se.spans, alias)
+			cost, selec, card, e := indexScanCost(se.index, se.sargKeys, this.context.RequestId(), se.spans, alias)
 			if e != nil || (cost <= 0.0 || card <= 0.0) {
 				useCBO = false
 			} else {
@@ -555,7 +555,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 
 		se.spans = spans
-		if exactSpans && !useIndex2API(se.index, this.indexApiVersion) {
+		if exactSpans && !useIndex2API(se.index, this.context.IndexApiVersion()) {
 			exactSpans = spans.ExactSpan1(len(se.keys))
 		}
 		se.exactSpans = exactSpans

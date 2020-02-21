@@ -63,7 +63,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys, unnestF
 		//        *  Query Order By not present
 		//        *  Query Order By matches with Index key order
 
-		if this.offset != nil && exactLimitOffset && useIndex2API(entry.index, this.indexApiVersion) &&
+		if this.offset != nil && exactLimitOffset && useIndex2API(entry.index, this.context.IndexApiVersion()) &&
 			entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(),
 				!unnest && indexHasArrayIndexKey(entry.index)) {
 			pushDownProperty |= _PUSHDOWN_OFFSET
@@ -128,10 +128,10 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 func (this *builder) indexAggPushDownProperty(entry *indexEntry, indexKeys expression.Expressions,
 	alias string, unnest bool, pushDownProperty PushDownProperties) (PushDownProperties, bool) {
 
-	if this.group == nil || !useIndex3API(entry.index, this.indexApiVersion) ||
+	if this.group == nil || !useIndex3API(entry.index, this.context.IndexApiVersion()) ||
 		!isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) ||
 		isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) ||
-		!util.IsFeatureEnabled(this.featureControls, util.N1QL_GROUPAGG_PUSHDOWN) {
+		!util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_GROUPAGG_PUSHDOWN) {
 		return pushDownProperty, true
 	}
 
@@ -295,7 +295,7 @@ func (this *builder) canPushDownCount(entry *indexEntry, op expression.Expressio
 	keys expression.Expressions, distinct bool) bool {
 
 	// COUNT( DISTINCT op) is supported in API2
-	if distinct && !useIndex2API(entry.index, this.indexApiVersion) {
+	if distinct && !useIndex2API(entry.index, this.context.IndexApiVersion()) {
 		return false
 	}
 
@@ -327,7 +327,7 @@ func (this *builder) canPushDownMinMax(entry *indexEntry, op expression.Expressi
 	}
 
 	// MAX() pushdown is supported in API2 only
-	if max && !useIndex2API(entry.index, this.indexApiVersion) {
+	if max && !useIndex2API(entry.index, this.context.IndexApiVersion()) {
 		return false
 	}
 
@@ -351,12 +351,12 @@ func (this *builder) canPushDownProjectionDistinct(entry *indexEntry, projection
 	indexKeys expression.Expressions) bool {
 
 	// Only supported in API2
-	if projection == nil || !useIndex2API(entry.index, this.indexApiVersion) || !projection.Distinct() {
+	if projection == nil || !useIndex2API(entry.index, this.context.IndexApiVersion()) || !projection.Distinct() {
 		return false
 	}
 
 	// Disable distinct pushdown for HASH partition. API3
-	if useIndex3API(entry.index, this.indexApiVersion) {
+	if useIndex3API(entry.index, this.context.IndexApiVersion()) {
 		partition, err := entry.index.(datastore.Index3).PartitionKeys()
 		if err != nil || (partition != nil && partition.Strategy != datastore.NO_PARTITION) {
 			return false
@@ -391,7 +391,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	// we will revisit this approach
 
 	if entry.index.Type() == datastore.SYSTEM ||
-		!entry.spans.CanUseIndexOrder(useIndex3API(entry.index, this.indexApiVersion)) {
+		!entry.spans.CanUseIndexOrder(useIndex3API(entry.index, this.context.IndexApiVersion())) {
 		return false, nil
 	}
 

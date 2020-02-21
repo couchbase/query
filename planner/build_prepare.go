@@ -26,7 +26,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	if name == "" {
 		var err errors.Error
 
-		name, err = planCache.GetName(text, this.indexApiVersion, this.featureControls, this.namespace, this.queryContext)
+		name, err = planCache.GetName(text, this.namespace, this.context)
 		if err != nil {
 			return nil, err
 		}
@@ -35,7 +35,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	if !force {
 		var gpErr errors.Error
 
-		prep, gpErr = planCache.GetPlan(name, text, this.indexApiVersion, this.featureControls, this.namespace, this.queryContext)
+		prep, gpErr = planCache.GetPlan(name, text, this.namespace, this.context)
 		if gpErr != nil {
 			return nil, gpErr
 		}
@@ -54,8 +54,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		}
 	}
 
-	prep, err = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false, true,
-		this.namedArgs, this.positionalArgs, this.indexApiVersion, this.featureControls, this.queryContext)
+	prep, err = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false, true, this.context)
 	if err != nil {
 		return nil, err
 	}
@@ -63,10 +62,11 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetName(name)
 	prep.SetText(text)
 	prep.SetType(stmt.Type())
-	prep.SetIndexApiVersion(this.indexApiVersion)
-	prep.SetFeatureControls(this.featureControls)
+	prep.SetIndexApiVersion(this.context.IndexApiVersion())
+	prep.SetFeatureControls(this.context.FeatureControls())
 	prep.SetNamespace(this.namespace)
-	prep.SetQueryContext(this.queryContext)
+	prep.SetQueryContext(this.context.QueryContext())
+	prep.SetUseFts(this.context.UseFts())
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {

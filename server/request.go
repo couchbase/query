@@ -108,6 +108,8 @@ type Request interface {
 	SetAutoExecute(a value.Tristate)
 	SetQueryContext(s string)
 	QueryContext() string
+	UseFts() bool
+	SetUseFts(a bool)
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -256,6 +258,7 @@ type BaseRequest struct {
 	featureControls uint64 // feature bit controls
 	autoPrepare     value.Tristate
 	autoExecute     value.Tristate
+	useFts          bool
 	queryContext    string
 }
 
@@ -734,6 +737,14 @@ func (this *BaseRequest) SetAutoExecute(a value.Tristate) {
 
 func (this *BaseRequest) AutoExecute() value.Tristate {
 	return this.autoExecute
+}
+
+func (this *BaseRequest) SetUseFts(a bool) {
+	this.useFts = a
+}
+
+func (this *BaseRequest) UseFts() bool {
+	return this.useFts
 }
 
 func (this *BaseRequest) SetQueryContext(s string) {

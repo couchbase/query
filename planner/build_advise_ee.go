@@ -44,7 +44,8 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
 
-	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.indexApiVersion), doDNF(stmt.Statement().Expressions()))
+	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos,
+		extractDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()))
 
 	this.setAdvisePhase(_VALIDATE)
 	//There are covering indexes to be validated:

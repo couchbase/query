@@ -19,22 +19,15 @@ import (
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
-	"github.com/couchbase/query/value"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery, stream bool, namedArgs map[string]value.Value,
-	positionalArgs value.Values, indexApiVersion int, featureControls uint64, queryContext string) (
+	namespace string, subquery, stream bool, context *PrepareContext) (
 	plan.Operator, error) {
 
-	// request id in planner is separate from request id in execution context
-	requestId, err := util.UUIDV3()
-	if err != nil {
-		return nil, err
-	}
-	builder := newBuilder(datastore, systemstore, namespace, subquery, namedArgs, positionalArgs,
-		indexApiVersion, featureControls, queryContext, requestId)
-	if distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) && util.IsFeatureEnabled(featureControls, util.N1QL_CBO) {
+	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
+	if distributed.RemoteAccess().Enabled(distributed.NEW_OPTIMIZER) &&
+		util.IsFeatureEnabled(context.FeatureControls(), util.N1QL_CBO) {
 		builder.useCBO = true
 	}
 
@@ -90,13 +83,10 @@ const (
 type builder struct {
 	indexPushDowns
 	collectQueryInfo
+	context           *PrepareContext
 	datastore         datastore.Datastore
 	systemstore       datastore.Datastore
 	namespace         string
-	indexApiVersion   int
-	featureControls   uint64
-	queryContext      string
-	requestId         string
 	subquery          bool
 	correlated        bool
 	maxParallelism    int
@@ -114,8 +104,6 @@ type builder struct {
 	skipDynamic       bool
 	requirePrimaryKey bool
 	orderScan         plan.SecondaryScan
-	namedArgs         map[string]value.Value
-	positionalArgs    value.Values
 	baseKeyspaces     map[string]*base.BaseKeyspace
 	pushableOnclause  expression.Expression // combined ON-clause from all inner joins
 	builderFlags      uint32
@@ -164,20 +152,14 @@ func (this *builder) restoreIndexPushDowns(idxPushDowns *indexPushDowns, paginat
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool,
-	namedArgs map[string]value.Value, positionalArgs value.Values, indexApiVersion int,
-	featureControls uint64, queryContext string, requestId string) *builder {
+	context *PrepareContext) *builder {
 	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
 		namespace:       namespace,
 		subquery:        subquery,
 		delayProjection: false,
-		namedArgs:       namedArgs,
-		positionalArgs:  positionalArgs,
-		indexApiVersion: indexApiVersion,
-		featureControls: featureControls,
-		queryContext:    queryContext,
-		requestId:       requestId,
+		context:         context,
 	}
 
 	return rv

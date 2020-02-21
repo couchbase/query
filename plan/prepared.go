@@ -32,6 +32,7 @@ type Prepared struct {
 	featureControls uint64
 	namespace       string
 	queryContext    string
+	useFts          bool
 
 	indexers      []idxVersion // for reprepare checking
 	keyspaces     []ksVersion
@@ -71,6 +72,9 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	r["featureControls"] = this.featureControls
 	r["namespace"] = this.namespace
 	r["queryContext"] = this.queryContext
+	if this.useFts {
+		r["useFts"] = this.useFts
+	}
 
 	if f != nil {
 		f(r)
@@ -90,6 +94,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 		FeatureControls uint64          `json:"featureControls"`
 		Namespace       string          `json:"namespace"`
 		QueryContext    string          `json:"queryContext"`
+		UseFts          bool            `json:"useFts"`
 	}
 
 	var op_type struct {
@@ -120,6 +125,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	this.featureControls = _unmarshalled.FeatureControls
 	this.namespace = _unmarshalled.Namespace
 	this.queryContext = _unmarshalled.QueryContext
+	this.useFts = _unmarshalled.UseFts
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -183,6 +189,14 @@ func (this *Prepared) QueryContext() string {
 
 func (this *Prepared) SetQueryContext(queryContext string) {
 	this.queryContext = queryContext
+}
+
+func (this *Prepared) UseFts() bool {
+	return this.useFts
+}
+
+func (this *Prepared) SetUseFts(useFts bool) {
+	this.useFts = useFts
 }
 
 func (this *Prepared) EncodedPlan() string {
