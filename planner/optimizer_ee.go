@@ -156,3 +156,12 @@ func getInitialProjectCost(projection *algebra.Projection, cardinality float64) 
 func getIndexCountProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
 	return optimizer.CalcIndexCountProjectionCost(projection, cardinality)
 }
+
+func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, cardinality float64,
+	keyspaces map[string]string, maxParallelism int) (
+	float64, float64, float64, float64, float64, float64) {
+	if maxParallelism <= 0 {
+		maxParallelism = plan.GetMaxParallelism()
+	}
+	return optimizer.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
+}

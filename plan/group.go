@@ -20,14 +20,19 @@ import (
 // Grouping of input data. Parallelizable.
 type InitialGroup struct {
 	readonly
-	keys       expression.Expressions
-	aggregates algebra.Aggregates
+	keys        expression.Expressions
+	aggregates  algebra.Aggregates
+	cost        float64
+	cardinality float64
 }
 
-func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates) *InitialGroup {
+func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
+	cost, cardinality float64) *InitialGroup {
 	return &InitialGroup{
-		keys:       keys,
-		aggregates: aggregates,
+		keys:        keys,
+		aggregates:  aggregates,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -47,6 +52,14 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *InitialGroup) Cost() float64 {
+	return this.cost
+}
+
+func (this *InitialGroup) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -63,6 +76,12 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -71,9 +90,11 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   `json:"#operator"`
-		Keys []string `json:"group_keys"`
-		Aggs []string `json:"aggregates"`
+		_           string   `json:"#operator"`
+		Keys        []string `json:"group_keys"`
+		Aggs        []string `json:"aggregates"`
+		Cost        float64  `json:"cost"`
+		Cardinality float64  `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -99,20 +120,28 @@ func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
 
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }
 
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
 	readonly
-	keys       expression.Expressions
-	aggregates algebra.Aggregates
+	keys        expression.Expressions
+	aggregates  algebra.Aggregates
+	cost        float64
+	cardinality float64
 }
 
-func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates) *IntermediateGroup {
+func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates,
+	cost, cardinality float64) *IntermediateGroup {
 	return &IntermediateGroup{
-		keys:       keys,
-		aggregates: aggregates,
+		keys:        keys,
+		aggregates:  aggregates,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -132,6 +161,14 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *IntermediateGroup) Cost() float64 {
+	return this.cost
+}
+
+func (this *IntermediateGroup) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -148,6 +185,12 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -156,9 +199,11 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 
 func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   `json:"#operator"`
-		Keys []string `json:"group_keys"`
-		Aggs []string `json:"aggregates"`
+		_           string   `json:"#operator"`
+		Keys        []string `json:"group_keys"`
+		Aggs        []string `json:"aggregates"`
+		Cost        float64  `json:"cost"`
+		Cardinality float64  `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -184,20 +229,28 @@ func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
 
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }
 
 // Final grouping and aggregation.
 type FinalGroup struct {
 	readonly
-	keys       expression.Expressions
-	aggregates algebra.Aggregates
+	keys        expression.Expressions
+	aggregates  algebra.Aggregates
+	cost        float64
+	cardinality float64
 }
 
-func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates) *FinalGroup {
+func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
+	cost, cardinality float64) *FinalGroup {
 	return &FinalGroup{
-		keys:       keys,
-		aggregates: aggregates,
+		keys:        keys,
+		aggregates:  aggregates,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -217,6 +270,14 @@ func (this *FinalGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *FinalGroup) Cost() float64 {
+	return this.cost
+}
+
+func (this *FinalGroup) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -233,6 +294,12 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -241,9 +308,11 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   `json:"#operator"`
-		Keys []string `json:"group_keys"`
-		Aggs []string `json:"aggregates"`
+		_           string   `json:"#operator"`
+		Keys        []string `json:"group_keys"`
+		Aggs        []string `json:"aggregates"`
+		Cost        float64  `json:"cost"`
+		Cardinality float64  `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -268,6 +337,9 @@ func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 		}
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	return nil
 }

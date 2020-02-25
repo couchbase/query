@@ -41,7 +41,7 @@ func (this *Parallel) Child() Operator {
 
 func (this *Parallel) MaxParallelism() int {
 	if this.maxParallelism <= 0 {
-		return runtime.NumCPU()
+		return GetMaxParallelism()
 	}
 
 	return this.maxParallelism
@@ -101,4 +101,8 @@ func (this *Parallel) Cost() float64 {
 
 func (this *Parallel) Cardinality() float64 {
 	return this.child.Cardinality()
+}
+
+func GetMaxParallelism() int {
+	return runtime.NumCPU()
 }

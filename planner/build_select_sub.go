@@ -368,12 +368,36 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 	}
 
 	if partial {
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		costInitial := OPT_COST_NOT_AVAIL
+		cardinalityInitial := OPT_CARD_NOT_AVAIL
+		costIntermediate := OPT_COST_NOT_AVAIL
+		cardinalityIntermediate := OPT_CARD_NOT_AVAIL
+		costFinal := OPT_COST_NOT_AVAIL
+		cardinalityFinal := OPT_CARD_NOT_AVAIL
+		last := this.lastOp
+		if this.useCBO && last != nil {
+			cost = last.Cost()
+			cardinality = last.Cardinality()
+			if cost > 0.0 && cardinality > 0.0 {
+				keyspaces := make(map[string]string, len(this.baseKeyspaces))
+				for _, ks := range this.baseKeyspaces {
+					keyspaces[ks.Name()] = ks.Keyspace()
+				}
+				costInitial, cardinalityInitial, costIntermediate, cardinalityIntermediate, costFinal, cardinalityFinal =
+					getGroupCosts(group, aggs, cost, cardinality, keyspaces, this.maxParallelism)
+			}
+		}
 		aggv := sortAggregatesSlice(aggs)
-		this.subChildren = append(this.subChildren, plan.NewInitialGroup(group.By(), aggv))
+		this.subChildren = append(this.subChildren, plan.NewInitialGroup(group.By(), aggv,
+			costInitial, cardinalityInitial))
 		this.children = append(this.children,
 			plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
-		this.children = append(this.children, plan.NewIntermediateGroup(group.By(), aggv))
-		this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
+		this.children = append(this.children, plan.NewIntermediateGroup(group.By(), aggv,
+			costIntermediate, cardinalityIntermediate))
+		this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv,
+			costFinal, cardinalityFinal))
 		this.subChildren = make([]plan.Operator, 0, 8)
 	}
 
