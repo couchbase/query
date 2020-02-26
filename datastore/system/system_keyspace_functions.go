@@ -22,8 +22,7 @@ const _FUNC_PATH = "/query/functions/"
 
 type functionsKeyspace struct {
 	keyspaceBase
-	name string
-	si   datastore.Indexer
+	si datastore.Indexer
 }
 
 func (b *functionsKeyspace) Release() {
@@ -126,8 +125,7 @@ func (b *functionsKeyspace) Delete(deletes []string, context datastore.QueryCont
 
 func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {
 	b := new(functionsKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_FUNCTIONS
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_FUNCTIONS)
 
 	primary := &functionsIndex{name: "#primary", keyspace: b}
 	b.si = newSystemIndexer(b, primary)

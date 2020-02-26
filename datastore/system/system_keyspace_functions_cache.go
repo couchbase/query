@@ -24,7 +24,6 @@ import (
 
 type functionsCacheKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -173,8 +172,7 @@ func (b *functionsCacheKeyspace) Delete(deletes []string, context datastore.Quer
 
 func newFunctionsCacheKeyspace(p *namespace) (*functionsCacheKeyspace, errors.Error) {
 	b := new(functionsCacheKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_FUNCTIONS_CACHE
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_FUNCTIONS_CACHE)
 
 	primary := &functionsCacheIndex{
 		name:     "#primary",

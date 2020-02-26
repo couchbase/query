@@ -90,6 +90,53 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 	return ks, true
 }
 
+func verifyScope(scope datastore.Scope, prepared *Prepared) (datastore.Scope, bool) {
+	var scp datastore.Scope
+	var err errors.Error
+	var meta datastore.KeyspaceMetadata
+
+	bucket := scope.Bucket()
+	namespace := bucket.Namespace()
+	b, _ := namespace.BucketById(bucket.Id())
+	if b != nil {
+		scp, err = b.ScopeById(scope.Id())
+		meta = b.(datastore.KeyspaceMetadata)
+	}
+	if scp == nil || err != nil {
+		return scope, false
+	}
+
+	// amend prepared statement version so that next time we avoid checks
+	if prepared != nil {
+		prepared.addKeyspaceMetadata(meta)
+	}
+
+	// return newly found keyspace just in case it has been refreshed
+	return scp, true
+}
+
+func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket, bool) {
+	var bkt datastore.Bucket
+	var err errors.Error
+	var meta datastore.KeyspaceMetadata
+
+	namespace := bucket.Namespace()
+	bkt, err = namespace.BucketById(bucket.Id())
+	meta = namespace.(datastore.KeyspaceMetadata)
+
+	if bkt == nil || err != nil {
+		return bucket, false
+	}
+
+	// amend prepared statement version so that next time we avoid checks
+	if prepared != nil {
+		prepared.addKeyspaceMetadata(meta)
+	}
+
+	// return newly found bucket just in case it has been refreshed
+	return bkt, true
+}
+
 /*
 Not currently used
 

@@ -96,6 +96,16 @@ func (sc *scope) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) 
 	return nil, errors.NewCbKeyspaceNotFoundError(nil, name)
 }
 
+// FIXME
+func (sc *scope) CreateCollection(name string) errors.Error {
+	return nil
+}
+
+// FIXME
+func (sc *scope) DropCollection(name string) errors.Error {
+	return nil
+}
+
 type collection struct {
 	id        string
 	uid       uint32
@@ -211,6 +221,11 @@ func (coll *collection) Delete(deletes []string, context datastore.QueryContext)
 
 func (coll *collection) Release() {
 	// do nothing
+}
+
+// FIXME
+func (coll *collection) Flush() errors.Error {
+	return nil
 }
 
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {

@@ -120,6 +120,9 @@ type Bucket interface {
 	ScopeNames() ([]string, errors.Error)          // Names of the scopes contained in this bucket
 	ScopeById(name string) (Scope, errors.Error)   // Find a scope in this bucket using the scope's id
 	ScopeByName(name string) (Scope, errors.Error) // Find a scope in this bucket using the scope's name
+
+	CreateScope(name string) errors.Error // Create a new scope
+	DropScope(name string) errors.Error   // Drop a scope
 }
 
 type Scope interface {
@@ -133,6 +136,9 @@ type Scope interface {
 	KeyspaceNames() ([]string, errors.Error)             // Names of the keyspaces contained in this scope
 	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this scope using the keyspace's id
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this scope using the keyspace's name
+
+	CreateCollection(name string) errors.Error // Create a new collection
+	DropCollection(name string) errors.Error   // Drop a collection
 }
 
 // Keyspace is a map of key-value entries (typically key-document, but
@@ -167,6 +173,8 @@ type Keyspace interface {
 	Upsert(upserts []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value upserts into this keyspace
 	Delete(deletes []string, context QueryContext) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
 
+	Flush() errors.Error // For flush collection
+
 	Release() // Release any resources held by this object
 }
 
@@ -195,7 +203,7 @@ func GetSystemstore() Datastore {
 	return _SYSTEMSTORE
 }
 
-func GetKeyspace(parts ...string) (Keyspace, errors.Error) {
+func getNamespace(parts ...string) (Namespace, errors.Error) {
 	var datastore Datastore
 
 	l := len(parts)
@@ -218,11 +226,14 @@ func GetKeyspace(parts ...string) (Keyspace, errors.Error) {
 		namespace = "default"
 	}
 
-	ns, err := datastore.NamespaceByName(namespace)
+	return datastore.NamespaceByName(namespace)
+}
+
+func GetKeyspace(parts ...string) (Keyspace, errors.Error) {
+	ns, err := getNamespace(parts...)
 	if err != nil {
 		return nil, err
 	}
-
 	switch len(parts) {
 	case 2:
 		ks, err := ns.KeyspaceByName(parts[1])
@@ -260,6 +271,36 @@ func GetKeyspace(parts ...string) (Keyspace, errors.Error) {
 		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
 	}
 
+}
+
+func GetScope(parts ...string) (Scope, errors.Error) {
+	ns, err := getNamespace(parts...)
+	if err != nil {
+		return nil, err
+	}
+	switch len(parts) {
+	case 3:
+		b, err := ns.BucketByName(parts[1])
+		if err != nil {
+			return nil, err
+		}
+		return b.ScopeByName(parts[2])
+	default:
+		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
+	}
+}
+
+func GetBucket(parts ...string) (Bucket, errors.Error) {
+	ns, err := getNamespace(parts...)
+	if err != nil {
+		return nil, err
+	}
+	switch len(parts) {
+	case 2:
+		return ns.BucketByName(parts[1])
+	default:
+		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
+	}
 }
 
 // These structures are generic representations of users and their roles.

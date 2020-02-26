@@ -363,10 +363,6 @@ func (b *keyspace) MetadataVersion() uint64 {
 	return 0
 }
 
-func (b *keyspace) Label() string {
-	return b.name
-}
-
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	dirEntries, er := ioutil.ReadDir(b.path())
 	if er != nil {
@@ -556,6 +552,18 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 }
 
 func (b *keyspace) Release() {
+}
+
+func (b *keyspace) CreateScope(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(b.name)
+}
+
+func (b *keyspace) DropScope(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(b.name)
+}
+
+func (b *keyspace) Flush() errors.Error {
+	return errors.NewNoFlushError(b.name)
 }
 
 func (b *keyspace) path() string {

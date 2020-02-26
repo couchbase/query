@@ -38,6 +38,13 @@ func NewPathLong(namespace, bucket, scope, keyspace string) *Path {
 	}
 }
 
+// Create a scope path from a namespace:bucket.scope combination
+func NewPathScope(namespace, bucket, scope string) *Path {
+	return &Path{
+		elements: []string{namespace, bucket, scope},
+	}
+}
+
 // Create a path from three possible combinations:
 // namespace:bucket
 // namespace:keyspace (for backwards compatibility)
@@ -93,7 +100,7 @@ func (path *Path) Namespace() string {
 
 // the next three methods are currently unused but left for completeness
 func (path *Path) Bucket() string {
-	if len(path.elements) == 4 {
+	if len(path.elements) > 1 {
 		return path.elements[1]
 	} else {
 		return ""
@@ -101,7 +108,7 @@ func (path *Path) Bucket() string {
 }
 
 func (path *Path) Scope() string {
-	if len(path.elements) == 4 {
+	if len(path.elements) > 2 {
 		return path.elements[2]
 	} else {
 		return ""

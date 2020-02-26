@@ -33,6 +33,26 @@ func (this *Rewrite) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 	return stmt, stmt.MapExpressions(this)
 }
 
+func (this *Rewrite) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitCreateFunction(stmt *algebra.CreateFunction) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }

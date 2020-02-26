@@ -29,13 +29,20 @@ type Visitor interface {
 	/*
 	   Visitor for DDL statements. N1QL provides index
 	   statements CREATE PRIMARY INDEX, CREATE INDEX, DROP
-	   INDEX and ALTER INDEX as Data definition statements.
+	   INDEX, ALTER INDEX, CREATE SCOPE, DROP SCOPE,
+	   CREATE COLLECTION, DROP COLLECTION and FLUSH COLLECTION
+	   as Data definition statements.
 	*/
 	VisitCreatePrimaryIndex(stmt *CreatePrimaryIndex) (interface{}, error)
 	VisitCreateIndex(stmt *CreateIndex) (interface{}, error)
 	VisitDropIndex(stmt *DropIndex) (interface{}, error)
 	VisitAlterIndex(stmt *AlterIndex) (interface{}, error)
 	VisitBuildIndexes(stmt *BuildIndexes) (interface{}, error)
+	VisitCreateScope(stmt *CreateScope) (interface{}, error)
+	VisitDropScope(stmt *DropScope) (interface{}, error)
+	VisitCreateCollection(stmt *CreateCollection) (interface{}, error)
+	VisitDropCollection(stmt *DropCollection) (interface{}, error)
+	VisitFlushCollection(stmt *FlushCollection) (interface{}, error)
 
 	/*
 	   Visitor for ROLES statements.

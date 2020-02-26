@@ -622,6 +622,31 @@ func (this *builder) VisitBuildIndexes(plan *plan.BuildIndexes) (interface{}, er
 	return checkOp(NewBuildIndexes(plan, this.context), this.context)
 }
 
+// CreateScope
+func (this *builder) VisitCreateScope(plan *plan.CreateScope) (interface{}, error) {
+	return checkOp(NewCreateScope(plan, this.context), this.context)
+}
+
+// DropScope
+func (this *builder) VisitDropScope(plan *plan.DropScope) (interface{}, error) {
+	return checkOp(NewDropScope(plan, this.context), this.context)
+}
+
+// CreateCollection
+func (this *builder) VisitCreateCollection(plan *plan.CreateCollection) (interface{}, error) {
+	return checkOp(NewCreateCollection(plan, this.context), this.context)
+}
+
+// DropCollection
+func (this *builder) VisitDropCollection(plan *plan.DropCollection) (interface{}, error) {
+	return checkOp(NewDropCollection(plan, this.context), this.context)
+}
+
+// FlushCollection
+func (this *builder) VisitFlushCollection(plan *plan.FlushCollection) (interface{}, error) {
+	return checkOp(NewFlushCollection(plan, this.context), this.context)
+}
+
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
 	return checkOp(NewPrepare(plan, this.context, plan.Prepared()), this.context)

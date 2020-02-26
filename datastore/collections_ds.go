@@ -221,6 +221,14 @@ func (cb *CollectionsBucket) ScopeByName(name string) (Scope, errors.Error) {
 	return nil, errors.NewCbScopeNotFoundError(nil, name)
 }
 
+func (cb *CollectionsBucket) CreateScope(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(cb.Name())
+}
+
+func (cb *CollectionsBucket) DropScope(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(cb.Name())
+}
+
 type CollectionsScope struct {
 	id     string
 	bucket *CollectionsBucket
@@ -292,6 +300,14 @@ func (cs *CollectionsScope) KeyspaceByName(name string) (Keyspace, errors.Error)
 		}
 	}
 	return nil, errors.NewCbKeyspaceNotFoundError(nil, name)
+}
+
+func (cs *CollectionsScope) CreateCollection(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(cs.Name())
+}
+
+func (cs *CollectionsScope) DropCollection(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(cs.Name())
 }
 
 type CollectionsKeyspace struct {
@@ -410,6 +426,10 @@ func (ks *CollectionsKeyspace) Delete(deletes []string, context QueryContext) ([
 
 func (ks *CollectionsKeyspace) Release() {
 	// do nothing
+}
+
+func (ks *CollectionsKeyspace) Flush() errors.Error {
+	return errors.NewNoFlushError(ks.Name())
 }
 
 type CollectionsIndexer struct {

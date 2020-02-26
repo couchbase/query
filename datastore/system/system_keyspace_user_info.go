@@ -22,7 +22,6 @@ import (
 
 type userInfoKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -124,8 +123,7 @@ func (b *userInfoKeyspace) Delete(deletes []string, context datastore.QueryConte
 
 func newUserInfoKeyspace(p *namespace) (*userInfoKeyspace, errors.Error) {
 	b := new(userInfoKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_USER_INFO
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_USER_INFO)
 
 	primary := &userInfoIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)

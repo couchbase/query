@@ -22,7 +22,6 @@ import (
 
 type tasksCacheKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -178,8 +177,7 @@ func (b *tasksCacheKeyspace) Delete(deletes []string, context datastore.QueryCon
 
 func newTasksCacheKeyspace(p *namespace) (*tasksCacheKeyspace, errors.Error) {
 	b := new(tasksCacheKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_TASKS_CACHE
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_TASKS_CACHE)
 
 	primary := &tasksCacheIndex{
 		name:     "#primary",

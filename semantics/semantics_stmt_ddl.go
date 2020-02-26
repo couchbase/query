@@ -32,3 +32,23 @@ func (this *SemChecker) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, 
 func (this *SemChecker) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
 }
+
+func (this *SemChecker) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}

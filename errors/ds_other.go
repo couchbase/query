@@ -63,7 +63,17 @@ func NewOtherNoBuckets(dsName string) Error {
 		InternalMsg: "Datastore " + dsName + "contains no buckets that contain scopes.", InternalCaller: CallerN(1)}
 }
 
+func NewScopesNotSupportedError(k string) Error {
+	return &err{level: EXCEPTION, ICode: 16022, IKey: "datastore.other.no_spopes",
+		InternalMsg: "Keyspace does not support scopes: " + k, InternalCaller: CallerN(1)}
+}
+
 func NewStatUpdaterNotFoundError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 16030, IKey: "datastore.other.statUpdater_not_found", ICause: e,
 		InternalMsg: "StatUpdater not found", InternalCaller: CallerN(1)}
+}
+
+func NewNoFlushError(k string) Error {
+	return &err{level: EXCEPTION, ICode: 16040, IKey: "datastore.other.flush_disabled",
+		InternalMsg: "Keyspace does not support flush: " + k, InternalCaller: CallerN(1)}
 }

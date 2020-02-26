@@ -104,3 +104,7 @@ func (this *virtualKeyspace) Delete(deletes []string, context datastore.QueryCon
 }
 
 func (this *virtualKeyspace) Release() {}
+
+func (this *virtualKeyspace) Flush() errors.Error {
+	return errors.NewVirtualKSNotSupportedError(nil, "Flush for virtual keyspace.")
+}

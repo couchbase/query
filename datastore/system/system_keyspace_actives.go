@@ -25,7 +25,6 @@ import (
 
 type activeRequestsKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -263,8 +262,7 @@ func (b *activeRequestsKeyspace) Delete(deletes []string, context datastore.Quer
 
 func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Error) {
 	b := new(activeRequestsKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_ACTIVE
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_ACTIVE)
 
 	primary := &activeRequestsIndex{
 		name:     "#primary",

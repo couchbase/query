@@ -124,6 +124,13 @@ type Visitor interface {
 	VisitAlterIndex(op *AlterIndex) (interface{}, error)
 	VisitBuildIndexes(op *BuildIndexes) (interface{}, error)
 
+	// Collections, Roles DDL
+	VisitCreateScope(op *CreateScope) (interface{}, error)
+	VisitDropScope(op *DropScope) (interface{}, error)
+	VisitCreateCollection(op *CreateCollection) (interface{}, error)
+	VisitDropCollection(op *DropCollection) (interface{}, error)
+	VisitFlushCollection(op *FlushCollection) (interface{}, error)
+
 	// Roles
 	VisitGrantRole(op *GrantRole) (interface{}, error)
 	VisitRevokeRole(op *RevokeRole) (interface{}, error)

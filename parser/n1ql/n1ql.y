@@ -74,6 +74,7 @@ windowFrameExtent *algebra.WindowFrameExtent
 updStatistics    *algebra.UpdateStatistics
 
 keyspaceRef      *algebra.KeyspaceRef
+scopeRef         *algebra.ScopeRef
 
 pair             *algebra.Pair
 pairs            algebra.Pairs
@@ -158,6 +159,7 @@ tokOffset	 int
 %token FILTER
 %token FIRST
 %token FLATTEN
+%token FLUSH
 %token FOLLOWING
 %token FOR
 %token FORCE
@@ -256,6 +258,7 @@ tokOffset	 int
 %token ROWS
 %token SATISFIES
 %token SCHEMA
+%token SCOPE
 %token SELECT
 %token SELF
 %token SEMI
@@ -412,6 +415,8 @@ tokOffset	 int
 %type <statement>        update_statistics
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
+%type <statement>        scope_stmt create_scope drop_scope
+%type <statement>        collection_stmt create_collection drop_collection flush_collection
 %type <statement>        role_stmt grant_role revoke_role
 %type <statement>        function_stmt create_function drop_function execute_function
 
@@ -439,6 +444,7 @@ tokOffset	 int
 
 %type <s>                index_name opt_primary_name opt_index_name
 %type <keyspaceRef>      named_keyspace_ref
+%type <scopeRef>         named_scope_ref
 %type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
@@ -684,6 +690,10 @@ merge
 
 ddl_stmt:
 index_stmt
+|
+scope_stmt
+|
+collection_stmt
 ;
 
 role_stmt:
@@ -700,6 +710,20 @@ drop_index
 alter_index
 |
 build_index
+;
+
+scope_stmt:
+create_scope
+|
+drop_scope
+;
+
+collection_stmt:
+create_collection
+|
+drop_collection
+|
+flush_collection
 ;
 
 function_stmt:
@@ -2230,6 +2254,71 @@ REVOKE role_list ON keyspace_list FROM user_list
 
 /*************************************************
  *
+ * CREATE SCOPE
+ *
+ *************************************************/
+
+create_scope:
+CREATE SCOPE named_scope_ref
+{
+    $$ = algebra.NewCreateScope($3)
+}
+;
+
+/*************************************************
+ *
+ * DROP SCOPE
+ *
+ *************************************************/
+
+drop_scope:
+DROP SCOPE named_scope_ref
+{
+    $$ = algebra.NewDropScope($3)
+}
+;
+
+/*************************************************
+ *
+ * CREATE COLLECTION
+ *
+ *************************************************/
+
+create_collection:
+CREATE COLLECTION named_keyspace_ref
+{
+    $$ = algebra.NewCreateCollection($3)
+}
+;
+
+/*************************************************
+ *
+ * DROP COLLECTION
+ *
+ *************************************************/
+
+drop_collection:
+DROP COLLECTION named_keyspace_ref
+{
+    $$ = algebra.NewDropCollection($3)
+}
+;
+
+/*************************************************
+ *
+ * FLUSH COLLECTION
+ *
+ *************************************************/
+
+flush_collection:
+FLUSH COLLECTION named_keyspace_ref
+{
+    $$ = algebra.NewFlushCollection($3)
+}
+;
+
+/*************************************************
+ *
  * CREATE INDEX
  *
  *************************************************/
@@ -2275,6 +2364,14 @@ namespace_name bucket_name DOT scope_name DOT keyspace_name
 {
     path := algebra.NewPathLong($1, $2, $4, $6)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+;
+
+named_scope_ref:
+namespace_name bucket_name DOT scope_name
+{
+    path := algebra.NewPathScope($1, $2, $4)
+    $$ = algebra.NewScopeRefFromPath(path, "")
 }
 ;
 

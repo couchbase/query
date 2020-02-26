@@ -25,7 +25,6 @@ import (
 
 type preparedsKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -198,8 +197,7 @@ func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryCont
 
 func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 	b := new(preparedsKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_PREPAREDS
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_PREPAREDS)
 
 	primary := &preparedsIndex{
 		name:     "#primary",

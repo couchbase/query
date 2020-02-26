@@ -347,6 +347,7 @@ func (this *scanIdxCol) VisitCollect(op *plan.Collect) (interface{}, error) {
 func (this *scanIdxCol) VisitCreatePrimaryIndex(op *plan.CreatePrimaryIndex) (interface{}, error) {
 	return nil, nil
 }
+
 func (this *scanIdxCol) VisitCreateIndex(op *plan.CreateIndex) (interface{}, error) {
 	return nil, nil
 }
@@ -360,6 +361,27 @@ func (this *scanIdxCol) VisitAlterIndex(op *plan.AlterIndex) (interface{}, error
 }
 
 func (this *scanIdxCol) VisitBuildIndexes(op *plan.BuildIndexes) (interface{}, error) {
+	return nil, nil
+}
+
+// Scope and Collection DDL
+func (this *scanIdxCol) VisitCreateScope(op *plan.CreateScope) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropScope(op *plan.DropScope) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitCreateCollection(op *plan.CreateCollection) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropCollection(op *plan.DropCollection) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitFlushCollection(op *plan.FlushCollection) (interface{}, error) {
 	return nil, nil
 }
 

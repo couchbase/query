@@ -181,6 +181,7 @@
 /[fF][iI][lL][tT][eE][rR]/			 { yylex.logToken(yylex.Text(), "FILTER"); return FILTER }
 /[fF][iI][rR][sS][tT]/				 { yylex.logToken(yylex.Text(), "FIRST"); return FIRST }
 /[fF][lL][aA][tT][tT][eE][nN]/			 { yylex.logToken(yylex.Text(), "FLATTEN"); return FLATTEN }
+/[fF][lL][uU][sS][hH]/				 { yylex.logToken(yylex.Text(), "FLUSH"); return FLUSH }
 /[fF][oO][lL][lL][oO][wW][iI][nN][gG]/		 { yylex.logToken(yylex.Text(), "FOLLOWING"); return FOLLOWING }
 /[fF][oO][rR]/					 { yylex.logToken(yylex.Text(), "FOR"); return FOR }
 /[fF][oO][rR][cC][eE]/				 {
@@ -289,6 +290,7 @@
 /[rR][oO][wW][sS]/				 { yylex.logToken(yylex.Text(), "ROWS"); return ROWS }
 /[sS][aA][tT][iI][sS][fF][iI][eE][sS]/		 { yylex.logToken(yylex.Text(), "SATISFIES"); return SATISFIES }
 /[sS][cC][hH][eE][mM][aA]/			 { yylex.logToken(yylex.Text(), "SCHEMA"); return SCHEMA }
+/[sS][cC][oO][pP][eE]/				 { yylex.logToken(yylex.Text(), "SCOPE"); return SCOPE }
 /[sS][eE][lL][eE][cC][tT]/			 { yylex.logToken(yylex.Text(), "SELECT"); return SELECT }
 /[sS][eE][lL][fF]/				 { yylex.logToken(yylex.Text(), "SELF"); return SELF }
 /[sS][eE][tT]/					 { yylex.logToken(yylex.Text(), "SET"); return SET }

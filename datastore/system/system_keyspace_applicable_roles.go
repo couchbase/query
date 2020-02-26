@@ -23,7 +23,6 @@ import (
 
 type applicableRolesKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -112,8 +111,7 @@ func (b *applicableRolesKeyspace) Delete(deletes []string, context datastore.Que
 
 func newApplicableRolesKeyspace(p *namespace) (*applicableRolesKeyspace, errors.Error) {
 	b := new(applicableRolesKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_APPLICABLE_ROLES
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_APPLICABLE_ROLES)
 
 	primary := &applicableRolesIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)

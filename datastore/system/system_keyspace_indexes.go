@@ -25,7 +25,6 @@ import (
 
 type indexKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -264,8 +263,7 @@ func datastoreObjectToJSONSafe(catobj interface{}) interface{} {
 
 func newIndexesKeyspace(p *namespace) (*indexKeyspace, errors.Error) {
 	b := new(indexKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_INDEXES
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_INDEXES)
 
 	primary := &indexIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)

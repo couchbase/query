@@ -24,7 +24,6 @@ import (
 
 type requestLogKeyspace struct {
 	keyspaceBase
-	name    string
 	indexer datastore.Indexer
 }
 
@@ -241,8 +240,7 @@ func (b *requestLogKeyspace) Delete(deletes []string, context datastore.QueryCon
 
 func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 	b := new(requestLogKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p)
-	b.name = KEYSPACE_NAME_REQUESTS
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_REQUESTS)
 
 	primary := &requestLogIndex{
 		name:     "#primary",

@@ -1774,6 +1774,24 @@ func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
 	return nil, errors.NewCbScopeNotFoundError(nil, name)
 }
 
+func (ks *keyspace) CreateScope(name string) errors.Error {
+	if !_COLLECTIONS_SUPPORTED {
+		return errors.NewScopesNotSupportedError(ks.name)
+	}
+	return nil
+}
+
+func (ks *keyspace) DropScope(name string) errors.Error {
+	if !_COLLECTIONS_SUPPORTED {
+		return errors.NewScopesNotSupportedError(ks.name)
+	}
+	return nil
+}
+
+func (ks *keyspace) Flush() errors.Error {
+	return errors.NewNoFlushError(ks.name)
+}
+
 // primaryIndex performs full keyspace scans.
 type primaryIndex struct {
 	viewIndex

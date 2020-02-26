@@ -22,6 +22,7 @@ import (
 
 type keyspaceBase struct {
 	namespace *namespace
+	name      string
 }
 
 func (this *keyspaceBase) Namespace() datastore.Namespace {
@@ -38,8 +39,25 @@ func (this *keyspaceBase) ScopeId() string {
 	return ""
 }
 
-func setKeyspaceBase(base *keyspaceBase, namespace *namespace) {
+func (this *keyspaceBase) CreateScope(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(this.name)
+}
+
+func (this *keyspaceBase) DropScope(name string) errors.Error {
+	return errors.NewScopesNotSupportedError(this.name)
+}
+
+func (this *keyspaceBase) Flush() errors.Error {
+	return errors.NewNoFlushError(this.name)
+}
+
+func setKeyspaceBase(base *keyspaceBase, namespace *namespace, name string) {
 	base.namespace = namespace
+	base.name = name
+}
+
+func (this *keyspaceBase) setNamespace(namespace *namespace) {
+	this.namespace = namespace
 }
 
 // Index stuff
