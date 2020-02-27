@@ -316,10 +316,10 @@ func getAndTerms(pred *expression.And) expression.Expressions {
 	return res
 }
 
-func getFilterInfos(filters base.Filters) iaplan.FilterInfos {
-	exprs := make(iaplan.FilterInfos, 0, len(filters))
+func getFilterInfos(filters base.Filters) base.Filters {
+	exprs := make(base.Filters, 0, len(filters))
 	for _, f := range filters {
-		exprs = append(exprs, iaplan.NewFilterInfo(f.FltrExpr().Copy(), f.IsUnnest(), f.IsDerived(), f.IsJoin()))
+		exprs = append(exprs, f.Copy())
 	}
 	return exprs
 }
