@@ -36,12 +36,31 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 		// gather keyspace references
 		this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
-		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces, this.from.PrimaryTerm().Alias())
+		primaryTerm := this.from.PrimaryTerm()
+		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces, primaryTerm.Alias())
 		_, err := node.From().Accept(keyspaceFinder)
 		if err != nil {
 			return err
 		}
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
+
+		numUnnests := 0
+		for _, keyspace := range this.baseKeyspaces {
+			if keyspace.IsPrimaryUnnest() {
+				numUnnests++
+			}
+		}
+		if numUnnests > 0 {
+			primKeyspace, _ := this.baseKeyspaces[primaryTerm.Alias()]
+
+			// MB-38105 gather all unnest aliases for the primary keyspace
+			for _, keyspace := range this.baseKeyspaces {
+				if keyspace.IsPrimaryUnnest() {
+					primKeyspace.AddUnnestAlias(keyspace.Name(), keyspace.Keyspace(), numUnnests)
+				}
+			}
+
+		}
 
 		// Process where clause and pushable on clause
 		if this.where != nil {
