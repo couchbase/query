@@ -70,6 +70,12 @@ func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	for _, kspace := range src {
 		dest[kspace.name] = NewBaseKeyspace(kspace.name, kspace.keyspace)
 		dest[kspace.name].ksFlags = kspace.ksFlags
+		if len(kspace.unnests) > 0 {
+			dest[kspace.name].unnests = make(map[string]string, len(kspace.unnests))
+			for a, k := range kspace.unnests {
+				dest[kspace.name].unnests[a] = k
+			}
+		}
 	}
 
 	return dest
