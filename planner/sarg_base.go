@@ -33,8 +33,11 @@ func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
 
 	if pred.Indexable() {
 		// make sure the expression does NOT reference current keyspace
-		keyspaceNames := make(map[string]string, 1)
-		keyspaceNames[this.baseKeyspace.Name()] = ""
+		keyspaceNames := make(map[string]string, 1+len(this.baseKeyspace.GetUnnests()))
+		keyspaceNames[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+		for a, k := range this.baseKeyspace.GetUnnests() {
+			keyspaceNames[a] = k
+		}
 		keyspaces, err := expression.CountKeySpaces(pred, keyspaceNames)
 		if err == nil && len(keyspaces) == 0 {
 			return pred.Copy()
