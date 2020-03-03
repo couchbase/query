@@ -1,0 +1,86 @@
+[
+  {
+    "statements": "advise select meta().cas from shellTest where meta().expiration > 10",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_meta_self_expiration_meta_self_cas ON `shellTest`(meta(self).`expiration`,meta(self).`cas`)",
+                    "keyspace_alias": "shellTest"
+                  }
+                ],
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_meta_self_expiration ON `shellTest`(meta(self).`expiration`)",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 5. less than/between/greater than."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select meta().cas from shellTest where meta().expiration > 10"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where SQRT(meta().expiration) > 10",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_sqrt_meta_self_expiration ON `shellTest`(sqrt((meta(self).`expiration`)))",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 9. function index."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select * from shellTest where SQRT(meta().expiration) > 10;"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where id is not null and length(meta().cas) = 10",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": [
+            {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_id_length_meta_self_cas ON `shellTest`(`id`,length((meta(self).`cas`)))",
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow order of predicate types: 8. not null/not missing/valued, 9. function index."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "query": "select * from shellTest where id is not null and length(meta().cas) = 10;"
+      }
+    ]
+  }
+]
