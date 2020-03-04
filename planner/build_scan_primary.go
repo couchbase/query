@@ -38,7 +38,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 
 	if this.order != nil {
 		keys := expression.Expressions{id}
-		entry := newIndexEntry(primary, keys, keys, nil, 1, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, []bool{true})
+		entry := newIndexEntry(primary, keys, keys, nil, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact)
 		ok := true
 		if ok, indexOrder = this.useIndexOrder(entry, entry.keys); ok {
 			this.maxParallelism = 1
@@ -82,7 +82,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 		return nil, err
 	}
 
-	entry := newIndexEntry(primary, keys, keys, partitionKeys, 1, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true, []bool{true})
+	entry := newIndexEntry(primary, keys, keys, partitionKeys, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true)
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)

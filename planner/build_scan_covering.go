@@ -129,22 +129,6 @@ outer:
 			}
 		}
 
-		// keep indexes with highest continous sargable indexes
-	couter:
-		for c, _ := range covering {
-			for c1, _ := range covering {
-				if c != c1 {
-					if t := bestIndexBySargableKeys(indexes[c], indexes[c1]); t != nil {
-						if indexes[c1] == t {
-							delete(covering, c)
-							continue couter
-						}
-						delete(covering, c1)
-					}
-				}
-			}
-		}
-
 		// Keep indexes with max sumKeys
 		sumKeys := 0
 		for c, _ := range covering {
