@@ -443,7 +443,7 @@ tokOffset	 int
 %type <mergeInsert>      merge_insert opt_merge_insert
 
 %type <s>                index_name opt_primary_name opt_index_name
-%type <keyspaceRef>      named_keyspace_ref
+%type <keyspaceRef>      simple_named_keyspace_ref named_keyspace_ref
 %type <scopeRef>         named_scope_ref
 %type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
@@ -1102,13 +1102,13 @@ keyspace_path opt_as_alias opt_use
 }
 ;
 
-keyspace_path: 
-namespace_term keyspace_name 
+keyspace_path:
+namespace_term keyspace_name
 {
     $$ = algebra.NewPathShort($1, $2)
 }
 |
-namespace_term bucket_name DOT scope_name DOT keyspace_name 
+namespace_term bucket_name DOT scope_name DOT keyspace_name
 {
     $$ = algebra.NewPathLong($1, $2, $4, $6)
 }
@@ -1642,6 +1642,12 @@ keyspace_name opt_as_alias
 keyspace_path opt_as_alias
 {
     $$ = algebra.NewKeyspaceRefFromPath($1, $2)
+}
+|
+bucket_name DOT scope_name DOT keyspace_name  opt_as_alias
+{
+    path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
+    $$ = algebra.NewKeyspaceRefFromPath(path, $6)
 }
 ;
 
@@ -2311,10 +2317,16 @@ DROP COLLECTION named_keyspace_ref
  *************************************************/
 
 flush_collection:
-FLUSH COLLECTION named_keyspace_ref
+flush_or_truncate COLLECTION named_keyspace_ref
 {
     $$ = algebra.NewFlushCollection($3)
 }
+;
+
+flush_or_truncate:
+FLUSH
+|
+TRUNCATE
 ;
 
 /*************************************************
@@ -2355,6 +2367,22 @@ index_name
 ;
 
 named_keyspace_ref:
+simple_named_keyspace_ref
+|
+namespace_name bucket_name
+{
+    path := algebra.NewPathShort($1, $2)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
+bucket_name DOT scope_name DOT keyspace_name
+{
+    path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+;
+
+simple_named_keyspace_ref:
 keyspace_name
 {
     $$ = algebra.NewKeyspaceRefWithContext($1, "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
@@ -2371,6 +2399,12 @@ named_scope_ref:
 namespace_name bucket_name DOT scope_name
 {
     path := algebra.NewPathScope($1, $2, $4)
+    $$ = algebra.NewScopeRefFromPath(path, "")
+}
+|
+bucket_name DOT scope_name
+{
+    path := algebra.NewPathScope(yylex.(*lexer).Namespace(), $1, $3)
     $$ = algebra.NewScopeRefFromPath(path, "")
 }
 ;
@@ -2511,9 +2545,14 @@ DROP PRIMARY INDEX ON named_keyspace_ref opt_index_using
     $$ = algebra.NewDropIndex($5, "#primary", $6)
 }
 |
-DROP INDEX named_keyspace_ref DOT index_name opt_index_using
+DROP INDEX simple_named_keyspace_ref DOT index_name opt_index_using
 {
     $$ = algebra.NewDropIndex($3, $5, $6)
+}
+|
+DROP INDEX index_name ON named_keyspace_ref opt_index_using
+{
+    $$ = algebra.NewDropIndex($5, $3, $6)
 }
 ;
 
@@ -2524,9 +2563,14 @@ DROP INDEX named_keyspace_ref DOT index_name opt_index_using
  *************************************************/
 
 alter_index:
-ALTER INDEX named_keyspace_ref DOT index_name opt_index_using index_with
+ALTER INDEX simple_named_keyspace_ref DOT index_name opt_index_using index_with
 {
     $$ = algebra.NewAlterIndex($3, $5, $6, $7)
+}
+|
+ALTER INDEX index_name ON named_keyspace_ref opt_index_using index_with
+{
+    $$ = algebra.NewAlterIndex($5, $3, $6, $7)
 }
 ;
 
