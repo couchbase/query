@@ -293,7 +293,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 			if n > 0 {
 				//		exact = exact && !qprams
 				if entry == nil || n > en || size < esize {
-					entry = newIndexEntry(index, keys, keys, nil, 1, 1, cond, origCond, nil, exact)
+					entry = newIndexEntry(index, keys, keys, nil, 1, 1, 1, cond, origCond, nil, exact)
 					esize = size
 					en = n
 				}
@@ -456,7 +456,9 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 	pushDownProperty := this.flexIndexPushDownProperty(resp)
 
 	entry = newIndexEntry(index, keys, keys[0:1], nil,
-		len(resp.StaticSargKeys), len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
+		len(resp.StaticSargKeys),
+		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
+		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
 		flexRequest.Cond, flexRequest.OrigCond, nil, isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS))
 	entry.setSearchOrders(resp.SearchOrders)
 	entry.pushDownProperty = pushDownProperty

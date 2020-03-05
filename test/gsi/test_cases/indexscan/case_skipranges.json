@@ -105,5 +105,116 @@
                 "id": 15
             }
         ]
+    },
+    {
+        "testcase": "Smallest index selection. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'is11' END"
+        },
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 = 6",
+        "results": [
+            {
+                "id": "is0006"
+            }
+        ]
+    },
+    {
+        "testcase": "Smallest index selection. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'is12' END"
+        },
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 = 6 AND o.c4 = 60000",
+        "results": [
+            {
+                "id": "is0006"
+            }
+        ]
+    },
+    {
+        "testcase": "Smallest index selection. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'is12' END"
+        },
+        "statements":"SELECT META(o).id, o.c10 FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 = 6 AND o.c4 = 60000",
+        "results": [
+            {
+                "id": "is0006"
+            }
+        ]
+    },
+    {
+        "testcase": "Smallest index selection. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'is13' END"
+        },
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 = 5 AND o.c1 = 50 ORDER BY o.c4",
+        "results": [
+            {
+                "id": "is0005"
+            }
+        ]
+    },
+    {
+        "testcase": "Smallest index selection. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'is14' END"
+        },
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c0 = 5 AND o.c1 = 50 AND o.c2 = 500 ORDER BY o.c4",
+        "results": [
+            {
+                "id": "is0005"
+            }
+        ]
+    },
+    {
+        "testcase": "Smallest index selection. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'is15' END"
+        },
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = \"skipranges\" AND o.c10 = 1 AND o.c14 = 1000",
+        "results": [
+        ]
     }
 ]
