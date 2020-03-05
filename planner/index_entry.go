@@ -32,7 +32,6 @@ type indexEntry struct {
 	keys             expression.Expressions
 	sargKeys         expression.Expressions
 	partitionKeys    expression.Expressions
-	contKeys         int
 	minKeys          int
 	sumKeys          int
 	cond             expression.Expression
@@ -44,18 +43,16 @@ type indexEntry struct {
 	cardinality      float64
 	selectivity      float64
 	searchOrders     []string
-	skeys            []bool
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
-	contKeys, minKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
-	exactSpans bool, skeys []bool) *indexEntry {
+	minKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
+	exactSpans bool) *indexEntry {
 	return &indexEntry{
 		index:            index,
 		keys:             keys,
 		sargKeys:         sargKeys,
 		partitionKeys:    partitionKeys,
-		contKeys:         contKeys,
 		minKeys:          minKeys,
 		sumKeys:          sumKeys,
 		cond:             cond,
@@ -66,7 +63,6 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		cost:             OPT_COST_NOT_AVAIL,
 		cardinality:      OPT_CARD_NOT_AVAIL,
 		selectivity:      OPT_SELEC_NOT_AVAIL,
-		skeys:            skeys,
 	}
 }
 
@@ -76,7 +72,6 @@ func (this *indexEntry) Copy() *indexEntry {
 		keys:             expression.CopyExpressions(this.keys),
 		sargKeys:         expression.CopyExpressions(this.sargKeys),
 		partitionKeys:    expression.CopyExpressions(this.partitionKeys),
-		contKeys:         this.contKeys,
 		minKeys:          this.minKeys,
 		sumKeys:          this.sumKeys,
 		cond:             expression.Copy(this.cond),
@@ -90,9 +85,6 @@ func (this *indexEntry) Copy() *indexEntry {
 	}
 
 	copy(rv.searchOrders, this.searchOrders)
-	if len(this.skeys) > 0 {
-		copy(rv.skeys, this.skeys)
-	}
 
 	return rv
 }

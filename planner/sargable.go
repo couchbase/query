@@ -14,9 +14,8 @@ import (
 )
 
 func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool) (
-	min, max, sum int, skeys []bool) {
+	min, max, sum int) {
 
-	skeys = make([]bool, len(keys))
 	if or, ok := pred.(*expression.Or); ok {
 		return sargableForOr(or, keys, missing, gsi)
 	}
@@ -38,7 +37,6 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 		}
 
 		if r.(bool) {
-			skeys[i] = true
 			max = i + 1
 			sum = max
 		} else {
@@ -61,22 +59,20 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 }
 
 func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool) (
-	min, max, sum int, skeys []bool) {
+	min, max, sum int) {
 
 	for _, c := range or.Operands() {
-		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi)
+		cmin, cmax, csum := SargableFor(c, keys, missing, gsi)
 		if cmin == 0 || cmax == 0 || csum < cmin || csum < cmax {
-			return 0, 0, 0, nil
+			return 0, 0, 0
 		}
 
 		if min == 0 || cmin < min {
 			min = cmin
-			skeys = cskeys
 		}
 
 		if max == 0 || cmax < max {
 			max = cmax
-			skeys = cskeys
 		}
 
 		sum += csum

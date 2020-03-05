@@ -339,14 +339,14 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		skip := useSkipIndexKeys(index, this.indexApiVersion)
-		min, max, sum, skeys := SargableFor(pred, keys, false, skip)
+		min, max, sum := SargableFor(pred, keys, false, skip)
 
 		n := min
 		if skip {
 			n = max
 		}
 
-		entry = newIndexEntry(index, keys, keys[0:n], partitionKeys, min, n, sum, cond, origCond, nil, false, skeys)
+		entry = newIndexEntry(index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false)
 		all[index] = entry
 
 		if min > 0 {
@@ -418,7 +418,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			te_pushdown := te.PushDownProperty()
 			if narrowerOrEquivalent(se, te, shortest, pred) {
 				if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
-					(te_pushdown > se_pushdown || te.contKeys > se.contKeys) {
+					te_pushdown > se_pushdown {
 					delete(sargables, s)
 					break
 				}
@@ -438,13 +438,6 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 Is se narrower or equivalent to te.
 */
 func narrowerOrEquivalent(se, te *indexEntry, shortest bool, pred expression.Expression) bool {
-	var be *indexEntry
-	if shortest {
-		if be = bestIndexBySargableKeys(te, se); be == se {
-			return true
-		}
-	}
-
 	if len(te.sargKeys) > len(se.sargKeys) {
 		return false
 	}
@@ -478,6 +471,10 @@ outer:
 			}
 		}
 
+		if se.cond == nil {
+			return false
+		}
+
 		/* Count number of matches
 		 * Indexkey is part of other index condition as equality predicate
 		 * If trying to determine shortest index(For: IntersectScan)
@@ -486,24 +483,20 @@ outer:
 		 */
 		_, condEq := fc[tk.String()]
 		_, predEq := predFc[tk.String()]
-		if condEq || (shortest && !predEq && se.cond != nil && se.cond.DependsOn(tk)) {
+		if condEq || (shortest && !predEq && se.cond.DependsOn(tk)) {
 			nfcmatch++
 		} else {
 			return false
 		}
 	}
 
-	if len(te.sargKeys) > 0 && (len(te.sargKeys) == nfcmatch || (shortest && len(te.sargKeys) == (nfcmatch+nkmatch))) {
+	if len(te.sargKeys) == nfcmatch || (shortest && len(te.sargKeys) == (nfcmatch+nkmatch)) {
 		return true
 	}
 
-	// shortest false keep both indexes so that covering can be done on best index
-	if !shortest {
-		return false
-	}
-
-	return se.sumKeys > te.sumKeys || len(se.keys) <= len(te.keys) ||
-		(se.cond != nil && te.cond == nil && be == nil)
+	return se.sumKeys > te.sumKeys ||
+		(shortest && ((len(se.keys) <= len(te.keys)) ||
+			(se.cond != nil && te.cond == nil && len(se.sargKeys) == len(te.sargKeys))))
 }
 
 func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool,
@@ -615,31 +608,4 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 	}
 
 	return sargables
-}
-
-func bestIndexBySargableKeys(s, t *indexEntry) *indexEntry {
-	i := 0
-	for ; i < len(s.skeys) && i < len(t.skeys); i++ {
-		if s.skeys[i] != t.skeys[i] {
-			if s.skeys[i] && !t.skeys[i] {
-				return s
-			} else if !s.skeys[i] && t.skeys[i] {
-				return t
-			}
-		}
-	}
-
-	for ; i < len(s.skeys); i++ {
-		if s.skeys[i] {
-			return s
-		}
-	}
-
-	for ; i < len(t.skeys); i++ {
-		if t.skeys[i] {
-			return t
-		}
-	}
-
-	return nil
 }
