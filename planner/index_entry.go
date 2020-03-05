@@ -33,6 +33,7 @@ type indexEntry struct {
 	sargKeys         expression.Expressions
 	partitionKeys    expression.Expressions
 	minKeys          int
+	maxKeys          int
 	sumKeys          int
 	cond             expression.Expression
 	origCond         expression.Expression
@@ -45,7 +46,7 @@ type indexEntry struct {
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
-	minKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
+	minKeys, maxKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
 	exactSpans bool) *indexEntry {
 	return &indexEntry{
 		index:            index,
@@ -53,6 +54,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		sargKeys:         sargKeys,
 		partitionKeys:    partitionKeys,
 		minKeys:          minKeys,
+		maxKeys:          maxKeys,
 		sumKeys:          sumKeys,
 		cond:             cond,
 		origCond:         origCond,
@@ -72,6 +74,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		sargKeys:         expression.CopyExpressions(this.sargKeys),
 		partitionKeys:    expression.CopyExpressions(this.partitionKeys),
 		minKeys:          this.minKeys,
+		maxKeys:          this.maxKeys,
 		sumKeys:          this.sumKeys,
 		cond:             expression.Copy(this.cond),
 		origCond:         expression.Copy(this.origCond),

@@ -285,7 +285,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			n = max
 		}
 
-		entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, n, sum, cond, origCond, nil, false)
+		entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, min, n, sum, cond, origCond, nil, false)
 		all[index] = entry
 
 		if min > 0 {
@@ -357,7 +357,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			te_pushdown := te.PushDownProperty()
 			if narrowerOrEquivalent(se, te, shortest, pred) {
 				if shortest && narrowerOrEquivalent(te, se, shortest, pred) &&
-					te_pushdown > se_pushdown {
+					(te_pushdown > se_pushdown ||
+						(te_pushdown == se_pushdown && len(se.keys) > len(te.keys))) {
 					delete(sargables, s)
 					break
 				}
@@ -377,7 +378,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 Is se narrower or equivalent to te.
 */
 func narrowerOrEquivalent(se, te *indexEntry, shortest bool, pred expression.Expression) bool {
-	if len(te.sargKeys) > len(se.sargKeys) {
+	if te.minKeys > se.minKeys {
 		return false
 	}
 
@@ -402,8 +403,10 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, pred expression.Exp
 	nfcmatch := 0
 	nkmatch := 0
 outer:
-	for _, tk := range te.sargKeys {
-		for _, sk := range se.sargKeys {
+	for ti := 0; ti < te.minKeys; ti++ {
+		tk := te.sargKeys[ti]
+		for si := 0; si < se.minKeys; si++ {
+			sk := se.sargKeys[si]
 			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
 				nkmatch++
 				continue outer
@@ -429,13 +432,13 @@ outer:
 		}
 	}
 
-	if len(te.sargKeys) == nfcmatch || (shortest && len(te.sargKeys) == (nfcmatch+nkmatch)) {
+	if te.minKeys == nfcmatch || (shortest && te.minKeys == (nfcmatch+nkmatch)) {
 		return true
 	}
 
 	return se.sumKeys > te.sumKeys ||
 		(shortest && ((len(se.keys) <= len(te.keys)) ||
-			(se.cond != nil && te.cond == nil && len(se.sargKeys) == len(te.sargKeys))))
+			(se.cond != nil && te.cond == nil && se.minKeys == te.minKeys)))
 }
 
 func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool, sargables map[datastore.Index]*indexEntry) error {
@@ -473,9 +476,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 
 		if useFilters {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys, se.minKeys, underHash, this.useCBO, baseKeyspace)
+			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys, se.maxKeys, underHash, this.useCBO, baseKeyspace)
 		} else {
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys, se.minKeys, orIsJoin, this.useCBO, baseKeyspace)
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys, se.maxKeys, orIsJoin, this.useCBO, baseKeyspace)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},

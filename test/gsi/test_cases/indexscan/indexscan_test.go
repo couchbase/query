@@ -113,9 +113,23 @@ func TestIndexScan(t *testing.T) {
 	// Create skip ranges
 	runStmt(qc, "CREATE INDEX is01 ON orders (c0,c1,c2,DISTINCT a1,c3,c4) WHERE test_id = \"skipranges\"")
 	runStmt(qc, "CREATE INDEX is02 ON orders (ALL ARRAY v.id FOR v IN a3 END, c0,c1,c2,c3,c4) WHERE test_id = \"skipranges\"")
+	runStmt(qc, "CREATE INDEX is11 ON orders (c0) WHERE test_id = \"skipranges\"")
+	runStmt(qc, "CREATE INDEX is12 ON orders (c0,c4) WHERE test_id = \"skipranges\"")
+	runStmt(qc, "CREATE INDEX is13 ON orders (c0,c1,c4) WHERE test_id = \"skipranges\"")
+	runStmt(qc, "CREATE INDEX is14 ON orders (c0,c1,c2,c4) WHERE test_id = \"skipranges\"")
+	runStmt(qc, "CREATE INDEX is15 ON orders (c10,c11) WHERE test_id = \"skipranges\" AND c14 = 1000")
+	runStmt(qc, "CREATE INDEX is16 ON orders (c10,c11,c14) WHERE test_id = \"skipranges\"")
+
 	runMatch("case_skipranges.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX orders.is01")
 	runStmt(qc, "DROP INDEX orders.is02")
+	runStmt(qc, "DROP INDEX orders.is11")
+	runStmt(qc, "DROP INDEX orders.is12")
+	runStmt(qc, "DROP INDEX orders.is13")
+	runStmt(qc, "DROP INDEX orders.is14")
+	runStmt(qc, "DROP INDEX orders.is15")
+	runStmt(qc, "DROP INDEX orders.is16")
 
 	// order nulls ASC index
 	runStmt(qc, "CREATE INDEX noix1 ON orders (c1, c2, c3, c4) WHERE test_id = \"ordernulls\"")

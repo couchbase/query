@@ -38,7 +38,6 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 
 		if r.(bool) {
 			max = i + 1
-			sum = max
 		} else {
 			if !gsi {
 				return
@@ -48,6 +47,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 
 		if !skiped {
 			min = max
+			sum = min
 		}
 
 		if gsi {
