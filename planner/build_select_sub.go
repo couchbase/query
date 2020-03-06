@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -795,7 +796,7 @@ func (this *builder) constrainAggregate(cond expression.Expression, aggs algebra
 
 	if cond == nil {
 		return constraint
-	} else if SubsetOf(cond, constraint) {
+	} else if base.SubsetOf(cond, constraint) {
 		return cond
 	} else {
 		this.aggConstraint = constraint

@@ -258,7 +258,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 	for _, s := range searchFns {
 		siname := s.IndexName()
 		keys := expression.Expressions{s.Copy()}
-		if !SubsetOf(pred, keys[0]) {
+		if !base.SubsetOf(pred, keys[0]) {
 			continue
 		}
 
@@ -334,7 +334,7 @@ func (this *builder) sargableSearchCondition(index datastore.Index, subset expre
 		return false, nil, nil, err
 	}
 
-	return SubsetOf(subset, cond), cond, origCond, nil
+	return base.SubsetOf(subset, cond), cond, origCond, nil
 }
 
 // helper function

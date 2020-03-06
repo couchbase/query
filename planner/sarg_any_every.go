@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
@@ -21,7 +22,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		spans = _FULL_SPANS
 	}
 
-	if SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 
@@ -62,7 +63,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		return nil, err
 	}
 
-	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
+	if array.When() != nil && !base.SubsetOf(satisfies, array.When()) {
 		return sp, nil
 	}
 

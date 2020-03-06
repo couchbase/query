@@ -260,7 +260,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 		}
 
 		if entry.cond != nil &&
-			!SubsetOf(pred, entry.cond) {
+			!base.SubsetOf(pred, entry.cond) {
 			continue
 		}
 
@@ -320,7 +320,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 			}
 		}
 
-		if when != nil && !SubsetOf(pred, when) {
+		if when != nil && !base.SubsetOf(pred, when) {
 			return nil, nil, nil, 0, nil
 		}
 
@@ -462,14 +462,14 @@ func narrowerOrEquivalentUnnest(se, te *indexEntry, sop, top *opEntry) bool {
 		return false
 	}
 
-	if te.cond != nil && (se.cond == nil || !SubsetOf(se.cond, te.cond)) {
+	if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
 		return false
 	}
 
 outer:
 	for _, tk := range te.keys {
 		for _, sk := range se.keys {
-			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
+			if base.SubsetOf(sk, tk) || sk.DependsOn(tk) {
 				continue outer
 			}
 		}

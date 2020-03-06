@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool) (
@@ -289,7 +290,7 @@ func (this *sargable) visitDefault(pred expression.Expression) (bool, error) {
 }
 
 func (this *sargable) defaultSargable(pred expression.Expression) bool {
-	return SubsetOf(pred, this.key) ||
+	return base.SubsetOf(pred, this.key) ||
 		((pred.PropagatesMissing() || pred.PropagatesNull()) &&
 			pred.DependsOn(this.key))
 }

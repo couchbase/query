@@ -7,20 +7,45 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package plannerbase
 
 import (
 	"github.com/couchbase/query/expression"
 )
 
-func LessThan(expr1, expr2 expression.Expression) bool {
-	value1 := expr1.Value()
+func (this *subset) VisitAnd(expr *expression.And) (interface{}, error) {
+	expr2 := this.expr2
 	value2 := expr2.Value()
+	if value2 != nil {
+		return value2.Truth(), nil
+	}
 
-	return value1 != nil && value2 != nil &&
-		value1.Collate(value2) < 0
-}
+	if expr.EquivalentTo(expr2) {
+		return true, nil
+	}
 
-func LessThanOrEquals(expr1, expr2 expression.Expression) bool {
-	return LessThan(expr1, expr2) || expr1.EquivalentTo(expr2)
+	for _, child := range expr.Operands() {
+		if SubsetOf(child, expr2) {
+			return true, nil
+		}
+	}
+
+	switch expr2 := expr2.(type) {
+	case *expression.And:
+		for _, child2 := range expr2.Operands() {
+			if !SubsetOf(expr, child2) {
+				return false, nil
+			}
+		}
+
+		return true, nil
+	case *expression.Or:
+		for _, child2 := range expr2.Operands() {
+			if SubsetOf(expr, child2) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

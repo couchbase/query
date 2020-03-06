@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
@@ -42,7 +43,7 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 		return nil, err
 	}
 
-	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
+	if array.When() != nil && !base.SubsetOf(satisfies, array.When()) {
 		return false, nil
 	}
 

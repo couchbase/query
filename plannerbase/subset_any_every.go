@@ -7,35 +7,17 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package plannerbase
 
 import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
+func (this *subset) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
 	switch expr2 := this.expr2.(type) {
-	case *expression.Any:
-		return this.visitCollectionPredicate(expr, expr2)
 	case *expression.AnyEvery:
 		return this.visitCollectionPredicate(expr, expr2)
 	default:
 		return this.visitDefault(expr)
 	}
-}
-
-func (this *subset) visitCollectionPredicate(expr, expr2 expression.CollectionPredicate) (
-	interface{}, error) {
-
-	if !expr.Bindings().SubsetOf(expr2.Bindings()) {
-		return false, nil
-	}
-
-	renamer := expression.NewRenamer(expr.Bindings(), expr2.Bindings())
-	satisfies, err := renamer.Map(expr.Satisfies().Copy())
-	if err != nil {
-		return nil, err
-	}
-
-	return SubsetOf(satisfies, expr2.Satisfies()), nil
 }

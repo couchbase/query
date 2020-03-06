@@ -23,7 +23,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		spans = _FULL_SPANS
 	}
 
-	if SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 
@@ -64,7 +64,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return nil, err
 	}
 
-	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
+	if array.When() != nil && !base.SubsetOf(satisfies, array.When()) {
 		return sp, nil
 	}
 

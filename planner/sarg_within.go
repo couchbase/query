@@ -13,13 +13,14 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
-	if SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 

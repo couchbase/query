@@ -11,10 +11,11 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sargable) VisitWithin(pred *expression.Within) (interface{}, error) {
-	return SubsetOf(pred.First(), this.key) ||
+	return base.SubsetOf(pred.First(), this.key) ||
 			this.defaultSargable(pred),
 		nil
 }

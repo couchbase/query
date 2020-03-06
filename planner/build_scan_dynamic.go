@@ -47,7 +47,7 @@ func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm,
 
 outer:
 	for i, e := range arrays {
-		if e.cond != nil && !SubsetOf(pred, e.cond) {
+		if e.cond != nil && !base.SubsetOf(pred, e.cond) {
 			continue
 		}
 

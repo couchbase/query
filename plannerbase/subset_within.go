@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2016 Couchbase, Withinc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -7,28 +7,12 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package plannerbase
 
 import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitOr(expr *expression.Or) (interface{}, error) {
-	expr2 := this.expr2
-	value2 := expr2.Value()
-	if value2 != nil {
-		return value2.Truth(), nil
-	}
-
-	if expr.EquivalentTo(expr2) {
-		return true, nil
-	}
-
-	for _, child := range expr.Operands() {
-		if !SubsetOf(child, expr2) {
-			return false, nil
-		}
-	}
-
-	return true, nil
+func (this *subset) VisitWithin(expr *expression.Within) (interface{}, error) {
+	return this.visitDefault(expr)
 }

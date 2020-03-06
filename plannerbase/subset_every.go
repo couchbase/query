@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2016 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -7,37 +7,20 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package plannerbase
 
 import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitLT(expr *expression.LT) (interface{}, error) {
+func (this *subset) VisitEvery(expr *expression.Every) (interface{}, error) {
 	switch expr2 := this.expr2.(type) {
-
-	case *expression.LE:
-		if expr.First().EquivalentTo(expr2.First()) {
-			return LessThanOrEquals(expr.Second(), expr2.Second()), nil
-		}
-
-		if expr.Second().EquivalentTo(expr2.Second()) {
-			return LessThanOrEquals(expr2.First(), expr.First()), nil
-		}
-
-		return false, nil
-
-	case *expression.LT:
-		if expr.First().EquivalentTo(expr2.First()) {
-			return LessThanOrEquals(expr.Second(), expr2.Second()), nil
-		}
-
-		if expr.Second().EquivalentTo(expr2.Second()) {
-			return LessThanOrEquals(expr2.First(), expr.First()), nil
-		}
-
-		return false, nil
-
+	case *expression.Every:
+		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
+			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
+	case *expression.AnyEvery:
+		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
+			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
 	default:
 		return this.visitDefault(expr)
 	}

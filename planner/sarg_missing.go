@@ -11,10 +11,11 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
-	if SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 
@@ -26,7 +27,7 @@ func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{},
 }
 
 func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
-	if SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 

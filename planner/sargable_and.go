@@ -11,10 +11,11 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sargable) VisitAnd(pred *expression.And) (interface{}, error) {
-	if SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key) {
 		return true, nil
 	}
 

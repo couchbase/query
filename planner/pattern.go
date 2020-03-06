@@ -248,7 +248,7 @@ outer:
 				return
 			}
 
-			if !SubsetOf(pred, cond) {
+			if !base.SubsetOf(pred, cond) {
 				continue
 			}
 		}

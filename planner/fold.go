@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 // Fold redundant AND and OR terms in the predicate
@@ -58,11 +59,11 @@ outer:
 				continue
 			}
 
-			if SubsetOf(rhs, lhs) {
+			if base.SubsetOf(rhs, lhs) {
 				operands[i] = nil
 				found = true
 				continue outer
-			} else if SubsetOf(lhs, rhs) {
+			} else if base.SubsetOf(lhs, rhs) {
 				operands[j] = nil
 				found = true
 			}
@@ -103,11 +104,11 @@ outer:
 				continue
 			}
 
-			if SubsetOf(lhs, rhs) {
+			if base.SubsetOf(lhs, rhs) {
 				operands[i] = nil
 				found = true
 				continue outer
-			} else if SubsetOf(rhs, lhs) {
+			} else if base.SubsetOf(rhs, lhs) {
 				operands[j] = nil
 				found = true
 			}

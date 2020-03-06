@@ -327,7 +327,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 				return
 			}
 
-			if !SubsetOf(subset, cond) {
+			if !base.SubsetOf(subset, cond) {
 				continue
 			}
 		}
@@ -443,7 +443,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, pred expression.Exp
 		return false
 	}
 
-	if te.cond != nil && (se.cond == nil || !SubsetOf(se.cond, te.cond)) {
+	if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
 		return false
 	}
 
@@ -468,7 +468,7 @@ outer:
 		tk := te.sargKeys[ti]
 		for si := 0; si < se.minKeys; si++ {
 			sk := se.sargKeys[si]
-			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
+			if base.SubsetOf(sk, tk) || sk.DependsOn(tk) {
 				nkmatch++
 				continue outer
 			}
