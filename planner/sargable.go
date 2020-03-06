@@ -63,15 +63,15 @@ func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi 
 
 	for _, c := range or.Operands() {
 		cmin, cmax, csum := SargableFor(c, keys, missing, gsi)
-		if cmin == 0 || cmax == 0 || csum < cmin || csum < cmax {
+		if cmin == 0 || cmax == 0 || csum < cmin {
 			return 0, 0, 0
 		}
 
-		if min == 0 || cmin < min {
+		if min == 0 || min > cmin {
 			min = cmin
 		}
 
-		if max == 0 || cmax < max {
+		if max == 0 || max < cmax {
 			max = cmax
 		}
 
