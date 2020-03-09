@@ -351,7 +351,7 @@ func redirectTo(prevFile, prevreset, prevfgRed string) (string, *os.File) {
 				s_err := command.HandleError(errors.FILE_OPEN, err.Error())
 				command.PrintError(s_err)
 				return prevFile, nil
-			} else if command.FILE_APPEND_MODE {
+			} else if command.FILE_APPEND_MODE && !quietFlag{
 				io.WriteString(outputFile, "-- <"+time.Now().Format("2006-01-02T15:04:05.999Z07:00")+"> : opened in append mode\n")
 			}
 		}
