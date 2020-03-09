@@ -92,6 +92,10 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 	return cost, sel, (sel * nrows), nil
 }
 
+func getKeyScanCost(keys expression.Expression) (float64, float64) {
+	return optimizer.CalcKeyScanCost(keys)
+}
+
 func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
 	return optimizer.CalcFetchCost(keyspace, cardinality)
 }

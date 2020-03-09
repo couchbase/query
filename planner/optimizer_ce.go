@@ -51,6 +51,10 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 
+func getKeyScanCost(keys expression.Expression) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
 	return OPT_COST_NOT_AVAIL
 }

@@ -35,7 +35,12 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 			this.maxParallelism = 1
 		}
 
-		return plan.NewKeyScan(keys), nil
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getKeyScanCost(keys)
+		}
+		return plan.NewKeyScan(keys, cost, cardinality), nil
 	}
 
 	secondary, primary, err := this.buildScan(keyspace, node)
