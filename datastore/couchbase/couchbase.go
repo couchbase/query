@@ -654,18 +654,18 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 				client, err = cb.Connect(url)
 			}
 			if err != nil {
-				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
+				return nil, errors.NewCbNamespaceNotFoundError(err, name)
 			}
 			// check if the default pool exists
 			cbpool, err = client.GetPool(name)
 			if err != nil {
-				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
+				return nil, errors.NewCbNamespaceNotFoundError(err, name)
 			}
 			s.client = client
 
 			err = s.SetClientConnectionSecurityConfig()
 			if err != nil {
-				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
+				return nil, errors.NewCbNamespaceNotFoundError(err, name)
 			}
 		} else {
 			logging.Errorf(" Error while retrieving pool %v", err)
@@ -680,6 +680,22 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 	}
 
 	return &rv, nil
+}
+
+// full name representation of a bucket / scope / keyspace for error message purposes
+func fullName(elems ...string) string {
+	switch len(elems) {
+	case 1:
+		return elems[0]
+	case 2:
+		return elems[0] + ":" + elems[1]
+	default:
+		res := elems[0] + ":" + elems[1]
+		for i := 2; i < len(elems); i++ {
+			res = res + "." + elems[i]
+		}
+		return res
+	}
 }
 
 // a namespace represents a couchbase pool
@@ -744,13 +760,44 @@ func (p *namespace) VirtualKeyspaceByName(name string) (datastore.Keyspace, erro
 
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	var err errors.Error
+	var keyspace *keyspace
 
 	// make sure that no one is deleting the keyspace as we check
 	p.lock.RLock()
-	entry, ok := p.keyspaceCache[name]
+	entry := p.keyspaceCache[name]
+	if entry != nil {
+		keyspace = entry.cbKeyspace
+	}
 	p.lock.RUnlock()
-	if ok && entry.cbKeyspace != nil && entry.cbKeyspace.flags != 0 {
-		return entry.cbKeyspace, nil
+	if keyspace != nil {
+
+		// shortcut if good, or only manifest needed
+		switch keyspace.flags {
+		case _NEEDS_MANIFEST:
+			mani, err := keyspace.cbbucket.GetCollectionsManifest()
+			if err == nil {
+				scopes, defaultCollection := buildScopesAndCollections(mani, keyspace)
+
+				// see later: another case for shared optimistic locks.
+				// only the first one in gets to change scopes, every one else's work is wasted
+				// if any other flag has been set in the interim, we go the reload route
+				keyspace.Lock()
+				if keyspace.flags == _NEEDS_MANIFEST {
+					keyspace.collectionsManifestUid = mani.Uid
+					keyspace.scopes = scopes
+					keyspace.defaultCollection = defaultCollection
+					keyspace.flags = 0
+				}
+				keyspace.Unlock()
+				if keyspace.flags == 0 {
+					return keyspace, nil
+				}
+			} else {
+				logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
+			}
+		case 0:
+			return keyspace, nil
+		}
 	}
 
 	// MB-19601 we haven't found the keyspace, so we have to load it,
@@ -782,8 +829,8 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 
 	// 1) create the entry if necessary, record time of loading attempt
 	p.lock.Lock()
-	entry, ok = p.keyspaceCache[name]
-	if !ok {
+	entry = p.keyspaceCache[name]
+	if entry == nil {
 
 		// adding a new keyspace does not force the namespace version to change
 		// all previously prepared statements are still good
@@ -1013,7 +1060,9 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 		}
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
+			ks.cbKeyspace.Lock()
 			ks.cbKeyspace.flags |= _DELETED
+			ks.cbKeyspace.Unlock()
 			ks.cbKeyspace.cbbucket.Close()
 			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
 			delete(p.keyspaceCache, name)
@@ -1057,11 +1106,13 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 }
 
 const (
-	_DELETED       = 1 << iota // this bucket no longer exists
-	_NEEDS_REFRESH             // received error that indicates the bucket needs refreshing
+	_DELETED        = 1 << iota // this bucket no longer exists
+	_NEEDS_REFRESH              // received error that indicates the bucket needs refreshing
+	_NEEDS_MANIFEST             // scopes or collections changed
 )
 
 type keyspace struct {
+	sync.Mutex  // to change flags and manifests in flight
 	namespace   *namespace
 	name        string
 	fullName    string
@@ -1097,7 +1148,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		cbbucket, err = cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
-			return nil, errors.NewCbKeyspaceNotFoundError(err, "keyspace "+name)
+			return nil, errors.NewCbKeyspaceNotFoundError(err, fullName(p.name, name))
 		}
 	}
 
@@ -1107,7 +1158,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 
 	connSecConfig := p.store.connSecConfig
 	if connSecConfig == nil {
-		return nil, errors.NewCbSecurityConfigNotProvided(name)
+		return nil, errors.NewCbSecurityConfigNotProvided(fullName(p.name, name))
 	}
 
 	rv := &keyspace{
@@ -1174,7 +1225,9 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
 		dropDictCacheEntry(name)
+		ks.cbKeyspace.Lock()
 		ks.cbKeyspace.flags |= _DELETED
+		ks.cbKeyspace.Unlock()
 		delete(p.keyspaceCache, name)
 
 		// keyspace has been deleted, force full auto reprepare check
@@ -1203,8 +1256,9 @@ func (b *keyspace) Name() string {
 // keyspace (as a bucket) implements KeyspaceMetadata
 func (b *keyspace) MetadataVersion() uint64 {
 
-	// this bucket doesn't exist anymore, fail any prepared verify
-	if b.flags&_DELETED != 0 {
+	// this bucket doesn't exist anymore or it needs a new manifest:
+	// fail any quick prepared verify, and force a full one instead
+	if b.flags&(_DELETED|_NEEDS_MANIFEST) != 0 {
 		return math.MaxUint64
 	}
 	return b.collectionsManifestUid
@@ -1222,7 +1276,7 @@ func (b *keyspace) count(context datastore.QueryContext, clientContext ...*memca
 	count, err := b.cbbucket.GetCount(true, clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
-		return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+err.Error())
+		return 0, errors.NewCbKeyspaceCountError(err, b.fullName)
 	}
 	return count, nil
 }
@@ -1235,7 +1289,7 @@ func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcac
 	size, err := b.cbbucket.GetSize(true, clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
-		return 0, errors.NewCbKeyspaceSizeError(nil, "keyspace "+b.Name()+"Error "+err.Error())
+		return 0, errors.NewCbKeyspaceSizeError(err, b.fullName)
 	}
 	return size, nil
 }
@@ -1513,8 +1567,16 @@ func opToString(op int) string {
 
 func (k *keyspace) checkRefresh(err error) {
 	if cb.IsRefreshRequired(err) {
+		k.Lock()
 		k.flags |= _NEEDS_REFRESH
+		k.Unlock()
 	}
+}
+
+func (k *keyspace) setNeedsManifest() {
+	k.Lock()
+	k.flags |= _NEEDS_MANIFEST
+	k.Unlock()
 }
 
 func isNotFoundError(err error) bool {
@@ -1679,7 +1741,9 @@ func (b *keyspace) delete(deletes []string, context datastore.QueryContext, clie
 }
 
 func (b *keyspace) Release() {
+	b.Lock()
 	b.flags |= _DELETED
+	b.Unlock()
 	b.cbbucket.Close()
 }
 
@@ -1730,7 +1794,7 @@ func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
 		if ks.defaultCollection != nil {
 			return ks.defaultCollection, nil
 		} else {
-			return nil, errors.NewCbBucketNoDefaultCollectionError(ks.name)
+			return nil, errors.NewCbBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
 		}
 	} else {
 		return ks, nil
@@ -1760,7 +1824,7 @@ func (ks *keyspace) ScopeNames() ([]string, errors.Error) {
 func (ks *keyspace) ScopeById(id string) (datastore.Scope, errors.Error) {
 	scope := ks.scopes[id]
 	if scope == nil {
-		return nil, errors.NewCbScopeNotFoundError(nil, id)
+		return nil, errors.NewCbScopeNotFoundError(nil, fullName(ks.namespace.name, ks.name, id))
 	}
 	return scope, nil
 }
@@ -1771,13 +1835,18 @@ func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
 			return v, nil
 		}
 	}
-	return nil, errors.NewCbScopeNotFoundError(nil, name)
+	return nil, errors.NewCbScopeNotFoundError(nil, fullName(ks.namespace.name, ks.name, name))
 }
 
 func (ks *keyspace) CreateScope(name string) errors.Error {
 	if !_COLLECTIONS_SUPPORTED {
 		return errors.NewScopesNotSupportedError(ks.name)
 	}
+	err := ks.cbbucket.CreateScope(name)
+	if err != nil {
+		return errors.NewCbBucketCreateScopeError(fullName(ks.namespace.name, name), err)
+	}
+	ks.setNeedsManifest()
 	return nil
 }
 
@@ -1785,6 +1854,11 @@ func (ks *keyspace) DropScope(name string) errors.Error {
 	if !_COLLECTIONS_SUPPORTED {
 		return errors.NewScopesNotSupportedError(ks.name)
 	}
+	err := ks.cbbucket.DropScope(name)
+	if err != nil {
+		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, name), err)
+	}
+	ks.setNeedsManifest()
 	return nil
 }
 

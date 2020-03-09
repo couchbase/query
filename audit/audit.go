@@ -388,6 +388,14 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"GRANT_ROLE":           28685,
 	"REVOKE_ROLE":          28686,
 	"CREATE_PRIMARY_INDEX": 28688,
+	"CREATE_FUNCTION":      28706,
+	"DROP_FUNCTION":        28707,
+	"EXECUTE_FUNCTION":     28708,
+	"CREATE_SCOPE":         28709,
+	"DROP_SCOPE":           28710,
+	"CREATE_COLLECTION":    28711,
+	"DROP_COLLECTION":      28712,
+	"FLUSH_COLLECTION":     28713,
 }
 
 func Submit(event Auditable) {

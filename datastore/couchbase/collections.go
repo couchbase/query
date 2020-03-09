@@ -19,7 +19,7 @@ import (
 )
 
 // TODO remove
-var _COLLECTIONS_SUPPORTED bool = false
+var _COLLECTIONS_SUPPORTED bool = true
 
 var _COLLECTIONS_NOT_SUPPORTED string = "Collections are not yet supported."
 
@@ -79,10 +79,14 @@ func (sc *scope) KeyspaceNames() ([]string, errors.Error) {
 	return ids, nil
 }
 
+func (sc *scope) objectFullName(id string) string {
+	return fullName(sc.bucket.namespace.name, sc.bucket.name, sc.id, id)
+}
+
 func (sc *scope) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 	ks := sc.keyspaces[id]
 	if ks == nil {
-		return nil, errors.NewCbKeyspaceNotFoundError(nil, id)
+		return nil, errors.NewCbKeyspaceNotFoundError(nil, sc.objectFullName(id))
 	}
 	return ks, nil
 }
@@ -93,16 +97,24 @@ func (sc *scope) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) 
 			return v, nil
 		}
 	}
-	return nil, errors.NewCbKeyspaceNotFoundError(nil, name)
+	return nil, errors.NewCbKeyspaceNotFoundError(nil, sc.objectFullName(name))
 }
 
-// FIXME
 func (sc *scope) CreateCollection(name string) errors.Error {
+	err := sc.bucket.cbbucket.CreateCollection(sc.id, name)
+	if err != nil {
+		return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
+	}
+	sc.bucket.setNeedsManifest()
 	return nil
 }
 
-// FIXME
 func (sc *scope) DropCollection(name string) errors.Error {
+	err := sc.bucket.cbbucket.DropCollection(sc.id, name)
+	if err != nil {
+		return errors.NewCbBucketDropCollectionError(sc.objectFullName(name), err)
+	}
+	sc.bucket.setNeedsManifest()
 	return nil
 }
 
@@ -223,8 +235,11 @@ func (coll *collection) Release() {
 	// do nothing
 }
 
-// FIXME
 func (coll *collection) Flush() errors.Error {
+	err := coll.bucket.cbbucket.FlushCollection(coll.scope.id, coll.id)
+	if err != nil {
+		return errors.NewCbBucketFlushCollectionError(coll.scope.objectFullName(coll.id), err)
+	}
 	return nil
 }
 

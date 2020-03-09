@@ -35,6 +35,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -72,6 +73,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -109,6 +111,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -146,6 +149,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -183,6 +187,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -220,6 +225,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -257,6 +263,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -294,6 +301,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -331,6 +339,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -368,6 +377,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -405,6 +415,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -478,6 +489,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -515,6 +527,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -552,6 +565,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -589,6 +603,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -626,6 +641,7 @@
       },
       "optional_fields" : {
 	"clientContextId" : "",
+	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -949,6 +965,310 @@
         "errorMessage": ""
       },
       "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28706,
+      "name" : "CREATE FUNCTION statement",
+      "description" : "A N1QL CREATE FUNCTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28707,
+      "name" : "DROP FUNCTION statement",
+      "description" : "A N1QL DROP FUNCTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28708,
+      "name" : "EXECUTE FUNCTION statement",
+      "description" : "A N1QL EXECUTE FUNCTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28709,
+      "name" : "CREATE SCOPE statement",
+      "description" : "A N1QL CREATE SCOPE statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28710,
+      "name" : "DROP SCOPE statement",
+      "description" : "A N1QL DROP SCOPE statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28711,
+      "name" : "CREATE COLLECTION statement",
+      "description" : "A N1QL CREATE COLLECTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28712,
+      "name" : "DROP COLLECTION statement",
+      "description" : "A N1QL DROP COLLECTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28713,
+      "name" : "FLUSH COLLECTION statement",
+      "description" : "A N1QL FLUSH COLLECTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
       }
     }
   ]

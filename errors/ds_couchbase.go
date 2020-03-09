@@ -22,12 +22,12 @@ func NewCbConnectionError(e error, msg string) Error {
 
 func NewCbNamespaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12002, IKey: "datastore.couchbase.namespace_not_found", ICause: e,
-		InternalMsg: "Namespace not found in CB datastore " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Namespace not found in CB datastore: " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbKeyspaceNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12003, IKey: "datastore.couchbase.keyspace_not_found", ICause: e,
-		InternalMsg: "Keyspace not found in CB datastore " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Keyspace not found in CB datastore: " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbPrimaryIndexNotFoundError(e error, msg string) Error {
@@ -42,7 +42,7 @@ func NewCbIndexerNotImplementedError(e error, msg string) Error {
 
 func NewCbKeyspaceCountError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12006, IKey: "datastore.couchbase.keyspace_count_error", ICause: e,
-		InternalMsg: "Failed to get keyspace count " + msg, InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Failed to get count for keyspace " + msg, InternalCaller: CallerN(1), retry: true}
 }
 
 // Error code 12007 is retired. Do not reuse.
@@ -119,7 +119,7 @@ func NewCbScopeNotFoundError(e error, msg string) Error {
 
 func NewCbKeyspaceSizeError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12022, IKey: "datastore.couchbase.keyspace_size_error", ICause: e,
-		InternalMsg: "Failed to get keyspace size " + msg, InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Failed to get size for keyspace" + msg, InternalCaller: CallerN(1), retry: true}
 }
 
 func NewCbSecurityConfigNotProvided(bucket string) Error {
@@ -130,4 +130,29 @@ func NewCbSecurityConfigNotProvided(bucket string) Error {
 func NewCbBucketNoDefaultCollectionError(b string) Error {
 	return &err{level: EXCEPTION, ICode: 12024, IKey: "datastore.couchbase.no_default_collection",
 		InternalMsg: "Bucket " + b + " does not have a default collection", InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketCreateScopeError(s string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 12025, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+		InternalMsg: "Error while creating scope " + s, InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketDropScopeError(s string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 12026, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+		InternalMsg: "Error while dropping scope " + s, InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketCreateCollectionError(c string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 12027, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+		InternalMsg: "Error while creating collection " + c, InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketDropCollectionError(c string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 12028, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+		InternalMsg: "Error while dropping collection " + c, InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketFlushCollectionError(c string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 12029, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+		InternalMsg: "Error while flushing collection " + c, InternalCaller: CallerN(1)}
 }
