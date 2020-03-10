@@ -21,12 +21,16 @@ import (
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
 type ValueScan struct {
 	readonly
-	values algebra.Pairs
+	values      algebra.Pairs
+	cost        float64
+	cardinality float64
 }
 
-func NewValueScan(values algebra.Pairs) *ValueScan {
+func NewValueScan(values algebra.Pairs, cost, cardinality float64) *ValueScan {
 	return &ValueScan{
-		values: values,
+		values:      values,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -42,6 +46,14 @@ func (this *ValueScan) Values() algebra.Pairs {
 	return this.values
 }
 
+func (this *ValueScan) Cost() float64 {
+	return this.cost
+}
+
+func (this *ValueScan) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *ValueScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -49,6 +61,12 @@ func (this *ValueScan) MarshalJSON() ([]byte, error) {
 func (this *ValueScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ValueScan"}
 	r["values"] = this.values.Expression().String()
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -57,8 +75,10 @@ func (this *ValueScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *ValueScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string `json:"#operator"`
-		Values string `json:"values"`
+		_           string  `json:"#operator"`
+		Values      string  `json:"values"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -81,5 +101,12 @@ func (this *ValueScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.values, err = algebra.NewValuesPairs(array)
-	return err
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }

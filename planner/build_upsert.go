@@ -28,7 +28,12 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	children := make([]plan.Operator, 0, 4)
 
 	if stmt.Values() != nil {
-		children = append(children, plan.NewValueScan(stmt.Values()))
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getValueScanCost(stmt.Values())
+		}
+		children = append(children, plan.NewValueScan(stmt.Values(), cost, cardinality))
 		this.maxParallelism = (len(stmt.Values()) + 64) / 64
 	} else if stmt.Select() != nil {
 		sel, err := stmt.Select().Accept(this)

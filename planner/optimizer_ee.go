@@ -108,6 +108,10 @@ func getExpressionScanCost(expr expression.Expression, keyspaces map[string]stri
 	return optimizer.CalcExpressionScanCost(expr, keyspaces)
 }
 
+func getValueScanCost(pairs algebra.Pairs) (float64, float64) {
+	return optimizer.CalcValueScanCost(pairs)
+}
+
 func getNLJoinCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
 	return optimizer.CalcNLJoinCost(left, right, filters)
 }

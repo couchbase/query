@@ -90,10 +90,13 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 		if this.keys != nil {
 			this.keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 		}
+		if err != nil {
+			return err
+		}
 	}
 
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
-	return err
+	return nil
 }

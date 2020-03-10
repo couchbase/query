@@ -694,4 +694,4 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, in
 var _INDEX_POOL = datastore.NewIndexPool(256)
 var _HINT_POOL = datastore.NewIndexPool(32)
 var _SKIP_POOL = datastore.NewIndexBoolPool(32)
-var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{})
+var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{}, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)

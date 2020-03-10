@@ -67,6 +67,10 @@ func getExpressionScanCost(expr expression.Expression, keyspaces map[string]stri
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
+func getValueScanCost(pairs algebra.Pairs) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getNLJoinCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
