@@ -112,6 +112,10 @@ func getValueScanCost(pairs algebra.Pairs) (float64, float64) {
 	return optimizer.CalcValueScanCost(pairs)
 }
 
+func getDummyScanCost() (float64, float64) {
+	return optimizer.CalcDummyScanCost()
+}
+
 func getNLJoinCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
 	return optimizer.CalcNLJoinCost(left, right, filters)
 }

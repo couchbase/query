@@ -127,7 +127,12 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 	} else {
 		// No FROM clause
 		this.resetPushDowns()
-		scan := plan.NewDummyScan()
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getDummyScanCost()
+		}
+		scan := plan.NewDummyScan(cost, cardinality)
 		this.children = append(this.children, scan)
 		this.maxParallelism = 1
 	}
