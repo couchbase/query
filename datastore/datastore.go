@@ -101,6 +101,16 @@ type Namespace interface {
 	BucketNames() ([]string, errors.Error)           // Names of the buckets contained in this namespace
 	BucketById(name string) (Bucket, errors.Error)   // Find a bucket in this namespace using the bucket's id
 	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this namespace using the bucket's name
+
+	// All keyspaces and buckets
+	Objects() ([]Object, errors.Error) // All first level namespace objects
+}
+
+type Object struct {
+	Id         string
+	Name       string
+	IsKeyspace bool
+	IsBucket   bool
 }
 
 type VirtualNamespace interface {

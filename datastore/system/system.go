@@ -21,11 +21,13 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const STORE_ID = "system"
 const NAMESPACE_ID = "#system"
 const NAMESPACE_NAME = "#system"
 const KEYSPACE_NAME_DATASTORES = "datastores"
 const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_KEYSPACES = "keyspaces"
+const KEYSPACE_NAME_ALL_KEYSPACES = "all_keyspaces"
 const KEYSPACE_NAME_INDEXES = "indexes"
 const KEYSPACE_NAME_DUAL = "dual"
 const KEYSPACE_NAME_PREPAREDS = "prepareds"
@@ -48,11 +50,11 @@ type store struct {
 }
 
 func (s *store) Id() string {
-	return s.actualStore.Id()
+	return STORE_ID
 }
 
 func (s *store) URL() string {
-	return s.actualStore.URL()
+	return ""
 }
 
 func (s *store) Info() datastore.Info {

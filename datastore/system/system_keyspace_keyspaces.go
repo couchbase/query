@@ -10,7 +10,6 @@
 package system
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/auth"
@@ -23,6 +22,7 @@ import (
 
 type keyspaceKeyspace struct {
 	keyspaceBase
+	store   datastore.Datastore
 	indexer datastore.Indexer
 }
 
@@ -51,30 +51,62 @@ func canAccessSystemTables(context datastore.QueryContext) bool {
 }
 
 func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
+	var bucket datastore.Bucket
+	var err errors.Error
+
 	count := int64(0)
-	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
+	namespaceIds, excp := b.store.NamespaceIds()
 	canAccessAll := canAccessSystemTables(context)
 	if excp == nil {
 		for _, namespaceId := range namespaceIds {
-			namespace, excp := b.namespace.store.actualStore.NamespaceById(namespaceId)
+			namespace, excp := b.store.NamespaceById(namespaceId)
 			if excp == nil {
-				keyspaceIds, excp := namespace.KeyspaceIds()
+				objects, excp := namespace.Objects()
 				if excp == nil {
-					for _, keyspaceId := range keyspaceIds {
-						excludeResult := !canAccessAll && !canRead(context, namespaceId, keyspaceId)
+					for _, object := range objects {
+						excludeResult := !canAccessAll && !canRead(context, namespaceId, object.Id)
 
-						// The list of keyspace ids can include memcached buckets.
+						// The list of bucket ids can include memcached buckets.
 						// We do not want to include them in the count of
-						// of queryable buckets. Attempting to retrieve the keyspace
+						// of queryable buckets. Attempting to retrieve the bucket
 						// record of a memcached bucket returns an error,
 						// which allows us to distinguish these buckets, and exclude them.
 						// See MB-19364 for more info.
-						_, err := namespace.KeyspaceByName(keyspaceId)
-						if err == nil {
-							if excludeResult {
-								context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-							} else {
+						if object.IsKeyspace {
+							_, err = namespace.KeyspaceByName(object.Id)
+							if err != nil {
+								continue
+							}
+						}
+						if object.IsBucket {
+							bucket, err = namespace.BucketByName(object.Id)
+							if err != nil {
+								continue
+							}
+						}
+						if excludeResult {
+							context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+						} else {
+
+							if object.IsKeyspace {
 								count++
+							}
+							if object.IsBucket {
+								scopeIds, _ := bucket.ScopeIds()
+								for _, scopeId := range scopeIds {
+									scope, _ := bucket.ScopeById(scopeId)
+									if scope != nil {
+										keyspaceIds, _ := scope.KeyspaceIds()
+										for _, _ = range keyspaceIds {
+											// for _, keyspaceId = range keyspaceIds {
+											// if !canAccessAll && !canRead(context, namespaceId, bucketId, scopeId, keyspaceId) {
+											// 	context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+											// } else {
+											count++
+											// }
+										}
+									}
+								}
 							}
 						}
 					}
@@ -104,18 +136,29 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	var e errors.Error
+	var item value.AnnotatedValue
+
 	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
-		err, ns, ks := splitId(k)
+		err, elems := splitId(k)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		if !canAccessAll && !canRead(context, ns, ks) {
-			context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-			continue
+		if len(elems) == 2 {
+			if !canAccessAll && !canRead(context, elems[0], elems[1]) {
+				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+				continue
+			}
+			item, e = b.fetchOne(elems[0], elems[1])
+		} else {
+			//			if !canAccessAll && !canRead(context, elems[0], elems[1]) {
+			//				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+			//				continue
+			//			}
+			item, e = b.fetchOneCollection(elems[0], elems[1], elems[2], elems[3])
 		}
-		item, e := b.fetchOne(ns, ks)
 
 		if e != nil {
 			errs = append(errs, e)
@@ -135,18 +178,65 @@ func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 	return
 }
 
+// we should take it from algebra, but we need to avoid circular references
+func path(elems ...string) string {
+	out := elems[0] + ":" + elems[1]
+	for i := 2; i < len(elems); i++ {
+		out = out + "." + elems[i]
+	}
+	return out
+}
+
 func (b *keyspaceKeyspace) fetchOne(ns string, ks string) (value.AnnotatedValue, errors.Error) {
-	namespace, err := b.namespace.store.actualStore.NamespaceById(ns)
+	namespace, err := b.store.NamespaceById(ns)
 	if namespace != nil {
 		keyspace, err := namespace.KeyspaceById(ks)
 		if keyspace != nil {
 			doc := value.NewAnnotatedValue(map[string]interface{}{
+				"datastore_id": namespace.DatastoreId(),
+				"namespace_id": namespace.Id(),
+				"namespace":    namespace.Name(),
 				"id":           keyspace.Id(),
 				"name":         keyspace.Name(),
-				"namespace_id": namespace.Id(),
-				"datastore_id": b.namespace.store.actualStore.Id(),
+				"path":         path(namespace.Name(), keyspace.Name()),
 			})
 			return doc, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nil, err
+}
+
+func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string) (value.AnnotatedValue, errors.Error) {
+	var err errors.Error
+	var namespace datastore.Namespace
+	var bucket datastore.Bucket
+	var scope datastore.Scope
+	var keyspace datastore.Keyspace
+
+	namespace, err = b.store.NamespaceById(ns)
+	if namespace != nil {
+		bucket, err = namespace.BucketById(bn)
+		if bucket != nil {
+			scope, err = bucket.ScopeById(sn)
+			if scope != nil {
+				keyspace, err = scope.KeyspaceById(ks)
+				if keyspace != nil {
+					doc := value.NewAnnotatedValue(map[string]interface{}{
+						"datastore_id": namespace.DatastoreId(),
+						"namespace_id": namespace.Id(),
+						"namespace":    namespace.Name(),
+						"id":           keyspace.Id(),
+						"name":         keyspace.Name(),
+						"bucket":       bucket.Name(),
+						"scope":        scope.Name(),
+						"path":         path(namespace.Name(), bucket.Name(), scope.Name(), keyspace.Name()),
+					})
+					return doc, nil
+				}
+			}
 		}
 		if err != nil {
 			return nil, err
@@ -175,9 +265,10 @@ func (b *keyspaceKeyspace) Delete(deletes []string, context datastore.QueryConte
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func newKeyspacesKeyspace(p *namespace) (*keyspaceKeyspace, errors.Error) {
+func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string) (*keyspaceKeyspace, errors.Error) {
 	b := new(keyspaceKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_KEYSPACES)
+	b.store = store
+	setKeyspaceBase(&b.keyspaceBase, p, name)
 
 	primary := &keyspaceIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
@@ -237,20 +328,24 @@ func (pi *keyspaceIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
-func makeId(n, k string) string {
-	return fmt.Sprintf("%s/%s", n, k)
+func makeId(elems ...string) string {
+	return strings.Join(elems, "/")
 }
 
-func splitId(id string) (errors.Error, string, string) {
-	ids := strings.SplitN(id, "/", 2)
-	if len(ids) != 2 {
-		return errors.NewSystemMalformedKeyError(id, "system:keyspaces"), "", ""
+func splitId(id string) (errors.Error, []string) {
+	ids := strings.SplitN(id, "/", 4)
+	if len(ids) != 2 && len(ids) != 4 {
+		return errors.NewSystemMalformedKeyError(id, "system:keyspaces"), nil
 	}
-	return nil, ids[0], ids[1]
+	return nil, ids
 }
 
 func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
+	var namespace datastore.Namespace
+	var bucket datastore.Bucket
+	var objects []datastore.Object
+
 	if span == nil {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
@@ -263,36 +358,69 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 		}
 
 		var numProduced int64 = 0
-		namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+		namespaceIds, err := pi.keyspace.store.NamespaceIds()
 		if err == nil {
 
 		loop:
 			for _, namespaceId := range namespaceIds {
-				namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
+				namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 				if err == nil {
-					keyspaceIds, err := namespace.KeyspaceIds()
+					objects, err = namespace.Objects()
 					if err == nil {
-						for _, keyspaceId := range keyspaceIds {
-							// The list of keyspace ids can include memcached buckets.
+						for _, object := range objects {
+
+							// The list of bucket ids can include memcached buckets.
 							// We do not want to include them in the list
-							// of queryable buckets. Attempting to retrieve the keyspace
+							// of queryable buckets. Attempting to retrieve the bucket
 							// record of a memcached bucket returns an error,
 							// which allows us to distinguish these buckets, and exclude them.
 							// See MB-19364 for more info.
-							_, err := namespace.KeyspaceByName(keyspaceId)
-							if err != nil {
-								continue
+							if object.IsKeyspace {
+								_, err = namespace.KeyspaceByName(object.Id)
+								if err != nil {
+									continue
+								}
+							}
+							if object.IsBucket {
+								bucket, err = namespace.BucketByName(object.Id)
+								if err != nil {
+									continue
+								}
 							}
 
-							id := makeId(namespaceId, keyspaceId)
-							if spanEvaluator.evaluate(id) {
-								entry := datastore.IndexEntry{PrimaryKey: id}
-								if !sendSystemKey(conn, &entry) {
-									return
+							if object.IsKeyspace {
+								id := makeId(namespaceId, object.Id)
+								if spanEvaluator.evaluate(id) {
+									entry := datastore.IndexEntry{PrimaryKey: id}
+									if !sendSystemKey(conn, &entry) {
+										return
+									}
+									numProduced++
+									if limit > 0 && numProduced >= limit {
+										break loop
+									}
 								}
-								numProduced++
-								if limit > 0 && numProduced >= limit {
-									break loop
+							}
+							if object.IsBucket {
+								scopeIds, _ := bucket.ScopeIds()
+								for _, scopeId := range scopeIds {
+									scope, _ := bucket.ScopeById(scopeId)
+									if scope != nil {
+										keyspaceIds, _ := scope.KeyspaceIds()
+										for _, keyspaceId := range keyspaceIds {
+											id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
+											if spanEvaluator.evaluate(id) {
+												entry := datastore.IndexEntry{PrimaryKey: id}
+												if !sendSystemKey(conn, &entry) {
+													return
+												}
+												numProduced++
+												if limit > 0 && numProduced >= limit {
+													break loop
+												}
+											}
+										}
+									}
 								}
 							}
 						}
@@ -305,37 +433,73 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 
 func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	var namespace datastore.Namespace
+	var bucket datastore.Bucket
+	var objects []datastore.Object
+
 	defer conn.Sender().Close()
 
 	var numProduced int64 = 0
-	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
 
 	loop:
 		for _, namespaceId := range namespaceIds {
-			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
+			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 			if err == nil {
-				keyspaceIds, err := namespace.KeyspaceIds()
+				objects, err = namespace.Objects()
 				if err == nil {
-					for _, keyspaceId := range keyspaceIds {
-						// The list of keyspace ids can include memcached buckets.
+					for _, object := range objects {
+
+						// The list of buckets ids can include memcached buckets.
 						// We do not want to include them in the list
-						// of queryable buckets. Attempting to retrieve the keyspace
+						// of queryable buckets. Attempting to retrieve the bucket
 						// record of a memcached bucket returns an error,
 						// which allows us to distinguish these buckets, and exclude them.
 						// See MB-19364 for more info.
-						_, err := namespace.KeyspaceByName(keyspaceId)
-						if err != nil {
-							continue
+						if object.IsKeyspace {
+							_, err = namespace.KeyspaceByName(object.Id)
+							if err != nil {
+								continue
+							}
 						}
-						id := makeId(namespaceId, keyspaceId)
-						entry := datastore.IndexEntry{PrimaryKey: id}
-						if !sendSystemKey(conn, &entry) {
-							return
+						if object.IsBucket {
+							bucket, err = namespace.BucketByName(object.Id)
+							if err != nil {
+								continue
+							}
 						}
-						numProduced++
-						if limit > 0 && numProduced >= limit {
-							break loop
+
+						if object.IsKeyspace {
+							id := makeId(namespaceId, object.Id)
+							entry := datastore.IndexEntry{PrimaryKey: id}
+							if !sendSystemKey(conn, &entry) {
+								return
+							}
+							numProduced++
+							if limit > 0 && numProduced >= limit {
+								break loop
+							}
+						}
+						if object.IsBucket {
+							scopeIds, _ := bucket.ScopeIds()
+							for _, scopeId := range scopeIds {
+								scope, _ := bucket.ScopeById(scopeId)
+								if scope != nil {
+									keyspaceIds, _ := scope.KeyspaceIds()
+									for _, keyspaceId := range keyspaceIds {
+										id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
+										entry := datastore.IndexEntry{PrimaryKey: id}
+										if !sendSystemKey(conn, &entry) {
+											return
+										}
+										numProduced++
+										if limit > 0 && numProduced >= limit {
+											break loop
+										}
+									}
+								}
+							}
 						}
 					}
 				}

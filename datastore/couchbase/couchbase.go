@@ -742,9 +742,24 @@ func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
 func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	p.refresh()
 	p.nslock.RLock()
-	rv := make([]string, 0, len(p.cbNamespace.BucketMap))
+	rv := make([]string, len(p.cbNamespace.BucketMap))
+	i := 0
 	for name, _ := range p.cbNamespace.BucketMap {
-		rv = append(rv, name)
+		rv[i] = name
+		i++
+	}
+	p.nslock.RUnlock()
+	return rv, nil
+}
+
+func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
+	p.refresh()
+	p.nslock.RLock()
+	rv := make([]datastore.Object, len(p.cbNamespace.BucketMap))
+	i := 0
+	for name, _ := range p.cbNamespace.BucketMap {
+		rv[i] = datastore.Object{name, name, true, true}
+		i++
 	}
 	p.nslock.RUnlock()
 	return rv, nil

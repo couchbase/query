@@ -47,6 +47,16 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
+func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
+	rv := make([]datastore.Object, len(p.keyspaces))
+	i := 0
+	for k, _ := range p.keyspaces {
+		rv[i] = datastore.Object{Id: k, Name: k, IsKeyspace: true}
+		i++
+	}
+	return rv, nil
+}
+
 func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 	return p.KeyspaceByName(id)
 }
@@ -98,11 +108,17 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[pb.Name()] = pb
 
-	bb, e := newKeyspacesKeyspace(p)
+	bb, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES)
 	if e != nil {
 		return e
 	}
 	p.keyspaces[bb.Name()] = bb
+
+	abb, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[abb.Name()] = abb
 
 	db, e := newDualKeyspace(p)
 	if e != nil {

@@ -242,6 +242,16 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return p.keyspaceNames, nil
 }
 
+func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
+	rv := make([]datastore.Object, len(p.keyspaceNames))
+	i := 0
+	for _, k := range p.keyspaceNames {
+		rv[i] = datastore.Object{Id: k, Name: k, IsKeyspace: true}
+		i++
+	}
+	return rv, nil
+}
+
 func (p *namespace) KeyspaceById(id string) (b datastore.Keyspace, e errors.Error) {
 	return p.KeyspaceByName(id)
 }

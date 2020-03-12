@@ -87,6 +87,20 @@ func (ns *CollectionsNamespace) KeyspaceNames() ([]string, errors.Error) {
 	return ret, nil
 }
 
+func (ns *CollectionsNamespace) Objects() ([]Object, errors.Error) {
+	ret := make([]Object, len(ns.keyspaces)+len(ns.buckets))
+	i := 0
+	for _, v := range ns.keyspaces {
+		ret[i] = Object{Id: v.Name(), Name: v.Name(), IsKeyspace: true}
+		i++
+	}
+	for _, v := range ns.buckets {
+		ret[i] = Object{Id: v.Name(), Name: v.Name(), IsBucket: true}
+		i++
+	}
+	return ret, nil
+}
+
 func (ns *CollectionsNamespace) KeyspaceById(id string) (Keyspace, errors.Error) {
 	ks := ns.keyspaces[id]
 	if ks == nil {
