@@ -611,7 +611,12 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		}
 	}
 
-	scan := plan.NewCountScan(keyspace, from)
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO {
+		cost, cardinality = getCountScanCost()
+	}
+	scan := plan.NewCountScan(keyspace, from, cost, cardinality)
 	this.children = append(this.children, scan)
 	return true, nil
 }

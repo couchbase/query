@@ -19,14 +19,18 @@ import (
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
 type CountScan struct {
 	readonly
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceTerm
+	cost        float64
+	cardinality float64
 }
 
-func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *CountScan {
+func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, cost, cardinality float64) *CountScan {
 	return &CountScan{
-		keyspace: keyspace,
-		term:     term,
+		keyspace:    keyspace,
+		term:        term,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -46,6 +50,14 @@ func (this *CountScan) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
+func (this *CountScan) Cost() float64 {
+	return this.cost
+}
+
+func (this *CountScan) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *CountScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -53,6 +65,12 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 func (this *CountScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "CountScan"}
 	this.term.MarshalKeyspace(r)
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -61,11 +79,13 @@ func (this *CountScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *CountScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Namespace string `json:"namespace"`
-		Bucket    string `json:"bucket"`
-		Scope     string `json:"scope"`
-		Keyspace  string `json:"keyspace"`
+		_           string  `json:"#operator"`
+		Namespace   string  `json:"namespace"`
+		Bucket      string  `json:"bucket"`
+		Scope       string  `json:"scope"`
+		Keyspace    string  `json:"keyspace"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -76,6 +96,12 @@ func (this *CountScan) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "", nil, nil)
 	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	return err
 }

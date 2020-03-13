@@ -116,6 +116,10 @@ func getDummyScanCost() (float64, float64) {
 	return optimizer.CalcDummyScanCost()
 }
 
+func getCountScanCost() (float64, float64) {
+	return optimizer.CalcCountScanCost()
+}
+
 func getNLJoinCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
 	return optimizer.CalcNLJoinCost(left, right, filters)
 }
