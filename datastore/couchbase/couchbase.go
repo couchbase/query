@@ -1366,7 +1366,8 @@ func (k *keyspace) getRandomEntry(clientContext ...*memcached.ClientContext) (st
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
 
-	return fmt.Sprintf("%s", resp.Key), value.NewValue(resp.Body), nil
+	// FIXME - to be amended after GetRandom for collection is implemented
+	return string(resp.Key[1:]), value.NewValue(resp.Body), nil
 }
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
