@@ -63,6 +63,7 @@
      ]
     },
     {
+      "ignore": ["cardinality", "cost"],
       "statements":"EXPLAIN select CLOCK_STR(\"2006-01-02\")",
       "results": [
         {

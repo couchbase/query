@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 type PushDownProperties uint32
@@ -35,6 +36,8 @@ type indexEntry struct {
 	minKeys          int
 	maxKeys          int
 	sumKeys          int
+	nSargKeys        int
+	skeys            []bool
 	cond             expression.Expression
 	origCond         expression.Expression
 	spans            SargSpans
@@ -44,12 +47,14 @@ type indexEntry struct {
 	cardinality      float64
 	selectivity      float64
 	searchOrders     []string
+	condFc           map[string]value.Value
+	nEqCond          int
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
 	minKeys, maxKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
-	exactSpans bool) *indexEntry {
-	return &indexEntry{
+	exactSpans bool, skeys []bool) *indexEntry {
+	rv := &indexEntry{
 		index:            index,
 		keys:             keys,
 		sargKeys:         sargKeys,
@@ -57,6 +62,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		minKeys:          minKeys,
 		maxKeys:          maxKeys,
 		sumKeys:          sumKeys,
+		skeys:            skeys,
 		cond:             cond,
 		origCond:         origCond,
 		spans:            spans,
@@ -66,6 +72,19 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		cardinality:      OPT_CARD_NOT_AVAIL,
 		selectivity:      OPT_SELEC_NOT_AVAIL,
 	}
+
+	for _, b := range skeys {
+		if b {
+			rv.nSargKeys++
+		}
+	}
+
+	if rv.cond != nil {
+		fc := make(map[string]value.Value, 4)
+		rv.condFc = rv.cond.FilterCovers(fc)
+		rv.nEqCond = countEqCond(rv.cond, rv.sargKeys, rv.skeys)
+	}
+	return rv
 }
 
 func (this *indexEntry) Copy() *indexEntry {
@@ -77,6 +96,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		minKeys:          this.minKeys,
 		maxKeys:          this.maxKeys,
 		sumKeys:          this.sumKeys,
+		nSargKeys:        this.nSargKeys,
 		cond:             expression.Copy(this.cond),
 		origCond:         expression.Copy(this.origCond),
 		spans:            CopySpans(this.spans),
@@ -85,9 +105,14 @@ func (this *indexEntry) Copy() *indexEntry {
 		cost:             this.cost,
 		cardinality:      this.cardinality,
 		selectivity:      this.selectivity,
+		condFc:           this.condFc,
+		nEqCond:          this.nEqCond,
 	}
 
 	copy(rv.searchOrders, this.searchOrders)
+	if len(this.skeys) > 0 {
+		copy(rv.skeys, this.skeys)
+	}
 
 	return rv
 }
@@ -109,4 +134,38 @@ func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {
 		return (pushDownProperty == property)
 	}
 	return (pushDownProperty & property) != 0
+}
+
+type EqExpr struct {
+	expression.MapperBase
+	sargKyes expression.Expressions
+	skeys    []bool
+	ncount   int
+}
+
+// Number Equality predicate in index Condition that not part of index keys
+
+func countEqCond(cond expression.Expression, sargKyes expression.Expressions, skeys []bool) int {
+	rv := &EqExpr{sargKyes: sargKyes, skeys: skeys}
+	rv.SetMapFunc(func(expr expression.Expression) (expression.Expression, error) {
+		if e, ok := expr.(*expression.Eq); ok {
+			for i, sk := range rv.sargKyes {
+				if rv.skeys[i] &&
+					(expression.Equivalent(sk, e.First()) ||
+						expression.Equivalent(sk, e.Second())) {
+					return expr, nil
+				}
+			}
+			rv.ncount++
+			return expr, nil
+		}
+		return expr, expr.MapChildren(rv)
+	})
+
+	rv.SetMapper(rv)
+
+	if _, err := rv.Map(cond); err != nil {
+		return 0
+	}
+	return rv.ncount
 }

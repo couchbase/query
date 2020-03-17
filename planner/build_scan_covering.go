@@ -157,16 +157,34 @@ outer:
 			}
 		}
 
+	couter:
+		// keep indexes with highest continous sargable indexes
+		for sc, _ := range covering {
+			se := indexes[sc]
+			for tc, _ := range covering {
+				if sc != tc {
+					te := indexes[tc]
+					if be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond); be != nil {
+						if be == te {
+							delete(covering, sc)
+							continue couter
+						}
+						delete(covering, tc)
+					}
+				}
+			}
+		}
+
 		// Keep indexes with max sumKeys
 		sumKeys := 0
 		for c, _ := range covering {
-			if max := indexes[c].sumKeys; max > sumKeys {
+			if max := indexes[c].sumKeys + indexes[c].nEqCond; max > sumKeys {
 				sumKeys = max
 			}
 		}
 
 		for c, _ := range covering {
-			if indexes[c].sumKeys < sumKeys {
+			if indexes[c].sumKeys+indexes[c].nEqCond < sumKeys {
 				delete(covering, c)
 			}
 		}
