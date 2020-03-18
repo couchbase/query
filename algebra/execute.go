@@ -45,7 +45,11 @@ func NewExecute(prepared expression.Expression, using expression.Expression) *Ex
 	default:
 		val := prepared.Value()
 		if val != nil {
-			preparedString = val.String()
+			if val.Type() == value.STRING {
+				preparedString = val.Actual().(string)
+			} else {
+				preparedString = val.String()
+			}
 		}
 	}
 
