@@ -22,8 +22,9 @@ import (
 
 type keyspaceKeyspace struct {
 	keyspaceBase
-	store   datastore.Datastore
-	indexer datastore.Indexer
+	skipSystem bool
+	store      datastore.Datastore
+	indexer    datastore.Indexer
 }
 
 func (b *keyspaceKeyspace) Release() {
@@ -216,6 +217,11 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string) (value.Anno
 	var scope datastore.Scope
 	var keyspace datastore.Keyspace
 
+	// this should never happen, but if it does, we skip silently system collections
+	// (not an error, they are just not part of the result set)
+	if b.skipSystem && ks[0] == '_' {
+		return nil, nil
+	}
 	namespace, err = b.store.NamespaceById(ns)
 	if namespace != nil {
 		bucket, err = namespace.BucketById(bn)
@@ -265,9 +271,10 @@ func (b *keyspaceKeyspace) Delete(deletes []string, context datastore.QueryConte
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string) (*keyspaceKeyspace, errors.Error) {
+func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string, skipSystem bool) (*keyspaceKeyspace, errors.Error) {
 	b := new(keyspaceKeyspace)
 	b.store = store
+	b.skipSystem = skipSystem
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
 	primary := &keyspaceIndex{name: "#primary", keyspace: b}
@@ -408,6 +415,9 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 									if scope != nil {
 										keyspaceIds, _ := scope.KeyspaceIds()
 										for _, keyspaceId := range keyspaceIds {
+											if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
+												continue
+											}
 											id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
 											if spanEvaluator.evaluate(id) {
 												entry := datastore.IndexEntry{PrimaryKey: id}
@@ -488,6 +498,9 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 								if scope != nil {
 									keyspaceIds, _ := scope.KeyspaceIds()
 									for _, keyspaceId := range keyspaceIds {
+										if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
+											continue
+										}
 										id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
 										entry := datastore.IndexEntry{PrimaryKey: id}
 										if !sendSystemKey(conn, &entry) {

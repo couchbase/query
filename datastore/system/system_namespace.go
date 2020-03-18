@@ -108,13 +108,13 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[pb.Name()] = pb
 
-	bb, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES)
+	bb, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES, true)
 	if e != nil {
 		return e
 	}
 	p.keyspaces[bb.Name()] = bb
 
-	abb, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES)
+	abb, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES, false)
 	if e != nil {
 		return e
 	}
