@@ -134,7 +134,7 @@ func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (flo
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace) (float64, float64) {
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) (float64, float64) {
 
 	// perform expression transformation, but no DNF transformation
 	var err error
@@ -145,7 +145,7 @@ func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	return optimizer.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces)
+	return optimizer.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames)
 }
 
 func getLetCost(lastOp plan.Operator) (float64, float64) {

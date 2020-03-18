@@ -43,6 +43,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
 	baseKeyspace := base.NewBaseKeyspace(ksref.Alias(), ksref.Keyspace())
 	this.baseKeyspaces[baseKeyspace.Name()] = baseKeyspace
+	this.collectKeyspaceNames()
 
 	// Process where clause
 	if this.where != nil {
@@ -99,7 +100,8 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		cardinality := float64(OPT_CARD_NOT_AVAIL)
 
 		if this.useCBO {
-			cost, cardinality = getFilterCost(this.lastOp, this.where, this.baseKeyspaces)
+			cost, cardinality = getFilterCost(this.lastOp, this.where,
+				this.baseKeyspaces, this.keyspaceNames)
 		}
 
 		filter := plan.NewFilter(this.where, cost, cardinality)

@@ -43,6 +43,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 			return err
 		}
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
+		this.collectKeyspaceNames()
 
 		numUnnests := 0
 		for _, keyspace := range this.baseKeyspaces {
@@ -270,11 +271,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		keyspaces := make(map[string]string, len(this.baseKeyspaces))
-		for _, bks := range this.baseKeyspaces {
-			keyspaces[bks.Name()] = keyspaces[bks.Keyspace()]
-		}
-		cost, cardinality = getExpressionScanCost(node.ExpressionTerm(), keyspaces)
+		cost, cardinality = getExpressionScanCost(node.ExpressionTerm(), this.keyspaceNames)
 	}
 	scan := plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), cost, cardinality)
 	this.children = append(this.children, scan)

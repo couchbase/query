@@ -105,6 +105,7 @@ type builder struct {
 	requirePrimaryKey bool
 	orderScan         plan.SecondaryScan
 	baseKeyspaces     map[string]*base.BaseKeyspace
+	keyspaceNames     map[string]string
 	pushableOnclause  expression.Expression // combined ON-clause from all inner joins
 	builderFlags      uint32
 	indexAdvisor      bool
@@ -183,6 +184,19 @@ func (this *builder) falseWhereClause() bool {
 
 func (this *builder) setFalseWhereClause() {
 	this.builderFlags |= BUILDER_WHERE_IS_FALSE
+}
+
+func (this *builder) collectKeyspaceNames() {
+	if len(this.keyspaceNames) > 0 || len(this.baseKeyspaces) == 0 {
+		return
+	}
+
+	this.keyspaceNames = make(map[string]string, len(this.baseKeyspaces))
+	for _, ks := range this.baseKeyspaces {
+		this.keyspaceNames[ks.Name()] = ks.Keyspace()
+	}
+
+	return
 }
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {

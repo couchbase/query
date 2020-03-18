@@ -28,6 +28,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.baseKeyspaces[sourceKeyspace.Name()] = sourceKeyspace
 	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Keyspace())
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
+	this.collectKeyspaceNames()
 
 	var left algebra.SimpleFromTerm
 	var err error
@@ -201,7 +202,8 @@ func (this *builder) addMergeFilter(pred expression.Expression) *plan.Filter {
 	cardinality := float64(OPT_CARD_NOT_AVAIL)
 
 	if this.useCBO {
-		cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+		cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
+			this.keyspaceNames)
 	}
 
 	filter := plan.NewFilter(pred, cost, cardinality)

@@ -29,6 +29,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCoveredUnnests := this.coveredUnnests
 	prevCountScan := this.countScan
 	prevBasekeyspaces := this.baseKeyspaces
+	prevKeyspaceNames := this.keyspaceNames
 	prevPushableOnclause := this.pushableOnclause
 	prevBuilderFlags := this.builderFlags
 	prevMaxParallelism := this.maxParallelism
@@ -44,6 +45,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.coveredUnnests = prevCoveredUnnests
 		this.countScan = prevCountScan
 		this.baseKeyspaces = prevBasekeyspaces
+		this.keyspaceNames = prevKeyspaceNames
 		this.pushableOnclause = prevPushableOnclause
 		this.builderFlags = prevBuilderFlags
 		this.maxParallelism = prevMaxParallelism
@@ -56,6 +58,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
 	this.baseKeyspaces = nil
+	this.keyspaceNames = nil
 	this.pushableOnclause = nil
 	this.builderFlags = 0
 	this.maxParallelism = 0
@@ -326,7 +329,8 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 
 			// Predicate does NOT depend on LET
 			if this.useCBO {
-				cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+				cost, cardinality = getFilterCost(this.lastOp, pred,
+					this.baseKeyspaces, this.keyspaceNames)
 			}
 			filter := plan.NewFilter(pred, cost, cardinality)
 			this.lastOp = filter
@@ -351,7 +355,8 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 
 	if pred != nil {
 		if this.useCBO {
-			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
+				this.keyspaceNames)
 		}
 		filter := plan.NewFilter(pred, cost, cardinality)
 		this.lastOp = filter
@@ -382,12 +387,8 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 			cost = last.Cost()
 			cardinality = last.Cardinality()
 			if cost > 0.0 && cardinality > 0.0 {
-				keyspaces := make(map[string]string, len(this.baseKeyspaces))
-				for _, ks := range this.baseKeyspaces {
-					keyspaces[ks.Name()] = ks.Keyspace()
-				}
 				costInitial, cardinalityInitial, costIntermediate, cardinalityIntermediate, costFinal, cardinalityFinal =
-					getGroupCosts(group, aggs, cost, cardinality, keyspaces, this.maxParallelism)
+					getGroupCosts(group, aggs, cost, cardinality, this.keyspaceNames, this.maxParallelism)
 			}
 		}
 		aggv := sortAggregatesSlice(aggs)

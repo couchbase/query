@@ -50,7 +50,7 @@ func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datas
 
 	// update filters list in baseKeyspace since new filters are generated above
 	baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-	_, err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces, false, this.useCBO)
+	_, err = ClassifyExpr(rv.(expression.Expression), baseKeyspaces, this.keyspaceNames, false, this.useCBO)
 	if err != nil {
 		return err
 	}

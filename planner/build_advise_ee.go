@@ -255,7 +255,8 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 			for _, op := range orTerms.Operands() {
 				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 
-				_, err := ClassifyExpr(op, baseKeyspacesCopy, ansijoin, this.useCBO)
+				_, err := ClassifyExpr(op, baseKeyspacesCopy, this.keyspaceNames,
+					ansijoin, this.useCBO)
 				if err != nil {
 					continue outer
 				}
@@ -269,7 +270,8 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 			}
 		} else {
 			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
-			_, err := ClassifyExpr(pred, baseKeyspacesCopy, false, this.useCBO)
+			_, err := ClassifyExpr(pred, baseKeyspacesCopy, this.keyspaceNames,
+				false, this.useCBO)
 			if err != nil {
 				return err
 			}

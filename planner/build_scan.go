@@ -501,7 +501,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 		}
 	}
 
-	constant, err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause, this.useCBO)
+	constant, err = ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO)
 	return
 }
 

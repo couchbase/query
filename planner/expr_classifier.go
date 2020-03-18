@@ -19,14 +19,14 @@ import (
 )
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
-func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace, isOnclause, doSelec bool) (
-	value.Value, error) {
+func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
+	keyspaceNames map[string]string, isOnclause, doSelec bool) (value.Value, error) {
 
 	if len(baseKeyspaces) == 0 {
 		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
-	classifier := newExprClassifier(baseKeyspaces, isOnclause, doSelec)
+	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec)
 	_, err := expr.Accept(classifier)
 	if err != nil {
 		return nil, err
@@ -59,20 +59,15 @@ type exprClassifier struct {
 	doSelec         bool
 }
 
-func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, isOnclause, doSelec bool) *exprClassifier {
+func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
+	isOnclause, doSelec bool) *exprClassifier {
 
-	rv := &exprClassifier{
+	return &exprClassifier{
 		baseKeyspaces: baseKeyspaces,
+		keyspaceNames: keyspaceNames,
 		isOnclause:    isOnclause,
 		doSelec:       doSelec,
 	}
-
-	rv.keyspaceNames = make(map[string]string, len(baseKeyspaces))
-	for _, keyspace := range baseKeyspaces {
-		rv.keyspaceNames[keyspace.Name()] = keyspace.Keyspace()
-	}
-
-	return rv
 }
 
 func (this *exprClassifier) addConstant(result bool) {
@@ -493,7 +488,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, this.isOnclause, this.doSelec)
+		_, err := ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, this.isOnclause, this.doSelec)
 		if err != nil {
 			return nil, nil, false, err
 		}
