@@ -115,7 +115,9 @@ func (this *VirtualIndex) RangeKey2() datastore.IndexKeys {
 		for i, expr := range this.indexKeys {
 			rangeKey := &datastore.IndexKey{
 				Expr: expr,
-				Desc: this.desc != nil && this.desc[i],
+			}
+			if this.desc != nil && this.desc[i] {
+				rangeKey.SetAttribute(datastore.IK_DESC, true)
 			}
 			rangeKeys = append(rangeKeys, rangeKey)
 		}

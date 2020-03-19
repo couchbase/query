@@ -511,7 +511,7 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
 		desc = make([]bool, len(keys))
 		for i, kp := range keys {
 			rv[i] = stringer.Visit(kp.Expr)
-			desc[i] = kp.Desc
+			desc[i] = kp.HasAttribute(datastore.IK_DESC)
 		}
 	} else {
 		rv = make([]string, len(index.RangeKey()))

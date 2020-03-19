@@ -475,5 +475,5 @@ func equalConditionFilter(filters map[string]value.Value, str string) bool {
 }
 
 func indexKeyIsDescCollation(keypos int, indexKeys datastore.IndexKeys) bool {
-	return len(indexKeys) > 0 && keypos < len(indexKeys) && indexKeys[keypos].Desc
+	return len(indexKeys) > 0 && keypos < len(indexKeys) && indexKeys[keypos].HasAttribute(datastore.IK_DESC)
 }

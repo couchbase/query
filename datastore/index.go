@@ -174,11 +174,18 @@ type SizedIndex interface {
 ////////////////////////////////////////////////////////////////////////
 
 type IndexKeys []*IndexKey
+type IkAttributes int
 
 type IndexKey struct {
-	Expr expression.Expression
-	Desc bool
+	Expr       expression.Expression
+	Attributes IkAttributes
 }
+
+const (
+	IK_NONE    IkAttributes = 0x00
+	IK_DESC                 = 0x01
+	IK_MISSING              = 0x01 << 1
+)
 
 type Indexer2 interface {
 	Indexer
@@ -661,4 +668,24 @@ func (this *IndexConnection) SetPrimary() {
 
 func (this *IndexConnection) Timeout() bool {
 	return this.timeout
+}
+
+func (this *IndexKey) Expression() expression.Expression {
+	return this.Expr
+}
+
+func (this *IndexKey) SetAttribute(attr IkAttributes, add bool) {
+	if add {
+		this.Attributes |= attr
+	} else {
+		this.Attributes = attr
+	}
+}
+
+func (this *IndexKey) UnsetAttribute(attr IkAttributes) {
+	this.Attributes &^= attr
+}
+
+func (this *IndexKey) HasAttribute(attr IkAttributes) bool {
+	return (this.Attributes & attr) != 0
 }

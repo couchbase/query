@@ -42,7 +42,7 @@ func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {
 func indexHasDesc(index datastore.Index) bool {
 	if index2, ok := index.(datastore.Index2); ok {
 		for _, key := range index2.RangeKey2() {
-			if key.Desc {
+			if key.HasAttribute(datastore.IK_DESC) {
 				return true
 			}
 		}

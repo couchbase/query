@@ -115,7 +115,11 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 func (this *CreateIndex) getRangeKeys(terms algebra.IndexKeyTerms) datastore.IndexKeys {
 	rangeKeys := make(datastore.IndexKeys, 0, len(terms))
 	for _, term := range terms {
-		rangeKeys = append(rangeKeys, &datastore.IndexKey{Expr: term.Expression(), Desc: term.Descending()})
+		rk := &datastore.IndexKey{Expr: term.Expression()}
+		if term.Descending() {
+			rk.SetAttribute(datastore.IK_DESC, true)
+		}
+		rangeKeys = append(rangeKeys, rk)
 	}
 
 	return rangeKeys
