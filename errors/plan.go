@@ -46,8 +46,11 @@ func NewNoSuchPreparedError(name string) Error {
 }
 
 func NewNoSuchPreparedWithContextError(name string, queryContext string) Error {
+	if queryContext == "" {
+		queryContext = "unset"
+	}
 	return &err{level: EXCEPTION, ICode: NO_SUCH_PREPARED, IKey: "plan.build_prepared.no_such_name",
-		InternalMsg: fmt.Sprintf("No such prepared statement: %s, context %s", name, queryContext), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("No such prepared statement: %s, context: %s", name, queryContext), InternalCaller: CallerN(1)}
 }
 
 func NewUnrecognizedPreparedError(e error) Error {
@@ -72,16 +75,22 @@ func NewPreparedEncodingMismatchError(name string) Error {
 
 const PLAN_NAME_MISMATCH = 4090
 
-func NewEncodingNameMismatchError(name string) Error {
+func NewEncodingNameMismatchError(expected, found string) Error {
 	return &err{level: EXCEPTION, ICode: PLAN_NAME_MISMATCH, IKey: "plan.build_prepared.name_not_in_encoded_plan",
-		InternalMsg: fmt.Sprintf("Prepared name in encoded plan parameter is not %s", name), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Mismatching name in encoded plan, expecting: %s, found: %s", expected, found), InternalCaller: CallerN(1)}
 }
 
 const PLAN_CONTEXT_MISMATCH = 4091
 
-func NewEncodingContextMismatchError(name string, context string) Error {
+func NewEncodingContextMismatchError(name, expected, found string) Error {
+	if expected == "" {
+		expected = "unset"
+	}
+	if found == "" {
+		found = "unset"
+	}
 	return &err{level: EXCEPTION, ICode: PLAN_CONTEXT_MISMATCH, IKey: "plan.build_prepared.context_not_in_encoded_plan",
-		InternalMsg: fmt.Sprintf("Prepared context in encoded plan parameter is not %s", context), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Mismatching query_context in encoded plan, expecting: %s, found: %s", expected, found), InternalCaller: CallerN(1)}
 }
 
 const NO_INDEX_JOIN = 4100

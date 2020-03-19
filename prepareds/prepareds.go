@@ -580,12 +580,12 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// the prepared statement named in the rest API
 	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
 	if prepared_key != prepared.Name() {
-		return nil, errors.NewEncodingNameMismatchError(prepared_name)
+		return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name())
 	}
 
 	// If a query context is specified, it has to match
 	if queryContext != "" && queryContext != prepared.QueryContext() {
-		return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext)
+		return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext, prepared.QueryContext())
 	}
 
 	// we don't trust anything strangers give us.

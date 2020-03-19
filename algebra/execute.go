@@ -25,7 +25,8 @@ a plan.Prepared.
 type Execute struct {
 	statementBase
 
-	prepared string `json:"prepared"`
+	prepared     value.Value `json:"prepared"`
+	preparedName string
 
 	// this contains either named parameters (a map of values)
 	// or positional (a slice)
@@ -37,25 +38,28 @@ The function NewExecute returns a pointer to the Execute
 struct with the input argument expressions value as a field.
 */
 func NewExecute(prepared expression.Expression, using expression.Expression) *Execute {
-	preparedString := ""
+	var preparedValue value.Value
+	var preparedString string
 
 	switch prepared := prepared.(type) {
 	case *expression.Identifier:
 		preparedString = prepared.Alias()
+		preparedValue = value.NewValue(preparedString)
 	default:
-		val := prepared.Value()
-		if val != nil {
-			if val.Type() == value.STRING {
-				preparedString = val.Actual().(string)
+		preparedValue = prepared.Value()
+		if preparedValue != nil {
+			if preparedValue.Type() == value.STRING {
+				preparedString = preparedValue.Actual().(string)
 			} else {
-				preparedString = val.String()
+				preparedString = preparedValue.String()
 			}
 		}
 	}
 
 	rv := &Execute{
-		prepared: preparedString,
-		using:    using,
+		prepared:     preparedValue,
+		preparedName: preparedString,
+		using:        using,
 	}
 
 	rv.stmt = rv
@@ -114,10 +118,18 @@ func (this *Execute) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-Returns the input prepared value that represents the prepared
+Returns the input prepared name that represents the prepared
 statement.
 */
 func (this *Execute) Prepared() string {
+	return this.preparedName
+}
+
+/*
+Returns the input prepared value that represents the prepared
+statement.
+*/
+func (this *Execute) PreparedValue() value.Value {
 	return this.prepared
 }
 
