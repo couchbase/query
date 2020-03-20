@@ -567,7 +567,7 @@ func DecodePrepared(prepared_name string, prepared_stmt string, track bool, dist
 	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
 	if prepared.Name() != "" && prepared_name != "" &&
 		prepared_key != prepared.Name() {
-		return nil, errors.NewEncodingNameMismatchError(prepared_name)
+		return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name())
 	}
 
 	if prepared.Name() == "" {

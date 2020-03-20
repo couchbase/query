@@ -18,15 +18,15 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-var errBadFormat = fmt.Errorf("prepared must be a json string or object")
+var errBadFormat = fmt.Errorf("prepared must be an identifier or a string")
 
 // Just a checker. The plan gets retrieved at request instantiation time, anyway
 // and getting it here was just doubling effort, plus introduced a circular dependency
 // VisitExecute is still part of the Visitor pattern because it will be used for
 // the Execute syntax enhancements (MB-22574)
 func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
-	expr := stmt.Prepared()
-	if (expr == nil) || expr.Type() != value.STRING && expr.Type() != value.OBJECT {
+	val := stmt.Prepared()
+	if val == nil || val.Type() != value.STRING {
 		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
 	}
 	return plan.NewDiscard(), nil
