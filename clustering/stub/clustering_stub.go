@@ -98,6 +98,10 @@ func (ConfigurationStoreStub) State() (clustering.Mode, errors.Error) {
 	return clustering.STANDALONE, nil
 }
 
+func (ConfigurationStoreStub) Cluster() (clustering.Cluster, errors.Error) {
+	return nil, nil
+}
+
 // ClusterStub is a stub implementation of clustering.Cluster
 // It has one Query Node, an instance of QueryNodeStub
 type ClusterStub struct{}
@@ -144,6 +148,10 @@ func (ClusterStub) ClusterManager() clustering.ClusterManager {
 
 func (ClusterStub) Capability(name string) bool {
 	return false
+}
+
+func (ClusterStub) Settings() (map[string]interface{}, errors.Error) {
+	return nil, nil
 }
 
 // StandaloneStub is a stub implementation of clustering.Standalone

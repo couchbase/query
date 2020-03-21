@@ -63,7 +63,8 @@ type ConfigurationStore interface {
 	ConfigurationManager() ConfigurationManager            // Get a ConfigurationManager for this ConfigurationStore
 	Authorize(map[string]string, []Privilege) errors.Error // Do authorization returning an error if unsuccessful
 	WhoAmI() (string, errors.Error)                        // The Id of the local node, if clustered
-	State() (Mode, errors.Error)                           // The clustring state of the local node
+	State() (Mode, errors.Error)                           // The clustering state of the local node
+	Cluster() (Cluster, errors.Error)                      // The cluster the local belongs to
 	SetOptions(httpAddr, httpsAddr string) errors.Error    // Set options for the local ConfigurationStore
 }
 
@@ -80,6 +81,7 @@ type Cluster interface {
 	Version() Version                                      // Logical version of the software that the QueryNodes in the cluster are running
 	ClusterManager() ClusterManager                        // Get a ClusterManager for this Cluster
 	Capability(string) bool                                // Check if cluster possesses a certain capability
+	Settings() (map[string]interface{}, errors.Error)      // Get cluster wide settings
 }
 
 type Standalone interface {

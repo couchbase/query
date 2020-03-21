@@ -279,6 +279,14 @@ func (this *cbConfigStore) State() (clustering.Mode, errors.Error) {
 	return state, nil
 }
 
+func (this *cbConfigStore) Cluster() (clustering.Cluster, errors.Error) {
+	_, _, err := this.doNameState()
+	if err != nil {
+		return nil, err
+	}
+	return this.ClusterByName(this.poolName)
+}
+
 func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error) {
 
 	// once things get to a certain state, no changes are possible
@@ -766,6 +774,23 @@ func (this *cbCluster) Capability(name string) bool {
 	rv := this.capabilities[name]
 	this.RUnlock()
 	return rv
+}
+
+func (this *cbCluster) Settings() (map[string]interface{}, errors.Error) {
+	pool, err := this.configStore.(*cbConfigStore).cbConn.GetPool(this.ClusterName)
+	if err != nil {
+		return nil, errors.NewAdminGetClusterError(err, this.ClusterName)
+	}
+
+	out := map[string]interface{}{"memory": map[string]interface{}{
+		"kv":       pool.MemoryQuota,
+		"cbas":     pool.CbasMemoryQuota,
+		"eventing": pool.EventingMemoryQuota,
+		"fts":      pool.FtsMemoryQuota,
+		"index":    pool.IndexMemoryQuota,
+	},
+	}
+	return out, nil
 }
 
 // cbCluster implements clustering.ClusterManager interface

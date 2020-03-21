@@ -159,6 +159,10 @@ func (z *zkConfigStore) State() (clustering.Mode, errors.Error) {
 	return clustering.STARTING, nil
 }
 
+func (z *zkConfigStore) Cluster() (clustering.Cluster, errors.Error) {
+	return nil, nil
+}
+
 // zkCluster implements clustering.Cluster
 type zkCluster struct {
 	configStore    clustering.ConfigurationStore `json:"-"`
@@ -280,6 +284,10 @@ func (z *zkCluster) ClusterManager() clustering.ClusterManager {
 
 func (z *zkCluster) Capability(name string) bool {
 	return false
+}
+
+func (z *zkCluster) Settings() (map[string]interface{}, errors.Error) {
+	return nil, nil
 }
 
 // zkCluster implements clustering.ClusterManager interface
