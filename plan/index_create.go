@@ -62,8 +62,11 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 		q := make(map[string]interface{}, 2)
 		q["expr"] = term.Expression().String()
 
-		if term.Descending() {
-			q["desc"] = term.Descending()
+		if term.HasAttribute(algebra.IK_MISSING) {
+			q["missing"] = true
+		}
+		if term.HasAttribute(algebra.IK_DESC) {
+			q["desc"] = true
 		}
 
 		k[i] = q
@@ -101,8 +104,9 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		Keyspace  string `json:"keyspace"`
 		Index     string `json:"index"`
 		Keys      []struct {
-			Expr string `json:"expr"`
-			Desc bool   `json:"desc"`
+			Expr    string `json:"expr"`
+			Desc    bool   `json:"desc"`
+			Missing bool   `json:"missing"`
 		} `json:"keys"`
 		Using     datastore.IndexType `json:"using"`
 		Partition *struct {
@@ -133,7 +137,15 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
-		keys[i] = algebra.NewIndexKeyTerm(expr, term.Desc)
+		attributes := uint32(0)
+		if term.Desc {
+			attributes |= algebra.IK_DESC
+		}
+		if term.Missing {
+			attributes |= algebra.IK_MISSING
+		}
+
+		keys[i] = algebra.NewIndexKeyTerm(expr, attributes)
 	}
 
 	if keys.HasDescending() {

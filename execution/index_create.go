@@ -82,6 +82,11 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 		} else {
+			if node.Keys().Missing() {
+				context.Error(errors.NewIndexLeadingKeyMissingNotSupportedError())
+				return
+			}
+
 			if node.Partition() != nil {
 				context.Error(errors.NewPartitionIndexNotSupportedError())
 				return
@@ -114,11 +119,17 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 
 func (this *CreateIndex) getRangeKeys(terms algebra.IndexKeyTerms) datastore.IndexKeys {
 	rangeKeys := make(datastore.IndexKeys, 0, len(terms))
-	for _, term := range terms {
-		rk := &datastore.IndexKey{Expr: term.Expression()}
-		if term.Descending() {
-			rk.SetAttribute(datastore.IK_DESC, true)
+	for i, term := range terms {
+		attrs := datastore.IK_NONE
+		// non-leading IK_MISSING is always true
+		if i > 0 || term.HasAttribute(algebra.IK_MISSING) {
+			attrs = datastore.IK_MISSING
 		}
+		if term.HasAttribute(algebra.IK_DESC) {
+			attrs |= datastore.IK_DESC
+		}
+
+		rk := &datastore.IndexKey{Expr: term.Expression(), Attributes: attrs}
 		rangeKeys = append(rangeKeys, rk)
 	}
 

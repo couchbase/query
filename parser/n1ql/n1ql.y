@@ -465,7 +465,7 @@ tokOffset	 int
 %type <s>                role_name
 %type <s>                user
 
-%type <u32>              opt_order_nulls
+%type <u32>              opt_order_nulls opt_ikattr ikattr
 %type <b>                first_last nulls
 
 %type <windowTerms>         opt_window_clause window_list
@@ -2479,7 +2479,7 @@ index_terms COMMA index_term
 ;
 
 index_term:
-index_term_expr opt_dir
+index_term_expr opt_ikattr
 {
    $$ = algebra.NewIndexKeyTerm($1, $2)
 }
@@ -2530,6 +2530,35 @@ WHERE index_expr
 {
     $$ = $2
 }
+;
+
+opt_ikattr:
+/* empty */
+{ $$ = algebra.IK_NONE }
+|
+ikattr
+{ $$ = $1 }
+|
+ikattr ikattr
+{
+   attr, valid := algebra.NewIndexKeyTermAttributes($1,$2)
+   if !valid {
+       yylex.Error("Duplicate or Invalid index key attribute")
+   }
+   $$ = attr
+}
+;
+
+
+ikattr:
+ASC
+{ $$ = algebra.IK_ASC }
+|
+DESC
+{ $$ = algebra.IK_DESC }
+|
+MISSING
+{ $$ = algebra.IK_MISSING }
 ;
 
 

@@ -243,28 +243,53 @@ value that decides the IndexKey collation (ASC or DESC).
 */
 type IndexKeyTerm struct {
 	expr       expression.Expression `json:"expr"`
-	descending bool                  `json:"desc"`
+	attributes uint32                `json:"attributes"`
+}
+
+const (
+	IK_ASC = 1 << iota
+	IK_DESC
+	IK_MISSING
+	IK_NONE = 0
+)
+
+func NewIndexKeyTermAttributes(attributes ...uint32) (v uint32, b bool) {
+	for i := 0; i < len(attributes); i++ {
+		for j := i + 1; j < len(attributes); j++ {
+			// Don't allow repeat of same attribute, ASC/DESC together.
+			if (attributes[i]&attributes[j]) != 0 ||
+				((attributes[i]&(IK_ASC|IK_DESC)) != 0 && (attributes[j]&(IK_ASC|IK_DESC)) != 0) {
+				return uint32(0), false
+			}
+		}
+		v |= attributes[i]
+	}
+	return v, true
 }
 
 /*
 The function NewIndexKeyTerm returns a pointer to the IndexKeyTerm
 struct that has its fields set to the input arguments.
 */
-func NewIndexKeyTerm(expr expression.Expression, descending bool) *IndexKeyTerm {
+func NewIndexKeyTerm(expr expression.Expression, attributes uint32) *IndexKeyTerm {
 	return &IndexKeyTerm{
 		expr:       expr,
-		descending: descending,
+		attributes: attributes,
 	}
 }
 
 /*
    Representation as a N1QL string.
 */
-func (this *IndexKeyTerm) String() string {
+func (this *IndexKeyTerm) String(pos int) string {
 	s := this.expr.String()
 
-	if this.descending {
-		s += " desc"
+	if pos == 0 && this.HasAttribute(IK_MISSING) {
+		s += " MISSING"
+	}
+
+	if this.HasAttribute(IK_DESC) {
+		s += " DESC"
 	}
 
 	return s
@@ -277,11 +302,31 @@ func (this *IndexKeyTerm) Expression() expression.Expression {
 	return this.expr
 }
 
+func (this *IndexKeyTerm) Attributes() uint32 {
+	return this.attributes
+}
+
+func (this *IndexKeyTerm) SetAttribute(attr uint32, add bool) {
+	if add {
+		this.attributes |= attr
+	} else {
+		this.attributes = attr
+	}
+}
+
+func (this *IndexKeyTerm) UnsetAttribute(attr uint32) {
+	this.attributes &^= attr
+}
+
+func (this *IndexKeyTerm) HasAttribute(attr uint32) bool {
+	return (this.attributes & attr) != 0
+}
+
 /*
-Return bool value representing ASC or DESC collation order.
+Return bool value representing Index Leading Missing
 */
-func (this *IndexKeyTerm) Descending() bool {
-	return this.descending
+func (this IndexKeyTerms) Missing() bool {
+	return this[0].HasAttribute(IK_MISSING)
 }
 
 /*
@@ -289,7 +334,7 @@ Return bool value representing ASC or DESC collation order.
 */
 func (this IndexKeyTerms) HasDescending() bool {
 	for _, term := range this {
-		if term.Descending() {
+		if term.HasAttribute(IK_DESC) {
 			return true
 		}
 	}
@@ -334,7 +379,7 @@ func (this IndexKeyTerms) String() string {
 			s += ", "
 		}
 
-		s += term.String()
+		s += term.String(i)
 	}
 
 	return s

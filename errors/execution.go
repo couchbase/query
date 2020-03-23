@@ -250,3 +250,9 @@ func NewSubqueryBuildError(e error) Error {
 		InternalMsg:    "Unable to run subquery",
 		InternalCaller: CallerN(1)}
 }
+
+func NewIndexLeadingKeyMissingNotSupportedError() Error {
+	return &err{level: EXCEPTION, ICode: 5380, IKey: "execution.indexing.leadingkey_missing_not_supported",
+		InternalMsg:    fmt.Sprintf("Indexing leading key MISSING values are not supported by indexer."),
+		InternalCaller: CallerN(1)}
+}

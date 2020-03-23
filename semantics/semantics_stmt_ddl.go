@@ -11,6 +11,8 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -18,6 +20,12 @@ func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex
 }
 
 func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
+	gsi := stmt.Using() == datastore.GSI || stmt.Using() == datastore.DEFAULT
+	for i, term := range stmt.Keys() {
+		if term.HasAttribute(algebra.IK_MISSING) && (i > 0 || !gsi) {
+			return nil, errors.NewSemanticsError(nil, "MISSING attribute only allowed on GSI index leading key")
+		}
+	}
 	return nil, stmt.MapExpressions(this)
 }
 

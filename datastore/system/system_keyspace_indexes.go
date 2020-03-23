@@ -216,6 +216,9 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 		rv = make([]string, len(keys))
 		for i, kp := range keys {
 			s := expression.NewStringer().Visit(kp.Expr)
+			if i == 0 && kp.HasAttribute(datastore.IK_MISSING) {
+				s += " MISSING"
+			}
 			if kp.HasAttribute(datastore.IK_DESC) {
 				s += " DESC"
 			}
