@@ -129,6 +129,10 @@ func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expressio
 	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, filters)
 }
 
+func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string) (float64, float64) {
+	return optimizer.CalcUnnestCost(node, lastOp, keyspaces)
+}
+
 func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
 	return optimizer.CalcSimpleFromTermCost(left, right, filters)
 }

@@ -19,14 +19,18 @@ import (
 
 type Unnest struct {
 	readonly
-	term  *algebra.Unnest
-	alias string
+	term        *algebra.Unnest
+	alias       string
+	cost        float64
+	cardinality float64
 }
 
-func NewUnnest(term *algebra.Unnest) *Unnest {
+func NewUnnest(term *algebra.Unnest, cost, cardinality float64) *Unnest {
 	return &Unnest{
-		term:  term,
-		alias: term.Alias(),
+		term:        term,
+		alias:       term.Alias(),
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -46,6 +50,14 @@ func (this *Unnest) Alias() string {
 	return this.alias
 }
 
+func (this *Unnest) Cost() float64 {
+	return this.cost
+}
+
+func (this *Unnest) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Unnest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -62,6 +74,13 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["as"] = this.alias
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -70,10 +89,12 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Unnest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Outer bool   `json:"outer"`
-		Expr  string `json:"expr"`
-		As    string `json:"as"`
+		_           string  `json:"#operator"`
+		Outer       bool    `json:"outer"`
+		Expr        string  `json:"expr"`
+		As          string  `json:"as"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 	var expr expression.Expression
 
@@ -91,5 +112,9 @@ func (this *Unnest) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewUnnest(nil, _unmarshalled.Outer, expr, _unmarshalled.As)
 	this.alias = _unmarshalled.As
-	return err
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }

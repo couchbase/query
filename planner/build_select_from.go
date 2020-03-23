@@ -546,7 +546,13 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 
 	_, found := this.coveredUnnests[node]
 	if !found {
-		unnest := plan.NewUnnest(node)
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			lastOp := this.getLastOp()
+			cost, cardinality = getUnnestCost(node, lastOp, this.keyspaceNames)
+		}
+		unnest := plan.NewUnnest(node, cost, cardinality)
 		this.subChildren = append(this.subChildren, unnest)
 		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
 		this.children = append(this.children, parallel)
