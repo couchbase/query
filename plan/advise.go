@@ -45,7 +45,6 @@ func (this *Advise) MarshalJSON() ([]byte, error) {
 func (this *Advise) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Advise"}
 
-	r["advice"] = this.op
 	r["query"] = this.query
 
 	if f != nil {

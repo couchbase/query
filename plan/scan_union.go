@@ -177,7 +177,6 @@ func (this *UnionScan) MarshalJSON() ([]byte, error) {
 
 func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "UnionScan"}
-	r["scans"] = this.scans
 
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
@@ -197,6 +196,8 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 	if f != nil {
 		f(r)
+	} else {
+		r["scans"] = this.scans
 	}
 	return r
 }

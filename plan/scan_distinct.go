@@ -114,7 +114,6 @@ func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 
 func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DistinctScan"}
-	r["scan"] = this.scan
 
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
@@ -134,6 +133,8 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 
 	if f != nil {
 		f(r)
+	} else {
+		r["scan"] = this.scan
 	}
 	return r
 }

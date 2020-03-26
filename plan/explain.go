@@ -44,7 +44,6 @@ func (this *Explain) MarshalJSON() ([]byte, error) {
 
 func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := make(map[string]interface{}, 2)
-	r["plan"] = this.op
 	r["text"] = this.text
 	if f != nil {
 		f(r)

@@ -42,7 +42,6 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 
 func (this *UnionAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "UnionAll"}
-	r["~children"] = this.children
 	if f != nil {
 		f(r)
 	} else {

@@ -136,7 +136,6 @@ func (this *OrderedIntersectScan) MarshalJSON() ([]byte, error) {
 
 func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "OrderedIntersectScan"}
-	r["scans"] = this.scans
 
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
@@ -152,6 +151,8 @@ func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) ma
 
 	if f != nil {
 		f(r)
+	} else {
+		r["scans"] = this.scans
 	}
 	return r
 }

@@ -58,9 +58,6 @@ func (this *With) MarshalBase(f func(map[string]interface{})) map[string]interfa
 	r["bindings"] = this.bindings
 	if f != nil {
 		f(r)
-	}
-	if f != nil {
-		f(r)
 	} else {
 		r["~child"] = this.child
 	}

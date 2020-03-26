@@ -47,7 +47,6 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 
 func (this *Sequence) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Sequence"}
-	r["~children"] = this.children
 	if f != nil {
 		f(r)
 	} else {

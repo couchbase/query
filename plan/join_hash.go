@@ -127,10 +127,10 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 		r["cardinality"] = this.cardinality
 	}
 
-	r["~child"] = this.child
-
 	if f != nil {
 		f(r)
+	} else {
+		r["~child"] = this.child
 	}
 	return r
 }

@@ -103,10 +103,10 @@ func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["cardinality"] = this.cardinality
 	}
 
-	r["~child"] = this.child
-
 	if f != nil {
 		f(r)
+	} else {
+		r["~child"] = this.child
 	}
 	return r
 }
