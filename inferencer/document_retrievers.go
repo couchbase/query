@@ -15,8 +15,10 @@ import (
 // and we also might get them using a primary index
 //
 
+const _EMPTY_KEY = ""
+
 type DocumentRetriever interface {
-	GetNextDoc() (value.Value, *string) // returns nil for value when done
+	GetNextDoc() (string, value.Value, *string) // returns nil for value when done
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -33,10 +35,10 @@ type PrimaryIndexDocumentRetriever struct {
 	sampleSize   int
 }
 
-func (pidr *PrimaryIndexDocumentRetriever) GetNextDoc() (value.Value, *string) {
+func (pidr *PrimaryIndexDocumentRetriever) GetNextDoc() (string, value.Value, *string) {
 	// have we reached the end of the set of primary keys?
 	if pidr.nextToReturn >= len(pidr.docIds) {
-		return nil, nil
+		return _EMPTY_KEY, nil, nil
 	}
 
 	// retrieve the next key
@@ -47,10 +49,10 @@ func (pidr *PrimaryIndexDocumentRetriever) GetNextDoc() (value.Value, *string) {
 
 	if errs != nil || len(docs) == 0 {
 		error_msg := fmt.Sprintf("Error fetching documents id %s: %s\n", key, errs)
-		return nil, &error_msg
+		return _EMPTY_KEY, nil, &error_msg
 	}
 
-	return docs[key[0]], nil
+	return key[0], docs[key[0]], nil
 }
 
 func MakePrimaryIndexDocumentRetriever(ks datastore.Keyspace, optSampleSize int) (*PrimaryIndexDocumentRetriever, *string) {
@@ -155,10 +157,10 @@ type KeyspaceRandomDocumentRetriever struct {
 	sampleSize int
 }
 
-func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (value.Value, *string) {
+func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (string, value.Value, *string) {
 	// have we returned as many documents as were requested?
 	if len(krdr.docIdsSeen) >= krdr.sampleSize {
-		return nil, nil
+		return _EMPTY_KEY, nil, nil
 	}
 
 	// try to retrieve the next document
@@ -167,7 +169,7 @@ func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (value.Value, *string)
 		key, value, err := krdr.rdr.GetRandomEntry() // get the doc
 		if err != nil {                              // check for errors
 			error_msg := err.Error()
-			return nil, &error_msg
+			return _EMPTY_KEY, nil, &error_msg
 		}
 		if krdr.docIdsSeen[key] { // seen it before?
 			duplicatesSeen++
@@ -175,12 +177,12 @@ func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (value.Value, *string)
 		}
 
 		krdr.docIdsSeen[key] = true
-		return value, nil // new doc, return
+		return key, value, nil // new doc, return
 	}
 
 	// if we get here, we saw duplicate docs 100 times in a row, so we give
 	// up on finding any more new docs
-	return nil, nil
+	return _EMPTY_KEY, nil, nil
 }
 
 func MakeKeyspaceRandomDocumentRetriever(ks datastore.Keyspace, sampleSize int) (*KeyspaceRandomDocumentRetriever, *string) {
@@ -216,10 +218,10 @@ type KVRandomDocumentRetriever struct {
 	bucket     *couchbase.Bucket
 }
 
-func (kvrdr *KVRandomDocumentRetriever) GetNextDoc() (value.Value, *string) {
+func (kvrdr *KVRandomDocumentRetriever) GetNextDoc() (string, value.Value, *string) {
 	// have we returned as many documents as were requested?
 	if len(kvrdr.docIdsSeen) >= kvrdr.sampleSize {
-		return nil, nil
+		return _EMPTY_KEY, nil, nil
 	}
 
 	// try to retrieve the next document
@@ -229,7 +231,7 @@ func (kvrdr *KVRandomDocumentRetriever) GetNextDoc() (value.Value, *string) {
 
 		if err != nil {
 			error_msg := fmt.Sprintf("Error getting random doc, %v", err)
-			return nil, &error_msg
+			return _EMPTY_KEY, nil, &error_msg
 		}
 
 		key := fmt.Sprintf("%s", resp.Key)
@@ -241,12 +243,12 @@ func (kvrdr *KVRandomDocumentRetriever) GetNextDoc() (value.Value, *string) {
 		}
 
 		kvrdr.docIdsSeen[key] = true
-		return val, nil // new doc, return
+		return key, val, nil // new doc, return
 	}
 
 	// if we get here, we saw duplicate docs 100 times in a row, so we give
 	// up on finding any more new docs
-	return nil, nil
+	return _EMPTY_KEY, nil, nil
 }
 
 func MakeKVRandomDocumentRetriever(serverURL, login, serverPass, bucket, bucketPass string, sampleSize int) (*KVRandomDocumentRetriever, *string) {

@@ -140,7 +140,7 @@ func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.
 			}
 			this.queryInfo.SetCurIndex(info)
 		}
-		if this.advisePhase == _VALIDATE {
+		if this.advisePhase == _RECOMMEND {
 			if !cover {
 				this.keyspaceInfos.SetUncovered()
 			}

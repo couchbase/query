@@ -53,7 +53,7 @@ func DescribeKeyspace(conn *datastore.ValueConnection, retriever DocumentRetriev
 		}
 
 		// Get the document
-		doc, err := retriever.GetNextDoc()
+		_, doc, err := retriever.GetNextDoc()
 		if err != nil {
 			message := fmt.Sprintf("Error getting documents for infer.\n%s", *err)
 			error := map[string]interface{}{"error": message}
