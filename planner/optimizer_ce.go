@@ -131,3 +131,15 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	float64, float64, float64, float64, float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
+
+func getUnionAllCost(first, second plan.Operator) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getIntersectAllCost(first, second plan.Operator) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getExceptAllCost(first, second plan.Operator) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}

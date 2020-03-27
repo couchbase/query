@@ -15,14 +15,18 @@ import (
 
 type ExceptAll struct {
 	readonly
-	first  Operator
-	second Operator
+	first       Operator
+	second      Operator
+	cost        float64
+	cardinality float64
 }
 
-func NewExceptAll(first, second Operator) *ExceptAll {
+func NewExceptAll(first, second Operator, cost, cardinality float64) *ExceptAll {
 	return &ExceptAll{
-		first:  first,
-		second: second,
+		first:       first,
+		second:      second,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -42,12 +46,26 @@ func (this *ExceptAll) Second() Operator {
 	return this.second
 }
 
+func (this *ExceptAll) Cost() float64 {
+	return this.cost
+}
+
+func (this *ExceptAll) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ExceptAll"}
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	} else {
@@ -59,9 +77,11 @@ func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *ExceptAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string          `json:"#operator"`
-		First  json.RawMessage `json:"first"`
-		Second json.RawMessage `json:"second"`
+		_           string          `json:"#operator"`
+		First       json.RawMessage `json:"first"`
+		Second      json.RawMessage `json:"second"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -89,6 +109,9 @@ func (this *ExceptAll) UnmarshalJSON(body []byte) error {
 			return err
 		}
 	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	return err
 }

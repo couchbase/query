@@ -185,3 +185,15 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	}
 	return optimizer.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
 }
+
+func getUnionAllCost(first, second plan.Operator) (float64, float64) {
+	return optimizer.CalcSetOpCost(first, second, optimizer.COST_UNION)
+}
+
+func getIntersectAllCost(first, second plan.Operator) (float64, float64) {
+	return optimizer.CalcSetOpCost(first, second, optimizer.COST_INTERSECT)
+}
+
+func getExceptAllCost(first, second plan.Operator) (float64, float64) {
+	return optimizer.CalcSetOpCost(first, second, optimizer.COST_EXCEPT)
+}
