@@ -61,8 +61,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		return err
 	}
 
-	this.children = append(this.children, scan)
-	this.lastOp = scan
+	this.addChildren(scan)
 
 	if len(this.coveringScans) > 0 {
 		err = this.coverExpressions()
@@ -91,8 +90,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		} else {
 			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality)
 		}
-		this.subChildren = append(this.subChildren, fetch)
-		this.lastOp = fetch
+		this.addSubChildren(fetch)
 	}
 
 	if this.where != nil {
@@ -105,8 +103,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		}
 
 		filter := plan.NewFilter(this.where, cost, cardinality)
-		this.subChildren = append(this.subChildren, filter)
-		this.lastOp = filter
+		this.addSubChildren(filter)
 	}
 
 	return nil

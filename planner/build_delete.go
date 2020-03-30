@@ -47,22 +47,22 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	if stmt.Limit() != nil {
 		seqChildren := make([]plan.Operator, 0, 3)
 		if len(subChildren) > 0 {
-			seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+			seqChildren = append(seqChildren, this.addParallel(subChildren...))
 		}
 		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit()))
-		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(deleteSubChildren...), this.maxParallelism))
-		this.children = append(this.children, plan.NewSequence(seqChildren...))
+		seqChildren = append(seqChildren, this.addParallel(deleteSubChildren...))
+		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {
 		if len(subChildren) > 0 {
 			subChildren = append(subChildren, deleteSubChildren...)
 		} else {
 			subChildren = deleteSubChildren
 		}
-		this.children = append(this.children, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+		this.addChildren(this.addParallel(subChildren...))
 	}
 
 	if stmt.Returning() == nil {
-		this.children = append(this.children, plan.NewDiscard())
+		this.addChildren(plan.NewDiscard())
 	}
 
 	return plan.NewSequence(this.children...), nil

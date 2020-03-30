@@ -52,17 +52,17 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 
 	if stmt.Limit() != nil {
 		seqChildren := make([]plan.Operator, 0, 3)
-		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+		seqChildren = append(seqChildren, this.addParallel(subChildren...))
 		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit()))
-		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(updateSubChildren...), this.maxParallelism))
-		this.children = append(this.children, plan.NewSequence(seqChildren...))
+		seqChildren = append(seqChildren, this.addParallel(updateSubChildren...))
+		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {
 		subChildren = append(subChildren, updateSubChildren...)
-		this.children = append(this.children, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+		this.addChildren(this.addParallel(subChildren...))
 	}
 
 	if stmt.Returning() == nil {
-		this.children = append(this.children, plan.NewDiscard())
+		this.addChildren(plan.NewDiscard())
 	}
 
 	return plan.NewSequence(this.children...), nil

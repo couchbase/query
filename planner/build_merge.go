@@ -147,9 +147,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	if stmt.IsOnKey() {
-		merge := plan.NewMerge(keyspace, ksref, stmt.On(), update, delete, insert)
-		this.lastOp = merge
-		this.subChildren = append(this.subChildren, merge)
+		this.addSubChildren(plan.NewMerge(keyspace, ksref, stmt.On(), update, delete, insert))
 	} else {
 		// use ANSI JOIN to handle the ON-clause
 		right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
@@ -164,34 +162,29 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 		switch join := join.(type) {
 		case *plan.NLJoin:
-			this.subChildren = append(this.subChildren, join)
+			this.addSubChildren(join)
 		case *plan.Join, *plan.HashJoin:
 			if len(this.subChildren) > 0 {
-				parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-				this.children = append(this.children, parallel)
-				this.subChildren = make([]plan.Operator, 0, 8)
+				this.addChildren(this.addSubchildrenParallel())
 			}
-			this.children = append(this.children, join)
+			this.addChildren(join)
 		}
 
-		merge := plan.NewMerge(keyspace, ksref, nil, update, delete, insert)
-		this.lastOp = merge
-		this.subChildren = append(this.subChildren, merge)
+		this.addSubChildren(plan.NewMerge(keyspace, ksref, nil, update, delete, insert))
 	}
 
 	if stmt.Returning() != nil {
 		this.subChildren = this.buildDMLProject(stmt.Returning(), this.subChildren)
 	}
 
-	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-	this.children = append(this.children, parallel)
+	this.addChildren(this.addSubchildrenParallel())
 
 	if stmt.Limit() != nil {
-		this.children = append(this.children, plan.NewLimit(stmt.Limit()))
+		this.addChildren(plan.NewLimit(stmt.Limit()))
 	}
 
 	if stmt.Returning() == nil {
-		this.children = append(this.children, plan.NewDiscard())
+		this.addChildren(plan.NewDiscard())
 	}
 
 	return plan.NewSequence(this.children...), nil
@@ -206,7 +199,5 @@ func (this *builder) addMergeFilter(pred expression.Expression) *plan.Filter {
 			this.keyspaceNames)
 	}
 
-	filter := plan.NewFilter(pred, cost, cardinality)
-	this.lastOp = filter
-	return filter
+	return plan.NewFilter(pred, cost, cardinality)
 }

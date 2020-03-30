@@ -234,22 +234,18 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			this.addLetAndPredicate(node.Let(), node.Where())
 		}
 
-		last := this.getLastOp()
-
 		if group != nil {
 			this.visitGroup(group, aggs)
-			last = this.getLastOp()
 		}
 
 		if len(windowAggs) > 0 {
 			this.visitWindowAggregates(windowAggs)
-			last = this.getLastOp()
 		}
 
 		projection := node.Projection()
-		if this.useCBO && last != nil {
-			cost = last.Cost()
-			cardinality = last.Cardinality()
+		if this.useCBO && this.lastOp != nil {
+			cost = this.lastOp.Cost()
+			cardinality = this.lastOp.Cardinality()
 			if cost > 0.0 && cardinality > 0.0 {
 				ipcost, ipcard := getInitialProjectCost(projection, cardinality)
 				if ipcost > 0.0 && ipcard > 0.0 {
@@ -258,11 +254,11 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				}
 			}
 		}
-		this.subChildren = append(this.subChildren, plan.NewInitialProject(projection, cost, cardinality))
+		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality))
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {
-			this.subChildren = append(this.subChildren, plan.NewDistinct())
+			this.addSubChildren(plan.NewDistinct())
 		}
 
 		if this.order != nil {
@@ -277,18 +273,17 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 
 		// Parallelize the subChildren
-		this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
+		this.addChildren(this.addSubchildrenParallel())
 
 		// Final DISTINCT (serial)
 		if projection.Distinct() || this.setOpDistinct {
-			this.children = append(this.children, plan.NewDistinct())
+			this.addChildren(plan.NewDistinct())
 		}
 	} else {
-		last := this.getLastOp()
 		projection := node.Projection()
-		if this.useCBO && last != nil {
-			cost = last.Cost()
-			cardinality = last.Cardinality()
+		if this.useCBO && this.lastOp != nil {
+			cost = this.lastOp.Cost()
+			cardinality = this.lastOp.Cardinality()
 			if cost > 0.0 && cardinality > 0.0 {
 				icpcost, icpcard := getIndexCountProjectCost(projection, cardinality)
 				if icpcost > 0.0 && icpcard > 0.0 {
@@ -297,7 +292,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				}
 			}
 		}
-		this.children = append(this.children, plan.NewIndexCountProject(projection, cost, cardinality))
+		this.addChildren(plan.NewIndexCountProject(projection, cost, cardinality))
 	}
 
 	// Serialize the top-level children
@@ -308,7 +303,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	// process with in a parent sequence
 	if node.With() != nil {
 		rv = plan.NewWith(node.With(), rv)
-		this.children = append([]plan.Operator{}, rv)
+		this.children = make([]plan.Operator, 0, 1)
+		this.addChildren(rv)
 	}
 	return rv, nil
 }
@@ -333,13 +329,11 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 					this.baseKeyspaces, this.keyspaceNames)
 			}
 			filter := plan.NewFilter(pred, cost, cardinality)
-			this.lastOp = filter
 			if this.useCBO {
 				cost, cardinality = getLetCost(this.lastOp)
 			}
 			letop := plan.NewLet(let, cost, cardinality)
-			this.lastOp = letop
-			this.subChildren = append(this.subChildren, filter, letop)
+			this.addSubChildren(filter, letop)
 			return
 		}
 	}
@@ -348,9 +342,7 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 		if this.useCBO {
 			cost, cardinality = getLetCost(this.lastOp)
 		}
-		letop := plan.NewLet(let, cost, cardinality)
-		this.lastOp = letop
-		this.subChildren = append(this.subChildren, letop)
+		this.addSubChildren(plan.NewLet(let, cost, cardinality))
 	}
 
 	if pred != nil {
@@ -358,9 +350,7 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
 				this.keyspaceNames)
 		}
-		filter := plan.NewFilter(pred, cost, cardinality)
-		this.lastOp = filter
-		this.subChildren = append(this.subChildren, filter)
+		this.addSubChildren(plan.NewFilter(pred, cost, cardinality))
 	}
 }
 
@@ -392,15 +382,12 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 			}
 		}
 		aggv := sortAggregatesSlice(aggs)
-		this.subChildren = append(this.subChildren, plan.NewInitialGroup(group.By(), aggv,
+		this.addSubChildren(plan.NewInitialGroup(group.By(), aggv,
 			costInitial, cardinalityInitial))
-		this.children = append(this.children,
-			plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
-		this.children = append(this.children, plan.NewIntermediateGroup(group.By(), aggv,
+		this.addChildren(this.addSubchildrenParallel())
+		this.addChildren(plan.NewIntermediateGroup(group.By(), aggv,
 			costIntermediate, cardinalityIntermediate))
-		this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv,
-			costFinal, cardinalityFinal))
-		this.subChildren = make([]plan.Operator, 0, 8)
+		this.addChildren(plan.NewFinalGroup(group.By(), aggv, costFinal, cardinalityFinal))
 	}
 
 	this.addLetAndPredicate(group.Letting(), group.Having())
@@ -927,13 +914,4 @@ func dereferenceLet(expr expression.Expression, inliner *expression.Inliner, lev
 		expr = expr_new
 	}
 	return expr, nil
-}
-
-func (this *builder) getLastOp() plan.Operator {
-	if len(this.subChildren) > 0 {
-		return this.subChildren[len(this.subChildren)-1]
-	} else if len(this.children) > 0 {
-		return this.children[len(this.children)-1]
-	}
-	return nil
 }

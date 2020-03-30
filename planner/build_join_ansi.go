@@ -633,9 +633,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 
 	// left hand side is already built
 	if len(this.subChildren) > 0 {
-		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-		this.children = append(this.children, parallel)
-		this.subChildren = make([]plan.Operator, 0, 16)
+		this.addChildren(this.addSubchildrenParallel())
 	}
 
 	// build right hand side

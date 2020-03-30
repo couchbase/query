@@ -133,8 +133,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		if this.useCBO {
 			cost, cardinality = getDummyScanCost()
 		}
-		scan := plan.NewDummyScan(cost, cardinality)
-		this.children = append(this.children, scan)
+		this.addChildren(plan.NewDummyScan(cost, cardinality))
 		this.maxParallelism = 1
 	}
 
@@ -203,8 +202,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: no plan generated")
 		}
 	}
-	this.children = append(this.children, scan)
-	this.lastOp = scan
+	this.addChildren(scan)
 
 	if len(this.coveringScans) == 0 && this.countScan == nil {
 		names, err := this.GetSubPaths(node.Alias())
@@ -223,9 +221,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				cardinality = OPT_CARD_NOT_AVAIL
 			}
 		}
-		fetch := plan.NewFetch(keyspace, node, names, cost, cardinality)
-		this.children = append(this.children, fetch)
-		this.lastOp = fetch
+		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality))
 	}
 
 	err = this.processKeyspaceDone(node.Alias())
@@ -247,8 +243,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
-	this.children = append(this.children, sel.(plan.Operator), plan.NewAlias(node.Alias()))
-	this.lastOp = sel.(plan.Operator)
+	this.addChildren(sel.(plan.Operator), plan.NewAlias(node.Alias()))
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -273,9 +268,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	if this.useCBO {
 		cost, cardinality = getExpressionScanCost(node.ExpressionTerm(), this.keyspaceNames)
 	}
-	scan := plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), cost, cardinality)
-	this.children = append(this.children, scan)
-	this.lastOp = scan
+	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), cost, cardinality))
 
 	err := this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -310,12 +303,9 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 	join := plan.NewJoin(keyspace, node)
 	if len(this.subChildren) > 0 {
-		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-		this.children = append(this.children, parallel)
-		this.subChildren = make([]plan.Operator, 0, 16)
+		this.addChildren(this.addSubchildrenParallel())
 	}
-	this.children = append(this.children, join)
-	this.lastOp = join
+	this.addChildren(join)
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -354,8 +344,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 		return nil, err
 	}
 
-	this.subChildren = append(this.subChildren, join)
-	this.lastOp = join
+	this.addSubChildren(join)
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -389,16 +378,13 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 
 	switch join := join.(type) {
 	case *plan.NLJoin:
-		this.subChildren = append(this.subChildren, join)
+		this.addSubChildren(join)
 	case *plan.Join, *plan.HashJoin:
 		if len(this.subChildren) > 0 {
-			parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-			this.children = append(this.children, parallel)
-			this.subChildren = make([]plan.Operator, 0, 16)
+			this.addChildren(this.addSubchildrenParallel())
 		}
-		this.children = append(this.children, join)
+		this.addChildren(join)
 	}
-	this.lastOp = join
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -431,14 +417,10 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	}
 
 	if len(this.subChildren) > 0 {
-		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-		this.children = append(this.children, parallel)
-		this.subChildren = make([]plan.Operator, 0, 16)
+		this.addChildren(this.addSubchildrenParallel())
 	}
 
-	nest := plan.NewNest(keyspace, node)
-	this.children = append(this.children, nest)
-	this.lastOp = nest
+	this.addChildren(plan.NewNest(keyspace, node))
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -476,8 +458,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 		return nil, err
 	}
 
-	this.subChildren = append(this.subChildren, nest)
-	this.lastOp = nest
+	this.addSubChildren(nest)
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -512,16 +493,13 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 
 	switch nest := nest.(type) {
 	case *plan.NLNest:
-		this.subChildren = append(this.subChildren, nest)
+		this.addSubChildren(nest)
 	case *plan.Nest, *plan.HashNest:
 		if len(this.subChildren) > 0 {
-			parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-			this.children = append(this.children, parallel)
-			this.subChildren = make([]plan.Operator, 0, 16)
+			this.addChildren(this.addSubchildrenParallel())
 		}
-		this.children = append(this.children, nest)
+		this.addChildren(nest)
 	}
-	this.lastOp = nest
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
@@ -549,15 +527,10 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
-			lastOp := this.getLastOp()
-			cost, cardinality = getUnnestCost(node, lastOp, this.keyspaceNames)
+			cost, cardinality = getUnnestCost(node, this.lastOp, this.keyspaceNames)
 		}
-		unnest := plan.NewUnnest(node, cost, cardinality)
-		this.subChildren = append(this.subChildren, unnest)
-		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
-		this.children = append(this.children, parallel)
-		this.subChildren = make([]plan.Operator, 0, 16)
-		this.lastOp = unnest
+		this.addSubChildren(plan.NewUnnest(node, cost, cardinality))
+		this.addChildren(this.addSubchildrenParallel())
 	}
 
 	err = this.processKeyspaceDone(node.Alias())
@@ -619,8 +592,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	if this.useCBO {
 		cost, cardinality = getCountScanCost()
 	}
-	scan := plan.NewCountScan(keyspace, from, cost, cardinality)
-	this.children = append(this.children, scan)
+	this.addChildren(plan.NewCountScan(keyspace, from, cost, cardinality))
 	return true, nil
 }
 

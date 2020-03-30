@@ -237,6 +237,30 @@ func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {
 	return float64(docCount), nil
 }
 
+func (this *builder) addSubChildren(ops ...plan.Operator) {
+	if len(ops) > 0 {
+		this.lastOp = ops[len(ops)-1]
+		this.subChildren = append(this.subChildren, ops...)
+	}
+}
+
+func (this *builder) addChildren(ops ...plan.Operator) {
+	if len(ops) > 0 {
+		this.lastOp = ops[len(ops)-1]
+		this.children = append(this.children, ops...)
+	}
+}
+
+func (this *builder) addParallel(subChildren ...plan.Operator) *plan.Parallel {
+	return plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
+}
+
+func (this *builder) addSubchildrenParallel() *plan.Parallel {
+	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+	this.subChildren = make([]plan.Operator, 0, 16)
+	return parallel
+}
+
 func getStaticInt(expr expression.Expression) (int64, bool) {
 	if expr != nil {
 		expVal := expr.Value()

@@ -32,18 +32,18 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 		// For each Sort required build Order operator
 		order := wOrderGroup.sortGroups.buildOrder()
 		if order != nil {
-			this.subChildren = append(this.subChildren, plan.NewOrder(order, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
+			this.addSubChildren(plan.NewOrder(order, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
 		}
 
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {
 			if wOrderGroup.pbys[i] != nil && len(wOrderGroup.pbys[i].aggs) > 0 {
-				this.subChildren = append(this.subChildren, plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs))
+				this.addSubChildren(plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs))
 			}
 		}
 	}
 
 	// make all Order/WindowAggregate operators as Sequence
-	this.children = append(this.children, plan.NewSequence(this.subChildren...))
+	this.addChildren(plan.NewSequence(this.subChildren...))
 	this.subChildren = make([]plan.Operator, 0, 8)
 }
 
