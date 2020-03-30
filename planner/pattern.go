@@ -278,7 +278,7 @@ outer:
 				}
 
 				if suf != nil {
-					op := suf.Operand()
+					op := suf.Operand().Copy()
 					op, err = formalizer.Map(op)
 					if err != nil {
 						continue outer
@@ -289,7 +289,7 @@ outer:
 				}
 
 				if tok != nil {
-					op := tok.Operands()[0]
+					op := tok.Operands()[0].Copy()
 					op, err = formalizer.Map(op)
 					if err != nil {
 						continue outer
