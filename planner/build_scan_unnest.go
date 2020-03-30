@@ -399,12 +399,12 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 			sargKeys = append(sargKeys, sargKey)
 		} else {
 			formalizer.SetIndexScope()
-			key, err := formalizer.Map(key)
+			key, err := formalizer.Map(key.Copy())
 			formalizer.ClearIndexScope()
 			if err != nil {
 				return nil, nil, nil, 0, nil
 			}
-			sargKeys = append(sargKeys, key.Copy())
+			sargKeys = append(sargKeys, key)
 		}
 	}
 
