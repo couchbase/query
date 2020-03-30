@@ -25,6 +25,7 @@ about in the bucket as the scan occurs.
 package util
 
 import (
+	"runtime"
 	"sync"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -52,8 +53,9 @@ type genElem struct {
 	contents interface{}
 }
 
+const _MIN_CACHES = 8
+const _MAX_CACHES = 64
 const _CACHE_SIZE = 1 << 8
-const _CACHES = 16
 
 type Operation int
 
@@ -65,17 +67,20 @@ const (
 
 type GenCache struct {
 
+	// number of caches
+	numCaches int
+
 	// one lock per cache bucket to aid concurrency
-	locks [_CACHES]sync.RWMutex
+	locks []sync.RWMutex
 
 	// this shows intent to lock exclusively
-	lockers [_CACHES]int32
+	lockers []int32
 
 	// doubly linked lists for scans and ejections
-	lists [_CACHES][_LISTTYPES]genSubList
+	lists [][_LISTTYPES]genSubList
 
 	// maps for direct access
-	maps [_CACHES]map[string]*genElem
+	maps []map[string]*genElem
 
 	// MRU operation counter
 	lastMRU uint32
@@ -86,11 +91,22 @@ type GenCache struct {
 }
 
 func NewGenCache(l int) *GenCache {
+	numCaches := runtime.NumCPU()
+	if numCaches > _MAX_CACHES {
+		numCaches = _MAX_CACHES
+	} else if numCaches < _MIN_CACHES {
+		numCaches = _MIN_CACHES
+	}
 	rv := &GenCache{
-		limit: l,
+		limit:     l,
+		numCaches: numCaches,
+		locks:     make([]sync.RWMutex, numCaches),
+		lockers:   make([]int32, numCaches),
+		lists:     make([][_LISTTYPES]genSubList, numCaches),
+		maps:      make([]map[string]*genElem, numCaches),
 	}
 
-	for b := 0; b < _CACHES; b++ {
+	for b := 0; b < rv.numCaches; b++ {
 		rv.maps[b] = make(map[string]*genElem, _CACHE_SIZE)
 	}
 	return rv
@@ -98,7 +114,7 @@ func NewGenCache(l int) *GenCache {
 
 // Fast Add, for caches where entries are never replaced and no actions are necessary
 func (this *GenCache) FastAdd(entry interface{}, id string) {
-	cacheNum := HashString(id, _CACHES)
+	cacheNum := HashString(id, this.numCaches)
 	elem := &genElem{
 		contents: entry,
 		ID:       id,
@@ -112,7 +128,7 @@ func (this *GenCache) FastAdd(entry interface{}, id string) {
 
 // Add (or update, if ID found) entry, eject old entry if we are controlling sie
 func (this *GenCache) Add(entry interface{}, id string, process func(interface{}) Operation) {
-	cacheNum := HashString(id, _CACHES)
+	cacheNum := HashString(id, this.numCaches)
 	this.lock(cacheNum)
 
 	elem, ok := this.maps[cacheNum][id]
@@ -176,7 +192,7 @@ func (this *GenCache) Add(entry interface{}, id string, process func(interface{}
 			count := 0
 			newCacheNum := -1
 
-			for c := 0; c < _CACHES; c++ {
+			for c := 0; c < this.numCaches; c++ {
 				l := len(this.maps[c])
 				if l > count {
 					count = l
@@ -206,7 +222,7 @@ func (this *GenCache) Add(entry interface{}, id string, process func(interface{}
 
 // Remove entry
 func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
-	cacheNum := HashString(id, _CACHES)
+	cacheNum := HashString(id, this.numCaches)
 	this.lock(cacheNum)
 	defer this.locks[cacheNum].Unlock()
 
@@ -224,7 +240,7 @@ func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
 
 // Returns an element's contents by id
 func (this *GenCache) Get(id string, process func(interface{})) interface{} {
-	cacheNum := HashString(id, _CACHES)
+	cacheNum := HashString(id, this.numCaches)
 	this.locks[cacheNum].RLock()
 	defer this.locks[cacheNum].RUnlock()
 	elem, ok := this.maps[cacheNum][id]
@@ -247,7 +263,7 @@ func (this *GenCache) Use(id string, process func(interface{})) interface{} {
 	if process == nil && !this.testMRU(0) {
 		return this.Get(id, nil)
 	}
-	cacheNum := HashString(id, _CACHES)
+	cacheNum := HashString(id, this.numCaches)
 	this.lock(cacheNum)
 	defer this.locks[cacheNum].Unlock()
 	elem, ok := this.maps[cacheNum][id]
@@ -295,7 +311,7 @@ func (this *GenCache) SetLimit(limit int) {
 			atomic.AddInt32(&this.curSize, -1)
 		}
 		this.locks[c].Unlock()
-		c = (c + 1) % _CACHES
+		c = (c + 1) % this.numCaches
 	}
 }
 
@@ -306,7 +322,7 @@ func (this *GenCache) Names() []string {
 	// we have emergency extra space not to have to append
 	// if we can avoid it
 	l := int(this.curSize)
-	sz := _CACHES + l
+	sz := this.numCaches + l
 	n := make([]string, l, sz)
 	this.ForEach(func(id string, entry interface{}) bool {
 		if i < l {
@@ -334,7 +350,7 @@ func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
 	blocking func() bool) {
 	cont := true
 
-	for b := 0; b < _CACHES; b++ {
+	for b := 0; b < this.numCaches; b++ {
 		sharedLock := true
 		this.locks[b].RLock()
 		nextElem := this.lists[b][_SCAN].prev

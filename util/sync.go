@@ -14,6 +14,7 @@ package util
 // Our implementation tends to be leaner too.
 
 import (
+	"runtime"
 	"sync"
 	"unsafe"
 
@@ -59,7 +60,8 @@ func (o *Once) Reset() {
 	atomic.StoreUint32(&o.done, 0)
 }
 
-const _POOL_BUCKETS = 16
+const _MIN_BUCKETS = 8
+const _MAX_BUCKETS = 64
 const _POOL_SIZE = 1024
 
 type FastPool struct {
@@ -67,9 +69,10 @@ type FastPool struct {
 	putNext   uint32
 	useCount  int32
 	freeCount int32
+	buckets   uint32
 	f         func() interface{}
-	pool      [_POOL_BUCKETS]poolList
-	free      [_POOL_BUCKETS]poolList
+	pool      []poolList
+	free      []poolList
 }
 
 type poolList struct {
@@ -85,6 +88,14 @@ type poolEntry struct {
 
 func NewFastPool(p *FastPool, f func() interface{}) {
 	*p = FastPool{}
+	p.buckets = uint32(runtime.NumCPU())
+	if p.buckets > _MAX_BUCKETS {
+		p.buckets = _MAX_BUCKETS
+	} else if p.buckets < _MIN_BUCKETS {
+		p.buckets = _MIN_BUCKETS
+	}
+	p.pool = make([]poolList, p.buckets)
+	p.free = make([]poolList, p.buckets)
 	p.f = f
 }
 
@@ -92,7 +103,7 @@ func (p *FastPool) Get() interface{} {
 	if atomic.LoadInt32(&p.useCount) == 0 {
 		return p.f()
 	}
-	l := atomic.AddUint32(&p.getNext, 1) % _POOL_BUCKETS
+	l := atomic.AddUint32(&p.getNext, 1) % p.buckets
 	e := p.pool[l].Get()
 	if e == nil {
 		return p.f()
@@ -111,7 +122,7 @@ func (p *FastPool) Put(s interface{}) {
 	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
 		return
 	}
-	l := atomic.AddUint32(&p.putNext, 1) % _POOL_BUCKETS
+	l := atomic.AddUint32(&p.putNext, 1) % p.buckets
 	e := p.free[l].Get()
 	if e == nil {
 		e = &poolEntry{}
@@ -164,7 +175,7 @@ func NewLocklessPool(p *LocklessPool, f func() unsafe.Pointer) {
 }
 
 func (p *LocklessPool) Get() unsafe.Pointer {
-	l := atomic.LoadUint32(&p.getNext) % _POOL_BUCKETS
+	l := atomic.LoadUint32(&p.getNext) % _POOL_SIZE
 	e := atomic.SwapPointer(&p.pool[l], nil)
 
 	// niet
@@ -181,6 +192,6 @@ func (p *LocklessPool) Get() unsafe.Pointer {
 }
 
 func (p *LocklessPool) Put(s unsafe.Pointer) {
-	l := (atomic.AddUint32(&p.putNext, 1) - 1) % _POOL_BUCKETS
+	l := (atomic.AddUint32(&p.putNext, 1) - 1) % _POOL_SIZE
 	atomic.StorePointer(&p.pool[l], s)
 }

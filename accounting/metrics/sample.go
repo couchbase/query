@@ -181,16 +181,18 @@ func (s *ExpDecaySample) update(t time.Time, v int64) {
 
 	// choose and amend reservoir
 	next := atomic.AddUint64(&s.next, 1) % _RESERVOIRS
-	s.reservoirs[next].mutex.Lock()
 	ed := expDecaySample{
 		k:     math.Exp(t.Sub(s.t0).Seconds()*s.alpha) / s.reservoirs[next].random.Float64(),
 		v:     v,
 		inUse: true,
 	}
+
+	s.reservoirs[next].mutex.Lock()
 	if s.reservoirs[next].values.Size() == s.reservoirs[next].reservoirSize {
-		s.reservoirs[next].values.Pop()
+		s.reservoirs[next].values.Rotate(ed)
+	} else {
+		s.reservoirs[next].values.Push(ed)
 	}
-	s.reservoirs[next].values.Push(ed)
 	s.reservoirs[next].mutex.Unlock()
 	s.mutex.RUnlock()
 
@@ -338,6 +340,15 @@ func (h *expDecaySampleHeap) Pop() expDecaySample {
 	h.s[n-1].inUse = false
 	h.s = h.s[0 : n-1]
 	return s
+}
+
+func (h *expDecaySampleHeap) Rotate(s expDecaySample) {
+	n := len(h.s) - 1
+	h.s[0], h.s[n] = h.s[n], h.s[0]
+	h.down(0, n)
+
+	h.s[n] = s
+	h.up(n)
 }
 
 func (h *expDecaySampleHeap) Size() int {
