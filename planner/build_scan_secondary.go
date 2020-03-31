@@ -423,7 +423,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		}
 	}
 
-	if useCBO && !shortest && len(sargables) > 1 {
+	if useCBO && shortest && len(sargables) > 1 {
 		sargables = this.chooseIntersectScan(sargables, node)
 	}
 
