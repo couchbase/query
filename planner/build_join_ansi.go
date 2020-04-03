@@ -30,7 +30,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
+		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +118,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
+		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
+		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -274,15 +274,14 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 	}
 }
 
-func (this *builder) processOnclause(alias string, onclause expression.Expression, outer bool) (err error) {
+func (this *builder) processOnclause(alias string, onclause expression.Expression, outer, pushable bool) (err error) {
 	baseKeyspace, ok := this.baseKeyspaces[alias]
 	if !ok {
 		return errors.NewPlanInternalError(fmt.Sprintf("processOnclause: missing baseKeyspace %s", alias))
 	}
 
-	// for inner join, the following processing is already done as part of
-	// this.pushableOnclause
-	if outer {
+	// add ON-clause if it's not already part of this.pushableOnclause
+	if outer || !pushable {
 		// For the keyspace as the inner of an ANSI JOIN, the processPredicate() call
 		// will effectively put ON clause filters on top of WHERE clause filters
 		// for each keyspace, as a result, both ON clause filters and WHERE clause
@@ -300,7 +299,9 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 		}
 	}
 
-	err = CombineFilters(baseKeyspace, true)
+	// MB-38564: in case of outer join, filters from the WHERE clause should not
+	// be pushed to a subservient table
+	err = CombineFilters(baseKeyspace, true, outer)
 	if err != nil {
 		return err
 	}

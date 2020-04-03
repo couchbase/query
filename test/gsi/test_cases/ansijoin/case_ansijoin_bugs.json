@@ -1,7 +1,6 @@
 [
     {
         "testcase": "MB-32354",
-        "ignore": "index_id",
         "explain": {
             "disabled": false,
             "results": [
@@ -15,6 +14,83 @@
         "results": [
         {
             "c11": 1
+        }
+	]
+    },
+    {
+        "testcase": "MB-38564 part1",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` = true AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 1 END END"
+        },
+        "statements":"SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r.c21 IS MISSING",
+        "results": [
+        {
+            "c11": 4
+        }
+	]
+    },
+    {
+        "testcase": "MB-38564 part2",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` = true AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 2 END END"
+        },
+        "statements":"SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.c21 IS MISSING AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2",
+        "results": [
+        {
+            "c11": 3
+        },
+        {
+            "c11": 4
+        }
+	]
+    },
+    {
+        "testcase": "MB-38564 part3",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` IS MISSING AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 2 END END"
+        },
+        "statements":"SELECT l.c11, r.c22 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r.c21 IS NOT MISSING",
+        "results": [
+        {
+            "c11": 3,
+            "c22": 30
+        }
+	]
+    },
+    {
+        "testcase": "MB-38564 part4",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` = true AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 1 END END"
+        },
+        "statements":"SELECT l.c11, r.c22, s.c22 AS s22 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" JOIN shellTest s ON s.c21 = l.c11 + 1 AND s.type = \"right\" AND r.c21 IS MISSING WHERE l.type = \"left\" AND l.c11 > 2",
+        "results": [
+        {
+            "c11": 4,
+            "s22": 50
         }
 	]
     }

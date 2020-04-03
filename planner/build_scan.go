@@ -112,7 +112,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			addUnnestPreds(this.baseKeyspaces, baseKeyspace)
 
 			// include pushed ON-clause filter
-			err = CombineFilters(baseKeyspace, true)
+			err = CombineFilters(baseKeyspace, true, false)
 			if err != nil {
 				return nil, nil, err
 			}

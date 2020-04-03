@@ -29,12 +29,13 @@ type AnsiNest struct {
 	left      FromTerm
 	right     SimpleFromTerm
 	outer     bool
+	pushable  bool // if not outer join, is the ON-clause pushable
 	onclause  expression.Expression
 	hintError string
 }
 
 func NewAnsiNest(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiNest {
-	return &AnsiNest{left, right, outer, onclause, ""}
+	return &AnsiNest{left, right, outer, false, onclause, ""}
 }
 
 func (this *AnsiNest) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -184,6 +185,20 @@ Set ON-clause
 */
 func (this *AnsiNest) SetOnclause(onclause expression.Expression) {
 	this.onclause = onclause
+}
+
+/*
+Returns whether the ON-clause is pushable
+*/
+func (this *AnsiNest) Pushable() bool {
+	return this.pushable
+}
+
+/*
+Set pushable ON-clause
+*/
+func (this *AnsiNest) SetPushable(pushable bool) {
+	this.pushable = pushable
 }
 
 /*

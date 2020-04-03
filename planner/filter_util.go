@@ -18,7 +18,7 @@ import (
 // Combine an array of filters into a single expression by ANDing each filter expression,
 // perform transformation on each filter, and if an OR filter is involved, perform DNF
 // transformation on the combined filter
-func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause bool) error {
+func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause, onclauseOnly bool) error {
 	var err error
 	var predHasOr, onHasOr bool
 	var dnfPred, origPred, onclause expression.Expression
@@ -39,6 +39,10 @@ func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause bool) error
 			}
 
 			if !includeOnclause {
+				continue
+			}
+		} else {
+			if onclauseOnly {
 				continue
 			}
 		}

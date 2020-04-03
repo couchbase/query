@@ -25,17 +25,18 @@ type AnsiJoin struct {
 	left      FromTerm
 	right     SimpleFromTerm
 	outer     bool
+	pushable  bool // if not outer join, is the ON-clause pushable
 	onclause  expression.Expression
 	hintError string
 }
 
 func NewAnsiJoin(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
-	return &AnsiJoin{left, right, outer, onclause, ""}
+	return &AnsiJoin{left, right, outer, false, onclause, ""}
 }
 
 func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
 	TransferJoinHint(left, right)
-	return &AnsiJoin{right, left, true, onclause, ""}
+	return &AnsiJoin{right, left, true, false, onclause, ""}
 }
 
 func TransferJoinHint(left SimpleFromTerm, right SimpleFromTerm) {
@@ -202,6 +203,20 @@ Set ON-clause
 */
 func (this *AnsiJoin) SetOnclause(onclause expression.Expression) {
 	this.onclause = onclause
+}
+
+/*
+Returns whether the ON-clause is pushable
+*/
+func (this *AnsiJoin) Pushable() bool {
+	return this.pushable
+}
+
+/*
+Set pushable ON-clause
+*/
+func (this *AnsiJoin) SetPushable(pushable bool) {
+	this.pushable = pushable
 }
 
 /*

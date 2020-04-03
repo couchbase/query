@@ -42,6 +42,12 @@ func (this *ansijoinOuterToInner) addOnclause(onclause expression.Expression) {
 	}
 }
 
+func (this *ansijoinOuterToInner) decrementOuterlevel(alias string) {
+	if baseKeyspace, ok := this.baseKeyspaces[alias]; ok {
+		baseKeyspace.SetOuterlevel(baseKeyspace.Outerlevel() - 1)
+	}
+}
+
 func (this *ansijoinOuterToInner) visitAnsiJoin(left algebra.FromTerm, outer bool,
 	alias string) (bool, error) {
 	_, err := left.Accept(this)
@@ -139,6 +145,7 @@ func (this *ansijoinOuterToInner) VisitAnsiJoin(node *algebra.AnsiJoin) (interfa
 	if aoj2aij {
 		this.addOnclause(node.Onclause())
 		node.SetOuter(false)
+		this.decrementOuterlevel(node.Alias())
 	}
 	return nil, nil
 }
@@ -161,6 +168,7 @@ func (this *ansijoinOuterToInner) VisitAnsiNest(node *algebra.AnsiNest) (interfa
 	if aoj2aij {
 		this.addOnclause(node.Onclause())
 		node.SetOuter(false)
+		this.decrementOuterlevel(node.Alias())
 	}
 	return nil, nil
 }

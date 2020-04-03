@@ -60,7 +60,7 @@ func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datas
 		return errors.NewPlanInternalError(fmt.Sprintf("PatternFor: missing baseKeyspace %s", baseKeyspace.Name()))
 	}
 	baseKeyspace.SetFilters(newKeyspace.Filters(), newKeyspace.JoinFilters())
-	err = CombineFilters(baseKeyspace, true)
+	err = CombineFilters(baseKeyspace, true, false)
 	if err != nil {
 		return err
 	}
