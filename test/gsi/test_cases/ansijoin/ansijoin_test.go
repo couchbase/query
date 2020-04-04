@@ -41,6 +41,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX st_ix12 on shellTest(c11, a11) WHERE type = \"left\"")
 	runStmt(qc, "CREATE INDEX st_ix21 on shellTest(c21, DISTINCT a21) WHERE type = \"right\"")
 	runStmt(qc, "CREATE INDEX st_ix22 on shellTest(a22) WHERE type = \"right\"")
+	runStmt(qc, "CREATE INDEX st_ix23 on shellTest(c22, c21) WHERE type = \"right\"")
 
 	fmt.Println("Running ANSI JOIN test cases")
 
@@ -111,6 +112,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.st_ix12")
 	runStmt(qc, "DROP INDEX shellTest.st_ix21")
 	runStmt(qc, "DROP INDEX shellTest.st_ix22")
+	runStmt(qc, "DROP INDEX shellTest.st_ix23")
 
 	// create primary indexes
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
