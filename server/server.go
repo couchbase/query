@@ -972,6 +972,10 @@ func GetProfile() Profile {
 	return options.Profile()
 }
 
+func IsIPv6() bool {
+	return _IPv6
+}
+
 // Return the correct address for localhost depending on if
 // IPv4 or IPv6
 func GetIP(is_url bool) string {
