@@ -648,6 +648,7 @@ func (this *Context) Recover(base *base) {
 		s := string(buf[0:n])
 		logging.Severef("panic: %v ", err)
 		logging.Severef("request text: <ud>%v</ud>", this.prepared.Text())
+		logging.Severef("query context: <ud>%v</ud>", this.queryContext)
 		logging.Severef("stack: %v", s)
 
 		// TODO - this may very well be a duplicate, if the orchestrator is redirecting
