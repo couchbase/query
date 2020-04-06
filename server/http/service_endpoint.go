@@ -13,6 +13,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"golang.org/x/net/http2"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -147,7 +148,8 @@ func (this *HttpEndpoint) ListenTLS() error {
 		if err != nil {
 			return fmt.Errorf(" Error configuring http2, err: %v", err)
 		}
-		cfg := http2Srv.TLSConfig
+
+		cfg = http2Srv.TLSConfig
 
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
