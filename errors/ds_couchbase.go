@@ -133,26 +133,26 @@ func NewCbBucketNoDefaultCollectionError(b string) Error {
 }
 
 func NewCbBucketCreateScopeError(s string, e error) Error {
-	return &err{level: EXCEPTION, ICode: 12025, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+	return &err{level: EXCEPTION, ICode: 12025, IKey: "datastore.couchbase.create_scope", ICause: e,
 		InternalMsg: "Error while creating scope " + s, InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketDropScopeError(s string, e error) Error {
-	return &err{level: EXCEPTION, ICode: 12026, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+	return &err{level: EXCEPTION, ICode: 12026, IKey: "datastore.couchbase.drop_scope", ICause: e,
 		InternalMsg: "Error while dropping scope " + s, InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketCreateCollectionError(c string, e error) Error {
-	return &err{level: EXCEPTION, ICode: 12027, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+	return &err{level: EXCEPTION, ICode: 12027, IKey: "datastore.couchbase.create_collection", ICause: e,
 		InternalMsg: "Error while creating collection " + c, InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketDropCollectionError(c string, e error) Error {
-	return &err{level: EXCEPTION, ICode: 12028, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+	return &err{level: EXCEPTION, ICode: 12028, IKey: "datastore.couchbase.drop_collection", ICause: e,
 		InternalMsg: "Error while dropping collection " + c, InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketFlushCollectionError(c string, e error) Error {
-	return &err{level: EXCEPTION, ICode: 12029, IKey: "datastore.couchbase.no_default_collection", ICause: e,
+	return &err{level: EXCEPTION, ICode: 12029, IKey: "datastore.couchbase.flush_collection", ICause: e,
 		InternalMsg: "Error while flushing collection " + c, InternalCaller: CallerN(1)}
 }
