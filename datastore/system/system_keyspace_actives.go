@@ -86,7 +86,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				func(doc map[string]interface{}) {
 
 					meta := map[string]interface{}{
-						"id": key,
+						"id":       key,
+						"keyspace": b.fullName,
 					}
 					t, ok := doc["timings"]
 					if ok {
@@ -188,7 +189,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				}
 
 				meta := map[string]interface{}{
-					"id": key,
+					"id":       key,
+					"keyspace": b.fullName,
 				}
 
 				t := request.GetTimings()

@@ -89,8 +89,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", map[string]interface{}{
-						"id":   key,
-						"plan": plan,
+						"id":       key,
+						"keyspace": b.fullName,
+						"plan":     plan,
 					})
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
@@ -134,8 +135,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				item := value.NewAnnotatedValue(itemMap)
 				bytes, _ := json.Marshal(entry.Prepared.Operator)
 				item.SetAttachment("meta", map[string]interface{}{
-					"id":   key,
-					"plan": bytes,
+					"id":       key,
+					"keyspace": b.fullName,
+					"plan":     bytes,
 				})
 				item.SetId(key)
 				keysMap[key] = item

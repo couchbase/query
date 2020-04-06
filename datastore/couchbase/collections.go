@@ -124,6 +124,7 @@ type collection struct {
 	namespace *namespace
 	scope     *scope
 	bucket    *keyspace
+	fullName  string
 	isDefault bool
 }
 
@@ -212,7 +213,7 @@ func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
 }
 
 func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string) []errors.Error {
-	return coll.bucket.fetch(keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid})
+	return coll.bucket.fetch(coll.fullName, keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
@@ -257,6 +258,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 			coll := &collection{
 				id:        c.Name,
 				namespace: bucket.namespace,
+				fullName:  bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + c.Name,
 				uid:       uint32(c.Uid),
 				scope:     scope,
 			}
@@ -270,6 +272,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				defaultCollection = &collection{
 					id:        bucket.name,
 					namespace: bucket.namespace,
+					fullName:  bucket.namespace.name + ":" + bucket.name,
 					uid:       uint32(c.Uid),
 					scope:     scope,
 					bucket:    bucket,

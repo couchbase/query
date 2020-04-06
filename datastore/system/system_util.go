@@ -23,6 +23,7 @@ import (
 type keyspaceBase struct {
 	namespace *namespace
 	name      string
+	fullName  string
 }
 
 func (this *keyspaceBase) Namespace() datastore.Namespace {
@@ -54,6 +55,7 @@ func (this *keyspaceBase) Flush() errors.Error {
 func setKeyspaceBase(base *keyspaceBase, namespace *namespace, name string) {
 	base.namespace = namespace
 	base.name = name
+	base.fullName = namespace.Name() + ":" + name
 }
 
 func (this *keyspaceBase) setNamespace(namespace *namespace) {

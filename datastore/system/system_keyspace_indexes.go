@@ -182,7 +182,8 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 		})
 
 		doc.SetAttachment("meta", map[string]interface{}{
-			"id": key,
+			"id":       key,
+			"keyspace": b.fullName,
 		})
 		doc.SetId(key)
 

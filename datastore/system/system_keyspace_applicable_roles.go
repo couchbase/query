@@ -84,7 +84,8 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 		val := value.NewValue(valMap)
 		item := value.NewAnnotatedValue(val)
 		item.SetAttachment("meta", map[string]interface{}{
-			"id": key,
+			"id":       key,
+			"keyspace": b.fullName,
 		})
 		item.SetId(key)
 

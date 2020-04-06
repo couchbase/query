@@ -1372,10 +1372,10 @@ func (k *keyspace) getRandomEntry(clientContext ...*memcached.ClientContext) (st
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) []errors.Error {
-	return b.fetch(keys, fetchMap, context, subPaths)
+	return b.fetch(b.fullName, keys, fetchMap, context, subPaths)
 }
 
-func (b *keyspace) fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
+func (b *keyspace) fetch(fullName string, keys []string, fetchMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, clientContext ...*memcached.ClientContext) []errors.Error {
 	var noVirtualDocAttr bool
 	var bulkResponse map[string]*gomemcached.MCResponse
@@ -1419,7 +1419,7 @@ func (b *keyspace) fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 
 	if fast {
 		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = doFetch(keys[0], mcr)
+			fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr)
 		}
 
 	} else if l == 1 {
@@ -1435,7 +1435,7 @@ func (b *keyspace) fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 			}
 		} else {
 			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, v)
+				fetchMap[k] = doFetch(k, fullName, v)
 				i++
 			}
 			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
@@ -1445,7 +1445,7 @@ func (b *keyspace) fetch(keys []string, fetchMap map[string]value.AnnotatedValue
 	return nil
 }
 
-func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedValue {
+func doFetch(k string, fullName string, v *gomemcached.MCResponse) value.AnnotatedValue {
 	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
 
 	var flags, expiration uint32
@@ -1465,6 +1465,7 @@ func doFetch(k string, v *gomemcached.MCResponse) value.AnnotatedValue {
 
 	val.SetAttachment("meta", map[string]interface{}{
 		"id":         k,
+		"keyspace":   fullName,
 		"cas":        v.Cas,
 		"type":       meta_type,
 		"flags":      flags,

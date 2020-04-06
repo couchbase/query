@@ -84,7 +84,8 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				func(doc map[string]interface{}) {
 
 					meta := map[string]interface{}{
-						"id": key,
+						"id":       key,
+						"keyspace": b.fullName,
 					}
 					t, ok := doc["timings"]
 					if ok {
@@ -174,7 +175,8 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 
 				meta := map[string]interface{}{
-					"id": key,
+					"id":       key,
+					"keyspace": b.fullName,
 				}
 				if entry.Timings != nil {
 					bytes, _ := json.Marshal(entry.Timings)
