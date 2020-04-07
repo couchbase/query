@@ -129,6 +129,29 @@ func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expressio
 	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, filters)
 }
 
+func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace) (float64, float64) {
+	return optimizer.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optimizer.COST_JOIN)
+}
+
+func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
+	requestId string) (float64, float64) {
+	return optimizer.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, covered,
+		index, requestId, optimizer.COST_JOIN)
+}
+
+func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace) (float64, float64) {
+	return optimizer.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optimizer.COST_NEST)
+}
+
+func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string) (float64, float64) {
+	return optimizer.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, false,
+		index, requestId, optimizer.COST_NEST)
+}
+
 func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string) (float64, float64) {
 	return optimizer.CalcUnnestCost(node, lastOp, keyspaces)
 }

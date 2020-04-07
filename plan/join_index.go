@@ -30,11 +30,13 @@ type IndexJoin struct {
 	indexer      datastore.Indexer
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
+	cost         float64
+	cardinality  float64
 }
 
 func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 	index datastore.Index, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) *IndexJoin {
+	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64) *IndexJoin {
 	rv := &IndexJoin{
 		keyspace:     keyspace,
 		term:         join.Right(),
@@ -44,6 +46,8 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 		indexer:      index.Indexer(),
 		covers:       covers,
 		filterCovers: filterCovers,
+		cost:         cost,
+		cardinality:  cardinality,
 	}
 
 	rv.idExpr = expression.NewField(
@@ -108,6 +112,14 @@ func (this *IndexJoin) SetCovers(covers expression.Covers) {
 	this.covers = covers
 }
 
+func (this *IndexJoin) Cost() float64 {
+	return this.cost
+}
+
+func (this *IndexJoin) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -146,6 +158,14 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 	}
 
 	r["scan"] = scan
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -170,6 +190,8 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			Covers       []string               `json:"covers"`
 			FilterCovers map[string]interface{} `json:"filter_covers"`
 		} `json:"scan"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -233,6 +255,9 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			this.filterCovers[c] = value.NewValue(v)
 		}
 	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	return nil
 }

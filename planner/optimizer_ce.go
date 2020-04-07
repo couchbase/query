@@ -88,6 +88,27 @@ func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expressio
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, false
 }
 
+func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
+	requestId string) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
+	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }

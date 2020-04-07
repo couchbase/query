@@ -31,7 +31,13 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 		return nil, err
 	}
 
-	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers)
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO {
+		cost, cardinality = getIndexJoinCost(this.lastOp, node.Outer(), node.Right(),
+			this.baseKeyspaces[node.Alias()], covers != nil, index, this.context.RequestId())
+	}
+	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers, cost, cardinality)
 	if covers != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -49,7 +55,13 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 		return nil, err
 	}
 
-	return plan.NewIndexNest(keyspace, node, index), nil
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO {
+		cost, cardinality = getIndexNestCost(this.lastOp, node.Outer(), node.Right(),
+			this.baseKeyspaces[node.Alias()], index, this.context.RequestId())
+	}
+	return plan.NewIndexNest(keyspace, node, index, cost, cardinality), nil
 }
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (

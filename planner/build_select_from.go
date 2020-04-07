@@ -301,7 +301,13 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
-	join := plan.NewJoin(keyspace, node)
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO {
+		cost, cardinality = getLookupJoinCost(this.lastOp, node.Outer(), right,
+			this.baseKeyspaces[right.Alias()])
+	}
+	join := plan.NewJoin(keyspace, node, cost, cardinality)
 	if len(this.subChildren) > 0 {
 		this.addChildren(this.addSubchildrenParallel())
 	}
@@ -420,7 +426,13 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		this.addChildren(this.addSubchildrenParallel())
 	}
 
-	this.addChildren(plan.NewNest(keyspace, node))
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO {
+		cost, cardinality = getLookupNestCost(this.lastOp, node.Outer(), right,
+			this.baseKeyspaces[right.Alias()])
+	}
+	this.addChildren(plan.NewNest(keyspace, node, cost, cardinality))
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {

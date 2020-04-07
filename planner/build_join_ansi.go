@@ -116,7 +116,13 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		newKeyspaceTerm := algebra.NewKeyspaceTermFromPath(right.Path(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
-		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
+		cost = OPT_COST_NOT_AVAIL
+		cardinality = OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getLookupJoinCost(this.lastOp, node.Outer(),
+				newKeyspaceTerm, this.baseKeyspaces[right.Alias()])
+		}
+		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), cost, cardinality), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
@@ -246,7 +252,13 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		newKeyspaceTerm := algebra.NewKeyspaceTermFromPath(right.Path(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
-		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
+		cost = OPT_COST_NOT_AVAIL
+		cardinality = OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getLookupNestCost(this.lastOp, node.Outer(),
+				newKeyspaceTerm, this.baseKeyspaces[right.Alias()])
+		}
+		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), cost, cardinality), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
@@ -849,6 +861,7 @@ type joinPlannerState struct {
 	children      []plan.Operator
 	subChildren   []plan.Operator
 	coveringScans []plan.CoveringOperator
+	lastOp        plan.Operator
 }
 
 func (this *builder) saveJoinPlannerState() *joinPlannerState {
@@ -856,6 +869,7 @@ func (this *builder) saveJoinPlannerState() *joinPlannerState {
 		children:      this.children,
 		subChildren:   this.subChildren,
 		coveringScans: this.coveringScans,
+		lastOp:        this.lastOp,
 	}
 }
 
@@ -863,4 +877,5 @@ func (this *builder) restoreJoinPlannerState(jps *joinPlannerState) {
 	this.children = jps.children
 	this.subChildren = jps.subChildren
 	this.coveringScans = jps.coveringScans
+	this.lastOp = jps.lastOp
 }

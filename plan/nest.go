@@ -20,24 +20,30 @@ import (
 
 type Nest struct {
 	readonly
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
-	outer    bool
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceTerm
+	outer       bool
+	cost        float64
+	cardinality float64
 }
 
-func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest) *Nest {
+func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest, cost, cardinality float64) *Nest {
 	return &Nest{
-		keyspace: keyspace,
-		term:     nest.Right(),
-		outer:    nest.Outer(),
+		keyspace:    keyspace,
+		term:        nest.Right(),
+		outer:       nest.Outer(),
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
-func NewNestFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool) *Nest {
+func NewNestFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool, cost, cardinality float64) *Nest {
 	return &Nest{
-		keyspace: keyspace,
-		term:     term,
-		outer:    outer,
+		keyspace:    keyspace,
+		term:        term,
+		outer:       outer,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -61,6 +67,14 @@ func (this *Nest) Outer() bool {
 	return this.outer
 }
 
+func (this *Nest) Cost() float64 {
+	return this.cost
+}
+
+func (this *Nest) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Nest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -77,6 +91,14 @@ func (this *Nest) MarshalBase(f func(map[string]interface{})) map[string]interfa
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -85,14 +107,16 @@ func (this *Nest) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Nest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Namespace string `json:"namespace"`
-		Bucket    string `json:"bucket"`
-		Scope     string `json:"scope"`
-		Keyspace  string `json:"keyspace"`
-		On        string `json:"on_keys"`
-		Outer     bool   `json:"outer"`
-		As        string `json:"as"`
+		_           string  `json:"#operator"`
+		Namespace   string  `json:"namespace"`
+		Bucket      string  `json:"bucket"`
+		Scope       string  `json:"scope"`
+		Keyspace    string  `json:"keyspace"`
+		On          string  `json:"on_keys"`
+		Outer       bool    `json:"outer"`
+		As          string  `json:"as"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -113,8 +137,14 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
 	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
-	return err
+	if err != nil {
+		return err
+	}
 
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }
 
 func (this *Nest) verify(prepared *Prepared) bool {
