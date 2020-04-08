@@ -120,13 +120,22 @@ func getCountScanCost() (float64, float64) {
 	return optimizer.CalcCountScanCost()
 }
 
-func getNLJoinCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
-	return optimizer.CalcNLJoinCost(left, right, filters)
+func getNLJoinCost(left, right plan.Operator, filters base.Filters, outer bool, op string) (float64, float64) {
+	jointype := optimizer.COST_JOIN
+	if op == "nest" {
+		jointype = optimizer.COST_NEST
+	}
+	return optimizer.CalcNLJoinCost(left, right, filters, outer, jointype)
 }
 
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
-	buildRight, force bool, filters base.Filters) (float64, float64, bool) {
-	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force, filters)
+	buildRight, force bool, filters base.Filters, outer bool, op string) (float64, float64, bool) {
+	jointype := optimizer.COST_JOIN
+	if op == "nest" {
+		jointype = optimizer.COST_NEST
+	}
+	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force,
+		filters, outer, jointype)
 }
 
 func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,

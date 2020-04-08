@@ -76,7 +76,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
-		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer(), "join")
 		if err != nil {
 			return nil, err
 		}
@@ -212,7 +212,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
-		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause())
+		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer(), "nest")
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +321,8 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 	return nil
 }
 
-func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expression.Expression) (
+func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expression.Expression,
+	outer bool, op string) (
 	[]plan.Operator, expression.Expression, expression.Expression, float64, float64, error) {
 
 	children := this.children
@@ -473,8 +474,8 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 	useCBO := this.useCBO
 	if useCBO {
 		if len(this.children) > 0 {
-			cost, cardinality = getNLJoinCost(lastOp, this.lastOp, baseKeyspace.Filters())
-		} // TODO: else calculate cost for lookup join
+			cost, cardinality = getNLJoinCost(lastOp, this.lastOp, baseKeyspace.Filters(), outer, op)
+		}
 	}
 
 	return this.children, primaryJoinKeys, newOnclause, cost, cardinality, nil
@@ -757,7 +758,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 
 	if useCBO {
 		var bldRight bool
-		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, filters)
+		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, filters, outer, op)
 		if cost > 0.0 && cardinality > 0.0 {
 			buildRight = bldRight
 		}
