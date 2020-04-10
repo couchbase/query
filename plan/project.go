@@ -215,13 +215,11 @@ func (this *FinalProject) UnmarshalJSON([]byte) error {
 
 type IndexCountProject struct {
 	readonly
-	projection  *algebra.Projection
-	terms       ProjectTerms
-	cost        float64
-	cardinality float64
+	projection *algebra.Projection
+	terms      ProjectTerms
 }
 
-func NewIndexCountProject(projection *algebra.Projection, cost, cardinality float64) *IndexCountProject {
+func NewIndexCountProject(projection *algebra.Projection) *IndexCountProject {
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
@@ -232,10 +230,8 @@ func NewIndexCountProject(projection *algebra.Projection, cost, cardinality floa
 	}
 
 	return &IndexCountProject{
-		projection:  projection,
-		terms:       terms,
-		cost:        cost,
-		cardinality: cardinality,
+		projection: projection,
+		terms:      terms,
 	}
 }
 
@@ -253,14 +249,6 @@ func (this *IndexCountProject) Projection() *algebra.Projection {
 
 func (this *IndexCountProject) Terms() ProjectTerms {
 	return this.terms
-}
-
-func (this *IndexCountProject) Cost() float64 {
-	return this.cost
-}
-
-func (this *IndexCountProject) Cardinality() float64 {
-	return this.cardinality
 }
 
 func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
@@ -291,13 +279,6 @@ func (this *IndexCountProject) MarshalBase(f func(map[string]interface{})) map[s
 	}
 	r["result_terms"] = s
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
-	}
-
 	if f != nil {
 		f(r)
 	}
@@ -311,9 +292,7 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 			Expr string `json:"expr"`
 			As   string `json:"as"`
 		} `json:"result_terms"`
-		Raw         bool    `json:"raw"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		Raw bool `json:"raw"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -345,9 +324,6 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 
 	this.projection = projection
 	this.terms = project_terms
-
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	return nil
 }

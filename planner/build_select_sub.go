@@ -280,19 +280,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			this.addChildren(plan.NewDistinct())
 		}
 	} else {
-		projection := node.Projection()
-		if this.useCBO && this.lastOp != nil {
-			cost = this.lastOp.Cost()
-			cardinality = this.lastOp.Cardinality()
-			if cost > 0.0 && cardinality > 0.0 {
-				icpcost, icpcard := getIndexCountProjectCost(projection, cardinality)
-				if icpcost > 0.0 && icpcard > 0.0 {
-					cost += icpcost
-					cardinality = icpcard
-				}
-			}
-		}
-		this.addChildren(plan.NewIndexCountProject(projection, cost, cardinality))
+		this.addChildren(plan.NewIndexCountProject(node.Projection()))
 	}
 
 	// Serialize the top-level children

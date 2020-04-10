@@ -143,10 +143,6 @@ func getInitialProjectCost(projection *algebra.Projection, cardinality float64) 
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getIndexCountProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
-	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
-}
-
 func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, cardinality float64,
 	keyspaces map[string]string, maxParallelism int) (
 	float64, float64, float64, float64, float64, float64) {
