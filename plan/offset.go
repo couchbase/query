@@ -18,12 +18,16 @@ import (
 
 type Offset struct {
 	readonly
-	expr expression.Expression
+	expr        expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewOffset(expr expression.Expression) *Offset {
+func NewOffset(expr expression.Expression, cost, cardinality float64) *Offset {
 	return &Offset{
-		expr: expr,
+		expr:        expr,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -39,6 +43,14 @@ func (this *Offset) Expression() expression.Expression {
 	return this.expr
 }
 
+func (this *Offset) Cost() float64 {
+	return this.cost
+}
+
+func (this *Offset) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Offset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -46,6 +58,12 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Offset"}
 	r["expr"] = expression.NewStringer().Visit(this.expr)
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -54,8 +72,10 @@ func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Offset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string `json:"#operator"`
-		Expr string `json:"expr"`
+		_           string  `json:"#operator"`
+		Expr        string  `json:"expr"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -64,5 +84,12 @@ func (this *Offset) UnmarshalJSON(body []byte) error {
 	}
 
 	this.expr, err = parser.Parse(_unmarshalled.Expr)
-	return err
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }

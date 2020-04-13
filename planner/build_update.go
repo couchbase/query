@@ -53,7 +53,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	if stmt.Limit() != nil {
 		seqChildren := make([]plan.Operator, 0, 3)
 		seqChildren = append(seqChildren, this.addParallel(subChildren...))
-		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit()))
+		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
 		seqChildren = append(seqChildren, this.addParallel(updateSubChildren...))
 		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {

@@ -123,14 +123,14 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
-		this.offset = NewOffset(offsetExpr)
+		this.offset = NewOffset(offsetExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL)
 	}
 	if limitExprStr := _unmarshalled.limitExpr; limitExprStr != "" {
 		limitExpr, err := parser.Parse(limitExprStr)
 		if err != nil {
 			return err
 		}
-		this.limit = NewLimit(limitExpr)
+		this.limit = NewLimit(limitExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL)
 	}
 
 	this.cost = getCost(_unmarshalled.Cost)

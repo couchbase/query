@@ -188,6 +188,14 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 	return optimizer.CalcLetCost(lastOp)
 }
 
+func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64) {
+	return optimizer.CalcOffsetCost(lastOp, noffset)
+}
+
+func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64) {
+	return optimizer.CalcLimitCost(lastOp, nlimit)
+}
+
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
 	keyspaces map[string]string) float64 {
 	return optimizer.GetUnnestPredSelec(pred, variable, mapping, keyspaces)

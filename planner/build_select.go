@@ -79,33 +79,38 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	children := make([]plan.Operator, 0, 5)
 	children = append(children, sub.(plan.Operator))
+	lastOp := sub.(plan.Operator)
+	cost := lastOp.Cost()
+	cardinality := lastOp.Cardinality()
+	nlimit := int64(0)
+	noffset := int64(0)
+	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
+		if stmtLimit != nil {
+			lv, static := getStaticInt(stmtLimit)
+			if static {
+				nlimit = lv
+			}
+		}
+		if stmtOffset != nil {
+			ov, static := getStaticInt(stmtOffset)
+			if static {
+				noffset = ov
+			}
+		}
+	}
 
 	if stmtOrder != nil && this.order == nil {
 		var limit *plan.Limit
 		var offset *plan.Offset
 		if stmtLimit != nil {
-			limit = plan.NewLimit(stmtLimit)
+			// the limit/offset operator that's embedded inside sort operator does not need cost
+			// since only the corresponding expression is saved in the plan
+			limit = plan.NewLimit(stmtLimit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 			if stmtOffset != nil && this.offset == nil {
-				offset = plan.NewOffset(stmtOffset)
+				offset = plan.NewOffset(stmtOffset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 			}
 		}
-		cost := sub.(plan.Operator).Cost()
-		cardinality := sub.(plan.Operator).Cardinality()
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			nlimit := int64(0)
-			noffset := int64(0)
-			if stmtLimit != nil {
-				lv, static := getStaticInt(stmtLimit)
-				if static {
-					nlimit = lv
-				}
-			}
-			if stmtOffset != nil {
-				ov, static := getStaticInt(stmtOffset)
-				if static {
-					noffset = ov
-				}
-			}
 			scost, scardinality := getSortCost(len(stmtOrder.Terms()), cardinality, nlimit, noffset)
 			if scost > 0.0 && scardinality > 0.0 {
 				cost += scost
@@ -115,15 +120,27 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 				cardinality = OPT_CARD_NOT_AVAIL
 			}
 		}
-		children = append(children, plan.NewOrder(stmtOrder, offset, limit, cost, cardinality))
+		order := plan.NewOrder(stmtOrder, offset, limit, cost, cardinality)
+		children = append(children, order)
+		lastOp = order
 	}
 
 	if stmtOffset != nil && this.offset == nil {
-		children = append(children, plan.NewOffset(stmtOffset))
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
+			cost, cardinality = getOffsetCost(lastOp, noffset)
+		}
+		offset := plan.NewOffset(stmtOffset, cost, cardinality)
+		children = append(children, offset)
+		lastOp = offset
 	}
 
 	if stmtLimit != nil {
-		children = append(children, plan.NewLimit(stmtLimit))
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
+			cost, cardinality = getLimitCost(lastOp, nlimit)
+		}
+		limit := plan.NewLimit(stmtLimit, cost, cardinality)
+		children = append(children, limit)
+		lastOp = limit
 	}
 
 	// Perform the delayed final projection now, after the ORDER BY

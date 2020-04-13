@@ -180,7 +180,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.addChildren(this.addSubchildrenParallel())
 
 	if stmt.Limit() != nil {
-		this.addChildren(plan.NewLimit(stmt.Limit()))
+		this.addChildren(plan.NewLimit(stmt.Limit(), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
 	}
 
 	if stmt.Returning() == nil {

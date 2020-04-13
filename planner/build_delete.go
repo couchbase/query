@@ -49,7 +49,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		if len(subChildren) > 0 {
 			seqChildren = append(seqChildren, this.addParallel(subChildren...))
 		}
-		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit()))
+		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
 		seqChildren = append(seqChildren, this.addParallel(deleteSubChildren...))
 		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {

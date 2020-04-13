@@ -18,12 +18,16 @@ import (
 
 type Limit struct {
 	readonly
-	expr expression.Expression
+	expr        expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewLimit(expr expression.Expression) *Limit {
+func NewLimit(expr expression.Expression, cost, cardinality float64) *Limit {
 	return &Limit{
-		expr: expr,
+		expr:        expr,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -39,6 +43,14 @@ func (this *Limit) Expression() expression.Expression {
 	return this.expr
 }
 
+func (this *Limit) Cost() float64 {
+	return this.cost
+}
+
+func (this *Limit) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Limit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -46,6 +58,12 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 func (this *Limit) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Limit"}
 	r["expr"] = expression.NewStringer().Visit(this.expr)
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -54,8 +72,10 @@ func (this *Limit) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Limit) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string `json:"#operator"`
-		Expr string `json:"expr"`
+		_           string  `json:"#operator"`
+		Expr        string  `json:"expr"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -64,5 +84,12 @@ func (this *Limit) UnmarshalJSON(body []byte) error {
 	}
 
 	this.expr, err = parser.Parse(_unmarshalled.Expr)
-	return err
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }
