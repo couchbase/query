@@ -80,6 +80,9 @@ var _OPERATORS = map[string]Operator{
 	// Infer
 	"InferKeyspace": &InferKeyspace{},
 
+	// Update Statistics
+	"UpdateStatistics": &UpdateStatistics{},
+
 	// Filter
 	"Filter": &Filter{},
 
@@ -100,6 +103,9 @@ var _OPERATORS = map[string]Operator{
 
 	// Distinct
 	"Distinct": &Distinct{},
+
+	// All
+	"All": &All{},
 
 	// Set operators
 	"UnionAll":     &UnionAll{},

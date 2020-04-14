@@ -340,6 +340,11 @@ func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 	return checkOp(NewDistinct(plan, this.context, false), this.context)
 }
 
+// All
+func (this *builder) VisitAll(plan *plan.All) (interface{}, error) {
+	return checkOp(NewAll(plan, this.context, false), this.context)
+}
+
 // Set operators
 func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 	children := _UNION_POOL.Get()
@@ -398,6 +403,9 @@ func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
 		return nil, e
 	}
 
+	if plan.Distinct() {
+		return checkOp(NewExcept(plan, this.context, first.(Operator), second.(Operator)), this.context)
+	}
 	return checkOp(NewExceptAll(plan, this.context, first.(Operator), second.(Operator)), this.context)
 }
 

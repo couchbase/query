@@ -250,6 +250,11 @@ func (this *scanIdxCol) VisitDistinct(op *plan.Distinct) (interface{}, error) {
 	return nil, nil
 }
 
+// All
+func (this *scanIdxCol) VisitAll(op *plan.All) (interface{}, error) {
+	return nil, nil
+}
+
 // Set operators
 func (this *scanIdxCol) VisitUnionAll(op *plan.UnionAll) (interface{}, error) {
 	return nil, nil

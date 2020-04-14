@@ -199,7 +199,7 @@ func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool
 	}
 
 	// FIXME: should this be handled by the planner?
-	all := NewAll(plan.NewDistinct(), context, true)
+	all := NewAll(plan.NewAll(), context, true)
 	sequence := NewSequence(plan.NewSequence(), context, this.second, all)
 	sequence.SetParent(this)
 	this.fork(sequence, context, parent)
@@ -280,11 +280,13 @@ func (this *IntersectAll) reopen(context *Context) bool {
 func (this *IntersectAll) Done() {
 	this.baseDone()
 	if this.first != nil {
-		this.first.Done()
+		first := this.first
+		this.first = nil
+		first.Done()
 	}
 	if this.second != nil {
-		this.second.Done()
+		second := this.second
+		this.second = nil
+		second.Done()
 	}
-	this.first = nil
-	this.second = nil
 }
