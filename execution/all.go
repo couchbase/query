@@ -19,11 +19,11 @@ import (
 type All struct {
 	base
 	mset    *value.MultiSet
-	plan    *plan.Distinct
+	plan    *plan.All
 	collect bool
 }
 
-func NewAll(plan *plan.Distinct, context *Context, collect bool) *All {
+func NewAll(plan *plan.All, context *Context, collect bool) *All {
 	rv := &All{
 		mset:    value.NewMultiSet(int(context.GetPipelineCap()), false, false),
 		plan:    plan,

@@ -71,7 +71,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
-	// Inject DISTINCT into both terms
+	// Inject DISTINCT into first term
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
 	prevCover := this.cover
@@ -79,6 +79,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 		this.cover = prevCover
 		this.setOpDistinct = setOpDistinct
 	}()
+
 	this.cover = node.First()
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
@@ -87,6 +88,9 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
+
+	// Do not inject DISTINCT into second term (done at run time)
+	this.setOpDistinct = false
 
 	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
@@ -124,7 +128,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 }
 
 func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
-	// Inject DISTINCT into both terms
+	// Inject DISTINCT into first term
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
 	prevCover := this.cover
@@ -142,6 +146,9 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 		return nil, err
 	}
 
+	// Do not inject DISTINCT into second term (done at run time)
+	this.setOpDistinct = false
+
 	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
@@ -149,7 +156,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	}
 
 	this.maxParallelism = 0
-	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator)), nil
+	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator), true), nil
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
@@ -167,11 +174,6 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 		return nil, err
 	}
 
-	// Inject DISTINCT into second term
-	setOpDistinct := this.setOpDistinct
-	this.setOpDistinct = true
-	defer func() { this.setOpDistinct = setOpDistinct }()
-
 	this.cover = node.Second()
 	second, err := node.Second().Accept(this)
 	if err != nil {
@@ -179,5 +181,5 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	}
 
 	this.maxParallelism = 0
-	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator)), nil
+	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator), false), nil
 }

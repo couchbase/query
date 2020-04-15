@@ -78,6 +78,7 @@ type Visitor interface {
 	VisitUnionAll(op *UnionAll) (interface{}, error)
 	VisitIntersect(op *Intersect) (interface{}, error)
 	VisitIntersectAll(op *IntersectAll) (interface{}, error)
+	VisitExcept(op *Except) (interface{}, error)
 	VisitExceptAll(op *ExceptAll) (interface{}, error)
 
 	// Order

@@ -71,6 +71,9 @@ type Visitor interface {
 	// Distinct
 	VisitDistinct(op *Distinct) (interface{}, error)
 
+	// All
+	VisitAll(op *All) (interface{}, error)
+
 	// Set operators
 	VisitUnionAll(op *UnionAll) (interface{}, error)
 	VisitIntersectAll(op *IntersectAll) (interface{}, error)
