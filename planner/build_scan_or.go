@@ -46,7 +46,7 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 	   ix1 ON default (c1,c2,c3)  ===> WHERE c1 = 10 AND (c2 = 20 OR (c2 = 30 AND c3 = 40))
 	        Instead of 2 index scans on ix1 do 1 indexscan with 2 spans of different composite ranges
 	*/
-	if err == nil && sargLength >= orSargLength {
+	if err == nil && scan != nil && sargLength >= orSargLength {
 		return scan, sargLength, nil
 	}
 

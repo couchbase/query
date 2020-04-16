@@ -60,7 +60,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 2 AND v.scans[0].`index` = 'idx11' AND ARRAY_LENGTH(v.scans[0].spans) = 1 AND v.scans[1].`index` = 'idx11' AND ARRAY_LENGTH(v.scans[1].spans) = 1 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'idx11' AND ARRAY_LENGTH(v.spans) = 2 AND v.spans[0].`range`[0].inclusion = 0 AND v.spans[1].`range`[0].inclusion = 0 END"
         },
         "statements":"SELECT 1 FROM shellTest AS d UNNEST d.a1 AS a  WHERE d.c1 != 10 AND d.c1 = a.u1",
         "ordered": true,
