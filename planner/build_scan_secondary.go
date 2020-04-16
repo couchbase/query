@@ -141,6 +141,10 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		} else {
 			scans = append(scans, scan)
 		}
+
+		if entry.maxKeys > sargLength {
+			sargLength = entry.maxKeys
+		}
 	}
 
 	for _, entry := range searchSargables {
@@ -154,6 +158,10 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 			scans[0] = scan
 		} else {
 			scans = append(scans, scan)
+		}
+
+		if entry.maxKeys > sargLength {
+			sargLength = entry.maxKeys
 		}
 	}
 
