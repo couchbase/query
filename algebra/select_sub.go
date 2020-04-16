@@ -226,6 +226,13 @@ func (this *Subselect) ResultTerms() ResultTerms {
 }
 
 /*
+Raw projection.
+*/
+func (this *Subselect) Raw() bool {
+	return this.projection.Raw()
+}
+
+/*
 Returns all required privileges.
 */
 func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {

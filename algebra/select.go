@@ -362,4 +362,9 @@ type Subresult interface {
 	   Checks if correlated subquery.
 	*/
 	IsCorrelated() bool
+
+	/*
+	   Checks if projection is raw
+	*/
+	Raw() bool
 }

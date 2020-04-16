@@ -67,6 +67,13 @@ func (this *setOp) ResultTerms() ResultTerms {
 }
 
 /*
+   Raw projection.
+*/
+func (this *setOp) Raw() bool {
+	return this.first.Raw() && this.second.Raw()
+}
+
+/*
 Returns all required privileges.
 */
 func (this *setOp) Privileges() (*auth.Privileges, errors.Error) {

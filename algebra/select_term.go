@@ -81,6 +81,13 @@ func (this *SelectTerm) ResultTerms() ResultTerms {
 }
 
 /*
+   Raw projection.
+*/
+func (this *SelectTerm) Raw() bool {
+	return this.query.Subresult().Raw()
+}
+
+/*
 Returns all required privileges.
 */
 func (this *SelectTerm) Privileges() (*auth.Privileges, errors.Error) {
