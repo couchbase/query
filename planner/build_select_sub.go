@@ -258,7 +258,18 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {
-			this.addSubChildren(plan.NewDistinct())
+			if this.useCBO && this.lastOp != nil {
+				cost = this.lastOp.Cost()
+				cardinality = this.lastOp.Cardinality()
+				if cost > 0.0 && cardinality > 0.0 {
+					dcost, dcard := getDistinctCost(projection.Terms(), cardinality, this.keyspaceNames)
+					if dcost > 0.0 && dcard > 0.0 {
+						cost += dcost
+						cardinality = dcard
+					}
+				}
+			}
+			this.addSubChildren(plan.NewDistinct(cost, cardinality))
 		}
 
 		if this.order != nil {
@@ -277,7 +288,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 		// Final DISTINCT (serial)
 		if projection.Distinct() || this.setOpDistinct {
-			this.addChildren(plan.NewDistinct())
+			// use the same cost/cardinality calculated above for DISTINCT
+			this.addChildren(plan.NewDistinct(cost, cardinality))
 		}
 	} else {
 		this.addChildren(plan.NewIndexCountProject(node.Projection()))

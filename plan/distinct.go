@@ -15,10 +15,16 @@ import (
 
 type Distinct struct {
 	readonly
+
+	cost        float64
+	cardinality float64
 }
 
-func NewDistinct() *Distinct {
-	return &Distinct{}
+func NewDistinct(cost, cardinality float64) *Distinct {
+	return &Distinct{
+		cost:        cost,
+		cardinality: cardinality,
+	}
 }
 
 func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
@@ -29,19 +35,46 @@ func (this *Distinct) New() Operator {
 	return &Distinct{}
 }
 
+func (this *Distinct) Cost() float64 {
+	return this.cost
+}
+
+func (this *Distinct) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Distinct) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *Distinct) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Distinct"}
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
 	return r
 }
 
-func (this *Distinct) UnmarshalJSON([]byte) error {
-	// NOP: Distinct has no data structure
+func (this *Distinct) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_           string  `json:"#operator"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }

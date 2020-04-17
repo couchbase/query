@@ -62,7 +62,7 @@ func (this *Except) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// FIXME: this should be handled by the planner
-	distinct := NewDistinct(plan.NewDistinct(), context, true)
+	distinct := NewDistinct(plan.NewDistinct(plan.PLAN_COST_NOT_AVAIL, plan.PLAN_CARD_NOT_AVAIL), context, true)
 	sequence := NewSequence(plan.NewSequence(), context, this.second, distinct)
 	sequence.SetParent(this)
 	this.fork(sequence, context, parent)

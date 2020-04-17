@@ -222,6 +222,14 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	return optimizer.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
 }
 
+func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string) (float64, float64) {
+	return optimizer.CalcDistinctCost(terms, cardinality, keyspaces)
+}
+
+func getUnionDistinctCost(cost, cardinality float64, first, second plan.Operator, compatible bool) (float64, float64) {
+	return optimizer.CalcUnionDistinctCost(cost, cardinality, first, second, compatible)
+}
+
 func getUnionAllCost(first, second plan.Operator) (float64, float64) {
 	return optimizer.CalcSetOpCost(first, second, optimizer.COST_UNION)
 }

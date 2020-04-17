@@ -48,7 +48,12 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 
 	this.maxParallelism = 0
 	unionAll := plan.NewUnionAll(cost, cardinality, first.(plan.Operator), second.(plan.Operator))
-	return plan.NewSequence(unionAll, plan.NewDistinct()), nil
+	if this.useCBO {
+		cost, cardinality = getUnionDistinctCost(cost, cardinality,
+			first.(plan.Operator), second.(plan.Operator),
+			compatibleResultTerms(node.First(), node.Second()))
+	}
+	return plan.NewSequence(unionAll, plan.NewDistinct(cost, cardinality)), nil
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
@@ -218,4 +223,32 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 
 	this.maxParallelism = 0
 	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator), false, cost, cardinality), nil
+}
+
+/*
+  Checks whether the two result terms are compatible with each other,
+  i.e. could there be duplicates from different arms that can be eliminated
+*/
+func compatibleResultTerms(first, second algebra.Subresult) bool {
+	firstTerms := first.ResultTerms()
+	secondTerms := second.ResultTerms()
+
+	if len(firstTerms) != len(secondTerms) || first.Raw() != second.Raw() {
+		return false
+	}
+
+	// if both sides have Raw projections, then assume they are compatible
+	if first.Raw() {
+		return true
+	}
+
+	// if both sides not Raw, compare the alias of each term
+	// since that's part of the result value
+	for i := 0; i < len(firstTerms); i++ {
+		if firstTerms[i].Alias() != secondTerms[i].Alias() || firstTerms[i].Star() != secondTerms[i].Star() {
+			return false
+		}
+	}
+
+	return true
 }
