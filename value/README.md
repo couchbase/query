@@ -22,7 +22,7 @@ See [GoDoc](http://godoc.org/github.com/couchbase/query)
 
 ### Performance
 
-Two simple benchmarks which process a 1MB JSON file.  The first uses NewValueFromBytes() with Field(), Index() and Actual() calls and the second using json.Unmarshal() and map/slice calls.  Both versions access the same property.
+Two simple benchmarks which process a 1MB JSON file.  The first uses NewValue() with Field(), Index() and Actual() calls and the second using json.Unmarshal() and map/slice calls.  Both versions access the same property.
 
     $ go test -bench .
     PASS

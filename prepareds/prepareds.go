@@ -633,7 +633,7 @@ func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, 
 
 		// if we failed to unmarshall, we find  the statement
 		// and try preparing from scratch
-		text, err1 := json.FirstFind(bytes, "text")
+		text, err1 := json.FindKey(bytes, "text")
 		if text != nil && err1 == nil {
 			var stmt string
 

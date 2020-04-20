@@ -32,8 +32,8 @@ type parsedValue struct {
 	fields       map[string]Value
 	elements     []Value
 	useState     bool
-	findState    *json.FindState
-	indexState   *json.IndexState
+	keyState     json.KeyState
+	indexState   json.IndexState
 	refCnt       int32 // to check for recycling
 	used         int32 // to access state
 }
@@ -63,14 +63,9 @@ func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 	// Atomic types
 	switch parsedType {
 	case NUMBER, STRING, BOOLEAN, NULL:
-		var p interface{}
-		var err error
 
-		if isValidated {
-			err = json.UnmarshalNoValidate(bytes, &p)
-		} else {
-			err = json.Unmarshal(bytes, &p)
-		}
+		// for scalar values we can skip validation, as the simple unmarshaler will validate while scanning
+		p, err := json.SimpleUnmarshal(bytes)
 		if err != nil {
 			return binaryValue(bytes)
 		}
@@ -118,12 +113,13 @@ func identifyType(bytes []byte) Type {
 			return NULL
 		case ' ', '\t', '\n':
 			continue
+		default:
+			return BINARY
 		}
-		break
 	}
-
 	return BINARY
 }
+
 func (this *parsedValue) String() string {
 	return this.unwrap().String()
 }
@@ -221,12 +217,10 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		// so we do a scan anyway
 		useState := this.useState && goahead == 1
 		if useState {
-			if this.findState == nil {
-				this.findState = json.NewFindState(this.raw)
-			}
-			res, err = json.FirstFindWithState(this.findState, field)
+			json.SetKeyState(&this.keyState, this.raw)
+			res, err = this.keyState.FindKey(field)
 		} else {
-			res, err = json.FirstFind(raw, field)
+			res, err = json.FindKey(raw, field)
 		}
 		if err != nil {
 			return missingField(field), false
@@ -321,12 +315,10 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		// so we do a scan anyway
 		useState := this.useState && goahead == 1
 		if useState {
-			if this.indexState == nil {
-				this.indexState = json.NewIndexState(this.raw)
-			}
-			res, err = json.IndexFindWithState(this.indexState, index)
+			json.SetIndexState(&this.indexState, this.raw)
+			res, err = this.indexState.FindIndex(index)
 		} else {
-			res, err = json.IndexFind(raw, index)
+			res, err = json.FindIndex(raw, index)
 		}
 		if err != nil {
 			return missingIndex(index), false
@@ -475,9 +467,7 @@ func (this *parsedValue) unwrap() Value {
 		if this.parsedType == BINARY {
 			this.parsed = binaryValue(this.raw)
 		} else {
-			var p interface{}
-
-			err := json.UnmarshalNoValidate(this.raw, &p)
+			p, err := json.SimpleUnmarshal(this.raw)
 			if err != nil {
 				this.parsedType = BINARY
 				this.parsed = binaryValue(this.raw)
@@ -488,8 +478,8 @@ func (this *parsedValue) unwrap() Value {
 
 		// Release raw memory when no longer needed
 		this.raw = nil
-		this.findState = nil
-		this.indexState = nil
+		this.keyState.Release()
+		this.indexState.Release()
 		if this.fields != nil {
 			for i, field := range this.fields {
 				this.fields[i] = nil
