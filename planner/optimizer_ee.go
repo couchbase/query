@@ -230,14 +230,14 @@ func getUnionDistinctCost(cost, cardinality float64, first, second plan.Operator
 	return optimizer.CalcUnionDistinctCost(cost, cardinality, first, second, compatible)
 }
 
-func getUnionAllCost(first, second plan.Operator) (float64, float64) {
-	return optimizer.CalcSetOpCost(first, second, optimizer.COST_UNION)
+func getUnionAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
+	return optimizer.CalcSetOpCost(first, second, compatible, optimizer.COST_UNION)
 }
 
-func getIntersectAllCost(first, second plan.Operator) (float64, float64) {
-	return optimizer.CalcSetOpCost(first, second, optimizer.COST_INTERSECT)
+func getIntersectAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
+	return optimizer.CalcSetOpCost(first, second, compatible, optimizer.COST_INTERSECT)
 }
 
-func getExceptAllCost(first, second plan.Operator) (float64, float64) {
-	return optimizer.CalcSetOpCost(first, second, optimizer.COST_EXCEPT)
+func getExceptAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
+	return optimizer.CalcSetOpCost(first, second, compatible, optimizer.COST_EXCEPT)
 }

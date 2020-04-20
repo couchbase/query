@@ -42,16 +42,18 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	compatible := false
 	if this.useCBO {
-		cost, cardinality = getUnionAllCost(first.(plan.Operator), second.(plan.Operator))
+		compatible = compatibleResultTerms(node.First(), node.Second())
+		cost, cardinality = getUnionAllCost(first.(plan.Operator), second.(plan.Operator),
+			compatible)
 	}
 
 	this.maxParallelism = 0
 	unionAll := plan.NewUnionAll(cost, cardinality, first.(plan.Operator), second.(plan.Operator))
 	if this.useCBO {
 		cost, cardinality = getUnionDistinctCost(cost, cardinality,
-			first.(plan.Operator), second.(plan.Operator),
-			compatibleResultTerms(node.First(), node.Second()))
+			first.(plan.Operator), second.(plan.Operator), compatible)
 	}
 	return plan.NewSequence(unionAll, plan.NewDistinct(cost, cardinality)), nil
 }
@@ -80,7 +82,8 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		cost, cardinality = getUnionAllCost(first.(plan.Operator), second.(plan.Operator))
+		cost, cardinality = getUnionAllCost(first.(plan.Operator), second.(plan.Operator),
+			compatibleResultTerms(node.First(), node.Second()))
 	}
 
 	this.maxParallelism = 0
@@ -118,7 +121,8 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		cost, cardinality = getIntersectAllCost(first.(plan.Operator), second.(plan.Operator))
+		cost, cardinality = getIntersectAllCost(first.(plan.Operator), second.(plan.Operator),
+			compatibleResultTerms(node.First(), node.Second()))
 	}
 
 	this.maxParallelism = 0
@@ -149,7 +153,8 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		cost, cardinality = getIntersectAllCost(first.(plan.Operator), second.(plan.Operator))
+		cost, cardinality = getIntersectAllCost(first.(plan.Operator), second.(plan.Operator),
+			compatibleResultTerms(node.First(), node.Second()))
 	}
 
 	this.maxParallelism = 0
@@ -187,7 +192,8 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		cost, cardinality = getExceptAllCost(first.(plan.Operator), second.(plan.Operator))
+		cost, cardinality = getExceptAllCost(first.(plan.Operator), second.(plan.Operator),
+			compatibleResultTerms(node.First(), node.Second()))
 	}
 
 	this.maxParallelism = 0
@@ -218,7 +224,8 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		cost, cardinality = getExceptAllCost(first.(plan.Operator), second.(plan.Operator))
+		cost, cardinality = getExceptAllCost(first.(plan.Operator), second.(plan.Operator),
+			compatibleResultTerms(node.First(), node.Second()))
 	}
 
 	this.maxParallelism = 0
