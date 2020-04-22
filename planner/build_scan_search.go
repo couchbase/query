@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -418,7 +419,7 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 	entry *indexEntry, err error) {
 
 	index, ok := idx.(datastore.FTSIndex)
-	if !ok {
+	if !ok || !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_FLEXINDEX) {
 		return
 	}
 

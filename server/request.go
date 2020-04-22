@@ -741,7 +741,7 @@ func (this *BaseRequest) SetUseFts(a bool) {
 }
 
 func (this *BaseRequest) UseFts() bool {
-	return this.useFts
+	return this.useFts && util.IsFeatureEnabled(this.featureControls, util.N1QL_FLEXINDEX)
 }
 
 func (this *BaseRequest) Results() chan bool {
