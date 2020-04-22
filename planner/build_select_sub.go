@@ -302,7 +302,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// process with in a parent sequence
 	if node.With() != nil {
-		rv = plan.NewWith(node.With(), rv)
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getWithCost(rv, node.With())
+		}
+		rv = plan.NewWith(node.With(), rv, cost, cardinality)
 		this.children = make([]plan.Operator, 0, 1)
 		this.addChildren(rv)
 	}

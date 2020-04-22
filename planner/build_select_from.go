@@ -243,7 +243,8 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
-	this.addChildren(sel.(plan.Operator), plan.NewAlias(node.Alias()))
+	selOp := sel.(plan.Operator)
+	this.addChildren(selOp, plan.NewAlias(node.Alias(), selOp.Cost(), selOp.Cardinality()))
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {

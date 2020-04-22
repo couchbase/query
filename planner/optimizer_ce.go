@@ -126,6 +126,10 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
+func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }

@@ -188,6 +188,10 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 	return optimizer.CalcLetCost(lastOp)
 }
 
+func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float64) {
+	return optimizer.CalcWithCost(lastOp, with)
+}
+
 func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64) {
 	return optimizer.CalcOffsetCost(lastOp, noffset)
 }
