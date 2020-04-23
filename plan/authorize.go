@@ -48,6 +48,14 @@ func (this *Authorize) Child() Operator {
 	return this.child
 }
 
+func (this *Authorize) Cost() float64 {
+	return this.child.Cost()
+}
+
+func (this *Authorize) Cardinality() float64 {
+	return this.child.Cardinality()
+}
+
 func (this *Authorize) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

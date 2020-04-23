@@ -15,10 +15,16 @@ import (
 
 type Discard struct {
 	readonly
+
+	cost        float64
+	cardinality float64
 }
 
-func NewDiscard() *Discard {
-	return &Discard{}
+func NewDiscard(cost, cardinality float64) *Discard {
+	return &Discard{
+		cost:        cost,
+		cardinality: cardinality,
+	}
 }
 
 func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
@@ -29,19 +35,46 @@ func (this *Discard) New() Operator {
 	return &Discard{}
 }
 
+func (this *Discard) Cost() float64 {
+	return this.cost
+}
+
+func (this *Discard) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Discard) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *Discard) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Discard"}
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
 	return r
 }
 
-func (this *Discard) UnmarshalJSON([]byte) error {
-	// NOP: Discard has no data structure
+func (this *Discard) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_           string  `json:"#operator"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }

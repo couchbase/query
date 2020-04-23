@@ -45,7 +45,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		}
 
 		if stream {
-			op = plan.NewSequence(op, plan.NewStream())
+			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality()))
 		}
 
 		// Always insert an Authorize operator, even if no privileges need to

@@ -62,7 +62,14 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	if stmt.Returning() == nil {
-		this.addChildren(plan.NewDiscard())
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		lastOp := this.lastOp
+		if lastOp != nil {
+			cost = lastOp.Cost()
+			cardinality = lastOp.Cardinality()
+		}
+		this.addChildren(plan.NewDiscard(cost, cardinality))
 	}
 
 	return plan.NewSequence(this.children...), nil

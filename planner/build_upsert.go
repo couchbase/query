@@ -52,7 +52,14 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
 	} else {
-		subChildren = append(subChildren, plan.NewDiscard())
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		lastOp := subChildren[len(subChildren)-1]
+		if lastOp != nil {
+			cost = lastOp.Cost()
+			cardinality = lastOp.Cardinality()
+		}
+		subChildren = append(subChildren, plan.NewDiscard(cost, cardinality))
 	}
 
 	children = append(children, this.addParallel(subChildren...))
