@@ -72,18 +72,16 @@ func (this *ansijoinOuterToInner) visitAnsiJoin(left algebra.FromTerm, outer boo
 			return false, errors.NewPlanInternalError(fmt.Sprintf("ansijoinOuterToInner: missing baseKeyspace for %s", a))
 		}
 
-		chkNullRej.setAlias(a)
-
 		// the filters and joinfilters attached to each keyspace at this point
 		// are from either WHERE clause or pushable ON clauses
 		for _, fl := range baseKeyspace.Filters() {
-			if nullRejExpr(chkNullRej, fl.FltrExpr()) {
+			if nullRejExpr(chkNullRej, a, fl.FltrExpr()) {
 				return true, nil
 			}
 		}
 
 		for _, jfl := range baseKeyspace.JoinFilters() {
-			if nullRejExpr(chkNullRej, jfl.FltrExpr()) {
+			if nullRejExpr(chkNullRej, a, jfl.FltrExpr()) {
 				return true, nil
 			}
 		}

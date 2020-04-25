@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -25,7 +26,15 @@ import (
  * well-established term in SQL (since results of outer joins may contain null-extended rows),
  * we'll inherit this term.
  */
-func nullRejExpr(chkNullRej *chkNullRej, expr expression.Expression) bool {
+func nullRejExpr(chkNullRej *chkNullRej, alias string, expr expression.Expression) bool {
+	chkNullRej.alias = alias
+	chkNullRej.keyspaceNames = _KEYSPACE_NAMES_POOL.Get()
+	defer func() {
+		_KEYSPACE_NAMES_POOL.Put(chkNullRej.keyspaceNames)
+		chkNullRej.keyspaceNames = nil
+	}()
+	chkNullRej.keyspaceNames[alias] = ""
+
 	res, err := expr.Accept(chkNullRej)
 	if err != nil {
 		return false
@@ -35,34 +44,12 @@ func nullRejExpr(chkNullRej *chkNullRej, expr expression.Expression) bool {
 }
 
 type chkNullRej struct {
-	alias       string
-	bindingVars []string
+	alias         string
+	keyspaceNames map[string]string
 }
 
 func newChkNullRej() *chkNullRej {
 	return &chkNullRej{}
-}
-
-func (this *chkNullRej) setAlias(alias string) {
-	this.alias = alias
-}
-
-func (this *chkNullRej) hasReferences(expr expression.Expression) bool {
-	keyspaceNames := make(map[string]string, len(this.bindingVars)+1)
-	keyspaceNames[this.alias] = ""
-	for _, bvar := range this.bindingVars {
-		keyspaceNames[bvar] = ""
-	}
-	keyspaces, err := expression.CountKeySpaces(expr, keyspaceNames)
-	if err != nil {
-		return false
-	}
-
-	if len(keyspaces) == 0 {
-		return false
-	}
-
-	return true
 }
 
 // Logic
@@ -74,7 +61,7 @@ func (this *chkNullRej) VisitAnd(expr *expression.And) (interface{}, error) {
 		}
 
 		// make sure the subterm references the keyspace
-		if !this.hasReferences(op) {
+		if !expression.HasKeyspaceReferences(op, this.keyspaceNames) {
 			continue
 		}
 
@@ -93,13 +80,14 @@ func (this *chkNullRej) VisitAnd(expr *expression.And) (interface{}, error) {
 }
 
 func (this *chkNullRej) VisitOr(expr *expression.Or) (interface{}, error) {
+	hasRef := false
 	for _, op := range expr.Operands() {
 		if op == nil {
 			continue
 		}
 
 		// make sure the subterm references the keyspace
-		if !this.hasReferences(op) {
+		if !expression.HasKeyspaceReferences(op, this.keyspaceNames) {
 			return false, nil
 		}
 
@@ -112,39 +100,78 @@ func (this *chkNullRej) VisitOr(expr *expression.Or) (interface{}, error) {
 		if !nullRej {
 			return false, nil
 		}
+		hasRef = true
 	}
 
-	return true, nil
+	return hasRef, nil
 }
 
 func (this *chkNullRej) VisitNot(expr *expression.Not) (interface{}, error) {
-	return expr.Operand().Accept(this)
+	op := expr.Operand()
+	res, err := op.Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	nullRej := res.(bool)
+	if !nullRej {
+		return false, nil
+	}
+
+	switch op.(type) {
+	case *expression.Eq, *expression.In, *expression.Within, *expression.Like, *expression.Between, *expression.And, *expression.Or:
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (this *chkNullRej) visitOperands(args ...expression.Expression) (interface{}, error) {
+	hasRef := false
+	for _, arg := range args {
+		if !expression.HasKeyspaceReferences(arg, this.keyspaceNames) {
+			continue
+		}
+
+		res, err := arg.Accept(this)
+		if err != nil {
+			return nil, err
+		}
+
+		nullRej := res.(bool)
+		if !nullRej {
+			return false, nil
+		}
+		hasRef = true
+	}
+
+	return hasRef, nil
 }
 
 // Arithmetic
 
 func (this *chkNullRej) VisitAdd(pred *expression.Add) (interface{}, error) {
-	return false, nil
+	return this.visitOperands((pred.Operands())...)
 }
 
 func (this *chkNullRej) VisitDiv(pred *expression.Div) (interface{}, error) {
-	return false, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitMod(pred *expression.Mod) (interface{}, error) {
-	return false, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitMult(pred *expression.Mult) (interface{}, error) {
-	return false, nil
+	return this.visitOperands((pred.Operands())...)
 }
 
 func (this *chkNullRej) VisitNeg(pred *expression.Neg) (interface{}, error) {
-	return false, nil
+	return this.visitOperands(pred.Operand())
 }
 
 func (this *chkNullRej) VisitSub(pred *expression.Sub) (interface{}, error) {
-	return false, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 // Case
@@ -160,23 +187,23 @@ func (this *chkNullRej) VisitSimpleCase(pred *expression.SimpleCase) (interface{
 // Collection
 
 func (this *chkNullRej) visitAnyAndEvery(coll expression.CollectionPredicate) (interface{}, error) {
-	if cap(this.bindingVars) < len(coll.Bindings()) {
-		this.bindingVars = make([]string, 0, len(coll.Bindings()))
-	}
+	keyspaceNames := this.keyspaceNames
+	this.keyspaceNames = _KEYSPACE_NAMES_POOL.Get()
+	defer func() {
+		_KEYSPACE_NAMES_POOL.Put(this.keyspaceNames)
+		this.keyspaceNames = keyspaceNames
+	}()
+	this.keyspaceNames[this.alias] = ""
 
 	aliasIdent := expression.NewIdentifier(this.alias)
 
 	for _, binding := range coll.Bindings() {
 		if binding.Expression().DependsOn(aliasIdent) {
-			this.bindingVars = append(this.bindingVars, binding.Variable())
+			this.keyspaceNames[binding.Variable()] = ""
 		}
 	}
 
-	if len(this.bindingVars) > 0 {
-		defer func() { this.bindingVars = this.bindingVars[:0] }()
-	}
-
-	if this.hasReferences(coll.Satisfies()) {
+	if expression.HasKeyspaceReferences(coll.Satisfies(), this.keyspaceNames) {
 		return coll.Satisfies().Accept(this)
 	}
 
@@ -213,34 +240,34 @@ func (this *chkNullRej) VisitExists(pred *expression.Exists) (interface{}, error
 
 /* IN, WITHIN expressions are null rejecting */
 func (this *chkNullRej) VisitIn(pred *expression.In) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitWithin(pred *expression.Within) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 // Comparison
 
 /* all relational comparison operations are null rejecting */
 func (this *chkNullRej) VisitBetween(pred *expression.Between) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitEq(pred *expression.Eq) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitLE(pred *expression.LE) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitLike(pred *expression.Like) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitLT(pred *expression.LT) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.First(), pred.Second())
 }
 
 func (this *chkNullRej) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
@@ -249,12 +276,12 @@ func (this *chkNullRej) VisitIsMissing(pred *expression.IsMissing) (interface{},
 
 /* IS NOT MISSING is null rejecting */
 func (this *chkNullRej) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.Operand())
 }
 
 /* IS NOT NULL is null rejecting */
 func (this *chkNullRej) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.Operand())
 }
 
 func (this *chkNullRej) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
@@ -267,12 +294,12 @@ func (this *chkNullRej) VisitIsNull(pred *expression.IsNull) (interface{}, error
 
 /* IS VALUED is null rejecting */
 func (this *chkNullRej) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
-	return true, nil
+	return this.visitOperands(pred.Operand())
 }
 
 // Concat
 func (this *chkNullRej) VisitConcat(pred *expression.Concat) (interface{}, error) {
-	return false, nil
+	return this.visitOperands((pred.Operands())...)
 }
 
 // Constant
@@ -282,7 +309,8 @@ func (this *chkNullRej) VisitConstant(pred *expression.Constant) (interface{}, e
 
 // Identifier
 func (this *chkNullRej) VisitIdentifier(pred *expression.Identifier) (interface{}, error) {
-	return false, nil
+	_, ok := this.keyspaceNames[pred.Identifier()]
+	return ok, nil
 }
 
 // Construction
@@ -302,7 +330,7 @@ func (this *chkNullRej) VisitElement(pred *expression.Element) (interface{}, err
 }
 
 func (this *chkNullRej) VisitField(pred *expression.Field) (interface{}, error) {
-	return false, nil
+	return this.visitOperands(pred.First())
 }
 
 func (this *chkNullRej) VisitFieldName(pred *expression.FieldName) (interface{}, error) {
@@ -347,3 +375,5 @@ func (this *chkNullRej) VisitCover(pred *expression.Cover) (interface{}, error) 
 func (this *chkNullRej) VisitAll(pred *expression.All) (interface{}, error) {
 	return false, nil
 }
+
+var _KEYSPACE_NAMES_POOL = util.NewStringStringPool(16)
