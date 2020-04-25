@@ -222,12 +222,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 
 		for _, term := range terms {
 			// check whether the expression references current keyspace
-			keyspaces, err := expression.CountKeySpaces(term, keyspaceNames)
-			if err != nil {
-				return err
-			}
-
-			if len(keyspaces) == 0 {
+			if !expression.HasKeyspaceReferences(term, keyspaceNames) {
 				continue
 			}
 

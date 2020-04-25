@@ -60,8 +60,7 @@ func (this *keyspaceFinder) addOnclause(onclause expression.Expression) bool {
 		for ks, _ := range keyspaces {
 			baseKspace, ok := this.baseKeyspaces[ks]
 			if !ok || baseKspace.Outerlevel() > 0 {
-				chkNullRej.setAlias(ks)
-				if !nullRejExpr(chkNullRej, onclause) {
+				if !nullRejExpr(chkNullRej, ks, onclause) {
 					return false
 				}
 			}

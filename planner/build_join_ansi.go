@@ -599,26 +599,10 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 				continue
 			}
 
-			// check keyspace references for both sides
-			firstKeyspaces, err := expression.CountKeySpaces(eqFltr.First(), keyspaceNames)
-			if err != nil {
-				return nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
-			}
-			secondKeyspaces, err := expression.CountKeySpaces(eqFltr.Second(), keyspaceNames)
-			if err != nil {
-				return nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
-			}
-
 			// make sure only one side of the equality predicate references
 			// alias (which is right-hand-side of the join)
-			firstRef := false
-			secondRef := false
-			if _, ok := firstKeyspaces[alias]; ok {
-				firstRef = true
-			}
-			if _, ok := secondKeyspaces[alias]; ok {
-				secondRef = true
-			}
+			firstRef := expression.HasKeyspaceReferences(eqFltr.First(), keyspaceNames)
+			secondRef := expression.HasKeyspaceReferences(eqFltr.Second(), keyspaceNames)
 
 			found := false
 			if firstRef && !secondRef {

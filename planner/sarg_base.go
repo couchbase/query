@@ -38,8 +38,7 @@ func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
 		for a, k := range this.baseKeyspace.GetUnnests() {
 			keyspaceNames[a] = k
 		}
-		keyspaces, err := expression.CountKeySpaces(pred, keyspaceNames)
-		if err == nil && len(keyspaces) == 0 {
+		if !expression.HasKeyspaceReferences(pred, keyspaceNames) {
 			return pred.Copy()
 		}
 	}
