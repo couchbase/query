@@ -24,6 +24,14 @@ type Concat struct {
 }
 
 func NewConcat(operands ...Expression) Function {
+	// if the first operand is another Concat, combine the operands
+	if len(operands) > 1 {
+		if concat, ok := operands[0].(*Concat); ok {
+			concat.operands = append(concat.operands, operands[1:]...)
+			return concat
+		}
+	}
+
 	rv := &Concat{
 		*NewFunctionBase("concat", operands...),
 	}
@@ -96,6 +104,17 @@ type Concat2 struct {
 }
 
 func NewConcat2(operands ...Expression) Function {
+	// if the second operand is another Concat2, and the separator match, combine the operands
+	// (for Concat2 the first operand is the separator)
+	if len(operands) > 2 {
+		if concat2, ok := operands[1].(*Concat2); ok {
+			if operands[0].EquivalentTo(concat2.operands[0]) {
+				concat2.operands = append(concat2.operands, operands[2:]...)
+				return concat2
+			}
+		}
+	}
+
 	rv := &Concat2{
 		*NewFunctionBase("concat2", operands...),
 	}
