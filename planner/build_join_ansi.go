@@ -77,7 +77,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, cost, cardinality, err := this.buildAnsiJoinScan(right, node.Onclause(), node.Outer(), "join")
-		if err != nil {
+		if err != nil && !useCBO {
+			// in case of CBO, defer returning error in case hash join is feasible
 			return nil, err
 		}
 
@@ -96,6 +97,9 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hjOnclause)
 			return hjoin, nil
+		} else if err != nil && useCBO {
+			// error occurred and neither nested-loop join nor hash join is available
+			return nil, err
 		}
 
 		right.UnsetUnderNL()
