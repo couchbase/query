@@ -254,6 +254,10 @@ func (b *keyspace) Name() string {
 	return b.name
 }
 
+func (b *keyspace) QualifiedName() string {
+	return b.namespace.name + ":" + b.name
+}
+
 func (b *keyspace) MetadataVersion() uint64 {
 	return 0
 }
@@ -369,6 +373,14 @@ func newMockIndexer(keyspace *keyspace) datastore.Indexer {
 		keyspace: keyspace,
 		indexes:  make(map[string]datastore.Index),
 	}
+}
+
+func (mi *mockIndexer) BucketId() string {
+	return ""
+}
+
+func (mi *mockIndexer) ScopeId() string {
+	return ""
 }
 
 func (mi *mockIndexer) KeyspaceId() string {
@@ -512,6 +524,14 @@ type primaryIndex struct {
 	name     string
 	keyspace *keyspace
 	indexer  *mockIndexer
+}
+
+func (pi *primaryIndex) BucketId() string {
+	return ""
+}
+
+func (pi *primaryIndex) ScopeId() string {
+	return ""
 }
 
 func (pi *primaryIndex) KeyspaceId() string {

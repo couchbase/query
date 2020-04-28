@@ -40,6 +40,14 @@ func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition express
 	}
 }
 
+func (this *VirtualIndex) BucketId() string {
+	return ""
+}
+
+func (this *VirtualIndex) ScopeId() string {
+	return ""
+}
+
 func (this *VirtualIndex) KeyspaceId() string {
 	return this.keyspace.Name()
 }

@@ -18,15 +18,20 @@ import (
 )
 
 func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
+	var path *algebra.Path
+
 	this.node = stmt
 	this.children = make([]plan.Operator, 0, 8)
 	this.subChildren = make([]plan.Operator, 0, 8)
 	source := stmt.Source()
 
 	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
-	sourceKeyspace := base.NewBaseKeyspace(source.Alias(), source.Keyspace())
+	if source.From() != nil {
+		path = source.From().Path()
+	}
+	sourceKeyspace := base.NewBaseKeyspace(source.Alias(), path)
 	this.baseKeyspaces[sourceKeyspace.Name()] = sourceKeyspace
-	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Keyspace())
+	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Path())
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
 	this.collectKeyspaceNames()
 

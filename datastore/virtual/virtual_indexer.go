@@ -32,6 +32,14 @@ func NewVirtualIndexer(namespace, keyspace string) datastore.Indexer {
 	}
 }
 
+func (this *VirtualIndexer) BucketId() string {
+	return ""
+}
+
+func (this *VirtualIndexer) ScopeId() string {
+	return ""
+}
+
 func (this *VirtualIndexer) KeyspaceId() string {
 	return this.keyspace
 }

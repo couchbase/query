@@ -503,17 +503,7 @@ func (this *MergeSource) Alias() string {
 	}
 }
 
-/*
-Return the actual keyspace name for the merge source.
-If not KeyspaceTerm return empty string
-*/
-func (this *MergeSource) Keyspace() string {
-	if this.from != nil {
-		return this.from.Keyspace()
-	} else {
-		return ""
-	}
-}
+// MergeSource.Keyspace() no longer needed, as we use paths instead
 
 /*
 Represents the merge actions in a merge statement. They

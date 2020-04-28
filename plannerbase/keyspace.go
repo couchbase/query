@@ -10,6 +10,8 @@
 package plannerbase
 
 import (
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 )
 
@@ -32,7 +34,29 @@ type BaseKeyspace struct {
 	unnests     map[string]string
 }
 
-func NewBaseKeyspace(name, keyspace string) *BaseKeyspace {
+func NewBaseKeyspace(name string, path *algebra.Path) *BaseKeyspace {
+	var keyspace string
+
+	// for expression scans we don't have a keyspace and leave it empty
+	if path != nil {
+
+		// we use the full name, except for buckets, where we look for the underlying default collection
+		// this has to be done for CBO, so that we can use the same distributions for buckets and
+		// default collections, when explicitly referenced
+		if path.IsCollection() {
+			keyspace = path.SimpleString()
+		} else {
+			ks, _ := datastore.GetKeyspace(path.Parts()...)
+
+			// if we can't find it, we use a token full name
+			if ks != nil {
+				keyspace = ks.QualifiedName()
+			} else {
+				keyspace = path.SimpleString()
+			}
+		}
+	}
+
 	return &BaseKeyspace{
 		name:     name,
 		keyspace: keyspace,
@@ -67,7 +91,10 @@ func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	dest := make(map[string]*BaseKeyspace, len(src))
 
 	for _, kspace := range src {
-		dest[kspace.name] = NewBaseKeyspace(kspace.name, kspace.keyspace)
+		dest[kspace.name] = &BaseKeyspace{
+			name:     kspace.name,
+			keyspace: kspace.keyspace,
+		}
 		dest[kspace.name].ksFlags = kspace.ksFlags
 		dest[kspace.name].outerlevel = kspace.outerlevel
 		if len(kspace.unnests) > 0 {

@@ -361,6 +361,10 @@ func (b *keyspace) Name() string {
 	return b.name
 }
 
+func (b *keyspace) QualifiedName() string {
+	return b.namespace.name + ":" + b.name
+}
+
 func (b *keyspace) Scope() datastore.Scope {
 	return nil
 }
@@ -615,6 +619,14 @@ func newFileIndexer(keyspace *keyspace) datastore.Indexer {
 	}
 }
 
+func (fi *fileIndexer) BucketId() string {
+	return ""
+}
+
+func (fi *fileIndexer) ScopeId() string {
+	return ""
+}
+
 func (fi *fileIndexer) KeyspaceId() string {
 	return fi.keyspace.Id()
 }
@@ -703,6 +715,14 @@ type primaryIndex struct {
 	name     string
 	keyspace *keyspace
 	indexer  *fileIndexer
+}
+
+func (pi *primaryIndex) BucketId() string {
+	return ""
+}
+
+func (pi *primaryIndex) ScopeId() string {
+	return ""
 }
 
 func (pi *primaryIndex) KeyspaceId() string {

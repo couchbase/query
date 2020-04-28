@@ -85,10 +85,7 @@ func init() {
 	cb.InitBulkGet()
 	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
 
-	// Collections?
-	if _COLLECTIONS_SUPPORTED {
-		cb.EnableCollections = true
-	}
+	cb.EnableCollections = true
 }
 
 const (
@@ -791,7 +788,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		case _NEEDS_MANIFEST:
 			mani, err := keyspace.cbbucket.GetCollectionsManifest()
 			if err == nil {
-				scopes, defaultCollection := buildScopesAndCollections(mani, keyspace)
+				scopes, defaultCollection := refreshScopesAndCollections(mani, keyspace)
 
 				// see later: another case for shared optimistic locks.
 				// only the first one in gets to change scopes, every one else's work is wasted
@@ -921,35 +918,24 @@ func (p *namespace) MetadataVersion() uint64 {
 	return p.version
 }
 
+// ditto
 func (p *namespace) FullName() string {
 	return p.name
 }
 
 func (p *namespace) BucketIds() ([]string, errors.Error) {
-	if !_COLLECTIONS_SUPPORTED {
-		return datastore.NO_STRINGS, nil
-	}
 	return p.KeyspaceIds()
 }
 
 func (p *namespace) BucketNames() ([]string, errors.Error) {
-	if !_COLLECTIONS_SUPPORTED {
-		return datastore.NO_STRINGS, nil
-	}
 	return p.KeyspaceNames()
 }
 
 func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
-	if !_COLLECTIONS_SUPPORTED {
-		return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
-	}
 	return p.keyspaceByName(name)
 }
 
 func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
-	if !_COLLECTIONS_SUPPORTED {
-		return nil, errors.NewNotImplemented(_COLLECTIONS_NOT_SUPPORTED)
-	}
 	return p.keyspaceByName(name)
 }
 
@@ -1136,7 +1122,7 @@ type keyspace struct {
 	viewIndexer datastore.Indexer // View index provider
 	gsiIndexer  datastore.Indexer // GSI index provider
 	ftsIndexer  datastore.Indexer // FTS index provider
-	chkIndex    *chkIndexDict
+	chkIndex    chkIndexDict
 
 	collectionsManifestUid uint64
 	scopes                 map[string]*scope // scopes by id
@@ -1187,14 +1173,12 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	rv.viewIndexer = newViewIndexer(rv)
 
 	rv.scopes = _NO_SCOPES
-	if _COLLECTIONS_SUPPORTED {
-		mani, err := cbbucket.GetCollectionsManifest()
-		if err == nil {
-			rv.collectionsManifestUid = mani.Uid
-			rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
-		} else {
-			logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
-		}
+	mani, err := cbbucket.GetCollectionsManifest()
+	if err == nil {
+		rv.collectionsManifestUid = mani.Uid
+		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
+	} else {
+		logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
 	}
 
 	// if we don't have any scope (not even default) revert to old style keyspace
@@ -1239,7 +1223,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
-		dropDictCacheEntry(name)
+		dropDictCacheEntries(ks.cbKeyspace)
 		ks.cbKeyspace.Lock()
 		ks.cbKeyspace.flags |= _DELETED
 		ks.cbKeyspace.Unlock()
@@ -1279,8 +1263,13 @@ func (b *keyspace) MetadataVersion() uint64 {
 	return b.collectionsManifestUid
 }
 
+// ditto
 func (b *keyspace) FullName() string {
 	return b.fullName
+}
+
+func (b *keyspace) QualifiedName() string {
+	return b.fullName + "._default._default"
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
@@ -1333,7 +1322,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	var err errors.Error
 	if b.gsiIndexer != nil {
 		indexers = append(indexers, b.gsiIndexer)
-		err = b.checkIndexCache(b.gsiIndexer)
+		err = checkIndexCache(b.QualifiedName(), b.gsiIndexer, &b.chkIndex)
 	}
 
 	if b.ftsIndexer != nil {
@@ -1807,14 +1796,10 @@ func (b *keyspace) ScopeId() string {
 }
 
 func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
-	if _COLLECTIONS_SUPPORTED {
-		if ks.defaultCollection != nil {
-			return ks.defaultCollection, nil
-		} else {
-			return nil, errors.NewCbBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
-		}
+	if ks.defaultCollection != nil {
+		return ks.defaultCollection, nil
 	} else {
-		return ks, nil
+		return nil, errors.NewCbBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
 	}
 }
 
@@ -1856,9 +1841,6 @@ func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
 }
 
 func (ks *keyspace) CreateScope(name string) errors.Error {
-	if !_COLLECTIONS_SUPPORTED {
-		return errors.NewScopesNotSupportedError(ks.name)
-	}
 	err := ks.cbbucket.CreateScope(name)
 	if err != nil {
 		return errors.NewCbBucketCreateScopeError(fullName(ks.namespace.name, name), err)
@@ -1868,9 +1850,6 @@ func (ks *keyspace) CreateScope(name string) errors.Error {
 }
 
 func (ks *keyspace) DropScope(name string) errors.Error {
-	if !_COLLECTIONS_SUPPORTED {
-		return errors.NewScopesNotSupportedError(ks.name)
-	}
 	err := ks.cbbucket.DropScope(name)
 	if err != nil {
 		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, name), err)

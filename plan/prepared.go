@@ -228,7 +228,7 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 	version := indexer.MetadataVersion()
 	for i, idx := range this.indexers {
 		if idx.indexer.Name() == indexer.Name() &&
-			idx.indexer.KeyspaceId() == indexer.KeyspaceId() {
+			datastore.IndexerQualifiedKeyspacePath(idx.indexer) == datastore.IndexerQualifiedKeyspacePath(indexer) {
 			this.indexers[i].indexer = indexer
 			this.indexers[i].version = version
 			return

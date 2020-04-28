@@ -40,6 +40,8 @@ const (
 )
 
 type Indexer interface {
+	BucketId() string
+	ScopeId() string
 	KeyspaceId() string                                                                       // Id of the keyspace to which this indexer belongs
 	Name() IndexType                                                                          // Unique within a Keyspace.
 	IndexIds() ([]string, errors.Error)                                                       // Ids of the indexes defined on this keyspace
@@ -125,6 +127,8 @@ type Indexes []Index
 Index is the base type for indexes, which may be distributed.
 */
 type Index interface {
+	//	BucketId() string
+	//	ScopeId() string
 	KeyspaceId() string                                                 // Id of the keyspace to which this index belongs
 	Id() string                                                         // Id of this index
 	Name() string                                                       // Name of this index
@@ -141,6 +145,13 @@ type Index interface {
 	// Perform a scan on this index. Distinct and limit are hints.
 	Scan(requestId string, span *Span, distinct bool, limit int64, cons ScanConsistency,
 		vector timestamp.Vector, conn *IndexConnection)
+}
+
+type CollectionIndex interface {
+	Index
+
+	BucketId() string
+	ScopeId() string
 }
 
 type CountIndex interface {

@@ -155,8 +155,9 @@ type Scope interface {
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.
 type Keyspace interface {
-	Id() string   // Id of this keyspace
-	Name() string // Name of this keyspace
+	Id() string            // Id of this keyspace
+	Name() string          // Name of this keyspace
+	QualifiedName() string // Full path of this keyspace, including default or system names if implied
 
 	// A keyspace is found either directly under a namespace or under a scope.
 	// If the keyspace is directly under a namespace, the ScopeId() returns "" and Scope() returns nil,
@@ -311,6 +312,39 @@ func GetBucket(parts ...string) (Bucket, errors.Error) {
 	default:
 		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
 	}
+}
+
+func IndexQualifiedKeyspacePath(index Index) string {
+
+	// The code below could have been duplicated here, but this makes maintenance easier
+	return IndexerQualifiedKeyspacePath(index.Indexer())
+}
+
+func IndexerQualifiedKeyspacePath(indexer Indexer) string {
+	if indexer.Name() == SYSTEM {
+		return string(SYSTEM) + ":" + indexer.KeyspaceId()
+	}
+
+	// FIXME currently indexers and indexes only support a type and not a namespace, hence we hardwire it
+	namespace := "default"
+
+	bucket := indexer.BucketId()
+	scope := indexer.ScopeId()
+
+	// we have a fully qualified path
+	if bucket != "" && scope != "" {
+		return namespace + ":" + bucket + "." + scope + "." + indexer.KeyspaceId()
+	}
+
+	// It must be a bucket, get the fully qualified name
+	keyspace, err := GetKeyspace(namespace, indexer.KeyspaceId())
+
+	// we couldn't find it, return a token name
+	if err != nil {
+		return namespace + ":" + indexer.KeyspaceId()
+	}
+
+	return keyspace.QualifiedName()
 }
 
 // These structures are generic representations of users and their roles.

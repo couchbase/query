@@ -39,6 +39,10 @@ func (this *virtualKeyspace) Name() string {
 	return this.name
 }
 
+func (this *virtualKeyspace) QualifiedName() string {
+	return this.namespace.Name() + ":" + this.name
+}
+
 // Virtual keyspace will be directly under a namespace.
 func (this *virtualKeyspace) NamespaceId() string {
 	return this.namespace.Id()

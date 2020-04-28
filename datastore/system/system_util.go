@@ -40,6 +40,10 @@ func (this *keyspaceBase) ScopeId() string {
 	return ""
 }
 
+func (this *keyspaceBase) QualifiedName() string {
+	return this.fullName
+}
+
 func (this *keyspaceBase) CreateScope(name string) errors.Error {
 	return errors.NewScopesNotSupportedError(this.name)
 }
@@ -70,6 +74,14 @@ type indexBase struct {
 
 func (this *indexBase) Indexer() datastore.Indexer {
 	return this.indexer
+}
+
+func (this *indexBase) BucketId() string {
+	return ""
+}
+
+func (this *indexBase) ScopeId() string {
+	return ""
 }
 
 func setIndexBase(base *indexBase, indexer datastore.Indexer) {

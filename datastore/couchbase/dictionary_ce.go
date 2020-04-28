@@ -30,6 +30,6 @@ type chkIndexDict struct {
 	// dummy struct
 }
 
-func (this *keyspace) checkIndexCache(indexer datastore.Indexer) errors.Error {
+func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexDict) errors.Error {
 	return nil
 }

@@ -365,6 +365,11 @@ func (ks *CollectionsKeyspace) Name() string {
 	return ks.id
 }
 
+// not really used in tests, so can be left as unqualified
+func (ks *CollectionsKeyspace) QualifiedName() string {
+	return ks.id
+}
+
 func (ks *CollectionsKeyspace) NamespaceId() string {
 	if ks.namespace == nil {
 		return ""
@@ -449,6 +454,14 @@ func (ks *CollectionsKeyspace) Flush() errors.Error {
 type CollectionsIndexer struct {
 	keyspace       *CollectionsKeyspace       // keyspace owns indexer
 	primaryIndexes []*CollectionsPrimaryIndex // indexer owns indexes
+}
+
+func (indexer *CollectionsIndexer) BucketId() string {
+	return ""
+}
+
+func (indexer *CollectionsIndexer) ScopeId() string {
+	return ""
 }
 
 func (indexer *CollectionsIndexer) KeyspaceId() string {
@@ -548,6 +561,14 @@ type CollectionsPrimaryIndex struct {
 	keyspace *CollectionsKeyspace
 	id       string
 	indexer  *CollectionsIndexer
+}
+
+func (index *CollectionsPrimaryIndex) BucketId() string {
+	return ""
+}
+
+func (index *CollectionsPrimaryIndex) ScopeId() string {
+	return ""
 }
 
 func (index *CollectionsPrimaryIndex) KeyspaceId() string {

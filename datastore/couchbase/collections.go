@@ -10,18 +10,19 @@
 package couchbase
 
 import (
+	"fmt"
+	"sync"
+
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached/client" // package name is memcached
+	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
+	ftsclient "github.com/couchbase/n1fty"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
-
-// TODO remove
-var _COLLECTIONS_SUPPORTED bool = true
-
-var _COLLECTIONS_NOT_SUPPORTED string = "Collections are not yet supported."
 
 type scope struct {
 	id     string
@@ -119,20 +120,18 @@ func (sc *scope) DropCollection(name string) errors.Error {
 }
 
 type collection struct {
-	id        string
-	uid       uint32
-	namespace *namespace
-	scope     *scope
-	bucket    *keyspace
-	fullName  string
-	isDefault bool
-}
-
-func NewCollection(name string) *collection {
-	coll := &collection{
-		id: name,
-	}
-	return coll
+	sync.Mutex
+	id         string
+	uid        uint32
+	namespace  *namespace
+	scope      *scope
+	bucket     *keyspace
+	fullName   string
+	checked    bool
+	gsiIndexer datastore.Indexer
+	ftsIndexer datastore.Indexer
+	chkIndex   chkIndexDict
+	isDefault  bool
 }
 
 func (coll *collection) Id() string {
@@ -141,6 +140,10 @@ func (coll *collection) Id() string {
 
 func (coll *collection) Name() string {
 	return coll.id
+}
+
+func (coll *collection) QualifiedName() string {
+	return coll.fullName
 }
 
 func (coll *collection) NamespaceId() string {
@@ -171,6 +174,8 @@ func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Err
 	if coll.isDefault {
 		return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid})
 	}
+
+	// FIXME
 	return -1, errors.NewNotImplemented("collection.Count()")
 }
 
@@ -180,6 +185,8 @@ func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Erro
 	if coll.isDefault {
 		return coll.bucket.size(context, &memcached.ClientContext{CollId: coll.uid})
 	}
+
+	// FIXME
 	return -1, errors.NewNotImplemented("collection.Size()")
 }
 
@@ -190,17 +197,78 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 		k := datastore.Keyspace(coll.bucket)
 		return k.Indexer(name)
 	}
-	return nil, errors.NewNotImplemented("collection.Indexer()")
+
+	coll.loadIndexes()
+	switch name {
+	case datastore.GSI, datastore.DEFAULT:
+		if coll.gsiIndexer != nil {
+			return coll.gsiIndexer, nil
+		}
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("GSI may not be enabled"))
+	case datastore.FTS:
+		if coll.ftsIndexer != nil {
+			return coll.ftsIndexer, nil
+		}
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("FTS may not be enabled"))
+	default:
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
+	}
 }
 
 func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
+	var err errors.Error
 
 	// default collection
 	if coll.isDefault {
 		k := datastore.Keyspace(coll.bucket)
 		return k.Indexers()
 	}
-	return nil, errors.NewNotImplemented("collection.Indexers()")
+
+	coll.loadIndexes()
+	indexers := make([]datastore.Indexer, 0, 2)
+
+	if coll.gsiIndexer != nil {
+		indexers = append(indexers, coll.gsiIndexer)
+		err = checkIndexCache(coll.id, coll.gsiIndexer, &coll.chkIndex)
+	}
+	if coll.ftsIndexer != nil {
+		indexers = append(indexers, coll.ftsIndexer)
+	}
+	return indexers, err
+}
+
+func (coll *collection) loadIndexes() {
+	var qerr errors.Error
+
+	if coll.checked {
+		return
+	}
+	coll.Lock()
+	defer coll.Unlock()
+
+	// somebody may have already done it while we were waiting
+	if coll.checked {
+		return
+	}
+
+	namespace := coll.namespace
+	store := namespace.store
+	connSecConfig := store.connSecConfig
+	coll.gsiIndexer, qerr = gsi.NewGSIIndexer2(store.URL(), namespace.name, coll.bucket.name, coll.scope.id, coll.id, connSecConfig)
+	if qerr != nil {
+		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", coll.id, qerr)
+	} else {
+		coll.gsiIndexer.SetConnectionSecurityConfig(connSecConfig)
+	}
+
+	// FTS indexer
+	coll.ftsIndexer, qerr = ftsclient.NewFTSIndexer(store.URL(), namespace.name, coll.id)
+	if qerr != nil {
+		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", coll.id, qerr)
+	} else {
+		coll.ftsIndexer.SetConnectionSecurityConfig(connSecConfig)
+	}
+	coll.checked = true
 }
 
 func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
@@ -209,6 +277,8 @@ func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
 	if coll.isDefault {
 		return coll.bucket.getRandomEntry(&memcached.ClientContext{CollId: coll.uid})
 	}
+
+	// FIXME
 	return "", nil, errors.NewNotImplemented("collection.GetRandomEntry()")
 }
 
@@ -283,4 +353,120 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 		scopes[s.Name] = scope
 	}
 	return scopes, defaultCollection
+}
+
+func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
+	oldScopes := bucket.scopes
+
+	// somebody just did it
+	if oldScopes == nil {
+		return nil, nil
+	}
+
+	scopes := make(map[string]*scope, len(mani.Scopes))
+	var defaultCollection *collection
+
+	// check the new scopes
+	for _, s := range mani.Scopes {
+		scope := &scope{
+			id:        s.Name,
+			bucket:    bucket,
+			keyspaces: make(map[string]*collection, len(s.Collections)),
+		}
+
+		oldScope := oldScopes[s.Name]
+		for _, c := range s.Collections {
+			coll := &collection{
+				id:        c.Name,
+				namespace: bucket.namespace,
+				fullName:  bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + c.Name,
+				uid:       uint32(c.Uid),
+				scope:     scope,
+			}
+			scope.keyspaces[c.Name] = coll
+			coll.bucket = bucket
+
+			// copy the indexers
+			if oldScope != nil {
+				oldColl := oldScope.keyspaces[c.Name]
+				if oldColl != nil {
+					oldColl.Lock()
+					coll.gsiIndexer = oldColl.gsiIndexer
+					coll.ftsIndexer = oldColl.ftsIndexer
+					coll.checked = oldColl.checked
+					oldColl.Unlock()
+				}
+			}
+			if s.Uid == 0 && c.Uid == 0 {
+				coll.isDefault = true
+
+				// the default collection has the bucket name to represent itself as the bucket
+				// this is to differentiate from the default collection being addressed explicitly
+				defaultCollection = &collection{
+					id:        bucket.name,
+					namespace: bucket.namespace,
+					fullName:  bucket.namespace.name + ":" + bucket.name,
+					uid:       uint32(c.Uid),
+					scope:     scope,
+					bucket:    bucket,
+					isDefault: true,
+				}
+
+				// copy the indexers
+				oldColl := bucket.defaultCollection.(*collection)
+				if oldColl != nil {
+					oldColl.Lock()
+					coll.gsiIndexer = oldColl.gsiIndexer
+					coll.ftsIndexer = oldColl.ftsIndexer
+					coll.checked = oldColl.checked
+					oldColl.Unlock()
+				}
+			}
+		}
+		scopes[s.Name] = scope
+
+		// clear collections that have disappeared
+		if oldScope != nil {
+			for n, _ := range oldScope.keyspaces {
+				if scope.keyspaces[n] == nil {
+					dropDictCacheEntry(n)
+				}
+			}
+		}
+	}
+
+	// Clear scopes that have disappeared
+	for n, _ := range oldScopes {
+
+		// not here anymore
+		if scopes[n] == nil {
+
+			// remove dictionary cache entries
+			for c, _ := range oldScopes[n].keyspaces {
+				dropDictCacheEntry(c)
+			}
+
+			// TODO clear distribution metakv
+			// TODO clear UDFs
+			// TODO clear UDF metakv
+		}
+	}
+
+	return scopes, defaultCollection
+}
+
+func dropDictCacheEntries(bucket *keyspace) {
+	for n, s := range bucket.scopes {
+		bucket.scopes[n] = nil
+
+		// remove dictionary cache entries
+		for c, _ := range s.keyspaces {
+			dropDictCacheEntry(c)
+			s.keyspaces[c] = nil
+		}
+
+		// TODO clear distribution metakv
+		// TODO clear UDFs
+		// TODO clear UDF metakv
+	}
 }

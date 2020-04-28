@@ -86,7 +86,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
-	baseKeyspace := base.NewBaseKeyspace(node.Alias(), node.Keyspace())
+	baseKeyspace := base.NewBaseKeyspace(node.Alias(), node.Path())
 	keyspaces := make(map[string]string, 1)
 	keyspaces[node.Alias()] = node.Keyspace()
 	newfilter := base.NewFilter(pred, pred, keyspaces, false, false)

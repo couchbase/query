@@ -61,6 +61,14 @@ func (view *viewIndexer) keepIndexesFresh() {
 	}
 }
 
+func (view *viewIndexer) BucketId() string {
+	return ""
+}
+
+func (view *viewIndexer) ScopeId() string {
+	return ""
+}
+
 func (view *viewIndexer) KeyspaceId() string {
 	return view.keyspace.Name()
 }
@@ -323,6 +331,14 @@ type designdoc struct {
 	mapfn    string
 	reducefn string
 	cksum    int
+}
+
+func (view *viewIndex) BucketId() string {
+	return ""
+}
+
+func (view *viewIndex) ScopeId() string {
+	return ""
 }
 
 func (vi *viewIndex) KeyspaceId() string {

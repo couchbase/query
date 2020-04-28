@@ -196,6 +196,14 @@ func (si *systemIndexer) AddIndex(name string, idx datastore.Index) {
 	si.indexes[name] = idx
 }
 
+func (si *systemIndexer) BucketId() string {
+	return ""
+}
+
+func (si *systemIndexer) ScopeId() string {
+	return ""
+}
+
 func (si *systemIndexer) KeyspaceId() string {
 	return si.keyspace.Id()
 }
