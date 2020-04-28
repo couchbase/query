@@ -143,6 +143,9 @@ func (coll *collection) Name() string {
 }
 
 func (coll *collection) QualifiedName() string {
+	if coll.isDefault {
+		return coll.fullName + "._default._default"
+	}
 	return coll.fullName
 }
 
