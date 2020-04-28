@@ -67,3 +67,9 @@ func (this *keyspaceTrimmer) VisitField(expr *Field) (interface{}, error) {
 
 	return second, nil
 }
+
+func (this *keyspaceTrimmer) VisitSubquery(expr Subquery) (interface{}, error) {
+	// since a Subquery expression is not copied via Copy() call,
+	// do not traverse inside the subquery
+	return expr, nil
+}
