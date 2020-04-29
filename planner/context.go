@@ -21,10 +21,11 @@ type PrepareContext struct {
 	indexApiVersion int
 	featureControls uint64
 	useFts          bool
+	optimizer       Optimizer
 }
 
 func NewPrepareContext(rv *PrepareContext, requestId, queryContext string, namedArgs map[string]value.Value, positionalArgs value.Values,
-	indexApiVersion int, featureControls uint64, useFts bool) {
+	indexApiVersion int, featureControls uint64, useFts bool, optimizer Optimizer) {
 	rv.requestId = requestId
 	rv.queryContext = queryContext
 	rv.namedArgs = namedArgs
@@ -32,6 +33,7 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string, named
 	rv.indexApiVersion = indexApiVersion
 	rv.featureControls = featureControls
 	rv.useFts = useFts
+	rv.optimizer = optimizer
 	return
 }
 
@@ -61,4 +63,8 @@ func (this *PrepareContext) FeatureControls() uint64 {
 
 func (this *PrepareContext) UseFts() bool {
 	return this.useFts
+}
+
+func (this *PrepareContext) Optimizer() Optimizer {
+	return this.optimizer
 }

@@ -637,7 +637,9 @@ func (this *Server) serviceRequest(request Request) {
 		namespace = this.namespace
 	}
 
-	prepared, err := this.getPrepared(request, namespace)
+	optimizer := getNewOptimizer()
+
+	prepared, err := this.getPrepared(request, namespace, optimizer)
 	if err != nil {
 		request.Fail(err)
 	}
@@ -662,7 +664,8 @@ func (this *Server) serviceRequest(request Request) {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
-		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(), request.UseFts())
+		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(), request.UseFts(),
+		optimizer)
 
 	context.SetWhitelist(this.whitelist)
 
@@ -755,7 +758,7 @@ func (this *Server) serviceRequest(request Request) {
 	request.Execute(this, prepared.Signature())
 }
 
-func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
+func (this *Server) getPrepared(request Request, namespace string, optimizer planner.Optimizer) (*plan.Prepared, errors.Error) {
 	var autoPrepare bool
 	var name string
 
@@ -778,7 +781,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	if prepared == nil && autoPrepare {
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
-			request.IndexApiVersion(), request.FeatureControls(), request.UseFts())
+			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), optimizer)
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
@@ -826,7 +829,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
-			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts())
+			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), optimizer)
 
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, autoExecute, !autoExecute,
 			&prepContext)

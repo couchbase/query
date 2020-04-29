@@ -12,7 +12,7 @@
 package planner
 
 import (
-	"github.com/couchbase/query-ee/optimizer"
+	"github.com/couchbase/query-ee/optutil"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -22,13 +22,13 @@ import (
 )
 
 func optCalcSelectivity(filter *base.Filter) {
-	optimizer.CalcSelectivity(filter)
+	optutil.CalcSelectivity(filter)
 	return
 }
 
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	float64, float64) {
-	sel, arrSel, def := optimizer.ExprSelec(keyspaces, pred)
+	sel, arrSel, def := optutil.ExprSelec(keyspaces, pred)
 	if def {
 		return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 	}
@@ -36,27 +36,27 @@ func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 }
 
 func optDefInSelec(keyspace, key string) float64 {
-	return optimizer.DefInSelec(keyspace, key)
+	return optutil.DefInSelec(keyspace, key)
 }
 
 func optDefLikeSelec(keyspace, key string) float64 {
-	return optimizer.DefLikeSelec(keyspace, key)
+	return optutil.DefLikeSelec(keyspace, key)
 }
 
 func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
 	condition expression.Expression, filters base.Filters) {
-	optimizer.MarkIndexFilters(keys, spans, condition, filters)
+	optutil.MarkIndexFilters(keys, spans, condition, filters)
 }
 
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
-	return optimizer.CalcPrimaryIndexScanCost(primary, requestId)
+	return optutil.CalcPrimaryIndexScanCost(primary, requestId)
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
 	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		return optimizer.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias)
+		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias)
 	case *IntersectSpans:
 		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false)
 	case *UnionSpans:
@@ -93,80 +93,80 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 }
 
 func getKeyScanCost(keys expression.Expression) (float64, float64) {
-	return optimizer.CalcKeyScanCost(keys)
+	return optutil.CalcKeyScanCost(keys)
 }
 
 func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
-	return optimizer.CalcFetchCost(keyspace, cardinality)
+	return optutil.CalcFetchCost(keyspace, cardinality)
 }
 
 func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64) {
-	return optimizer.CalcDistinctScanCost(index, cardinality)
+	return optutil.CalcDistinctScanCost(index, cardinality)
 }
 
 func getExpressionScanCost(expr expression.Expression, keyspaces map[string]string) (float64, float64) {
-	return optimizer.CalcExpressionScanCost(expr, keyspaces)
+	return optutil.CalcExpressionScanCost(expr, keyspaces)
 }
 
 func getValueScanCost(pairs algebra.Pairs) (float64, float64) {
-	return optimizer.CalcValueScanCost(pairs)
+	return optutil.CalcValueScanCost(pairs)
 }
 
 func getDummyScanCost() (float64, float64) {
-	return optimizer.CalcDummyScanCost()
+	return optutil.CalcDummyScanCost()
 }
 
 func getCountScanCost() (float64, float64) {
-	return optimizer.CalcCountScanCost()
+	return optutil.CalcCountScanCost()
 }
 
 func getNLJoinCost(left, right plan.Operator, filters base.Filters, outer bool, op string) (float64, float64) {
-	jointype := optimizer.COST_JOIN
+	jointype := optutil.COST_JOIN
 	if op == "nest" {
-		jointype = optimizer.COST_NEST
+		jointype = optutil.COST_NEST
 	}
-	return optimizer.CalcNLJoinCost(left, right, filters, outer, jointype)
+	return optutil.CalcNLJoinCost(left, right, filters, outer, jointype)
 }
 
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
 	buildRight, force bool, filters base.Filters, outer bool, op string) (float64, float64, bool) {
-	jointype := optimizer.COST_JOIN
+	jointype := optutil.COST_JOIN
 	if op == "nest" {
-		jointype = optimizer.COST_NEST
+		jointype = optutil.COST_NEST
 	}
-	return optimizer.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force,
+	return optutil.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force,
 		filters, outer, jointype)
 }
 
 func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	rightKeyspace *base.BaseKeyspace) (float64, float64) {
-	return optimizer.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optimizer.COST_JOIN)
+	return optutil.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optutil.COST_JOIN)
 }
 
 func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
 	requestId string) (float64, float64) {
-	return optimizer.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, covered,
-		index, requestId, optimizer.COST_JOIN)
+	return optutil.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, covered,
+		index, requestId, optutil.COST_JOIN)
 }
 
 func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	rightKeyspace *base.BaseKeyspace) (float64, float64) {
-	return optimizer.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optimizer.COST_NEST)
+	return optutil.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optutil.COST_NEST)
 }
 
 func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string) (float64, float64) {
-	return optimizer.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, false,
-		index, requestId, optimizer.COST_NEST)
+	return optutil.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, false,
+		index, requestId, optutil.COST_NEST)
 }
 
 func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string) (float64, float64) {
-	return optimizer.CalcUnnestCost(node, lastOp, keyspaces)
+	return optutil.CalcUnnestCost(node, lastOp, keyspaces)
 }
 
 func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
-	return optimizer.CalcSimpleFromTermCost(left, right, filters)
+	return optutil.CalcSimpleFromTermCost(left, right, filters)
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
@@ -181,40 +181,40 @@ func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	return optimizer.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames)
+	return optutil.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames)
 }
 
 func getLetCost(lastOp plan.Operator) (float64, float64) {
-	return optimizer.CalcLetCost(lastOp)
+	return optutil.CalcLetCost(lastOp)
 }
 
 func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float64) {
-	return optimizer.CalcWithCost(lastOp, with)
+	return optutil.CalcWithCost(lastOp, with)
 }
 
 func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64) {
-	return optimizer.CalcOffsetCost(lastOp, noffset)
+	return optutil.CalcOffsetCost(lastOp, noffset)
 }
 
 func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64) {
-	return optimizer.CalcLimitCost(lastOp, nlimit)
+	return optutil.CalcLimitCost(lastOp, nlimit)
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
 	keyspaces map[string]string) float64 {
-	return optimizer.GetUnnestPredSelec(pred, variable, mapping, keyspaces)
+	return optutil.GetUnnestPredSelec(pred, variable, mapping, keyspaces)
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost) map[datastore.Index]*base.IndexCost {
-	return optimizer.ChooseIntersectScan(keyspace, indexes)
+	return optutil.ChooseIntersectScan(keyspace, indexes)
 }
 
 func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
-	return optimizer.CalcSortCost(nterms, cardinality, limit, offset)
+	return optutil.CalcSortCost(nterms, cardinality, limit, offset)
 }
 
 func getInitialProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
-	return optimizer.CalcInitialProjectionCost(projection, cardinality)
+	return optutil.CalcInitialProjectionCost(projection, cardinality)
 }
 
 func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, cardinality float64,
@@ -223,25 +223,25 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	if maxParallelism <= 0 {
 		maxParallelism = plan.GetMaxParallelism()
 	}
-	return optimizer.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
+	return optutil.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
 }
 
 func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string) (float64, float64) {
-	return optimizer.CalcDistinctCost(terms, cardinality, keyspaces)
+	return optutil.CalcDistinctCost(terms, cardinality, keyspaces)
 }
 
 func getUnionDistinctCost(cost, cardinality float64, first, second plan.Operator, compatible bool) (float64, float64) {
-	return optimizer.CalcUnionDistinctCost(cost, cardinality, first, second, compatible)
+	return optutil.CalcUnionDistinctCost(cost, cardinality, first, second, compatible)
 }
 
 func getUnionAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
-	return optimizer.CalcSetOpCost(first, second, compatible, optimizer.COST_UNION)
+	return optutil.CalcSetOpCost(first, second, compatible, optutil.COST_UNION)
 }
 
 func getIntersectAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
-	return optimizer.CalcSetOpCost(first, second, compatible, optimizer.COST_INTERSECT)
+	return optutil.CalcSetOpCost(first, second, compatible, optutil.COST_INTERSECT)
 }
 
 func getExceptAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
-	return optimizer.CalcSetOpCost(first, second, compatible, optimizer.COST_EXCEPT)
+	return optutil.CalcSetOpCost(first, second, compatible, optutil.COST_EXCEPT)
 }

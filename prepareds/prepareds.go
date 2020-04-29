@@ -685,10 +685,14 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 		return nil, errors.NewReprepareError(fmt.Errorf("Context is nil"))
 	}
 
+	var optimizer planner.Optimizer
+	if util.IsFeatureEnabled(prepared.FeatureControls(), util.N1QL_CBO) {
+		optimizer = getNewOptimizer()
+	}
 	// building prepared statements should not depend on args
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, prepared.QueryContext(), nil, nil,
-		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts())
+		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), optimizer)
 
 	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
 		false, true, &prepContext)
