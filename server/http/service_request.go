@@ -68,11 +68,9 @@ func (r *httpRequest) OriginalHttpRequest() *http.Request {
 	return r.req
 }
 
-func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
+func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string) {
 	var httpArgs httpRequestArgs
 	var err errors.Error
-	var urlArgs urlArgs
-	var jsonArgs jsonArgs
 
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
@@ -80,19 +78,35 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
 
-	e := req.ParseForm()
-	if e != nil {
-		err = errors.NewServiceErrorBadValue(go_errors.New("unable to parse form"), "request form")
-	}
-
-	if err != nil && req.Method != "GET" && req.Method != "POST" {
+	if req.Method != "GET" && req.Method != "POST" {
 		err = errors.NewServiceErrorHTTPMethod(req.Method)
 	}
 
 	err = contentNegotiation(resp, req)
 
 	if err == nil {
-		httpArgs, err = getRequestParams(req, &urlArgs, &jsonArgs)
+		const (
+			URL_CONTENT  = "application/x-www-form-urlencoded"
+			JSON_CONTENT = "application/json"
+		)
+		content_types := req.Header["Content-Type"]
+		content_type := URL_CONTENT
+
+		if len(content_types) > 0 {
+			content_type = content_types[0]
+		}
+
+		if strings.HasPrefix(content_type, JSON_CONTENT) {
+			var jsonArgs jsonArgs
+
+			err = newJsonArgs(req, &jsonArgs)
+			httpArgs = &jsonArgs
+		} else {
+			var urlArgs urlArgs
+
+			err = newUrlArgs(req, &urlArgs)
+			httpArgs = &urlArgs
+		}
 	}
 
 	rv.resp = resp
@@ -135,7 +149,11 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			rv.SetCredentials(creds)
 
 			if rv.consCnt > 0 {
-				err = getScanConfiguration(&rv.consistency, httpArgs)
+				defaultNamespace := rv.Namespace()
+				if defaultNamespace == "" {
+					defaultNamespace = namespace
+				}
+				err = getScanConfiguration(&rv.consistency, httpArgs, defaultNamespace)
 				if err == nil {
 					rv.SetScanConfiguration(&rv.consistency)
 				}
@@ -158,8 +176,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err != nil {
 		rv.Fail(err)
 	}
-
-	return rv
 }
 
 // For audit.Auditable interface.
@@ -172,11 +188,6 @@ func (this *httpRequest) EventNodeName() string {
 	return ret
 }
 
-// stub for those parameters that have to be handled specially
-func handleDummy(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	return nil
-}
-
 func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	statement, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
@@ -184,6 +195,10 @@ func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 		rv.stmtCnt++
 	}
 	return err
+}
+
+func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	return httpArgs.storeDirect(_ENCODED_PLAN, parm, val)
 }
 
 func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
@@ -200,7 +215,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	// compatibility with older SDKs
 	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_ENCODED_PLAN) &&
 		err != nil && err.Code() == errors.NO_SUCH_PREPARED {
-		encoded_plan, plan_err := httpArgs.getString(ENCODED_PLAN, "")
+		encoded_plan, plan_err := httpArgs.getString(_ENCODED_PLAN, "")
 		if plan_err == nil && encoded_plan != "" && encoded_plan != prepareds.EmptyPlan {
 			var decoded_plan *plan.Prepared
 
@@ -229,7 +244,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 }
 
 func handlePositionalArgs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	positionalArgs, err := httpArgs.getPositionalArgs()
+	positionalArgs, err := httpArgs.getPositionalArgs(parm, val)
 	if err == nil {
 		rv.SetPositionalArgs(positionalArgs)
 	}
@@ -412,9 +427,28 @@ func handleAutoExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
+func handleCreds(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	return httpArgs.storeDirect(_CREDS, parm, val)
+}
+
 func handleConsistency(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	rv.consCnt++
-	return nil
+	return httpArgs.storeDirect(_SCAN_CONSISTENCY, parm, val)
+}
+
+func handleScanWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	rv.consCnt++
+	return httpArgs.storeDirect(_SCAN_WAIT, parm, val)
+}
+
+func handleScanVector(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	rv.consCnt++
+	return httpArgs.storeDirect(_SCAN_VECTOR, parm, val)
+}
+
+func handleScanVectors(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	rv.consCnt++
+	return httpArgs.storeDirect(_SCAN_VECTORS, parm, val)
 }
 
 func handleClientContextID(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
@@ -578,60 +612,104 @@ const ( // Request argument names
 	USE_FTS           = "use_fts"
 )
 
-var _PARAMETERS = map[string]func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error{
-	STATEMENT:         handleStatement,
-	PREPARED:          handlePrepared,
-	ENCODED_PLAN:      handleDummy,
-	CREDS:             handleDummy,
-	ARGS:              handlePositionalArgs,
-	TIMEOUT:           handleTimeout,
-	SCAN_CONSISTENCY:  handleConsistency,
-	SCAN_WAIT:         handleConsistency,
-	SCAN_VECTOR:       handleConsistency,
-	SCAN_VECTORS:      handleConsistency,
-	MAX_PARALLELISM:   handleMaxParallelism,
-	SCAN_CAP:          handleScanCap,
-	PIPELINE_CAP:      handlePipelineCap,
-	PIPELINE_BATCH:    handlePipelineBatch,
-	READONLY:          handleReadonly,
-	METRICS:           handleMetrics,
-	NAMESPACE:         handleNamespace,
-	FORMAT:            handleFormat,
-	ENCODING:          handleEncoding,
-	COMPRESSION:       handleCompression,
-	SIGNATURE:         handleSignature,
-	PRETTY:            handlePretty,
-	CLIENT_CONTEXT_ID: handleClientContextID,
-	PROFILE:           handleProfile,
-	CONTROLS:          handleControls,
-	N1QL_FEAT_CTRL:    handleN1QLFeatCtrl,
-	MAX_INDEX_API:     handleMaxIndexAPI,
-	AUTO_PREPARE:      handleAutoPrepare,
-	AUTO_EXECUTE:      handleAutoExecute,
-	QUERY_CONTEXT:     handleQueryContext,
-	USE_FTS:           handleUseFts,
+type argHandler struct {
+	fn      func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error
+	initial bool
 }
 
-// take note while handling: initial parameters will not be found in fields or form values!
-var _INITIAL_PARAMETERS = map[string]bool{
-	N1QL_FEAT_CTRL: true,
-	MAX_INDEX_API:  true,
-	QUERY_CONTEXT:  true,
+var _PARAMETERS = map[string]*argHandler{
+	N1QL_FEAT_CTRL: {handleN1QLFeatCtrl, true},
+	MAX_INDEX_API:  {handleMaxIndexAPI, true},
+	QUERY_CONTEXT:  {handleQueryContext, true},
+	NAMESPACE:      {handleNamespace, true},
+	ENCODED_PLAN:   {handleEncodedPlan, true},
+
+	STATEMENT:         {handleStatement, false},
+	PREPARED:          {handlePrepared, false},
+	CREDS:             {handleCreds, false},
+	ARGS:              {handlePositionalArgs, false},
+	TIMEOUT:           {handleTimeout, false},
+	SCAN_CONSISTENCY:  {handleConsistency, false},
+	SCAN_WAIT:         {handleScanWait, false},
+	SCAN_VECTOR:       {handleScanVector, false},
+	SCAN_VECTORS:      {handleScanVectors, false},
+	MAX_PARALLELISM:   {handleMaxParallelism, false},
+	SCAN_CAP:          {handleScanCap, false},
+	PIPELINE_CAP:      {handlePipelineCap, false},
+	PIPELINE_BATCH:    {handlePipelineBatch, false},
+	READONLY:          {handleReadonly, false},
+	METRICS:           {handleMetrics, false},
+	FORMAT:            {handleFormat, false},
+	ENCODING:          {handleEncoding, false},
+	COMPRESSION:       {handleCompression, false},
+	SIGNATURE:         {handleSignature, false},
+	PRETTY:            {handlePretty, false},
+	CLIENT_CONTEXT_ID: {handleClientContextID, false},
+	PROFILE:           {handleProfile, false},
+	CONTROLS:          {handleControls, false},
+	AUTO_PREPARE:      {handleAutoPrepare, false},
+	AUTO_EXECUTE:      {handleAutoExecute, false},
+	USE_FTS:           {handleUseFts, false},
 }
 
-func isValidParameter(a string) bool {
-	// Ignore empty (whitespace) parameters. They are harmless.
-	if a == "" {
-		return true
-	}
+// common storage for the httpArgs implementations
+const (
+	_ENCODED_PLAN = int(iota)
+	_CREDS
+	_SCAN_CONSISTENCY
+	_SCAN_WAIT
+	_SCAN_VECTOR
+	_SCAN_VECTORS
 
-	_, ok := _PARAMETERS[a]
-	return ok
+	_DIRECT_MAX
+)
+
+type directAccess [_DIRECT_MAX]interface{}
+
+type parmValue struct {
+	name string
+	val  interface{}
+	fn   func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error
 }
 
-func isInitialParameter(a string) bool {
-	_, ok := _INITIAL_PARAMETERS[a]
-	return ok
+// this is a bit of a hack because golang doesn't allow map constants (can't size an array at compile time based on a map)
+// and is a bit clumsy with statically allocated slice buffers
+// remember to resize initialArray and argsArray approriately if _PARAMETERS changes
+type parmList interface {
+	add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error)
+	slice() []parmValue
+}
+
+type initialArray struct {
+	count int
+	parms [10]parmValue
+}
+
+func (ia *initialArray) slice() []parmValue {
+	return ia.parms[0:ia.count]
+}
+
+func (ia *initialArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error) {
+	ia.parms[ia.count].name = name
+	ia.parms[ia.count].val = val
+	ia.parms[ia.count].fn = fn
+	ia.count++
+}
+
+type argsArray struct {
+	count int
+	parms [30]parmValue
+}
+
+func (aa *argsArray) slice() []parmValue {
+	return aa.parms[0:aa.count]
+}
+
+func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error) {
+	aa.parms[aa.count].name = name
+	aa.parms[aa.count].val = val
+	aa.parms[aa.count].fn = fn
+	aa.count++
 }
 
 func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{}, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
@@ -654,9 +732,8 @@ func getEmptyScanConfiguration(rv *scanConfigImpl) {
 	rv.scan_vector_source = zeroScanVectorSource
 }
 
-func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs) errors.Error {
-
-	scan_consistency_field, err := a.getString(SCAN_CONSISTENCY, "NOT_BOUNDED")
+func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs, namespace string) errors.Error {
+	scan_consistency_field, err := a.getString(_SCAN_CONSISTENCY, "NOT_BOUNDED")
 	if err != nil {
 		return err
 	}
@@ -666,7 +743,11 @@ func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs) errors.Error {
 		return errors.NewServiceErrorUnrecognizedValue(SCAN_CONSISTENCY, scan_consistency_field)
 	}
 
-	scan_wait, err := a.getDuration(SCAN_WAIT)
+	t, err := a.getString(_SCAN_WAIT, "0s")
+	if err != nil {
+		return err
+	}
+	scan_wait, err := newDuration(t)
 	if err != nil {
 		return err
 	}
@@ -689,11 +770,7 @@ func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs) errors.Error {
 			}
 			scan_vector_source = zeroScanVectorSource
 		} else {
-			defaultNamespace, err := a.getString(NAMESPACE, "default")
-			if err != nil {
-				return err
-			}
-			scan_vector_source = newMultipleScanVectorSource(defaultNamespace, scan_vectors)
+			scan_vector_source = newMultipleScanVectorSource(namespace, scan_vectors)
 		}
 	} else {
 		if scan_vectors == nil {
@@ -825,54 +902,34 @@ func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Erro
 // httpRequestArgs is an interface for getting the arguments in a http request
 type httpRequestArgs interface {
 	processParameters(rv *httpRequest) errors.Error
-	getString(string, string) (string, errors.Error)
+	storeDirect(int, string, interface{}) errors.Error
+	getString(int, string) (string, errors.Error)
 	getStringVal(field string, v interface{}) (string, errors.Error)
 	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
 	getPreparedName(field string, v interface{}) (string, errors.Error)
-	getDuration(string) (time.Duration, errors.Error)
 	getNamedArgs() map[string]value.Value
-	getPositionalArgs() (value.Values, errors.Error)
+	getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error)
 	getCredentials() ([]map[string]string, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
 	getScanVectors() (map[string]timestamp.Vector, errors.Error)
-}
-
-// getRequestParams creates a httpRequestArgs implementation,
-// depending on the content type in the request
-func getRequestParams(req *http.Request, urlArgs *urlArgs, jsonArgs *jsonArgs) (httpRequestArgs, errors.Error) {
-
-	const (
-		URL_CONTENT  = "application/x-www-form-urlencoded"
-		JSON_CONTENT = "application/json"
-	)
-	content_types := req.Header["Content-Type"]
-	content_type := URL_CONTENT
-
-	if len(content_types) > 0 {
-		content_type = content_types[0]
-	}
-
-	if strings.HasPrefix(content_type, URL_CONTENT) {
-		return newUrlArgs(req, urlArgs)
-	}
-
-	if strings.HasPrefix(content_type, JSON_CONTENT) {
-		return newJsonArgs(req, jsonArgs)
-	}
-
-	return newUrlArgs(req, urlArgs)
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
 // request arguments from a url-encoded http request
 type urlArgs struct {
 	req     *http.Request
-	initial map[string][]string
+	initial initialArray
 	named   map[string]value.Value
+	direct  directAccess
 }
 
-func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
+func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 	var named map[string]value.Value
+
+	e := req.ParseForm()
+	if e != nil {
+		return errors.NewServiceErrorBadValue(go_errors.New("unable to parse form"), "request form")
+	}
 
 	for arg, val := range req.Form {
 		newArg := util.TrimSpace(arg)
@@ -881,24 +938,26 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 			switch len(val) {
 			case 0:
 				//This is an error - there _has_ to be a value for a named argument
-				return nil, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", arg))
+				return errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", arg))
 			case 1:
 				named = addNamedArg(named, newArg, value.NewValue([]byte(util.TrimSpace(val[0]))))
 			default:
-				return nil, errors.NewServiceErrorMultipleValues(arg)
+				return errors.NewServiceErrorMultipleValues(arg)
 			}
 			continue
 		}
 
+		// ignore empty parameters
+		if newArg == "" {
+			continue
+		}
 		lowerArg := strings.ToLower(newArg)
-		if !isValidParameter(lowerArg) {
-			return nil, errors.NewServiceErrorUnrecognizedParameter(lowerArg)
-		} else if isInitialParameter(lowerArg) {
+		pType := _PARAMETERS[lowerArg]
+		if pType == nil {
+			return errors.NewServiceErrorUnrecognizedParameter(lowerArg)
+		} else if pType.initial {
 			delete(req.Form, arg)
-			if urlArgs.initial == nil {
-				urlArgs.initial = make(map[string][]string, 3)
-			}
-			urlArgs.initial[lowerArg] = val
+			urlArgs.initial.add(lowerArg, val, pType.fn)
 		} else if arg != lowerArg {
 			delete(req.Form, arg)
 			req.Form[lowerArg] = val
@@ -907,7 +966,7 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 	if req.Form[STATEMENT] == nil && req.Method == "POST" {
 		bytes, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), STATEMENT)
+			return errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), STATEMENT)
 		}
 		if len(bytes) > 0 {
 			req.Form[STATEMENT] = []string{string(bytes)}
@@ -916,24 +975,32 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) (*urlArgs, errors.Error) {
 
 	urlArgs.req = req
 	urlArgs.named = named
-	return urlArgs, nil
+	return nil
 }
 
 func (this *urlArgs) processParameters(rv *httpRequest) errors.Error {
 	var err errors.Error
 
-	// certain parameters need to be handles before all others (eg query_context), because processing others depends on them
-	for parm, val := range this.initial {
-		err = _PARAMETERS[parm](rv, this, parm, val)
+	// certain parameters need to be handled before all others (eg query_context), because processing others depends on them
+	for _, p := range this.initial.slice() {
+		err = p.fn(rv, this, p.name, p.val)
 		if err != nil {
 			return err
 		}
 	}
 	for parm, val := range this.req.Form {
-		err = _PARAMETERS[parm](rv, this, parm, val)
+		err = _PARAMETERS[parm].fn(rv, this, parm, val)
 		if err != nil {
 			break
 		}
+	}
+	return err
+}
+
+func (this *urlArgs) storeDirect(f int, parm string, val interface{}) errors.Error {
+	s, err := this.checkFormValue(parm, val)
+	if err == nil {
+		this.direct[f] = s
 	}
 	return err
 }
@@ -951,10 +1018,10 @@ func getJsonDecoder(r io.Reader) (*json.Decoder, errors.Error) {
 }
 
 // Positional args are of the form: args=json_list
-func (this *urlArgs) getPositionalArgs() (value.Values, errors.Error) {
+func (this *urlArgs) getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error) {
 	var positionalArgs value.Values
 
-	args_field, err := this.formValue(ARGS)
+	args_field, err := this.checkFormValue(parm, val)
 	if err != nil || args_field == "" {
 		return positionalArgs, err
 	}
@@ -1034,7 +1101,7 @@ func getScanVectorFromJSON(json interface{}) (timestamp.Vector, errors.Error) {
 }
 
 func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
-	scan_vector_data_field, err := this.formValue(SCAN_VECTOR)
+	scan_vector_data_field, err := this.formValue(_SCAN_VECTOR)
 
 	if err != nil || scan_vector_data_field == "" {
 		return nil, err
@@ -1050,7 +1117,7 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 }
 
 func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error) {
-	scan_vectors_data_field, err := this.formValue(SCAN_VECTORS)
+	scan_vectors_data_field, err := this.formValue(_SCAN_VECTORS)
 
 	if err != nil || scan_vectors_data_field == "" {
 		return nil, err
@@ -1063,16 +1130,6 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 	}
 
 	return getScanVectorsFromJSON(target)
-}
-
-func (this *urlArgs) getDuration(f string) (time.Duration, errors.Error) {
-	var timeout time.Duration
-
-	timeout_field, err := this.formValue(f)
-	if err == nil && timeout_field != "" {
-		timeout, err = newDuration(timeout_field)
-	}
-	return timeout, err
 }
 
 func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.Error) {
@@ -1092,7 +1149,7 @@ func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.E
 	}
 }
 
-func (this *urlArgs) getString(f string, dflt string) (string, errors.Error) {
+func (this *urlArgs) getString(f int, dflt string) (string, errors.Error) {
 	value := dflt
 
 	value_field, err := this.formValue(f)
@@ -1123,7 +1180,7 @@ func (this *urlArgs) getTristateVal(field string, v interface{}) (value.Tristate
 func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 	var creds_data []map[string]string
 
-	creds_field, err := this.formValue(CREDS)
+	creds_field, err := this.formValue(_CREDS)
 	if err == nil && creds_field != "" {
 		e := json.Unmarshal([]byte(creds_field), &creds_data)
 		if e != nil {
@@ -1147,12 +1204,21 @@ func (this *urlArgs) getPreparedName(field string, v interface{}) (string, error
 	return value_field, nil
 }
 
-func (this *urlArgs) getField(field string) []string {
-	return this.req.Form[field]
+func (this *urlArgs) formValue(field int) (string, errors.Error) {
+	v := this.direct[field]
+	if v == nil {
+		return "", nil
+	}
+	return v.(string), nil
 }
 
-func (this *urlArgs) formValue(field string) (string, errors.Error) {
-	values := this.getField(field)
+func (this *urlArgs) checkFormValue(field string, val interface{}) (string, errors.Error) {
+	values, ok := val.([]string)
+
+	// this should never happen
+	if !ok {
+		return "", errors.NewServiceErrorBadValue(go_errors.New("unexpected value type"), field)
+	}
 
 	switch len(values) {
 	case 0:
@@ -1167,60 +1233,76 @@ func (this *urlArgs) formValue(field string) (string, errors.Error) {
 // jsonArgs is an implementation of httpRequestArgs that reads
 // request arguments from a json-encoded http request
 type jsonArgs struct {
-	args    map[string]interface{}
-	initial map[string]interface{}
+	initial initialArray
+	args    argsArray
 	named   map[string]value.Value
+	direct  directAccess
 	req     *http.Request
 }
 
 // create a jsonArgs structure from the given http request.
-func newJsonArgs(req *http.Request, p *jsonArgs) (*jsonArgs, errors.Error) {
-	decoder, e := getJsonDecoder(req.Body)
-	if e != nil {
-		return nil, e
+func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
+	var bytes []byte
+	var err error
+	var state json.ScanState
+
+	if req.Method == "POST" {
+		bytes, err = ioutil.ReadAll(req.Body)
+		if err != nil {
+			return errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "JSON request body")
+		}
 	}
-	err := decoder.Decode(&p.args)
-	if err != nil {
-		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse JSON"), "JSON request body")
-	}
-	for arg, val := range p.args {
-		newArg := util.TrimSpace(arg)
+
+	json.SetScanState(&state, bytes)
+	for {
+		key, err := state.ScanKeys()
+		if err != nil {
+			return errors.NewServiceErrorBadValue(err, "getting key")
+		}
+		if key == nil {
+			break
+		}
+
+		val, err := state.NextUnmarshaledValue()
+		if err != nil {
+			return errors.NewServiceErrorBadValue(err, "getting value")
+		}
+		newArg := util.TrimSpace(string(key))
+
+		// ignore empty parameters
+		if newArg == "" {
+			continue
+		}
 		if newArg[0] == '$' {
-			delete(p.args, arg)
 			p.named = addNamedArg(p.named, newArg, value.NewValue(val))
 			continue
 		}
-
-		lowerArg := strings.ToLower(arg)
-		if !isValidParameter(lowerArg) {
-			return nil, errors.NewServiceErrorUnrecognizedParameter(newArg)
-		} else if isInitialParameter(lowerArg) {
-			delete(p.args, arg)
-			if p.initial == nil {
-				p.initial = make(map[string]interface{}, 3)
-			}
-			p.initial[lowerArg] = val
-		} else if arg != lowerArg {
-			delete(p.args, arg)
-			p.args[lowerArg] = val
+		lowerArg := strings.ToLower(newArg)
+		pType := _PARAMETERS[lowerArg]
+		if pType == nil {
+			return errors.NewServiceErrorUnrecognizedParameter(newArg)
+		} else if pType.initial {
+			p.initial.add(lowerArg, val, pType.fn)
+		} else {
+			p.args.add(lowerArg, val, pType.fn)
 		}
 	}
 	p.req = req
-	return p, nil
+	return nil
 }
 
 func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
 	var err errors.Error
 
-	// certain parameters need to be handles before all others (eg query_context), because processing others depends on them
-	for parm, val := range this.initial {
-		err = _PARAMETERS[parm](rv, this, parm, val)
+	// certain parameters need to be handled before all others (eg query_context), because processing others depends on them
+	for _, p := range this.initial.slice() {
+		err = p.fn(rv, this, p.name, p.val)
 		if err != nil {
 			return err
 		}
 	}
-	for parm, val := range this.args {
-		err = _PARAMETERS[parm](rv, this, parm, val)
+	for _, p := range this.args.slice() {
+		err = p.fn(rv, this, p.name, p.val)
 		if err != nil {
 			break
 		}
@@ -1228,24 +1310,23 @@ func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
 	return err
 }
 
-func (this *jsonArgs) getField(field string) (interface{}, bool) {
-	value, ok := this.args[field]
-	return value, ok
+func (this *jsonArgs) storeDirect(f int, parm string, val interface{}) errors.Error {
+	_, ok := val.(string)
+	if !ok {
+		return errors.NewServiceErrorTypeMismatch(parm, "string")
+	}
+	this.direct[f] = val
+	return nil
 }
 
 func (this *jsonArgs) getNamedArgs() map[string]value.Value {
 	return this.named
 }
 
-func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
+func (this *jsonArgs) getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error) {
 	var positionalArgs value.Values
 
-	args_field, in_request := this.getField(ARGS)
-	if !in_request {
-		return positionalArgs, nil
-	}
-
-	args, type_ok := args_field.([]interface{})
+	args, type_ok := val.([]interface{})
 	if !type_ok {
 		return positionalArgs, errors.NewServiceErrorTypeMismatch(ARGS, "array")
 	}
@@ -1260,8 +1341,8 @@ func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
 }
 
 func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
-	creds_field, in_request := this.getField(CREDS)
-	if !in_request {
+	creds_field := this.direct[_CREDS]
+	if creds_field == nil {
 		return nil, nil
 	}
 
@@ -1292,16 +1373,16 @@ func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
 }
 
 func (this *jsonArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error) {
-	scan_vectors_data, in_request := this.getField(SCAN_VECTORS)
-	if !in_request {
+	scan_vectors_data := this.direct[_SCAN_VECTORS]
+	if scan_vectors_data == nil {
 		return nil, nil
 	}
 	return getScanVectorsFromJSON(scan_vectors_data)
 }
 
 func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
-	scan_vector_data, in_request := this.getField(SCAN_VECTOR)
-	if !in_request {
+	scan_vector_data := this.direct[_SCAN_VECTOR]
+	if scan_vector_data == nil {
 		return nil, nil
 	}
 	return getScanVectorFromJSON(scan_vector_data)
@@ -1335,15 +1416,6 @@ func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, errors.Erro
 	}, nil
 }
 
-func (this *jsonArgs) getDuration(f string) (time.Duration, errors.Error) {
-	var timeout time.Duration
-	t, err := this.getString(f, "0s")
-	if err != nil {
-		return timeout, err
-	}
-	return newDuration(t)
-}
-
 func (this *jsonArgs) getTristateVal(field string, v interface{}) (value.Tristate, errors.Error) {
 	value_tristate := value.NONE
 
@@ -1366,17 +1438,13 @@ func (this *jsonArgs) getStringVal(field string, v interface{}) (string, errors.
 }
 
 // helper function to get a string type argument
-func (this *jsonArgs) getString(f string, dflt string) (string, errors.Error) {
-	value_field, in_request := this.getField(f)
-	if !in_request {
+func (this *jsonArgs) getString(f int, dflt string) (string, errors.Error) {
+	value_field := this.direct[f]
+	if value_field == nil {
 		return dflt, nil
 	}
 
-	value, type_ok := value_field.(string)
-	if !type_ok {
-		return value, errors.NewServiceErrorTypeMismatch(f, "string")
-	}
-	return value, nil
+	return value_field.(string), nil
 }
 
 func (this *jsonArgs) getPreparedName(field string, v interface{}) (string, errors.Error) {
