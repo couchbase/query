@@ -45,6 +45,14 @@ func (this *Explain) MarshalJSON() ([]byte, error) {
 func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := make(map[string]interface{}, 2)
 	r["text"] = this.text
+	if this.op != nil {
+		if this.op.Cost() > 0.0 {
+			r["cost"] = this.op.Cost()
+		}
+		if this.op.Cardinality() > 0.0 {
+			r["cardinality"] = this.op.Cardinality()
+		}
+	}
 	if f != nil {
 		f(r)
 	} else {
@@ -55,8 +63,10 @@ func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]inte
 
 func (this *Explain) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Op   json.RawMessage `json:"plan"`
-		Text string          `json:"text"`
+		Op          json.RawMessage `json:"plan"`
+		Text        string          `json:"text"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	var op_type struct {
@@ -79,6 +89,10 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
+
+	// Cost/cardinality is included in the explain plan so it's easy to
+	// see the overall cost/cardinality for the entire plan, there is
+	// no need to put the info anywhere
 
 	this.op, err = MakeOperator(op_type.Operator, _unmarshalled.Op)
 	return err
