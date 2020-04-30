@@ -36,12 +36,14 @@ import (
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -61,6 +63,11 @@ type cbPoolServices struct {
 }
 
 var _POOLMAP cbPoolMap
+
+const (
+	PRIMARY_INDEX          = "#primary"
+	_TRAN_CLEANUP_INTERVAL = 1 * time.Minute
+)
 
 func init() {
 
@@ -86,21 +93,22 @@ func init() {
 	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
 
 	cb.EnableCollections = true
-}
 
-const (
-	PRIMARY_INDEX = "#primary"
-)
+	// transaction cache initalization
+	transactions.TranContextCacheInit(_TRAN_CLEANUP_INTERVAL)
+}
 
 // store is the root for the couchbase datastore
 type store struct {
-	client         cb.Client             // instance of go-couchbase client
+	client         cb.Client // instance of go-couchbase client
+	gcClient       *gcagent.Client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
 	CbAuthInit     bool                  // whether cbAuth is initialized
 	inferencer     datastore.Inferencer  // what we use to infer schemas
 	statUpdater    datastore.StatUpdater // what we use to update statistics
 	connectionUrl  string                // where to contact ns_server
 	connSecConfig  *datastore.ConnectionSecurityConfig
+	nslock         sync.RWMutex
 }
 
 func (s *store) Id() string {
@@ -496,13 +504,20 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 func (s *store) SetClientConnectionSecurityConfig() (err error) {
 	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
 		err = s.client.InitTLS(s.connSecConfig.CertFile)
+		if err == nil && s.gcClient != nil {
+			err = s.gcClient.InitTLS(s.connSecConfig.CertFile)
+		}
 		if err != nil {
-			err = fmt.Errorf("Unable to initialize TLS using cert file %s. Aborting security update. Error:%v", s.connSecConfig.CertFile, err)
+			err = fmt.Errorf("Unable to initialize TLS using cert file %s. Aborting security update. Error:%v",
+				s.connSecConfig.CertFile, err)
 			logging.Errorf("%v", err)
 			return
 		}
 	} else {
 		s.client.ClearTLS()
+		if s.gcClient != nil {
+			s.gcClient.ClearTLS()
+		}
 	}
 	return
 
@@ -657,7 +672,6 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 }
 
 func loadNamespace(s *store, name string) (*namespace, errors.Error) {
-
 	cbpool, err := s.client.GetPool(name)
 	if err != nil {
 		if name == "default" {
@@ -1100,10 +1114,7 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 		}
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
-			ks.cbKeyspace.Lock()
-			ks.cbKeyspace.flags |= _DELETED
-			ks.cbKeyspace.Unlock()
-			ks.cbKeyspace.cbbucket.Close()
+			ks.cbKeyspace.Release(true)
 			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
 			delete(p.keyspaceCache, name)
 
@@ -1157,6 +1168,7 @@ type keyspace struct {
 	name           string
 	fullName       string
 	cbbucket       *cb.Bucket
+	agentProvider  *gcagent.AgentProvider
 	flags          int
 	viewIndexer    datastore.Indexer // View index provider
 	gsiIndexer     datastore.Indexer // GSI index provider
@@ -1243,9 +1255,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
 		cbKeyspace = ks.cbKeyspace
-		ks.cbKeyspace.Lock()
-		ks.cbKeyspace.flags |= _DELETED
-		ks.cbKeyspace.Unlock()
+		ks.cbKeyspace.Release(false)
 		delete(p.keyspaceCache, name)
 
 		// keyspace has been deleted, force full auto reprepare check
@@ -1413,10 +1423,11 @@ func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
 //
 
 func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
-	return k.getRandomEntry()
+	return k.getRandomEntry("", "")
 }
 
-func (k *keyspace) getRandomEntry(clientContext ...*memcached.ClientContext) (string, value.Value, errors.Error) {
+func (k *keyspace) getRandomEntry(scopeName, collectionName string,
+	clientContext ...*memcached.ClientContext) (string, value.Value, errors.Error) {
 	resp, err := k.cbbucket.GetRandomDoc(clientContext...)
 
 	if err != nil {
@@ -1429,11 +1440,18 @@ func (k *keyspace) getRandomEntry(clientContext ...*memcached.ClientContext) (st
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) []errors.Error {
-	return b.fetch(b.fullName, keys, fetchMap, context, subPaths)
+	return b.fetch(b.fullName, b.QualifiedName(), "", "", keys, fetchMap, context, subPaths)
 }
 
-func (b *keyspace) fetch(fullName string, keys []string, fetchMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, clientContext ...*memcached.ClientContext) []errors.Error {
+func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName string, keys []string,
+	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string,
+	clientContext ...*memcached.ClientContext) []errors.Error {
+
+	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
+		return b.txFetch(fullName, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
+			keys, fetchMap, context, subPaths, txContext)
+	}
+
 	var noVirtualDocAttr bool
 	var bulkResponse map[string]*gomemcached.MCResponse
 	var mcr *gomemcached.MCResponse
@@ -1619,26 +1637,6 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 	return val
 }
 
-const (
-	INSERT = 0x01
-	UPDATE = 0x02
-	UPSERT = 0x04
-)
-
-func opToString(op int) string {
-
-	switch op {
-	case INSERT:
-		return "insert"
-	case UPDATE:
-		return "update"
-	case UPSERT:
-		return "upsert"
-	}
-
-	return "unknown operation"
-}
-
 func (k *keyspace) checkRefresh(err error) {
 	if cb.IsRefreshRequired(err) {
 		k.Lock()
@@ -1665,27 +1663,37 @@ func isEExistError(err error) bool {
 	return cb.IsKeyEExistsError(err)
 }
 
-func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32, err error) {
+func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, txnMeta interface{}, err error) {
 
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("Recovered in f %v", r)
-		}
-	}()
+	var meta map[string]interface{}
+	var av value.AnnotatedValue
+	var ok bool
 
-	if _, ok := meta["cas"]; ok {
-		cas = meta["cas"].(uint64)
-	} else {
-		return 0, 0, fmt.Errorf("Cas value not found for key %v", key)
+	if av, ok = val.(value.AnnotatedValue); ok && av != nil {
+		meta, ok = av.GetAttachment("meta").(map[string]interface{})
 	}
 
-	if _, ok := meta["flags"]; ok {
-		flags = meta["flags"].(uint32)
-	} else {
-		return 0, 0, fmt.Errorf("Flags value not found for key %v", key)
+	if _, ok = meta["cas"]; ok {
+		cas, ok = meta["cas"].(uint64)
 	}
 
-	return cas, flags, nil
+	if must && !ok {
+		return 0, 0, nil, fmt.Errorf("Not valid Cas value for key %v", key)
+	}
+
+	if _, ok = meta["flags"]; ok {
+		flags, ok = meta["flags"].(uint32)
+	}
+
+	if must && !ok {
+		return 0, 0, nil, fmt.Errorf("Not valid Flags value for key %v", key)
+	}
+
+	if _, ok = meta["txnMeta"]; ok {
+		txnMeta, _ = meta["txnMeta"].(interface{})
+	}
+
+	return cas, flags, txnMeta, nil
 
 }
 
@@ -1698,18 +1706,31 @@ func getExpiration(options value.Value) (exptime uint32) {
 	return
 }
 
-func (b *keyspace) performOp(op int, inserts []value.Pair, clientContext ...*memcached.ClientContext) ([]value.Pair, errors.Error) {
-	if len(inserts) == 0 {
+func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs []value.Pair,
+	context datastore.QueryContext, clientContext ...*memcached.ClientContext) ([]value.Pair, errors.Error) {
+
+	if len(pairs) == 0 {
 		return nil, nil
 	}
 
-	insertedKeys := make([]value.Pair, 0, len(inserts))
-	var err error
+	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
+		return b.txPerformOp(op, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
+			pairs, context, txContext)
+	}
 
-	for _, kv := range inserts {
+	var failedDeletes []string
+	var err error
+	mPairs := make(value.Pairs, 0, len(pairs))
+
+	for _, kv := range pairs {
+		var val interface{}
+		var exptime int
+
 		key := kv.Name
-		val := kv.Value.ActualForIndex()
-		exptime := int(getExpiration(kv.Options))
+		if op != MOP_DELETE {
+			val = kv.Value.ActualForIndex()
+			exptime = int(getExpiration(kv.Options))
+		}
 
 		//mv := kv.Value.GetAttachment("meta")
 
@@ -1717,7 +1738,7 @@ func (b *keyspace) performOp(op int, inserts []value.Pair, clientContext ...*mem
 
 		switch op {
 
-		case INSERT:
+		case MOP_INSERT:
 			var added bool
 
 			// add the key to the backend
@@ -1731,98 +1752,89 @@ func (b *keyspace) performOp(op int, inserts []value.Pair, clientContext ...*mem
 					err = errors.NewError(nil, "Duplicate Key "+key)
 				}
 			}
-		case UPDATE:
+		case MOP_UPDATE:
 			// check if the key exists and if so then use the cas value
 			// to update the key
-			var meta map[string]interface{}
 			var cas uint64
 			var flags uint32
 
-			an := kv.Value.(value.AnnotatedValue)
-			meta = an.GetAttachment("meta").(map[string]interface{})
-
-			cas, flags, err = getMeta(key, meta)
+			cas, flags, _, err = getMeta(key, kv.Value, true)
 			if err != nil {
 				// Don't perform the update if the meta values are not found
 				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
 			} else {
 
-				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>", key, uint64(cas), flags, val)
+				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>",
+					key, uint64(cas), flags, val)
 				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, uint64(cas), val, clientContext...)
 				b.checkRefresh(err)
 			}
 
-		case UPSERT:
+		case MOP_UPSERT:
 			err = b.cbbucket.Set(key, exptime, val, clientContext...)
+			b.checkRefresh(err)
+		case MOP_DELETE:
+			err = b.cbbucket.Delete(key, clientContext...)
 			b.checkRefresh(err)
 		}
 
 		if err != nil {
-			if isEExistError(err) {
+			if op == MOP_DELETE {
+				if !isNotFoundError(err) {
+					logging.Infof("Failed to delete key <ud>%s</ud> Error %s", key, err)
+					failedDeletes = append(failedDeletes, key)
+				}
+			} else if isEExistError(err) {
 				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications. Error - %v", key, err)
 			} else {
-				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s. Error - %v", opToString(op), key, b.Name(), err)
+				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s. Error - %v",
+					MutateOpToName(op), key, b.Name(), err)
 			}
 		} else {
-			insertedKeys = append(insertedKeys, kv)
+			mPairs = append(mPairs, kv)
 		}
 	}
 
-	if len(insertedKeys) == 0 {
-		return nil, errors.NewCbDMLError(err, "Failed to perform "+opToString(op))
-	}
-
-	return insertedKeys, nil
-
-}
-
-func (b *keyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
-	return b.performOp(INSERT, inserts)
-
-}
-
-func (b *keyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
-	return b.performOp(UPDATE, updates)
-}
-
-func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
-	return b.performOp(UPSERT, upserts)
-}
-
-func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
-	return b.delete(deletes, context)
-}
-
-func (b *keyspace) delete(deletes []string, context datastore.QueryContext, clientContext ...*memcached.ClientContext) ([]string, errors.Error) {
-
-	failedDeletes := make([]string, 0)
-	actualDeletes := make([]string, 0)
-	var err error
-
-	for _, key := range deletes {
-		if err = b.cbbucket.Delete(key, clientContext...); err != nil {
-			b.checkRefresh(err)
-			if !isNotFoundError(err) {
-				logging.Infof("Failed to delete key <ud>%s</ud> Error %s", key, err)
-				failedDeletes = append(failedDeletes, key)
-			}
-		} else {
-			actualDeletes = append(actualDeletes, key)
+	if op == MOP_DELETE {
+		if len(failedDeletes) > 0 {
+			return mPairs, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 		}
+	} else if len(mPairs) == 0 {
+		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op))
 	}
 
-	if len(failedDeletes) > 0 {
-		return actualDeletes, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
-	}
-
-	return actualDeletes, nil
+	return mPairs, nil
 }
 
-func (b *keyspace) Release() {
+func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(MOP_INSERT, b.QualifiedName(), "", "", inserts, context)
+
+}
+
+func (b *keyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(MOP_UPDATE, b.QualifiedName(), "", "", updates, context)
+}
+
+func (b *keyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(MOP_UPSERT, b.QualifiedName(), "", "", upserts, context)
+}
+
+func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(MOP_DELETE, b.QualifiedName(), "", "", deletes, context)
+}
+
+func (b *keyspace) Release(bclose bool) {
 	b.Lock()
 	b.flags |= _DELETED
+	agentProvider := b.agentProvider
+	b.agentProvider = nil
 	b.Unlock()
-	b.cbbucket.Close()
+	if bclose {
+		b.cbbucket.Close()
+	}
+	if agentProvider != nil {
+		agentProvider.Close()
+	}
 }
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
@@ -2045,4 +2057,12 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	pi.viewIndex.ScanEntries(requestId, limit, cons, vector, conn)
+}
+
+func getCollectionId(clientContext ...*memcached.ClientContext) uint32 {
+	collectionId := uint32(0)
+	if len(clientContext) > 0 {
+		collectionId = clientContext[0].CollId
+	}
+	return collectionId
 }

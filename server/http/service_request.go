@@ -149,7 +149,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 				if defaultNamespace == "" {
 					defaultNamespace = namespace
 				}
-				err = getScanConfiguration(&rv.consistency, httpArgs, defaultNamespace)
+				err = getScanConfiguration(rv.TxId(), &rv.consistency, httpArgs, defaultNamespace)
 				if err == nil {
 					rv.SetScanConfiguration(&rv.consistency)
 				}
@@ -543,6 +543,85 @@ func handleUseCBO(rv *httpRequest, httpsArgs httpRequestArgs, parm string, val i
 	return err
 }
 
+func handleTxId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	txid, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetTxId(txid)
+	}
+	return err
+}
+
+func handleTxImplicit(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	tximplicit, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetTxImplicit(tximplicit == value.TRUE)
+	}
+
+	return err
+}
+
+func handleTxStmtNum(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		txstmtnum, e := strconv.ParseInt(param, 10, 64)
+		if e != nil || txstmtnum < 0 {
+			err = errors.NewServiceErrorBadValue(fmt.Errorf("%s is invalid", parm), parm)
+		} else {
+			rv.SetTxStmtNum(txstmtnum)
+		}
+	}
+	return err
+}
+
+func handleTxTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	var timeout time.Duration
+
+	t, err := httpArgs.getStringVal(parm, val)
+	if err == nil && t != "" {
+		timeout, err = newDuration(t)
+		if err == nil {
+			rv.SetTxTimeout(timeout)
+		}
+	}
+
+	return err
+}
+
+func handleDurabilityLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	dLevel, err := httpArgs.getStringVal(parm, val)
+
+	if err == nil {
+		if l := datastore.DurabilityNameToLevel(dLevel); l >= 0 {
+			rv.SetDurabilityLevel(l)
+		} else {
+			err = errors.NewServiceErrorBadValue(fmt.Errorf("%s is invalid", parm), parm)
+		}
+	}
+
+	return err
+}
+
+func handleDurabilityTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	var timeout time.Duration
+
+	t, err := httpArgs.getStringVal(parm, val)
+	if err == nil && t != "" {
+		timeout, err = newDuration(t)
+		if err == nil {
+			rv.SetDurabilityTimeout(timeout)
+		}
+	}
+	return err
+}
+
+func handleTxData(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	txData, err := httpArgs.getStringVal(parm, val)
+	if err == nil && txData != "" {
+		rv.SetTxData([]byte(txData))
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -598,39 +677,46 @@ func (this *httpRequest) EventRemoteAddress() string {
 }
 
 const ( // Request argument names
-	MAX_PARALLELISM   = "max_parallelism"
-	SCAN_CAP          = "scan_cap"
-	PIPELINE_CAP      = "pipeline_cap"
-	PIPELINE_BATCH    = "pipeline_batch"
-	READONLY          = "readonly"
-	METRICS           = "metrics"
-	NAMESPACE         = "namespace"
-	TIMEOUT           = "timeout"
-	ARGS              = "args"
-	PREPARED          = "prepared"
-	ENCODED_PLAN      = "encoded_plan"
-	STATEMENT         = "statement"
-	FORMAT            = "format"
-	ENCODING          = "encoding"
-	COMPRESSION       = "compression"
-	SIGNATURE         = "signature"
-	PRETTY            = "pretty"
-	SCAN_CONSISTENCY  = "scan_consistency"
-	SCAN_WAIT         = "scan_wait"
-	SCAN_VECTOR       = "scan_vector"
-	SCAN_VECTORS      = "scan_vectors"
-	CREDS             = "creds"
-	CLIENT_CONTEXT_ID = "client_context_id"
-	PROFILE           = "profile"
-	CONTROLS          = "controls"
-	N1QL_FEAT_CTRL    = "n1ql_feat_ctrl"
-	MAX_INDEX_API     = "max_index_api"
-	AUTO_PREPARE      = "auto_prepare"
-	AUTO_EXECUTE      = "auto_execute"
-	QUERY_CONTEXT     = "query_context"
-	USE_FTS           = "use_fts"
-	MEMORY_QUOTA      = "memory_quota"
-	USE_CBO           = "use_cbo"
+	MAX_PARALLELISM    = "max_parallelism"
+	SCAN_CAP           = "scan_cap"
+	PIPELINE_CAP       = "pipeline_cap"
+	PIPELINE_BATCH     = "pipeline_batch"
+	READONLY           = "readonly"
+	METRICS            = "metrics"
+	NAMESPACE          = "namespace"
+	TIMEOUT            = "timeout"
+	ARGS               = "args"
+	PREPARED           = "prepared"
+	ENCODED_PLAN       = "encoded_plan"
+	STATEMENT          = "statement"
+	FORMAT             = "format"
+	ENCODING           = "encoding"
+	COMPRESSION        = "compression"
+	SIGNATURE          = "signature"
+	PRETTY             = "pretty"
+	SCAN_CONSISTENCY   = "scan_consistency"
+	SCAN_WAIT          = "scan_wait"
+	SCAN_VECTOR        = "scan_vector"
+	SCAN_VECTORS       = "scan_vectors"
+	CREDS              = "creds"
+	CLIENT_CONTEXT_ID  = "client_context_id"
+	PROFILE            = "profile"
+	CONTROLS           = "controls"
+	N1QL_FEAT_CTRL     = "n1ql_feat_ctrl"
+	MAX_INDEX_API      = "max_index_api"
+	AUTO_PREPARE       = "auto_prepare"
+	AUTO_EXECUTE       = "auto_execute"
+	QUERY_CONTEXT      = "query_context"
+	USE_FTS            = "use_fts"
+	MEMORY_QUOTA       = "memory_quota"
+	USE_CBO            = "use_cbo"
+	TXID               = "txid"
+	TXIMPLICIT         = "tximplicit"
+	TXSTMTNUM          = "txstmtnum"
+	TXTIMEOUT          = "txtimeout"
+	TXDATA             = "txdata"
+	DURABILITY_LEVEL   = "durability_level"
+	DURABILITY_TIMEOUT = "durability_timeout"
 )
 
 type argHandler struct {
@@ -644,35 +730,42 @@ var _PARAMETERS = map[string]*argHandler{
 	QUERY_CONTEXT:  {handleQueryContext, true},
 	NAMESPACE:      {handleNamespace, true},
 	ENCODED_PLAN:   {handleEncodedPlan, true},
+	TXID:           {handleTxId, true},
 
-	STATEMENT:         {handleStatement, false},
-	PREPARED:          {handlePrepared, false},
-	CREDS:             {handleCreds, false},
-	ARGS:              {handlePositionalArgs, false},
-	TIMEOUT:           {handleTimeout, false},
-	SCAN_CONSISTENCY:  {handleConsistency, false},
-	SCAN_WAIT:         {handleScanWait, false},
-	SCAN_VECTOR:       {handleScanVector, false},
-	SCAN_VECTORS:      {handleScanVectors, false},
-	MAX_PARALLELISM:   {handleMaxParallelism, false},
-	SCAN_CAP:          {handleScanCap, false},
-	PIPELINE_CAP:      {handlePipelineCap, false},
-	PIPELINE_BATCH:    {handlePipelineBatch, false},
-	READONLY:          {handleReadonly, false},
-	METRICS:           {handleMetrics, false},
-	FORMAT:            {handleFormat, false},
-	ENCODING:          {handleEncoding, false},
-	COMPRESSION:       {handleCompression, false},
-	SIGNATURE:         {handleSignature, false},
-	PRETTY:            {handlePretty, false},
-	CLIENT_CONTEXT_ID: {handleClientContextID, false},
-	PROFILE:           {handleProfile, false},
-	CONTROLS:          {handleControls, false},
-	AUTO_PREPARE:      {handleAutoPrepare, false},
-	AUTO_EXECUTE:      {handleAutoExecute, false},
-	USE_FTS:           {handleUseFts, false},
-	MEMORY_QUOTA:      {handleMemoryQuota, false},
-	USE_CBO:           {handleUseCBO, false},
+	STATEMENT:          {handleStatement, false},
+	PREPARED:           {handlePrepared, false},
+	CREDS:              {handleCreds, false},
+	ARGS:               {handlePositionalArgs, false},
+	TIMEOUT:            {handleTimeout, false},
+	SCAN_CONSISTENCY:   {handleConsistency, false},
+	SCAN_WAIT:          {handleScanWait, false},
+	SCAN_VECTOR:        {handleScanVector, false},
+	SCAN_VECTORS:       {handleScanVectors, false},
+	MAX_PARALLELISM:    {handleMaxParallelism, false},
+	SCAN_CAP:           {handleScanCap, false},
+	PIPELINE_CAP:       {handlePipelineCap, false},
+	PIPELINE_BATCH:     {handlePipelineBatch, false},
+	READONLY:           {handleReadonly, false},
+	METRICS:            {handleMetrics, false},
+	FORMAT:             {handleFormat, false},
+	ENCODING:           {handleEncoding, false},
+	COMPRESSION:        {handleCompression, false},
+	SIGNATURE:          {handleSignature, false},
+	PRETTY:             {handlePretty, false},
+	CLIENT_CONTEXT_ID:  {handleClientContextID, false},
+	PROFILE:            {handleProfile, false},
+	CONTROLS:           {handleControls, false},
+	AUTO_PREPARE:       {handleAutoPrepare, false},
+	AUTO_EXECUTE:       {handleAutoExecute, false},
+	USE_FTS:            {handleUseFts, false},
+	MEMORY_QUOTA:       {handleMemoryQuota, false},
+	USE_CBO:            {handleUseCBO, false},
+	TXIMPLICIT:         {handleTxImplicit, false},
+	TXSTMTNUM:          {handleTxStmtNum, false},
+	TXTIMEOUT:          {handleTxTimeout, false},
+	TXDATA:             {handleTxData, false},
+	DURABILITY_LEVEL:   {handleDurabilityLevel, false},
+	DURABILITY_TIMEOUT: {handleDurabilityTimeout, false},
 }
 
 // common storage for the httpArgs implementations
@@ -735,14 +828,16 @@ func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, 
 	aa.count++
 }
 
-func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{}, phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
+func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{},
+	phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
 	prepared_name, err := a.getPreparedName(parm, val)
 	if err != nil || prepared_name == "" {
 		return "", nil, err
 	}
 
 	// Monitoring API: track prepared statement access
-	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
+	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, nil,
+		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
 	if err != nil || prepared == nil {
 		return prepared_name, nil, err
 	}
@@ -751,12 +846,12 @@ func getPrepared(a httpRequestArgs, queryContext string, parm string, val interf
 }
 
 func getEmptyScanConfiguration(rv *scanConfigImpl) {
-	rv.scan_level = newScanConsistency("NOT_BOUNDED")
+	rv.scan_level = newScanConsistency("NOT_SET")
 	rv.scan_vector_source = zeroScanVectorSource
 }
 
-func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs, namespace string) errors.Error {
-	scan_consistency_field, err := a.getString(_SCAN_CONSISTENCY, "NOT_BOUNDED")
+func getScanConfiguration(txId string, rv *scanConfigImpl, a httpRequestArgs, namespace string) errors.Error {
+	scan_consistency_field, err := a.getString(_SCAN_CONSISTENCY, "NOT_SET")
 	if err != nil {
 		return err
 	}
@@ -1707,9 +1802,11 @@ type scanConfigImpl struct {
 
 func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
 	if this == nil {
-		return datastore.UNBOUNDED
+		return datastore.NOT_SET
 	}
 	switch this.scan_level {
+	case server.NOT_SET:
+		return datastore.NOT_SET
 	case server.NOT_BOUNDED:
 		return datastore.UNBOUNDED
 	case server.REQUEST_PLUS, server.STATEMENT_PLUS:
@@ -1719,6 +1816,24 @@ func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
 	default:
 		return datastore.UNBOUNDED
 	}
+}
+
+func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) interface{} {
+	if this == nil {
+		this = &scanConfigImpl{}
+	}
+	switch consistency {
+	case datastore.NOT_SET:
+		this.scan_level = server.NOT_SET
+	case datastore.UNBOUNDED:
+		this.scan_level = server.NOT_BOUNDED
+	case datastore.SCAN_PLUS:
+		this.scan_level = server.REQUEST_PLUS
+	case datastore.AT_PLUS:
+		this.scan_level = server.AT_PLUS
+	}
+
+	return this
 }
 
 func (this *scanConfigImpl) ScanWait() time.Duration {
@@ -1731,6 +1846,8 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 
 func newScanConsistency(s string) server.ScanConsistency {
 	switch strings.ToUpper(s) {
+	case "NOT_SET":
+		return server.NOT_SET
 	case "NOT_BOUNDED":
 		return server.NOT_BOUNDED
 	case "REQUEST_PLUS":

@@ -31,9 +31,16 @@ func (this *builder) buildCovering(indexes, flex map[datastore.Index]*indexEntry
 		return
 	}
 
+	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+
 	// GSI covering scan
 	scan, sargLength, err = this.buildCoveringScan(indexes, node, baseKeyspace, id)
 	if scan != nil || err != nil {
+		return
+	}
+
+	// Delta keyspace present no covering
+	if hasDeltaKeyspace {
 		return
 	}
 
@@ -47,12 +54,27 @@ func (this *builder) buildCovering(indexes, flex map[datastore.Index]*indexEntry
 	return this.buildSearchCovering(searchSargables, node, baseKeyspace, id)
 }
 
-func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
+func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression) (plan.SecondaryScan, int, error) {
 
-	if this.cover == nil || len(indexes) == 0 {
+	if this.cover == nil || len(idxs) == 0 {
 		return nil, 0, nil
+	}
+
+	indexes := idxs
+	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	if hasDeltaKeyspace {
+		indexes = make(map[datastore.Index]*indexEntry, 1)
+		for index, entry := range idxs {
+			if index.IsPrimary() {
+				indexes[index] = entry
+				break
+			}
+		}
+		if len(indexes) == 0 {
+			return nil, 0, nil
+		}
 	}
 
 	alias := node.Alias()
@@ -235,7 +257,7 @@ outer:
 	indexKeyOrders := this.checkResetPaginations(entry, keys)
 
 	// Build old Aggregates on Index2 only
-	scan := this.buildCoveringPushdDownIndexScan2(entry, node, pred, indexProjection,
+	scan := this.buildCoveringPushdDownIndexScan2(entry, node, baseKeyspace, pred, indexProjection,
 		!arrayIndex, false, covers, filterCovers)
 	if scan != nil {
 		return scan, sargLength, nil
@@ -272,7 +294,7 @@ outer:
 	// generate filters for covering index scan
 	var filter expression.Expression
 	var err error
-	if indexGroupAggs == nil {
+	if indexGroupAggs == nil && !hasDeltaKeyspace {
 		filter, cost, cardinality, err = this.getIndexFilter(index, node.Alias(), entry.spans,
 			covers, filterCovers, entry.cost, entry.cardinality)
 		if err != nil {
@@ -285,10 +307,13 @@ outer:
 	}
 
 	// build plan for IndexScan
-	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), false,
-		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers, filter,
-		entry.cost, entry.cardinality)
+	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
+		pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, indexKeyOrders,
+		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality, hasDeltaKeyspace)
 	if scan != nil {
+		if entry.index.Type() != datastore.SYSTEM {
+			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
+		}
 		this.coveringScans = append(this.coveringScans, scan)
 	}
 
@@ -322,8 +347,8 @@ func (this *builder) checkResetPaginations(entry *indexEntry,
 }
 
 func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *algebra.KeyspaceTerm,
-	pred expression.Expression, indexProjection *plan.IndexProjection, countPush, array bool,
-	covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
+	baseKeyspace *base.BaseKeyspace, pred expression.Expression, indexProjection *plan.IndexProjection,
+	countPush, array bool, covers expression.Covers, filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
 	// Aggregates supported pre-Index3
 	if (useIndex3API(entry.index, this.context.IndexApiVersion()) &&
@@ -366,8 +391,11 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
-		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, false)
 	if scan != nil {
+		if entry.index.Type() != datastore.SYSTEM {
+			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
+		}
 		this.coveringScans = append(this.coveringScans, scan)
 	}
 

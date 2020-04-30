@@ -27,7 +27,7 @@ type functionsCacheKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *functionsCacheKeyspace) Release() {
+func (b *functionsCacheKeyspace) Release(close bool) {
 }
 
 func (b *functionsCacheKeyspace) NamespaceId() string {
@@ -130,28 +130,29 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 	return
 }
 
-func (b *functionsCacheKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *functionsCacheKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *functionsCacheKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *functionsCacheKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *functionsCacheKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *functionsCacheKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *functionsCacheKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *functionsCacheKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 
 	creds, authToken := credsFromContext(context)
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	for _, name := range deletes {
+	for _, pair := range deletes {
+		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 		// remote entry

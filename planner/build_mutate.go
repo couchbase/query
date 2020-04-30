@@ -34,9 +34,11 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	prevOffset := this.offset
 	prevRequirePrimaryKey := this.requirePrimaryKey
 	prevBasekeyspaces := this.baseKeyspaces
+	prevCover := this.cover
 
 	defer func() {
 		this.offset = prevOffset
+		this.cover = prevCover
 		this.limit = prevLimit
 		this.requirePrimaryKey = prevRequirePrimaryKey
 		this.baseKeyspaces = prevBasekeyspaces
@@ -51,6 +53,13 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.collectKeyspaceNames()
 	this.extractKeyspacePredicates(this.where, nil)
 
+	if !mustFetch {
+		mustFetch = this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	}
+	if mustFetch {
+		this.cover = nil
+	}
+
 	// Process where clause
 	if this.where != nil {
 		err := this.processWhere(this.where)
@@ -59,7 +68,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		}
 	}
 
-	scan, err := this.selectScan(keyspace, term)
+	scan, err := this.selectScan(keyspace, term, true)
 
 	this.appendQueryInfo(scan, keyspace, term, len(this.coveringScans) == 0)
 

@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
+	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -113,71 +114,95 @@ func (this *internalOutput) TrackMemory(size uint64) {
 	// empty
 }
 
-func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
-	var outputBuf internalOutput
-	output := &outputBuf
-
-	// TODO leaving profiling in place but commented out just in case
-	// parse := util.Now()
-	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext)
-	// output.AddPhaseTime(PARSE, util.Since(parse))
+func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool) (value.Value, uint64, error) {
+	prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-		return nil, 0, errors.NewRewriteError(err, "")
+	return this.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
+}
+
+func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly, autoPrepare bool) (prepared *plan.Prepared, isPrepared bool, rerr error) {
+
+	if len(namedArgs) > 0 || len(positionalArgs) > 0 || subquery {
+		autoPrepare = false
 	}
 
-	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type())
+	var name string
+	var prepContext planner.PrepareContext
+	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
+		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+		this.deltaKeyspaces)
+
+	if autoPrepare {
+		name = prepareds.GetAutoPrepareName(statement, &prepContext)
+		if name != "" {
+			prepared = prepareds.GetAutoPreparePlan(name, statement, this.namespace, &prepContext)
+			if prepared != nil {
+				if readonly && !prepared.Readonly() {
+					return nil, false, fmt.Errorf("not a readonly request")
+				}
+				return prepared, true, nil
+			}
+		} else {
+			autoPrepare = false
+		}
+	}
+
+	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext)
+	if err != nil {
+		return nil, false, err
+	}
+
+	//  monitoring code TBD
+	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
+		return nil, false, errors.NewRewriteError(err, "")
+	}
+
+	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.GetTxContext() != nil)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 
-	isprepare := false
-	if _, ok := stmt.(*algebra.Prepare); ok {
-		isprepare = true
-	}
+	_, isPrepare := stmt.(*algebra.Prepare)
 
-	if isprepare {
+	if isPrepare {
 		namedArgs = nil
 		positionalArgs = nil
 	}
 
-	var prepContext planner.PrepareContext
-	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
-		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO,
-		this.optimizer)
-	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
+	//  monitoring code TBD
+	prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
 		&prepContext)
-	// output.AddPhaseTime(PLAN, util.Since(prep))
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 
 	if prepared == nil {
-		return nil, 0, fmt.Errorf("failed to build a plan")
+		return nil, false, fmt.Errorf("failed to build a plan")
 	}
 
 	if readonly && !prepared.Readonly() {
-		return nil, 0, fmt.Errorf("not a readonly request")
+		return nil, false, fmt.Errorf("not a readonly request")
 	}
 
 	// EXECUTE doesn't get a plan. Get the plan from the cache.
-	isPrepared := false
+	isPrepared = false
 	switch stmt.Type() {
 	case "EXECUTE":
 		var reprepTime time.Duration
-		var err errors.Error
 
 		exec, _ := stmt.(*algebra.Execute)
-		prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), this.queryContext, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
-		// if reprepTime > 0 {
-		//        output.AddPhaseTime(REPREPARE, reprepTime)
-		// }
+		prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), this.queryContext,
+			this.deltaKeyspaces, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
+			&reprepTime)
+		//  monitoring code TBD
 		if err != nil {
-			return nil, 0, err
+			return prepared, isPrepared, err
 		}
 		isPrepared = true
 
@@ -187,46 +212,33 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 		// text for the benefit of context.Recover(): we can
 		// output the text in case of crashes
 		prepared.SetText(statement)
+		if autoPrepare {
+			prepared.SetName(name)
+			prepared.SetIndexApiVersion(this.indexApiVersion)
+			prepared.SetFeatureControls(this.featureControls)
+			prepared.SetNamespace(this.namespace)
+			prepared.SetQueryContext(this.queryContext)
+			prepared.SetUseFts(this.useFts)
+			prepareds.AddAutoPreparePlan(stmt, prepared)
+		}
+
 	}
 
-	newContext := this.Copy()
-	newContext.output = output
-	newContext.SetPrepared(isPrepared)
-	newContext.prepared = prepared
-	newContext.namedArgs = namedArgs
-	newContext.positionalArgs = positionalArgs
-
-	pipeline, err := Build(prepared, newContext)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Collect statements results
-	// FIXME: this should handled by the planner
-	collect := NewCollect(plan.NewCollect(), newContext)
-	sequence := NewSequence(plan.NewSequence(), newContext, pipeline, collect)
-	sequence.RunOnce(newContext, nil)
-
-	// Await completion
-	collect.waitComplete()
-
-	results := collect.ValuesOnce()
-
-	sequence.Done()
-
-	return results, output.mutationCount, output.err
+	return prepared, isPrepared, nil
 }
 
-func (this *Context) EvaluatePrepared(prepared *plan.Prepared, isPrepared bool) (value.Value, uint64, error) {
+func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
+	namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
+
 	var outputBuf internalOutput
 	output := &outputBuf
 
 	newContext := this.Copy()
 	newContext.output = output
-	newContext.SetPrepared(isPrepared)
-	newContext.prepared = prepared
-	newContext.namedArgs = this.namedArgs
-	newContext.positionalArgs = this.positionalArgs
+	newContext.SetIsPrepared(isPrepared)
+	newContext.SetPrepared(prepared)
+	newContext.namedArgs = namedArgs
+	newContext.positionalArgs = positionalArgs
 
 	build := util.Now()
 	pipeline, err := Build(prepared, newContext)
@@ -253,4 +265,105 @@ func (this *Context) EvaluatePrepared(prepared *plan.Prepared, isPrepared bool) 
 	this.output.AddPhaseTime(RUN, util.Since(exec))
 
 	return results, output.mutationCount, output.err
+}
+
+func (this *Context) executeTranStatementAtomicity(stmtType string) (map[string]bool, errors.Error) {
+	if this.txContext == nil {
+		return nil, nil
+	}
+
+	switch stmtType {
+	case "START":
+		return this.datastore.StartTransaction(true, this)
+	case "COMMIT":
+		return nil, this.datastore.CommitTransaction(true, this)
+	case "ROLLBACK":
+		return nil, this.datastore.RollbackTransaction(true, this, "")
+	}
+
+	return nil, errors.NewTransactionError(fmt.Errorf("Atomic Transaction: %s unknown statement", stmtType), "")
+
+}
+
+var implicitTranStmts = map[string]string{
+	"START":    "START TRANSACTION",
+	"COMMIT":   "COMMIT TRANSACTION",
+	"ROLLBACK": "ROLLBACK TRANSACTION"}
+
+// Used for implicit, explicit transactions
+func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (string, map[string]bool, errors.Error) {
+	if stmtAtomicity {
+		dks, err := this.executeTranStatementAtomicity(stmtType)
+		return "", dks, err
+	}
+
+	var res value.Value
+	var txId string
+	stmt, ok := implicitTranStmts[stmtType]
+	if !ok {
+		return txId, nil, errors.NewTransactionError(fmt.Errorf("Implicit Transaction: %s unknown statement", stmtType), "")
+	}
+
+	prepared, isPrepared, err := this.PrepareStatement(stmt, nil, nil, false, false, true)
+	if err == nil {
+		res, _, err = this.ExecutePrepared(prepared, isPrepared, nil, nil)
+	}
+	if err != nil {
+		error, ok := err.(errors.Error)
+		if !ok {
+			error = errors.NewError(err, "")
+		}
+		return "", nil, error
+	}
+
+	if stmtType == "START" {
+		if actual, ok := res.Actual().([]interface{}); ok {
+			if fields, ok := actual[0].(map[string]interface{}); ok {
+				txId, _ = fields["txid"].(string)
+			}
+		}
+		if txId == "" {
+			return "", nil, errors.NewStartTransactionError(fmt.Errorf("Implicit Transaction"))
+		}
+	}
+
+	return txId, nil, nil
+}
+
+func (this *Context) DoStatementComplete(stmtType string, success bool) (err errors.Error) {
+	if this.txContext == nil {
+		return nil
+	}
+
+	switch stmtType {
+	case "SET_TRANSACTION_ISOLATION", "SAVEPOINT", "ROLLBACK_SAVEPOINT":
+	case "START_TRANSACTION", "COMMIT", "ROLLBACK":
+		if !success {
+			_, _, err = this.ExecuteTranStatement("ROLLBACK", false)
+		}
+		if this.txContext != nil {
+			if stmtType != "START_TRANSACTION" || !success {
+				transactions.DeleteTransContext(this.txContext.TxId(), false)
+			}
+		}
+
+	default:
+		tranStmt := "ROLLBACK"
+		if success {
+			tranStmt = "COMMIT"
+		}
+
+		_, _, err = this.ExecuteTranStatement(tranStmt, !this.txImplicit)
+		if err != nil && tranStmt == "COMMIT" && this.txContext != nil {
+			_, _, err = this.ExecuteTranStatement("ROLLBACK", !this.txImplicit)
+		}
+
+		if this.txContext != nil {
+			if this.txContext.TxImplicit() {
+				transactions.DeleteTransContext(this.txContext.TxId(), false)
+			}
+		}
+	}
+
+	return err
 }

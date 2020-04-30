@@ -99,6 +99,7 @@ func (indexState IndexState) String() string {
 type ScanConsistency string
 
 const (
+	NOT_SET   ScanConsistency = "not_set"
 	UNBOUNDED ScanConsistency = "unbounded"
 	SCAN_PLUS ScanConsistency = "scan_plus"
 	AT_PLUS   ScanConsistency = "at_plus"
@@ -691,6 +692,11 @@ func (this *IndexConnection) SetPrimary() {
 
 func (this *IndexConnection) Timeout() bool {
 	return this.timeout
+}
+
+func (this *IndexConnection) QueryContext() QueryContext {
+	context, _ := this.context.(QueryContext)
+	return context
 }
 
 func (this *IndexKey) Expression() expression.Expression {

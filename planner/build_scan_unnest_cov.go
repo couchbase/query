@@ -18,11 +18,11 @@ import (
 
 func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
 	indexes map[datastore.Index]*indexEntry, unnestIndexes []datastore.Index,
-	arrayKeys map[datastore.Index]*expression.All, unnests []*algebra.Unnest) (
+	arrayKeys map[datastore.Index]*expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
 	plan.SecondaryScan, int, error) {
 
 	// Statement to be covered
-	if this.cover == nil {
+	if this.cover == nil || hasDeltaKeyspace {
 		return nil, 0, nil
 	}
 
@@ -33,7 +33,8 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 		this.restoreIndexPushDowns(indexPushDowns, true)
 
 		entry := indexes[index]
-		cop, cun, err := this.buildOneCoveringUnnestScan(node, pred, index, entry, arrayKeys[index], unnests)
+		cop, cun, err := this.buildOneCoveringUnnestScan(node, pred, index, entry, arrayKeys[index],
+			unnests, hasDeltaKeyspace)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -75,11 +76,11 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 }
 
 func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
-	index datastore.Index, entry *indexEntry, arrKey *expression.All, unnests []*algebra.Unnest) (
+	index datastore.Index, entry *indexEntry, arrKey *expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
 	plan.SecondaryScan, map[*algebra.Unnest]bool, error) {
 
 	// Sarg and populate spans
-	op, unnest, arrayKey, _, err := this.matchUnnest(node, pred, unnests[0], index, entry, arrKey, unnests)
+	op, unnest, arrayKey, _, err := this.matchUnnest(node, pred, unnests[0], index, entry, arrKey, unnests, hasDeltaKeyspace)
 	if op == nil || err != nil {
 		return nil, nil, err
 	}
@@ -90,6 +91,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// Include META().id in covering expressions
 	alias := node.Alias()
+	baseKeyspace, _ := this.baseKeyspaces[alias]
 	id := expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(alias)),
 		expression.NewFieldName("id", false))
@@ -229,7 +231,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	indexKeyOrders := this.checkResetPaginations(entry, keys)
 
 	// Build old Aggregates on Index2 only
-	scan := this.buildCoveringPushdDownIndexScan2(entry, node, pred, indexProjection,
+	scan := this.buildCoveringPushdDownIndexScan2(entry, node, baseKeyspace, pred, indexProjection,
 		array, array, covers, filterCovers)
 	if scan != nil {
 		return scan, coveredUnnests, nil
@@ -265,7 +267,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// generate filters for covering index scan
 	var filter expression.Expression
-	if indexGroupAggs == nil {
+	if indexGroupAggs == nil && !hasDeltaKeyspace {
 		filter, cost, cardinality, err = this.getIndexFilter(index, node.Alias(), entry.spans,
 			covers, filterCovers, entry.cost, entry.cardinality)
 		if err != nil {
@@ -277,10 +279,11 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		}
 	}
 
-	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), array,
-		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers, filter,
-		entry.cost, entry.cardinality)
+	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
+		pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, indexKeyOrders,
+		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality, hasDeltaKeyspace)
 	if scan != nil {
+		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)
 	}
 	return scan, coveredUnnests, nil

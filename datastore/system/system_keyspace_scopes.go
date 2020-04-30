@@ -26,7 +26,7 @@ type scopeKeyspace struct {
 	indexer    datastore.Indexer
 }
 
-func (b *scopeKeyspace) Release() {
+func (b *scopeKeyspace) Release(close bool) {
 }
 
 func (b *scopeKeyspace) NamespaceId() string {
@@ -185,22 +185,22 @@ func (b *scopeKeyspace) fetchOne(ns, bn, sn string) (value.AnnotatedValue, error
 	return nil, err
 }
 
-func (b *scopeKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *scopeKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *scopeKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *scopeKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *scopeKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *scopeKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *scopeKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *scopeKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

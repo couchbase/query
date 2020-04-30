@@ -62,6 +62,7 @@ var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store addre
 var ACCTSTORE = flag.String("acctstore", "gometrics:", "Accounting store address (http://URL or stub:)")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout, e.g. 500ms or 2s; use zero or negative value to disable")
+var TXTIMEOUT = flag.Duration("txtimeout", 0*time.Second, "Maximum Transaction timeout, e.g. 2m or 2s; use zero or negative to use request level value")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
@@ -270,6 +271,7 @@ func main() {
 	server.SetScanCap(*SCAN_CAP)
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
 	server.SetAutoPrepare(*AUTO_PREPARE)
+	server.SetTxTimeout(*TXTIMEOUT)
 	if *ENTERPRISE {
 		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
 		util.SetUseCBO(util.DEF_USE_CBO)
@@ -298,6 +300,7 @@ func main() {
 		logging.Pair{"n1ql-feat-ctrl", util.GetN1qlFeatureControl()},
 		logging.Pair{"use-cbo", util.GetUseCBO()},
 		logging.Pair{"timeout", server.Timeout()},
+		logging.Pair{"txtimeout", server.TxTimeout()},
 	)
 
 	// Create http endpoint

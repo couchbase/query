@@ -49,6 +49,10 @@ func (this *SemChecker) visitSearchFunction(search *search.Search) (err error) {
 }
 
 func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err error) {
+	if this.hasSemFlag(_SEM_TRANSACTION) {
+		return errors.NewTranFunctionNotSupportedError(advisor.Name())
+	}
+
 	if !distributed.RemoteAccess().Enabled(distributed.NEW_INDEXADVISOR) {
 		return errors.NewMHDPOnlyFeature("Advisor Function", "semantics.visit_advise")
 	}

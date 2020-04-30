@@ -23,10 +23,13 @@ type PrepareContext struct {
 	useFts          bool
 	useCBO          bool
 	optimizer       Optimizer
+	deltaKeyspaces  map[string]bool
 }
 
-func NewPrepareContext(rv *PrepareContext, requestId, queryContext string, namedArgs map[string]value.Value, positionalArgs value.Values,
-	indexApiVersion int, featureControls uint64, useFts, useCBO bool, optimizer Optimizer) {
+func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
+	namedArgs map[string]value.Value, positionalArgs value.Values,
+	indexApiVersion int, featureControls uint64, useFts, useCBO bool, optimizer Optimizer,
+	deltaKeyspaces map[string]bool) {
 	rv.requestId = requestId
 	rv.queryContext = queryContext
 	rv.namedArgs = namedArgs
@@ -36,6 +39,7 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string, named
 	rv.useFts = useFts
 	rv.useCBO = useCBO
 	rv.optimizer = optimizer
+	rv.deltaKeyspaces = deltaKeyspaces
 	return
 }
 
@@ -73,4 +77,17 @@ func (this *PrepareContext) UseCBO() bool {
 
 func (this *PrepareContext) Optimizer() Optimizer {
 	return this.optimizer
+}
+
+func (this *PrepareContext) SetDeltaKeyspaces(dk map[string]bool) {
+	this.deltaKeyspaces = dk
+}
+
+func (this *PrepareContext) DeltaKeyspaces() map[string]bool {
+	return this.deltaKeyspaces
+}
+
+func (this *PrepareContext) HasDeltaKeyspace(keyspace string) bool {
+	_, ok := this.deltaKeyspaces[keyspace]
+	return ok
 }

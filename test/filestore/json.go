@@ -68,7 +68,7 @@ func (this *MockQuery) Fail(err errors.Error) {
 	close(this.response.done)
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, signature value.Value) {
+func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
 	select {
 	case <-this.Results():
 		this.stopAndAlert(server.COMPLETED)
@@ -136,6 +136,10 @@ func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
 
 func (this *scanConfigImpl) ScanWait() time.Duration {
 	return 0
+}
+
+func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) interface{} {
+	return this
 }
 
 func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {

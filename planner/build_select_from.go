@@ -197,7 +197,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 	}
 
-	scan, err := this.selectScan(keyspace, node)
+	scan, err := this.selectScan(keyspace, node, false)
 
 	uncovered := len(this.coveringScans) == 0 && this.countScan == nil
 	this.appendQueryInfo(scan, keyspace, node, uncovered)
@@ -689,6 +689,10 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		}
 	}
 
+	baseKeyspace := base.NewBaseKeyspace(from.Alias(), from.Path())
+	if this.context.HasDeltaKeyspace(baseKeyspace.Keyspace()) {
+		return false, nil
+	}
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {

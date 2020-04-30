@@ -315,7 +315,7 @@
     ]
   },
   {
-    "statements": "advise SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode <5 OR guestCode >10) AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.level,s.size, s.num] = [$level, $size, $num] END)",
+    "statements": "advise SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode <5 OR guestCode >10) AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.`level`,s.size, s.num] = [$level, $size, $num] END)",
     "advise": true,
     "results": [
       {
@@ -340,7 +340,7 @@
             }
           }
         },
-        "query": "SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode <5 OR guestCode >10) AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.level,s.size, s.num] = [$level, $size, $num] END)"
+        "query": "SELECT META(p).id, ARRAY_DISTINCT(IFMISSING(rooms[*].num,[])) FROM shellTest AS p WHERE (guestCode <5 OR guestCode >10) AND (checkinTime BETWEEN $startTime AND $endTime) AND (ANY s IN rooms SATISFIES [s.`level`,s.size, s.num] = [$level, $size, $num] END)"
       }
     ]
   },

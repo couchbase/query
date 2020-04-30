@@ -81,6 +81,7 @@ type MockQuery struct {
 type MockServer struct {
 	sync.RWMutex
 	prepDone  map[string]bool
+	txgroups  []string
 	server    *server.Server
 	acctstore accounting.AccountingStore
 }
@@ -105,7 +106,7 @@ func (this *MockQuery) Error(err errors.Error) {
 	}
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, signature value.Value) {
+func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
 	select {
 	case <-this.Results():
 		this.stopAndAlert(server.COMPLETED)
@@ -183,8 +184,44 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 	return &http.ZeroScanVectorSource{}
 }
 
+func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) interface{} {
+	return this
+}
+
 func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, request.resultCount, 0, 0, nil, this.server)
+}
+
+func (this *MockServer) getTxId(group int) string {
+	this.RLock()
+	defer this.RUnlock()
+	if group < len(this.txgroups) {
+		return this.txgroups[group]
+	}
+	return ""
+}
+
+func (this *MockServer) setTxId(group int, txId string) {
+	this.Lock()
+	defer this.Unlock()
+	if group < len(this.txgroups) {
+		this.txgroups[group] = txId
+	}
+}
+
+func (this *MockServer) saveTxId(group int, reqType string, res []interface{}) {
+	var txId string
+	switch reqType {
+	case "START":
+		if len(res) > 0 {
+			if fields, ok := res[0].(map[string]interface{}); ok {
+				txId, _ = fields["txid"].(string)
+			}
+		}
+		this.setTxId(group, txId)
+	case "ROLLBACK", "COMMIT":
+		this.setTxId(group, txId)
+	}
 }
 
 var _ALL_USERS = auth.Credentials{
@@ -202,7 +239,7 @@ This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
-func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
+func Run(mockServer *MockServer, gv int, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values, userArgs map[string]string) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
@@ -224,6 +261,7 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
 	mockServer.server.SetWhitelist(curlWhitelist)
+	query.SetTxId(mockServer.getTxId(gv))
 
 	if userArgs == nil {
 		query.SetCredentials(&_ALL_USERS)
@@ -239,15 +277,19 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	defer mockServer.doStats(query)
 
 	if !mockServer.server.ServiceRequest(query) {
+		mockServer.saveTxId(gv, query.Type(), nil)
 		return nil, nil, errors.NewError(nil, "Query timed out")
 	}
 
 	// wait till all the results are ready
 	<-mr.done
+	if mr.err != nil {
+		mockServer.saveTxId(gv, query.Type(), mr.results)
+	}
 	return mr.results, mr.warnings, mr.err
 }
 
-func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[string]value.Value,
+func RunPrepared(mockServer *MockServer, gv int, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
@@ -259,7 +301,7 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 		response: mr,
 	}
 
-	prepared, err := PrepareStmt(mockServer, namespace, q)
+	prepared, err := PrepareStmt(mockServer, gv, namespace, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -275,17 +317,22 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
 	query.SetCredentials(&_ALL_USERS)
+	query.SetTxId(mockServer.getTxId(gv))
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
 	defer mockServer.doStats(query)
 
 	if !mockServer.server.ServiceRequest(query) {
+		mockServer.saveTxId(gv, query.Type(), nil)
 		return nil, nil, errors.NewError(nil, "Query timed out")
 	}
 
 	// wait till all the results are ready
 	<-mr.done
+	if mr.err != nil {
+		mockServer.saveTxId(gv, query.Type(), mr.results)
+	}
 	return mr.results, mr.warnings, mr.err
 }
 
@@ -299,6 +346,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 
 	mockServer := &MockServer{}
 	mockServer.prepDone = make(map[string]bool)
+	mockServer.txgroups = make([]string, 16)
 	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -443,8 +491,13 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			ordered = o.(bool)
 		}
 
+		var gv int
+		if txGroup, txOk := c["txGroup"]; txOk {
+			gv, _ = txGroup.(int)
+		}
+
 		if explain {
-			if errstring = checkExplain(qc, namespace, statements, c, ordered, fname, i); errstring != nil {
+			if errstring = checkExplain(qc, gv, namespace, statements, c, ordered, fname, i); errstring != nil {
 				return
 			}
 		}
@@ -484,9 +537,9 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 
 		if prepared {
-			resultsActual, _, errActual = RunPrepared(qc, statements, namespace, namedArgs, positionalArgs)
+			resultsActual, _, errActual = RunPrepared(qc, gv, statements, namespace, namedArgs, positionalArgs)
 		} else {
-			resultsActual, _, errActual = Run(qc, statements, namespace, namedArgs, positionalArgs, userArgs)
+			resultsActual, _, errActual = Run(qc, gv, statements, namespace, namedArgs, positionalArgs, userArgs)
 		}
 
 		errExpected := ""
@@ -628,7 +681,7 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 	return nil
 }
 
-func checkExplain(qc *MockServer, namespace string, statement string, c map[string]interface{}, ordered bool,
+func checkExplain(qc *MockServer, gv int, namespace string, statement string, c map[string]interface{}, ordered bool,
 	fname string, i int) (errstring error) {
 	var ev map[string]interface{}
 
@@ -667,7 +720,7 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	}
 
 	explainStmt := "EXPLAIN " + statement
-	resultsActual, _, errActual := Run(qc, explainStmt, namespace, nil, nil, nil)
+	resultsActual, _, errActual := Run(qc, gv, explainStmt, namespace, nil, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return go_er.New(fmt.Sprintf("(%v) error actual: %#v"+
 			", for case file: %v, index: %v", explainStmt, resultsActual, fname, i))
@@ -676,7 +729,7 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	namedParams := make(map[string]value.Value, 1)
 	namedParams["explan"] = value.NewValue(resultsActual[0])
 
-	resultsActual, _, errActual = Run(qc, eStmt, namespace, namedParams, nil, nil)
+	resultsActual, _, errActual = Run(qc, gv, eStmt, namespace, namedParams, nil, nil)
 	if errActual != nil {
 		return go_er.New(fmt.Sprintf("unexpected err: %v, statement: %v"+
 			", for case file: %v, index: %v", errActual, eStmt, fname, i))
@@ -689,9 +742,9 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	return
 }
 
-func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, errors.Error) {
+func PrepareStmt(qc *MockServer, gv int, namespace, statement string) (*plan.Prepared, errors.Error) {
 	prepareStmt := "PREPARE " + statement
-	resultsActual, _, errActual := Run(qc, prepareStmt, namespace, nil, nil, nil)
+	resultsActual, _, errActual := Run(qc, gv, prepareStmt, namespace, nil, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
 	}
@@ -702,7 +755,7 @@ func PrepareStmt(qc *MockServer, namespace, statement string) (*plan.Prepared, e
 	done := qc.prepDone[statement]
 	qc.RUnlock()
 	if done {
-		return prepareds.GetPrepared(ra["name"].(string))
+		return prepareds.GetPrepared(ra["name"].(string), nil)
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
@@ -756,7 +809,7 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 }
 
 func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
-	return Run(mockServer, q, Namespace_CBS, nil, nil, nil)
+	return Run(mockServer, 0, q, Namespace_CBS, nil, nil, nil)
 }
 
 func getAdviseResults(subpath string, result []interface{}) []interface{} {

@@ -32,7 +32,8 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		return
 	}
 
-	if this.group != nil {
+	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	if this.group != nil || hasDeltaKeyspace {
 		this.resetPushDowns()
 	}
 
@@ -109,9 +110,12 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 			_, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
 		}
 
+		if entry.index.Type() != datastore.SYSTEM {
+			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
+		}
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection,
-			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality)
+			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality, hasDeltaKeyspace)
 
 		if orderEntry != nil && index == orderEntry.index {
 			scans[0] = scan
@@ -131,7 +135,9 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		if entry != orderEntry {
 			sOrders = nil
 		}
-		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil)
+
+		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
+		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
 		if entry == orderEntry {
 			scans[0] = scan
 		} else {
@@ -149,7 +155,9 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		if entry != orderEntry {
 			sOrders = nil
 		}
-		scan := this.CreateFTSSearch(entry.index, node, sfn, sOrders, nil, nil)
+
+		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
+		scan := this.CreateFTSSearch(entry.index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
 		if entry == orderEntry {
 			scans[0] = scan
 		} else {

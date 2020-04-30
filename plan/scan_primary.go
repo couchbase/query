@@ -21,21 +21,23 @@ import (
 
 type PrimaryScan struct {
 	legacy
-	index    datastore.PrimaryIndex
-	indexer  datastore.Indexer
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
-	limit    expression.Expression
+	index            datastore.PrimaryIndex
+	indexer          datastore.Indexer
+	keyspace         datastore.Keyspace
+	term             *algebra.KeyspaceTerm
+	limit            expression.Expression
+	hasDeltaKeyspace bool
 }
 
 func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace,
-	term *algebra.KeyspaceTerm, limit expression.Expression) *PrimaryScan {
+	term *algebra.KeyspaceTerm, limit expression.Expression, hasDeltaKeyspace bool) *PrimaryScan {
 	return &PrimaryScan{
-		index:    index,
-		indexer:  index.Indexer(),
-		keyspace: keyspace,
-		term:     term,
-		limit:    limit,
+		index:            index,
+		indexer:          index.Indexer(),
+		keyspace:         keyspace,
+		term:             term,
+		limit:            limit,
+		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
 }
 
@@ -63,6 +65,10 @@ func (this *PrimaryScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *PrimaryScan) HasDeltaKeyspace() bool {
+	return this.hasDeltaKeyspace
+}
+
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -81,6 +87,10 @@ func (this *PrimaryScan) MarshalBase(f func(map[string]interface{})) map[string]
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.hasDeltaKeyspace {
+		r["has_delta_keyspace"] = this.hasDeltaKeyspace
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -89,21 +99,23 @@ func (this *PrimaryScan) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string              `json:"#operator"`
-		Index     string              `json:"index"`
-		Namespace string              `json:"namespace"`
-		Bucket    string              `json:"bucket"`
-		Scope     string              `json:"scope"`
-		Keyspace  string              `json:"keyspace"`
-		As        string              `json:"as"`
-		Using     datastore.IndexType `json:"using"`
-		Limit     string              `json:"limit"`
+		_                string              `json:"#operator"`
+		Index            string              `json:"index"`
+		Namespace        string              `json:"namespace"`
+		Bucket           string              `json:"bucket"`
+		Scope            string              `json:"scope"`
+		Keyspace         string              `json:"keyspace"`
+		As               string              `json:"as"`
+		Using            datastore.IndexType `json:"using"`
+		Limit            string              `json:"limit"`
+		HasDeltaKeyspace bool                `json:"has_delta_keyspace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
+	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)

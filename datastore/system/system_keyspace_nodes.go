@@ -22,7 +22,7 @@ type nodeKeyspace struct {
 	si datastore.Indexer
 }
 
-func (b *nodeKeyspace) Release() {
+func (b *nodeKeyspace) Release(close bool) {
 }
 
 func (b *nodeKeyspace) NamespaceId() string {
@@ -96,22 +96,22 @@ func appendError(errs []errors.Error, err errors.Error) []errors.Error {
 	return errs
 }
 
-func (b *nodeKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *nodeKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *nodeKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *nodeKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *nodeKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *nodeKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *nodeKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *nodeKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

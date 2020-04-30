@@ -439,23 +439,23 @@ func (ks *CollectionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 
 // Used by DML statements
 // For insert and upsert, nil input keys are replaced with auto-generated keys
-func (ks *CollectionsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (ks *CollectionsKeyspace) Insert(inserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewNotImplemented("CollectionsKeyspace.Insert()")
 }
 
-func (ks *CollectionsKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (ks *CollectionsKeyspace) Update(updates []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewNotImplemented("CollectionsKeyspace.Update()")
 }
 
-func (ks *CollectionsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (ks *CollectionsKeyspace) Upsert(upserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewNotImplemented("CollectionsKeyspace.Upsert()")
 }
 
-func (ks *CollectionsKeyspace) Delete(deletes []string, context QueryContext) ([]string, errors.Error) {
+func (ks *CollectionsKeyspace) Delete(deletes []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewNotImplemented("CollectionsKeyspace.Delete()")
 }
 
-func (ks *CollectionsKeyspace) Release() {
+func (ks *CollectionsKeyspace) Release(close bool) {
 	// do nothing
 }
 

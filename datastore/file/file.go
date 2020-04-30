@@ -174,6 +174,26 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	return false, nil
 }
 
+func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (map[string]bool, errors.Error) {
+	return nil, errors.NewTranDatastoreNotSupportedError("file")
+}
+
+func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryContext) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("file")
+}
+
+func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("file")
+}
+
+func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("file")
+}
+
+func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexConnection) {
+	defer conn.Sender().Close()
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)
@@ -486,7 +506,7 @@ func opToString(op int) string {
 	return "unknown operation"
 }
 
-func (b *keyspace) performOp(op int, kvPairs []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspace) performOp(op int, kvPairs []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 
 	if len(kvPairs) == 0 {
 		return nil, errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())
@@ -549,30 +569,31 @@ func (b *keyspace) performOp(op int, kvPairs []value.Pair) ([]value.Pair, errors
 
 }
 
-func (b *keyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
-	return b.performOp(INSERT, inserts)
+func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(INSERT, inserts, context)
 }
 
-func (b *keyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
-	return b.performOp(UPDATE, updates)
+func (b *keyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(UPDATE, updates, context)
 }
 
-func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
-	return b.performOp(UPSERT, upserts)
+func (b *keyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return b.performOp(UPSERT, upserts, context)
 }
 
-func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 
 	var fileError []string
-	var deleted []string
-	for _, key := range deletes {
+	var deleted []value.Pair
+	for _, pair := range deletes {
+		key := pair.Name
 		filename := filepath.Join(b.path(), key+".json")
 		if err := os.Remove(filename); err != nil {
 			if !os.IsNotExist(err) {
 				fileError = append(fileError, err.Error())
 			}
 		} else {
-			deleted = append(deleted, key)
+			deleted = append(deleted, pair)
 		}
 	}
 
@@ -584,7 +605,7 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 	return deleted, nil
 }
 
-func (b *keyspace) Release() {
+func (b *keyspace) Release(close bool) {
 }
 
 func (b *keyspace) CreateScope(name string) errors.Error {

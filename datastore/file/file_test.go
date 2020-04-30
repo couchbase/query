@@ -134,53 +134,54 @@ func TestFile(t *testing.T) {
 	dmlKey.Name = "fred2"
 	dmlKey.Value = fred
 
-	_, err = keyspace.Insert([]value.Pair{dmlKey})
+	_, err = keyspace.Insert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	_, err = keyspace.Update([]value.Pair{dmlKey})
+	_, err = keyspace.Update([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	_, err = keyspace.Upsert([]value.Pair{dmlKey})
+	_, err = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
 	dmlKey.Name = "fred3"
-	_, err = keyspace.Upsert([]value.Pair{dmlKey})
+	_, err = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
 	// negative cases
-	_, err = keyspace.Insert([]value.Pair{dmlKey})
+	_, err = keyspace.Insert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err == nil {
 		t.Errorf("Insert should not have succeeded for fred2")
 	}
 
 	// delete all the freds
-	deleted, err := keyspace.Delete([]string{"fred2", "fred3"}, datastore.NULL_QUERY_CONTEXT)
+
+	deleted, err := keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil && len(deleted) != 2 {
 		fmt.Printf("Warning: Failed to delete. Error %v", err)
 	}
 
-	_, err = keyspace.Update([]value.Pair{dmlKey})
+	_, err = keyspace.Update([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err == nil {
 		t.Errorf("Update should have failed. Key fred3 doesn't exist")
 	}
 
 	// finally upsert the key. this should work
-	_, err = keyspace.Upsert([]value.Pair{dmlKey})
+	_, err = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
 	// some deletes should fail
-	deleted, err = keyspace.Delete([]string{"fred2", "fred3"}, datastore.NULL_QUERY_CONTEXT)
-	if len(deleted) != 1 && deleted[0] != "fred2" {
+	deleted, err = keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT)
+	if len(deleted) != 1 && deleted[0].Name != "fred2" {
 		t.Errorf("failed to delete fred2: %v, #deleted=%d", deleted, len(deleted))
 	}
 

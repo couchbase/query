@@ -59,6 +59,9 @@ type QueryContext interface {
 	Credentials() *auth.Credentials
 	AuthenticatedUsers() []string
 	Warning(errors.Error)
+	GetTxContext() interface{}
+	SetTxContext(tc interface{})
+	Datastore() Datastore
 }
 
 type queryContextImpl struct {
@@ -77,4 +80,15 @@ func (ci *queryContextImpl) Warning(err errors.Error) {
 
 func (ci *queryContextImpl) GetReqDeadline() time.Time {
 	return time.Time{}
+}
+
+func (ci *queryContextImpl) GetTxContext() interface{} {
+	return nil
+}
+
+func (ci *queryContextImpl) Datastore() Datastore {
+	return GetDatastore()
+}
+
+func (ci *queryContextImpl) SetTxContext(tc interface{}) {
 }

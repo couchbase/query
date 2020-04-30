@@ -478,6 +478,26 @@ func (this *scanIdxCol) VisitUpdateStatistics(op *plan.UpdateStatistics) (interf
 	return nil, nil
 }
 
+func (this *scanIdxCol) VisitStartTransaction(op *plan.StartTransaction) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitCommitTransaction(op *plan.CommitTransaction) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitRollbackTransaction(op *plan.RollbackTransaction) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitTransactionIsolation(op *plan.TransactionIsolation) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitSavepoint(op *plan.Savepoint) (interface{}, error) {
+	return nil, nil
+}
+
 func formalizeIndexKeys(alias string, keys expression.Expressions) expression.Expressions {
 	formalizer := expression.NewSelfFormalizer(alias, nil)
 	keys = keys.Copy()

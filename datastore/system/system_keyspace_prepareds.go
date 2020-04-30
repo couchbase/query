@@ -28,7 +28,7 @@ type preparedsKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *preparedsKeyspace) Release() {
+func (b *preparedsKeyspace) Release(close bool) {
 }
 
 func (b *preparedsKeyspace) NamespaceId() string {
@@ -83,16 +83,18 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"prepareds", "POST",
 				func(doc map[string]interface{}) {
-
-					plan := doc["plan"]
-					delete(doc, "plan")
-					remoteValue := value.NewAnnotatedValue(doc)
-					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", map[string]interface{}{
+					m := map[string]interface{}{
 						"id":       key,
 						"keyspace": b.fullName,
-						"plan":     plan,
-					})
+					}
+
+					m["plan"] = doc["plan"]
+					m["txPlans"] = doc["txPlans"]
+					delete(doc, "plan")
+					delete(doc, "txPlans")
+					remoteValue := value.NewAnnotatedValue(doc)
+					remoteValue.SetField("node", node)
+					remoteValue.SetAttachment("meta", m)
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -103,6 +105,10 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 
 			// local entry
 			prepareds.PreparedDo(localKey, func(entry *prepareds.CacheEntry) {
+				m := map[string]interface{}{
+					"id":       key,
+					"keyspace": b.fullName,
+				}
 				itemMap := map[string]interface{}{
 					"name":            localKey,
 					"uses":            entry.Uses,
@@ -116,6 +122,18 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				if entry.Prepared.EncodedPlan() != "" {
 					itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 				}
+
+				isks := entry.Prepared.IndexScanKeyspaces()
+				if len(isks) > 0 {
+					itemMap["indexScanKeyspaces"] = isks
+				}
+
+				txPrepards, txPlans := entry.Prepared.TxPrepared()
+				if len(txPrepards) > 0 {
+					itemMap["txPrepards"] = txPrepards
+					m["txPlans"] = txPlans
+				}
+
 				if node != "" {
 					itemMap["node"] = node
 				}
@@ -133,12 +151,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
 				}
 				item := value.NewAnnotatedValue(itemMap)
-				bytes, _ := json.Marshal(entry.Prepared.Operator)
-				item.SetAttachment("meta", map[string]interface{}{
-					"id":       key,
-					"keyspace": b.fullName,
-					"plan":     bytes,
-				})
+				m["plan"], _ = json.Marshal(entry.Prepared.Operator)
+				item.SetAttachment("meta", m)
+
 				item.SetId(key)
 				keysMap[key] = item
 			})
@@ -147,29 +162,30 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 	return
 }
 
-func (b *preparedsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *preparedsKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *preparedsKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *preparedsKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *preparedsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *preparedsKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *preparedsKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	var err errors.Error
 
 	creds, authToken := credsFromContext(context)
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	for i, name := range deletes {
+	for i, pair := range deletes {
+		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 		// remote entry
@@ -187,7 +203,7 @@ func (b *preparedsKeyspace) Delete(deletes []string, context datastore.QueryCont
 			err = prepareds.DeletePrepared(localKey)
 		}
 		if err != nil {
-			deleted := make([]string, i)
+			deleted := make([]value.Pair, i)
 			if i > 0 {
 				copy(deleted, deletes[0:i-1])
 			}

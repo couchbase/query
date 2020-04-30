@@ -27,7 +27,7 @@ type keyspaceKeyspace struct {
 	indexer    datastore.Indexer
 }
 
-func (b *keyspaceKeyspace) Release() {
+func (b *keyspaceKeyspace) Release(close bool) {
 }
 
 func (b *keyspaceKeyspace) NamespaceId() string {
@@ -252,22 +252,22 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string) (value.Anno
 	return nil, err
 }
 
-func (b *keyspaceKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspaceKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *keyspaceKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspaceKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *keyspaceKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspaceKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *keyspaceKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *keyspaceKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

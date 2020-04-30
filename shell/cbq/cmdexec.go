@@ -144,7 +144,6 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 					break
 				}
 			}
-
 		}
 
 	}

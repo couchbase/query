@@ -21,7 +21,7 @@ import (
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery, stream bool, context *PrepareContext) (
-	plan.Operator, error) {
+	plan.Operator, map[string]bool, error) {
 
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
 	if context.UseCBO() && context.Optimizer() != nil {
@@ -32,16 +32,17 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	o, err := stmt.Accept(builder)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	op := o.(plan.Operator)
 	_, is_prepared := o.(*plan.Prepared)
+	indexKeyspaces := builder.indexKeyspaceNames
 
 	if !subquery && !is_prepared {
 		privs, er := stmt.Privileges()
 		if er != nil {
-			return nil, er
+			return nil, nil, er
 		}
 
 		if stream {
@@ -59,9 +60,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		// query is against secured tables anyway, and would therefore
 		// have privileges that need verification, meaning the Authorize
 		// operator would have been present in any case.
-		return plan.NewAuthorize(privs, op), nil
+		return plan.NewAuthorize(privs, op), indexKeyspaces, nil
 	} else {
-		return op, nil
+		return op, indexKeyspaces, nil
 	}
 }
 
@@ -81,36 +82,37 @@ const (
 type builder struct {
 	indexPushDowns
 	collectQueryInfo
-	context           *PrepareContext
-	datastore         datastore.Datastore
-	systemstore       datastore.Datastore
-	namespace         string
-	subquery          bool
-	correlated        bool
-	maxParallelism    int
-	delayProjection   bool                  // Used to allow ORDER BY non-projected expressions
-	from              algebra.FromTerm      // Used for index selection
-	where             expression.Expression // Used for index selection
-	filter            expression.Expression // for Filter operator
-	setOpDistinct     bool                  // Used for SETOP Distinct to apply DISTINCT on projection
-	children          []plan.Operator
-	subChildren       []plan.Operator
-	cover             expression.HasExpressions
-	node              expression.HasExpressions
-	coveringScans     []plan.CoveringOperator
-	coveredUnnests    map[*algebra.Unnest]bool
-	countScan         plan.CoveringOperator
-	skipDynamic       bool
-	requirePrimaryKey bool
-	orderScan         plan.SecondaryScan
-	baseKeyspaces     map[string]*base.BaseKeyspace
-	keyspaceNames     map[string]string
-	pushableOnclause  expression.Expression // combined ON-clause from all inner joins
-	builderFlags      uint32
-	indexAdvisor      bool
-	useCBO            bool
-	hintIndexes       bool
-	lastOp            plan.Operator // last operator built, to get cost/cardinality info
+	context            *PrepareContext
+	datastore          datastore.Datastore
+	systemstore        datastore.Datastore
+	namespace          string
+	subquery           bool
+	correlated         bool
+	maxParallelism     int
+	delayProjection    bool                  // Used to allow ORDER BY non-projected expressions
+	from               algebra.FromTerm      // Used for index selection
+	where              expression.Expression // Used for index selection
+	filter             expression.Expression // for Filter operator
+	setOpDistinct      bool                  // Used for SETOP Distinct to apply DISTINCT on projection
+	children           []plan.Operator
+	subChildren        []plan.Operator
+	cover              expression.HasExpressions
+	node               expression.HasExpressions
+	coveringScans      []plan.CoveringOperator
+	coveredUnnests     map[*algebra.Unnest]bool
+	countScan          plan.CoveringOperator
+	skipDynamic        bool
+	requirePrimaryKey  bool
+	orderScan          plan.SecondaryScan
+	baseKeyspaces      map[string]*base.BaseKeyspace
+	keyspaceNames      map[string]string
+	indexKeyspaceNames map[string]bool       // keyspace names that use indexscan (excludes non from caluse subqueries)
+	pushableOnclause   expression.Expression // combined ON-clause from all inner joins
+	builderFlags       uint32
+	indexAdvisor       bool
+	useCBO             bool
+	hintIndexes        bool
+	lastOp             plan.Operator // last operator built, to get cost/cardinality info
 }
 
 func (this *builder) Copy() *builder {
@@ -208,6 +210,8 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 		context:         context,
 	}
 
+	rv.indexKeyspaceNames = make(map[string]bool, _MAP_KEYSPACE_CAP)
+
 	return rv
 }
 
@@ -242,6 +246,14 @@ func (this *builder) collectKeyspaceNames() {
 	}
 
 	return
+}
+
+func (this *builder) collectIndexKeyspaceNames(ks string) {
+	this.indexKeyspaceNames[ks] = this.context.HasDeltaKeyspace(ks)
+}
+
+func (this *builder) IndexKeyspaceNames() map[string]bool {
+	return this.indexKeyspaceNames
 }
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {

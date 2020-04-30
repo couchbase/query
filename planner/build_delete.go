@@ -28,7 +28,8 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Returning() != nil)
+	mustFetch := stmt.Returning() != nil || this.context.DeltaKeyspaces() != nil
+	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), mustFetch)
 	if err != nil {
 		return nil, err
 	}

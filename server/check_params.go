@@ -10,6 +10,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 )
@@ -44,6 +46,7 @@ const (
 	TASKLIMIT       = "tasks-limit"
 	MEMORYQUOTA     = "memory-quota"
 	USECBO          = "use-cbo"
+	TXTIMEOUT       = "txtimeout"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -78,6 +81,7 @@ var CHECKERS = map[string]Checker{
 	TASKLIMIT:       checkPositiveInteger,
 	MEMORYQUOTA:     checkNonNegativeInteger,
 	USECBO:          checkBool,
+	TXTIMEOUT:       checkDuration,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {
@@ -165,6 +169,21 @@ func checkNonNegativeInteger(val interface{}) (bool, errors.Error) {
 func checkString(val interface{}) (bool, errors.Error) {
 	_, ok := val.(string)
 	return ok, nil
+}
+
+func checkDuration(val interface{}) (bool, errors.Error) {
+	switch val := val.(type) {
+	case string:
+		if val != "" {
+			// valid units are "ns", "us", "ms", "s", "m", "h"
+			lc := val[len(val)-1]
+			if lc == 's' || lc == 'm' || lc == 'h' {
+				_, e := time.ParseDuration(val)
+				return e == nil, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func checkLogLevel(val interface{}) (bool, errors.Error) {

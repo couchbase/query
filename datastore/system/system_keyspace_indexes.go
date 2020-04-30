@@ -30,7 +30,7 @@ type indexKeyspace struct {
 	indexer    datastore.Indexer
 }
 
-func (b *indexKeyspace) Release() {
+func (b *indexKeyspace) Release(close bool) {
 }
 
 func (b *indexKeyspace) NamespaceId() string {
@@ -427,22 +427,22 @@ func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, sk
 	return b, nil
 }
 
-func (b *indexKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *indexKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *indexKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *indexKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }
 
-func (b *indexKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *indexKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }
 
-func (b *indexKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *indexKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }

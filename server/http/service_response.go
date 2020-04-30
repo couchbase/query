@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -128,7 +129,7 @@ func (this *httpRequest) markTimeOfCompletion(now time.Time) {
 	this.elapsedTime = now.Sub(this.RequestTime())
 }
 
-func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
+func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
 	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
 	this.setHttpCode(http.StatusOK)
@@ -150,6 +151,11 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 
 		// wait for operator before continuing
 		<-this.Results()
+	}
+
+	success := this.State() == server.COMPLETED && len(this.Errors()) == 0
+	if err := context.DoStatementComplete(reqType, success); err != nil {
+		this.Error(err)
 	}
 
 	now := time.Now()
@@ -404,6 +410,9 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 	if err.Retry() {
 		m["retry"] = true
 	}
+	if err.Diagnostics() != nil {
+		m["diagnstics"] = err.Diagnostics()
+	}
 
 	var er error
 	var bytes []byte
@@ -580,11 +589,44 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			logging.Infop("Error writing memoryQuota", logging.Pair{"error", err})
 		}
 	}
+	this.writeTransactionInfo(newPrefix, indent)
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
 		return false
 	}
 	return this.writeString("}")
+}
+
+func (this *httpRequest) writeTransactionInfo(prefix, indent string) bool {
+	if this.TxId() != "" {
+		if !this.writeString(",") || !this.writer.printf("%s\"txid\": \"%v\"", prefix, this.TxId()) {
+			logging.Infop("Error writing txid")
+		}
+
+		if !this.writeString(",") || !this.writer.printf("%s\"tximplicit\": \"%v\"", prefix, this.TxImplicit()) {
+			logging.Infop("Error writing tximplicit")
+		}
+
+		if !this.writeString(",") || !this.writer.printf("%s\"txstmtnum\": \"%v\"", prefix, this.TxStmtNum()) {
+			logging.Infop("Error writing stmtnum")
+		}
+
+		if !this.writeString(",") || !this.writer.printf("%s\"txtimeout\": \"%v\"", prefix, this.TxTimeout()) {
+			logging.Infop("Error writing txtimeout")
+		}
+
+		if !this.writeString(",") || !this.writer.printf("%s\"durability_level\": \"%v\"",
+			prefix, datastore.DurabilityLevelToName(this.DurabilityLevel())) {
+			logging.Infop("Error writing durability_level")
+		}
+
+		if !this.writeString(",") ||
+			!this.writer.printf("%s\"durability_timeout\": \"%v\"", prefix, this.DurabilityTimeout()) {
+			logging.Infop("Error writing durability_timeout")
+		}
+	}
+
+	return true
 }
 
 func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent string) bool {

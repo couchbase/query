@@ -21,35 +21,38 @@ import (
 
 type PrimaryScan3 struct {
 	readonly
-	index       datastore.PrimaryIndex3
-	indexer     datastore.Indexer
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceTerm
-	groupAggs   *IndexGroupAggregates
-	projection  *IndexProjection
-	orderTerms  IndexKeyOrders
-	offset      expression.Expression
-	limit       expression.Expression
-	cost        float64
-	cardinality float64
+	index            datastore.PrimaryIndex3
+	indexer          datastore.Indexer
+	keyspace         datastore.Keyspace
+	term             *algebra.KeyspaceTerm
+	groupAggs        *IndexGroupAggregates
+	projection       *IndexProjection
+	orderTerms       IndexKeyOrders
+	offset           expression.Expression
+	limit            expression.Expression
+	cost             float64
+	cardinality      float64
+	hasDeltaKeyspace bool
 }
 
 func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
-	groupAggs *IndexGroupAggregates, cost, cardinality float64) *PrimaryScan3 {
+	groupAggs *IndexGroupAggregates, cost, cardinality float64,
+	hasDeltaKeyspace bool) *PrimaryScan3 {
 	return &PrimaryScan3{
-		index:       index,
-		indexer:     index.Indexer(),
-		keyspace:    keyspace,
-		term:        term,
-		groupAggs:   groupAggs,
-		projection:  projection,
-		orderTerms:  orderTerms,
-		offset:      offset,
-		limit:       limit,
-		cost:        cost,
-		cardinality: cardinality,
+		index:            index,
+		indexer:          index.Indexer(),
+		keyspace:         keyspace,
+		term:             term,
+		groupAggs:        groupAggs,
+		projection:       projection,
+		orderTerms:       orderTerms,
+		offset:           offset,
+		limit:            limit,
+		cost:             cost,
+		cardinality:      cardinality,
+		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
 }
 
@@ -113,6 +116,10 @@ func (this *PrimaryScan3) Cardinality() float64 {
 	return this.cardinality
 }
 
+func (this *PrimaryScan3) HasDeltaKeyspace() bool {
+	return this.hasDeltaKeyspace
+}
+
 func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -155,6 +162,10 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 		r["cardinality"] = this.cardinality
 	}
 
+	if this.hasDeltaKeyspace {
+		r["has_delta_keyspace"] = this.hasDeltaKeyspace
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -163,21 +174,22 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                `json:"#operator"`
-		Index       string                `json:"index"`
-		Namespace   string                `json:"namespace"`
-		Bucket      string                `json:"bucket"`
-		Scope       string                `json:"scope"`
-		Keyspace    string                `json:"keyspace"`
-		As          string                `json:"as"`
-		Using       datastore.IndexType   `json:"using"`
-		GroupAggs   *IndexGroupAggregates `json:"index_group_aggs"`
-		Projection  *IndexProjection      `json:"index_projection"`
-		OrderTerms  IndexKeyOrders        `json:"index_order"`
-		Offset      string                `json:"offset"`
-		Limit       string                `json:"limit"`
-		Cost        float64               `json:"cost"`
-		Cardinality float64               `json:"cardinality"`
+		_                string                `json:"#operator"`
+		Index            string                `json:"index"`
+		Namespace        string                `json:"namespace"`
+		Bucket           string                `json:"bucket"`
+		Scope            string                `json:"scope"`
+		Keyspace         string                `json:"keyspace"`
+		As               string                `json:"as"`
+		Using            datastore.IndexType   `json:"using"`
+		GroupAggs        *IndexGroupAggregates `json:"index_group_aggs"`
+		Projection       *IndexProjection      `json:"index_projection"`
+		OrderTerms       IndexKeyOrders        `json:"index_order"`
+		Offset           string                `json:"offset"`
+		Limit            string                `json:"limit"`
+		Cost             float64               `json:"cost"`
+		Cardinality      float64               `json:"cardinality"`
+		HasDeltaKeyspace bool                  `json:"has_delta_keyspace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -188,6 +200,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms
 	this.groupAggs = _unmarshalled.GroupAggs
+	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
 
 	if _unmarshalled.Offset != "" {
 		this.offset, err = parser.Parse(_unmarshalled.Offset)

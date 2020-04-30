@@ -20,14 +20,16 @@ import (
 type KeyScan struct {
 	readonly
 	keys        expression.Expression
+	distinct    bool
 	cost        float64
 	cardinality float64
 }
 
-func NewKeyScan(keys expression.Expression, cost, cardinality float64) *KeyScan {
+func NewKeyScan(keys expression.Expression, distinct bool, cost, cardinality float64) *KeyScan {
 	keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 	return &KeyScan{
 		keys:        keys,
+		distinct:    distinct,
 		cost:        cost,
 		cardinality: cardinality,
 	}
@@ -45,6 +47,10 @@ func (this *KeyScan) Keys() expression.Expression {
 	return this.keys
 }
 
+func (this *KeyScan) Distinct() bool {
+	return this.distinct
+}
+
 func (this *KeyScan) Cost() float64 {
 	return this.cost
 }
@@ -60,6 +66,9 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "KeyScan"}
 	r["keys"] = expression.NewStringer().Visit(this.keys)
+	if this.distinct {
+		r["distinct"] = this.distinct
+	}
 	if this.cost > 0.0 {
 		r["cost"] = this.cost
 	}
@@ -76,6 +85,7 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string  `json:"#operator"`
 		Keys        string  `json:"keys"`
+		Distinct    bool    `json:"distinct"`
 		Cost        float64 `json:"cost"`
 		Cardinality float64 `json:"cardinality"`
 	}
@@ -95,6 +105,7 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
+	this.distinct = _unmarshalled.Distinct
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 

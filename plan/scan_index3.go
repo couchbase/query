@@ -28,21 +28,23 @@ const (
 
 type IndexScan3 struct {
 	readonly
-	index        datastore.Index3
-	indexer      datastore.Indexer
-	term         *algebra.KeyspaceTerm
-	spans        Spans2
-	flags        uint32
-	groupAggs    *IndexGroupAggregates
-	projection   *IndexProjection
-	orderTerms   IndexKeyOrders
-	offset       expression.Expression
-	limit        expression.Expression
-	covers       expression.Covers
-	filterCovers map[*expression.Cover]value.Value
-	filter       expression.Expression
-	cost         float64
-	cardinality  float64
+	index            datastore.Index3
+	indexer          datastore.Indexer
+	term             *algebra.KeyspaceTerm
+	keyspace         datastore.Keyspace
+	spans            Spans2
+	flags            uint32
+	groupAggs        *IndexGroupAggregates
+	projection       *IndexProjection
+	orderTerms       IndexKeyOrders
+	offset           expression.Expression
+	limit            expression.Expression
+	covers           expression.Covers
+	filterCovers     map[*expression.Cover]value.Value
+	filter           expression.Expression
+	cost             float64
+	cardinality      float64
+	hasDeltaKeyspace bool
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
@@ -50,8 +52,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
-	cost, cardinality float64) *IndexScan3 {
-
+	cost, cardinality float64, hasDeltaKeyspace bool) *IndexScan3 {
 	flags := uint32(0)
 	if reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN
@@ -62,23 +63,27 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	if dynamicIn {
 		flags |= ISCAN_HAS_DYNAMIC_IN_SPAN
 	}
-	return &IndexScan3{
-		index:        index,
-		indexer:      index.Indexer(),
-		term:         term,
-		spans:        spans,
-		flags:        flags,
-		groupAggs:    groupAggs,
-		projection:   projection,
-		orderTerms:   orderTerms,
-		offset:       offset,
-		limit:        limit,
-		covers:       covers,
-		filterCovers: filterCovers,
-		filter:       filter,
-		cost:         cost,
-		cardinality:  cardinality,
+	rv := &IndexScan3{
+		index:            index,
+		indexer:          index.Indexer(),
+		term:             term,
+		spans:            spans,
+		flags:            flags,
+		groupAggs:        groupAggs,
+		projection:       projection,
+		orderTerms:       orderTerms,
+		offset:           offset,
+		limit:            limit,
+		covers:           covers,
+		filterCovers:     filterCovers,
+		filter:           filter,
+		cost:             cost,
+		cardinality:      cardinality,
+		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
+
+	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
+	return rv
 }
 
 func (this *IndexScan3) Accept(visitor Visitor) (interface{}, error) {
@@ -95,6 +100,10 @@ func (this *IndexScan3) Index() datastore.Index3 {
 
 func (this *IndexScan3) Term() *algebra.KeyspaceTerm {
 	return this.term
+}
+
+func (this *IndexScan3) Keyspace() datastore.Keyspace {
+	return this.keyspace
 }
 
 func (this *IndexScan3) Spans() Spans2 {
@@ -211,6 +220,10 @@ func (this *IndexScan3) Cardinality() float64 {
 	return this.cardinality
 }
 
+func (this *IndexScan3) HasDeltaKeyspace() bool {
+	return this.hasDeltaKeyspace
+}
+
 func (this *IndexScan3) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
@@ -293,6 +306,10 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["cardinality"] = this.cardinality
 	}
 
+	if this.hasDeltaKeyspace {
+		r["has_delta_keyspace"] = this.hasDeltaKeyspace
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -301,30 +318,31 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Index        string                 `json:"index"`
-		IndexId      string                 `json:"index_id"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		As           string                 `json:"as"`
-		Using        datastore.IndexType    `json:"using"`
-		Spans        Spans2                 `json:"spans"`
-		Reverse      bool                   `json:"reverse"`
-		Distinct     bool                   `json:"distinct"`
-		DynamicIn    bool                   `json:"has_dynamic_in"`
-		UnderNL      bool                   `json:"nested_loop"`
-		GroupAggs    *IndexGroupAggregates  `json:"index_group_aggs"`
-		Projection   *IndexProjection       `json:"index_projection"`
-		OrderTerms   IndexKeyOrders         `json:"index_order"`
-		Offset       string                 `json:"offset"`
-		Limit        string                 `json:"limit"`
-		Covers       []string               `json:"covers"`
-		FilterCovers map[string]interface{} `json:"filter_covers"`
-		Filter       string                 `json:"filter"`
-		Cost         float64                `json:"cost"`
-		Cardinality  float64                `json:"cardinality"`
+		_                string                 `json:"#operator"`
+		Index            string                 `json:"index"`
+		IndexId          string                 `json:"index_id"`
+		Namespace        string                 `json:"namespace"`
+		Bucket           string                 `json:"bucket"`
+		Scope            string                 `json:"scope"`
+		Keyspace         string                 `json:"keyspace"`
+		As               string                 `json:"as"`
+		Using            datastore.IndexType    `json:"using"`
+		Spans            Spans2                 `json:"spans"`
+		Reverse          bool                   `json:"reverse"`
+		Distinct         bool                   `json:"distinct"`
+		DynamicIn        bool                   `json:"has_dynamic_in"`
+		UnderNL          bool                   `json:"nested_loop"`
+		GroupAggs        *IndexGroupAggregates  `json:"index_group_aggs"`
+		Projection       *IndexProjection       `json:"index_projection"`
+		OrderTerms       IndexKeyOrders         `json:"index_order"`
+		Offset           string                 `json:"offset"`
+		Limit            string                 `json:"limit"`
+		Covers           []string               `json:"covers"`
+		FilterCovers     map[string]interface{} `json:"filter_covers"`
+		Filter           string                 `json:"filter"`
+		Cost             float64                `json:"cost"`
+		Cardinality      float64                `json:"cardinality"`
+		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -334,7 +352,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
-	k, err := datastore.GetKeyspace(this.term.Path().Parts()...)
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err
 	}
@@ -354,6 +372,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.groupAggs = _unmarshalled.GroupAggs
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms
+	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
 
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
@@ -408,7 +427,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
-	this.indexer, err = k.Indexer(_unmarshalled.Using)
+	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}

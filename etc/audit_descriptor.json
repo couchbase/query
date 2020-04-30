@@ -36,6 +36,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -74,6 +75,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -112,6 +114,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -188,6 +191,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -226,6 +230,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -264,6 +269,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -302,6 +308,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -340,6 +347,7 @@
       "optional_fields" : {
 	"clientContextId" : "",
 	"queryContext" : "",
+	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
@@ -1423,6 +1431,249 @@
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28720,
+      "name" : "START TRANSACTION statement",
+      "description" : "A N1QL START TRANSACTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : ""
+      }
+    },
+    {
+      "id" : 28721,
+      "name" : "COMMIT TRANSACTION statement",
+      "description" : "A N1QL COMMIT TRANSACTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+	"txId" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : ""
+      }
+    },
+    {
+      "id" : 28722,
+      "name" : "ROLLBACK TRANSACTION statement",
+      "description" : "A N1QL ROLLBACK TRANSACTION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+	"txId" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : ""
+      }
+    },
+    {
+      "id" : 28723,
+      "name" : "ROLLBACK TRANSACTION TO SAVEPOINT statement",
+      "description" : "A N1QL ROLLBACK TRANSACTION TO SAVEPOINT statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+	"txId" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : ""
+      }
+    },
+    {
+      "id" : 28724,
+      "name" : "SET TRANSACTION ISOLATION statement",
+      "description" : "A N1QL SET TRANSACTION ISOLATION statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+	"txId" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : ""
+      }
+    },
+    {
+      "id" : 28725,
+      "name" : "SAVEPOINT statement",
+      "description" : "A N1QL SAVEPOINT statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+	"txId" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : ""
+      }
+    },
+    {
+      "id" : 28726,
+      "name" : "/admin/transactions API request",
+      "description" : "An HTTP request was made to the API at /admin/transactions.",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
+      }
+    },
+    {
+      "id" : 28727,
+      "name" : "/admin/indexes/transactions API request",
+      "description" : "An HTTP request was made to the API at /admin/indexes/transactions.",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
       }
     }
   ]

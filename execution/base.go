@@ -917,6 +917,65 @@ func (this *base) notifyStop() {
 	}
 }
 
+func (this *base) scanDeltaKeyspace(keyspace datastore.Keyspace, parent value.Value,
+	phase Phases, context *Context, covers expression.Covers) (keys map[string]bool, pool bool) {
+
+	pipelineCap := int(context.GetPipelineCap())
+	if pipelineCap <= _STRING_BOOL_POOL.Size() {
+		keys = _STRING_BOOL_POOL.Get()
+		pool = true
+	} else {
+		keys = make(map[string]bool, pipelineCap)
+	}
+
+	conn := datastore.NewIndexConnection(context)
+	defer conn.Dispose()
+	defer conn.SendStop()
+
+	go context.datastore.TransactionDeltaKeyScan(keyspace.QualifiedName(), conn)
+
+	var docs uint64
+	defer func() {
+		if docs > 0 {
+			context.AddPhaseCount(phase, docs)
+		}
+	}()
+
+	for {
+		entry, ok := this.getItemEntry(conn)
+		if ok {
+			if entry != nil {
+				if entry.MetaData == nil {
+					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
+					av.SetBit(this.bit)
+					if len(covers) > 0 { // only primary key
+						av.SetCover(covers[len(covers)-1].Text(), value.NewValue(entry.PrimaryKey))
+					}
+					ok = this.sendItem(av)
+					docs++
+					if docs > _PHASE_UPDATE_COUNT {
+						context.AddPhaseCount(phase, docs)
+						docs = 0
+					}
+				}
+				keys[entry.PrimaryKey] = true
+			} else {
+				break
+			}
+		} else {
+			return
+		}
+	}
+	return
+}
+
+func (this *base) deltaKeyspaceDone(keys map[string]bool, pool bool) (map[string]bool, bool) {
+	if pool {
+		_STRING_BOOL_POOL.Put(keys)
+	}
+	return nil, false
+}
+
 type batcher interface {
 	allocateBatch(context *Context, size int)
 	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool

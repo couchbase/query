@@ -26,6 +26,8 @@ type IndexScan3 struct {
 	conn     *datastore.IndexConnection
 	plan     *plan.IndexScan3
 	children []Operator
+	keys     map[string]bool
+	pool     bool
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
@@ -63,6 +65,14 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()                          // Notify that I have stopped
 		if !active {
 			return
+		}
+
+		if this.plan.HasDeltaKeyspace() {
+			defer func() {
+				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
+			}()
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
+				INDEX_SCAN, context, this.plan.Covers())
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
@@ -104,44 +114,46 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
-					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
-					covers := this.plan.Covers()
-					if lcovers > 0 {
+					if _, sok := this.keys[entry.PrimaryKey]; !sok {
+						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
+						covers := this.plan.Covers()
+						if lcovers > 0 {
 
-						for c, v := range this.plan.FilterCovers() {
-							av.SetCover(c.Text(), v)
-						}
+							for c, v := range this.plan.FilterCovers() {
+								av.SetCover(c.Text(), v)
+							}
 
-						// Matches planner.builder.buildCoveringScan()
-						for i, ek := range entry.EntryKey {
-							if proj == nil || i < len(entryKeys) {
-								if i < len(entryKeys) {
-									i = entryKeys[i]
-								}
+							// Matches planner.builder.buildCoveringScan()
+							for i, ek := range entry.EntryKey {
+								if proj == nil || i < len(entryKeys) {
+									if i < len(entryKeys) {
+										i = entryKeys[i]
+									}
 
-								if i < lcovers {
-									av.SetCover(covers[i].Text(), ek)
+									if i < lcovers {
+										av.SetCover(covers[i].Text(), ek)
+									}
 								}
 							}
-						}
 
-						// Matches planner.builder.buildCoveringScan()
-						if proj == nil || proj.PrimaryKey {
-							av.SetCover(covers[len(covers)-1].Text(),
-								value.NewValue(entry.PrimaryKey))
-						}
-
-						av.SetField(this.plan.Term().Alias(), av)
-
-						if this.plan.Filter() != nil {
-							result, err := this.plan.Filter().Evaluate(av, context)
-							if err != nil {
-								context.Error(errors.NewEvaluationError(err, "filter"))
-								return
+							// Matches planner.builder.buildCoveringScan()
+							if proj == nil || proj.PrimaryKey {
+								av.SetCover(covers[len(covers)-1].Text(),
+									value.NewValue(entry.PrimaryKey))
 							}
-							if !result.Truth() {
-								av.Recycle()
-								continue
+
+							av.SetField(this.plan.Term().Alias(), av)
+
+							if this.plan.Filter() != nil {
+								result, err := this.plan.Filter().Evaluate(av, context)
+								if err != nil {
+									context.Error(errors.NewEvaluationError(err, "filter"))
+									return
+								}
+								if !result.Truth() {
+									av.Recycle()
+									continue
+								}
 							}
 							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 								context.Error(errors.NewMemoryQuotaExceededError())
@@ -150,14 +162,14 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 								break
 							}
 						}
-					}
 
-					av.SetBit(this.bit)
-					ok = this.sendItem(av)
-					docs++
-					if docs > _PHASE_UPDATE_COUNT {
-						context.AddPhaseCount(INDEX_SCAN, docs)
-						docs = 0
+						av.SetBit(this.bit)
+						ok = this.sendItem(av)
+						docs++
+						if docs > _PHASE_UPDATE_COUNT {
+							context.AddPhaseCount(INDEX_SCAN, docs)
+							docs = 0
+						}
 					}
 				} else {
 					ok = false
@@ -321,6 +333,11 @@ func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 // send a stop/pause
 func (this *IndexScan3) SendAction(action opAction) {
 	this.connSendAction(this.conn, action)
+}
+
+func (this *IndexScan3) Done() {
+	this.baseDone()
+	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }
 
 const _FULL_SPAN_FANOUT = 8192

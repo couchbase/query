@@ -14,6 +14,8 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"sort"
+	"strconv"
 	"sync"
 
 	"github.com/couchbase/query/algebra"
@@ -35,9 +37,12 @@ type Prepared struct {
 	useFts          bool
 	useCBO          bool
 
-	indexers      []idxVersion // for reprepare checking
-	keyspaces     []ksVersion
-	subqueryPlans map[*algebra.Select]interface{}
+	indexScanKeyspaces              map[string]bool
+	indexers                        []idxVersion // for reprepare checking
+	keyspaces                       []ksVersion
+	subqueryPlans                   map[*algebra.Select]interface{}
+	subqueryPlansIndexScanKeyspaces map[*algebra.Select]interface{}
+	txPrepareds                     map[string]*Prepared
 	sync.RWMutex
 }
 
@@ -51,10 +56,11 @@ type ksVersion struct {
 	version uint64
 }
 
-func NewPrepared(operator Operator, signature value.Value) *Prepared {
+func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool) *Prepared {
 	return &Prepared{
-		Operator:  operator,
-		signature: signature,
+		Operator:           operator,
+		signature:          signature,
+		indexScanKeyspaces: indexScanKeyspaces,
 	}
 }
 
@@ -79,6 +85,9 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	if this.useCBO {
 		r["useCBO"] = this.useCBO
 	}
+	if len(this.indexScanKeyspaces) > 0 {
+		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
+	}
 
 	if f != nil {
 		f(r)
@@ -88,18 +97,19 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Operator        json.RawMessage `json:"operator"`
-		Signature       json.RawMessage `json:"signature"`
-		Name            string          `json:"name"`
-		EncodedPlan     string          `json:"encoded_plan"`
-		Text            string          `json:"text"`
-		ReqType         string          `json:"reqType"`
-		ApiVersion      int             `json:"indexApiVersion"`
-		FeatureControls uint64          `json:"featureControls"`
-		Namespace       string          `json:"namespace"`
-		QueryContext    string          `json:"queryContext"`
-		UseFts          bool            `json:"useFts"`
-		UseCBO          bool            `json:"useCBO"`
+		Operator           json.RawMessage        `json:"operator"`
+		Signature          json.RawMessage        `json:"signature"`
+		Name               string                 `json:"name"`
+		EncodedPlan        string                 `json:"encoded_plan"`
+		Text               string                 `json:"text"`
+		ReqType            string                 `json:"reqType"`
+		ApiVersion         int                    `json:"indexApiVersion"`
+		FeatureControls    uint64                 `json:"featureControls"`
+		Namespace          string                 `json:"namespace"`
+		QueryContext       string                 `json:"queryContext"`
+		UseFts             bool                   `json:"useFts"`
+		UseCBO             bool                   `json:"useCBO"`
+		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 	}
 
 	var op_type struct {
@@ -132,6 +142,12 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
+	if len(_unmarshalled.IndexScanKeyspaces) > 0 {
+		this.indexScanKeyspaces = make(map[string]bool, len(_unmarshalled.IndexScanKeyspaces))
+		for ks, v := range _unmarshalled.IndexScanKeyspaces {
+			this.indexScanKeyspaces[ks] = v.(bool)
+		}
+	}
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -236,6 +252,20 @@ func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
 	return this.encoded_plan != encoded_plan
 }
 
+func (this *Prepared) SetIndexScanKeyspaces(ik map[string]bool) {
+	this.indexScanKeyspaces = ik
+}
+
+func (this *Prepared) IndexScanKeyspaces() (rv map[string]interface{}) {
+	if len(this.indexScanKeyspaces) > 0 {
+		rv = make(map[string]interface{}, len(this.indexScanKeyspaces))
+		for ks, v := range this.indexScanKeyspaces {
+			rv[ks] = v
+		}
+	}
+	return rv
+}
+
 // Locking is handled by the top level caller!
 func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 	indexer.Refresh()
@@ -289,18 +319,123 @@ func (this *Prepared) Verify() bool {
 }
 
 // must be called with the prepared read locked
-func (this *Prepared) GetSubqueryPlan(key *algebra.Select) (interface{}, bool) {
+func (this *Prepared) GetSubqueryPlan(key *algebra.Select) (interface{}, interface{}, bool) {
 	if this.subqueryPlans == nil {
-		return nil, false
+		return nil, nil, false
 	}
 	rv, ok := this.subqueryPlans[key]
-	return rv, ok
+	irv, _ := this.subqueryPlansIndexScanKeyspaces[key]
+	return rv, irv, ok
 }
 
 // must be called with the prepared write locked
-func (this *Prepared) SetSubqueryPlan(key *algebra.Select, value interface{}) {
+func (this *Prepared) SetSubqueryPlan(key *algebra.Select, value, iks interface{}) {
 	if this.subqueryPlans == nil {
 		this.subqueryPlans = make(map[*algebra.Select]interface{})
+		this.subqueryPlansIndexScanKeyspaces = make(map[*algebra.Select]interface{})
 	}
 	this.subqueryPlans[key] = value
+	this.subqueryPlansIndexScanKeyspaces[key] = iks
+}
+
+const (
+	_TX_KEYSPACES = 2
+)
+
+func (this *Prepared) SetTxPrepared(txPrepared *Prepared, hashCode string) {
+	if hashCode == "" || len(this.indexScanKeyspaces) > _TX_KEYSPACES {
+		return
+	}
+	this.Lock()
+	defer this.Unlock()
+	if this.txPrepareds == nil {
+		this.txPrepareds = make(map[string]*Prepared, (1 << _TX_KEYSPACES))
+	}
+	this.txPrepareds[hashCode] = txPrepared
+}
+
+func (this *Prepared) GetTxPrepared(deltaKeyspaces map[string]bool) (*Prepared, string) {
+	if len(deltaKeyspaces) > 0 {
+		if len(this.indexScanKeyspaces) == 0 {
+			return this, ""
+		} else if len(this.indexScanKeyspaces) > _TX_KEYSPACES {
+			return nil, ""
+		}
+		good := true
+		for ks, _ := range this.indexScanKeyspaces {
+			if _, ok := deltaKeyspaces[ks]; ok {
+				good = false
+				break
+			}
+		}
+
+		if good {
+			return this, ""
+		}
+	}
+
+	hashCode := this.txHashCode(deltaKeyspaces)
+	this.RLock()
+	defer this.RUnlock()
+	prepared, _ := this.txPrepareds[hashCode]
+	return prepared, hashCode
+}
+
+func (this *Prepared) TxPrepared() (rv map[string]interface{}, rvp map[string]interface{}) {
+	if len(this.txPrepareds) == 0 {
+		return
+	}
+	this.RLock()
+	defer this.RUnlock()
+	rv = make(map[string]interface{}, len(this.txPrepareds))
+	rvp = make(map[string]interface{}, len(this.txPrepareds))
+	i := 1
+	for _, p := range this.txPrepareds {
+		plan := p.EncodedPlan()
+		isks := p.IndexScanKeyspaces()
+		if plan != "" && len(isks) > 0 {
+			key := "p" + strconv.Itoa(i)
+			i++
+			rv[key] = map[string]interface{}{
+				"plan":               plan,
+				"indexScanKeyspaces": isks,
+			}
+			b, _ := json.Marshal(p.Operator)
+			rvp[key] = map[string]interface{}{
+				"plan":               b,
+				"indexScanKeyspaces": isks,
+			}
+		}
+	}
+	return
+}
+
+func (this *Prepared) txHashCode(deltaKeyspaces map[string]bool) (hashCode string) {
+	if len(deltaKeyspaces) == 0 {
+		return "(delete)"
+	}
+
+	var i int
+	var nameBuf [_TX_KEYSPACES]string
+	names := nameBuf[0:len(this.indexScanKeyspaces)]
+
+	for ks, _ := range this.indexScanKeyspaces {
+		names[i] = ks
+		i++
+	}
+
+	sort.Strings(names)
+
+	for i, ks := range names {
+		if i != 0 {
+			hashCode += ","
+		}
+		if ok, _ := deltaKeyspaces[ks]; ok {
+			hashCode += "(" + ks + "):true"
+		} else {
+			hashCode += "(" + ks + "):false"
+		}
+	}
+
+	return hashCode
 }

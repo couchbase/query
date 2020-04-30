@@ -28,6 +28,8 @@ type IndexFtsSearch struct {
 	conn     *datastore.IndexConnection
 	plan     *plan.IndexFtsSearch
 	children []Operator
+	keys     map[string]bool
+	pool     bool
 }
 
 func NewIndexFtsSearch(plan *plan.IndexFtsSearch, context *Context) *IndexFtsSearch {
@@ -67,6 +69,14 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		if this.plan.HasDeltaKeyspace() {
+			defer func() {
+				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
+			}()
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
+				FTS_SEARCH, context, this.plan.Covers())
+		}
+
 		this.conn = datastore.NewIndexConnection(context)
 		defer this.conn.Dispose()  // Dispose of the connection
 		defer this.conn.SendStop() // Notify index that I have stopped
@@ -102,35 +112,37 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
-					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
-					if lc > 0 {
-						for c, v := range fc {
-							av.SetCover(c.Text(), v)
-						}
+					if _, sok := this.keys[entry.PrimaryKey]; !sok {
+						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
+						if lc > 0 {
+							for c, v := range fc {
+								av.SetCover(c.Text(), v)
+							}
 
-						av.SetCover(covers[0].Text(), value.NewValue(true))
-						av.SetCover(covers[1].Text(), value.NewValue(entry.PrimaryKey))
-						smeta := entry.MetaData
-						var score value.Value
-						if smeta != nil {
-							score, _ = smeta.Field("score")
-						}
+							av.SetCover(covers[0].Text(), value.NewValue(true))
+							av.SetCover(covers[1].Text(), value.NewValue(entry.PrimaryKey))
+							smeta := entry.MetaData
+							var score value.Value
+							if smeta != nil {
+								score, _ = smeta.Field("score")
+							}
 
-						if lc > 2 {
-							av.SetCover(covers[2].Text(), score)
+							if lc > 2 {
+								av.SetCover(covers[2].Text(), score)
+							}
+							if lc > 3 {
+								av.SetCover(covers[3].Text(), smeta)
+							}
+							av.SetField(this.plan.Term().Alias(), av)
 						}
-						if lc > 3 {
-							av.SetCover(covers[3].Text(), smeta)
+						av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
+						av.SetBit(this.bit)
+						ok = this.sendItem(av)
+						docs++
+						if docs > _PHASE_UPDATE_COUNT {
+							context.AddPhaseCount(FTS_SEARCH, docs)
+							docs = 0
 						}
-						av.SetField(this.plan.Term().Alias(), av)
-					}
-					av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
-					av.SetBit(this.bit)
-					ok = this.sendItem(av)
-					docs++
-					if docs > _PHASE_UPDATE_COUNT {
-						context.AddPhaseCount(FTS_SEARCH, docs)
-						docs = 0
 					}
 				} else {
 					ok = false
@@ -206,6 +218,11 @@ func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 // send a stop/pause
 func (this *IndexFtsSearch) SendAction(action opAction) {
 	this.connSendAction(this.conn, action)
+}
+
+func (this *IndexFtsSearch) Done() {
+	this.baseDone()
+	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }
 
 func SetSearchInfo(aliasMap map[string]string, item value.Value,

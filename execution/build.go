@@ -718,3 +718,28 @@ func (this *builder) VisitAdvise(plan *plan.Advise) (interface{}, error) {
 func (this *builder) VisitUpdateStatistics(plan *plan.UpdateStatistics) (interface{}, error) {
 	return checkOp(NewUpdateStatistics(plan, this.context), this.context)
 }
+
+// Start Transaction
+func (this *builder) VisitStartTransaction(plan *plan.StartTransaction) (interface{}, error) {
+	return checkOp(NewStartTransaction(plan, this.context), this.context)
+}
+
+// Commit Transaction
+func (this *builder) VisitCommitTransaction(plan *plan.CommitTransaction) (interface{}, error) {
+	return checkOp(NewCommitTransaction(plan, this.context), this.context)
+}
+
+// Rollback Transaction
+func (this *builder) VisitRollbackTransaction(plan *plan.RollbackTransaction) (interface{}, error) {
+	return checkOp(NewRollbackTransaction(plan, this.context), this.context)
+}
+
+// Transaction Isolation
+func (this *builder) VisitTransactionIsolation(plan *plan.TransactionIsolation) (interface{}, error) {
+	return checkOp(NewTransactionIsolation(plan, this.context), this.context)
+}
+
+// Savepoint
+func (this *builder) VisitSavepoint(plan *plan.Savepoint) (interface{}, error) {
+	return checkOp(NewSavepoint(plan, this.context), this.context)
+}

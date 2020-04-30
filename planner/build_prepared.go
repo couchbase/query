@@ -17,11 +17,11 @@ import (
 
 func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery, stream bool, context *PrepareContext) (*plan.Prepared, error) {
-	operator, err := Build(stmt, datastore, systemstore, namespace, subquery, stream, context)
+	operator, ik, err := Build(stmt, datastore, systemstore, namespace, subquery, stream, context)
 	if err != nil {
 		return nil, err
 	}
 
 	signature := stmt.Signature()
-	return plan.NewPrepared(operator, signature), nil
+	return plan.NewPrepared(operator, signature, ik), nil
 }

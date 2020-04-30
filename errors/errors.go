@@ -48,6 +48,7 @@ type Error interface {
 	OnceOnly() bool
 	Object() map[string]interface{}
 	Retry() bool
+	Diagnostics() interface{}
 }
 
 type ErrorChannel chan Error
@@ -82,6 +83,13 @@ func NewDebug(internalMsg string) Error {
 	return &err{level: DEBUG, InternalMsg: internalMsg, InternalCaller: CallerN(1)}
 }
 
+func NewErrors(es []error, internalMsg string) (errs Errors) {
+	for _, e := range es {
+		errs = append(errs, NewError(e, internalMsg))
+	}
+	return errs
+}
+
 type err struct {
 	ICode          int32
 	IKey           string
@@ -91,6 +99,7 @@ type err struct {
 	level          int
 	onceOnly       bool
 	retry          bool // Retrying this query might be useful.
+	diagnostics    interface{}
 }
 
 func (e *err) Error() string {
@@ -118,35 +127,29 @@ func (e *err) Object() map[string]interface{} {
 	if e.retry {
 		m["retry"] = true
 	}
+	if e.diagnostics != nil {
+		m["diagnostics"] = e.diagnostics
+	}
 	return m
 }
 
 func (e *err) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
-		"code":    e.ICode,
-		"key":     e.IKey,
-		"message": e.InternalMsg,
-	}
-	if e.ICause != nil {
-		m["cause"] = e.ICause.Error()
-	}
+	m := e.Object()
 	if e.InternalCaller != "" &&
 		!strings.HasPrefix("e.InternalCaller", "unknown:") {
 		m["caller"] = e.InternalCaller
-	}
-	if e.retry {
-		m["retry"] = true
 	}
 	return json.Marshal(m)
 }
 
 func (e *err) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Caller  string `json:"caller"`
-		Code    int32  `json:"code"`
-		Key     string `json:"key"`
-		Message string `json:"message"`
-		Retry   bool   `json:"retry"`
+		Caller      string      `json:"caller"`
+		Code        int32       `json:"code"`
+		Key         string      `json:"key"`
+		Message     string      `json:"message"`
+		Retry       bool        `json:"retry"`
+		Diagnostics interface{} `json:"diagnostics"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -159,6 +162,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 	e.InternalMsg = _unmarshalled.Message
 	e.InternalCaller = _unmarshalled.Caller
 	e.retry = _unmarshalled.Retry
+	e.diagnostics = _unmarshalled.Diagnostics
 	return nil
 }
 
@@ -192,6 +196,10 @@ func (e *err) OnceOnly() bool {
 
 func (e *err) Retry() bool {
 	return e.retry
+}
+
+func (e *err) Diagnostics() interface{} {
+	return e.diagnostics
 }
 
 // only put errors in the reserved range here (7000-9999)

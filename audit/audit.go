@@ -53,6 +53,9 @@ type Auditable interface {
 	// The query context used to formalize collections
 	EventQueryContext() string
 
+	// Transaction Id
+	EventTxId() string
+
 	// Statement id.
 	EventId() string
 
@@ -343,6 +346,7 @@ func stringifyQueryAR(entry n1qlAuditEvent) string {
 	str += fmt.Sprintf("NamedArgs: %v ", entry.NamedArgs)
 	str += fmt.Sprintf("PositionalArgs: %v ", entry.PositionalArgs)
 	str += fmt.Sprintf("ClientContextId: <ud>%v</ud> ", entry.ClientContextId)
+	str += fmt.Sprintf("TxId: <ud>%v</ud> ", entry.TxId)
 	str += fmt.Sprintf("IsAdHoc: %v ", entry.IsAdHoc)
 	str += fmt.Sprintf("PreparedId: %v ", entry.PreparedId)
 	str += fmt.Sprintf("UserAgent: %v ", entry.UserAgent)
@@ -372,32 +376,38 @@ func stringifyAPIAR(entry n1qlAuditApiRequestEvent) string {
 
 // Event types are described in /query/etc/audit_descriptor.json
 var _EVENT_TYPE_MAP = map[string]uint32{
-	"SELECT":               28672,
-	"EXPLAIN":              28673,
-	"PREPARE":              28674,
-	"INFER":                28675,
-	"INSERT":               28676,
-	"UPSERT":               28677,
-	"DELETE":               28678,
-	"UPDATE":               28679,
-	"MERGE":                28680,
-	"CREATE_INDEX":         28681,
-	"DROP_INDEX":           28682,
-	"ALTER_INDEX":          28683,
-	"BUILD_INDEX":          28684,
-	"GRANT_ROLE":           28685,
-	"REVOKE_ROLE":          28686,
-	"CREATE_PRIMARY_INDEX": 28688,
-	"CREATE_FUNCTION":      28706,
-	"DROP_FUNCTION":        28707,
-	"EXECUTE_FUNCTION":     28708,
-	"CREATE_SCOPE":         28713,
-	"DROP_SCOPE":           28714,
-	"CREATE_COLLECTION":    28715,
-	"DROP_COLLECTION":      28716,
-	"FLUSH_COLLECTION":     28717,
-	"UPDATE_STATISTICS":    28718,
-	"ADVISE":               28719,
+	"SELECT":                    28672,
+	"EXPLAIN":                   28673,
+	"PREPARE":                   28674,
+	"INFER":                     28675,
+	"INSERT":                    28676,
+	"UPSERT":                    28677,
+	"DELETE":                    28678,
+	"UPDATE":                    28679,
+	"MERGE":                     28680,
+	"CREATE_INDEX":              28681,
+	"DROP_INDEX":                28682,
+	"ALTER_INDEX":               28683,
+	"BUILD_INDEX":               28684,
+	"GRANT_ROLE":                28685,
+	"REVOKE_ROLE":               28686,
+	"CREATE_PRIMARY_INDEX":      28688,
+	"CREATE_FUNCTION":           28706,
+	"DROP_FUNCTION":             28707,
+	"EXECUTE_FUNCTION":          28708,
+	"CREATE_SCOPE":              28713,
+	"DROP_SCOPE":                28714,
+	"CREATE_COLLECTION":         28715,
+	"DROP_COLLECTION":           28716,
+	"FLUSH_COLLECTION":          28717,
+	"UPDATE_STATISTICS":         28718,
+	"ADVISE":                    28719,
+	"START_TRANSACTION":         28720,
+	"COMMIT":                    28721,
+	"ROLLBACK":                  28722,
+	"ROLLBACK_SAVEPOINT":        28723,
+	"SET_TRANSACTION_ISOLATION": 28724,
+	"SAVEPOINT":                 28725,
 }
 
 func Submit(event Auditable) {
@@ -465,6 +475,8 @@ const (
 	API_ADMIN_INDEXES_TASKS              = 28710
 	API_ADMIN_DICTIONARY                 = 28711
 	API_ADMIN_INDEXES_DICTIONARY         = 28712
+	API_ADMIN_TRANSACTIONS               = 28726
+	API_ADMIN_INDEXES_TRANSACTIONS       = 28727
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {
@@ -531,6 +543,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	namedArgs := event.EventNamedArgs()
 	positionalArgs := event.EventPositionalArgs()
 	clientContextId := event.ClientContextId()
+	txId := event.EventTxId()
 	isAdHoc := event.IsAdHoc()
 	preparedId := event.PreparedId()
 	userAgent := event.UserAgent()
@@ -559,6 +572,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			NamedArgs:       namedArgs,
 			PositionalArgs:  positionalArgs,
 			ClientContextId: clientContextId,
+			TxId:            txId,
 			IsAdHoc:         isAdHoc,
 			PreparedId:      preparedId,
 			UserAgent:       userAgent,
@@ -595,6 +609,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			NamedArgs:       namedArgs,
 			PositionalArgs:  positionalArgs,
 			ClientContextId: clientContextId,
+			TxId:            txId,
 			IsAdHoc:         isAdHoc,
 			PreparedId:      preparedId,
 			UserAgent:       userAgent,
@@ -709,6 +724,7 @@ type n1qlAuditEvent struct {
 	NamedArgs       map[string]interface{} `json:"namedArgs,omitempty"`
 	PositionalArgs  []interface{}          `json:"positionalArgs,omitempty"`
 	ClientContextId string                 `json:"clientContextId,omitempty"`
+	TxId            string                 `json:"txId,omitempty"`
 
 	IsAdHoc    bool   `json:"isAdHoc"`
 	PreparedId string `json:"preparedId,omitempty"`

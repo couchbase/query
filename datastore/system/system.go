@@ -46,6 +46,7 @@ const KEYSPACE_NAME_MY_USER_INFO = "my_user_info"
 const KEYSPACE_NAME_NODES = "nodes"
 const KEYSPACE_NAME_APPLICABLE_ROLES = "applicable_roles"
 const KEYSPACE_NAME_TASKS_CACHE = "tasks_cache"
+const KEYSPACE_NAME_TRANSACTIONS = "transactions"
 
 // TODO, sync with fetch timeout
 const scanTimeout = 30 * time.Second
@@ -220,6 +221,26 @@ func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 
 func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	return false, nil
+}
+
+func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (map[string]bool, errors.Error) {
+	return nil, errors.NewTranDatastoreNotSupportedError("system")
+}
+
+func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryContext) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("system")
+}
+
+func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("system")
+}
+
+func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("system")
+}
+
+func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexConnection) {
+	defer conn.Sender().Close()
 }
 
 func NewDatastore(actualStore datastore.Datastore) (datastore.Systemstore, errors.Error) {

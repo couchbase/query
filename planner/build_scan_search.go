@@ -87,8 +87,10 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	if this.order != nil && searchOrderEntry == nil {
 		this.resetOrderOffsetLimit()
 	}
-	scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, covers, filterCovers)
+	hasDeltaKeySpace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, covers, filterCovers, hasDeltaKeySpace)
 	if scan != nil {
+		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)
 	}
 
@@ -144,8 +146,10 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 	searchOrders := this.checkFlexSearchResetPaginations(bentry)
 	this.resetProjection()
 
-	scan := this.CreateFTSSearch(bentry.index, node, sfn, searchOrders, covers, nil)
+	hasDeltaKeySpace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	scan := this.CreateFTSSearch(bentry.index, node, sfn, searchOrders, covers, nil, hasDeltaKeySpace)
 	if scan != nil {
+		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)
 	}
 
@@ -156,11 +160,11 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 
 func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.KeyspaceTerm,
 	sfn *search.Search, order []string, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
+	filterCovers map[*expression.Cover]value.Value, hasDeltaKeySpace bool) plan.SecondaryScan {
 
 	return plan.NewIndexFtsSearch(index, node,
 		plan.NewFTSSearchInfo(expression.NewConstant(sfn.FieldName()), sfn.Query(), sfn.Options(),
-			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers)
+			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers, hasDeltaKeySpace)
 }
 
 // SEARCH() function pagination

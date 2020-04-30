@@ -49,6 +49,7 @@ type RequestLogEntry struct {
 	Plan            *plan.Prepared
 	State           string
 	ScanConsistency string
+	TxId            string
 	UseFts          bool
 	UseCBO          bool
 	ResultCount     int
@@ -535,6 +536,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		UseCBO:          request.UseCBO(),
 		Mutations:       request.MutationCount(),
 		QueryContext:    request.QueryContext(),
+		TxId:            request.TxId(),
 	}
 	stmt := request.Statement()
 	if stmt != "" {

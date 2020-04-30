@@ -229,6 +229,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[applicableRoles.Name()] = applicableRoles
 
+	transactions, e := newTransactionsKeyspace(p)
+	if e != nil {
+		return e
+	}
+
+	p.keyspaces[transactions.Name()] = transactions
 	return nil
 }
 

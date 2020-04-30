@@ -158,6 +158,26 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	return false, nil
 }
 
+func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (map[string]bool, errors.Error) {
+	return nil, errors.NewTranDatastoreNotSupportedError("mock")
+}
+
+func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryContext) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("mock")
+}
+
+func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("mock")
+}
+
+func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+	return errors.NewTranDatastoreNotSupportedError("mock")
+}
+
+func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexConnection) {
+	defer conn.Sender().Close()
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store
@@ -345,27 +365,27 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	return doc, nil
 }
 
-func (b *keyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Release() {
+func (b *keyspace) Release(close bool) {
 }
 
 func (b *keyspace) CreateScope(name string) errors.Error {

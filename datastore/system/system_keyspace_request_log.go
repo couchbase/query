@@ -27,7 +27,7 @@ type requestLogKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *requestLogKeyspace) Release() {
+func (b *requestLogKeyspace) Release(close bool) {
 }
 
 func (b *requestLogKeyspace) NamespaceId() string {
@@ -135,6 +135,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.UseCBO {
 					item.SetField("useCBO", entry.UseCBO)
 				}
+				if entry.TxId != "" {
+					item.SetField("txid", entry.TxId)
+				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)
 					item.SetField("preparedText", entry.PreparedText)
@@ -204,29 +207,30 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return
 }
 
-func (b *requestLogKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *requestLogKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *requestLogKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *requestLogKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *requestLogKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *requestLogKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *requestLogKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *requestLogKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	var err errors.Error
 
 	creds, authToken := credsFromContext(context)
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	for i, name := range deletes {
+	for i, pair := range deletes {
+		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 		// remote entry
@@ -246,7 +250,7 @@ func (b *requestLogKeyspace) Delete(deletes []string, context datastore.QueryCon
 
 		// save memory allocations by making a new slice only on errors
 		if err != nil {
-			deleted := make([]string, i)
+			deleted := make([]value.Pair, i)
 			if i > 0 {
 				copy(deleted, deletes[0:i-1])
 			}

@@ -200,7 +200,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Perform the actual INSERT
 	var er errors.Error
-	dpairs, er = this.keyspace.Insert(dpairs)
+	dpairs, er = this.keyspace.Insert(dpairs, context)
 
 	this.switchPhase(_EXECTIME)
 

@@ -26,7 +26,7 @@ type applicableRolesKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *applicableRolesKeyspace) Release() {
+func (b *applicableRolesKeyspace) Release(close bool) {
 }
 
 func (b *applicableRolesKeyspace) NamespaceId() string {
@@ -101,19 +101,19 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 	return
 }
 
-func (b *applicableRolesKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *applicableRolesKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *applicableRolesKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *applicableRolesKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *applicableRolesKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *applicableRolesKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *applicableRolesKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *applicableRolesKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 

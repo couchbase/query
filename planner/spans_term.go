@@ -36,8 +36,8 @@ func (this *TermSpans) CreateScan(
 	reverse, distinct, overlap, array bool, offset, limit expression.Expression,
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value,
-	filter expression.Expression, cost, cardinality float64) plan.SecondaryScan {
+	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
+	cost, cardinality float64, hasDeltaKeyspace bool) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
@@ -45,7 +45,8 @@ func (this *TermSpans) CreateScan(
 		dynamicIn := this.spans.HasDynamicIn()
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter, cost, cardinality)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
+				cost, cardinality, hasDeltaKeyspace)
 
 			if cost > 0.0 && cardinality > 0.0 {
 				distCost, distCard := getDistinctScanCost(index, cardinality)
@@ -60,7 +61,8 @@ func (this *TermSpans) CreateScan(
 			return plan.NewDistinctScan(limit, offset, scan, cost, cardinality)
 		} else {
 			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter, cost, cardinality)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
+				cost, cardinality, hasDeltaKeyspace)
 		}
 
 	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index, indexApiVersion) {
@@ -71,11 +73,11 @@ func (this *TermSpans) CreateScan(
 
 		if distScan {
 			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, false, false, nil, nil,
-				projection, covers, filterCovers)
+				projection, covers, filterCovers, hasDeltaKeyspace)
 			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 		} else {
 			return plan.NewIndexScan2(index2, term, this.spans, reverse, distinct, false, offset, limit,
-				projection, covers, filterCovers)
+				projection, covers, filterCovers, hasDeltaKeyspace)
 		}
 	} else {
 		var limitOffset expression.Expression
@@ -89,10 +91,10 @@ func (this *TermSpans) CreateScan(
 		}
 
 		if distScan || (len(spans) > 1 && !exact) {
-			scan := plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers)
+			scan := plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers, hasDeltaKeyspace)
 			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 		} else {
-			return plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers)
+			return plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers, hasDeltaKeyspace)
 		}
 	}
 }

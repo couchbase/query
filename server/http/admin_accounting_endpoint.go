@@ -27,23 +27,25 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
 )
 
 const (
-	accountingPrefix = adminPrefix + "/stats"
-	vitalsPrefix     = adminPrefix + "/vitals"
-	preparedsPrefix  = adminPrefix + "/prepareds"
-	requestsPrefix   = adminPrefix + "/active_requests"
-	completedsPrefix = adminPrefix + "/completed_requests"
-	functionsPrefix  = adminPrefix + "/functions_cache"
-	dictionaryPrefix = adminPrefix + "/dictionary_cache"
-	tasksPrefix      = adminPrefix + "/tasks_cache"
-	indexesPrefix    = adminPrefix + "/indexes"
-	expvarsRoute     = "/debug/vars"
-	prometheusLow    = "/_prometheusMetrics"
-	prometheusHigh   = "/_prometheusMetricsHigh"
+	accountingPrefix   = adminPrefix + "/stats"
+	vitalsPrefix       = adminPrefix + "/vitals"
+	preparedsPrefix    = adminPrefix + "/prepareds"
+	requestsPrefix     = adminPrefix + "/active_requests"
+	completedsPrefix   = adminPrefix + "/completed_requests"
+	functionsPrefix    = adminPrefix + "/functions_cache"
+	dictionaryPrefix   = adminPrefix + "/dictionary_cache"
+	tasksPrefix        = adminPrefix + "/tasks_cache"
+	indexesPrefix      = adminPrefix + "/indexes"
+	expvarsRoute       = "/debug/vars"
+	prometheusLow      = "/_prometheusMetrics"
+	prometheusHigh     = "/_prometheusMetricsHigh"
+	transactionsPrefix = adminPrefix + "/transactions"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -127,6 +129,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doEmpty)
 	}
+	transactionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doTransactionsIndex)
+	}
+	transactionHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doTransaction)
+	}
+	transactionsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doTransactions)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -146,6 +157,8 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		dictionaryPrefix + "/{name}":          {handler: dictionaryEntryHandler, methods: []string{"GET", "POST", "DELETE"}},
 		tasksPrefix:                           {handler: tasksHandler, methods: []string{"GET"}},
 		tasksPrefix + "/{name}":               {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
+		transactionsPrefix:                    {handler: transactionsHandler, methods: []string{"GET"}},
+		transactionsPrefix + "/{txid}":        {handler: transactionHandler, methods: []string{"GET", "POST", "DELETE"}},
 		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
@@ -154,6 +167,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
 		prometheusHigh:                        {handler: prometheusHighHandler, methods: []string{"GET"}},
+		indexesPrefix + "/transactions":       {handler: transactionsIndexHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -357,7 +371,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminBodyError(err1)
 		}
 
-		prepared, _ := prepareds.GetPrepared(name)
+		prepared, _ := prepareds.GetPrepared(name, nil)
 
 		// nothing to do if the prepared is there and the plan matches
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
@@ -396,8 +410,19 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			if entry.Prepared.EncodedPlan() != "" {
 				itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 			}
+			isks := entry.Prepared.IndexScanKeyspaces()
+			if len(isks) > 0 {
+				itemMap["indexScanKeyspaces"] = isks
+			}
+			txPrepards, txPlans := entry.Prepared.TxPrepared()
+			if len(txPrepards) > 0 {
+				itemMap["txPrepards"] = txPrepards
+			}
 			if req.Method == "POST" {
 				itemMap["plan"] = entry.Prepared.Operator
+				if len(txPlans) > 0 {
+					itemMap["txPlans"] = txPlans
+				}
 			}
 
 			// only give times for entries that have completed at least one execution
@@ -445,6 +470,14 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			}
 			if d.Prepared.EncodedPlan() != "" {
 				data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
+			}
+			isks := d.Prepared.IndexScanKeyspaces()
+			if len(isks) > 0 {
+				data[i]["indexScanKeyspaces"] = isks
+			}
+			txPrepards, _ := d.Prepared.TxPrepared()
+			if len(txPrepards) > 0 {
+				data[i]["txPrepards"] = txPrepards
 			}
 			data[i]["statement"] = d.Prepared.Text()
 			data[i]["uses"] = d.Uses
@@ -735,6 +768,72 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 }
 
+func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	txId := vars["txid"]
+
+	af.EventTypeId = audit.API_ADMIN_TRANSACTIONS
+	af.Name = txId
+
+	if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		return true, transactions.DeleteTransContext(txId, true)
+	} else if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:transactions, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
+		err := verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		var itemMap map[string]interface{}
+		transactions.TransactionEntryDo(txId, func(d interface{}) {
+			entry := d.(*transactions.TranContext)
+			itemMap = map[string]interface{}{}
+			entry.Content(itemMap)
+		})
+		return itemMap, nil
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_TRANSACTIONS
+	switch req.Method {
+	case "GET":
+		err := verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		numTransactions := transactions.CountTransContext()
+		data := make([]map[string]interface{}, 0, numTransactions)
+
+		snapshot := func(name string, d interface{}) bool {
+			tranContext := d.(*transactions.TranContext)
+			entry := map[string]interface{}{}
+			tranContext.Content(entry)
+			data = append(data, entry)
+			return true
+		}
+
+		transactions.TransactionEntriesForeach(snapshot, nil)
+		return data, nil
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
 func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	requestId := vars["request"]
@@ -789,6 +888,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 			p := request.Prepared()
 			reqMap["preparedName"] = p.Name()
 			reqMap["preparedText"] = p.Text()
+		}
+		if request.TxId() != "" {
+			reqMap["txid"] = request.TxId()
 		}
 		reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
@@ -909,6 +1011,12 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 			requests[i]["preparedName"] = p.Name()
 			requests[i]["preparedStatement"] = p.Text()
 		}
+		if request.QueryContext() != "" {
+			requests[i]["queryContext"] = request.QueryContext()
+		}
+		if request.TxId() != "" {
+			requests[i]["txid"] = request.TxId()
+		}
 		requests[i]["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
@@ -999,6 +1107,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		if request.PreparedName != "" {
 			reqMap["preparedName"] = request.PreparedName
 			reqMap["preparedText"] = request.PreparedText
+		}
+		if request.TxId != "" {
+			reqMap["txid"] = request.TxId
 		}
 		reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = request.ElapsedTime.String()
@@ -1096,6 +1207,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 			requests[i]["preparedName"] = request.PreparedName
 			requests[i]["preparedText"] = request.PreparedText
 		}
+		if request.TxId != "" {
+			requests[i]["txid"] = request.TxId
+		}
 		requests[i]["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = request.ElapsedTime.String()
 		requests[i]["serviceTime"] = request.ServiceTime.String()
@@ -1186,6 +1300,12 @@ func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_INDEXES_TASKS
 	return scheduler.NameTasks(), nil
+}
+
+func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_TRANSACTIONS
+	return transactions.NameTransactions(), nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {

@@ -95,6 +95,8 @@ indexType        datastore.IndexType
 inferenceType    datastore.InferenceType
 val              value.Value
 
+isolationLevel   datastore.IsolationLevel
+
 functionName	 functions.FunctionName
 functionBody     functions.FunctionBody
 
@@ -128,6 +130,7 @@ tokOffset	 int
 %token COLLATE
 %token COLLECTION
 %token COMMIT
+%token COMMITTED
 %token CONNECT
 %token CONTINUE
 %token CORRELATED
@@ -189,6 +192,7 @@ tokOffset	 int
 %token INTERSECT
 %token INTO
 %token IS
+%token ISOLATION
 %token JAVASCRIPT
 %token JOIN
 %token KEY
@@ -200,6 +204,7 @@ tokOffset	 int
 %token LEFT
 %token LET
 %token LETTING
+%token LEVEL
 %token LIKE
 %token LIMIT
 %token LSM
@@ -246,6 +251,7 @@ tokOffset	 int
 %token PUBLIC
 %token RANGE
 %token RAW
+%token READ
 %token REALM
 %token REDUCE
 %token RENAME
@@ -260,6 +266,7 @@ tokOffset	 int
 %token ROW
 %token ROWS
 %token SATISFIES
+%token SAVEPOINT
 %token SCHEMA
 %token SCOPE
 %token SELECT
@@ -275,6 +282,7 @@ tokOffset	 int
 %token THEN
 %token TIES
 %token TO
+%token TRAN
 %token TRANSACTION
 %token TRIGGER
 %token TRUE
@@ -421,6 +429,8 @@ tokOffset	 int
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
 %type <statement>        scope_stmt create_scope drop_scope
+%type <statement>        transaction_stmt start_transaction commit_transaction rollback_transaction
+%type <statement>        savepoint set_transaction_isolation
 %type <statement>        collection_stmt create_collection drop_collection flush_collection
 %type <statement>        role_stmt grant_role revoke_role
 %type <statement>        function_stmt create_function drop_function execute_function
@@ -483,6 +493,9 @@ tokOffset	 int
 %type <windowFrameExtent>   window_frame_extent
 %type <u32>                 opt_nulls_treatment nulls_treatment opt_from_first_last agg_quantifier
 
+%type <isolationLevel>      opt_isolation_level isolation_level isolation_val
+%type <s>                   opt_savepoint savepoint_name
+
 %start input
 
 %%
@@ -533,6 +546,8 @@ update_statistics
 role_stmt
 |
 function_stmt
+|
+transaction_stmt
 ;
 
 advise:
@@ -738,6 +753,18 @@ create_function
 drop_function
 |
 execute_function
+;
+
+transaction_stmt:
+start_transaction
+|
+commit_transaction
+|
+rollback_transaction
+|
+savepoint
+|
+set_transaction_isolation
 ;
 
 fullselect:
@@ -4058,5 +4085,111 @@ OVER IDENT
 OVER window_specification
 {
     $$ = $2
+}
+;
+
+/*************************************************
+ *
+ * <START|BEGIN> <TRANSACTION | TRAN | WORK> [ISOLATION LEVEL READ COMMITED]
+ *
+ *************************************************/
+
+start_transaction:
+start_or_begin transaction opt_isolation_level
+{
+    $$ = algebra.NewStartTransaction($3)
+}
+;
+
+commit_transaction:
+COMMIT opt_transaction
+{
+    $$ = algebra.NewCommitTransaction()
+}
+;
+
+rollback_transaction:
+ROLLBACK opt_transaction opt_savepoint
+{
+    $$ = algebra.NewRollbackTransaction($3)
+}
+;
+
+start_or_begin:
+START
+|
+BEGIN
+;
+
+opt_transaction:
+/* empty */
+{}
+|
+transaction
+;
+
+transaction:
+TRAN
+|
+TRANSACTION
+|
+WORK
+;
+
+opt_savepoint:
+/* empty */
+{
+    $$ = ""
+}
+|
+TO SAVEPOINT savepoint_name
+{
+    $$ = $3
+}
+;
+
+savepoint_name:
+IDENT
+{
+    $$ = $1
+}
+
+opt_isolation_level:
+/* empty */
+{
+    $$ = datastore.IL_READ_COMMITTED
+}
+|
+isolation_level
+{
+    $$ = $1
+}
+;
+
+isolation_level:
+ISOLATION LEVEL isolation_val
+{
+    $$ = $3
+}
+;
+
+isolation_val:
+READ COMMITTED
+{
+    $$ = datastore.IL_READ_COMMITTED
+}
+;
+
+set_transaction_isolation:
+SET TRANSACTION isolation_level
+{
+    $$ = algebra.NewTransactionIsolation($3)
+}
+;
+
+savepoint:
+SAVEPOINT savepoint_name
+{
+    $$ = algebra.NewSavepoint($2)
 }
 ;

@@ -59,6 +59,7 @@ type simpleAuditable struct {
 	sortCount           uint64
 	eventErrorCount     int
 	eventWarningCount   int
+	txId                string
 }
 
 func (sa *simpleAuditable) EventGenericFields() adt.GenericFields {
@@ -83,6 +84,10 @@ func (sa *simpleAuditable) EventQueryContext() string {
 
 func (sa *simpleAuditable) EventId() string {
 	return sa.eventId
+}
+
+func (sa *simpleAuditable) EventTxId() string {
+	return sa.txId
 }
 
 func (sa *simpleAuditable) EventType() string {

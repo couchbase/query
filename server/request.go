@@ -97,6 +97,8 @@ type Request interface {
 	SetProfile(p Profile)
 	ScanConsistency() datastore.ScanConsistency
 	SetScanConfiguration(consistency ScanConfiguration)
+	OriginalScanConsistency() datastore.ScanConsistency
+	SetScanConsistency(consistency datastore.ScanConsistency)
 	ScanVectorSource() timestamp.ScanVectorSource
 	IndexApiVersion() int
 	SetIndexApiVersion(ver int)
@@ -115,13 +117,29 @@ type Request interface {
 	MemoryQuota() uint64
 	SetMemoryQuota(q uint64)
 	UsedMemory() uint64
+	TxId() string
+	SetTxId(s string)
+	TxImplicit() bool
+	SetTxImplicit(b bool)
+	TxStmtNum() int64
+	SetTxStmtNum(n int64)
+	TxTimeout() time.Duration
+	SetTxTimeout(d time.Duration)
+	TxData() []byte
+	SetTxData(b []byte)
+	DurabilityLevel() datastore.DurabilityLevel
+	SetDurabilityLevel(l datastore.DurabilityLevel)
+	DurabilityTimeout() time.Duration
+	SetDurabilityTimeout(d time.Duration)
+	ExecutionContext() *execution.Context
+	SetExecutionContext(ctx *execution.Context)
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
 	Servicing()
 	Fail(err errors.Error)
-	Execute(server *Server, signature value.Value)
+	Execute(server *Server, context *execution.Context, reqType string, signature value.Value)
 	NotifyStop(stop execution.Operator)
 	Failed(server *Server)
 	Expire(state State, timeout time.Duration)
@@ -155,7 +173,8 @@ type ClientContextID interface {
 type ScanConsistency int
 
 const (
-	NOT_BOUNDED ScanConsistency = iota
+	NOT_SET ScanConsistency = iota
+	NOT_BOUNDED
 	REQUEST_PLUS
 	STATEMENT_PLUS
 	AT_PLUS
@@ -166,6 +185,7 @@ type ScanConfiguration interface {
 	ScanConsistency() datastore.ScanConsistency
 	ScanWait() time.Duration
 	ScanVectorSource() timestamp.ScanVectorSource
+	SetScanConsistency(consistency datastore.ScanConsistency) interface{}
 }
 
 // API for tracking active requests
@@ -229,52 +249,60 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id              requestIDImpl
-	client_id       clientContextIDImpl
-	statement       string
-	prepared        *plan.Prepared
-	reqType         string
-	isPrepare       bool
-	namedArgs       map[string]value.Value
-	positionalArgs  value.Values
-	namespace       string
-	timeout         time.Duration
-	timer           *time.Timer
-	maxParallelism  int
-	scanCap         int64
-	pipelineCap     int64
-	pipelineBatch   int
-	readonly        value.Tristate
-	signature       value.Tristate
-	metrics         value.Tristate
-	pretty          value.Tristate
-	consistency     ScanConfiguration
-	credentials     *auth.Credentials
-	remoteAddr      string
-	userAgent       string
-	requestTime     time.Time
-	serviceTime     time.Time
-	execTime        time.Time
-	state           State
-	aborted         bool
-	errors          []errors.Error
-	warnings        []errors.Error
-	results         sync.WaitGroup
-	servicerGate    sync.WaitGroup
-	stopResult      chan bool          // stop consuming results
-	stopExecute     chan bool          // stop executing request
-	stopOperator    execution.Operator // notified when request execution stops
-	timings         execution.Operator
-	controls        value.Tristate
-	profile         Profile
-	indexApiVersion int    // Index API version
-	featureControls uint64 // feature bit controls
-	autoPrepare     value.Tristate
-	autoExecute     value.Tristate
-	useFts          bool
-	useCBO          bool
-	queryContext    string
-	memoryQuota     uint64
+	id                requestIDImpl
+	client_id         clientContextIDImpl
+	statement         string
+	prepared          *plan.Prepared
+	reqType           string
+	isPrepare         bool
+	namedArgs         map[string]value.Value
+	positionalArgs    value.Values
+	namespace         string
+	timeout           time.Duration
+	timer             *time.Timer
+	maxParallelism    int
+	scanCap           int64
+	pipelineCap       int64
+	pipelineBatch     int
+	readonly          value.Tristate
+	signature         value.Tristate
+	metrics           value.Tristate
+	pretty            value.Tristate
+	consistency       ScanConfiguration
+	credentials       *auth.Credentials
+	remoteAddr        string
+	userAgent         string
+	requestTime       time.Time
+	serviceTime       time.Time
+	execTime          time.Time
+	state             State
+	aborted           bool
+	errors            []errors.Error
+	warnings          []errors.Error
+	results           sync.WaitGroup
+	servicerGate      sync.WaitGroup
+	stopResult        chan bool          // stop consuming results
+	stopExecute       chan bool          // stop executing request
+	stopOperator      execution.Operator // notified when request execution stops
+	timings           execution.Operator
+	controls          value.Tristate
+	profile           Profile
+	indexApiVersion   int    // Index API version
+	featureControls   uint64 // feature bit controls
+	autoPrepare       value.Tristate
+	autoExecute       value.Tristate
+	useFts            bool
+	useCBO            bool
+	queryContext      string
+	memoryQuota       uint64
+	txId              string
+	txImplicit        bool
+	txStmtNum         int64
+	txTimeout         time.Duration
+	txData            []byte
+	durabilityTimeout time.Duration
+	durabilityLevel   datastore.DurabilityLevel
+	executionContext  *execution.Context
 }
 
 type requestIDImpl struct {
@@ -306,6 +334,7 @@ func (this *clientContextIDImpl) String() string {
 
 func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
+	rv.txTimeout = datastore.DEF_TXTIMEOUT
 	rv.serviceTime = time.Now()
 	rv.results.Add(1)
 	rv.state = SUBMITTED
@@ -325,6 +354,8 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.client_id.id = ""
 	rv.SetMaxParallelism(1)
 	rv.useCBO = util.GetUseCBO()
+	rv.durabilityTimeout = datastore.DEF_DURABILITY_TIMEOUT
+	rv.durabilityLevel = datastore.DL_UNSET
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -470,11 +501,23 @@ func (this *BaseRequest) SetPretty(pretty value.Tristate) {
 	this.pretty = pretty
 }
 
-func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {
+func (this *BaseRequest) OriginalScanConsistency() datastore.ScanConsistency {
 	if this.consistency == nil {
-		return datastore.UNBOUNDED
+		return datastore.NOT_SET
 	}
 	return this.consistency.ScanConsistency()
+}
+
+func (this *BaseRequest) SetScanConsistency(consistency datastore.ScanConsistency) {
+	this.consistency = this.consistency.SetScanConsistency(consistency).(ScanConfiguration)
+}
+
+func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {
+	consistency := this.OriginalScanConsistency()
+	if consistency == datastore.NOT_SET {
+		consistency = datastore.UNBOUNDED
+	}
+	return consistency
 }
 
 func (this *BaseRequest) SetScanConfiguration(consistency ScanConfiguration) {
@@ -818,6 +861,75 @@ func (this *BaseRequest) SetUseCBO(useCBO bool) {
 	}
 }
 
+func (this *BaseRequest) SetTxId(s string) {
+	this.txId = s
+}
+
+func (this *BaseRequest) TxId() string {
+	return this.txId
+}
+
+func (this *BaseRequest) SetTxImplicit(b bool) {
+	this.txImplicit = b
+}
+
+func (this *BaseRequest) TxImplicit() bool {
+	if this.txId == "" {
+		return this.txImplicit
+	}
+	return false
+}
+
+func (this *BaseRequest) SetTxStmtNum(n int64) {
+	this.txStmtNum = n
+}
+
+func (this *BaseRequest) TxStmtNum() int64 {
+	return this.txStmtNum
+}
+
+func (this *BaseRequest) SetTxTimeout(d time.Duration) {
+	if d > 0 {
+		this.txTimeout = d
+	}
+}
+
+func (this *BaseRequest) TxTimeout() time.Duration {
+	return this.txTimeout
+}
+
+func (this *BaseRequest) SetTxData(b []byte) {
+	this.txData = b
+}
+
+func (this *BaseRequest) TxData() []byte {
+	return this.txData
+}
+
+func (this *BaseRequest) SetDurabilityLevel(l datastore.DurabilityLevel) {
+	this.durabilityLevel = l
+}
+
+func (this *BaseRequest) DurabilityLevel() datastore.DurabilityLevel {
+	return this.durabilityLevel
+}
+
+func (this *BaseRequest) SetDurabilityTimeout(d time.Duration) {
+	this.durabilityTimeout = d
+}
+
+func (this *BaseRequest) DurabilityTimeout() time.Duration {
+	return this.durabilityTimeout
+}
+
+func (this *BaseRequest) ExecutionContext() *execution.Context {
+	return this.executionContext
+}
+
+func (this *BaseRequest) SetExecutionContext(ctx *execution.Context) {
+	this.executionContext = ctx
+}
+
 func (this *BaseRequest) Results() chan bool {
 	return this.stopResult
 }
@@ -917,6 +1029,11 @@ func (this *BaseRequest) EventStatement() string {
 // For audit.Auditable interface.
 func (this *BaseRequest) EventQueryContext() string {
 	return this.QueryContext()
+}
+
+// For audit.Auditable interface.
+func (this *BaseRequest) EventTxId() string {
+	return this.TxId()
 }
 
 // For audit.Auditable interface.

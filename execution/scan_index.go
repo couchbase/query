@@ -25,6 +25,8 @@ type IndexScan struct {
 	conn     *datastore.IndexConnection
 	plan     *plan.IndexScan
 	children []Operator
+	keys     map[string]bool
+	pool     bool
 }
 
 func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
@@ -70,6 +72,15 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			this.fail(context)
 			return
 		}
+
+		if this.plan.HasDeltaKeyspace() {
+			defer func() {
+				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
+			}()
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
+				INDEX_SCAN, context, this.plan.Covers())
+		}
+
 		this.children = _INDEX_SCAN_POOL.Get()
 
 		for i, span := range spans {
@@ -127,18 +138,21 @@ func (this *IndexScan) Done() {
 	}
 	_INDEX_SCAN_POOL.Put(this.children)
 	this.children = nil
+	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }
 
 type spanScan struct {
 	base
-	plan *plan.IndexScan
-	span *plan.Span
+	plan      *plan.IndexScan
+	span      *plan.Span
+	indexScan *IndexScan
 }
 
 func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
 	rv := &spanScan{
-		plan: parent.plan,
-		span: span,
+		plan:      parent.plan,
+		span:      span,
+		indexScan: parent,
 	}
 
 	newRedirectBase(&rv.base)
@@ -205,42 +219,44 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
+					if _, sok := this.indexScan.keys[entry.PrimaryKey]; !sok {
 
-					// current policy is to only count 'in' documents
-					// from operators, not kv
-					// add this.addInDocs(1) if this changes
+						// current policy is to only count 'in' documents
+						// from operators, not kv
+						// add this.addInDocs(1) if this changes
 
-					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
-					covers := this.plan.Covers()
-					if len(covers) > 0 {
-						for c, v := range this.plan.FilterCovers() {
-							av.SetCover(c.Text(), v)
+						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
+						covers := this.plan.Covers()
+						if len(covers) > 0 {
+							for c, v := range this.plan.FilterCovers() {
+								av.SetCover(c.Text(), v)
+							}
+
+							// Matches planner.builder.buildCoveringScan()
+							for i, ek := range entry.EntryKey {
+								av.SetCover(covers[i].Text(), ek)
+							}
+
+							// Matches planner.builder.buildCoveringScan()
+							av.SetCover(covers[len(covers)-1].Text(),
+								value.NewValue(entry.PrimaryKey))
+
+							av.SetField(this.plan.Term().Alias(), av)
+							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+								context.Error(errors.NewMemoryQuotaExceededError())
+								av.Recycle()
+								ok = false
+								break
+							}
 						}
 
-						// Matches planner.builder.buildCoveringScan()
-						for i, ek := range entry.EntryKey {
-							av.SetCover(covers[i].Text(), ek)
+						av.SetBit(this.bit)
+						ok = this.sendItem(av)
+						docs++
+						if docs > _PHASE_UPDATE_COUNT {
+							context.AddPhaseCount(INDEX_SCAN, docs)
+							docs = 0
 						}
-
-						// Matches planner.builder.buildCoveringScan()
-						av.SetCover(covers[len(covers)-1].Text(),
-							value.NewValue(entry.PrimaryKey))
-
-						av.SetField(this.plan.Term().Alias(), av)
-						if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-							context.Error(errors.NewMemoryQuotaExceededError())
-							av.Recycle()
-							ok = false
-							break
-						}
-					}
-
-					av.SetBit(this.bit)
-					ok = this.sendItem(av)
-					docs++
-					if docs > _PHASE_UPDATE_COUNT {
-						context.AddPhaseCount(INDEX_SCAN, docs)
-						docs = 0
 					}
 				} else {
 					ok = false

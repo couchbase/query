@@ -54,7 +54,11 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		}
 	}
 
+	dks := this.context.DeltaKeyspaces()
+	this.context.SetDeltaKeyspaces(nil)
 	prep, err = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false, true, this.context)
+	this.context.SetDeltaKeyspaces(dks)
+
 	if err != nil {
 		return nil, err
 	}

@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
 )
 
@@ -133,41 +134,49 @@ type Output interface {
 }
 
 type Context struct {
-	inUseMemory        uint64
-	requestId          string
-	datastore          datastore.Datastore
-	systemstore        datastore.Systemstore
-	namespace          string
-	indexApiVersion    int
-	featureControls    uint64
-	queryContext       string
-	useFts             bool
-	useCBO             bool
-	optimizer          planner.Optimizer
-	readonly           bool
-	maxParallelism     int
-	scanCap            int64
-	pipelineCap        int64
-	pipelineBatch      int
-	isPrepared         bool
-	reqDeadline        time.Time
-	now                time.Time
-	namedArgs          map[string]value.Value
-	positionalArgs     value.Values
-	credentials        *auth.Credentials
-	consistency        datastore.ScanConsistency
-	scanVectorSource   timestamp.ScanVectorSource
-	output             Output
-	prepared           *plan.Prepared
-	subplans           *subqueryMap
-	subresults         *subqueryMap
-	httpRequest        *http.Request
-	authenticatedUsers auth.AuthenticatedUsers
-	mutex              sync.RWMutex
-	whitelist          map[string]interface{}
-	inlistHashMap      map[*expression.In]*expression.InlistHash
-	inlistHashLock     sync.RWMutex
-	memoryQuota        uint64
+	inUseMemory         uint64
+	requestId           string
+	datastore           datastore.Datastore
+	systemstore         datastore.Systemstore
+	namespace           string
+	indexApiVersion     int
+	featureControls     uint64
+	queryContext        string
+	useFts              bool
+	useCBO              bool
+	optimizer           planner.Optimizer
+	readonly            bool
+	maxParallelism      int
+	scanCap             int64
+	pipelineCap         int64
+	pipelineBatch       int
+	isPrepared          bool
+	reqDeadline         time.Time
+	now                 time.Time
+	namedArgs           map[string]value.Value
+	positionalArgs      value.Values
+	credentials         *auth.Credentials
+	consistency         datastore.ScanConsistency
+	originalConsistency datastore.ScanConsistency
+	scanVectorSource    timestamp.ScanVectorSource
+	output              Output
+	prepared            *plan.Prepared
+	subplans            *subqueryMap
+	subresults          *subqueryMap
+	httpRequest         *http.Request
+	authenticatedUsers  auth.AuthenticatedUsers
+	mutex               sync.RWMutex
+	whitelist           map[string]interface{}
+	inlistHashMap       map[*expression.In]*expression.InlistHash
+	inlistHashLock      sync.RWMutex
+	memoryQuota         uint64
+	deltaKeyspaces      map[string]bool
+	durabilityLevel     datastore.DurabilityLevel
+	durabilityTimeout   time.Duration
+	txContext           *transactions.TranContext
+	txTimeout           time.Duration
+	txImplicit          bool
+	txData              []byte
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -215,28 +224,37 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 }
 
 func (this *Context) Copy() *Context {
-	return &Context{
-		requestId:        this.requestId,
-		datastore:        this.datastore,
-		systemstore:      this.systemstore,
-		namespace:        this.namespace,
-		readonly:         this.readonly,
-		maxParallelism:   this.maxParallelism,
-		scanCap:          this.scanCap,
-		pipelineCap:      this.pipelineCap,
-		pipelineBatch:    this.pipelineBatch,
-		now:              this.now,
-		credentials:      this.credentials,
-		consistency:      this.consistency,
-		scanVectorSource: this.scanVectorSource,
-		output:           this.output,
-		httpRequest:      this.httpRequest,
-		indexApiVersion:  this.indexApiVersion,
-		featureControls:  this.featureControls,
-		useFts:           this.useFts,
-		useCBO:           this.useCBO,
-		optimizer:        this.optimizer,
+	rv := &Context{
+		requestId:           this.requestId,
+		datastore:           this.datastore,
+		systemstore:         this.systemstore,
+		namespace:           this.namespace,
+		readonly:            this.readonly,
+		maxParallelism:      this.maxParallelism,
+		scanCap:             this.scanCap,
+		pipelineCap:         this.pipelineCap,
+		pipelineBatch:       this.pipelineBatch,
+		now:                 this.now,
+		credentials:         this.credentials,
+		consistency:         this.consistency,
+		originalConsistency: this.originalConsistency,
+		scanVectorSource:    this.scanVectorSource,
+		output:              this.output,
+		httpRequest:         this.httpRequest,
+		indexApiVersion:     this.indexApiVersion,
+		featureControls:     this.featureControls,
+		useFts:              this.useFts,
+		useCBO:              this.useCBO,
+		optimizer:           this.optimizer,
+		deltaKeyspaces:      this.deltaKeyspaces,
+		txTimeout:           this.txTimeout,
+		txImplicit:          this.txImplicit,
+		txContext:           this.txContext,
 	}
+
+	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
+
+	return rv
 }
 
 func (this *Context) NewQueryContext(queryContext string, readonly bool) interface{} {
@@ -261,7 +279,15 @@ func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
 }
 
-func (this *Context) ChangePrepared(prepared *plan.Prepared) {
+func (this *Context) SetNamedArgs(namedArgs map[string]value.Value) {
+	this.namedArgs = namedArgs
+}
+
+func (this *Context) SetPositionalArgs(positionalArgs value.Values) {
+	this.positionalArgs = positionalArgs
+}
+
+func (this *Context) SetPrepared(prepared *plan.Prepared) {
 	this.prepared = prepared
 }
 
@@ -271,6 +297,10 @@ func (this *Context) SetWhitelist(val map[string]interface{}) {
 
 func (this *Context) GetWhitelist() map[string]interface{} {
 	return this.whitelist
+}
+
+func (this *Context) Optimizer() planner.Optimizer {
+	return this.optimizer
 }
 
 func (this *Context) DatastoreVersion() string {
@@ -313,6 +343,30 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 	}
 }
 
+func (this *Context) GetTxContext() interface{} {
+	return this.txContext
+}
+
+func (this *Context) TxContext() *transactions.TranContext {
+	return this.txContext
+}
+
+func (this *Context) SetTxContext(tc interface{}) {
+	this.txContext, _ = tc.(*transactions.TranContext)
+}
+
+func (this *Context) AdjustTimeout(timeout time.Duration, stmtType string, isPrepare bool) time.Duration {
+
+	if this.txContext != nil {
+		timeout = this.txContext.TxTimeRemaining()
+		if timeout <= 0 {
+			timeout = time.Millisecond
+		}
+	}
+
+	return timeout
+}
+
 func (this *Context) Credentials() *auth.Credentials {
 	return this.credentials
 }
@@ -333,6 +387,11 @@ func (this *Context) UrlCredentials(urlS string) *auth.Credentials {
 
 func (this *Context) ScanConsistency() datastore.ScanConsistency {
 	return this.consistency
+}
+
+func (this *Context) SetScanConsistency(consistency, originalConsistency datastore.ScanConsistency) {
+	this.consistency = consistency
+	this.originalConsistency = originalConsistency
 }
 
 func (this *Context) ScanVectorSource() timestamp.ScanVectorSource {
@@ -413,7 +472,7 @@ func (this *Context) IsPrepared() bool {
 	return this.isPrepared
 }
 
-func (this *Context) SetPrepared(isPrepared bool) {
+func (this *Context) SetIsPrepared(isPrepared bool) {
 	this.isPrepared = isPrepared
 }
 
@@ -493,22 +552,127 @@ func (this *Context) ReleaseValueSize(size uint64) {
 	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
 }
 
+func (this *Context) SetDeltaKeyspaces(d map[string]bool) {
+	this.deltaKeyspaces = d
+}
+
+func (this *Context) DeltaKeyspaces() map[string]bool {
+	return this.deltaKeyspaces
+}
+
+func (this *Context) SetDurability(l datastore.DurabilityLevel, d time.Duration) {
+	this.durabilityLevel = l
+	this.durabilityTimeout = d
+}
+
+func (this *Context) DurabilityLevel() datastore.DurabilityLevel {
+	return this.durabilityLevel
+}
+
+func (this *Context) DurabilityTimeout() time.Duration {
+	return this.durabilityTimeout
+}
+
+func (this *Context) ResetTxContext() {
+	if this.txContext != nil {
+		this.txContext = nil
+	}
+}
+
+func (this *Context) SetTransactionInfo(txId string, txStmtNum int64) (err errors.Error) {
+	txContext := transactions.GetTransContext(txId)
+	if txContext == nil {
+		return errors.NewTransactionContextError(fmt.Errorf("transaction (%s) is not present", txId))
+	} else if err := txContext.TxValid(); err != nil {
+		return err
+	}
+
+	this.txTimeout = txContext.TxTimeout()
+	if this.originalConsistency == datastore.NOT_SET {
+		this.consistency = txContext.TxScanConsistency()
+	}
+	this.SetDurability(txContext.TxDurabilityLevel(), txContext.TxDurabilityTimeout())
+
+	this.txImplicit = false
+	if txStmtNum > 0 {
+		lastStmtNum := txContext.TxLastStmtNum()
+		if lastStmtNum >= txStmtNum {
+			return errors.NewTranStatementOutOfOrderError(lastStmtNum, txStmtNum)
+		}
+		txContext.SetTxLastStmtNum(txStmtNum)
+	}
+	this.txContext = txContext
+	return nil
+}
+
+func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTxTimeout, sTxTimeout time.Duration,
+	txData []byte) (err errors.Error) {
+
+	if this.txContext != nil || txImplicit || stmtType == "START_TRANSACTION" {
+		if this.txContext == nil {
+			// start transaction or implicit transaction
+			if sTxTimeout > 0 && sTxTimeout < rTxTimeout {
+				rTxTimeout = sTxTimeout
+			}
+			this.txTimeout = rTxTimeout
+
+			if stmtType == "START_TRANSACTION" {
+				this.txData = txData
+			} else {
+				// start implicit transaction
+				this.txImplicit = txImplicit
+				txId, _, err := this.ExecuteTranStatement("START", !txImplicit)
+				if err != nil {
+					return err
+				}
+				this.txContext = transactions.GetTransContext(txId)
+				if this.txContext == nil {
+					return errors.NewTransactionContextError(fmt.Errorf("transaction (%s) is not present", txId))
+				}
+				if this.txImplicit {
+					this.SetDeltaKeyspaces(make(map[string]bool, 1))
+				}
+			}
+		} else {
+			switch stmtType {
+			case "START_TRANSACTION", "COMMIT", "ROLLBACK":
+			case "ROLLBACK_SAVEPOINT", "SAVEPOINT", "SET_TRANSACTION_ISOLATION":
+			default:
+				// setup atomicity
+				_, dks, err := this.ExecuteTranStatement("START", true)
+				if err != nil {
+					return err
+				}
+				this.SetDeltaKeyspaces(dks)
+			}
+		}
+	}
+	return nil
+}
+
+func (this *Context) TxExpired() bool {
+	return this.txContext != nil && this.txContext.TxExpired()
+}
+
 // subquery evaluation
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
-	var subplan interface{}
+	var subplan, subplanIsks interface{}
 	planFound := false
 
 	subresults := this.getSubresults()
-	subresult, ok := subresults.get(query)
+	subresult, _, ok := subresults.get(query)
 	if ok {
 		return subresult.(value.Value), nil
 	}
 
+	subplans := this.getSubplans()
+	subplan, subplanIsks, planFound = subplans.get(query)
+
 	// MB-34749 make subquery plans a property of the prepared statement
-	if this.IsPrepared() {
+	if !planFound && this.IsPrepared() {
 		this.prepared.RLock()
-		subplan, planFound = this.prepared.GetSubqueryPlan(query)
+		subplan, subplanIsks, planFound = this.prepared.GetSubqueryPlan(query)
 		this.prepared.RUnlock()
 
 		if !planFound {
@@ -517,15 +681,16 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 			this.prepared.Lock()
 
 			// check again, just in case somebody has done it while we were waiting
-			subplan, planFound = this.prepared.GetSubqueryPlan(query)
+			subplan, subplanIsks, planFound = this.prepared.GetSubqueryPlan(query)
 
 			if !planFound {
 
 				// MB-32140: do not replace named/positional arguments with its value for prepared statements
 				var prepContext planner.PrepareContext
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
-					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer)
-				subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
+					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+					nil)
+				subplan, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
 
 				if err != nil {
@@ -537,34 +702,38 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 				}
 
 				// Cache plan
-				this.prepared.SetSubqueryPlan(query, subplan)
+				this.prepared.SetSubqueryPlan(query, subplanIsks, subplan)
+				planFound = true
 			}
 			this.prepared.Unlock()
 		}
-	} else {
-		subplans := this.getSubplans()
-		subplan, planFound = subplans.get(query)
 
-		if !planFound {
-			var err error
-
-			var prepContext planner.PrepareContext
-			planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
-				this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO,
-				this.optimizer)
-			subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
-				&prepContext)
-
-			if err != nil {
-
-				// Generate our own error for this subquery, in addition to whatever the query above is doing.
-				this.Error(errors.NewSubqueryBuildError(err))
-				return nil, err
+		for ks, _ := range subplanIsks.(map[string]bool) {
+			if _, ok := this.deltaKeyspaces[ks]; ok {
+				planFound = false
+				break
 			}
-
-			// Cache plan
-			subplans.set(query, subplan)
 		}
+	}
+
+	if !planFound {
+		var err error
+
+		var prepContext planner.PrepareContext
+		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
+			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+			this.deltaKeyspaces)
+		subplan, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
+			this.namespace, true, false, &prepContext)
+
+		if err != nil {
+			// Generate our own error for this subquery, in addition to whatever the query above is doing.
+			this.Error(errors.NewSubqueryBuildError(err))
+			return nil, err
+		}
+
+		// Cache plan
+		subplans.set(query, subplan, subplanIsks)
 	}
 
 	pipeline, err := Build(subplan.(plan.Operator), this)
@@ -588,7 +757,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	// Cache results
 	if !planFound && !query.IsCorrelated() {
-		subresults.set(query, results)
+		subresults.set(query, results, nil)
 	}
 
 	return results, nil
@@ -609,7 +778,7 @@ func (this *Context) initSubplans() {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.subplans == nil {
-		this.subplans = newSubqueryMap()
+		this.subplans = newSubqueryMap(true)
 	}
 }
 
@@ -636,7 +805,7 @@ func (this *Context) initSubresults() {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.subresults == nil {
-		this.subresults = newSubqueryMap()
+		this.subresults = newSubqueryMap(false)
 	}
 }
 
@@ -644,24 +813,32 @@ func (this *Context) initSubresults() {
 type subqueryMap struct {
 	mutex   sync.RWMutex
 	entries map[*algebra.Select]interface{}
+	isks    map[*algebra.Select]interface{}
 }
 
-func newSubqueryMap() *subqueryMap {
+func newSubqueryMap(plan bool) *subqueryMap {
 	rv := &subqueryMap{}
 	rv.entries = make(map[*algebra.Select]interface{})
+	if plan {
+		rv.isks = make(map[*algebra.Select]interface{})
+	}
 	return rv
 }
 
-func (this *subqueryMap) get(key *algebra.Select) (interface{}, bool) {
+func (this *subqueryMap) get(key *algebra.Select) (interface{}, interface{}, bool) {
 	this.mutex.RLock()
 	rv, ok := this.entries[key]
+	rv1, _ := this.isks[key]
 	this.mutex.RUnlock()
-	return rv, ok
+	return rv, rv1, ok
 }
 
-func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
+func (this *subqueryMap) set(key *algebra.Select, value, dks interface{}) {
 	this.mutex.Lock()
 	this.entries[key] = value
+	if this.isks != nil {
+		this.isks[key] = dks
+	}
 	this.mutex.Unlock()
 }
 

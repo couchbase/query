@@ -20,7 +20,7 @@ import (
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	indexes []datastore.Index, id expression.Expression, force, exact bool) (
+	indexes []datastore.Index, id expression.Expression, force, exact, hasDeltaKeyspace bool) (
 	plan.Operator, error) {
 	primary, err := buildPrimaryIndex(keyspace, indexes, force)
 	if primary == nil || err != nil {
@@ -47,6 +47,10 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 		}
 	}
 
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	if primary.Type() != datastore.SYSTEM {
+		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
+	}
 	if primary3, ok := primary.(datastore.PrimaryIndex3); ok && useIndex3API(primary, this.context.IndexApiVersion()) {
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
@@ -54,7 +58,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 			cost, cardinality = primaryIndexScanCost(primary, this.context.RequestId())
 		}
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
-			plan.NewIndexProjection(0, true), indexOrder, nil, cost, cardinality), nil
+			plan.NewIndexProjection(0, true), indexOrder, nil, cost, cardinality, hasDeltaKeyspace), nil
 	}
 
 	var limit expression.Expression
@@ -63,7 +67,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 		this.resetOffset()
 	}
 
-	return plan.NewPrimaryScan(primary, keyspace, node, limit), nil
+	return plan.NewPrimaryScan(primary, keyspace, node, limit, hasDeltaKeyspace), nil
 }
 
 func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,

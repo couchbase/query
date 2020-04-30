@@ -206,7 +206,7 @@ func encodeName(name string, queryContext string) string {
 }
 
 func (this *preparedCache) GetPlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
-	prep, err := prepareds.getPrepared(name, context.QueryContext(), OPT_VERIFY, nil)
+	prep, err := getPrepared(name, context.QueryContext(), context.DeltaKeyspaces(), OPT_VERIFY, nil)
 	if err != nil {
 		if err.Code() == errors.NO_SUCH_PREPARED {
 			return nil, nil
@@ -335,7 +335,7 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	// we'll let the caller handle the planning.
 	// The new statement will have the latest change counters, so until we
 	// have a new index no other planning will be necessary
-	prep, err := prepareds.getPrepared(name, "", OPT_TRACK|OPT_METACHECK, nil)
+	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), OPT_TRACK|OPT_METACHECK, nil)
 	if err != nil {
 		if err.Code() != errors.NO_SUCH_PREPARED {
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
@@ -441,15 +441,29 @@ func DeletePrepared(name string) errors.Error {
 	return errors.NewNoSuchPreparedError(name)
 }
 
-func GetPrepared(fullName string) (*plan.Prepared, errors.Error) {
-	return prepareds.getPrepared(fullName, "", 0, nil)
+func GetPrepared(fullName string, deltaKeyspaces map[string]bool) (prepared *plan.Prepared, err errors.Error) {
+	return getPrepared(fullName, "", deltaKeyspaces, 0, nil)
 }
 
-func GetPreparedWithContext(preparedName string, queryContext string, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
-	return prepareds.getPrepared(preparedName, queryContext, options, phaseTime)
+func GetPreparedWithContext(preparedName string, queryContext string, deltaKeyspaces map[string]bool,
+	options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime)
 }
 
-func (prepareds *preparedCache) getPrepared(preparedName string, queryContext string, options uint32, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+func getPrepared(preparedName string, queryContext string, deltaKeyspaces map[string]bool, options uint32,
+	phaseTime *time.Duration) (prepared *plan.Prepared, err errors.Error) {
+
+	prepared, err = prepareds.getPrepared(preparedName, queryContext, options, phaseTime)
+	if err == nil {
+		if len(deltaKeyspaces) > 0 || (deltaKeyspaces != nil && prepared.Type() == "DELETE") {
+			prepared, err = getTxPrepared(prepared, deltaKeyspaces, phaseTime)
+		}
+	}
+	return prepared, err
+}
+
+func (prepareds *preparedCache) getPrepared(preparedName string, queryContext string, options uint32,
+	phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	var err errors.Error
 	var prepared *plan.Prepared
 
@@ -518,7 +532,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		// locking will occur at adding time: both requests will insert,
 		// the last wins
 		if !good && !metaCheck {
-			prepared, err = reprepare(prepared, phaseTime)
+			prepared, err = reprepare(prepared, nil, phaseTime)
 			if err == nil {
 				err = AddPrepared(prepared)
 			}
@@ -604,7 +618,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// reprepare if no good
 	good := prepared.Verify()
 	if !good {
-		newPrepared, prepErr := reprepare(prepared, phaseTime)
+		newPrepared, prepErr := reprepare(prepared, nil, phaseTime)
 		if prepErr == nil {
 			prepared = newPrepared
 		} else {
@@ -638,7 +652,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 }
 
 func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
-	prepared := plan.NewPrepared(nil, nil)
+	prepared := plan.NewPrepared(nil, nil, nil)
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
 
@@ -651,7 +665,7 @@ func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, 
 			err1 = json.Unmarshal(text, &stmt)
 			if err1 == nil {
 				prepared.SetText(stmt)
-				pl, _ := reprepare(prepared, phaseTime)
+				pl, _ := reprepare(prepared, nil, phaseTime)
 				if pl != nil {
 					return pl, nil
 				}
@@ -671,7 +685,7 @@ func distributePrepared(name, plan string) {
 		}, distributed.NO_CREDS, "")
 }
 
-func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	parse := time.Now()
 
 	stmt, err := n1ql.ParseStatement2(prepared.Text(), prepared.Namespace(), prepared.QueryContext())
@@ -702,8 +716,8 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	// building prepared statements should not depend on args
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, prepared.QueryContext(), nil, nil,
-		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(),
-		prepared.UseCBO(), optimizer)
+		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), prepared.UseCBO(),
+		optimizer, deltaKeyspaces)
 
 	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
 		false, true, &prepContext)
@@ -730,4 +744,23 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	}
 	pl.BuildEncodedPlan(json_bytes)
 	return pl, nil
+}
+
+const (
+	_PREPARE_TX_KEYSPACES = 1
+)
+
+func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration) (
+	txPrepared *plan.Prepared, err errors.Error) {
+	var hashCode string
+	txPrepared, hashCode = prepared.GetTxPrepared(deltaKeyspaces)
+	if txPrepared != nil {
+		return
+	}
+	txPrepared, err = reprepare(prepared, deltaKeyspaces, phaseTime)
+	if err == nil {
+		prepared.SetTxPrepared(txPrepared, hashCode)
+	}
+	return
+
 }

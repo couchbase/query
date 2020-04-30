@@ -86,6 +86,15 @@ type Visitor interface {
 	   Visitor for UPDATE STATISTICS statements.
 	*/
 	VisitUpdateStatistics(stmt *UpdateStatistics) (interface{}, error)
+
+	/*
+	   Visitor for Transaction statements.
+	*/
+	VisitStartTransaction(stmt *StartTransaction) (interface{}, error)
+	VisitCommitTransaction(stmt *CommitTransaction) (interface{}, error)
+	VisitRollbackTransaction(stmt *RollbackTransaction) (interface{}, error)
+	VisitTransactionIsolation(stmt *TransactionIsolation) (interface{}, error)
+	VisitSavepoint(stmt *Savepoint) (interface{}, error)
 }
 
 type NodeVisitor interface {

@@ -246,9 +246,8 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	}
 
 	var res bool
-	if request.ScanConsistency() == datastore.UNBOUNDED {
+	if request.ScanConsistency() == datastore.UNBOUNDED && request.TxId() == "" {
 		res = this.server.ServiceRequest(request)
-
 	} else {
 		res = this.server.PlusServiceRequest(request)
 	}

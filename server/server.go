@@ -79,6 +79,10 @@ const (
 	_WAIT_FULL
 )
 
+const (
+	_TX_QUEUE_SIZE = 16
+)
+
 type waitEntry struct {
 	request Request
 	state   uint32
@@ -92,6 +96,14 @@ type runQueue struct {
 	head      int32
 	tail      int32
 	queue     []waitEntry
+	mutex     sync.RWMutex
+}
+
+type txRunQueues struct {
+	mutex    sync.RWMutex
+	queueCnt int32
+	size     int32
+	txQueues map[string]*runQueue
 }
 
 type Server struct {
@@ -102,26 +114,28 @@ type Server struct {
 	requestSize    atomic.AlignedInt64
 
 	sync.RWMutex
-	unboundQueue runQueue
-	plusQueue    runQueue
-	datastore    datastore.Datastore
-	systemstore  datastore.Systemstore
-	configstore  clustering.ConfigurationStore
-	acctstore    accounting.AccountingStore
-	namespace    string
-	readonly     bool
-	timeout      time.Duration
-	signature    bool
-	metrics      bool
-	memprofile   string
-	cpuprofile   string
-	enterprise   bool
-	pretty       bool
-	srvprofile   Profile
-	srvcontrols  bool
-	whitelist    map[string]interface{}
-	autoPrepare  bool
-	memoryQuota  uint64
+	unboundQueue      runQueue
+	plusQueue         runQueue
+	transactionQueues txRunQueues
+	datastore         datastore.Datastore
+	systemstore       datastore.Systemstore
+	configstore       clustering.ConfigurationStore
+	acctstore         accounting.AccountingStore
+	namespace         string
+	readonly          bool
+	timeout           time.Duration
+	txTimeout         time.Duration
+	signature         bool
+	metrics           bool
+	memprofile        string
+	cpuprofile        string
+	enterprise        bool
+	pretty            bool
+	srvprofile        Profile
+	srvcontrols       bool
+	whitelist         map[string]interface{}
+	autoPrepare       bool
+	memoryQuota       uint64
 }
 
 // Default Keep Alive Length
@@ -151,8 +165,9 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 
 	rv.unboundQueue.servicers = servicers
 	rv.plusQueue.servicers = plusServicers
-	newRunQueue(&rv.unboundQueue, requestsCap)
-	newRunQueue(&rv.plusQueue, plusRequestsCap)
+	newRunQueue(&rv.unboundQueue, requestsCap, false)
+	newRunQueue(&rv.plusQueue, plusRequestsCap, false)
+	newTxRunQueues(&rv.transactionQueues, plusRequestsCap, _TX_QUEUE_SIZE)
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 
@@ -438,6 +453,17 @@ func (this *Server) SetTimeout(timeout time.Duration) {
 	this.timeout = timeout
 }
 
+func (this *Server) TxTimeout() time.Duration {
+	return this.txTimeout
+}
+
+func (this *Server) SetTxTimeout(timeout time.Duration) {
+	if timeout < 0 {
+		timeout = 0
+	}
+	this.txTimeout = timeout
+}
+
 func (this *Server) Profile() Profile {
 	return this.srvprofile
 }
@@ -485,65 +511,219 @@ func (this *Server) SetUseCBO(useCBO bool) {
 }
 
 func (this *Server) ServiceRequest(request Request) bool {
+	if !this.setupRequestContext(request) {
+		request.Failed(this)
+		return true // so that StatusServiceUnavailable will not return
+	}
+
 	return this.handleRequest(request, &this.unboundQueue)
 }
 
 func (this *Server) PlusServiceRequest(request Request) bool {
-	return this.handleRequest(request, &this.plusQueue)
+	if !this.setupRequestContext(request) {
+		request.Failed(this)
+		return true // so that StatusServiceUnavailable will not return
+	}
+
+	return this.handlePlusRequest(request, &this.plusQueue, &this.transactionQueues)
+}
+
+func (this *Server) setupRequestContext(request Request) bool {
+	namespace := request.Namespace()
+	if namespace == "" {
+		namespace = this.namespace
+	}
+
+	optimizer := getNewOptimizer()
+	maxParallelism := request.MaxParallelism()
+	if maxParallelism <= 0 || maxParallelism > this.MaxParallelism() {
+		maxParallelism = this.MaxParallelism()
+	}
+
+	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
+		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
+		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
+		request.ScanVectorSource(), request.Output(), nil, request.IndexApiVersion(), request.FeatureControls(),
+		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer)
+	context.SetWhitelist(this.whitelist)
+	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
+	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
+
+	if request.TxId() != "" {
+		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())
+		if err == nil {
+			err = context.TxContext().TxValid()
+		}
+
+		if err != nil {
+			request.Fail(err)
+			return false
+		}
+
+		if request.OriginalScanConsistency() == datastore.NOT_SET {
+			request.SetScanConsistency(context.TxContext().TxScanConsistency())
+		}
+		request.SetDurabilityLevel(context.TxContext().TxDurabilityLevel())
+		request.SetDurabilityTimeout(context.TxContext().TxDurabilityTimeout())
+	}
+	request.SetExecutionContext(context)
+	return true
 }
 
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
-	runCnt := int(atomic.AddInt32(&queue.runCnt, 1))
+	if !queue.enqueue(request) {
+		return false
+	}
+
+	this.serviceRequest(request) // service
+
+	queue.dequeue()
+
+	return true
+}
+
+func (this *Server) handlePlusRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) bool {
+	if !queue.enqueue(request) {
+		return false
+	}
+
+	dequeue := true
+	if request.TxId() != "" {
+		err := this.handlePreTxRequest(request, queue, transactionQueues)
+		if err != nil {
+			request.Fail(err)
+			request.Failed(this) // don't return
+		} else {
+			this.serviceRequest(request) // service
+			dequeue = this.handlePostTxRequest(request, queue, transactionQueues)
+		}
+	} else {
+		this.serviceRequest(request) // service
+	}
+
+	if dequeue {
+		queue.dequeue()
+	}
+
+	return true
+}
+
+func (this *Server) handlePreTxRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) errors.Error {
+	txId := request.TxId()
+	txContext := request.ExecutionContext().TxContext()
+	if err := txContext.TxValid(); err != nil {
+		return err
+	}
+
+	transactionQueues.mutex.Lock()
+	defer transactionQueues.mutex.Unlock()
+
+	if txContext.TxInUse() {
+		txQueue, ok := transactionQueues.txQueues[txId]
+		if !ok {
+			txQueue := &runQueue{servicers: 1}
+			newRunQueue(txQueue, int(transactionQueues.size), true)
+			transactionQueues.txQueues[txId] = txQueue
+		}
+		txQueue.mutex.Lock()
+		if txQueue.runCnt >= txQueue.size {
+			txQueue.mutex.Unlock()
+			return errors.NewTransactionQueueFull()
+		}
+		txQueue.runCnt++
+		transactionQueues.queueCnt++
+		txQueue.addRequest(request, true) // unlock done inside
+		return nil
+	}
+
+	return txContext.SetTxInUse(true)
+}
+
+func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) bool {
+	txId := request.TxId()
+	transactionQueues.mutex.Lock()
+	defer transactionQueues.mutex.Unlock()
+	txContext := request.ExecutionContext().TxContext()
+
+	txQueue, ok := transactionQueues.txQueues[txId]
+	if ok {
+		txQueue.mutex.Lock()
+		if txQueue.runCnt > 0 {
+			txQueue.runCnt--
+			transactionQueues.queueCnt--
+			txQueue.releaseRequest(true) // unlock done inside
+			return false
+		} else {
+			delete(transactionQueues.txQueues, txId)
+		}
+		txQueue.mutex.Unlock()
+	}
+
+	if txContext != nil {
+		txContext.SetTxInUse(false)
+	}
+
+	return true
+}
+
+func newRunQueue(q *runQueue, num int, txflag bool) {
+	q.size = int32(num)
+	q.queue = make([]waitEntry, num)
+	if !txflag {
+		go q.checkWaiters()
+	}
+}
+
+func newTxRunQueues(q *txRunQueues, nqueues, num int) {
+	q.size = int32(num)
+	q.txQueues = make(map[string]*runQueue, nqueues)
+}
+
+func (this *runQueue) enqueue(request Request) bool {
+	runCnt := int(atomic.AddInt32(&this.runCnt, 1))
 
 	// if servicers exceeded, reserve a spot in the queue
-	if runCnt > queue.servicers {
+	if runCnt > this.servicers {
 
-		atomic.AddInt32(&queue.runCnt, -1)
-		queueCnt := atomic.AddInt32(&queue.queueCnt, 1)
+		atomic.AddInt32(&this.runCnt, -1)
+		queueCnt := atomic.AddInt32(&this.queueCnt, 1)
 
 		// rats! queue full, can't handle this request
-		if queueCnt >= queue.size {
-			atomic.AddInt32(&queue.queueCnt, -1)
+		if queueCnt >= this.size {
+			atomic.AddInt32(&this.queueCnt, -1)
 			return false
 		}
 
 		// (RC #1) wait
-		queue.addRequest(request)
-	}
-
-	// service
-	this.serviceRequest(request)
-
-	// anyone to release?
-	queueCnt := atomic.LoadInt32(&queue.queueCnt)
-	wakeUp := queueCnt > 0
-	if wakeUp {
-		queueCnt = atomic.AddInt32(&queue.queueCnt, -1)
-		wakeUp = queueCnt >= 0
-
-		// (RC #2) rats! waker already gone
-		if !wakeUp {
-			atomic.AddInt32(&queue.queueCnt, 1)
-		}
-	}
-
-	if wakeUp {
-		queue.releaseRequest()
-	} else {
-		atomic.AddInt32(&queue.runCnt, -1)
+		this.addRequest(request, false)
 	}
 	return true
 }
 
-func newRunQueue(q *runQueue, num int) {
-	q.size = int32(num)
-	q.queue = make([]waitEntry, num)
-	go q.checkWaiters()
+func (this *runQueue) dequeue() {
+	// anyone to release?
+	queueCnt := atomic.LoadInt32(&this.queueCnt)
+	wakeUp := queueCnt > 0
+	if wakeUp {
+		queueCnt = atomic.AddInt32(&this.queueCnt, -1)
+		wakeUp = queueCnt >= 0
+
+		// (RC #2) rats! waker already gone
+		if !wakeUp {
+			atomic.AddInt32(&this.queueCnt, 1)
+		}
+	}
+
+	if wakeUp {
+		this.releaseRequest(false)
+	} else {
+		atomic.AddInt32(&this.runCnt, -1)
+	}
 }
 
 // in this next couple of methods, the waiter populates the wait entry and then tries the CAS
 // the waker tries the CAS and then empties
-func (this *runQueue) addRequest(request Request) {
+func (this *runQueue) addRequest(request Request, txflag bool) {
 
 	// get the next available entry
 	entry := atomic.AddInt32(&this.tail, 1) % this.size
@@ -551,6 +731,10 @@ func (this *runQueue) addRequest(request Request) {
 	// set up the entry and the request
 	request.setSleep()
 	this.queue[entry].request = request
+
+	if txflag {
+		this.mutex.Unlock()
+	}
 
 	// atomically set the state to full
 	// if we succeed, sleep
@@ -565,10 +749,14 @@ func (this *runQueue) addRequest(request Request) {
 	}
 }
 
-func (this *runQueue) releaseRequest() {
+func (this *runQueue) releaseRequest(txflag bool) {
 
 	// get the next available entry
 	entry := atomic.AddInt32(&this.head, 1) % this.size
+
+	if txflag {
+		this.mutex.Unlock()
+	}
 
 	// can we mark the entry as ready to go?
 	if !atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_GO) {
@@ -633,18 +821,22 @@ func (this *runQueue) checkWaiters() {
 
 				// let it free
 				runCnt = atomic.AddInt32(&this.runCnt, 1)
-				this.releaseRequest()
+				this.releaseRequest(false)
 			}
 		}
 	}
 }
 
-func (this *runQueue) load() int {
-	return 100 * (int(this.runCnt) + int(this.queueCnt)) / this.servicers
+func (this *runQueue) load(txqueueCnt int) int {
+	return 100 * (int(this.runCnt) + int(this.queueCnt) + txqueueCnt) / this.servicers
 }
 
 func (this *Server) Load() int {
-	return this.plusQueue.load() + this.unboundQueue.load()
+	return this.plusQueue.load(this.txQueueCount()) + this.unboundQueue.load(0)
+}
+
+func (this *Server) txQueueCount() int {
+	return int(this.transactionQueues.queueCnt)
 }
 
 func (this *Server) serviceRequest(request Request) {
@@ -663,22 +855,35 @@ func (this *Server) serviceRequest(request Request) {
 
 	request.Servicing()
 
-	namespace := request.Namespace()
-	if namespace == "" {
-		namespace = this.namespace
+	context := request.ExecutionContext()
+	if request.TxId() != "" {
+		if err := context.SetTransactionContext(request.Type(), request.TxImplicit(),
+			request.TxTimeout(), this.TxTimeout(), request.TxData()); err != nil {
+			request.Fail(err)
+			request.Failed(this)
+			return
+		}
+	} else if request.TxImplicit() {
+		context.SetDeltaKeyspaces(make(map[string]bool, 1))
 	}
 
-	optimizer := getNewOptimizer()
-
-	prepared, err := this.getPrepared(request, namespace, optimizer)
+	prepared, err := this.getPrepared(request, context)
 	if err != nil {
 		request.Fail(err)
-	}
-
-	if (this.readonly || value.ToBool(request.Readonly())) &&
-		(prepared != nil && !prepared.Readonly()) {
-		request.Fail(errors.NewServiceErrorReadonly("The server or request is read-only" +
-			" and cannot accept this write statement."))
+	} else {
+		context.SetPrepared(prepared)
+		if (this.readonly || value.ToBool(request.Readonly())) &&
+			(prepared != nil && !prepared.Readonly()) {
+			request.Fail(errors.NewServiceErrorReadonly("The server or request is read-only" +
+				" and cannot accept this write statement."))
+		} else if request.IsPrepare() {
+			context.ResetTxContext()
+		} else if request.TxId() == "" {
+			if err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
+				request.TxTimeout(), this.TxTimeout(), request.TxData()); err != nil {
+				request.Fail(err)
+			}
+		}
 	}
 
 	if request.State() == FATAL {
@@ -686,68 +891,16 @@ func (this *Server) serviceRequest(request Request) {
 		return
 	}
 
-	maxParallelism := request.MaxParallelism()
-	if maxParallelism <= 0 || maxParallelism > this.MaxParallelism() {
-		maxParallelism = this.MaxParallelism()
-	}
-
-	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
-		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
-		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
-		request.ScanVectorSource(), request.Output(),
-		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(),
-		request.UseFts(), request.UseCBO(), optimizer)
-
-	context.SetWhitelist(this.whitelist)
-
 	if request.AutoExecute() == value.TRUE {
-		res, _, er := context.EvaluatePrepared(prepared, false)
-		if er != nil {
-			error, ok := er.(errors.Error)
-			if ok {
-				request.Fail(error)
-			} else {
-				request.Fail(errors.NewError(er, ""))
-			}
-		} else {
-			var name string
-
-			actual, ok := res.Actual().([]interface{})
-			if ok {
-				fields, ok := actual[0].(map[string]interface{})
-				if ok {
-					name, _ = fields["name"].(string)
-				}
-			}
-			if name != "" {
-				var reprepTime time.Duration
-
-				prepared, er = prepareds.GetPreparedWithContext(name, request.QueryContext(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
-				if reprepTime > 0 {
-					request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
-				}
-			} else {
-				er = errors.NewUnrecognizedPreparedError(fmt.Errorf("auto_execute did not produce a prepared statement"))
-			}
-			if er != nil {
-				error, ok := er.(errors.Error)
-				if ok {
-					request.Fail(error)
-				} else {
-					request.Fail(errors.NewError(er, ""))
-				}
-			} else {
-				request.SetPrepared(prepared)
-				context.ChangePrepared(prepared)
-			}
-		}
-		if er != nil {
+		prepared, err = this.getAutoExecutePrepared(request, prepared, context)
+		if err != nil {
+			request.Fail(err)
 			request.Failed(this)
 			return
 		}
 	}
 
-	context.SetPrepared(request.Prepared() != nil)
+	context.SetIsPrepared(request.Prepared() != nil)
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
 	if er != nil {
@@ -775,6 +928,12 @@ func (this *Server) serviceRequest(request Request) {
 	if this.timeout > 0 && (this.timeout < timeout || timeout <= 0) {
 		timeout = this.timeout
 	}
+
+	timeout = context.AdjustTimeout(timeout, request.Type(), request.IsPrepare())
+	if timeout != request.Timeout() {
+		request.SetTimeout(timeout)
+	}
+
 	if timeout > 0 {
 		request.SetTimer(time.AfterFunc(timeout, func() { request.Expire(TIMEOUT, timeout) }))
 		context.SetReqDeadline(time.Now().Add(timeout))
@@ -795,10 +954,10 @@ func (this *Server) serviceRequest(request Request) {
 	request.SetExecTime(time.Now())
 	operator.RunOnce(context, nil)
 
-	request.Execute(this, prepared.Signature())
+	request.Execute(this, context, request.Type(), prepared.Signature())
 }
 
-func (this *Server) getPrepared(request Request, namespace string, optimizer planner.Optimizer) (*plan.Prepared, errors.Error) {
+func (this *Server) getPrepared(request Request, context *execution.Context) (*plan.Prepared, errors.Error) {
 	var autoPrepare bool
 	var name string
 
@@ -821,7 +980,8 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 	if prepared == nil && autoPrepare {
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
-			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), request.UseCBO(), optimizer)
+			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces())
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
@@ -835,20 +995,10 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 
 	if prepared == nil {
 		parse := time.Now()
-		stmt, err := n1ql.ParseStatement2(request.Statement(), namespace, request.QueryContext())
+		stmt, err := n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext())
 		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
-		}
-
-		if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-			return nil, errors.NewRewriteError(err, "")
-		}
-
-		semChecker := semantics.NewSemChecker(this.Enterprise(), stmt.Type())
-		_, err = stmt.Accept(semChecker)
-		if err != nil {
-			return nil, errors.NewSemanticsError(err, "")
 		}
 
 		isPrepare := false
@@ -857,6 +1007,25 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 		} else {
 			autoExecute = false
 			request.SetAutoExecute(value.FALSE)
+		}
+
+		stype := stmt.Type()
+		if estmt, ok := stmt.(*algebra.Explain); ok {
+			stype = estmt.Statement().Type()
+		}
+
+		if ok, msg := IsValidStatement(request.TxId(), stype, request.TxImplicit(), isPrepare && !autoExecute); !ok {
+			return nil, errors.NewTranStatementNotSupportedError(stype, msg)
+		}
+
+		if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
+			return nil, errors.NewRewriteError(err, "")
+		}
+
+		semChecker := semantics.NewSemChecker(this.Enterprise(), stmt.Type(), request.TxId() != "")
+		_, err = stmt.Accept(semChecker)
+		if err != nil {
+			return nil, errors.NewSemanticsError(err, "")
 		}
 
 		prep := time.Now()
@@ -870,20 +1039,13 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), optimizer)
-
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces())
 		if stmt, ok := stmt.(*algebra.Advise); ok {
-			ec := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
-				this.readonly, 1, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
-				request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
-				request.ScanVectorSource(), request.Output(),
-				prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(),
-				request.UseFts(), request.UseCBO(), optimizer)
-			stmt.SetContext(ec)
+			stmt.SetContext(context)
 		}
 
-		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, autoExecute, !autoExecute,
-			&prepContext)
+		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
+			autoExecute, !autoExecute, &prepContext)
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
@@ -892,57 +1054,20 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 		// EXECUTE doesn't get a plan. Get the plan from the cache.
 		switch stmt.Type() {
 		case "EXECUTE":
-			var reprepTime time.Duration
 			var err errors.Error
-
 			exec, _ := stmt.(*algebra.Execute)
-
-			prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), request.QueryContext(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, &reprepTime)
-			if reprepTime > 0 {
-				request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
-			}
-			if err != nil {
+			if prepared, err = this.getPreparedByName(exec.Prepared(), request, context); err != nil {
 				return nil, err
 			}
-			request.SetPrepared(prepared)
 
-			// when executing prepared statements, we set the type to that
-			// of the prepared statement
-			request.SetType(prepared.Type())
-
-			usingArgs := exec.Using()
-			if usingArgs != nil {
-
-				// USING clause and REST API parameters can't go together
-				if namedArgs != nil || positionalArgs != nil {
-					return nil, errors.NewExecutionParameterError("cannot have both USING clause and request parameters")
-				}
-
-				argsValue := usingArgs.Value()
-				if argsValue == nil {
-					return nil, errors.NewExecutionParameterError("USING clause does not evaluate to static values")
-				}
-
-				actualValue := argsValue.Actual()
-				switch actualValue := actualValue.(type) {
-				case map[string]interface{}:
-					newArgs := make(map[string]value.Value, len(actualValue))
-					for n, v := range actualValue {
-						newArgs[n] = value.NewValue(v)
-					}
-					request.SetNamedArgs(newArgs)
-				case []interface{}:
-					newArgs := make([]value.Value, len(actualValue))
-					for n, v := range actualValue {
-						newArgs[n] = value.NewValue(v)
-					}
-					request.SetPositionalArgs(newArgs)
-				default:
-
-					// this never happens, but for completeness
-					return nil, errors.NewExecutionParameterError("unexpected value type")
-				}
+			if ok, msg := IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), false); !ok {
+				return nil, errors.NewTranStatementNotSupportedError(request.Type(), msg)
 			}
+
+			if err = this.setUsingArgs(exec, positionalArgs, namedArgs, request, context); err != nil {
+				return nil, err
+			}
+
 		default:
 
 			if isPrepare && autoExecute {
@@ -983,15 +1108,128 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 			}
 		}
 	} else {
+		if request.TxId() != "" && !autoPrepare {
+			var err errors.Error
+			if prepared, err = this.getPreparedByName(prepared.Name(), request, context); err != nil {
+				return nil, err
+			}
+		}
 
 		// ditto
 		request.SetType(prepared.Type())
+		if ok, msg := IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), true); !ok {
+			return nil, errors.NewTranStatementNotSupportedError(request.Type(), msg)
+		}
 	}
 
 	if logging.LogLevel() >= logging.DEBUG {
 		// log EXPLAIN for the request
 		logExplain(prepared)
 	}
+
+	return prepared, nil
+}
+
+func (this *Server) setUsingArgs(exec *algebra.Execute, positionalArgs value.Values, namedArgs map[string]value.Value,
+	request Request, context *execution.Context) errors.Error {
+
+	usingArgs := exec.Using()
+	if usingArgs == nil {
+		return nil
+	}
+
+	// USING clause and REST API parameters can't go together
+	if namedArgs != nil || positionalArgs != nil {
+		return errors.NewExecutionParameterError("cannot have both USING clause and request parameters")
+	}
+
+	argsValue := usingArgs.Value()
+	if argsValue == nil {
+		return errors.NewExecutionParameterError("USING clause does not evaluate to static values")
+	}
+
+	actualValue := argsValue.Actual()
+	switch actualValue := actualValue.(type) {
+	case map[string]interface{}:
+		newArgs := make(map[string]value.Value, len(actualValue))
+		for n, v := range actualValue {
+			newArgs[n] = value.NewValue(v)
+		}
+		request.SetNamedArgs(newArgs)
+		context.SetNamedArgs(newArgs)
+	case []interface{}:
+		newArgs := make([]value.Value, len(actualValue))
+		for n, v := range actualValue {
+			newArgs[n] = value.NewValue(v)
+		}
+		request.SetPositionalArgs(newArgs)
+		context.SetPositionalArgs(newArgs)
+	default:
+
+		// this never happens, but for completeness
+		return errors.NewExecutionParameterError("unexpected value type")
+	}
+
+	return nil
+}
+
+func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepared,
+	context *execution.Context) (*plan.Prepared, errors.Error) {
+	res, _, er := context.ExecutePrepared(prepared, false, request.NamedArgs(), request.PositionalArgs())
+	if er == nil {
+		var name string
+		actual, ok := res.Actual().([]interface{})
+		if ok && len(actual) > 0 {
+			if fields, ok := actual[0].(map[string]interface{}); ok {
+				name, _ = fields["name"].(string)
+			}
+		}
+
+		if name != "" {
+			var reprepTime time.Duration
+
+			prepared, er = prepareds.GetPreparedWithContext(name, request.QueryContext(),
+				context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
+				&reprepTime)
+			if reprepTime > 0 {
+				request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
+			}
+		} else {
+			er = errors.NewUnrecognizedPreparedError(fmt.Errorf("auto_execute did not produce a prepared statement"))
+		}
+	}
+
+	if er != nil {
+		if err, ok := er.(errors.Error); ok {
+			return prepared, err
+		}
+		return prepared, errors.NewError(er, "")
+	}
+
+	request.SetPrepared(prepared)
+	context.SetPrepared(prepared)
+	return prepared, nil
+}
+
+func (this *Server) getPreparedByName(prepareName string, request Request, context *execution.Context) (
+	*plan.Prepared, errors.Error) {
+
+	var reprepTime time.Duration
+
+	prepared, err := prepareds.GetPreparedWithContext(prepareName, request.QueryContext(),
+		context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
+		&reprepTime)
+	if reprepTime > 0 {
+		request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	request.SetPrepared(prepared)
+
+	// when executing prepared statements, we set the type to that of the prepared statement
+	request.SetType(prepared.Type())
 
 	return prepared, nil
 }
@@ -1085,4 +1323,22 @@ func HostNameandPort(node string) (host, port string) {
 	}
 
 	return
+}
+
+func IsValidStatement(txId, stmtType string, tximplicit, allow bool) (bool, string) {
+	switch stmtType {
+	case "SELECT", "UPDATE", "INSERT", "UPSERT", "DELETE", "MERGE":
+		return true, ""
+	case "EXECUTE", "PREPARE":
+		return true, ""
+	case "COMMIT", "ROLLBACK", "ROLLBACK_SAVEPOINT", "SET_TRANSACTION_ISOLATION", "SAVEPOINT":
+		return allow || txId != "", "outside the"
+	case "START_TRANSACTION":
+		return allow || txId == "", "within the"
+	default:
+		if txId != "" {
+			return false, "within the"
+		}
+		return !tximplicit, "in implicit"
+	}
 }

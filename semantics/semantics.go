@@ -18,6 +18,7 @@ const (
 	_SEM_ENTERPRISE = 1 << iota
 	_SEM_WHERE
 	_SEM_ON
+	_SEM_TRANSACTION
 )
 
 type SemChecker struct {
@@ -26,12 +27,16 @@ type SemChecker struct {
 	stmtType string
 }
 
-func NewSemChecker(enterprise bool, stmtType string) *SemChecker {
+func NewSemChecker(enterprise bool, stmtType string, txn bool) *SemChecker {
 	rv := &SemChecker{}
 	rv.SetMapper(rv)
 	rv.stmtType = stmtType
 	if enterprise {
 		rv.setSemFlag(_SEM_ENTERPRISE)
+	}
+
+	if txn {
+		rv.setSemFlag(_SEM_TRANSACTION)
 	}
 
 	return rv

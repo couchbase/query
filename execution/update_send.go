@@ -186,7 +186,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
-	pairs, e := this.keyspace.Update(pairs)
+	pairs, e := this.keyspace.Update(pairs, context)
 
 	this.switchPhase(_EXECTIME)
 

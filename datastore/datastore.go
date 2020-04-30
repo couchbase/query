@@ -58,10 +58,15 @@ type Datastore interface {
 	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error
 
 	SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
-
 	CreateSystemCBOStats(requestId string) errors.Error
 	GetSystemCBOStats() (Keyspace, errors.Error)
 	HasSystemCBOStats() (bool, errors.Error)
+
+	StartTransaction(stmtAtomicity bool, context QueryContext) (map[string]bool, errors.Error)
+	CommitTransaction(stmtAtomicity bool, context QueryContext) errors.Error
+	RollbackTransaction(stmtAtomicity bool, context QueryContext, sname string) errors.Error
+	SetSavepoint(stmtAtomicity bool, context QueryContext, sname string) errors.Error
+	TransactionDeltaKeyScan(keyspace string, conn *IndexConnection) // Keys of Delta keyspace
 }
 
 type Systemstore interface {
@@ -205,19 +210,19 @@ type Keyspace interface {
 	Indexers() ([]Indexer, errors.Error)              // List of index providers
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context QueryContext, subPath []string) []errors.Error // Bulk key-value fetch from this keyspace
+	Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+		context QueryContext, subPath []string) []errors.Error // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys
-	Insert(inserts []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value insert into this keyspace
-	Update(updates []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value updates into this keyspace
-	Upsert(upserts []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value upserts into this keyspace
-	Delete(deletes []string, context QueryContext) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
+	Insert(inserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value insert into this keyspace
+	Update(updates []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value updates into this keyspace
+	Upsert(upserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value upserts into this keyspace
+	Delete(deletes []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value deletes from this keyspace
 
 	Flush() errors.Error // For flush collection
-
-	Release() // Release any resources held by this object
 	IsBucket() bool
+	Release(close bool) // Release any resources held by this object
 }
 
 type KeyspaceMetadata interface {

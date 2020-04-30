@@ -114,10 +114,15 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		return true
 	}
 
-	keys := _STRING_POOL.Get()
-	defer _STRING_POOL.Put(keys)
+	var pairs []value.Pair
+	if _DELETE_POOL.Size() >= len(this.batch) {
+		pairs = _DELETE_POOL.Get()
+		defer _DELETE_POOL.Put(pairs)
+	} else {
+		pairs = make([]value.Pair, 0, len(this.batch))
+	}
 
-	for _, item := range this.batch {
+	for i, item := range this.batch {
 		dv, ok := item.Field(this.plan.Alias())
 		if !ok {
 			context.Error(errors.NewDeleteAliasMissingError(this.plan.Alias()))
@@ -135,17 +140,20 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 			return false
 		}
 
-		keys = append(keys, key)
+		pairs = pairs[0 : i+1]
+		pair := &pairs[i]
+		pair.Name = key
+		pair.Value = av
 	}
 
 	this.switchPhase(_SERVTIME)
 
-	deleted_keys, e := this.keyspace.Delete(keys, context)
+	dpairs, e := this.keyspace.Delete(pairs, context)
 
 	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of deleted docs:
-	context.AddMutationCount(uint64(len(deleted_keys)))
+	context.AddMutationCount(uint64(len(dpairs)))
 
 	if e != nil {
 		context.Error(e)
@@ -177,3 +185,5 @@ func (this *SendDelete) Done() {
 		_SENDDELETE_OP_POOL.Put(this)
 	}
 }
+
+var _DELETE_POOL = value.NewPairPool(_BATCH_SIZE)

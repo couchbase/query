@@ -23,6 +23,7 @@ import (
 type KeyScan struct {
 	base
 	plan *plan.KeyScan
+	keys map[string]bool
 }
 
 var _KEYSCAN_OP_POOL util.FastPool
@@ -68,6 +69,23 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		// Distinct keys then create map for keys
+		if this.plan.Distinct() {
+			defer func() {
+				this.keys = nil
+			}()
+
+			pipelineCap := int(context.GetPipelineCap())
+			if pipelineCap <= _STRING_BOOL_POOL.Size() {
+				this.keys = _STRING_BOOL_POOL.Get()
+				defer func() {
+					_STRING_BOOL_POOL.Put(this.keys)
+				}()
+			} else {
+				this.keys = make(map[string]bool, pipelineCap)
+			}
+		}
+
 		keys, e := this.plan.Keys().Evaluate(parent, context)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "KEYS"))
@@ -79,7 +97,15 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		case []interface{}:
 			for _, key := range actuals {
 				k := value.NewValue(key).Actual()
-				if _, ok := k.(string); ok {
+				if k, ok := k.(string); ok {
+					// Distinct keys
+					if this.keys != nil {
+						if _, ok1 := this.keys[k]; ok1 {
+							continue
+						}
+						this.keys[k] = true
+					}
+
 					av := this.newEmptyDocumentWithKey(key, parent, context)
 					if !this.sendItem(av) {
 						break
@@ -108,6 +134,7 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 
 func (this *KeyScan) Done() {
 	this.baseDone()
+	this.keys = nil
 	if this.isComplete() {
 		_KEYSCAN_OP_POOL.Put(this)
 	}

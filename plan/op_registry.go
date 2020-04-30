@@ -171,4 +171,11 @@ var _OPERATORS = map[string]Operator{
 	// Index Advisor
 	"AdviseIndex": &Advise{},
 	"IndexAdvice": &IndexAdvice{},
+
+	// Transactions
+	"StartTransaction":     &StartTransaction{},
+	"CommitTransaction":    &CommitTransaction{},
+	"RollbackTransaction":  &RollbackTransaction{},
+	"TransactionIsolation": &TransactionIsolation{},
+	"Savepoint":            &Savepoint{},
 }

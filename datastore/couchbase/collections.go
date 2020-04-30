@@ -276,30 +276,36 @@ func (coll *collection) loadIndexes() {
 }
 
 func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
-	return coll.bucket.getRandomEntry(&memcached.ClientContext{CollId: coll.uid})
+	return coll.bucket.getRandomEntry(coll.scope.id, coll.id, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string) []errors.Error {
-	return coll.bucket.fetch(coll.fullName, keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid})
+
+	return coll.bucket.fetch(coll.fullName, coll.QualifiedName(), coll.scope.id, coll.id,
+		keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid})
 }
 
-func (coll *collection) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
-	return coll.bucket.performOp(INSERT, inserts, &memcached.ClientContext{CollId: coll.uid})
+func (coll *collection) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return coll.bucket.performOp(MOP_INSERT, coll.QualifiedName(), coll.scope.id, coll.id,
+		inserts, context, &memcached.ClientContext{CollId: coll.uid})
 }
 
-func (coll *collection) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
-	return coll.bucket.performOp(UPDATE, updates, &memcached.ClientContext{CollId: coll.uid})
+func (coll *collection) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return coll.bucket.performOp(MOP_UPDATE, coll.QualifiedName(), coll.scope.id, coll.id,
+		updates, context, &memcached.ClientContext{CollId: coll.uid})
 }
 
-func (coll *collection) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
-	return coll.bucket.performOp(UPSERT, upserts, &memcached.ClientContext{CollId: coll.uid})
+func (coll *collection) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return coll.bucket.performOp(MOP_UPSERT, coll.QualifiedName(), coll.scope.id, coll.id,
+		upserts, context, &memcached.ClientContext{CollId: coll.uid})
 }
 
-func (coll *collection) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
-	return coll.bucket.delete(deletes, context, &memcached.ClientContext{CollId: coll.uid})
+func (coll *collection) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+	return coll.bucket.performOp(MOP_DELETE, coll.QualifiedName(), coll.scope.id, coll.id,
+		deletes, context, &memcached.ClientContext{CollId: coll.uid})
 }
 
-func (coll *collection) Release() {
+func (coll *collection) Release(blcose bool) {
 	// do nothing
 }
 

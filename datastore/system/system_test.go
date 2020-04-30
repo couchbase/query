@@ -36,6 +36,17 @@ func (ci *queryContextImpl) GetReqDeadline() time.Time {
 	return time.Time{}
 }
 
+func (ci *queryContextImpl) GetTxContext() interface{} {
+	return nil
+}
+
+func (ci *queryContextImpl) Datastore() datastore.Datastore {
+	return datastore.GetDatastore()
+}
+
+func (ci *queryContextImpl) SetTxContext(tc interface{}) {
+}
+
 func (ci *queryContextImpl) AuthenticatedUsers() []string {
 	return []string{"local:ivanivanov", "local:petrpetrov"}
 }

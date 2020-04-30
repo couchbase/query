@@ -22,26 +22,32 @@ import (
 
 type IndexFtsSearch struct {
 	readonly
-	index        datastore.Index
-	indexer      datastore.Indexer
-	term         *algebra.KeyspaceTerm
-	searchInfo   *FTSSearchInfo
-	covers       expression.Covers
-	filterCovers map[*expression.Cover]value.Value
+	index            datastore.Index
+	indexer          datastore.Indexer
+	term             *algebra.KeyspaceTerm
+	keyspace         datastore.Keyspace
+	searchInfo       *FTSSearchInfo
+	covers           expression.Covers
+	filterCovers     map[*expression.Cover]value.Value
+	hasDeltaKeyspace bool
 }
 
 func NewIndexFtsSearch(index datastore.Index, term *algebra.KeyspaceTerm,
 	searchInfo *FTSSearchInfo, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) *IndexFtsSearch {
+	filterCovers map[*expression.Cover]value.Value, hasDeltaKeyspace bool) *IndexFtsSearch {
 
-	return &IndexFtsSearch{
-		index:        index,
-		indexer:      index.Indexer(),
-		term:         term,
-		searchInfo:   searchInfo,
-		covers:       covers,
-		filterCovers: filterCovers,
+	rv := &IndexFtsSearch{
+		index:            index,
+		indexer:          index.Indexer(),
+		term:             term,
+		searchInfo:       searchInfo,
+		covers:           covers,
+		filterCovers:     filterCovers,
+		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
+
+	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
+	return rv
 }
 
 func (this *IndexFtsSearch) Accept(visitor Visitor) (interface{}, error) {
@@ -58,6 +64,10 @@ func (this *IndexFtsSearch) Index() datastore.Index {
 
 func (this *IndexFtsSearch) Term() *algebra.KeyspaceTerm {
 	return this.term
+}
+
+func (this *IndexFtsSearch) Keyspace() datastore.Keyspace {
+	return this.keyspace
 }
 
 func (this *IndexFtsSearch) SearchInfo() *FTSSearchInfo {
@@ -135,6 +145,10 @@ func (this *IndexFtsSearch) Cardinality() float64 {
 	return PLAN_CARD_NOT_AVAIL
 }
 
+func (this *IndexFtsSearch) HasDeltaKeyspace() bool {
+	return this.hasDeltaKeyspace
+}
+
 func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -171,6 +185,10 @@ func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[stri
 		r["filter_covers"] = fc
 	}
 
+	if this.hasDeltaKeyspace {
+		r["has_delta_keyspace"] = this.hasDeltaKeyspace
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -179,19 +197,20 @@ func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Index        string                 `json:"index"`
-		IndexId      string                 `json:"index_id"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		As           string                 `json:"as"`
-		Using        datastore.IndexType    `json:"using"`
-		UnderNL      bool                   `json:"nested_loop"`
-		SearchInfo   *FTSSearchInfo         `json:"search_info"`
-		Covers       []string               `json:"covers"`
-		FilterCovers map[string]interface{} `json:"filter_covers"`
+		_                string                 `json:"#operator"`
+		Index            string                 `json:"index"`
+		IndexId          string                 `json:"index_id"`
+		Namespace        string                 `json:"namespace"`
+		Bucket           string                 `json:"bucket"`
+		Scope            string                 `json:"scope"`
+		Keyspace         string                 `json:"keyspace"`
+		As               string                 `json:"as"`
+		Using            datastore.IndexType    `json:"using"`
+		UnderNL          bool                   `json:"nested_loop"`
+		SearchInfo       *FTSSearchInfo         `json:"search_info"`
+		Covers           []string               `json:"covers"`
+		FilterCovers     map[string]interface{} `json:"filter_covers"`
+		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -200,10 +219,12 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.searchInfo = _unmarshalled.SearchInfo
+	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
 
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
-	k, err := datastore.GetKeyspace(this.term.Path().Parts()...)
+
+	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err
 	}
@@ -212,7 +233,7 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 		this.term.SetUnderNL()
 	}
 
-	this.indexer, err = k.Indexer(_unmarshalled.Using)
+	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}

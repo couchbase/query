@@ -24,7 +24,7 @@ type dictionaryKeyspace struct {
 	si datastore.Indexer
 }
 
-func (b *dictionaryKeyspace) Release() {
+func (b *dictionaryKeyspace) Release(close bool) {
 }
 
 func (b *dictionaryKeyspace) NamespaceId() string {
@@ -116,25 +116,26 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 	return itemMap, nil
 }
 
-func (b *dictionaryKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *dictionaryKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *dictionaryKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *dictionaryKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *dictionaryKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *dictionaryKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *dictionaryKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
+func (b *dictionaryKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	creds, authToken := credsFromContext(context)
 
-	for _, name := range deletes {
+	for _, pair := range deletes {
+		name := pair.Name
 
 		// if we are deleting a dictionary entry, we also must remove it
 		// from all the n1ql node caches

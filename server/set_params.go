@@ -162,6 +162,10 @@ var _SETTERS = map[string]Setter{
 		s.SetUseCBO(value)
 		return nil
 	},
+	TXTIMEOUT: func(s *Server, o interface{}) errors.Error {
+		s.SetTxTimeout(getDuration(o))
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -172,6 +176,16 @@ func getNumber(o interface{}) float64 {
 		return o
 	}
 	return -1
+}
+
+func getDuration(o interface{}) time.Duration {
+	switch o := o.(type) {
+	case string:
+		if d, e := time.ParseDuration(o); e == nil {
+			return d
+		}
+	}
+	return 0
 }
 
 func setCompleted(s *Server, o interface{}) errors.Error {

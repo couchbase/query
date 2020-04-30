@@ -25,6 +25,8 @@ type PrimaryScan struct {
 	base
 	conn *datastore.IndexConnection
 	plan *plan.PrimaryScan
+	keys map[string]bool
+	pool bool
 }
 
 func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
@@ -60,6 +62,13 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify() // Notify that I have stopped
 		if !active {
 			return
+		}
+
+		if this.plan.HasDeltaKeyspace() {
+			defer func() {
+				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
+			}()
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, PRIMARY_SCAN, context, nil)
 		}
 
 		this.scanPrimary(context, parent)
@@ -98,17 +107,19 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		entry, ok := this.getItemEntry(this.conn)
 		if ok {
 			if entry != nil {
-				// current policy is to only count 'in' documents
-				// from operators, not kv
-				// add this.addInDocs(1) if this changes
-				av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
-				ok = this.sendItem(av)
-				lastEntry = entry
-				nitems++
-				docs++
-				if docs > _PHASE_UPDATE_COUNT {
-					context.AddPhaseCount(PRIMARY_SCAN, docs)
-					docs = 0
+				if _, sok := this.keys[entry.PrimaryKey]; !sok {
+					// current policy is to only count 'in' documents
+					// from operators, not kv
+					// add this.addInDocs(1) if this changes
+					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
+					ok = this.sendItem(av)
+					lastEntry = entry
+					nitems++
+					docs++
+					if docs > _PHASE_UPDATE_COUNT {
+						context.AddPhaseCount(PRIMARY_SCAN, docs)
+						docs = 0
+					}
 				}
 			} else {
 				break
@@ -161,14 +172,16 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 		entry, ok := this.getItemEntry(conn)
 		if ok {
 			if entry != nil {
-				av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
-				ok = this.sendItem(av)
-				lastEntry = entry
-				nitems++
-				docs++
-				if docs > _PHASE_UPDATE_COUNT {
-					context.AddPhaseCount(PRIMARY_SCAN, docs)
-					docs = 0
+				if _, sok := this.keys[entry.PrimaryKey]; !sok {
+					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
+					ok = this.sendItem(av)
+					lastEntry = entry
+					nitems++
+					docs++
+					if docs > _PHASE_UPDATE_COUNT {
+						context.AddPhaseCount(PRIMARY_SCAN, docs)
+						docs = 0
+					}
 				}
 			} else {
 				break
@@ -214,4 +227,9 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 // send a stop/pause
 func (this *PrimaryScan) SendAction(action opAction) {
 	this.connSendAction(this.conn, action)
+}
+
+func (this *PrimaryScan) Done() {
+	this.baseDone()
+	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }

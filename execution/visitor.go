@@ -156,4 +156,11 @@ type Visitor interface {
 
 	// Update Statistics
 	VisitUpdateStatistics(op *UpdateStatistics) (interface{}, error)
+
+	// Transactions
+	VisitStartTransaction(op *StartTransaction) (interface{}, error)
+	VisitCommitTransaction(op *CommitTransaction) (interface{}, error)
+	VisitRollbackTransaction(op *RollbackTransaction) (interface{}, error)
+	VisitTransactionIsolation(op *TransactionIsolation) (interface{}, error)
+	VisitSavepoint(op *Savepoint) (interface{}, error)
 }

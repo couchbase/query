@@ -57,7 +57,7 @@ dimension.
 
 */
 func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.FromTerm,
-	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
+	pred expression.Expression, indexes map[datastore.Index]*indexEntry, hasDeltaKeyspace bool) (
 	op plan.SecondaryScan, sargLength int, err error) {
 
 	if pred == nil {
@@ -88,7 +88,8 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return nil, 0, nil
 	}
 
-	cop, sargLength, err := this.buildCoveringUnnestScan(node, pred, indexes, unnestIndexes, arrayKeys, unnests)
+	cop, sargLength, err := this.buildCoveringUnnestScan(node, pred, indexes, unnestIndexes, arrayKeys,
+		unnests, hasDeltaKeyspace)
 	if cop != nil || err != nil {
 		return cop, sargLength, err
 	}
@@ -101,7 +102,8 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	for _, unnest := range primaryUnnests {
 		for _, index := range unnestIndexes {
 			arrayKey := arrayKeys[index]
-			op, _, _, n, err = this.matchUnnest(node, pred, unnest, index, indexes[index], arrayKey, unnests)
+			op, _, _, n, err = this.matchUnnest(node, pred, unnest, index, indexes[index],
+				arrayKey, unnests, hasDeltaKeyspace)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -272,7 +274,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 }
 
 func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest *algebra.Unnest,
-	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
+	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
 	plan.SecondaryScan, *algebra.Unnest, *expression.All, int, error) {
 
 	var sargKey expression.Expression
@@ -332,13 +334,15 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 					continue
 				}
 
-				op, un, nArrayKey, n, err := this.matchUnnest(node, pred, u, index, entry, nestedArrayKey, unnests)
+				op, un, nArrayKey, n, err := this.matchUnnest(node, pred, u, index, entry,
+					nestedArrayKey, unnests, hasDeltaKeyspace)
 				if err != nil {
 					return nil, nil, nil, 0, err
 				}
 
 				if op != nil {
-					newArrayKey = expression.NewAll(expression.NewArray(nArrayKey, expression.Bindings{binding}, when), arrayKey.Distinct())
+					newArrayKey = expression.NewAll(expression.NewArray(nArrayKey,
+						expression.Bindings{binding}, when), arrayKey.Distinct())
 					return op, un, newArrayKey, n + 1, err
 				}
 			}
@@ -347,7 +351,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		}
 
 		sargKey = arrayMapping
-		newArrayKey = expression.NewAll(expression.NewArray(arrayMapping, expression.Bindings{binding}, when), arrayKey.Distinct())
+		newArrayKey = expression.NewAll(expression.NewArray(arrayMapping,
+			expression.Bindings{binding}, when), arrayKey.Distinct())
 	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
 		return nil, nil, nil, 0, nil
 	} else {
@@ -404,7 +409,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	cardinality := OPT_CARD_NOT_AVAIL
 	selectivity := OPT_SELEC_NOT_AVAIL
 	if this.useCBO {
-		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(), spans, node.Alias(), this.advisorValidate())
+		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(),
+			spans, node.Alias(), this.advisorValidate())
 		if err != nil {
 			cost = OPT_COST_NOT_AVAIL
 			cardinality = OPT_CARD_NOT_AVAIL
@@ -418,8 +424,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.cardinality = cardinality
 	entry.selectivity = selectivity
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
+	this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 	scan := entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(), false,
-		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality)
+		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality, hasDeltaKeyspace)
 	return scan, unnest, newArrayKey, n, nil
 }
 

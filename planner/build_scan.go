@@ -23,7 +23,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (op plan.Operator, err error) {
+func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	mutate bool) (op plan.Operator, err error) {
 
 	keys := node.Keys()
 	if keys != nil {
@@ -40,7 +41,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		if this.useCBO {
 			cost, cardinality = getKeyScanCost(keys)
 		}
-		return plan.NewKeyScan(keys, cost, cardinality), nil
+		return plan.NewKeyScan(keys, mutate, cost, cardinality), nil
 	}
 
 	secondary, primary, err := this.buildScan(keyspace, node)
@@ -76,6 +77,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
+	}
+
+	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	if hasDeltaKeyspace {
+		this.resetPushDowns()
 	}
 
 	var pred, pred2 expression.Expression
@@ -145,7 +151,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	primary, err = this.buildPrimaryScan(keyspace, node, hints, id, false, true)
+	primary, err = this.buildPrimaryScan(keyspace, node, hints, id, false, true, hasDeltaKeyspace)
 	return nil, primary, err
 }
 
@@ -261,7 +267,8 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if !join || hash {
 		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
 		this.order = order
-		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, false)
+		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, false, hasDeltaKeyspace)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -378,8 +385,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	if !join && this.from != nil {
 		// Try pushdowns
 		this.restoreIndexPushDowns(indexPushDowns, true)
+		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
 
-		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all)
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all, hasDeltaKeyspace)
 		if err != nil {
 			return nil, 0, err
 		}
