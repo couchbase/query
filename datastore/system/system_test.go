@@ -130,7 +130,7 @@ func TestSystem(t *testing.T) {
 	// Expect count of 10 for the indexes keyspace (all the primary indexes)
 	ib_c, err := ib.Count(datastore.NULL_QUERY_CONTEXT)
 	if err != nil || ib_c != 10 {
-		t.Fatalf("failed to get expected indexes keyspace count %v", err)
+		t.Fatalf("failed to get expected indexes keyspace count %v %v", ib_c, err)
 	}
 
 	// Scan all Primary Index entries of the keyspaces keyspace
