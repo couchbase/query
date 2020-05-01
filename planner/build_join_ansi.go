@@ -35,7 +35,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 			return nil, err
 		}
 
-		this.extractPredicates(nil, node.Onclause())
+		this.extractKeyspacePredicates(nil, node.Onclause())
 
 		var hjoin *plan.HashJoin
 		var jps, hjps *joinPlannerState
@@ -175,7 +175,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 			return nil, err
 		}
 
-		this.extractPredicates(nil, node.Onclause())
+		this.extractKeyspacePredicates(nil, node.Onclause())
 
 		var hnest *plan.HashNest
 		var jps, hjps *joinPlannerState

@@ -116,7 +116,7 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 	}
 }
 
-func (this *builder) extractPredicates(where, on expression.Expression) {
+func (this *builder) extractKeyspacePredicates(where, on expression.Expression) {
 	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		if where != nil {
 			this.queryInfo.SetWhere(where)
@@ -124,6 +124,7 @@ func (this *builder) extractPredicates(where, on expression.Expression) {
 		if on != nil {
 			this.queryInfo.SetOn(on)
 		}
+		this.queryInfo.SetKeyspaceNames(this.keyspaceNames)
 	}
 }
 

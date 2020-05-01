@@ -118,7 +118,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 			}
 		}
 
-		this.extractPredicates(this.where, nil)
+		this.extractKeyspacePredicates(this.where, nil)
 
 		// Use FROM clause in index selection
 		_, err = node.From().Accept(this)

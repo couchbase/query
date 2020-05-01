@@ -31,7 +31,7 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 }
 
-func (this *builder) extractPredicates(where, on expression.Expression) {
+func (this *builder) extractKeyspacePredicates(where, on expression.Expression) {
 }
 
 func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool) {

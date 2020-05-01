@@ -54,7 +54,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	this.initialIndexAdvisor(stmt)
-	this.extractPredicates(nil, this.pushableOnclause)
+	this.extractKeyspacePredicates(nil, this.pushableOnclause)
 
 	if source.SubqueryTerm() != nil {
 		_, err := source.SubqueryTerm().Accept(this)

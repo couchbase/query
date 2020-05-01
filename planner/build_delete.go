@@ -28,8 +28,6 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	this.extractPredicates(this.where, nil)
-
 	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Returning() != nil)
 	if err != nil {
 		return nil, err
