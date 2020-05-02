@@ -56,6 +56,15 @@ const (
 
 var _ENDPOINT *HttpEndpoint
 
+// surprisingly FastPool is faster than LocklessPool
+var requestPool util.FastPool
+
+func init() {
+	util.NewFastPool(&requestPool, func() interface{} {
+		return &httpRequest{}
+	})
+}
+
 func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	httpAddr, httpsAddr, certFile, keyFile string) *HttpEndpoint {
 	rv := &HttpEndpoint{
@@ -215,10 +224,14 @@ func (this *HttpEndpoint) ListenTLS() error {
 // If the server channel is full and we are unable to queue a request,
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	var httpRequest httpRequest
 
-	request := &httpRequest
+	// ESCAPE analysis workaround
+	request := requestPool.Get().(*httpRequest)
+	*request = httpRequest{}
 	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace())
+	defer func() {
+		requestPool.Put(request)
+	}()
 
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false)
@@ -226,6 +239,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	defer this.doStats(request, this.server)
 
 	if request.State() == server.FATAL {
+
 		// There was problems creating the request: Fail it and return
 		request.Failed(this.server)
 		return

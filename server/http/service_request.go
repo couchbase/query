@@ -58,8 +58,10 @@ type httpRequest struct {
 	elapsedTime   time.Duration
 	executionTime time.Duration
 
-	stmtCnt int
-	consCnt int
+	stmtCnt  int
+	consCnt  int
+	jsonArgs jsonArgs // ESCAPE analysis workaround
+	urlArgs  urlArgs  // ESCAPE analysis workaround
 }
 
 var zeroScanVectorSource = &ZeroScanVectorSource{}
@@ -97,15 +99,11 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		}
 
 		if strings.HasPrefix(content_type, JSON_CONTENT) {
-			var jsonArgs jsonArgs
-
-			err = newJsonArgs(req, &jsonArgs)
-			httpArgs = &jsonArgs
+			err = newJsonArgs(req, &rv.jsonArgs)
+			httpArgs = &rv.jsonArgs
 		} else {
-			var urlArgs urlArgs
-
-			err = newUrlArgs(req, &urlArgs)
-			httpArgs = &urlArgs
+			err = newUrlArgs(req, &rv.urlArgs)
+			httpArgs = &rv.urlArgs
 		}
 	}
 
@@ -176,6 +174,8 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err != nil {
 		rv.Fail(err)
 	}
+	rv.jsonArgs = jsonArgs{}
+	rv.urlArgs = urlArgs{}
 }
 
 // For audit.Auditable interface.
@@ -1238,13 +1238,13 @@ type jsonArgs struct {
 	named   map[string]value.Value
 	direct  directAccess
 	req     *http.Request
+	state   json.ScanState // ESCAPE analysis workaround
 }
 
 // create a jsonArgs structure from the given http request.
 func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 	var bytes []byte
 	var err error
-	var state json.ScanState
 
 	if req.Method == "POST" {
 		bytes, err = ioutil.ReadAll(req.Body)
@@ -1253,9 +1253,9 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 		}
 	}
 
-	json.SetScanState(&state, bytes)
+	json.SetScanState(&p.state, bytes)
 	for {
-		key, err := state.ScanKeys()
+		key, err := p.state.ScanKeys()
 		if err != nil {
 			return errors.NewServiceErrorBadValue(err, "getting key")
 		}
@@ -1263,7 +1263,7 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 			break
 		}
 
-		val, err := state.NextUnmarshaledValue()
+		val, err := p.state.NextUnmarshaledValue()
 		if err != nil {
 			return errors.NewServiceErrorBadValue(err, "getting value")
 		}
@@ -1287,6 +1287,7 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 			p.args.add(lowerArg, val, pType.fn)
 		}
 	}
+	p.state.Release()
 	p.req = req
 	return nil
 }
