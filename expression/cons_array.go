@@ -46,7 +46,19 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 		return *this.value, nil
 	}
 
-	return this.Eval(this, item, context)
+	if len(this.operands) == 1 && this.HasExprFlag(EXPR_CAN_FLATTEN) {
+		return this.operands[0].Evaluate(item, context)
+	} else {
+		aa := make([]interface{}, len(this.operands))
+		for i, _ := range this.operands {
+			arg, err := this.operands[i].Evaluate(item, context)
+			if err != nil {
+				return nil, err
+			}
+			aa[i] = arg
+		}
+		return value.NewValue(aa), nil
+	}
 }
 
 func (this *ArrayConstruct) PropagatesMissing() bool {
@@ -55,18 +67,6 @@ func (this *ArrayConstruct) PropagatesMissing() bool {
 
 func (this *ArrayConstruct) PropagatesNull() bool {
 	return this.value != nil && *this.value != nil
-}
-
-func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.Value, error) {
-	if this.HasExprFlag(EXPR_CAN_FLATTEN) && len(args) == 1 {
-		return args[0], nil
-	}
-	aa := make([]interface{}, len(args))
-	for i, arg := range args {
-		aa[i] = arg
-	}
-
-	return value.NewValue(aa), nil
 }
 
 /*

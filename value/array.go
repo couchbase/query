@@ -40,7 +40,10 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 		return
 	}
 
-	if _, err = w.Write([]byte{'['}); err != nil {
+	// TODO workaround for GSI using an old golang that doesn't know about StringWriter
+	stringWriter := w.(*bytes.Buffer)
+
+	if _, err = stringWriter.WriteString("["); err != nil {
 		return
 	}
 
@@ -48,11 +51,11 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 
 	for i, e := range this {
 		if i > 0 {
-			if _, err = w.Write([]byte{','}); err != nil {
+			if _, err = stringWriter.WriteString(","); err != nil {
 				return
 			}
 		}
-		if err = writeJsonNewline(w, newPrefix); err != nil {
+		if err = writeJsonNewline(stringWriter, newPrefix); err != nil {
 			return
 		}
 
@@ -63,11 +66,11 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 	}
 
 	if len(this) > 0 {
-		if err = writeJsonNewline(w, prefix); err != nil {
+		if err = writeJsonNewline(stringWriter, prefix); err != nil {
 			return
 		}
 	}
-	_, err = w.Write([]byte{']'})
+	_, err = stringWriter.WriteString("]")
 	return err
 }
 

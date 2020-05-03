@@ -17,6 +17,8 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+const _DEFAULT_ATTACHMENT_SIZE = 10
+
 type AnnotatedValues []AnnotatedValue
 
 var annotatedPool util.LocklessPool
@@ -161,7 +163,7 @@ func (this *annotatedValue) GetAttachment(key string) interface{} {
 
 func (this *annotatedValue) SetAttachment(key string, val interface{}) {
 	if this.attachments == nil {
-		this.attachments = make(map[string]interface{})
+		this.attachments = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
 	}
 
 	this.attachments[key] = val

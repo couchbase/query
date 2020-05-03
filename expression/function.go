@@ -134,23 +134,27 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 
 func (this *FunctionBase) Eval(applied Applied, item value.Value, context Context) (
 	result value.Value, err error) {
-	var buf [8]value.Value
-	var args []value.Value
-	if len(this.operands) <= len(buf) {
-		args = buf[0:len(this.operands)]
-	} else {
-		args = _ARGS_POOL.GetSized(len(this.operands))
-		defer _ARGS_POOL.Put(args)
-	}
+	if len(this.operands) == 1 {
+		var arg value.Value
 
-	for i, op := range this.operands {
-		args[i], err = op.Evaluate(item, context)
+		arg, err = this.operands[0].Evaluate(item, context)
 		if err != nil {
 			return
 		}
-	}
+		return applied.Apply(context, arg)
+	} else {
+		args := _ARGS_POOL.GetSized(len(this.operands))
+		defer _ARGS_POOL.Put(args)
 
-	return applied.Apply(context, args...)
+		for i, op := range this.operands {
+			args[i], err = op.Evaluate(item, context)
+			if err != nil {
+				return
+			}
+		}
+
+		return applied.Apply(context, args...)
+	}
 }
 
 func (this *FunctionBase) Indexable() bool {
@@ -626,23 +630,27 @@ func NewUserDefinedFunctionBase(name string, operands ...Expression) *UserDefine
 
 func (this *UserDefinedFunctionBase) EvalForIndex(applied UdfApplied, item value.Value, context Context) (
 	result value.Value, err error) {
-	var buf [8]value.Value
-	var args []value.Value
-	if len(this.operands) <= len(buf) {
-		args = buf[0:len(this.operands)]
-	} else {
-		args = _ARGS_POOL.GetSized(len(this.operands))
-		defer _ARGS_POOL.Put(args)
-	}
+	if len(this.operands) == 1 {
+		var arg value.Value
 
-	for i, op := range this.operands {
-		args[i], err = op.Evaluate(item, context)
+		arg, err = this.operands[0].Evaluate(item, context)
 		if err != nil {
 			return
 		}
-	}
+		return applied.Apply(context, arg)
+	} else {
+		args := _ARGS_POOL.GetSized(len(this.operands))
+		defer _ARGS_POOL.Put(args)
 
-	return applied.IdxApply(context, args...)
+		for i, op := range this.operands {
+			args[i], err = op.Evaluate(item, context)
+			if err != nil {
+				return
+			}
+		}
+
+		return applied.IdxApply(context, args...)
+	}
 }
 
 var _FOUND_POOL = util.NewBoolPool(64)

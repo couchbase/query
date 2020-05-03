@@ -83,7 +83,10 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 		return
 	}
 
-	if _, err = w.Write([]byte{'{'}); err != nil {
+	// TODO workaround for GSI using an old golang that doesn't know about StringWriter
+	stringWriter := w.(*bytes.Buffer)
+
+	if _, err = stringWriter.WriteString("{"); err != nil {
 		return
 	}
 
@@ -103,20 +106,20 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 				continue
 			}
 			written++
-			if err = writeJsonNewline(w, newPrefix); err != nil {
+			if err = writeJsonNewline(stringWriter, newPrefix); err != nil {
 				return
 			}
-			if _, err = w.Write([]byte{'"'}); err != nil {
+			if _, err = stringWriter.WriteString("\""); err != nil {
 				return
 			}
-			if _, err = w.Write([]byte(n)); err != nil {
+			if _, err = stringWriter.WriteString(n); err != nil {
 				return
 			}
-			if _, err = w.Write([]byte{'"', ':'}); err != nil {
+			if _, err = stringWriter.WriteString("\":"); err != nil {
 				return
 			}
 			if newPrefix != "" {
-				if _, err = w.Write([]byte{' '}); err != nil {
+				if _, err = stringWriter.WriteString(" "); err != nil {
 					return err
 				}
 			}
@@ -146,13 +149,13 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 			}
 
 			if written > 0 {
-				if _, err = w.Write([]byte{','}); err != nil {
+				if _, err = stringWriter.WriteString(","); err != nil {
 					return
 				}
 			}
 			written++
 
-			if err = writeJsonNewline(w, newPrefix); err != nil {
+			if err = writeJsonNewline(stringWriter, newPrefix); err != nil {
 				return
 			}
 
@@ -164,11 +167,11 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 			if _, err = w.Write(b); err != nil {
 				return err
 			}
-			if _, err = w.Write([]byte{':'}); err != nil {
+			if _, err = stringWriter.WriteString(":"); err != nil {
 				return err
 			}
 			if prefix != "" || indent != "" {
-				if _, err = w.Write([]byte{' '}); err != nil {
+				if _, err = stringWriter.WriteString(" "); err != nil {
 					return err
 				}
 			}
@@ -179,11 +182,11 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 		}
 	}
 	if written > 0 {
-		if err = writeJsonNewline(w, prefix); err != nil {
+		if err = writeJsonNewline(stringWriter, prefix); err != nil {
 			return
 		}
 	}
-	_, err = w.Write([]byte{'}'})
+	_, err = stringWriter.WriteString("}")
 	return err
 }
 
@@ -681,13 +684,13 @@ func combineNames(objs ...map[string]interface{}) map[string]interface{} {
 	return all
 }
 
-func writeJsonNewline(w io.Writer, prefix string) (err error) {
+func writeJsonNewline(stringWriter *bytes.Buffer, prefix string) (err error) {
 	if prefix != "" {
-		if _, err = w.Write([]byte{'\n'}); err != nil {
+		if _, err = stringWriter.WriteString("\n"); err != nil {
 			return
 		}
 
-		_, err = io.WriteString(w, prefix)
+		_, err = stringWriter.WriteString(prefix)
 	}
 
 	return
