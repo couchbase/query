@@ -111,7 +111,10 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 
 	for _, expr := range this.cover.Expressions() {
 		if !expression.IsCovered(expr, alias, coveringExprs) {
-			return nil, 0, nil
+			// handle equality on multiple AND with precedences
+			if !base.SubsetOf(pred, expr) || !base.SubsetOf(expr, pred) {
+				return nil, 0, nil
+			}
 		}
 	}
 
