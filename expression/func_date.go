@@ -449,7 +449,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 	}
 
 	da := date.Actual().(string)
-	t, fmt, err := strToTimeFormat(da)
+	t, fmt, err := StrToTimeFormat(da)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -1048,14 +1048,14 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 
 	// Convert start date to time format.
 	da1 := startDate.Actual().(string)
-	t1, fmt1, err := strToTimeFormat(da1)
+	t1, fmt1, err := StrToTimeFormat(da1)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	// Convert end date to time format.
 	da2 := endDate.Actual().(string)
-	t2, _, err := strToTimeFormat(da2)
+	t2, _, err := StrToTimeFormat(da2)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2528,7 +2528,7 @@ Parse the input string using the defined formats for Date
 and return the time value it represents, the format and an
 error. The Parse method is defined by the time package.
 */
-func strToTimeFormat(s string) (time.Time, string, error) {
+func StrToTimeFormat(s string) (time.Time, string, error) {
 	var t time.Time
 	var err error
 	for _, f := range _DATE_FORMATS {
@@ -2546,7 +2546,7 @@ It returns a textual representation of the time value formatted
 according to the Format string.
 */
 func timeToStr(t time.Time, format string) string {
-	_, fmt, _ := strToTimeFormat(format)
+	_, fmt, _ := StrToTimeFormat(format)
 	return t.Format(fmt)
 }
 
