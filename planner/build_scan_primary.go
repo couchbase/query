@@ -90,6 +90,10 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	keyspaces := make(map[string]string, 1)
 	keyspaces[node.Alias()] = node.Keyspace()
 	newfilter := base.NewFilter(pred, pred, keyspaces, false, false)
+	if this.useCBO {
+		newfilter.SetSelec(1.0)
+		newfilter.SetSelecDone()
+	}
 	baseKeyspace.AddFilter(newfilter)
 	baseKeyspace.SetPreds(pred, nil, nil)
 	op, _, err := this.buildCoveringScan(secondaries, node, baseKeyspace, id)
