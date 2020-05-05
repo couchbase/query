@@ -193,13 +193,21 @@ func (this *chkNullRej) visitAnyAndEvery(coll expression.CollectionPredicate) (i
 		_KEYSPACE_NAMES_POOL.Put(this.keyspaceNames)
 		this.keyspaceNames = keyspaceNames
 	}()
-	this.keyspaceNames[this.alias] = ""
 
-	aliasIdent := expression.NewIdentifier(this.alias)
+	aliasIdents := make([]*expression.Identifier, 0, len(keyspaceNames))
+	for k, _ := range keyspaceNames {
+		this.keyspaceNames[k] = ""
+		aliasIdent := expression.NewIdentifier(k)
+		aliasIdents = append(aliasIdents, aliasIdent)
+	}
 
+outer:
 	for _, binding := range coll.Bindings() {
-		if binding.Expression().DependsOn(aliasIdent) {
-			this.keyspaceNames[binding.Variable()] = ""
+		for _, aliasIdent := range aliasIdents {
+			if binding.Expression().DependsOn(aliasIdent) {
+				this.keyspaceNames[binding.Variable()] = ""
+				continue outer
+			}
 		}
 	}
 
