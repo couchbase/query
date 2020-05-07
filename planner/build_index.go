@@ -169,7 +169,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef) (datastore.Keyspac
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
 			strings.Contains(err.TranslationKey(), "scope_not_found") ||
 			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
-		virtualKeyspace, err1 := this.getVirtualKeyspace(ks.Path().Namespace(), ks.Path().Keyspace())
+		virtualKeyspace, err1 := this.getVirtualKeyspace(ks.Path().Namespace(), ks.Path().Parts())
 		if err1 == nil {
 			return virtualKeyspace, nil
 		}
@@ -182,7 +182,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef) (datastore.Keyspac
 	return keyspace, err
 }
 
-func (this *builder) getVirtualKeyspace(namespaceStr, keySpaceStr string) (datastore.Keyspace, error) {
+func (this *builder) getVirtualKeyspace(namespaceStr string, path []string) (datastore.Keyspace, error) {
 	ds := this.datastore
 	namespace, err := ds.NamespaceByName(namespaceStr)
 	if err != nil {
@@ -192,7 +192,9 @@ func (this *builder) getVirtualKeyspace(namespaceStr, keySpaceStr string) (datas
 		if this.indexAdvisor {
 			this.setKeyspaceFound()
 		}
-		return v.VirtualKeyspaceByName(keySpaceStr)
+
+		// TODO collections
+		return v.VirtualKeyspaceByName(path)
 	}
 	return nil, errors.NewVirtualKSNotSupportedError(nil, "Namespace "+namespaceStr)
 }

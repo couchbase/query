@@ -85,7 +85,7 @@ type collectQueryInfo struct {
 	indexCollector      *scanIdxCol
 	idxCandidates       []datastore.Index
 	validatedCoverIdxes iaplan.IndexInfos
-	pushDownPropMap     map[string]PushDownProperties // key->"keyspace_alias_indexname_typeofIdx" e.g. "default_d_idx1_virtual"
+	pushDownPropMap     map[string]PushDownProperties // key->"keyspace_alias_indexname_typeofIdx" e.g. "default:b.s.k_d_idx1_virtual"
 	advisePhase         int
 }
 
@@ -298,7 +298,8 @@ func (this *builder) collectPushdownProperty(index datastore.Index, alias string
 	if this.pushDownPropMap == nil {
 		this.pushDownPropMap = make(map[string]PushDownProperties, 1)
 	}
-	key := index.KeyspaceId() + "_" + alias + "_" + index.Name() + "_" + string(index.Type())
+
+	key := datastore.IndexQualifiedKeyspacePath(index) + "_" + alias + "_" + index.Name() + "_" + string(index.Type())
 	if _, ok := this.pushDownPropMap[key]; !ok {
 		this.pushDownPropMap[key] = property
 	}

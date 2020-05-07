@@ -115,7 +115,7 @@ type Object struct {
 
 type VirtualNamespace interface {
 	Namespace
-	VirtualKeyspaceByName(name string) (Keyspace, errors.Error)
+	VirtualKeyspaceByName(path []string) (Keyspace, errors.Error)
 }
 
 type Bucket interface {
@@ -314,7 +314,32 @@ func GetBucket(parts ...string) (Bucket, errors.Error) {
 	}
 }
 
+func GetPath(keyspace Keyspace) []string {
+	namespace := keyspace.NamespaceId()
+	scope := keyspace.Scope()
+	if scope == nil {
+		return []string{namespace, keyspace.Name()}
+	}
+
+	// for the default collection we want the actual name of the collection
+	return []string{namespace, scope.BucketId(), scope.Name(), keyspace.Id()}
+}
+
 func IndexQualifiedKeyspacePath(index Index) string {
+
+	// there is an outside chance that a virtual index might not have an indexer associated
+	// this is code is never called, but just in case
+	if index.Indexer() == nil {
+		collIdx, ok := index.(CollectionIndex)
+		if ok {
+			bucketId := collIdx.BucketId()
+			scopeId := collIdx.ScopeId()
+			if bucketId != "" && scopeId != "" {
+				return "default:" + bucketId + "." + scopeId + "." + index.KeyspaceId()
+			}
+		}
+		return "default:" + index.KeyspaceId()
+	}
 
 	// The code below could have been duplicated here, but this makes maintenance easier
 	return IndexerQualifiedKeyspacePath(index.Indexer())

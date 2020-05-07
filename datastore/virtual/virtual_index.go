@@ -41,15 +41,19 @@ func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition express
 }
 
 func (this *VirtualIndex) BucketId() string {
-	return ""
+	scope := this.keyspace.Scope()
+	if scope == nil {
+		return ""
+	}
+	return scope.BucketId()
 }
 
 func (this *VirtualIndex) ScopeId() string {
-	return ""
+	return this.keyspace.ScopeId()
 }
 
 func (this *VirtualIndex) KeyspaceId() string {
-	return this.keyspace.Name()
+	return this.keyspace.Id()
 }
 
 func (this *VirtualIndex) Id() string {
@@ -66,7 +70,7 @@ func (this *VirtualIndex) Type() datastore.IndexType {
 
 //Virtual index may be in virtualindexer for virtual keyspace or normal keyspace indexer.
 func (this *VirtualIndex) Indexer() datastore.Indexer {
-	indexer, err := this.keyspace.Indexer(this.Type())
+	indexer, err := this.keyspace.Indexer(datastore.DEFAULT)
 	if err == nil {
 		return indexer
 	}

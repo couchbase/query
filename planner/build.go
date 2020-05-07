@@ -208,7 +208,7 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 			strings.Contains(err.TranslationKey(), "scope_not_found") ||
 			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {
 
-		virtualKeyspace, err1 := this.getVirtualKeyspace(ns, path.Keyspace())
+		virtualKeyspace, err1 := this.getVirtualKeyspace(ns, path.Parts())
 		if err1 == nil {
 			return virtualKeyspace, nil
 		}

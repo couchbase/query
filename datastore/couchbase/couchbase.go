@@ -766,8 +766,8 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 	return p.keyspaceByName(name)
 }
 
-func (p *namespace) VirtualKeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
-	return virtual.NewVirtualKeyspace(name, p), nil
+func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, errors.Error) {
+	return virtual.NewVirtualKeyspace(p, path)
 }
 
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
@@ -1269,7 +1269,7 @@ func (b *keyspace) FullName() string {
 }
 
 func (b *keyspace) QualifiedName() string {
-	return b.fullName + "._default._default"
+	return b.fullName + _DEFAULT_COLLECTION_SCOPE_NAME
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {

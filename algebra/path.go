@@ -94,6 +94,10 @@ func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 	}
 }
 
+func NewPathFromElements(elems []string) *Path {
+	return &Path{elements: elems}
+}
+
 func (path *Path) Namespace() string {
 	return path.elements[0]
 }

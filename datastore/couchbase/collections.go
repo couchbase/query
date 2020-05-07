@@ -24,6 +24,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const _DEFAULT_COLLECTION_SCOPE_NAME = "_default._default"
+
 type scope struct {
 	id     string
 	bucket *keyspace
@@ -122,6 +124,7 @@ func (sc *scope) DropCollection(name string) errors.Error {
 type collection struct {
 	sync.Mutex
 	id         string
+	name       string
 	uid        uint32
 	namespace  *namespace
 	scope      *scope
@@ -132,6 +135,7 @@ type collection struct {
 	ftsIndexer datastore.Indexer
 	chkIndex   chkIndexDict
 	isDefault  bool
+	isBucket   bool
 }
 
 func (coll *collection) Id() string {
@@ -139,12 +143,12 @@ func (coll *collection) Id() string {
 }
 
 func (coll *collection) Name() string {
-	return coll.id
+	return coll.name
 }
 
 func (coll *collection) QualifiedName() string {
-	if coll.isDefault {
-		return coll.fullName + "._default._default"
+	if coll.isBucket {
+		return coll.fullName + _DEFAULT_COLLECTION_SCOPE_NAME
 	}
 	return coll.fullName
 }
@@ -330,6 +334,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 		for _, c := range s.Collections {
 			coll := &collection{
 				id:        c.Name,
+				name:      c.Name,
 				namespace: bucket.namespace,
 				fullName:  bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + c.Name,
 				uid:       uint32(c.Uid),
@@ -343,13 +348,15 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				// the default collection has the bucket name to represent itself as the bucket
 				// this is to differentiate from the default collection being addressed explicitly
 				defaultCollection = &collection{
-					id:        bucket.name,
+					id:        c.Name,
+					name:      bucket.name,
 					namespace: bucket.namespace,
 					fullName:  bucket.namespace.name + ":" + bucket.name,
 					uid:       uint32(c.Uid),
 					scope:     scope,
 					bucket:    bucket,
 					isDefault: true,
+					isBucket:  true,
 				}
 			}
 		}
@@ -381,6 +388,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 		for _, c := range s.Collections {
 			coll := &collection{
 				id:        c.Name,
+				name:      c.Name,
 				namespace: bucket.namespace,
 				fullName:  bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + c.Name,
 				uid:       uint32(c.Uid),
@@ -406,13 +414,15 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 				// the default collection has the bucket name to represent itself as the bucket
 				// this is to differentiate from the default collection being addressed explicitly
 				defaultCollection = &collection{
-					id:        bucket.name,
+					id:        c.Name,
+					name:      bucket.name,
 					namespace: bucket.namespace,
 					fullName:  bucket.namespace.name + ":" + bucket.name,
 					uid:       uint32(c.Uid),
 					scope:     scope,
 					bucket:    bucket,
 					isDefault: true,
+					isBucket:  true,
 				}
 
 				// copy the indexers

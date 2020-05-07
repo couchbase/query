@@ -19,29 +19,33 @@ import (
 
 //Implement Interface Indexer{}
 type VirtualIndexer struct {
-	namespace string
-	keyspace  string
-	indexes   map[string]datastore.Index
+	path    []string
+	indexes map[string]datastore.Index
 }
 
-func NewVirtualIndexer(namespace, keyspace string) datastore.Indexer {
+func NewVirtualIndexer(path []string) datastore.Indexer {
 	return &VirtualIndexer{
-		namespace: namespace,
-		keyspace:  keyspace,
-		indexes:   make(map[string]datastore.Index, 1),
+		path:    path,
+		indexes: make(map[string]datastore.Index, 1),
 	}
 }
 
 func (this *VirtualIndexer) BucketId() string {
+	if len(this.path) > 2 {
+		return this.path[1]
+	}
 	return ""
 }
 
 func (this *VirtualIndexer) ScopeId() string {
+	if len(this.path) > 2 {
+		return this.path[2]
+	}
 	return ""
 }
 
 func (this *VirtualIndexer) KeyspaceId() string {
-	return this.keyspace
+	return this.path[len(this.path)-1]
 }
 
 func (this *VirtualIndexer) Name() datastore.IndexType {

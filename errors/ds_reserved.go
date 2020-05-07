@@ -21,6 +21,9 @@ func NewDatastoreInvalidPathError(w string) Error {
 const DS_BAD_CONTEXT = 10101
 
 func NewQueryContextError(w string) Error {
+	if w != "" {
+		w = ": " + w
+	}
 	return &err{level: EXCEPTION, ICode: DS_BAD_CONTEXT, IKey: "datastore.generic.context_error",
-		InternalMsg: "Invalid query context specified: " + w, InternalCaller: CallerN(1)}
+		InternalMsg: "Invalid query context specified" + w, InternalCaller: CallerN(1)}
 }

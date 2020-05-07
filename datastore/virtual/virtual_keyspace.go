@@ -17,35 +17,160 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type virtualKeyspace struct {
-	name      string
+// for completeness with collections
+type virtualBucket struct {
+	id        string
 	namespace datastore.Namespace
-	indexer   datastore.Indexer
+	scope     datastore.Scope
 }
 
-func NewVirtualKeyspace(name string, namespace datastore.Namespace) datastore.Keyspace {
-	return &virtualKeyspace{
-		name:      name,
-		namespace: namespace,
-		indexer:   NewVirtualIndexer(namespace.Name(), name),
+func (b *virtualBucket) Id() string {
+	return b.id
+}
+
+func (b *virtualBucket) Name() string {
+	return b.id
+}
+
+func (b *virtualBucket) NamespaceId() string {
+	return b.namespace.Id()
+}
+
+func (b *virtualBucket) Namespace() datastore.Namespace {
+	return b.namespace
+}
+
+func (b *virtualBucket) ScopeIds() ([]string, errors.Error) {
+	return []string{b.scope.Id()}, nil
+}
+
+func (b *virtualBucket) ScopeNames() ([]string, errors.Error) {
+	return []string{b.scope.Name()}, nil
+}
+
+func (b *virtualBucket) ScopeById(id string) (datastore.Scope, errors.Error) {
+	if b.scope.Id() != id {
+		return nil, errors.NewVirtualScopeNotFoundError(nil, id)
 	}
+	return b.scope, nil
+}
+
+func (b *virtualBucket) ScopeByName(name string) (datastore.Scope, errors.Error) {
+	if b.scope.Name() != name {
+		return nil, errors.NewVirtualScopeNotFoundError(nil, name)
+	}
+	return b.scope, nil
+}
+
+func (b *virtualBucket) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
+	return nil, errors.NewVirtualBucketNoDefaultCollectionError(b.id)
+}
+
+func (b *virtualBucket) CreateScope(name string) errors.Error {
+	return errors.NewVirtualBucketCreateScopeError(name, fmt.Errorf("not supported by virtual buckets"))
+}
+
+func (b *virtualBucket) DropScope(name string) errors.Error {
+	return errors.NewVirtualBucketDropScopeError(name, fmt.Errorf("not supported by virtual buckets"))
+}
+
+// for completeness with collections
+type virtualScope struct {
+	id       string
+	bucket   *virtualBucket
+	keyspace *virtualKeyspace
+}
+
+func (sc *virtualScope) Id() string {
+	return sc.id
+}
+
+func (sc *virtualScope) Name() string {
+	return sc.id
+}
+
+func (sc *virtualScope) BucketId() string {
+	return sc.bucket.Id()
+}
+
+func (sc *virtualScope) Bucket() datastore.Bucket {
+	return sc.bucket
+}
+
+func (sc *virtualScope) KeyspaceIds() ([]string, errors.Error) {
+	return []string{sc.keyspace.Id()}, nil
+}
+
+func (sc *virtualScope) KeyspaceNames() ([]string, errors.Error) {
+	return []string{sc.keyspace.Name()}, nil
+}
+
+func (sc *virtualScope) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
+	if sc.keyspace.Id() != id {
+		return nil, errors.NewVirtualKeyspaceNotFoundError(nil, id)
+	}
+	return sc.keyspace, nil
+}
+
+func (sc *virtualScope) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
+	if sc.keyspace.Name() != name {
+		return nil, errors.NewVirtualKeyspaceNotFoundError(nil, name)
+	}
+	return sc.keyspace, nil
+}
+
+func (sc *virtualScope) CreateCollection(name string) errors.Error {
+	return errors.NewCbBucketCreateCollectionError(name, fmt.Errorf("not supported by virtual scopes"))
+}
+
+func (sc *virtualScope) DropCollection(name string) errors.Error {
+	return errors.NewCbBucketDropCollectionError(name, fmt.Errorf("not supported by virtual scopes"))
+}
+
+type virtualKeyspace struct {
+	path      []string
+	namespace datastore.Namespace
+	indexer   datastore.Indexer
+	scope     datastore.Scope
+}
+
+func NewVirtualKeyspace(namespace datastore.Namespace, path []string) (datastore.Keyspace, errors.Error) {
+	if len(path) != 2 && len(path) != 4 {
+		return nil, errors.NewDatastoreInvalidPathError("")
+	}
+
+	rv := &virtualKeyspace{
+		path:      path,
+		namespace: namespace,
+		indexer:   NewVirtualIndexer(path),
+	}
+	if len(path) == 4 {
+		scope := &virtualScope{id: path[2], keyspace: rv}
+		bucket := &virtualBucket{id: path[1], namespace: namespace, scope: scope}
+		scope.bucket = bucket
+		rv.scope = scope
+	}
+	return rv, nil
 }
 
 func (this *virtualKeyspace) Id() string {
-	return this.name
+	return this.path[len(this.path)-1]
 }
 
 func (this *virtualKeyspace) Name() string {
-	return this.name
+	return this.path[len(this.path)-1]
 }
 
 func (this *virtualKeyspace) QualifiedName() string {
-	return this.namespace.Name() + ":" + this.name
+	if len(this.path) == 2 {
+		return this.path[0] + ":" + this.path[1]
+	}
+	return this.path[0] + ":" + this.path[1] + "." + this.path[2] + "." + this.path[3]
 }
 
 // Virtual keyspace will be directly under a namespace.
 func (this *virtualKeyspace) NamespaceId() string {
-	return this.namespace.Id()
+	return this.path[0]
 }
 
 func (this *virtualKeyspace) Namespace() datastore.Namespace {
@@ -53,11 +178,14 @@ func (this *virtualKeyspace) Namespace() datastore.Namespace {
 }
 
 func (this *virtualKeyspace) ScopeId() string {
+	if len(this.path) == 4 {
+		return this.path[2]
+	}
 	return ""
 }
 
 func (this *virtualKeyspace) Scope() datastore.Scope {
-	return nil
+	return this.scope
 }
 
 func (this *virtualKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {

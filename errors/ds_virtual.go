@@ -44,3 +44,38 @@ func NewVirtualIdxNotSupportedError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 17006, IKey: "datastore.virtual.index.not_supported", ICause: e,
 		InternalMsg: "Virtual Index : Not supported " + msg, InternalCaller: CallerN(1)}
 }
+
+func NewVirtualScopeNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 17007, IKey: "datastore.virtual.scope_not_found", ICause: e,
+		InternalMsg: "Scope not found in virtual datastore " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewVirtualBucketNoDefaultCollectionError(b string) Error {
+	return &err{level: EXCEPTION, ICode: 17008, IKey: "datastore.virtual.no_default_collection",
+		InternalMsg: "Bucket " + b + " does not have a default collection", InternalCaller: CallerN(1)}
+}
+
+func NewVirtualBucketCreateScopeError(s string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 17009, IKey: "datastore.virtual.create_scope", ICause: e,
+		InternalMsg: "Error while creating scope " + s, InternalCaller: CallerN(1)}
+}
+
+func NewVirtualBucketDropScopeError(s string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 17010, IKey: "datastore.virtual.drop_scope", ICause: e,
+		InternalMsg: "Error while dropping scope " + s, InternalCaller: CallerN(1)}
+}
+
+func NewVirtualKeyspaceNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 17011, IKey: "datastore.virtual.keyspace_not_found", ICause: e,
+		InternalMsg: "Keyspace not found in CB datastore: " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewVirtualBucketCreateCollectionError(c string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 17012, IKey: "datastore.virtual.create_collection", ICause: e,
+		InternalMsg: "Error while creating collection " + c, InternalCaller: CallerN(1)}
+}
+
+func NewVirtualBucketDropCollectionError(c string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 17013, IKey: "datastore.virtual.drop_collection", ICause: e,
+		InternalMsg: "Error while dropping collection " + c, InternalCaller: CallerN(1)}
+}

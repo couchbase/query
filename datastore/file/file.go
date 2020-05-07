@@ -265,8 +265,8 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 	return
 }
 
-func (p *namespace) VirtualKeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
-	return virtual.NewVirtualKeyspace(name, p), nil
+func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, errors.Error) {
+	return virtual.NewVirtualKeyspace(p, path)
 }
 
 func (p *namespace) MetadataVersion() uint64 {
