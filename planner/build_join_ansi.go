@@ -691,20 +691,6 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		return nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
 	}
 
-	if buildRight {
-		child = plan.NewSequence(this.children...)
-		this.children = children
-		buildAliases = []string{alias}
-	} else {
-		child = plan.NewSequence(children...)
-		buildAliases = make([]string, 0, len(this.baseKeyspaces))
-		for _, kspace := range this.baseKeyspaces {
-			if kspace.PlanDone() && kspace.Name() != alias {
-				buildAliases = append(buildAliases, kspace.Name())
-			}
-		}
-	}
-
 	// perform cover transformation of leftExprs and rightExprs and onclause
 	newOnclause = onclause.Copy()
 
@@ -756,11 +742,21 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	}
 
 	if buildRight {
+		child = plan.NewSequence(this.children...)
+		this.children = children
 		probeExprs = leftExprs
 		buildExprs = rightExprs
+		buildAliases = []string{alias}
 	} else {
+		child = plan.NewSequence(children...)
 		buildExprs = leftExprs
 		probeExprs = rightExprs
+		buildAliases = make([]string, 0, len(this.baseKeyspaces))
+		for _, kspace := range this.baseKeyspaces {
+			if kspace.PlanDone() && kspace.Name() != alias {
+				buildAliases = append(buildAliases, kspace.Name())
+			}
+		}
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, cost, cardinality, nil
