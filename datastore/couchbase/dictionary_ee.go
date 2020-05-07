@@ -89,7 +89,7 @@ func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexD
 			continue
 		}
 
-		indexes[idx.Name()] = true
+		indexes[idx.Id()] = idx.Name()
 	}
 
 	dictionary.CheckIndexes(keyspace, indexes)
@@ -97,4 +97,4 @@ func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexD
 	return nil
 }
 
-var _INDEX_ID_POOL = util.NewStringBoolPool(256)
+var _INDEX_ID_POOL = util.NewStringStringPool(256)
