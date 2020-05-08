@@ -60,5 +60,9 @@ func (this *Use) SetJoinHint(joinHint JoinHint) {
 
 // Hint Errors
 
-const HASH_JOIN_EE_ONLY = "HASH JOIN is not supported in Community Edition"
-const HASH_NEST_EE_ONLY = "HASH NEST is not supported in Community Edition"
+const (
+	HASH_JOIN_EE_ONLY     = "HASH JOIN is not supported in Community Edition"
+	HASH_NEST_EE_ONLY     = "HASH NEST is not supported in Community Edition"
+	USE_NL_NOT_FOLLOWED   = "USE NL hint cannot be followed"
+	USE_HASH_NOT_FOLLOWED = "USE HASH hint cannot be followed"
+)

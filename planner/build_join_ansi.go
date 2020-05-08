@@ -83,12 +83,15 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		}
 
 		if len(scans) > 0 {
-			if useCBO && (hjCost > 0.0) && (cost > hjCost) {
+			if useCBO && !right.PreferNL() && (hjCost > 0.0) && (cost > hjCost) {
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hjOnclause)
 				return hjoin, nil
 			}
 
+			if right.PreferHash() {
+				node.SetHintError(algebra.USE_HASH_NOT_FOLLOWED)
+			}
 			if newOnclause != nil {
 				node.SetOnclause(newOnclause)
 			}
@@ -96,6 +99,9 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		} else if hjCost > 0.0 {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hjOnclause)
+			if right.PreferNL() {
+				node.SetHintError(algebra.USE_NL_NOT_FOLLOWED)
+			}
 			return hjoin, nil
 		} else if err != nil && useCBO {
 			// error occurred and neither nested-loop join nor hash join is available
@@ -222,12 +228,15 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		}
 
 		if len(scans) > 0 {
-			if useCBO && (hnCost > 0.0) && (cost > hnCost) {
+			if useCBO && !right.PreferNL() && (hnCost > 0.0) && (cost > hnCost) {
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hnOnclause)
 				return hnest, nil
 			}
 
+			if right.PreferHash() {
+				node.SetHintError(algebra.USE_HASH_NOT_FOLLOWED)
+			}
 			if newOnclause != nil {
 				node.SetOnclause(newOnclause)
 			}
@@ -235,6 +244,9 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		} else if hnCost > 0.0 {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hnOnclause)
+			if right.PreferNL() {
+				node.SetHintError(algebra.USE_NL_NOT_FOLLOWED)
+			}
 			return hnest, nil
 		}
 
