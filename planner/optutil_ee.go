@@ -21,11 +21,6 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func optCalcSelectivity(filter *base.Filter) {
-	optutil.CalcSelectivity(filter)
-	return
-}
-
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	float64, float64) {
 	sel, arrSel, def := optutil.ExprSelec(keyspaces, pred)

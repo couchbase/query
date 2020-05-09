@@ -430,6 +430,24 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		isJoin = true
 	}
 
+	// calculate selectivity before removing keyspace references
+	selec := OPT_SELEC_NOT_AVAIL
+	arrSelec := OPT_SELEC_NOT_AVAIL
+	if this.doSelec {
+		hasUnnest := false
+		for kspace, _ := range keyspaces {
+			if baseKeyspace, ok := this.baseKeyspaces[kspace]; ok {
+				if baseKeyspace.IsPrimaryUnnest() {
+					hasUnnest = true
+					break
+				}
+			}
+		}
+		if !hasUnnest {
+			selec, arrSelec = optExprSelec(keyspaces, dnfExpr)
+		}
+	}
+
 	if this.isOnclause {
 		// remove references to keyspaces that's already processed
 		for kspace, _ := range keyspaces {
@@ -444,8 +462,10 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 	for kspace, _ := range keyspaces {
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
 			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, this.isOnclause, isJoin)
-			if this.doSelec && !baseKspace.IsPrimaryUnnest() {
-				optCalcSelectivity(filter)
+			if this.doSelec {
+				filter.SetSelec(selec)
+				filter.SetArraySelec(arrSelec)
+				filter.SetSelecDone()
 			}
 
 			if len(keyspaces) == 1 {
