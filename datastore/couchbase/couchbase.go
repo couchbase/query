@@ -1269,7 +1269,7 @@ func (b *keyspace) FullName() string {
 }
 
 func (b *keyspace) QualifiedName() string {
-	return b.fullName + _DEFAULT_COLLECTION_SCOPE_NAME
+	return b.fullName + _DEFAULT_SCOPE_COLLECTION_NAME
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {

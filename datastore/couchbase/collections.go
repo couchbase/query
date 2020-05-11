@@ -24,7 +24,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-const _DEFAULT_COLLECTION_SCOPE_NAME = "_default._default"
+const _DEFAULT_SCOPE_COLLECTION_NAME = "._default._default"
 
 type scope struct {
 	id     string
@@ -148,7 +148,7 @@ func (coll *collection) Name() string {
 
 func (coll *collection) QualifiedName() string {
 	if coll.isBucket {
-		return coll.fullName + _DEFAULT_COLLECTION_SCOPE_NAME
+		return coll.fullName + _DEFAULT_SCOPE_COLLECTION_NAME
 	}
 	return coll.fullName
 }

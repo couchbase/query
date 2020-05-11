@@ -194,7 +194,8 @@ func (this *builder) restoreCollectQueryInfo(info *collectQueryInfo) {
 	this.queryInfo = info.queryInfo
 }
 
-func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order, aggs algebra.Aggregates) {
+func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group,
+	projection *algebra.Projection, order *algebra.Order, aggs algebra.Aggregates) {
 	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
 		if let != nil {
 			this.queryInfo.SetLet(let)
@@ -224,7 +225,8 @@ func (this *builder) enableUnnest(alias string) {
 	}
 }
 
-func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
+func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace,
+	node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
 	if !(this.indexAdvisor && this.advisePhase == _RECOMMEND) {
 		return nil
 	}
@@ -238,7 +240,9 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 
 	if pred == nil {
 		if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false, nil)
+			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()),
+				getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(),
+				false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		} else {
 			pred = baseKeyspace.DnfPred()
@@ -266,7 +270,9 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				if !ansijoin {
 					addUnnestPreds(baseKeyspacesCopy, bk)
 				}
-				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()), getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(), op, true, predConjunc)
+				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()),
+					getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(),
+					op, true, predConjunc)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
@@ -277,7 +283,9 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				return err
 			}
 			baseKeyspaceCopy, _ := baseKeyspacesCopy[node.Alias()]
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()), getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(), pred, false, nil)
+			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()),
+				getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(),
+				pred, false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		}
 	}
@@ -389,7 +397,8 @@ func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryId
 	return level
 }
 
-func extractDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, indexApiVersion int) map[string]iaplan.IndexInfos {
+func extractDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo,
+	indexApiVersion int) map[string]iaplan.IndexInfos {
 	if len(queryInfos) == 0 {
 		return nil
 	}
