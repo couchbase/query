@@ -13,8 +13,10 @@ package planner
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 type Optimizer interface {
+	Initialize(baseKeyspaces map[string]*base.BaseKeyspace)
 	OptimizeQueryBlock(node algebra.Node) (plan.Operator, error)
 }

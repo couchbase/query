@@ -120,10 +120,25 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 		this.extractKeyspacePredicates(this.where, nil)
 
-		// Use FROM clause in index selection
-		_, err = node.From().Accept(this)
-		if err != nil {
-			return err
+		var op plan.Operator
+
+		if this.useCBO && this.context.Optimizer() != nil {
+			optimizer := this.context.Optimizer()
+			optimizer.Initialize(this.baseKeyspaces)
+			op, err = optimizer.OptimizeQueryBlock(node.From())
+			if err != nil {
+				return err
+			}
+		}
+
+		if op != nil {
+			this.addChildren(op)
+		} else {
+			// Use FROM clause in index selection
+			_, err = node.From().Accept(this)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		// No FROM clause
