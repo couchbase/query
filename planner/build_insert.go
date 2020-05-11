@@ -27,9 +27,10 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 
 	children := make([]plan.Operator, 0, 4)
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+
 	if stmt.Values() != nil {
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
 			cost, cardinality = getValueScanCost(stmt.Values())
 		}
@@ -41,24 +42,27 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 			return nil, err
 		}
 
-		children = append(children, sel.(plan.Operator))
+		selOp := sel.(plan.Operator)
+		if this.useCBO {
+			cost = selOp.Cost()
+			cardinality = selOp.Cardinality()
+		}
+		children = append(children, selOp)
 	} else {
 		return nil, fmt.Errorf("INSERT missing both VALUES and SELECT.")
 	}
 
+	if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+		cost, cardinality = getInsertCost(keyspace, stmt.Key(), stmt.Value(), stmt.Options(), nil, cost, cardinality)
+	}
+
+	insert := plan.NewSendInsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(), nil, cost, cardinality)
 	subChildren := make([]plan.Operator, 0, 4)
-	subChildren = append(subChildren, plan.NewSendInsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(), nil))
+	subChildren = append(subChildren, insert)
 
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
 	} else {
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
-		lastOp := subChildren[len(subChildren)-1]
-		if lastOp != nil {
-			cost = lastOp.Cost()
-			cardinality = lastOp.Cardinality()
-		}
 		subChildren = append(subChildren, plan.NewDiscard(cost, cardinality))
 	}
 

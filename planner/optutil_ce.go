@@ -180,3 +180,35 @@ func getIntersectAllCost(first, second plan.Operator, compatible bool) (float64,
 func getExceptAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
+
+func getInsertCost(keyspace datastore.Keyspace, key, value, options, limit expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getUpsertCost(keyspace datastore.Keyspace, key, value, options expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getDeleteCost(keyspace datastore.Keyspace, limit expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getCloneCost(keyspace datastore.Keyspace, cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getUpdateSetCost(keyspace datastore.Keyspace, set *algebra.Set, cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getUpdateUnsetCost(keyspace datastore.Keyspace, unset *algebra.Unset, cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getUpdateSendCost(keyspace datastore.Keyspace, limit expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}

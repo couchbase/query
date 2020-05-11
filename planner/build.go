@@ -258,17 +258,3 @@ func (this *builder) addSubchildrenParallel() *plan.Parallel {
 	this.subChildren = make([]plan.Operator, 0, 16)
 	return parallel
 }
-
-func getStaticInt(expr expression.Expression) (int64, bool) {
-	if expr != nil {
-		expVal := expr.Value()
-		if expVal != nil {
-			switch evt := expVal.Actual().(type) {
-			case float64:
-				return int64(evt), true
-			}
-		}
-	}
-
-	return 0, false
-}

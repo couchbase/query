@@ -30,19 +30,38 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		return nil, err
 	}
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO && this.lastOp != nil {
+		cost = this.lastOp.Cost()
+		cardinality = this.lastOp.Cardinality()
+		if cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getCloneCost(keyspace, cost, cardinality)
+		}
+	}
+
 	subChildren := this.subChildren
 	updateSubChildren := make([]plan.Operator, 0, 8)
-	updateSubChildren = append(updateSubChildren, plan.NewClone(ksref.Alias()))
+	updateSubChildren = append(updateSubChildren, plan.NewClone(ksref.Alias(), cost, cardinality))
 
 	if stmt.Set() != nil {
-		updateSubChildren = append(updateSubChildren, plan.NewSet(stmt.Set()))
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getUpdateSetCost(keyspace, stmt.Set(), cost, cardinality)
+		}
+		updateSubChildren = append(updateSubChildren, plan.NewSet(stmt.Set(), cost, cardinality))
 	}
 
 	if stmt.Unset() != nil {
-		updateSubChildren = append(updateSubChildren, plan.NewUnset(stmt.Unset()))
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getUpdateUnsetCost(keyspace, stmt.Unset(), cost, cardinality)
+		}
+		updateSubChildren = append(updateSubChildren, plan.NewUnset(stmt.Unset(), cost, cardinality))
 	}
 
-	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref, stmt.Limit()))
+	if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+		cost, cardinality = getUpdateSendCost(keyspace, stmt.Limit(), cost, cardinality)
+	}
+	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality))
 
 	if stmt.Returning() != nil {
 		updateSubChildren = this.buildDMLProject(stmt.Returning(), updateSubChildren)
@@ -60,13 +79,6 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	if stmt.Returning() == nil {
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
-		lastOp := this.lastOp
-		if lastOp != nil {
-			cost = lastOp.Cost()
-			cardinality = lastOp.Cardinality()
-		}
 		this.addChildren(plan.NewDiscard(cost, cardinality))
 	}
 

@@ -20,18 +20,23 @@ import (
 
 type SendDelete struct {
 	readwrite
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceRef
-	alias    string
-	limit    expression.Expression
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceRef
+	alias       string
+	limit       expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression) *SendDelete {
+func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
+	limit expression.Expression, cost, cardinality float64) *SendDelete {
 	return &SendDelete{
-		keyspace: keyspace,
-		term:     ksref,
-		alias:    ksref.Alias(),
-		limit:    limit,
+		keyspace:    keyspace,
+		term:        ksref,
+		alias:       ksref.Alias(),
+		limit:       limit,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -55,6 +60,14 @@ func (this *SendDelete) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *SendDelete) Cost() float64 {
+	return this.cost
+}
+
+func (this *SendDelete) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -68,6 +81,13 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["limit"] = this.limit
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -76,13 +96,15 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Namespace string `json:"namespace"`
-		Bucket    string `json:"bucket"`
-		Scope     string `json:"scope"`
-		Keyspace  string `json:"keyspace"`
-		Alias     string `json:"alias"`
-		Limit     string `json:"limit"`
+		_           string  `json:"#operator"`
+		Namespace   string  `json:"namespace"`
+		Bucket      string  `json:"bucket"`
+		Scope       string  `json:"scope"`
+		Keyspace    string  `json:"keyspace"`
+		Alias       string  `json:"alias"`
+		Limit       string  `json:"limit"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -102,8 +124,14 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
+	if err != nil {
+		return err
+	}
 
-	return err
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }
 
 func (this *SendDelete) verify(prepared *Prepared) bool {

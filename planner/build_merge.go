@@ -38,6 +38,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	var left algebra.SimpleFromTerm
 	var err error
 	outer := false
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
 
 	if !stmt.IsOnKey() {
 		// use outer join if INSERT action is specified
@@ -104,17 +106,17 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, filter)
 		}
 
-		ops = append(ops, plan.NewClone(ksref.Alias()))
+		ops = append(ops, plan.NewClone(ksref.Alias(), cost, cardinality))
 
 		if act.Set() != nil {
-			ops = append(ops, plan.NewSet(act.Set()))
+			ops = append(ops, plan.NewSet(act.Set(), cost, cardinality))
 		}
 
 		if act.Unset() != nil {
-			ops = append(ops, plan.NewUnset(act.Unset()))
+			ops = append(ops, plan.NewUnset(act.Unset(), cost, cardinality))
 		}
 
-		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit()))
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality))
 		update = plan.NewSequence(ops...)
 	}
 
@@ -127,7 +129,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, filter)
 		}
 
-		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit()))
+		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality))
 		delete = plan.NewSequence(ops...)
 	}
 
@@ -147,7 +149,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			keyExpr = act.Key()
 		}
 		ops = append(ops, plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(),
-			act.Options(), stmt.Limit()))
+			act.Options(), stmt.Limit(), cost, cardinality))
 		insert = plan.NewSequence(ops...)
 	}
 

@@ -22,12 +22,16 @@ import (
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
 	readonly
-	alias string
+	alias       string
+	cost        float64
+	cardinality float64
 }
 
-func NewClone(alias string) *Clone {
+func NewClone(alias string, cost, cardinality float64) *Clone {
 	return &Clone{
-		alias: alias,
+		alias:       alias,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -43,32 +47,62 @@ func (this *Clone) Alias() string {
 	return this.alias
 }
 
+func (this *Clone) Cost() float64 {
+	return this.cost
+}
+
+func (this *Clone) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Clone) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *Clone) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Clone"}
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
 	return r
 }
 
-func (this *Clone) UnmarshalJSON([]byte) error {
-	// NOP: Clone has no data structure
+func (this *Clone) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }
 
 // Write to copy
 type Set struct {
 	readonly
-	node *algebra.Set
+	node        *algebra.Set
+	cost        float64
+	cardinality float64
 }
 
-func NewSet(node *algebra.Set) *Set {
+func NewSet(node *algebra.Set, cost, cardinality float64) *Set {
 	return &Set{
-		node: node,
+		node:        node,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -84,6 +118,14 @@ func (this *Set) Node() *algebra.Set {
 	return this.node
 }
 
+func (this *Set) Cost() float64 {
+	return this.cost
+}
+
+func (this *Set) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -91,6 +133,12 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 func (this *Set) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Set"}
 	r["set_terms"] = this.node.Terms()
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -99,8 +147,10 @@ func (this *Set) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Set) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string          `json:"#operator"`
-		SetTerms json.RawMessage `json:"set_terms"`
+		_           string          `json:"#operator"`
+		SetTerms    json.RawMessage `json:"set_terms"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -114,18 +164,26 @@ func (this *Set) UnmarshalJSON(body []byte) error {
 	}
 
 	this.node = algebra.NewSet(terms)
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }
 
 // Write to copy
 type Unset struct {
 	readonly
-	node *algebra.Unset
+	node        *algebra.Unset
+	cost        float64
+	cardinality float64
 }
 
-func NewUnset(node *algebra.Unset) *Unset {
+func NewUnset(node *algebra.Unset, cost, cardinality float64) *Unset {
 	return &Unset{
-		node: node,
+		node:        node,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -141,6 +199,14 @@ func (this *Unset) Node() *algebra.Unset {
 	return this.node
 }
 
+func (this *Unset) Cost() float64 {
+	return this.cost
+}
+
+func (this *Unset) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Unset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -148,6 +214,12 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 func (this *Unset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Unset"}
 	r["unset_terms"] = this.node.Terms()
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -156,8 +228,10 @@ func (this *Unset) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Unset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_          string          `json:"#operator"`
-		UnsetTerms json.RawMessage `json:"unset_terms"`
+		_           string          `json:"#operator"`
+		UnsetTerms  json.RawMessage `json:"unset_terms"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -171,24 +245,33 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 	}
 
 	this.node = algebra.NewUnset(terms)
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
 	return nil
 }
 
 // Send to keyspace
 type SendUpdate struct {
 	readwrite
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceRef
-	alias    string
-	limit    expression.Expression
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceRef
+	alias       string
+	limit       expression.Expression
+	cost        float64
+	cardinality float64
 }
 
-func NewSendUpdate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression) *SendUpdate {
+func NewSendUpdate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
+	limit expression.Expression, cost, cardinality float64) *SendUpdate {
 	return &SendUpdate{
-		keyspace: keyspace,
-		term:     ksref,
-		alias:    ksref.Alias(),
-		limit:    limit,
+		keyspace:    keyspace,
+		term:        ksref,
+		alias:       ksref.Alias(),
+		limit:       limit,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -212,6 +295,14 @@ func (this *SendUpdate) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *SendUpdate) Cost() float64 {
+	return this.cost
+}
+
+func (this *SendUpdate) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -225,6 +316,13 @@ func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["limit"] = this.limit
 	}
 
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -233,13 +331,15 @@ func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Namespace string `json:"namespace"`
-		Bucket    string `json:"bucket"`
-		Scope     string `json:"scope"`
-		Keyspace  string `json:"keyspace"`
-		Alias     string `json:"alias"`
-		Limit     string `json:"limit"`
+		_           string  `json:"#operator"`
+		Namespace   string  `json:"namespace"`
+		Bucket      string  `json:"bucket"`
+		Scope       string  `json:"scope"`
+		Keyspace    string  `json:"keyspace"`
+		Alias       string  `json:"alias"`
+		Limit       string  `json:"limit"`
+		Cost        float64 `json:"cost"`
+		Cardinality float64 `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -259,7 +359,14 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
-	return err
+	if err != nil {
+		return err
+	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }
 
 func (this *SendUpdate) verify(prepared *Prepared) bool {

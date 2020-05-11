@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -86,13 +87,13 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	noffset := int64(0)
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 		if stmtLimit != nil {
-			lv, static := getStaticInt(stmtLimit)
+			lv, static := base.GetStaticInt(stmtLimit)
 			if static {
 				nlimit = lv
 			}
 		}
 		if stmtOffset != nil {
-			ov, static := getStaticInt(stmtOffset)
+			ov, static := base.GetStaticInt(stmtOffset)
 			if static {
 				noffset = ov
 			}

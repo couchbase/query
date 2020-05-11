@@ -240,3 +240,35 @@ func getIntersectAllCost(first, second plan.Operator, compatible bool) (float64,
 func getExceptAllCost(first, second plan.Operator, compatible bool) (float64, float64) {
 	return optutil.CalcSetOpCost(first, second, compatible, optutil.COST_EXCEPT)
 }
+
+func getInsertCost(keyspace datastore.Keyspace, key, value, options, limit expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return optutil.CalcInsertCost(keyspace, key, value, options, limit, cost, cardinality)
+}
+
+func getUpsertCost(keyspace datastore.Keyspace, key, value, options expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return optutil.CalcUpsertCost(keyspace, key, value, options, cost, cardinality)
+}
+
+func getDeleteCost(keyspace datastore.Keyspace, limit expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return optutil.CalcDeleteCost(keyspace, limit, cost, cardinality)
+}
+
+func getCloneCost(keyspace datastore.Keyspace, cost, cardinality float64) (float64, float64) {
+	return optutil.CalcCloneCost(keyspace, cost, cardinality)
+}
+
+func getUpdateSetCost(keyspace datastore.Keyspace, set *algebra.Set, cost, cardinality float64) (float64, float64) {
+	return optutil.CalcUpdateSetCost(keyspace, set, cost, cardinality)
+}
+
+func getUpdateUnsetCost(keyspace datastore.Keyspace, unset *algebra.Unset, cost, cardinality float64) (float64, float64) {
+	return optutil.CalcUpdateUnsetCost(keyspace, unset, cost, cardinality)
+}
+
+func getUpdateSendCost(keyspace datastore.Keyspace, limit expression.Expression,
+	cost, cardinality float64) (float64, float64) {
+	return optutil.CalcUpdateSendCost(keyspace, limit, cost, cardinality)
+}

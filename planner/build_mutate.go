@@ -64,6 +64,9 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	this.addChildren(scan)
 
+	cost := scan.Cost()
+	cardinality := scan.Cardinality()
+
 	if len(this.coveringScans) > 0 {
 		err = this.coverExpressions()
 		if err != nil {
@@ -71,8 +74,6 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		}
 	} else {
 		var fetch plan.Operator
-		cost := scan.Cost()
-		cardinality := scan.Cardinality()
 		if mustFetch || this.where != nil || !isKeyScan(scan) {
 			names, err := this.GetSubPaths(term.Alias())
 			if err != nil {
@@ -95,9 +96,6 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	}
 
 	if this.where != nil {
-		cost := float64(OPT_COST_NOT_AVAIL)
-		cardinality := float64(OPT_CARD_NOT_AVAIL)
-
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, this.where,
 				this.baseKeyspaces, this.keyspaceNames)

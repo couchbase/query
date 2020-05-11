@@ -36,7 +36,17 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	subChildren := this.subChildren
 	deleteSubChildren := make([]plan.Operator, 0, 4)
 
-	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref, stmt.Limit()))
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO && this.lastOp != nil {
+		cost = this.lastOp.Cost()
+		cardinality = this.lastOp.Cardinality()
+		if cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getDeleteCost(keyspace, stmt.Limit(), cost, cardinality)
+		}
+	}
+
+	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality))
 
 	if stmt.Returning() != nil {
 		deleteSubChildren = this.buildDMLProject(stmt.Returning(), deleteSubChildren)
