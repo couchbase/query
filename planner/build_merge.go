@@ -37,36 +37,35 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	var left algebra.SimpleFromTerm
 	var err error
+
 	outer := false
-	cost := OPT_COST_NOT_AVAIL
-	cardinality := OPT_CARD_NOT_AVAIL
-
-	if !stmt.IsOnKey() {
+	if stmt.Actions().Insert() != nil {
 		// use outer join if INSERT action is specified
-		if stmt.Actions().Insert() != nil {
-			outer = true
-		} else {
-			_, err = this.processPredicate(stmt.On(), true)
-			if err != nil {
-				return nil, err
-			}
+		outer = true
+	}
 
-			this.pushableOnclause = stmt.On()
+	if !stmt.IsOnKey() && !outer {
+		// setup usable predicate from ON-clause for source scan
+		_, err = this.processPredicate(stmt.On(), true)
+		if err != nil {
+			return nil, err
 		}
+
+		this.pushableOnclause = stmt.On()
 	}
 
 	this.initialIndexAdvisor(stmt)
 	this.extractKeyspacePredicates(nil, this.pushableOnclause)
 
 	if source.SubqueryTerm() != nil {
-		_, err := source.SubqueryTerm().Accept(this)
+		_, err = source.SubqueryTerm().Accept(this)
 		if err != nil && !this.indexAdvisor {
 			return nil, err
 		}
 
 		left = source.SubqueryTerm()
 	} else if source.ExpressionTerm() != nil {
-		_, err := source.ExpressionTerm().Accept(this)
+		_, err = source.ExpressionTerm().Accept(this)
 		if err != nil && !this.indexAdvisor {
 			return nil, err
 		}
@@ -78,7 +77,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			return nil, errors.NewPlanInternalError("VisitMerge: MERGE missing source.")
 		}
 
-		_, err := source.From().Accept(this)
+		_, err = source.From().Accept(this)
 		if err != nil && !this.indexAdvisor {
 			return nil, err
 		}
@@ -94,70 +93,24 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		return nil, err
 	}
 
-	actions := stmt.Actions()
-	var update, delete, insert plan.Operator
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	joinCost := OPT_COST_NOT_AVAIL
+	joinCard := OPT_CARD_NOT_AVAIL
+	leftCard := OPT_CARD_NOT_AVAIL
 
-	if actions.Update() != nil {
-		act := actions.Update()
-		ops := make([]plan.Operator, 0, 5)
-
-		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where())
-			ops = append(ops, filter)
-		}
-
-		ops = append(ops, plan.NewClone(ksref.Alias(), cost, cardinality))
-
-		if act.Set() != nil {
-			ops = append(ops, plan.NewSet(act.Set(), cost, cardinality))
-		}
-
-		if act.Unset() != nil {
-			ops = append(ops, plan.NewUnset(act.Unset(), cost, cardinality))
-		}
-
-		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality))
-		update = plan.NewSequence(ops...)
+	if this.useCBO && this.lastOp != nil {
+		leftCard = this.lastOp.Cardinality()
 	}
 
-	if actions.Delete() != nil {
-		act := actions.Delete()
-		ops := make([]plan.Operator, 0, 4)
-
-		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where())
-			ops = append(ops, filter)
-		}
-
-		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality))
-		delete = plan.NewSequence(ops...)
-	}
-
-	if actions.Insert() != nil {
-		act := actions.Insert()
-		ops := make([]plan.Operator, 0, 4)
-
-		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where())
-			ops = append(ops, filter)
-		}
-
-		var keyExpr expression.Expression
-		if stmt.IsOnKey() {
-			keyExpr = stmt.On()
-		} else {
-			keyExpr = act.Key()
-		}
-		ops = append(ops, plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(),
-			act.Options(), stmt.Limit(), cost, cardinality))
-		insert = plan.NewSequence(ops...)
-	}
+	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 
 	if stmt.IsOnKey() {
-		this.addSubChildren(plan.NewMerge(keyspace, ksref, stmt.On(), update, delete, insert))
+		if this.useCBO {
+			joinCost, joinCard = getLookupJoinCost(this.lastOp, outer, right, targetKeyspace)
+		}
 	} else {
 		// use ANSI JOIN to handle the ON-clause
-		right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 		right.SetAnsiJoin()
 		algebra.TransferJoinHint(right, left)
 
@@ -177,8 +130,173 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			this.addChildren(join)
 		}
 
-		this.addSubChildren(plan.NewMerge(keyspace, ksref, nil, update, delete, insert))
+		if this.useCBO {
+			joinOp := join.(plan.Operator)
+			joinCost = joinOp.Cost()
+			joinCard = joinOp.Cardinality()
+		}
 	}
+
+	// there should only be a single match for each source document,
+	// otherwise MERGE will return an error on multiple update/delete
+	if this.useCBO && leftCard > 0.0 && joinCard > 0.0 && joinCard > leftCard {
+		joinCard = leftCard
+	}
+
+	matchCard := OPT_CARD_NOT_AVAIL
+	nonMatchCard := OPT_CARD_NOT_AVAIL
+	if this.useCBO && leftCard > 0.0 && joinCard > 0.0 {
+		matchCard = joinCard
+		nonMatchCard = leftCard - joinCard
+		if nonMatchCard < 1.0 {
+			// assume at least 1 insert
+			nonMatchCard = 1.0
+			matchCard = leftCard - nonMatchCard
+		}
+	}
+
+	actions := stmt.Actions()
+	var update, delete, insert plan.Operator
+	var updateCost, deleteCost, insertCost float64
+	var updateCard, deleteCard, insertCard float64
+
+	if actions.Update() != nil {
+		act := actions.Update()
+		ops := make([]plan.Operator, 0, 5)
+
+		cost = OPT_COST_NOT_AVAIL
+		if this.useCBO && joinCost > 0.0 {
+			// do not use cumulative cost for embedded operators
+			cost = optMinCost()
+		}
+		cardinality = matchCard
+		if act.Where() != nil {
+			filter := this.addMergeFilter(act.Where(), cost, cardinality)
+			ops = append(ops, filter)
+			cost = filter.Cost()
+			cardinality = filter.Cardinality()
+		}
+
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getCloneCost(keyspace, cost, cardinality)
+		}
+		ops = append(ops, plan.NewClone(ksref.Alias(), cost, cardinality))
+
+		if act.Set() != nil {
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+				cost, cardinality = getUpdateSetCost(keyspace, act.Set(), cost, cardinality)
+			}
+			ops = append(ops, plan.NewSet(act.Set(), cost, cardinality))
+		}
+
+		if act.Unset() != nil {
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+				cost, cardinality = getUpdateUnsetCost(keyspace, act.Unset(), cost, cardinality)
+			}
+			ops = append(ops, plan.NewUnset(act.Unset(), cost, cardinality))
+		}
+
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getUpdateSendCost(keyspace, stmt.Limit(), cost, cardinality)
+		}
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality))
+		update = plan.NewSequence(ops...)
+		if this.useCBO && cost > 0.0 {
+			updateCost = cost
+			updateCard = cardinality
+		}
+	}
+
+	if actions.Delete() != nil {
+		act := actions.Delete()
+		ops := make([]plan.Operator, 0, 4)
+
+		cost = OPT_COST_NOT_AVAIL
+		if this.useCBO && joinCost > 0.0 {
+			// do not use cumulative cost for embedded operators
+			cost = optMinCost()
+		}
+		cardinality = matchCard
+		if act.Where() != nil {
+			filter := this.addMergeFilter(act.Where(), cost, cardinality)
+			ops = append(ops, filter)
+			cost = filter.Cost()
+			cardinality = filter.Cardinality()
+		}
+
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getDeleteCost(keyspace, stmt.Limit(), cost, cardinality)
+		}
+
+		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality))
+		delete = plan.NewSequence(ops...)
+		if this.useCBO && cost > 0.0 {
+			deleteCost = cost
+			deleteCard = cardinality
+		}
+	}
+
+	if actions.Insert() != nil {
+		act := actions.Insert()
+		ops := make([]plan.Operator, 0, 4)
+
+		cost = OPT_COST_NOT_AVAIL
+		if this.useCBO && joinCost > 0.0 {
+			// do not use cumulative cost for embedded operators
+			cost = optMinCost()
+		}
+		cardinality = nonMatchCard
+		if act.Where() != nil {
+			filter := this.addMergeFilter(act.Where(), cost, cardinality)
+			ops = append(ops, filter)
+			cost = filter.Cost()
+			cardinality = filter.Cardinality()
+		}
+
+		var keyExpr expression.Expression
+		if stmt.IsOnKey() {
+			keyExpr = stmt.On()
+		} else {
+			keyExpr = act.Key()
+		}
+
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality = getInsertCost(keyspace, keyExpr, act.Value(),
+				act.Options(), stmt.Limit(), cost, cardinality)
+		}
+
+		ops = append(ops, plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(),
+			act.Options(), stmt.Limit(), cost, cardinality))
+		insert = plan.NewSequence(ops...)
+		if this.useCBO && cost > 0.0 {
+			insertCost = cost
+			insertCard = cardinality
+		}
+	}
+
+	if this.useCBO && joinCost > 0.0 && joinCard > 0.0 {
+		cost = joinCost
+		cardinality = 0.0
+		if actions.Update() != nil {
+			cost += updateCost
+			cardinality += updateCard
+		}
+		if actions.Delete() != nil {
+			cost += deleteCost
+			cardinality += deleteCard
+		}
+		if actions.Insert() != nil {
+			cost += insertCost
+			cardinality += insertCard
+		}
+	}
+
+	var mergeKey expression.Expression
+	if stmt.IsOnKey() {
+		mergeKey = stmt.On()
+	}
+	merge := plan.NewMerge(keyspace, ksref, mergeKey, update, delete, insert, cost, cardinality)
+	this.addSubChildren(merge)
 
 	if stmt.Returning() != nil {
 		this.subChildren = this.buildDMLProject(stmt.Returning(), this.subChildren)
@@ -191,26 +309,16 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	if stmt.Returning() == nil {
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
-		lastOp := this.lastOp
-		if lastOp != nil {
-			cost = lastOp.Cost()
-			cardinality = lastOp.Cardinality()
-		}
 		this.addChildren(plan.NewDiscard(cost, cardinality))
 	}
 
 	return plan.NewSequence(this.children...), nil
 }
 
-func (this *builder) addMergeFilter(pred expression.Expression) *plan.Filter {
-	cost := float64(OPT_COST_NOT_AVAIL)
-	cardinality := float64(OPT_CARD_NOT_AVAIL)
-
+func (this *builder) addMergeFilter(pred expression.Expression, cost, cardinality float64) *plan.Filter {
 	if this.useCBO {
-		cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
-			this.keyspaceNames)
+		cost, cardinality = getFilterCostWithInput(pred, this.baseKeyspaces,
+			this.keyspaceNames, cost, cardinality)
 	}
 
 	return plan.NewFilter(pred, cost, cardinality)

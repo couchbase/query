@@ -20,10 +20,6 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func optCalcSelectivity(filter *base.Filter) {
-	return
-}
-
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
@@ -40,6 +36,10 @@ func optDefLikeSelec(keyspace, key string) float64 {
 func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
 	condition expression.Expression, filters base.Filters) {
 	// no-op
+}
+
+func optMinCost() float64 {
+	return OPT_COST_NOT_AVAIL
 }
 
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
@@ -119,6 +119,11 @@ func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (flo
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
+	keyspaceNames map[string]string, cost, cardinality float64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 

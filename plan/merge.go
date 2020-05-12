@@ -20,23 +20,27 @@ import (
 
 type Merge struct {
 	readwrite
-	keyspace datastore.Keyspace
-	ref      *algebra.KeyspaceRef
-	key      expression.Expression
-	update   Operator
-	delete   Operator
-	insert   Operator
+	keyspace    datastore.Keyspace
+	ref         *algebra.KeyspaceRef
+	key         expression.Expression
+	update      Operator
+	delete      Operator
+	insert      Operator
+	cost        float64
+	cardinality float64
 }
 
 func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
-	key expression.Expression, update, delete, insert Operator) *Merge {
+	key expression.Expression, update, delete, insert Operator, cost, cardinality float64) *Merge {
 	return &Merge{
-		keyspace: keyspace,
-		ref:      ref,
-		key:      key,
-		update:   update,
-		delete:   delete,
-		insert:   insert,
+		keyspace:    keyspace,
+		ref:         ref,
+		key:         key,
+		update:      update,
+		delete:      delete,
+		insert:      insert,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -76,6 +80,14 @@ func (this *Merge) Insert() Operator {
 	return this.insert
 }
 
+func (this *Merge) Cost() float64 {
+	return this.cost
+}
+
+func (this *Merge) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Merge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -90,6 +102,13 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 	if this.ref.As() != "" {
 		r["as"] = this.ref.As()
+	}
+
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
 	}
 
 	if f != nil {
@@ -110,16 +129,18 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Merge) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string          `json:"#operator"`
-		Namespace string          `json:"namespace"`
-		Bucket    string          `json:"bucket"`
-		Scope     string          `json:"scope"`
-		Keyspace  string          `json:"keyspace"`
-		As        string          `json:"as"`
-		Key       string          `json:"key"`
-		Update    json.RawMessage `json:"update"`
-		Delete    json.RawMessage `json:"delete"`
-		Insert    json.RawMessage `json:"insert"`
+		_           string          `json:"#operator"`
+		Namespace   string          `json:"namespace"`
+		Bucket      string          `json:"bucket"`
+		Scope       string          `json:"scope"`
+		Keyspace    string          `json:"keyspace"`
+		As          string          `json:"as"`
+		Key         string          `json:"key"`
+		Update      json.RawMessage `json:"update"`
+		Delete      json.RawMessage `json:"delete"`
+		Insert      json.RawMessage `json:"insert"`
+		Cost        float64         `json:"cost"`
+		Cardinality float64         `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -176,7 +197,10 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	return err
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	return nil
 }
 
 func (this *Merge) verify(prepared *Prepared) bool {

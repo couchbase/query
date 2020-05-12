@@ -43,6 +43,10 @@ func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
 	optutil.MarkIndexFilters(keys, spans, condition, filters)
 }
 
+func optMinCost() float64 {
+	return optutil.MinCost()
+}
+
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
 	return optutil.CalcPrimaryIndexScanCost(primary, requestId)
 }
@@ -177,6 +181,21 @@ func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 	}
 
 	return optutil.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames)
+}
+
+func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
+	keyspaceNames map[string]string, cost, cardinality float64) (float64, float64) {
+
+	// perform expression transformation, but no DNF transformation
+	var err error
+	dnfExpr := expr.Copy()
+	dnf := NewDNF(dnfExpr, true, false)
+	dnfExpr, err = dnf.Map(dnfExpr)
+	if err != nil {
+		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+	}
+
+	return optutil.CalcFilterCostWithInput(dnfExpr, baseKeyspaces, keyspaceNames, cost, cardinality)
 }
 
 func getLetCost(lastOp plan.Operator) (float64, float64) {
