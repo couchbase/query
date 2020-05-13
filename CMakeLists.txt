@@ -40,7 +40,7 @@ IF (APPLE)
 ENDIF ()
 
 IF (NOT CBQ_ONLY)
-  GoYacc (GOVERSION 1.7.6 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+  GoYacc (GOVERSION 1.13.7 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
   GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
