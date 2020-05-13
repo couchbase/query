@@ -1312,9 +1312,8 @@ func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
 }
 
 func (this *jsonArgs) storeDirect(f int, parm string, val interface{}) errors.Error {
-	_, ok := val.(string)
-	if !ok {
-		return errors.NewServiceErrorTypeMismatch(parm, "string")
+	if val == nil {
+		return errors.NewServiceErrorBadValue(go_errors.New("value is not specified"), parm)
 	}
 	this.direct[f] = val
 	return nil
