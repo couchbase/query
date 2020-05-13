@@ -59,6 +59,8 @@ func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datas
 	if !ok {
 		return errors.NewPlanInternalError(fmt.Sprintf("PatternFor: missing baseKeyspace %s", baseKeyspace.Name()))
 	}
+
+	addUnnestPreds(baseKeyspaces, newKeyspace)
 	baseKeyspace.SetFilters(newKeyspace.Filters(), newKeyspace.JoinFilters())
 	err = CombineFilters(baseKeyspace, true, false)
 	if err != nil {
