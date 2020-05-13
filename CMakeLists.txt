@@ -52,6 +52,10 @@ IF (NOT CBQ_ONLY)
     GOVERSION ${GOVERSION}
     GOTAGS ${_gotags})
 
+  IF (BUILD_ENTERPRISE)
+    ADD_DEPENDENCIES (cbq-engine js-evaluator)
+  ENDIF ()
+
   GoInstall (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
     GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
     DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
