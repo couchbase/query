@@ -176,14 +176,7 @@ func (coll *collection) Scope() datastore.Scope {
 }
 
 func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Error) {
-
-	// default collection
-	if coll.isDefault {
-		return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid})
-	}
-
-	// FIXME
-	return -1, errors.NewNotImplemented("collection.Count()")
+	return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Error) {

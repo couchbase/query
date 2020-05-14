@@ -1576,6 +1576,10 @@ func (k *keyspace) checkRefresh(err error) {
 		k.Lock()
 		k.flags |= _NEEDS_REFRESH
 		k.Unlock()
+	} else if cb.IsUnknownCollection(err) {
+		k.Lock()
+		k.flags |= _NEEDS_REFRESH
+		k.Unlock()
 	}
 }
 
