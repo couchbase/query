@@ -19,7 +19,7 @@ import (
 )
 
 type SendDelete struct {
-	readwrite
+	dml
 	keyspace    datastore.Keyspace
 	term        *algebra.KeyspaceRef
 	alias       string

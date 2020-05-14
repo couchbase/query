@@ -254,7 +254,7 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 
 // Send to keyspace
 type SendUpdate struct {
-	readwrite
+	dml
 	keyspace    datastore.Keyspace
 	term        *algebra.KeyspaceRef
 	alias       string

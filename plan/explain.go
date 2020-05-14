@@ -14,7 +14,7 @@ import (
 )
 
 type Explain struct {
-	readonly
+	execution
 	op   Operator
 	text string
 }

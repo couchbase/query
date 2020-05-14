@@ -14,7 +14,7 @@ import (
 )
 
 type Advise struct {
-	readonly
+	execution
 	op    Operator
 	query string
 }

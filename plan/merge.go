@@ -19,7 +19,7 @@ import (
 )
 
 type Merge struct {
-	readwrite
+	dml
 	keyspace    datastore.Keyspace
 	ref         *algebra.KeyspaceRef
 	key         expression.Expression

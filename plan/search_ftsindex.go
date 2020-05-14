@@ -123,6 +123,14 @@ func (this *IndexFtsSearch) String() string {
 	return string(bytes)
 }
 
+func (this *IndexFtsSearch) Cost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
+func (this *IndexFtsSearch) Cardinality() float64 {
+	return PLAN_CARD_NOT_AVAIL
+}
+
 func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

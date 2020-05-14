@@ -20,14 +20,6 @@ func (this *readonly) verify(prepared *Prepared) bool {
 	return true
 }
 
-func (this *readonly) Cost() float64 {
-	return PLAN_COST_NOT_AVAIL
-}
-
-func (this *readonly) Cardinality() float64 {
-	return PLAN_CARD_NOT_AVAIL
-}
-
 type readwrite struct {
 }
 
@@ -39,10 +31,46 @@ func (this *readwrite) verify(prepared *Prepared) bool {
 	return true
 }
 
-func (this *readwrite) Cost() float64 {
+// represents DML statements, all are read-write
+type dml struct {
+	readwrite
+}
+
+// represents DDL statements, all are read-write, and currently have no cost/cardinality
+type ddl struct {
+	readwrite
+}
+
+func (this *ddl) Cost() float64 {
 	return PLAN_COST_NOT_AVAIL
 }
 
-func (this *readwrite) Cardinality() float64 {
+func (this *ddl) Cardinality() float64 {
+	return PLAN_CARD_NOT_AVAIL
+}
+
+// represents legacy operators, all are read-only, and have no cost/cardinality
+type legacy struct {
+	readonly
+}
+
+func (this *legacy) Cost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
+func (this *legacy) Cardinality() float64 {
+	return PLAN_CARD_NOT_AVAIL
+}
+
+// represents operators used in execution only, all are read-only, and have no cost/cardinality
+type execution struct {
+	readonly
+}
+
+func (this *execution) Cost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
+func (this *execution) Cardinality() float64 {
 	return PLAN_CARD_NOT_AVAIL
 }

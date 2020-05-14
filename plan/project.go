@@ -181,7 +181,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 // (just in case prepared plans on mixed versions clusters come in from older engines)
 // TODO It will be retired after mad hatter goes out of support
 type FinalProject struct {
-	readonly
+	legacy
 }
 
 func NewFinalProject() *FinalProject {
@@ -214,7 +214,7 @@ func (this *FinalProject) UnmarshalJSON([]byte) error {
 }
 
 type IndexCountProject struct {
-	readonly
+	legacy
 	projection *algebra.Projection
 	terms      ProjectTerms
 }

@@ -18,7 +18,7 @@ import (
 
 // Drop collection
 type DropCollection struct {
-	readwrite
+	ddl
 	scope datastore.Scope
 	node  *algebra.DropCollection
 }

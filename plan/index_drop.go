@@ -18,7 +18,7 @@ import (
 
 // Drop index
 type DropIndex struct {
-	readwrite
+	ddl
 	index   datastore.Index
 	indexer datastore.Indexer
 	node    *algebra.DropIndex

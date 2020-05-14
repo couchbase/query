@@ -18,7 +18,7 @@ import (
 
 // Drop function
 type DropFunction struct {
-	readwrite
+	ddl
 	name functions.FunctionName
 }
 

@@ -21,7 +21,7 @@ import (
 )
 
 type IndexScan2 struct {
-	readonly
+	legacy
 	index        datastore.Index2
 	indexer      datastore.Indexer
 	term         *algebra.KeyspaceTerm

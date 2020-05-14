@@ -18,7 +18,7 @@ import (
 
 // Drop scope
 type DropScope struct {
-	readwrite
+	ddl
 	bucket datastore.Bucket
 	node   *algebra.DropScope
 }

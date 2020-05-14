@@ -17,7 +17,7 @@ import (
 
 // Revoke role
 type RevokeRole struct {
-	readwrite
+	ddl
 	node *algebra.RevokeRole
 }
 

@@ -14,7 +14,7 @@ import (
 )
 
 type All struct {
-	readonly
+	execution
 }
 
 func NewAll() *All {

@@ -16,7 +16,7 @@ import (
 )
 
 type IndexAdvice struct {
-	readonly
+	execution
 }
 
 func NewIndexAdvice() *IndexAdvice {

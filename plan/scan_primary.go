@@ -20,7 +20,7 @@ import (
 )
 
 type PrimaryScan struct {
-	readonly
+	legacy
 	index    datastore.PrimaryIndex
 	indexer  datastore.Indexer
 	keyspace datastore.Keyspace

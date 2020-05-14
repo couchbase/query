@@ -17,7 +17,7 @@ import (
 
 // Grant role
 type GrantRole struct {
-	readwrite
+	ddl
 	node *algebra.GrantRole
 }
 

@@ -14,7 +14,7 @@ import (
 )
 
 type Collect struct {
-	readonly
+	execution
 }
 
 func NewCollect() *Collect {

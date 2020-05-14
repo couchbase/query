@@ -21,7 +21,7 @@ import (
 )
 
 type IndexCountDistinctScan2 struct {
-	readonly
+	legacy
 	index        datastore.CountIndex2
 	indexer      datastore.Indexer
 	term         *algebra.KeyspaceTerm

@@ -17,7 +17,7 @@ import (
 
 // Flush collection
 type FlushCollection struct {
-	readwrite
+	ddl
 	keyspace datastore.Keyspace
 	node     *algebra.FlushCollection
 }

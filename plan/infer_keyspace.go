@@ -19,7 +19,7 @@ import (
 
 // Create index
 type InferKeyspace struct {
-	readonly
+	execution
 	keyspace datastore.Keyspace
 	node     *algebra.InferKeyspace
 }

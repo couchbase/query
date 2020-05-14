@@ -19,7 +19,7 @@ import (
 )
 
 type SendInsert struct {
-	readwrite
+	dml
 	keyspace    datastore.Keyspace
 	term        *algebra.KeyspaceRef
 	alias       string

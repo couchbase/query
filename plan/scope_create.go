@@ -17,7 +17,7 @@ import (
 
 // Create scope
 type CreateScope struct {
-	readwrite
+	ddl
 	bucket datastore.Bucket
 	node   *algebra.CreateScope
 }

@@ -21,7 +21,7 @@ import (
 
 // Update Statistics
 type UpdateStatistics struct {
-	readonly
+	execution
 	keyspace datastore.Keyspace
 	node     *algebra.UpdateStatistics
 }

@@ -16,7 +16,7 @@ import (
 )
 
 type Prepare struct {
-	readonly
+	execution
 	prepared value.Value
 	plan     *Prepared
 	force    bool

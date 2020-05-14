@@ -20,7 +20,7 @@ import (
 
 // Create function
 type CreateFunction struct {
-	readwrite
+	ddl
 	name functions.FunctionName
 	body functions.FunctionBody
 }

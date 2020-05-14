@@ -17,7 +17,7 @@ import (
 
 // Create collection
 type CreateCollection struct {
-	readwrite
+	ddl
 	scope datastore.Scope
 	node  *algebra.CreateCollection
 }

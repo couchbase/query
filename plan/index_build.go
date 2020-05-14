@@ -20,7 +20,7 @@ import (
 
 // Build indexes
 type BuildIndexes struct {
-	readwrite
+	ddl
 	keyspace datastore.Keyspace
 	node     *algebra.BuildIndexes
 }

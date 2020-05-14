@@ -15,7 +15,7 @@ import (
 
 // ParentScan is used for UNNEST subqueries.
 type ParentScan struct {
-	readonly
+	legacy
 }
 
 func NewParentScan() *ParentScan {

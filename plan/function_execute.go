@@ -19,7 +19,7 @@ import (
 
 // Execute function
 type ExecuteFunction struct {
-	readwrite
+	ddl
 	name  functions.FunctionName
 	exprs expression.Expressions
 }

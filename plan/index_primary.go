@@ -21,7 +21,7 @@ import (
 
 // Create primary index
 type CreatePrimaryIndex struct {
-	readwrite
+	ddl
 	keyspace datastore.Keyspace
 	node     *algebra.CreatePrimaryIndex
 }

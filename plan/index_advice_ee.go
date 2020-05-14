@@ -18,7 +18,7 @@ import (
 )
 
 type IndexAdvice struct {
-	readonly
+	execution
 	adviceInfo *iaplan.IndexAdviceInfo
 }
 

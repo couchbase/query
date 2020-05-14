@@ -20,7 +20,7 @@ import (
 
 // Alter index
 type AlterIndex struct {
-	readwrite
+	ddl
 	index    datastore.Index
 	indexer  datastore.Indexer
 	node     *algebra.AlterIndex
