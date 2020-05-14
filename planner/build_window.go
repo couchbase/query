@@ -26,18 +26,38 @@ import (
 
 func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	if this.useCBO && this.lastOp != nil {
+		cost = this.lastOp.Cost()
+		cardinality = this.lastOp.Cardinality()
+	}
+
 	// build the Window groups as described above
 	for _, wOrderGroup := range this.buildWindowGroups(windowAggs) {
 
 		// For each Sort required build Order operator
 		order := wOrderGroup.sortGroups.buildOrder()
 		if order != nil {
-			this.addSubChildren(plan.NewOrder(order, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+				scost, scardinality := getSortCost(len(order.Terms()), cardinality, 0, 0)
+				if scost > 0.0 && scardinality > 0.0 {
+					cost += scost
+					cardinality = scardinality
+				} else {
+					cost = OPT_COST_NOT_AVAIL
+					cardinality = OPT_CARD_NOT_AVAIL
+				}
+			}
+			this.addSubChildren(plan.NewOrder(order, nil, nil, cost, cardinality))
 		}
 
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {
 			if wOrderGroup.pbys[i] != nil && len(wOrderGroup.pbys[i].aggs) > 0 {
-				this.addSubChildren(plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs))
+				if this.useCBO && cost > 0.0 && cardinality > 0.0 {
+					cost, cardinality = getWindowAggCost(wOrderGroup.pbys[i].aggs, cost, cardinality)
+				}
+				this.addSubChildren(plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs, cost, cardinality))
 			}
 		}
 	}

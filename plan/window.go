@@ -19,12 +19,16 @@ import (
 
 type WindowAggregate struct {
 	readonly
-	aggregates algebra.Aggregates
+	aggregates  algebra.Aggregates
+	cost        float64
+	cardinality float64
 }
 
-func NewWindowAggregate(aggregates algebra.Aggregates) *WindowAggregate {
+func NewWindowAggregate(aggregates algebra.Aggregates, cost, cardinality float64) *WindowAggregate {
 	return &WindowAggregate{
-		aggregates: aggregates,
+		aggregates:  aggregates,
+		cost:        cost,
+		cardinality: cardinality,
 	}
 }
 
@@ -40,6 +44,14 @@ func (this *WindowAggregate) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *WindowAggregate) Cost() float64 {
+	return this.cost
+}
+
+func (this *WindowAggregate) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *WindowAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -51,6 +63,12 @@ func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[str
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
+	if this.cost > 0.0 {
+		r["cost"] = this.cost
+	}
+	if this.cardinality > 0.0 {
+		r["cardinality"] = this.cardinality
+	}
 	if f != nil {
 		f(r)
 	}
@@ -59,8 +77,10 @@ func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[str
 
 func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   `json:"#operator"`
-		Aggs []string `json:"aggregates"`
+		_           string   `json:"#operator"`
+		Aggs        []string `json:"aggregates"`
+		Cost        float64  `json:"cost"`
+		Cardinality float64  `json:"cardinality"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -76,6 +96,9 @@ func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 		}
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
 	return nil
 }

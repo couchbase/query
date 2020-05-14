@@ -217,3 +217,7 @@ func getUpdateSendCost(keyspace datastore.Keyspace, limit expression.Expression,
 	cost, cardinality float64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
+
+func getWindowAggCost(aggs algebra.Aggregates, cost, cardinality float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}

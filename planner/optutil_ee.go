@@ -291,3 +291,7 @@ func getUpdateSendCost(keyspace datastore.Keyspace, limit expression.Expression,
 	cost, cardinality float64) (float64, float64) {
 	return optutil.CalcUpdateSendCost(keyspace, limit, cost, cardinality)
 }
+
+func getWindowAggCost(aggs algebra.Aggregates, cost, cardinality float64) (float64, float64) {
+	return optutil.CalcWindowAggCost(aggs, cost, cardinality)
+}
