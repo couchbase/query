@@ -73,6 +73,11 @@ type IndexConfig interface {
 	SetParam(name string, val interface{}) errors.Error
 }
 
+type GsiIndexer interface {
+	Indexer
+	GetGsiClientConfig() map[string]interface{}
+}
+
 type IndexState string
 
 const (
