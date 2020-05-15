@@ -17,6 +17,6 @@ import (
 )
 
 type Optimizer interface {
-	Initialize(baseKeyspaces map[string]*base.BaseKeyspace)
+	Initialize(baseKeyspaces map[string]*base.BaseKeyspace, featureControls uint64)
 	OptimizeQueryBlock(node algebra.Node) (plan.Operator, error)
 }
