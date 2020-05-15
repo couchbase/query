@@ -19,7 +19,14 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
+
+func checkCostModel(featureControls uint64) {
+	if util.IsFeatureEnabled(featureControls, util.N1QL_CBO_NEW) {
+		optutil.SetNewCostModel()
+	}
+}
 
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	float64, float64) {

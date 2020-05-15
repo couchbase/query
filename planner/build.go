@@ -27,6 +27,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
 	if util.IsFeatureEnabled(context.FeatureControls(), util.N1QL_CBO) && context.Optimizer() != nil {
 		builder.useCBO = true
+		checkCostModel(context.FeatureControls())
 	}
 
 	o, err := stmt.Accept(builder)

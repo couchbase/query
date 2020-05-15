@@ -20,6 +20,10 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
+func checkCostModel(featureControls uint64) {
+	// no-op
+}
+
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
