@@ -43,7 +43,9 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.maxParallelism = 1
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
-	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos, extractDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()))
+
+	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos,
+		extractExistAndDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()))
 
 	this.setAdvisePhase(_VALIDATE)
 	//There are covering indexes to be validated:
@@ -234,6 +236,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	}
 
 	if pred == nil {
+		//This is for collecting predicates from build_scan when predicate is not disjunction.
 		if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
 			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()), getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
@@ -243,6 +246,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	}
 
 	if pred != nil {
+		//This is for collecting predicates from build_scan when predicates is disjunction.
 		if or, ok := pred.(*expression.Or); ok {
 			orTerms, _ := flattenOr(or)
 			var predConjunc expression.Expressions
@@ -266,6 +270,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
+			//This is for collecting predicates for build_join_index.
 			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 			_, err := ClassifyExpr(pred, baseKeyspacesCopy, false, this.useCBO)
 			if err != nil {
@@ -383,7 +388,8 @@ func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryId
 	return level
 }
 
-func extractDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, indexApiVersion int) map[string]iaplan.IndexInfos {
+func extractExistAndDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo,
+	indexApiVersion int) map[string]iaplan.IndexInfos {
 	if len(queryInfos) == 0 {
 		return nil
 	}
@@ -393,14 +399,14 @@ func extractDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.Query
 		for _, keyspaceInfo := range queryInfo.GetKeyspaceInfos() {
 			if _, ok := infoMap[keyspaceInfo.GetName()]; !ok {
 				//use nil value to mark one keyspace has been processed and no deferred indexes are found or errors occur.
-				infoMap[keyspaceInfo.GetName()] = getDeferredIndexes(keyspaceInfo.GetKeyspace(), keyspaceInfo.GetAlias(), indexApiVersion)
+				infoMap[keyspaceInfo.GetName()] = getExistAndDeferredIndexes(keyspaceInfo.GetKeyspace(), keyspaceInfo.GetAlias(), indexApiVersion)
 			}
 		}
 	}
 	return infoMap
 }
 
-func getDeferredIndexes(keyspace datastore.Keyspace, alias string, indexApiVersion int) iaplan.IndexInfos {
+func getExistAndDeferredIndexes(keyspace datastore.Keyspace, alias string, indexApiVersion int) iaplan.IndexInfos {
 	var infos iaplan.IndexInfos
 	indexers, err := keyspace.Indexers()
 	if err != nil {
@@ -414,20 +420,29 @@ func getDeferredIndexes(keyspace datastore.Keyspace, alias string, indexApiVersi
 		}
 
 		for _, idx := range idxes {
-			state, _, er := idx.State()
-			if er != nil || state != datastore.DEFERRED || idx.IsPrimary() {
-				continue
+			if isValidIndex(idx, indexApiVersion) {
+				if infos == nil {
+					infos = make(iaplan.IndexInfos, 0, 1)
+				}
+				infos = append(infos, extractInfo(idx, alias, keyspace, false, false))
+
+			} else {
+				state, _, er := idx.State()
+				if er != nil || state != datastore.DEFERRED || idx.IsPrimary() {
+					continue
+				}
+
+				//Not (useIndex2API(idx, indexApiVersion) || !indexHasDesc(idx))
+				if !useIndex2API(idx, indexApiVersion) && indexHasDesc(idx) {
+					continue
+				}
+
+				if infos == nil {
+					infos = make(iaplan.IndexInfos, 0, 1)
+				}
+				infos = append(infos, extractInfo(idx, alias, keyspace, true, false))
 			}
 
-			if !useIndex2API(idx, indexApiVersion) && indexHasDesc(idx) && idx.IsPrimary() {
-				continue
-			}
-
-			if infos == nil {
-				infos = make(iaplan.IndexInfos, 0, 1)
-			}
-
-			infos = append(infos, extractInfo(idx, alias, keyspace, true, false))
 		}
 	}
 	return infos
