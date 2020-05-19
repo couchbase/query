@@ -158,6 +158,7 @@ type Keyspace interface {
 	Id() string            // Id of this keyspace
 	Name() string          // Name of this keyspace
 	QualifiedName() string // Full path of this keyspace, including default or system names if implied
+	AuthKey() string       // Key of the object to be used for authorization purposes
 
 	// A keyspace is found either directly under a namespace or under a scope.
 	// If the keyspace is directly under a namespace, the ScopeId() returns "" and Scope() returns nil,
@@ -385,7 +386,7 @@ type User struct {
 
 type Role struct {
 	Name   string
-	Bucket string
+	Target string
 }
 
 var NO_STRINGS = make([]string, 0)

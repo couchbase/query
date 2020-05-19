@@ -22,10 +22,10 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-func opIsUnimplemented(namespace, bucket string, requested auth.Privilege) bool {
+func opIsUnimplemented(namespace, object string, requested auth.Privilege) bool {
 	if namespace == "#system" {
 		// For system monitoring tables INSERT and UPDATE are not supported.
-		if bucket == "prepareds" || bucket == "completed_requests" || bucket == "active_requests" {
+		if object == "prepareds" || object == "completed_requests" || object == "active_requests" {
 			if requested == auth.PRIV_QUERY_UPDATE || requested == auth.PRIV_QUERY_INSERT {
 				return true
 			}
@@ -40,13 +40,13 @@ func opIsUnimplemented(namespace, bucket string, requested auth.Privilege) bool 
 	return false
 }
 
-func privilegeString(namespace, bucket string, requested auth.Privilege) (string, error) {
+func privilegeString(namespace, object string, requested auth.Privilege) (string, error) {
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
-		permission = joinStrings("cluster.bucket[", bucket, "].data.docs!write")
+		permission = joinStrings("cluster.bucket[", object, "].data.docs!write")
 	case auth.PRIV_READ:
-		permission = joinStrings("cluster.bucket[", bucket, "].data.docs!read")
+		permission = joinStrings("cluster.bucket[", object, "].data.docs!read")
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
@@ -54,33 +54,51 @@ func privilegeString(namespace, bucket string, requested auth.Privilege) (string
 	case auth.PRIV_SECURITY_WRITE:
 		permission = "cluster.admin.security!write"
 	case auth.PRIV_QUERY_SELECT:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.select!execute")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.select!execute")
 	case auth.PRIV_QUERY_UPDATE:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.update!execute")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.update!execute")
 	case auth.PRIV_QUERY_INSERT:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.insert!execute")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.insert!execute")
 	case auth.PRIV_QUERY_DELETE:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.delete!execute")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.delete!execute")
 	case auth.PRIV_QUERY_BUILD_INDEX:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!build")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!build")
 	case auth.PRIV_QUERY_CREATE_INDEX:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!create")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!create")
 	case auth.PRIV_QUERY_ALTER_INDEX:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!alter")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!alter")
 	case auth.PRIV_QUERY_DROP_INDEX:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!drop")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!drop")
 	case auth.PRIV_QUERY_LIST_INDEX:
-		permission = joinStrings("cluster.bucket[", bucket, "].n1ql.index!list")
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!list")
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
 		permission = "cluster.n1ql.curl!execute"
+	case auth.PRIV_QUERY_MANAGE_FUNCTIONS:
+		permission = "cluster.n1ql.udf!manage"
+	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS:
+		permission = "cluster.n1ql.udf!execute"
+	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS:
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf!manage")
+	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS:
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf!execute")
+	case auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL:
+		permission = "cluster.n1ql.udf_external!manage"
+	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL:
+		permission = "cluster.n1ql.udf_external!execute"
+	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL:
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf_external!manage")
+	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL:
+		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf_external!execute")
+	case auth.PRIV_QUERY_BUCKET_ADMIN:
+		permission = joinStrings("cluster.bucket[", object, "]!manage")
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}
 	return permission, nil
 }
 
-func doAuthByCreds(creds cbauth.Creds, namespace string, bucket string, requested auth.Privilege) (bool, error) {
-	permission, err := privilegeString(namespace, bucket, requested)
+func doAuthByCreds(creds cbauth.Creds, namespace string, object string, requested auth.Privilege) (bool, error) {
+	permission, err := privilegeString(namespace, object, requested)
 	if err != nil {
 		return false, err
 	}
@@ -98,16 +116,29 @@ type authSource interface {
 	authWebCreds(req *http.Request) (cbauth.Creds, error)
 }
 
-func namespaceKeyspaceFromPrivPair(pair auth.PrivilegePair) (namespace, keyspace string) {
-	if strings.Contains(pair.Target, ":") {
-		q := strings.Split(pair.Target, ":")
-		namespace = q[0]
-		keyspace = q[1]
+// splits the target into namespace and couchbase target (bucket, or collection path separated by :)
+func namespaceKeyspaceFromPrivPair(pair auth.PrivilegePair) (string, string) {
+	var bytes []byte
+	var namespace string
+
+	i := strings.IndexByte(pair.Target, ':')
+	if i > 0 {
+		namespace = pair.Target[:i]
+		if i < len(pair.Target)-1 {
+			bytes = []byte(pair.Target[i+1:])
+		}
 	} else {
 		namespace = "default"
-		keyspace = pair.Target
+		bytes = []byte(pair.Target)
 	}
-	return
+
+	// cbAuth separates target collection path objects with ':', not '.' as N1QL does
+	for i := 0; i < len(bytes); i++ {
+		if bytes[i] == '.' {
+			bytes[i] = ':'
+		}
+	}
+	return namespace, string(bytes)
 }
 
 // Try to get privsSought privileges from the availableCredentials credentials.
@@ -120,7 +151,7 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 
 		thisPrivGranted := false
 
-		if keyspace == "nodes" && privilege == auth.PRIV_SYSTEM_READ && as.adminIsOpen() {
+		if namespace == "#system" && keyspace == "nodes" && privilege == auth.PRIV_SYSTEM_READ && as.adminIsOpen() {
 			// The system:nodes table follows the underlying ns_server API.
 			// If all tables have passwords, the API requires credentials.
 			// But if any don't, the API is open to read.
@@ -159,6 +190,9 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 // Determine the set of keyspaces referenced in the list of privileges, and derive
 // credentials for them with empty passwords. This corresponds to the case of access users that were
 // created for passwordless buckets at upgrate time.
+
+// TODO: ditch this code, when we require that users created for old style passwordless buckets have a password
+// as legacy code, we choose not to make it collection aware
 func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbauth.Creds, auth.AuthenticatedUsers) {
 	keyspaces := make(map[string]bool, len(privs))
 	for _, pair := range privs {

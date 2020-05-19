@@ -370,6 +370,10 @@ func (ks *CollectionsKeyspace) QualifiedName() string {
 	return ks.id
 }
 
+func (ks *CollectionsKeyspace) AuthKey() string {
+	return ks.id
+}
+
 func (ks *CollectionsKeyspace) NamespaceId() string {
 	if ks.namespace == nil {
 		return ""

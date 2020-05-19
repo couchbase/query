@@ -18,17 +18,17 @@ import (
 )
 
 func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
-	_, keyspace := namespaceKeyspaceFromPrivPair(pair)
+	keyspace := pair.Target
 
 	privilege := ""
 	role := ""
 	switch pair.Priv {
 	case auth.PRIV_READ:
 		privilege = "data read queries"
-		role = fmt.Sprintf("bucket_full_access on bucket %s", keyspace)
+		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_WRITE:
 		privilege = "data write queries"
-		role = fmt.Sprintf("bucket_full_access on bucket %s", keyspace)
+		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_SYSTEM_READ:
 		privilege = "queries accessing the system tables"
 		role = "admin"
@@ -39,16 +39,16 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 		privilege = "queries accessing user information"
 		role = "admin"
 	case auth.PRIV_QUERY_SELECT:
-		privilege = fmt.Sprintf("SELECT queries on the %s bucket", keyspace)
+		privilege = fmt.Sprintf("SELECT queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_UPDATE:
-		privilege = fmt.Sprintf("UPDATE queries on the %s bucket", keyspace)
+		privilege = fmt.Sprintf("UPDATE queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_INSERT:
-		privilege = fmt.Sprintf("INSERT queries on the %s bucket", keyspace)
+		privilege = fmt.Sprintf("INSERT queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_DELETE:
-		privilege = fmt.Sprintf("DELETE queries on the %s bucket", keyspace)
+		privilege = fmt.Sprintf("DELETE queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
 		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:

@@ -130,6 +130,7 @@ type collection struct {
 	scope      *scope
 	bucket     *keyspace
 	fullName   string
+	authKey    string
 	checked    bool
 	gsiIndexer datastore.Indexer
 	ftsIndexer datastore.Indexer
@@ -151,6 +152,10 @@ func (coll *collection) QualifiedName() string {
 		return coll.fullName + _DEFAULT_SCOPE_COLLECTION_NAME
 	}
 	return coll.fullName
+}
+
+func (coll *collection) AuthKey() string {
+	return coll.authKey
 }
 
 func (coll *collection) NamespaceId() string {
@@ -331,6 +336,9 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 			if s.Uid == 0 && c.Uid == 0 {
 				coll.isDefault = true
 
+				// the authorization key for the default collection is the bucket
+				coll.authKey = bucket.name
+
 				// the default collection has the bucket name to represent itself as the bucket
 				// this is to differentiate from the default collection being addressed explicitly
 				defaultCollection = &collection{
@@ -338,12 +346,15 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 					name:      bucket.name,
 					namespace: bucket.namespace,
 					fullName:  bucket.namespace.name + ":" + bucket.name,
+					authKey:   bucket.name,
 					uid:       uint32(c.Uid),
 					scope:     scope,
 					bucket:    bucket,
 					isDefault: true,
 					isBucket:  true,
 				}
+			} else {
+				coll.authKey = bucket.name + "." + scope.id + "." + coll.name
 			}
 		}
 		scopes[s.Name] = scope
@@ -396,6 +407,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			}
 			if s.Uid == 0 && c.Uid == 0 {
 				coll.isDefault = true
+				coll.authKey = bucket.name
 
 				// the default collection has the bucket name to represent itself as the bucket
 				// this is to differentiate from the default collection being addressed explicitly
@@ -404,6 +416,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					name:      bucket.name,
 					namespace: bucket.namespace,
 					fullName:  bucket.namespace.name + ":" + bucket.name,
+					authKey:   bucket.name,
 					uid:       uint32(c.Uid),
 					scope:     scope,
 					bucket:    bucket,
@@ -420,6 +433,8 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					coll.checked = oldColl.checked
 					oldColl.Unlock()
 				}
+			} else {
+				coll.authKey = bucket.name + "." + scope.id + "." + coll.name
 			}
 		}
 		scopes[s.Name] = scope

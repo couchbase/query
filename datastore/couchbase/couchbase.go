@@ -435,7 +435,13 @@ func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 		roles := make([]datastore.Role, len(u.Roles))
 		for j, r := range u.Roles {
 			roles[j].Name = r.Role
-			roles[j].Bucket = r.BucketName
+			if r.CollectionName != "" {
+				roles[j].Target = r.BucketName + "." + r.ScopeName + "." + r.CollectionName
+			} else if r.ScopeName != "" {
+				roles[j].Target = r.BucketName + "." + r.ScopeName
+			} else if r.BucketName != "" {
+				roles[j].Target = r.BucketName
+			}
 		}
 		resultUsers[i].Roles = roles
 	}
@@ -450,7 +456,15 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	outputUser.Domain = u.Domain
 	for i, r := range u.Roles {
 		outputUser.Roles[i].Role = r.Name
-		outputUser.Roles[i].BucketName = r.Bucket
+		if len(r.Target) > 0 {
+			bytes := []byte(r.Target)
+			for i := 0; i < len(bytes); i++ {
+				if bytes[i] == '.' {
+					bytes[i] = ':'
+				}
+			}
+			outputUser.Roles[i].BucketName = string(bytes)
+		}
 	}
 	err := s.client.PutUserInfo(&outputUser)
 	if err != nil {
@@ -467,7 +481,7 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	roles := make([]datastore.Role, len(roleDescList))
 	for i, rd := range roleDescList {
 		roles[i].Name = rd.Role
-		roles[i].Bucket = rd.BucketName
+		roles[i].Target = rd.BucketName
 	}
 	return roles, nil
 }
@@ -1270,6 +1284,10 @@ func (b *keyspace) FullName() string {
 
 func (b *keyspace) QualifiedName() string {
 	return b.fullName + _DEFAULT_SCOPE_COLLECTION_NAME
+}
+
+func (b *keyspace) AuthKey() string {
+	return b.name
 }
 
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {

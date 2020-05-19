@@ -112,7 +112,6 @@ func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
 
 func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
 
-	// FIXME this has to be rewritten once collection privileges are defined
 	namespace := path.Namespace()
 	fullKeyspace := path.SimpleString()
 	privs := auth.NewPrivileges()

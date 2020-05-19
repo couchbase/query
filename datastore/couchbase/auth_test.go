@@ -204,21 +204,3 @@ type deniedCase struct {
 	data     auth.PrivilegePair
 	expected string
 }
-
-func TestMessageForDeniedPrivilege(t *testing.T) {
-	cases := []deniedCase{
-		deniedCase{data: auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
-			expected: "User does not have credentials to run SELECT queries on the testbucket bucket. Add role bucket_full_access on testbucket to allow the query to run."},
-		deniedCase{data: auth.PrivilegePair{Target: ":testbucket", Priv: auth.PRIV_QUERY_DROP_INDEX},
-			expected: "User does not have credentials to run index operations. Add role bucket_full_access on testbucket to allow the query to run."},
-		deniedCase{data: auth.PrivilegePair{Target: "", Priv: auth.PRIV_SYSTEM_READ},
-			expected: "User does not have credentials to run queries accessing the system tables. Add role admin to allow the query to run."},
-	}
-
-	for i, c := range cases {
-		result := messageForDeniedPrivilege(c.data)
-		if result != c.expected {
-			t.Fatalf("Error in case %d. Expected %q, got %q.", i, c.expected, result)
-		}
-	}
-}

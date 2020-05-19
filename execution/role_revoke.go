@@ -65,7 +65,12 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Create the set of deletable roles.
-		roleList := getRoles(this.plan.Node())
+		roleList, err := getRoles(this.plan.Node())
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
+
 		deleteRoleMap := make(map[datastore.Role]bool, len(roleList))
 		for _, role := range roleList {
 			deleteRoleMap[role] = true
@@ -78,12 +83,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 			context.Fatal(err)
 			return
 		}
-		validKeyspaces, err := getAllKeyspaces(context.datastore)
-		if err != nil {
-			context.Fatal(err)
-			return
-		}
-		err = validateRoles(roleList, validRoles, validKeyspaces)
+		err = validateRoles(roleList, validRoles)
 		if err != nil {
 			context.Fatal(err)
 			return
@@ -109,7 +109,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 						continue eachDeleteRole
 					}
 				}
-				context.Warning(errors.NewRoleNotPresent(userId, deleteRole.Name, deleteRole.Bucket))
+				context.Warning(errors.NewRoleNotPresent(userId, deleteRole.Name, deleteRole.Target))
 			}
 
 			// Create a new list of roles for the user: their current

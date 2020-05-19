@@ -84,8 +84,8 @@ Returns all required privileges.
 */
 func (this *FlushCollection) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
-	//	fullName := this.keyspace.FullName()
-	//	privs.Add(fullName, auth.PRIV_QUERY_FLUSH_COLLECTION)
+	fullName := this.keyspace.Path().BucketPath().FullName()
+	privs.Add(fullName, auth.PRIV_QUERY_BUCKET_ADMIN)
 	return privs, nil
 }
 

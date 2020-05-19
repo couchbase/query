@@ -155,7 +155,7 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	return []datastore.Role{
 		datastore.Role{Name: "cluster_admin"},
 		datastore.Role{Name: "replication_admin"},
-		datastore.Role{Name: "bucket_admin", Bucket: "*"},
+		datastore.Role{Name: "bucket_admin", Target: "*"},
 	}, nil
 }
 
@@ -363,6 +363,10 @@ func (b *keyspace) Name() string {
 
 func (b *keyspace) QualifiedName() string {
 	return b.namespace.name + ":" + b.name
+}
+
+func (b *keyspace) AuthKey() string {
+	return b.name
 }
 
 func (b *keyspace) Scope() datastore.Scope {

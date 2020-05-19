@@ -21,16 +21,16 @@ import (
 type RevokeRole struct {
 	statementBase
 
-	roles     []string `json:"roles"`
-	keyspaces []string `json:"keyspaces"`
-	users     []string `json:"users"`
+	roles     []string       `json:"roles"`
+	keyspaces []*KeyspaceRef `json:"keyspaces"`
+	users     []string       `json:"users"`
 }
 
 /*
 The function NewRevokeRole returns a pointer to the
 RevokeRole struct with the input argument values as fields.
 */
-func NewRevokeRole(roles []string, keyspaces []string, users []string) *RevokeRole {
+func NewRevokeRole(roles []string, keyspaces []*KeyspaceRef, users []string) *RevokeRole {
 	rv := &RevokeRole{
 		roles:     roles,
 		keyspaces: keyspaces,
@@ -111,7 +111,7 @@ func (this *RevokeRole) Roles() []string {
 /*
 Returns the list of keyspaces that qualify the roles being assigned.
 */
-func (this *RevokeRole) Keyspaces() []string {
+func (this *RevokeRole) Keyspaces() []*KeyspaceRef {
 	return this.keyspaces
 }
 

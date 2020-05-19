@@ -38,9 +38,9 @@ func TestRoleStatements(t *testing.T) {
 	qc := start()
 
 	pete := datastore.User{Name: "Peter Peterson", Id: "pete", Domain: "local",
-		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "contacts"}}}
+		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Target: "contacts"}}}
 	sam := datastore.User{Name: "Sam Samson", Id: "sam", Domain: "local",
-		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "products"}}}
+		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Target: "products"}}}
 
 	ds := qc.dstore
 	ds.PutUserInfo(&pete)
@@ -66,8 +66,8 @@ func TestRoleStatements(t *testing.T) {
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
-				datastore.Role{Name: "bucket_admin", Bucket: "products"},
+				datastore.Role{Name: "bucket_admin", Target: "contacts"},
+				datastore.Role{Name: "bucket_admin", Target: "products"},
 			},
 		},
 		datastore.User{
@@ -76,7 +76,7 @@ func TestRoleStatements(t *testing.T) {
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "replication_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "products"},
+				datastore.Role{Name: "bucket_admin", Target: "products"},
 			},
 		},
 	}
@@ -102,7 +102,7 @@ func TestRoleStatements(t *testing.T) {
 			Domain: "local",
 			Roles: []datastore.Role{
 				datastore.Role{Name: "cluster_admin"},
-				datastore.Role{Name: "bucket_admin", Bucket: "contacts"},
+				datastore.Role{Name: "bucket_admin", Target: "contacts"},
 			},
 		},
 		datastore.User{

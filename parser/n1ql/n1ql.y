@@ -74,6 +74,7 @@ windowFrameExtent *algebra.WindowFrameExtent
 updStatistics    *algebra.UpdateStatistics
 
 keyspaceRef      *algebra.KeyspaceRef
+keyspaceRefs     []*algebra.KeyspaceRef
 scopeRef         *algebra.ScopeRef
 
 pair             *algebra.Pair
@@ -460,7 +461,7 @@ tokOffset	 int
 %type <val>              infer_ustat_with opt_infer_ustat_with
 
 %type <ss>               user_list
-%type <ss>               keyspace_list
+%type <keyspaceRefs>     keyspace_list
 %type <ss>               role_list
 %type <s>                role_name
 %type <s>                user
@@ -2206,12 +2207,12 @@ DELETE
 ;
 
 keyspace_list:
-IDENT
+keyspace_ref
 {
-	$$ = []string{ $1 }
+	$$ = []*algebra.KeyspaceRef{ $1 }
 }
 |
-keyspace_list COMMA IDENT
+keyspace_list COMMA keyspace_ref
 {
 	$$ = append($1, $3)
 }

@@ -84,8 +84,8 @@ Returns all required privileges.
 */
 func (this *DropScope) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
-	//	fullName := this.scope.FullName()
-	//	privs.Add(fullName, auth.PRIV_QUERY_DROP_SCOPE)
+	fullName := this.scope.Path().BucketPath().FullName()
+	privs.Add(fullName, auth.PRIV_QUERY_BUCKET_ADMIN)
 	return privs, nil
 }
 

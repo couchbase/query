@@ -572,17 +572,17 @@ Determine the privileges requires for the merge actions,
 and add them to 'privs' (which will not be nil).
 The keyspace being acted on is passed down as 'keyspace'.
 */
-func (this *MergeActions) AddPrivilegesFor(privs *auth.Privileges, keyspace string) {
+func (this *MergeActions) AddPrivilegesFor(privs *auth.Privileges, fullKeyspace string) {
 	if this.update != nil {
-		privs.Add(keyspace, auth.PRIV_QUERY_UPDATE)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE)
 	}
 
 	if this.delete != nil {
-		privs.Add(keyspace, auth.PRIV_QUERY_DELETE)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE)
 	}
 
 	if this.insert != nil {
-		privs.Add(keyspace, auth.PRIV_QUERY_INSERT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT)
 	}
 }
 

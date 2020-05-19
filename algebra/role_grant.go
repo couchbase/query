@@ -21,16 +21,16 @@ import (
 type GrantRole struct {
 	statementBase
 
-	roles     []string `json:"roles"`
-	keyspaces []string `json:"keyspaces"`
-	users     []string `json:"users"`
+	roles     []string       `json:"roles"`
+	keyspaces []*KeyspaceRef `json:"keyspaces"`
+	users     []string       `json:"users"`
 }
 
 /*
 The function NewGrantRole returns a pointer to the
 GrantRole struct with the input argument values as fields.
 */
-func NewGrantRole(roles []string, keyspaces []string, users []string) *GrantRole {
+func NewGrantRole(roles []string, keyspaces []*KeyspaceRef, users []string) *GrantRole {
 	rv := &GrantRole{
 		roles:     roles,
 		keyspaces: keyspaces,
@@ -111,7 +111,7 @@ func (this *GrantRole) Roles() []string {
 /*
 Returns the list of keyspaces that qualify the roles being assigned.
 */
-func (this *GrantRole) Keyspaces() []string {
+func (this *GrantRole) Keyspaces() []*KeyspaceRef {
 	return this.keyspaces
 }
 

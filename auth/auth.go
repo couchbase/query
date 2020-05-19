@@ -12,29 +12,30 @@ package auth
 type Privilege int
 
 const (
-	PRIV_READ                  Privilege = 1
-	PRIV_WRITE                 Privilege = 2
-	PRIV_SYSTEM_READ           Privilege = 4  // Access to tables in the system namespace, such as system:keyspaces.
-	PRIV_SECURITY_READ         Privilege = 5  // Reading user information.
-	PRIV_SECURITY_WRITE        Privilege = 6  // Updating user information.
-	PRIV_QUERY_SELECT          Privilege = 7  // Ability to run SELECT statements.
-	PRIV_QUERY_UPDATE          Privilege = 8  // Ability to run UPDATE statements.
-	PRIV_QUERY_INSERT          Privilege = 9  // Ability to run INSERT statements.
-	PRIV_QUERY_DELETE          Privilege = 10 // Ability to run DELETE statements.
-	PRIV_QUERY_BUILD_INDEX     Privilege = 11 // Ability to run BUILD INDEX statements.
-	PRIV_QUERY_CREATE_INDEX    Privilege = 12 // Ability to run CREATE INDEX statements.
-	PRIV_QUERY_ALTER_INDEX     Privilege = 13 // Ability to run ALTER INDEX statements.
-	PRIV_QUERY_DROP_INDEX      Privilege = 14 // Ability to run DROP INDEX statements.
-	PRIV_QUERY_LIST_INDEX      Privilege = 15 // Ability to list indexes of a keyspace.
-	PRIV_QUERY_EXTERNAL_ACCESS Privilege = 16 // Ability to access the web from a N1QL query.
-//	PRIV_QUERY_CREATE_FUNCTION   Privilege = 17 // Ability to run CREATE FUNCTION statements.
-//	PRIV_QUERY_DROP_FUNCTION     Privilege = 18 // Ability to run DROP FUNCTION statements.
-//	PRIV_QUERY_EXECUTE_FUNCTION  Privilege = 19 // Ability to run EXECUTE FUNCTION statements.
-//	PRIV_QUERY_CREATE_SCOPE      Privilege = 20 // Ability to run CREATE SCOPE statements.
-//	PRIV_QUERY_DROP_SCOPE        Privilege = 21 // Ability to run DROP SCOPE statements.
-//	PRIV_QUERY_CREATE_COLLECTION Privilege = 22 // Ability to run CREATE COLLECTION statements.
-//	PRIV_QUERY_DROP_COLLECTION   Privilege = 23 // Ability to run DROP COLLECTION statements.
-//	PRIV_QUERY_FLUSH_COLLECTION  Privilege = 24 // Ability to run FLUSH COLLECTION statements.
+	PRIV_READ                                   Privilege = 1
+	PRIV_WRITE                                  Privilege = 2
+	PRIV_SYSTEM_READ                            Privilege = 4  // Access to tables in the system namespace, such as system:keyspaces.
+	PRIV_SECURITY_READ                          Privilege = 5  // Reading user information.
+	PRIV_SECURITY_WRITE                         Privilege = 6  // Updating user information.
+	PRIV_QUERY_SELECT                           Privilege = 7  // Ability to run SELECT statements.
+	PRIV_QUERY_UPDATE                           Privilege = 8  // Ability to run UPDATE statements.
+	PRIV_QUERY_INSERT                           Privilege = 9  // Ability to run INSERT statements.
+	PRIV_QUERY_DELETE                           Privilege = 10 // Ability to run DELETE statements.
+	PRIV_QUERY_BUILD_INDEX                      Privilege = 11 // Ability to run BUILD INDEX statements.
+	PRIV_QUERY_CREATE_INDEX                     Privilege = 12 // Ability to run CREATE INDEX statements.
+	PRIV_QUERY_ALTER_INDEX                      Privilege = 13 // Ability to run ALTER INDEX statements.
+	PRIV_QUERY_DROP_INDEX                       Privilege = 14 // Ability to run DROP INDEX statements.
+	PRIV_QUERY_LIST_INDEX                       Privilege = 15 // Ability to list indexes of a keyspace.
+	PRIV_QUERY_EXTERNAL_ACCESS                  Privilege = 16 // Ability to access the web from a N1QL query.
+	PRIV_QUERY_MANAGE_FUNCTIONS                 Privilege = 17 // Ability to run CREATE / DROP  FUNCTION statements.
+	PRIV_QUERY_EXECUTE_FUNCTIONS                Privilege = 18 // Ability to run EXECUTE FUNCTION statements.
+	PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS           Privilege = 19 // Ability to run CREATE / DROP  FUNCTION statements.
+	PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS          Privilege = 20 // Ability to run EXECUTE FUNCTION statements.
+	PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL        Privilege = 21 // Ability to run CREATE / DROP  FUNCTION statements.
+	PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL       Privilege = 22 // Ability to run EXECUTE FUNCTION statements.
+	PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL  Privilege = 23 // Ability to run CREATE / DROP  FUNCTION statements.
+	PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL Privilege = 24 // Ability to run EXECUTE FUNCTION statements.
+	PRIV_QUERY_BUCKET_ADMIN                     Privilege = 25 // Ability to add, drop, flush scopes and collections
 )
 
 func IsStatementTypePrivilege(priv Privilege) bool {

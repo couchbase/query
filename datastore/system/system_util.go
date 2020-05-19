@@ -44,6 +44,10 @@ func (this *keyspaceBase) QualifiedName() string {
 	return this.fullName
 }
 
+func (this *keyspaceBase) AuthKey() string {
+	return this.name
+}
+
 func (this *keyspaceBase) CreateScope(name string) errors.Error {
 	return errors.NewScopesNotSupportedError(this.name)
 }

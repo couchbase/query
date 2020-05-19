@@ -258,6 +258,10 @@ func (b *keyspace) QualifiedName() string {
 	return b.namespace.name + ":" + b.name
 }
 
+func (b *keyspace) AuthKey() string {
+	return b.name
+}
+
 func (b *keyspace) MetadataVersion() uint64 {
 	return 0
 }

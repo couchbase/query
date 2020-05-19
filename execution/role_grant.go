@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -45,22 +46,21 @@ func (this *GrantRole) Copy() Operator {
 	return rv
 }
 
-func validateRoles(candidateRoles, allRoles []datastore.Role, keyspaces map[string]bool) errors.Error {
+func validateRoles(candidateRoles, allRoles []datastore.Role) errors.Error {
 	for _, candidate := range candidateRoles {
 		foundMatch := false
 		for _, permittedRole := range allRoles {
 			if candidate.Name == permittedRole.Name {
-				if candidate.Bucket == "" {
-					if permittedRole.Bucket == "*" {
+				if candidate.Target == "" {
+					if permittedRole.Target == "*" {
 						return errors.NewRoleRequiresKeyspaceError(candidate.Name)
 					}
 				} else {
-					if permittedRole.Bucket != "*" {
+					if permittedRole.Target != "*" {
 						return errors.NewRoleTakesNoKeyspaceError(candidate.Name)
 					}
-					if candidate.Bucket != "*" && !keyspaces[candidate.Bucket] {
-						return errors.NewNoSuchKeyspaceError(candidate.Bucket)
-					}
+
+					// the keyspace is known to exist. no further checks needed
 				}
 				foundMatch = true
 				break
@@ -73,34 +73,12 @@ func validateRoles(candidateRoles, allRoles []datastore.Role, keyspaces map[stri
 	return nil
 }
 
-func getAllKeyspaces(store datastore.Datastore) (map[string]bool, errors.Error) {
-	keyspaces := make(map[string]bool, 16)
-	namespaceIds, err := store.NamespaceIds()
-	if err != nil {
-		return nil, err
-	}
-	for _, namespaceId := range namespaceIds {
-		namespace, err := store.NamespaceById(namespaceId)
-		if err != nil {
-			return nil, err
-		}
-		keyspaceIds, err := namespace.KeyspaceIds()
-		if err != nil {
-			return nil, err
-		}
-		for _, keyspaceId := range keyspaceIds {
-			keyspaces[keyspaceId] = true
-		}
-	}
-	return keyspaces, nil
-}
-
 type roleSource interface {
 	Roles() []string
-	Keyspaces() []string
+	Keyspaces() []*algebra.KeyspaceRef
 }
 
-func getRoles(node roleSource) []datastore.Role {
+func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 	rolesList := auth.NormalizeRoleNames(node.Roles())
 	keyspaceList := node.Keyspaces()
 
@@ -109,15 +87,19 @@ func getRoles(node roleSource) []datastore.Role {
 		for i, v := range rolesList {
 			ret[i].Name = v
 		}
-		return ret
+		return ret, nil
 	} else {
 		ret := make([]datastore.Role, 0, len(rolesList)*len(keyspaceList))
 		for _, role := range rolesList {
 			for _, ks := range keyspaceList {
-				ret = append(ret, datastore.Role{Name: role, Bucket: ks})
+				keyspace, _ := datastore.GetKeyspace(ks.Path().Parts()...)
+				if keyspace == nil {
+					return nil, errors.NewNoSuchKeyspaceError(ks.Keyspace())
+				}
+				ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
 			}
 		}
-		return ret
+		return ret, nil
 	}
 }
 
@@ -176,7 +158,11 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Create the set of new roles, in a form suitable for output.
-		roleList := getRoles(this.plan.Node())
+		roleList, err := getRoles(this.plan.Node())
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
 
 		// Get the list of all valid roles, and verify that the roles to be
 		// granted are proper.
@@ -185,12 +171,7 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 			context.Fatal(err)
 			return
 		}
-		validKeyspaces, err := getAllKeyspaces(context.datastore)
-		if err != nil {
-			context.Fatal(err)
-			return
-		}
-		err = validateRoles(roleList, validRoles, validKeyspaces)
+		err = validateRoles(roleList, validRoles)
 		if err != nil {
 			context.Fatal(err)
 			return
@@ -217,7 +198,8 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 					}
 				}
 				if alreadyHasRole {
-					context.Warning(errors.NewRoleAlreadyPresent(userId, newRole.Name, newRole.Bucket))
+					// FIXME COLLECTIONS use full path
+					context.Warning(errors.NewRoleAlreadyPresent(userId, newRole.Name, newRole.Target))
 					continue
 				}
 				user.Roles = append(user.Roles, newRole)

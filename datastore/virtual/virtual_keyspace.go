@@ -168,6 +168,10 @@ func (this *virtualKeyspace) QualifiedName() string {
 	return this.path[0] + ":" + this.path[1] + "." + this.path[2] + "." + this.path[3]
 }
 
+func (this *virtualKeyspace) AuthKey() string {
+	return this.path[len(this.path)-1]
+}
+
 // Virtual keyspace will be directly under a namespace.
 func (this *virtualKeyspace) NamespaceId() string {
 	return this.path[0]

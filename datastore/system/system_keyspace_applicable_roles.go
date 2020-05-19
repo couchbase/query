@@ -70,7 +70,7 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 
 	for _, key := range keys {
-		err, grantee, role, bucketName := splitAppRolesKey(key)
+		err, grantee, role, target := splitAppRolesKey(key)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -78,8 +78,15 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 		valMap := make(map[string]interface{}, 3)
 		valMap["grantee"] = grantee
 		valMap["role"] = auth.RoleToAlias(role)
-		if bucketName != "" {
-			valMap["bucket_name"] = bucketName
+		if target != "" {
+			object := strings.SplitN(target, ".", 3)
+			valMap["bucket_name"] = object[0]
+			if len(object) > 1 {
+				valMap["scope_name"] = object[1]
+			}
+			if len(object) > 2 {
+				valMap["collection_name"] = object[2]
+			}
 		}
 		val := value.NewValue(valMap)
 		item := value.NewAnnotatedValue(val)
@@ -196,11 +203,11 @@ func (pi *applicableRolesIndex) ScanEntries(requestId string, limit int64, cons 
 }
 
 // sample key: "ivanivanov/bucket_admin/testbucket"
-func makeAppRolesKey(id, roleName, bucket string) string {
-	return fmt.Sprintf("%s/%s/%s", id, roleName, bucket)
+func makeAppRolesKey(id, roleName, target string) string {
+	return fmt.Sprintf("%s/%s/%s", id, roleName, target)
 }
 
-func splitAppRolesKey(key string) (err errors.Error, id, roleName, bucketName string) {
+func splitAppRolesKey(key string) (err errors.Error, id, roleName, target string) {
 	fields := strings.Split(key, "/")
 	if len(fields) != 3 {
 		err = errors.NewSystemMalformedKeyError(key, "system:applicable_roles")
@@ -208,7 +215,7 @@ func splitAppRolesKey(key string) (err errors.Error, id, roleName, bucketName st
 	}
 	id = fields[0]
 	roleName = fields[1]
-	bucketName = fields[2]
+	target = fields[2]
 	return
 }
 
@@ -225,7 +232,7 @@ func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexCo
 			if numProduced >= limit {
 				return
 			}
-			key := makeAppRolesKey(user.Id, role.Name, role.Bucket)
+			key := makeAppRolesKey(user.Id, role.Name, role.Target)
 			if compSpan == nil || compSpan.evaluate(key) {
 				entry := datastore.IndexEntry{PrimaryKey: key}
 				if !sendSystemKey(conn, &entry) {

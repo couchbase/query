@@ -56,10 +56,10 @@ func (this *GrantRole) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *GrantRole) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string   `json:"#operator"`
-		Roles     []string `json:"roles"`
-		Keyspaces []string `json:"keyspaces"`
-		Users     []string `json:"users"`
+		_         string                 `json:"#operator"`
+		Roles     []string               `json:"roles"`
+		Keyspaces []*algebra.KeyspaceRef `json:"keyspaces"`
+		Users     []string               `json:"users"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

@@ -98,6 +98,18 @@ func NewPathFromElements(elems []string) *Path {
 	return &Path{elements: elems}
 }
 
+// These two are used to generate partial paths for RBAC roles
+func (path *Path) BucketPath() *Path {
+	return &Path{elements: path.elements[:2]}
+}
+
+func (path *Path) ScopePath() *Path {
+	if len(path.elements) == 2 {
+		return nil
+	}
+	return &Path{elements: path.elements[:3]}
+}
+
 func (path *Path) Namespace() string {
 	return path.elements[0]
 }
@@ -141,6 +153,11 @@ func (path *Path) SetDefaultNamespace(namespace string) {
 
 func (path *Path) Alias() string {
 	return path.elements[len(path.elements)-1]
+}
+
+func (path *Path) FullName() string {
+	forceBackticks := false
+	return path.string(forceBackticks)
 }
 
 func (path *Path) SimpleString() string {
