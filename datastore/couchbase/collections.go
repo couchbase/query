@@ -180,13 +180,7 @@ func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Err
 }
 
 func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Error) {
-
-	// FIXME
-	// default collection
-	if coll.isDefault {
-		return coll.bucket.size(context)
-	}
-	return -1, nil
+	return coll.bucket.size(context, &memcached.ClientContext{CollId: coll.uid})
 }
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
