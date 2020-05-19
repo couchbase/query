@@ -219,6 +219,15 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	}
 	this.addChildren(scan)
 
+	// for inner side of ANSI JOIN/NEST, scans will be considered multiple times for different
+	// join methods, wait till join is finalized before marking index filters
+	if this.useCBO && !node.IsAnsiJoinOp() {
+		err = this.markPlanFlags(scan, node)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if len(this.coveringScans) == 0 && this.countScan == nil {
 		names, err := this.GetSubPaths(node.Alias())
 		if err != nil {

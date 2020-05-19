@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -38,50 +37,12 @@ func (this *TermSpans) CreateScan(
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value,
-	filters base.Filters, cost, cardinality float64) plan.SecondaryScan {
+	cost, cardinality float64) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		dynamicIn := this.spans.HasDynamicIn()
-		if (filters != nil) && (cost > 0.0) && (cardinality > 0.0) {
-			var err error
-			keys := index.RangeKey().Copy()
-			condition := index.Condition()
-			if condition != nil {
-				condition = condition.Copy()
-			}
-			if len(keys) > 0 || condition != nil {
-				formalizer := expression.NewSelfFormalizer(term.Alias(), nil)
-
-				for i, key := range keys {
-					key = key.Copy()
-
-					formalizer.SetIndexScope()
-					key, err = formalizer.Map(key)
-					formalizer.ClearIndexScope()
-					if err != nil {
-						break
-					}
-
-					keys[i] = key
-				}
-
-				if condition != nil && err == nil {
-					condition, err = formalizer.Map(condition)
-				}
-			}
-			if index.IsPrimary() {
-				meta := expression.NewMeta(expression.NewIdentifier(term.Alias()))
-				keys = append(keys, meta)
-			}
-			if err != nil {
-				cost = OPT_COST_NOT_AVAIL
-				cardinality = OPT_CARD_NOT_AVAIL
-			} else {
-				optMarkIndexFilters(keys, this.spans, condition, filters)
-			}
-		}
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)

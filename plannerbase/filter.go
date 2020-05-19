@@ -245,6 +245,18 @@ func trimJoinFilters(joinfilters Filters, curlen int) (newlen int) {
 	}
 }
 
+func (this Filters) ClearIndexFlag() {
+	for _, fltr := range this {
+		fltr.fltrFlags &^= FLTR_IN_INDEX_SPAN
+	}
+}
+
+func (this Filters) ClearHashFlag() {
+	for _, fltr := range this {
+		fltr.fltrFlags &^= FLTR_IN_HASH_JOIN
+	}
+}
+
 func (this Filters) ClearPlanFlags() {
 	for _, fltr := range this {
 		fltr.fltrFlags &^= TEMP_PLAN_FLAGS

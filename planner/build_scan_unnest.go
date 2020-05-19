@@ -418,7 +418,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.selectivity = selectivity
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
 	scan := entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(), false,
-		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality)
+		nil, nil, indexProjection, nil, nil, nil, nil, cost, cardinality)
 	return scan, unnest, newArrayKey, n, nil
 }
 

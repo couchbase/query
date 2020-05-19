@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -40,12 +39,12 @@ func (this *UnionSpans) CreateScan(
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value,
-	filters base.Filters, cost, cardinality float64) plan.SecondaryScan {
+	cost, cardinality float64) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
 		return this.spans[0].CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, offset, limit, projection, indexOrder, indexGroupAggs,
-			covers, filterCovers, filters, cost, cardinality)
+			covers, filterCovers, cost, cardinality)
 	}
 
 	lim := offsetPlusLimit(offset, limit)
@@ -53,7 +52,7 @@ func (this *UnionSpans) CreateScan(
 	for i, s := range this.spans {
 		scans[i] = s.CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, nil, lim, projection, nil, indexGroupAggs,
-			covers, filterCovers, filters, cost, cardinality)
+			covers, filterCovers, cost, cardinality)
 	}
 
 	return plan.NewUnionScan(limit, offset, cost, cardinality, scans...)

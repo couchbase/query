@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -31,7 +30,7 @@ type SargSpans interface {
 		projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 		indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 		filterCovers map[*expression.Cover]value.Value,
-		filters base.Filters, cost, cardinality float64) plan.SecondaryScan
+		cost, cardinality float64) plan.SecondaryScan
 
 	Compose(prev SargSpans) SargSpans              // Apply to previous composite keys
 	ComposeTerm(next *TermSpans) SargSpans         // Apply next composite keys

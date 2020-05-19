@@ -247,7 +247,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), array,
 		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
-		nil, entry.cost, entry.cardinality)
+		entry.cost, entry.cardinality)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
