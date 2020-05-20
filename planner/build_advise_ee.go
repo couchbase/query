@@ -389,7 +389,7 @@ func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryId
 	level = collectInnerUnnestMap(joinTerm.Left(), q, primaryIdentifier, level)
 	unnest, ok := joinTerm.(*algebra.Unnest)
 	if ok && !unnest.Outer() {
-		// to add the top level expression which should belong to the unnest filters
+		// to add the top level expression to avoid generating regular index on it.
 		if unnest.Expression().DependsOn(primaryIdentifier) {
 			q.AddToUnnestMap(expression.NewStringer().Visit(unnest.Expression()), unnest.Expression(), level)
 			level += 1
