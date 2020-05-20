@@ -933,7 +933,7 @@ func (p *namespace) MetadataVersion() uint64 {
 }
 
 // ditto
-func (p *namespace) FullName() string {
+func (p *namespace) MetadataId() string {
 	return p.name
 }
 
@@ -1278,7 +1278,7 @@ func (b *keyspace) MetadataVersion() uint64 {
 }
 
 // ditto
-func (b *keyspace) FullName() string {
+func (b *keyspace) MetadataId() string {
 	return b.fullName
 }
 

@@ -273,7 +273,7 @@ func (p *namespace) MetadataVersion() uint64 {
 	return 0
 }
 
-func (p *namespace) FullName() string {
+func (p *namespace) MetadataId() string {
 	return p.name
 }
 

@@ -241,7 +241,7 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) {
 func (this *Prepared) addKeyspaceMetadata(ksMeta datastore.KeyspaceMetadata) {
 	version := ksMeta.MetadataVersion()
 	for i, ks := range this.keyspaces {
-		if ks.ksMeta.FullName() == ksMeta.FullName() {
+		if ks.ksMeta.MetadataId() == ksMeta.MetadataId() {
 			this.keyspaces[i].ksMeta = ksMeta
 			this.keyspaces[i].version = version
 			return

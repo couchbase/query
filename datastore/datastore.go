@@ -155,9 +155,27 @@ type Scope interface {
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.
 type Keyspace interface {
-	Id() string            // Id of this keyspace
+	Id() string // Id of this keyspace
+
+	// A word on why we need three names:
+	// Name is just a name unique among the object tracked by the namespace or scope under which this object sits. Easy enough.
+
+	// QualifiedName returns the unique path of the storage object supporting this keyspace. This is not necessarily the full
+	// path of this object.
+	// For instance, for couchbase buckets, the QualifiedName is the full path of the default collection for that bucket.
+	// This is needed for things like the planner, or index advisor, or the dictionary cache - by using a consistent unique
+	// full path, both SELECT * FROM bucket and SELECT * FROM default:bucket._default._default are optimized in the same way,
+	// using statistics from the same underlying objects, etc.
+	// ADVISE provides the same indexes whether used agains the bucket and the default collection
+	// Delta table names generated are the same whether we use a bucket or its defeault collection.
+
+	// AuthKey is used for a similar reason: we want to use the same RBAC role for a default collection and a bucket.
+	// But while the KV uses default collections for storage, and default:bucket internally uses default:bucket._default._default,
+	// cbauth uses buckets to authorize default collections, so to access default:bucket._default._default, you need query_select
+	// on bucket, not bucket:_default:_default.
+	// Also, cbauth does not support namespaces, so AuthKeys only have bucket, scope and collection.
 	Name() string          // Name of this keyspace
-	QualifiedName() string // Full path of this keyspace, including default or system names if implied
+	QualifiedName() string // Full path of the storage object supporting keyspace, including default or system names if implied
 	AuthKey() string       // Key of the object to be used for authorization purposes
 
 	// A keyspace is found either directly under a namespace or under a scope.
@@ -192,7 +210,7 @@ type Keyspace interface {
 
 type KeyspaceMetadata interface {
 	MetadataVersion() uint64 // A counter that shows the current version of the list of objects contained within
-	FullName() string        // FullName is a unique identifier across all of the stores. We choose the path of the object
+	MetadataId() string      // A unique identifier across all of the stores. We choose the path of the object
 }
 
 // Globally accessible Datastore instance
