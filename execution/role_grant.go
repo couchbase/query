@@ -94,7 +94,7 @@ func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 			for _, ks := range keyspaceList {
 				keyspace, _ := datastore.GetKeyspace(ks.Path().Parts()...)
 				if keyspace == nil {
-					return nil, errors.NewNoSuchKeyspaceError(ks.Keyspace())
+					return nil, errors.NewNoSuchKeyspaceError(ks.FullName())
 				}
 				ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
 			}

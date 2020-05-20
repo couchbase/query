@@ -40,13 +40,13 @@ func opIsUnimplemented(namespace, object string, requested auth.Privilege) bool 
 	return false
 }
 
-func privilegeString(namespace, object string, requested auth.Privilege) (string, error) {
+func privilegeString(namespace, target, obj string, requested auth.Privilege) (string, error) {
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
-		permission = joinStrings("cluster.bucket[", object, "].data.docs!write")
+		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!write")
 	case auth.PRIV_READ:
-		permission = joinStrings("cluster.bucket[", object, "].data.docs!read")
+		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!read")
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
@@ -54,23 +54,23 @@ func privilegeString(namespace, object string, requested auth.Privilege) (string
 	case auth.PRIV_SECURITY_WRITE:
 		permission = "cluster.admin.security!write"
 	case auth.PRIV_QUERY_SELECT:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.select!execute")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.select!execute")
 	case auth.PRIV_QUERY_UPDATE:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.update!execute")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.update!execute")
 	case auth.PRIV_QUERY_INSERT:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.insert!execute")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.insert!execute")
 	case auth.PRIV_QUERY_DELETE:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.delete!execute")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.delete!execute")
 	case auth.PRIV_QUERY_BUILD_INDEX:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!build")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!build")
 	case auth.PRIV_QUERY_CREATE_INDEX:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!create")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!create")
 	case auth.PRIV_QUERY_ALTER_INDEX:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!alter")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!alter")
 	case auth.PRIV_QUERY_DROP_INDEX:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!drop")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!drop")
 	case auth.PRIV_QUERY_LIST_INDEX:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.index!list")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!list")
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
 		permission = "cluster.n1ql.curl!execute"
 	case auth.PRIV_QUERY_MANAGE_FUNCTIONS:
@@ -78,27 +78,27 @@ func privilegeString(namespace, object string, requested auth.Privilege) (string
 	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS:
 		permission = "cluster.n1ql.udf!execute"
 	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf!manage")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.udf!manage")
 	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf!execute")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.udf!execute")
 	case auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL:
 		permission = "cluster.n1ql.udf_external!manage"
 	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL:
 		permission = "cluster.n1ql.udf_external!execute"
 	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf_external!manage")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.udf_external!manage")
 	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL:
-		permission = joinStrings("cluster.bucket[", object, "].n1ql.udf_external!execute")
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.udf_external!execute")
 	case auth.PRIV_QUERY_BUCKET_ADMIN:
-		permission = joinStrings("cluster.bucket[", object, "]!manage")
+		permission = join3Strings("cluster.bucket[", target, "]!manage")
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}
 	return permission, nil
 }
 
-func doAuthByCreds(creds cbauth.Creds, namespace string, object string, requested auth.Privilege) (bool, error) {
-	permission, err := privilegeString(namespace, object, requested)
+func doAuthByCreds(creds cbauth.Creds, namespace string, target string, obj string, requested auth.Privilege) (bool, error) {
+	permission, err := privilegeString(namespace, target, obj, requested)
 	if err != nil {
 		return false, err
 	}
@@ -117,28 +117,43 @@ type authSource interface {
 }
 
 // splits the target into namespace and couchbase target (bucket, or collection path separated by :)
-func namespaceKeyspaceFromPrivPair(pair auth.PrivilegePair) (string, string) {
+// determines the type of object to check (bucket, scope, collection)
+func namespaceKeyspaceTypeFromPrivPair(pair auth.PrivilegePair) (string, string, string) {
 	var bytes []byte
 	var namespace string
+	var obj string
 
 	i := strings.IndexByte(pair.Target, ':')
-	if i > 0 {
+	if i < 0 {
+		namespace = "default"
+		bytes = []byte(pair.Target)
+	} else {
 		namespace = pair.Target[:i]
 		if i < len(pair.Target)-1 {
 			bytes = []byte(pair.Target[i+1:])
 		}
-	} else {
-		namespace = "default"
-		bytes = []byte(pair.Target)
 	}
+
+	// count the items
+	cnt := 0
 
 	// cbAuth separates target collection path objects with ':', not '.' as N1QL does
 	for i := 0; i < len(bytes); i++ {
 		if bytes[i] == '.' {
 			bytes[i] = ':'
+			cnt++
 		}
 	}
-	return namespace, string(bytes)
+
+	switch cnt {
+	case 0:
+		obj = "bucket"
+	case 1:
+		obj = "scope"
+	default:
+		obj = "collection"
+	}
+	return namespace, string(bytes), obj
 }
 
 // Try to get privsSought privileges from the availableCredentials credentials.
@@ -146,7 +161,7 @@ func namespaceKeyspaceFromPrivPair(pair auth.PrivilegePair) (string, string) {
 func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
 	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
 	for _, pair := range privsSought {
-		namespace, keyspace := namespaceKeyspaceFromPrivPair(pair)
+		namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(pair)
 		privilege := pair.Priv
 
 		thisPrivGranted := false
@@ -166,7 +181,7 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 
 		// Check requested privilege against the list of credentials.
 		for _, creds := range availableCredentials {
-			authResult, err := doAuthByCreds(creds, namespace, keyspace, privilege)
+			authResult, err := doAuthByCreds(creds, namespace, keyspace, obj, privilege)
 
 			if err != nil {
 				return nil, err
@@ -221,17 +236,27 @@ func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbau
 }
 
 func userKeyString(c cbauth.Creds) string {
-	return joinStrings(c.Domain(), ":", c.Name())
+	return join3Strings(c.Domain(), ":", c.Name())
 }
 
-// could be a variadic function, but we are looking for speed and
-// as it happens we always require joining 3 strings...
-func joinStrings(s1, s2, s3 string) string {
+// could be variadic functions, but we are looking for speed
+func join3Strings(s1, s2, s3 string) string {
 	var buff bytes.Buffer
 
 	buff.WriteString(s1)
 	buff.WriteString(s2)
 	buff.WriteString(s3)
+	return buff.String()
+}
+
+func join5Strings(s1, s2, s3, s4, s5 string) string {
+	var buff bytes.Buffer
+
+	buff.WriteString(s1)
+	buff.WriteString(s2)
+	buff.WriteString(s3)
+	buff.WriteString(s4)
+	buff.WriteString(s5)
 	return buff.String()
 }
 
