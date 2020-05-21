@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/couchbase/go_json"
+	json "github.com/couchbase/go_json"
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -137,13 +137,12 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		}
 	}
 
-	var creds auth.Credentials
 	// handle parameters that can't be handled dynamically
 	if err == nil {
-		rv.SetNamedArgs(httpArgs.getNamedArgs())
+		var creds auth.Credentials
 
-		// Creds check
-		creds, err = getCredentials(httpArgs, req)
+		rv.SetNamedArgs(httpArgs.getNamedArgs())
+		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
 		if err == nil {
 			rv.SetCredentials(creds)
 
@@ -788,11 +787,8 @@ func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs, namespace strin
 	return nil
 }
 
-func getCredentials(a httpRequestArgs, req *http.Request) (auth.Credentials, errors.Error) {
+func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors.Error) {
 	// Cred_data retrieves credentials from either the URL parameters or from the body of the JSON request.
-
-	auths := req.Header["Authorization"]
-
 	cred_data, err := a.getCredentials()
 	if err != nil {
 		return nil, err
@@ -842,15 +838,6 @@ func getCredentials(a httpRequestArgs, req *http.Request) (auth.Credentials, err
 				// Support passwords like "local:xxx" or "admin:xxx"
 				creds[u_details[0]] = strings.Join(u_details[1:], ":")
 			}
-		}
-	}
-
-	if creds == nil {
-		if req != nil && req.Header.Get("ns-server-ui") == "yes" &&
-			len(req.Header.Get("ns-server-auth-token")) > 0 {
-			return creds, nil
-		} else {
-			return nil, errors.NewAdminAuthError(err, "cause: Authentication failure")
 		}
 	}
 

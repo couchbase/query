@@ -339,7 +339,6 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 			creds, err := s.auth(un, password)
 			if err != nil {
 				logging.Debugf("Unable to authorize <ud>%s</ud>. Error - %v", username, err)
-				return nil, errors.NewDatastoreAuthorizationError(err)
 			} else {
 				credentialsList = append(credentialsList, creds)
 				if un != "" {
