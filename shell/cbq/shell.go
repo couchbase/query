@@ -572,6 +572,7 @@ func main() {
 			os.Exit(1)
 		}
 		n1ql.SetQueryParams("creds", string(ac))
+		n1ql.SetUsernamePassword(creds[0]["user"], creds[0]["pass"])
 	}
 
 	n1ql.SetSkipVerify(noSSLVerify)
