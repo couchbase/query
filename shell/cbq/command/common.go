@@ -69,6 +69,7 @@ func init() {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
 	}
+
 }
 
 func SetWriter(Wt io.Writer) {
@@ -305,7 +306,6 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 	//The string needs to be parsed into a byte array so as to pass to godbc/n1ql.
 	cred := strings.Split(credsFlag, ",")
 	var creds Credentials
-	creds = append(creds, Credential{"user": "", "pass": ""})
 
 	/* Append input credentials in [{"user": <username>, "pass" : <password>}]
 	format as expected by godbc/n1ql creds.
@@ -342,6 +342,7 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 			creds = append(creds, Credential{"user": up[0], "pass": up[1]})
 		}
 	}
+	creds = append(creds, Credential{"user": "", "pass": ""})
 	return creds, 0, ""
 
 }
@@ -420,6 +421,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			}
 
 			n1ql.SetQueryParams("creds", string(ac))
+			n1ql.SetUsernamePassword(creds[0]["user"], creds[0]["pass"])
 
 		} else {
 
