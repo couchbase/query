@@ -98,6 +98,17 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 	return cost, sel, (sel * nrows), nil
 }
 
+func getIndexProjectionCost(index datastore.Index, indexProjection *plan.IndexProjection,
+	cardinality float64) (float64, float64) {
+	return optutil.CalcIndexProjectionCost(index, indexProjection, cardinality, 0, 0, 0)
+}
+
+func getIndexGroupAggsCost(index datastore.Index, indexGroupAggs *plan.IndexGroupAggregates,
+	indexProjection *plan.IndexProjection, keyspaces map[string]string,
+	cardinality float64) (float64, float64) {
+	return optutil.CalcIndexGroupAggsCost(index, indexGroupAggs, indexProjection, keyspaces, cardinality)
+}
+
 func getKeyScanCost(keys expression.Expression) (float64, float64) {
 	return optutil.CalcKeyScanCost(keys)
 }

@@ -245,6 +245,22 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, true, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
+	if this.useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 {
+		if indexGroupAggs != nil {
+			cost, cardinality := getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 {
+				entry.cost += cost
+				entry.cardinality = cardinality
+			}
+		} else {
+			cost, cardinality := getIndexProjectionCost(index, indexProjection, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 {
+				entry.cost += cost
+				entry.cardinality = cardinality
+			}
+		}
+	}
+
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), array,
 		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
 		entry.cost, entry.cardinality)

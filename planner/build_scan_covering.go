@@ -251,6 +251,22 @@ outer:
 	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, false, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
+	if useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 {
+		if indexGroupAggs != nil {
+			cost, cardinality := getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 {
+				entry.cost += cost
+				entry.cardinality = cardinality
+			}
+		} else {
+			cost, cardinality := getIndexProjectionCost(index, indexProjection, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 {
+				entry.cost += cost
+				entry.cardinality = cardinality
+			}
+		}
+	}
+
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), false,
 		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
