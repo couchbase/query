@@ -191,5 +191,35 @@
         "query": "select * from shellTest st unnest address addr where st.id < 10"
       }
     ]
+  },
+  {
+    "statements": "advise SELECT t.type,branch.Id FROM shellTest AS t UNNEST t.branches AS branch WHERE t.type is valued AND branch.Id > (t.cur-2)",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type_cur_sub_2 ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`,`cur`-2)",
+                  "keyspace_alias": "shellTest_t"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`)",
+                  "keyspace_alias": "shellTest_t",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 7. not null/not missing/valued."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT t.type,branch.Id FROM shellTest AS t UNNEST t.branches AS branch WHERE t.type is valued AND branch.Id > (t.cur-2)"
+      }
+    ]
   }
 ]
