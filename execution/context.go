@@ -223,12 +223,20 @@ func (this *Context) Copy() *Context {
 		credentials:      this.credentials,
 		consistency:      this.consistency,
 		scanVectorSource: this.scanVectorSource,
+		output:           this.output,
 		httpRequest:      this.httpRequest,
 		indexApiVersion:  this.indexApiVersion,
 		featureControls:  this.featureControls,
 		useFts:           this.useFts,
 		optimizer:        this.optimizer,
 	}
+}
+
+func (this *Context) NewQueryContext(queryContext string, readonly bool) interface{} {
+	rv := this.Copy()
+	rv.queryContext = queryContext
+	rv.readonly = readonly
+	return rv
 }
 
 func (this *Context) OriginalHttpRequest() *http.Request {

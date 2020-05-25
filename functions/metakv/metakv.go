@@ -7,14 +7,16 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package globalName
+package metaStorage
 
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	"github.com/couchbase/cbauth/metakv"
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -86,36 +88,94 @@ func fmtChangeCounter() []byte {
 	return []byte(distributed.RemoteAccess().MakeKey(whoAmI, strconv.Itoa(int(changeCounter))))
 }
 
-// system wide functions (not bucket or scope dependent)
-type globalName struct {
-	name          string
-	namespace     string
+// datastore and function store actions
+// TODO this is very inefficient - we'll amend when we write the new storage
+func DropScope(namespace, bucket, scope string) {
+	scopePath := _FUNC_PATH + namespace + ":" + bucket + "." + scope + "."
+	metakv.IterateChildren(_FUNC_PATH, func(path string, value []byte, rev interface{}) error {
+		if strings.HasPrefix(path, scopePath) {
+
+			// technically, we don't need to clear the cache because clearing the
+			// storage will invalidate the entry, but for completeness
+			functions.FunctionClear(path[len(scopePath):], nil)
+			metakv.Delete(path, nil)
+		}
+		return nil
+	})
+}
+
+func Foreach(f func(path string, value []byte) error) error {
+	return metakv.IterateChildren(_FUNC_PATH, func(p string, value []byte, rev interface{}) error {
+		return f(p[len(_FUNC_PATH):], value)
+	})
+}
+
+func Get(path string) ([]byte, error) {
+	body, _, err := metakv.Get(_FUNC_PATH + path)
+	return body, err
+}
+
+func Count() (int64, error) {
+	children, err := metakv.ListAllChildren(_FUNC_PATH)
+	if err != nil {
+		return -1, err
+	} else {
+		return int64(len(children)), nil
+	}
+}
+
+type metaEntry struct {
+	path          algebra.Path
 	changeCounter int32
 }
 
 func NewGlobalFunction(namespace string, name string) (functions.FunctionName, errors.Error) {
-	ns, _ := datastore.GetDatastore().NamespaceByName(namespace)
+	rv := &metaEntry{}
+	algebra.SetPathShort(namespace, name, &rv.path)
+	ns, err := datastore.GetDatastore().NamespaceByName(namespace)
 	if ns == nil {
-		return nil, errors.NewInvalidFunctionNameError(namespace + ":" + name)
+		return nil, errors.NewInvalidFunctionNameError(rv.path.FullName(), err)
 	}
-	return &globalName{name, namespace, 0}, nil
+	return rv, nil
 }
 
-func (name *globalName) Name() string {
-	return name.name
+func NewScopeFunction(namespace string, bucket string, scope string, name string) (functions.FunctionName, errors.Error) {
+	rv := &metaEntry{}
+	algebra.SetPathLong(namespace, bucket, scope, name, &rv.path)
+	sc, err := datastore.GetScope(namespace, bucket, scope)
+	if sc == nil {
+		return nil, errors.NewInvalidFunctionNameError(rv.path.FullName(), err)
+	}
+	return rv, nil
 }
 
-func (name *globalName) Key() string {
-	return name.namespace + ":" + name.name
+func (name *metaEntry) Name() string {
+	return name.path.Keyspace()
 }
 
-func (name *globalName) Signature(object map[string]interface{}) {
-	object["name"] = name.name
-	object["namespace"] = name.namespace
-	object["type"] = "global"
+func (name *metaEntry) Key() string {
+	return name.path.FullName()
 }
 
-func (name *globalName) Load() (functions.FunctionBody, errors.Error) {
+func (name *metaEntry) QueryContext() string {
+	return name.path.QueryContext()
+}
+
+func (name *metaEntry) Signature(object map[string]interface{}) {
+	if name.path.IsCollection() {
+		object["namespace"] = name.path.Namespace()
+		object["bucket"] = name.path.Bucket()
+		object["scope"] = name.path.Scope()
+		object["name"] = name.path.Keyspace()
+		object["type"] = "scope"
+	} else {
+		object["namespace"] = name.path.Namespace()
+		object["name"] = name.path.Keyspace()
+		object["type"] = "global"
+	}
+}
+
+func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 	var _unmarshalled struct {
 		Identity   json.RawMessage `json:"identity"`
 		Definition json.RawMessage `json:"definition"`
@@ -139,10 +199,10 @@ func (name *globalName) Load() (functions.FunctionBody, errors.Error) {
 	}
 
 	// determine language and create body from definition
-	return resolver.MakeBody(name.name, _unmarshalled.Definition)
+	return resolver.MakeBody(name.Name(), _unmarshalled.Definition)
 }
 
-func (name *globalName) Save(body functions.FunctionBody) errors.Error {
+func (name *metaEntry) Save(body functions.FunctionBody) errors.Error {
 	entry := make(map[string]interface{}, 2)
 	identity := make(map[string]interface{})
 	definition := make(map[string]interface{})
@@ -167,7 +227,7 @@ func (name *globalName) Save(body functions.FunctionBody) errors.Error {
 	return nil
 }
 
-func (name *globalName) Delete() errors.Error {
+func (name *metaEntry) Delete() errors.Error {
 	// Delete() does not currently throw an error on missing key, so load first
 	val, _, err := metakv.Get(_FUNC_PATH + name.Key())
 
@@ -189,10 +249,10 @@ func (name *globalName) Delete() errors.Error {
 	return nil
 }
 
-func (name *globalName) CheckStorage() bool {
+func (name *metaEntry) CheckStorage() bool {
 	return name.changeCounter != changeCounter
 }
 
-func (name *globalName) ResetStorage() {
+func (name *metaEntry) ResetStorage() {
 	name.changeCounter = changeCounter
 }

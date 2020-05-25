@@ -10,6 +10,7 @@
 package functions
 
 import (
+	"fmt"
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -44,6 +45,7 @@ const _LIMIT = 16384
 type FunctionName interface {
 	Name() string
 	Key() string
+	QueryContext() string
 	Signature(object map[string]interface{})
 	Load() (FunctionBody, errors.Error)
 	Save(body FunctionBody) errors.Error
@@ -57,6 +59,7 @@ type FunctionBody interface {
 	SetVarNames(vars []string) errors.Error
 	Body(object map[string]interface{})
 	Indexable() value.Tristate
+	SwitchContext() value.Tristate
 }
 
 type FunctionEntry struct {
@@ -79,8 +82,7 @@ type functionCache struct {
 	tag   atomic.AlignedInt64
 }
 
-// TODO switch to collections scope
-var Constructor func(elem []string, namespace string) (FunctionName, errors.Error)
+var Constructor func(elem []string, namespace string, queryContext string) (FunctionName, errors.Error)
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
@@ -164,6 +166,10 @@ func (name *mockName) Name() string {
 
 func (name *mockName) Key() string {
 	return name.namespace + ":" + name.name
+}
+
+func (name *mockName) QueryContext() string {
+	return name.namespace + ":"
 }
 
 func (name *mockName) Signature(object map[string]interface{}) {
@@ -321,7 +327,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		body = entry.FunctionBody
 
 		// if the storage change counter has moved, we may need to update the cache
-		// not that since we reload the body outside of a cache lock (not to lock
+		// note that since we reload the body outside of a cache lock (not to lock
 		// out the whole cache bucket), there might be some temporary pile up on
 		// storage
 		if name.CheckStorage() {
@@ -380,8 +386,20 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 			return nil, err
 		}
 	*/
+
+	newContext := context
+	switchContext := body.SwitchContext()
+	readonly := (modifiers & READONLY) != 0
+	if switchContext == value.TRUE || (readonly && switchContext == value.NONE) {
+		var ok bool
+
+		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
+		if !ok {
+			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
+		}
+	}
 	start := time.Now()
-	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, context)
+	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, newContext)
 
 	// update stats
 	serviceTime := time.Since(start)
@@ -446,6 +464,10 @@ func (this *missing) Body(object map[string]interface{}) {
 }
 
 func (this *missing) Indexable() value.Tristate {
+	return value.FALSE
+}
+
+func (this *missing) SwitchContext() value.Tristate {
 	return value.FALSE
 }
 

@@ -10,29 +10,50 @@
 package constructor
 
 import (
+	"fmt"
+
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
-	globalName "github.com/couchbase/query/functions/metakv"
+	storage "github.com/couchbase/query/functions/metakv"
 	"github.com/gorilla/mux"
 )
 
 func Init(mux *mux.Router) {
 	functions.Constructor = newGlobalFunction
-	globalName.Init()
+	storage.Init()
 	golang.Init()
 	inline.Init()
 	javascript.Init(mux)
 }
 
-// TODO switch to collections context
-func newGlobalFunction(elem []string, namespace string) (functions.FunctionName, errors.Error) {
-	if len(elem) == 2 {
-		return globalName.NewGlobalFunction(elem[0], elem[1])
-	} else if namespace == "" {
-		return nil, errors.NewInvalidFunctionNameError(elem[0])
+func newGlobalFunction(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {
+	var ns string
+
+	if len(elem) == 1 && queryContext != "" {
+		newElem := algebra.ParseQueryContext(queryContext)
+		elem = append(newElem, elem[0])
 	}
-	return globalName.NewGlobalFunction(namespace, elem[0])
+	if len(elem) == 1 || elem[0] == "" {
+		ns = namespace
+	} else {
+		ns = elem[0]
+	}
+
+	if ns == "" {
+		return nil, errors.NewInvalidFunctionNameError(elem[len(elem)-1], fmt.Errorf("namespace not specified"))
+	}
+	switch len(elem) {
+	case 1:
+		return storage.NewGlobalFunction(namespace, elem[0])
+	case 2:
+		return storage.NewGlobalFunction(ns, elem[1])
+	case 4:
+		return storage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+	default:
+		return nil, errors.NewInvalidFunctionNameError(elem[len(elem)-1], fmt.Errorf("invalid function path"))
+	}
 }

@@ -45,6 +45,7 @@ func (this *IndexContext) Now() time.Time {
 	return this.now
 }
 
+// 5 next methods are unused and only for expression Context compatibility
 func (this *IndexContext) AuthenticatedUsers() []string {
 	return []string{"NEVER_USED"}
 }
@@ -55,4 +56,12 @@ func (this *IndexContext) DatastoreVersion() string {
 
 func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
 	return nil, 0, nil
+}
+
+func (this *IndexContext) Readonly() bool {
+	return true
+}
+
+func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) interface{} {
+	return nil
 }

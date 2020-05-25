@@ -130,3 +130,9 @@ func (this *inlineBody) Indexable() value.Tristate {
 		return value.FALSE
 	}
 }
+
+// inline only allows selects and the keyspaces are already qualified
+// so no need to switch
+func (this *inlineBody) SwitchContext() value.Tristate {
+	return value.FALSE
+}

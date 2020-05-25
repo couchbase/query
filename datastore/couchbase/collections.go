@@ -20,6 +20,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	functions "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -443,7 +444,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 		if oldScope != nil {
 			for n, _ := range oldScope.keyspaces {
 				if scope.keyspaces[n] == nil {
-					dropDictCacheEntry(n)
+					dropDictCacheEntry(oldScope.keyspaces[n].QualifiedName())
 				}
 			}
 		}
@@ -454,15 +455,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 		// not here anymore
 		if scopes[n] == nil {
-
-			// remove dictionary cache entries
-			for c, _ := range oldScopes[n].keyspaces {
-				dropDictCacheEntry(c)
-			}
-
-			// TODO clear distribution metakv
-			// TODO clear UDFs
-			// TODO clear UDF metakv
+			clearOldScope(bucket, oldScopes[n])
 		}
 	}
 
@@ -472,15 +465,18 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 func dropDictCacheEntries(bucket *keyspace) {
 	for n, s := range bucket.scopes {
 		bucket.scopes[n] = nil
-
-		// remove dictionary cache entries
-		for c, _ := range s.keyspaces {
-			dropDictCacheEntry(c)
-			s.keyspaces[c] = nil
-		}
-
-		// TODO clear distribution metakv
-		// TODO clear UDFs
-		// TODO clear UDF metakv
+		clearOldScope(bucket, s)
 	}
+}
+
+func clearOldScope(bucket *keyspace, s *scope) {
+
+	// TODO clear distribution metakv
+	// remove dictionary cache entries
+	for c, _ := range s.keyspaces {
+		dropDictCacheEntry(s.keyspaces[c].QualifiedName())
+		s.keyspaces[c] = nil
+	}
+
+	functions.DropScope(bucket.namespace.name, bucket.name, s.Name())
 }

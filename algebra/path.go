@@ -31,11 +31,19 @@ func NewPathShort(namespace, keyspace string) *Path {
 	}
 }
 
+func SetPathShort(namespace, keyspace string, path *Path) {
+	path.elements = []string{namespace, keyspace}
+}
+
 // Create a path from a namespace:bucket.scope.keyspace combination
 func NewPathLong(namespace, bucket, scope, keyspace string) *Path {
 	return &Path{
 		elements: []string{namespace, bucket, scope, keyspace},
 	}
+}
+
+func SetPathLong(namespace, bucket, scope, keyspace string, path *Path) {
+	path.elements = []string{namespace, bucket, scope, keyspace}
 }
 
 // Create a scope path from a namespace:bucket.scope combination
@@ -83,7 +91,7 @@ func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 		}
 	}
 
-	elems := parseQueryContext(queryContext)
+	elems := ParseQueryContext(queryContext)
 
 	// FIXME ditto
 	//	if elems[0] == "" {
@@ -156,24 +164,30 @@ func (path *Path) Alias() string {
 }
 
 func (path *Path) FullName() string {
-	forceBackticks := false
-	return path.string(forceBackticks)
+	return path.string(false, false)
+}
+
+func (path *Path) QueryContext() string {
+	return path.string(false, true)
 }
 
 func (path *Path) SimpleString() string {
-	forceBackticks := false
-	return path.string(forceBackticks)
+	return path.string(false, false)
 }
 
 func (path *Path) ProtectedString() string {
-	forceBackticks := true
-	return path.string(forceBackticks)
+	return path.string(true, false)
 }
 
-func (path *Path) string(forceBackticks bool) string {
+func (path *Path) string(forceBackticks bool, isContext bool) string {
 	acc := ""
 	lastIndex := len(path.elements) - 1
-	for i, s := range path.elements {
+	if isContext {
+		lastIndex--
+	}
+	for i := 0; i <= lastIndex; i++ {
+		s := path.elements[i]
+
 		// The first element, i.e. the namespace, may be an empty string.
 		// That means we can omit it, and the separator after it.
 		if i == 0 && s == "" {
@@ -195,6 +209,10 @@ func (path *Path) string(forceBackticks bool) string {
 			} else {
 				acc += "."
 			}
+		} else if isContext && i == 0 {
+
+			// always terminate namespaces with ':' for scopes
+			acc += ":"
 		}
 	}
 	return acc
@@ -214,7 +232,7 @@ func (this *Path) marshalKeyspace(m map[string]interface{}) {
 
 // the queryContext is expected to be syntactically correct as per function below
 // no checks are made, and undesired behaviour will ensue if it isn't
-func parseQueryContext(queryContext string) []string {
+func ParseQueryContext(queryContext string) []string {
 	if queryContext == "" || queryContext == ":" {
 		return []string{""}
 	}
@@ -259,6 +277,9 @@ func ValidateQueryContext(queryContext string) errors.Error {
 			if hasNamespace {
 				return errors.NewQueryContextError("repeated namespace")
 			} else {
+				if parts == 0 {
+					parts++ // namespace is implied
+				}
 				hasNamespace = true
 				countPart = true
 			}

@@ -2645,7 +2645,7 @@ long_func_name
 short_func_name:
 keyspace_name
 {
-    name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
+    name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
 	yylex.Error(err.Error())
     }
@@ -2656,23 +2656,21 @@ keyspace_name
 long_func_name:
 namespace_term keyspace_name
 {
-    name, err := functions.Constructor([]string{$1, $2}, yylex.(*lexer).Namespace())
-    if $$ != nil {
+    name, err := functions.Constructor([]string{$1, $2}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
 	yylex.Error(err.Error())
     }
     $$ = name
 }
-/* TODO function names for collections
 |
 namespace_term bucket_name DOT scope_name DOT keyspace_name
 {
-    name, err := functions.Constructor([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace())
-    if $$ != nil {
+    name, err := functions.Constructor([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
 	yylex.Error(err.Error())
     }
     $$ = name
 }
-*/
 ;
 
 parm_list:
@@ -3490,7 +3488,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
     } else {
         f = nil
         if $5 == nil && $6 == uint32(0) && $7 == nil {
-	     name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace())
+	     name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
 	     if err != nil {
 	         yylex.Error(err.Error())
 	         yylex.(*lexer).Stop()

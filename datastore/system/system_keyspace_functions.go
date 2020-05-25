@@ -10,15 +10,13 @@
 package system
 
 import (
-	"github.com/couchbase/cbauth/metakv"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	functions "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
-
-const _FUNC_PATH = "/query/functions/"
 
 type functionsKeyspace struct {
 	keyspaceBase
@@ -41,9 +39,9 @@ func (b *functionsKeyspace) Name() string {
 }
 
 func (b *functionsKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	children, err := metakv.ListAllChildren(_FUNC_PATH)
-	if err != nil {
-		return int64(len(children)), nil
+	count, err := functions.Count()
+	if err == nil {
+		return count, nil
 	} else {
 		return 0, errors.NewMetaKVError("Count", err)
 	}
@@ -87,7 +85,7 @@ func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 }
 
 func (b *functionsKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
-	body, _, err := metakv.Get(_FUNC_PATH + key)
+	body, err := functions.Get(key)
 
 	// get does not return is not found, but nil, nil instead
 	if err == nil && body == nil {
@@ -188,26 +186,15 @@ func (pi *functionsIndex) Drop(requestId string) errors.Error {
 
 func (pi *functionsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	if span == nil {
-		pi.ScanEntries(requestId, limit, cons, vector, conn)
-	} else {
-		spanEvaluator, err := compileSpan(span)
-		if err != nil {
-			conn.Error(err)
-		} else if spanEvaluator.evaluate(pi.keyspace.namespace.store.actualStore.Id()) {
-			entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}
-			sendSystemKey(conn, &entry)
-		}
-		conn.Sender().Close()
-	}
+	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
 func (pi *functionsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
-	err := metakv.IterateChildren(_FUNC_PATH, func(path string, value []byte, rev interface{}) error {
-		entry := datastore.IndexEntry{PrimaryKey: path[len(_FUNC_PATH):]}
+	err := functions.Foreach(func(path string, value []byte) error {
+		entry := datastore.IndexEntry{PrimaryKey: path}
 		sendSystemKey(conn, &entry)
 		return nil
 	})

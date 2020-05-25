@@ -1877,6 +1877,10 @@ func (ks *keyspace) DropScope(name string) errors.Error {
 		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, name), err)
 	}
 	ks.setNeedsManifest()
+
+	// TODO remove
+	// trigger scope refresh straight away to empty functions and dictionary caches
+	time.AfterFunc(time.Second, func() { ks.namespace.keyspaceByName(ks.name) })
 	return nil
 }
 

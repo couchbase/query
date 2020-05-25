@@ -68,8 +68,8 @@ func NewArgumentsMismatchError(f string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewInvalidFunctionNameError(name string) Error {
-	return &err{level: EXCEPTION, ICode: 10105, IKey: "function.name.error",
+func NewInvalidFunctionNameError(name string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 10105, IKey: "function.name.error", ICause: e,
 		InternalMsg:    fmt.Sprintf("Invalid function name %v", name),
 		InternalCaller: CallerN(1)}
 }

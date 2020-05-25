@@ -96,7 +96,8 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	}
 
 	// FIXME credentials
-	opts := map[defs.Option]interface{}{defs.SideEffects: modifiers&functions.READONLY == 0}
+	// FIXME queryContext
+	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0}
 
 	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
 	if err.Err != nil {
@@ -143,5 +144,10 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 func (this *javascriptBody) Indexable() value.Tristate {
 
 	// for now
+	return value.FALSE
+}
+
+// queryContext and readonly are resolved outside of this request
+func (this *javascriptBody) SwitchContext() value.Tristate {
 	return value.FALSE
 }
