@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -109,7 +110,7 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 				}
 				if object.IsBucket {
 					bucket, excp = namespace.BucketById(object.Id)
-					if excp == nil {
+					if excp != nil {
 						break loop
 					}
 					scopeIds, _ := bucket.ScopeIds()
@@ -121,12 +122,11 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 								keyspace, excp = scope.KeyspaceById(keyspaceId)
 								if excp == nil {
 
-									// TODO
-									// excludeResults := !canRead(context, namespaceId, keyspaceId) &&
-									//		     !canListIndexes(context, namespaceId, keyspaceId)
+									excludeResults := !canRead(context, namespaceId, object.Id, scopeId, keyspaceId) &&
+										!canListIndexes(context, namespaceId, object.Id, scopeId, keyspaceId)
 									excp = handleKeyspace(keyspace, func(err errors.Error) {
 										context.Warning(err)
-									}, false /* excludeResults */, func(id string) {
+									}, excludeResults, func(id string) {
 										count++
 									})
 								}
@@ -183,10 +183,11 @@ func (b *indexKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedV
 			}
 			err = b.fetchOne(key, keysMap, elems[0], elems[1], elems[2])
 		} else {
-			//                      if !canAccessAll && !canRead(context, elems[0], elems[1]) {
-			//                              context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-			//                              continue
-			//                      }
+			if !canRead(context, elems[0], elems[1], elems[2], elems[3]) &&
+				!canListIndexes(context, elems[0], elems[1], elems[2], elems[3]) {
+				context.Warning(errors.NewSystemFilteredRowsWarning("system:indexes"))
+				continue
+			}
 			err = b.fetchOneCollection(key, keysMap, elems[0], elems[1], elems[2], elems[3], elems[4])
 		}
 
@@ -494,21 +495,19 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
-// TODO
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
-func canRead(context datastore.QueryContext, namespace string, keyspace string) bool {
+func canRead(context datastore.QueryContext, elems ...string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(namespace+":"+keyspace, auth.PRIV_QUERY_SELECT)
+	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_SELECT)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res
 }
 
-// TODO
 // Do the presented credentials authorize the user to list indexes of the namespace/keyspace bucket?
-func canListIndexes(context datastore.QueryContext, namespace string, keyspace string) bool {
+func canListIndexes(context datastore.QueryContext, elems ...string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(namespace+":"+keyspace, auth.PRIV_QUERY_LIST_INDEX)
+	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_LIST_INDEX)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
 	res := err == nil
 	return res
@@ -558,7 +557,7 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 				}
 				if object.IsBucket {
 					bucket, excp := namespace.BucketById(object.Id)
-					if excp == nil {
+					if excp != nil {
 						continue loop
 					}
 					scopeIds, _ := bucket.ScopeIds()
@@ -568,12 +567,12 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
 								keyspace, excp := scope.KeyspaceById(keyspaceId)
-								if excp == nil {
+								if keyspace != nil {
 									keys := make(map[string]bool, 64)
 									excp = handleKeyspace(keyspace, func(error errors.Error) {
 										conn.Warning(err)
 									}, false, func(id string) {
-										key := makeId(namespaceId, object.Id, scopeId, id)
+										key := makeId(namespaceId, object.Id, scopeId, keyspaceId, id)
 
 										// avoid duplicates
 										if !keys[key] {

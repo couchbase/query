@@ -663,7 +663,6 @@ func distributePrepared(name, plan string) {
 func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
 	parse := time.Now()
 
-	// TODO switch to collections context
 	stmt, err := n1ql.ParseStatement2(prepared.Text(), prepared.Namespace(), prepared.QueryContext())
 	if phaseTime != nil {
 		*phaseTime += time.Since(parse)

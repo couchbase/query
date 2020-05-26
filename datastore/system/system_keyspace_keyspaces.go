@@ -98,14 +98,13 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 									scope, _ := bucket.ScopeById(scopeId)
 									if scope != nil {
 										keyspaceIds, _ := scope.KeyspaceIds()
-										for _, _ /* keyspaceId */ = range keyspaceIds {
+										for _, keyspaceId := range keyspaceIds {
 
-											// TODO
-											// if !canAccessAll && !canRead(context, namespaceId, bucketId, scopeId, keyspaceId) {
-											// 	context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-											// } else {
-											count++
-											// }
+											if !canAccessAll && !canRead(context, namespaceId, object.Id, scopeId, keyspaceId) {
+												context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+											} else {
+												count++
+											}
 										}
 									}
 								}
@@ -155,10 +154,10 @@ func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 			}
 			item, e = b.fetchOne(elems[0], elems[1])
 		} else {
-			//			if !canAccessAll && !canRead(context, elems[0], elems[1]) {
-			//				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-			//				continue
-			//			}
+			if !canAccessAll && !canRead(context, elems[0], elems[1], elems[2], elems[3]) {
+				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+				continue
+			}
 			item, e = b.fetchOneCollection(elems[0], elems[1], elems[2], elems[3])
 		}
 

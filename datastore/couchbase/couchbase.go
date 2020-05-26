@@ -1127,16 +1127,17 @@ const (
 )
 
 type keyspace struct {
-	sync.Mutex  // to change flags and manifests in flight
-	namespace   *namespace
-	name        string
-	fullName    string
-	cbbucket    *cb.Bucket
-	flags       int
-	viewIndexer datastore.Indexer // View index provider
-	gsiIndexer  datastore.Indexer // GSI index provider
-	ftsIndexer  datastore.Indexer // FTS index provider
-	chkIndex    chkIndexDict
+	sync.RWMutex   // to change flags and manifests in flight
+	namespace      *namespace
+	name           string
+	fullName       string
+	cbbucket       *cb.Bucket
+	flags          int
+	viewIndexer    datastore.Indexer // View index provider
+	gsiIndexer     datastore.Indexer // GSI index provider
+	ftsIndexer     datastore.Indexer // FTS index provider
+	chkIndex       chkIndexDict
+	indexersLoaded bool
 
 	collectionsManifestUid uint64
 	scopes                 map[string]*scope // scopes by id
@@ -1183,9 +1184,6 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		cbbucket:  cbbucket,
 	}
 
-	// Initialize index providers
-	rv.viewIndexer = newViewIndexer(rv)
-
 	rv.scopes = _NO_SCOPES
 	mani, err := cbbucket.GetCollectionsManifest()
 	if err == nil {
@@ -1201,26 +1199,6 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	}
 
 	logging.Infof("Created New Bucket %s", name)
-
-	//discover existing indexes
-	if ierr := rv.loadIndexes(); ierr != nil {
-		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
-	}
-
-	var qerr errors.Error
-	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), name, connSecConfig)
-	if qerr != nil {
-		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
-	} else {
-		rv.gsiIndexer.SetConnectionSecurityConfig(connSecConfig)
-	}
-
-	rv.ftsIndexer, qerr = ftsclient.NewFTSIndexer(p.store.URL(), p.Name(), name)
-	if qerr != nil {
-		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", name, qerr)
-	} else {
-		rv.ftsIndexer.SetConnectionSecurityConfig(connSecConfig)
-	}
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
 	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
@@ -1317,6 +1295,7 @@ func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcac
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+	b.loadIndexes()
 	switch name {
 	case datastore.GSI, datastore.DEFAULT:
 		if b.gsiIndexer != nil {
@@ -1336,6 +1315,7 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
+	b.loadIndexes()
 	indexers := make([]datastore.Indexer, 0, 3)
 	var err errors.Error
 	if b.gsiIndexer != nil {
@@ -1777,6 +1757,13 @@ func (b *keyspace) Release() {
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 	var err error
+
+	b.RLock()
+	indexersLoaded := b.indexersLoaded
+	b.RUnlock()
+	if !indexersLoaded {
+		return
+	}
 	b.gsiIndexer, err = gsi.NewGSIIndexer(url, poolName, b.Name(), b.namespace.store.connSecConfig)
 	if err == nil {
 		logging.Infof(" GSI Indexer loaded ")
@@ -1790,6 +1777,13 @@ func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 
 func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
 	var err error
+
+	b.RLock()
+	indexersLoaded := b.indexersLoaded
+	b.RUnlock()
+	if !indexersLoaded {
+		return
+	}
 	b.ftsIndexer, err = ftsclient.NewFTSIndexer(url, poolName, b.Name())
 	if err == nil {
 		logging.Infof(" FTS Indexer loaded ")
@@ -1801,12 +1795,41 @@ func (b *keyspace) refreshFTSIndexer(url string, poolName string) {
 	}
 }
 
-func (b *keyspace) loadIndexes() (err errors.Error) {
-	viewIndexer := b.viewIndexer.(*viewIndexer)
-	if err1 := viewIndexer.loadViewIndexes(); err1 != nil {
-		err = err1
+// we load indexers asynchronously because unless we are connecting to older KV's
+// we're always going to use the collection indexers and we don't need the bucket
+// indexes loaded
+func (b *keyspace) loadIndexes() {
+	var qerr errors.Error
+
+	b.Lock()
+	defer b.Unlock()
+
+	// somebody's already done it
+	if b.indexersLoaded {
+		return
 	}
-	return
+	p := b.namespace
+	store := p.store
+	b.viewIndexer = newViewIndexer(b)
+	viewIndexer := b.viewIndexer.(*viewIndexer)
+	if err := viewIndexer.loadViewIndexes(); err != nil {
+		logging.Warnf("Error loading indexes for keyspace %s, Error %v", b.name, err)
+	}
+
+	b.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), b.name, store.connSecConfig)
+	if qerr != nil {
+		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", b.name, qerr)
+	} else {
+		b.gsiIndexer.SetConnectionSecurityConfig(store.connSecConfig)
+	}
+
+	b.ftsIndexer, qerr = ftsclient.NewFTSIndexer(store.URL(), p.Name(), b.name)
+	if qerr != nil {
+		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", b.name, qerr)
+	} else {
+		b.ftsIndexer.SetConnectionSecurityConfig(store.connSecConfig)
+	}
+	b.indexersLoaded = true
 }
 
 func (b *keyspace) Scope() datastore.Scope {

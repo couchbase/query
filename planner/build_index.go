@@ -193,7 +193,6 @@ func (this *builder) getVirtualKeyspace(namespaceStr string, path []string) (dat
 			this.setKeyspaceFound()
 		}
 
-		// TODO collections
 		return v.VirtualKeyspaceByName(path)
 	}
 	return nil, errors.NewVirtualKSNotSupportedError(nil, "Namespace "+namespaceStr)

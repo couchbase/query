@@ -190,13 +190,6 @@ func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Erro
 }
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-
-	// default collection
-	if coll.isDefault {
-		k := datastore.Keyspace(coll.bucket)
-		return k.Indexer(name)
-	}
-
 	coll.loadIndexes()
 	switch name {
 	case datastore.GSI, datastore.DEFAULT:
@@ -216,12 +209,6 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 
 func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
 	var err errors.Error
-
-	// default collection
-	if coll.isDefault {
-		k := datastore.Keyspace(coll.bucket)
-		return k.Indexers()
-	}
 
 	coll.loadIndexes()
 	indexers := make([]datastore.Indexer, 0, 2)
@@ -261,6 +248,7 @@ func (coll *collection) loadIndexes() {
 	}
 
 	// FTS indexer
+	// FIXME collections
 	coll.ftsIndexer, qerr = ftsclient.NewFTSIndexer(store.URL(), namespace.name, coll.id)
 	if qerr != nil {
 		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", coll.id, qerr)
@@ -277,7 +265,7 @@ func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
 		return coll.bucket.getRandomEntry(&memcached.ClientContext{CollId: coll.uid})
 	}
 
-	// FIXME
+	// FIXME collections
 	return "", nil, errors.NewNotImplemented("collection.GetRandomEntry()")
 }
 
