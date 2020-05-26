@@ -32,6 +32,9 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	}
 
 	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
 		return _SELF_SPANS, nil
 	}
 

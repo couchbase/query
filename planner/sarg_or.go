@@ -16,6 +16,9 @@ import (
 
 func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
 		return _SELF_SPANS, nil
 	}
 
