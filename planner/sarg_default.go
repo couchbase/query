@@ -15,6 +15,9 @@ import (
 
 func (this *sarg) visitDefault(pred expression.Expression) (SargSpans, error) {
 	if SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
 		return _SELF_SPANS, nil
 	}
 

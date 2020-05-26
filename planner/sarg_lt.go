@@ -17,6 +17,9 @@ import (
 
 func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 	if SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
 		return _SELF_SPANS, nil
 	}
 

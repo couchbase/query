@@ -119,6 +119,20 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, max int, 
 		sargSpans[pos] = addArrayKeys(arrayKeySpan)
 	}
 
+	if exactSpan {
+		var hasSpan bool
+		for _, s := range sargSpans {
+			if s != nil {
+				hasSpan = true
+				break
+			}
+		}
+
+		if !hasSpan {
+			exactSpan = false
+		}
+	}
+
 	return composeSargSpan(sargSpans, exactSpan)
 }
 

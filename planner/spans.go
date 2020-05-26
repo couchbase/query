@@ -96,12 +96,17 @@ var _EXACT_FULL_SPANS *TermSpans
 var _EXACT_VALUED_SPAN *plan.Span2
 var _EXACT_VALUED_SPANS *TermSpans
 
+var _EXACT_SELF_SPAN *plan.Span2
+var _EXACT_SELF_SPANS *TermSpans
+
 func init() {
 	var range2 *plan.Range2
 
 	range2 = plan.NewRange2(expression.TRUE_EXPR, nil, datastore.LOW, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_SELF_SPAN)
 	_SELF_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, false)
+	_EXACT_SELF_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 	_SELF_SPANS = NewTermSpans(_SELF_SPAN)
+	_EXACT_SELF_SPANS = NewTermSpans(_EXACT_SELF_SPAN)
 
 	range2 = plan.NewRange2(expression.NULL_EXPR, nil, datastore.LOW, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_FULL_SPAN)
 	_FULL_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, false)

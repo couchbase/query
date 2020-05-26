@@ -15,6 +15,9 @@ import (
 
 func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
 	if SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
 		return _SELF_SPANS, nil
 	}
 
@@ -27,6 +30,9 @@ func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{},
 
 func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
 	if SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
 		return _SELF_SPANS, nil
 	}
 
