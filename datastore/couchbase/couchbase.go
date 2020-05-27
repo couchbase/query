@@ -314,7 +314,7 @@ func (s *store) authWebCreds(req *http.Request) (cbauth.Creds, error) {
 	return cbauth.AuthWebCreds(req)
 }
 
-func (s *store) Authorize(privileges *auth.Privileges, credentials auth.Credentials, req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
@@ -322,7 +322,7 @@ func (s *store) Authorize(privileges *auth.Privileges, credentials auth.Credenti
 		return nil, nil
 	}
 
-	return cbAuthorize(s, privileges, credentials, req)
+	return cbAuthorize(s, privileges, credentials)
 }
 
 func (s *store) CredsString(req *http.Request) string {

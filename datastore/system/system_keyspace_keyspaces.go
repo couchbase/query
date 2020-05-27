@@ -45,7 +45,7 @@ func (b *keyspaceKeyspace) Name() string {
 func canAccessSystemTables(context datastore.QueryContext) bool {
 	privs := auth.NewPrivileges()
 	privs.Add("", auth.PRIV_SYSTEM_READ)
-	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
+	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res
 

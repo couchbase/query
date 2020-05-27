@@ -502,7 +502,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		re.PositionalArgs = request.PositionalArgs()
 	}
 
-	re.Users = datastore.CredsString(request.Credentials(), req)
+	re.Users = datastore.CredsString(request.Credentials())
 	re.RemoteAddr = request.RemoteAddr()
 	userAgent := request.UserAgent()
 	if userAgent != "" {
@@ -704,7 +704,7 @@ func (this *user) checkCondition(c interface{}) errors.Error {
 func (this *user) evaluate(request *BaseRequest, req *http.Request) bool {
 	var iid, icred int
 
-	credString := datastore.CredsString(request.Credentials(), req)
+	credString := datastore.CredsString(request.Credentials())
 
 	// split in space separated tokens
 loop:

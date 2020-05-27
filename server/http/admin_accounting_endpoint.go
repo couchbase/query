@@ -220,11 +220,11 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 // from basic authorizatio, and from a "creds" value, which encodes
 // in JSON an array of username/password pairs, like this:
 //   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
-func getCredentialsFromRequest(req *http.Request) (auth.Credentials, errors.Error) {
-	creds := make(auth.Credentials)
+func getCredentialsFromRequest(req *http.Request) (*auth.Credentials, errors.Error) {
+	creds := auth.NewCredentials()
 	user, pass, ok := req.BasicAuth()
 	if ok {
-		creds[user] = pass
+		creds.Users[user] = pass
 	}
 	creds_json := req.FormValue("creds")
 	if creds_json != "" {
@@ -239,7 +239,7 @@ func getCredentialsFromRequest(req *http.Request) (auth.Credentials, errors.Erro
 				if !user_ok || !pass_ok {
 					return nil, errors.NewAdminCredsError(creds_json, nil)
 				}
-				creds[user] = pass
+				creds.Users[user] = pass
 			}
 		}
 	}
@@ -252,15 +252,15 @@ func verifyCredentialsFromRequest(api string, req *http.Request, af *audit.ApiAu
 		return err
 	}
 
-	users := make([]string, 0, len(creds))
-	for user := range creds {
+	users := make([]string, 0, len(creds.Users))
+	for user := range creds.Users {
 		users = append(users, user)
 	}
 	af.Users = users
 
 	privs := auth.NewPrivileges()
 	privs.Add("system:"+api, auth.PRIV_SYSTEM_READ)
-	_, err = datastore.GetDatastore().Authorize(privs, creds, req)
+	_, err = datastore.GetDatastore().Authorize(privs, creds)
 	return err
 }
 
@@ -702,7 +702,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 				}
 			}
 		}
-		credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
+		credsString := datastore.CredsString(request.Credentials())
 		if credsString != "" {
 			reqMap["users"] = credsString
 		}
@@ -759,7 +759,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["state"] = request.State().StateName()
 		requests[i]["scanConsistency"] = request.ScanConsistency()
 
-		credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
+		credsString := datastore.CredsString(request.Credentials())
 		if credsString != "" {
 			requests[i]["users"] = credsString
 		}

@@ -94,7 +94,7 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(*auth.Privileges, auth.Credentials, *http.Request) (auth.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
 	return nil, nil
 }
 

@@ -10,21 +10,20 @@
 package datastore
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/couchbase/query/auth"
 )
 
-func CredsString(creds auth.Credentials, req *http.Request) string {
+func CredsString(creds *auth.Credentials) string {
 	credsLen := 1
 	if creds != nil {
-		credsLen += len(creds)
+		credsLen += len(creds.Users)
 	}
 	credsList := make([]string, 0, credsLen)
 	credsMap := make(map[string]bool, credsLen)
 	if credsLen > 1 {
-		for k := range creds {
+		for k := range creds.Users {
 			if k == "" {
 				continue
 			}
@@ -36,8 +35,8 @@ func CredsString(creds auth.Credentials, req *http.Request) string {
 		}
 	}
 	ds := GetDatastore()
-	if ds != nil {
-		reqName := ds.CredsString(req)
+	if ds != nil && creds != nil {
+		reqName := ds.CredsString(creds.HttpRequest)
 		if reqName != "" {
 			if _, found := credsMap[reqName]; !found {
 				credsMap[reqName] = true

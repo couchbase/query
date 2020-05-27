@@ -9,6 +9,8 @@
 
 package auth
 
+import "net/http"
+
 type Privilege int
 
 const (
@@ -104,7 +106,19 @@ func (this *Privileges) Add(target string, priv Privilege) {
 /*
 Type Credentials maps users to passwords.
 */
-type Credentials map[string]string
+
+type Users map[string]string
+
+type Credentials struct {
+	Users       Users
+	HttpRequest *http.Request
+}
+
+func NewCredentials() *Credentials {
+	rv := &Credentials{}
+	rv.Users = make(Users, 0)
+	return rv
+}
 
 /*
 Type AuthenticatedUsers is a list of users whose credentials checked out.

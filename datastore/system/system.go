@@ -93,7 +93,7 @@ func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error)
 	return s.actualStore.NamespaceByName(name)
 }
 
-func (s *store) Authorize(*auth.Privileges, auth.Credentials, *http.Request) (auth.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
 	logging.Logf(logging.INFO, "System authorize")
 	return nil, nil
 }

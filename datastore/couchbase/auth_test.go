@@ -69,7 +69,7 @@ type testCase struct {
 	purpose       string
 	authSource    authSource
 	privs         *auth.Privileges
-	creds         auth.Credentials
+	creds         *auth.Credentials
 	shouldSucceed bool
 }
 
@@ -94,8 +94,8 @@ func TestGrantRole(t *testing.T) {
 	}
 
 	cases := []testCase{
-		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: auth.Credentials{"nancy": "pwnancy"}},
-		testCase{purpose: "Works", authSource: as, privs: privs, creds: auth.Credentials{"bob": "pwbob"}, shouldSucceed: true},
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"nancy": "pwnancy"}, nil}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "pwbob"}, nil}, shouldSucceed: true},
 	}
 	runCases(t, cases)
 }
@@ -120,17 +120,17 @@ func TestSimpleSelect(t *testing.T) {
 	}
 
 	cases := []testCase{
-		testCase{purpose: "No Credentials", authSource: as, privs: privs, creds: auth.Credentials{}},
-		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: auth.Credentials{"nancy": "pwnancy"}},
-		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: auth.Credentials{"bob": "badpassword"}},
-		testCase{purpose: "Works", authSource: as, privs: privs, creds: auth.Credentials{"bob": "pwbob"}, shouldSucceed: true},
+		testCase{purpose: "No Credentials", authSource: as, privs: privs, creds: &auth.Credentials{}},
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"nancy": "pwnancy"}, nil}},
+		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "badpassword"}, nil}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "pwbob"}, nil}, shouldSucceed: true},
 	}
 	runCases(t, cases)
 }
 
 func runCases(t *testing.T, cases []testCase) {
 	for _, c := range cases {
-		_, err := cbAuthorize(c.authSource, c.privs, c.creds, nil)
+		_, err := cbAuthorize(c.authSource, c.privs, c.creds)
 		if c.shouldSucceed {
 			if err != nil {
 				t.Fatalf("Case %s should succeed, but it failed with error %v.", c.purpose, err)
@@ -189,7 +189,7 @@ func TestDefaultCredentials(t *testing.T) {
 		},
 	}
 
-	loginCreds := auth.Credentials{"bob": "pwbob"}
+	loginCreds := &auth.Credentials{map[string]string{"bob": "pwbob"}, nil}
 
 	cases := []testCase{
 		testCase{purpose: "No Default User", authSource: asNoDefault, privs: privs, creds: loginCreds},

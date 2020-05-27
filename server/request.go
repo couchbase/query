@@ -123,15 +123,14 @@ type Request interface {
 	SortCount() uint64
 	State() State
 	Halted() bool
-	Credentials() auth.Credentials
-	SetCredentials(credentials auth.Credentials)
+	Credentials() *auth.Credentials
+	SetCredentials(credentials *auth.Credentials)
 	RemoteAddr() string
 	SetRemoteAddr(remoteAddr string)
 	UserAgent() string
 	SetUserAgent(userAgent string)
 	SetTimings(o execution.Operator)
 	GetTimings() execution.Operator
-	OriginalHttpRequest() *http.Request
 	IsAdHoc() bool
 
 	setSleep() // internal methods for load control
@@ -236,7 +235,7 @@ type BaseRequest struct {
 	metrics         value.Tristate
 	pretty          value.Tristate
 	consistency     ScanConfiguration
-	credentials     auth.Credentials
+	credentials     *auth.Credentials
 	remoteAddr      string
 	userAgent       string
 	requestTime     time.Time
@@ -540,11 +539,11 @@ func (this *BaseRequest) Halted() bool {
 	return state != RUNNING && state != SUBMITTED
 }
 
-func (this *BaseRequest) Credentials() auth.Credentials {
+func (this *BaseRequest) Credentials() *auth.Credentials {
 	return this.credentials
 }
 
-func (this *BaseRequest) SetCredentials(credentials auth.Credentials) {
+func (this *BaseRequest) SetCredentials(credentials *auth.Credentials) {
 	this.credentials = credentials
 }
 
@@ -882,9 +881,9 @@ func (this *BaseRequest) EventType() string {
 // For audit.Auditable interface.
 func (this *BaseRequest) EventUsers() []string {
 	userToPassword := this.Credentials()
-	ret := make([]string, len(userToPassword))
+	ret := make([]string, len(userToPassword.Users))
 	index := 0
-	for user := range userToPassword {
+	for user := range userToPassword.Users {
 		ret[index] = user
 		index++
 	}

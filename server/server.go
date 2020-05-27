@@ -663,7 +663,7 @@ func (this *Server) serviceRequest(request Request) {
 	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
-		request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest(),
+		request.ScanVectorSource(), request.Output(),
 		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(), request.UseFts(),
 		optimizer)
 

@@ -66,10 +66,6 @@ type httpRequest struct {
 
 var zeroScanVectorSource = &ZeroScanVectorSource{}
 
-func (r *httpRequest) OriginalHttpRequest() *http.Request {
-	return r.req
-}
-
 func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string) {
 	var httpArgs httpRequestArgs
 	var err errors.Error
@@ -139,10 +135,12 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 	// handle parameters that can't be handled dynamically
 	if err == nil {
-		var creds auth.Credentials
+		var creds = &auth.Credentials{}
+		creds.Users = make(map[string]string, 0)
 
 		rv.SetNamedArgs(httpArgs.getNamedArgs())
 		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
+		creds.HttpRequest = req
 		if err == nil {
 			rv.SetCredentials(creds)
 
@@ -787,7 +785,7 @@ func getScanConfiguration(rv *scanConfigImpl, a httpRequestArgs, namespace strin
 	return nil
 }
 
-func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors.Error) {
+func getCredentials(a httpRequestArgs, auths []string) (*auth.Credentials, errors.Error) {
 	// Cred_data retrieves credentials from either the URL parameters or from the body of the JSON request.
 	cred_data, err := a.getCredentials()
 	if err != nil {
@@ -797,16 +795,17 @@ func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors
 	// Credentials can come from the cred_data, from the Basic authorization field
 	// in  the request, both, or neither. If from both, the credentials are combined.
 	// If neither, this function should return nil, nil.
-	var creds auth.Credentials = nil
+	var creds = &auth.Credentials{}
+	creds.Users = make(map[string]string, 0)
 
 	if len(cred_data) > 0 {
 		// Credentials are in request parameters:
-		creds = auth.Credentials{}
+		creds = &auth.Credentials{}
 		for _, cred := range cred_data {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
 			if user_ok && pass_ok {
-				creds[user] = pass
+				creds.Users[user] = pass
 			} else {
 				return nil, errors.NewServiceErrorMissingValue("user or pass")
 			}
@@ -825,18 +824,19 @@ func getCredentials(a httpRequestArgs, auths []string) (auth.Credentials, errors
 			// Authorization header is in format "user:pass"
 			// per http://tools.ietf.org/html/rfc1945#section-10.2
 			u_details := strings.Split(string(decoded_creds), ":")
-			if creds == nil {
-				creds = auth.Credentials{}
+			if creds.Users == nil {
+				creds = &auth.Credentials{}
+				creds.Users = make(map[string]string, 0)
 			}
 			switch len(u_details) {
 			case 0, 1:
 				// Authorization header format is incorrect
 				return nil, errors.NewServiceErrorBadValue(nil, CREDS)
 			case 2:
-				creds[u_details[0]] = u_details[1]
+				creds.Users[u_details[0]] = u_details[1]
 			default:
 				// Support passwords like "local:xxx" or "admin:xxx"
-				creds[u_details[0]] = strings.Join(u_details[1:], ":")
+				creds.Users[u_details[0]] = strings.Join(u_details[1:], ":")
 			}
 		}
 	}

@@ -264,14 +264,13 @@ func isClientCertPresent(req *http.Request) bool {
 	return req != nil && req.TLS != nil && req.TLS.PeerCertificates != nil
 }
 
-func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Credentials,
-	req *http.Request) (auth.AuthenticatedUsers, errors.Error) {
+func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
 
 	// Create credentials - list and authenticated users to use for auth calls
-	if credentials == nil {
-		credentials = make(auth.Credentials)
+	if credentials.Users == nil {
+		credentials.Users = make(map[string]string, 0)
 	}
-	authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials))
+	authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials.Users))
 	credentialsList := make([]cbauth.Creds, 0, 2)
 
 	// Query allows 4 kinds of authorization methods -
@@ -294,6 +293,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 	//		2. If cert not present then we need to use other methods
 	//		   (partially done by auth web creds)
 
+	req := credentials.HttpRequest
 	if req != nil {
 		creds, err := s.authWebCreds(req)
 		if err == nil {
@@ -326,7 +326,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials auth.Cre
 	// request could be nil - in which case we handle credentials only
 
 	if len(credentialsList) == 0 {
-		for username, password := range credentials {
+		for username, password := range credentials.Users {
 			var un string
 			userCreds := strings.Split(username, ":")
 			if len(userCreds) == 1 {

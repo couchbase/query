@@ -438,7 +438,7 @@ func (entry *FunctionEntry) add() *FunctionEntry {
 func isAuthorized(context Context, name FunctionName, priv auth.Privilege) errors.Error {
         privs := auth.NewPrivileges()
         privs.Add(name.Key(), priv)
-        _, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
+        _, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
         return err
 }
 */

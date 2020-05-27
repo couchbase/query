@@ -149,7 +149,7 @@ type Context struct {
 	now                time.Time
 	namedArgs          map[string]value.Value
 	positionalArgs     value.Values
-	credentials        auth.Credentials
+	credentials        *auth.Credentials
 	consistency        datastore.ScanConsistency
 	scanVectorSource   timestamp.ScanVectorSource
 	output             Output
@@ -167,8 +167,8 @@ type Context struct {
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	namespace string, readonly bool, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
-	credentials auth.Credentials, consistency datastore.ScanConsistency,
-	scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request,
+	credentials *auth.Credentials, consistency datastore.ScanConsistency,
+	scanVectorSource timestamp.ScanVectorSource, output Output,
 	prepared *plan.Prepared, indexApiVersion int, featureControls uint64, queryContext string,
 	useFts bool, optimizer planner.Optimizer) *Context {
 
@@ -191,7 +191,6 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		output:           output,
 		subplans:         nil,
 		subresults:       nil,
-		httpRequest:      httpRequest,
 		prepared:         prepared,
 		indexApiVersion:  indexApiVersion,
 		featureControls:  featureControls,
@@ -237,10 +236,6 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv.queryContext = queryContext
 	rv.readonly = readonly
 	return rv
-}
-
-func (this *Context) OriginalHttpRequest() *http.Request {
-	return this.httpRequest
 }
 
 func (this *Context) RequestId() string {
@@ -310,11 +305,11 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 	}
 }
 
-func (this *Context) Credentials() auth.Credentials {
+func (this *Context) Credentials() *auth.Credentials {
 	return this.credentials
 }
 
-func (this *Context) UrlCredentials(urlS string) auth.Credentials {
+func (this *Context) UrlCredentials(urlS string) *auth.Credentials {
 	// For the cases where the request doesnt have credentials but uses an auth
 	// token or x509 certs, we need to derive the credentials to be able to query
 	// the fts index.
@@ -325,7 +320,7 @@ func (this *Context) UrlCredentials(urlS string) auth.Credentials {
 
 	authenticator := cbauth.Default
 	u, p, _ := authenticator.GetHTTPServiceAuth(urlS)
-	return auth.Credentials{u: p}
+	return &auth.Credentials{map[string]string{u: p}, nil}
 }
 
 func (this *Context) ScanConsistency() datastore.ScanConsistency {

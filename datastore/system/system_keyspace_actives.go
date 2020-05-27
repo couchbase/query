@@ -157,7 +157,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if prof == server.ProfUnset {
 					prof = server.GetProfile()
 				}
-				credsString := datastore.CredsString(request.Credentials(), request.OriginalHttpRequest())
+				credsString := datastore.CredsString(request.Credentials())
 				if credsString != "" {
 					item.SetField("users", credsString)
 				}

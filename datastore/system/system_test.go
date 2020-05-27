@@ -24,11 +24,11 @@ import (
 
 type queryContextImpl struct {
 	req   *http.Request
-	creds auth.Credentials
+	creds *auth.Credentials
 	t     *testing.T
 }
 
-func (ci *queryContextImpl) Credentials() auth.Credentials {
+func (ci *queryContextImpl) Credentials() *auth.Credentials {
 	return ci.creds
 }
 
@@ -38,10 +38,6 @@ func (ci *queryContextImpl) GetReqDeadline() time.Time {
 
 func (ci *queryContextImpl) AuthenticatedUsers() []string {
 	return []string{"local:ivanivanov", "local:petrpetrov"}
-}
-
-func (ci *queryContextImpl) OriginalHttpRequest() *http.Request {
-	return ci.req
 }
 
 func (ci *queryContextImpl) Warning(warn errors.Error) {
@@ -292,7 +288,7 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 	}
 }
 
-func doTestCredsFromContext(t *testing.T, request *http.Request, credentials auth.Credentials,
+func doTestCredsFromContext(t *testing.T, request *http.Request, credentials *auth.Credentials,
 	expectedCreds distributed.Creds, expectedAuthToken string) {
 	context := &queryContextImpl{req: request, creds: credentials, t: t}
 
@@ -315,7 +311,7 @@ func TestCredsFromContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create http request: %v", err)
 	}
-	credentials := auth.Credentials{"user1": "pw1", "user2": "pw2"}
+	credentials := &auth.Credentials{map[string]string{"user1": "pw1", "user2": "pw2"}, httpRequest}
 	expectedCreds := distributed.Creds{"user1": "pw1", "user2": "pw2"}
 
 	// No auth token.

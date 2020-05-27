@@ -34,8 +34,8 @@ type Context interface {
 type CurlContext interface {
 	Context
 	GetWhitelist() map[string]interface{}
-	Credentials() auth.Credentials
-	UrlCredentials(urlS string) auth.Credentials
+	Credentials() *auth.Credentials
+	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
 }
 

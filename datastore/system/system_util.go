@@ -220,12 +220,15 @@ func noop(val, key string) bool {
 // if one is present, else the empty string.
 func credsFromContext(context datastore.QueryContext) (distributed.Creds, string) {
 	credentials := context.Credentials()
-	creds := make(distributed.Creds, len(credentials))
-	for k, v := range credentials {
+	if credentials == nil {
+		return nil, ""
+	}
+	creds := make(distributed.Creds, len(credentials.Users))
+	for k, v := range credentials.Users {
 		creds[k] = v
 	}
 	authToken := ""
-	req := context.OriginalHttpRequest()
+	req := credentials.HttpRequest
 	if req != nil && req.Header.Get("ns-server-ui") == "yes" {
 		authToken = req.Header.Get("ns-server-auth-token")
 	}

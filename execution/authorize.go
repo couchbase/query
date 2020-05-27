@@ -71,7 +71,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_SERVTIME)
 		ds := datastore.GetDatastore()
 		if ds != nil {
-			authenticatedUsers, err := ds.Authorize(this.plan.Privileges(), context.Credentials(), context.OriginalHttpRequest())
+			authenticatedUsers, err := ds.Authorize(this.plan.Privileges(), context.Credentials())
 			if err != nil {
 				context.Fatal(err)
 				this.fail(context)

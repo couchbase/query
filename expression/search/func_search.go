@@ -358,7 +358,7 @@ func (this *FTSQuery) getCredentials(context expression.Context, hname string) (
 	if up == nil {
 		up = context.(expression.CurlContext).UrlCredentials(hname)
 	}
-	for i, k := range up {
+	for i, k := range up.Users {
 		if i != "" && k != "" {
 			user = i + ":" + k
 			break

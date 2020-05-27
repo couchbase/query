@@ -499,7 +499,7 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 func canRead(context datastore.QueryContext, elems ...string) bool {
 	privs := auth.NewPrivileges()
 	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_SELECT)
-	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
+	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res
 }
@@ -508,7 +508,7 @@ func canRead(context datastore.QueryContext, elems ...string) bool {
 func canListIndexes(context datastore.QueryContext, elems ...string) bool {
 	privs := auth.NewPrivileges()
 	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_LIST_INDEX)
-	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials(), context.OriginalHttpRequest())
+	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res
 }

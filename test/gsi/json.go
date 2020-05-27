@@ -14,7 +14,6 @@ import (
 	go_er "errors"
 	"fmt"
 	"io/ioutil"
-	http_base "net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -88,10 +87,6 @@ type MockServer struct {
 
 func SetConsistencyParam(consistency_parameter datastore.ScanConsistency) {
 	Consistency_parameter = consistency_parameter
-}
-
-func (this *MockQuery) OriginalHttpRequest() *http_base.Request {
-	return nil
 }
 
 func (this *MockQuery) Output() execution.Output {
@@ -193,13 +188,14 @@ func (this *MockServer) doStats(request *MockQuery) {
 }
 
 var _ALL_USERS = auth.Credentials{
-	"customerowner":  "customerpass",
-	"ordersowner":    "orderspass",
-	"productowner":   "productpass",
-	"purchaseowner":  "purchasepass",
-	"reviewowner":    "reviewpass",
-	"shellTestowner": "shellTestpass",
-}
+	map[string]string{
+		"customerowner":  "customerpass",
+		"ordersowner":    "orderspass",
+		"productowner":   "productpass",
+		"purchaseowner":  "purchasepass",
+		"reviewowner":    "reviewpass",
+		"shellTestowner": "shellTestpass",
+	}, nil}
 
 /*
 This method is used to execute the N1QL query represented by
@@ -230,13 +226,13 @@ func Run(mockServer *MockServer, q, namespace string, namedArgs map[string]value
 	mockServer.server.SetWhitelist(curlWhitelist)
 
 	if userArgs == nil {
-		query.SetCredentials(_ALL_USERS)
+		query.SetCredentials(&_ALL_USERS)
 	} else {
 		users := _ALL_USERS
 		for k, v := range userArgs {
-			users[k] = v
+			users.Users[k] = v
 		}
-		query.SetCredentials(users)
+		query.SetCredentials(&users)
 	}
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
@@ -278,7 +274,7 @@ func RunPrepared(mockServer *MockServer, q, namespace string, namedArgs map[stri
 	query.SetSignature(value.TRUE)
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
-	query.SetCredentials(_ALL_USERS)
+	query.SetCredentials(&_ALL_USERS)
 
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
