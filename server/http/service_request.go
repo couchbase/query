@@ -800,7 +800,6 @@ func getCredentials(a httpRequestArgs, auths []string) (*auth.Credentials, error
 
 	if len(cred_data) > 0 {
 		// Credentials are in request parameters:
-		creds = &auth.Credentials{}
 		for _, cred := range cred_data {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
