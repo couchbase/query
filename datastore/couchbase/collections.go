@@ -190,6 +190,13 @@ func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Erro
 }
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+
+	// default collection
+	if coll.isDefault {
+		k := datastore.Keyspace(coll.bucket)
+		return k.Indexer(name)
+	}
+
 	coll.loadIndexes()
 	switch name {
 	case datastore.GSI, datastore.DEFAULT:
@@ -209,6 +216,12 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 
 func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
 	var err errors.Error
+
+	// default collection
+	if coll.isDefault {
+		k := datastore.Keyspace(coll.bucket)
+		return k.Indexers()
+	}
 
 	coll.loadIndexes()
 	indexers := make([]datastore.Indexer, 0, 2)
