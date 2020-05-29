@@ -25,7 +25,9 @@ import (
 
 type indexKeyspace struct {
 	keyspaceBase
-	indexer datastore.Indexer
+	skipSystem bool
+	store      datastore.Datastore
+	indexer    datastore.Indexer
 }
 
 func (b *indexKeyspace) Release() {
@@ -78,12 +80,12 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 	var objects []datastore.Object
 
 	count := int64(0)
-	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
+	namespaceIds, excp := b.store.NamespaceIds()
 	if excp == nil {
 
 	loop:
 		for _, namespaceId := range namespaceIds {
-			namespace, excp = b.namespace.store.actualStore.NamespaceById(namespaceId)
+			namespace, excp = b.store.NamespaceById(namespaceId)
 			if excp != nil {
 				break loop
 			}
@@ -206,8 +208,7 @@ func (b *indexKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedV
 func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedValue,
 	namespaceId string, keyspaceId string, indexId string) errors.Error {
 
-	actualStore := b.namespace.store.actualStore
-	namespace, err := actualStore.NamespaceById(namespaceId)
+	namespace, err := b.store.NamespaceById(namespaceId)
 	if err != nil {
 		return err
 	}
@@ -238,7 +239,7 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			"name":         index.Name(),
 			"keyspace_id":  keyspace.Id(),
 			"namespace_id": namespace.Id(),
-			"datastore_id": actualStore.URL(),
+			"datastore_id": b.store.URL(),
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
 			"using":        datastoreObjectToJSONSafe(index.Type()),
 			"state":        string(state),
@@ -277,8 +278,13 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.AnnotatedValue,
 	namespaceId string, bucketId string, scopeId string, keyspaceId string, indexId string) errors.Error {
 
-	actualStore := b.namespace.store.actualStore
-	namespace, err := actualStore.NamespaceById(namespaceId)
+	// this should never happen, but if it does, we skip silently system collections
+	// (not an error, they are just not part of the result set)
+	if b.skipSystem && keyspaceId[0] == '_' {
+		return nil
+	}
+
+	namespace, err := b.store.NamespaceById(namespaceId)
 	if err != nil {
 		return err
 	}
@@ -318,7 +324,7 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			"scope_id":     scope.Id(),
 			"bucket_id":    bucket.Id(),
 			"namespace_id": namespace.Id(),
-			"datastore_id": actualStore.URL(),
+			"datastore_id": b.store.URL(),
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
 			"using":        datastoreObjectToJSONSafe(index.Type()),
 			"state":        string(state),
@@ -408,9 +414,11 @@ func datastoreObjectToJSONSafe(catobj interface{}) interface{} {
 	return rv
 }
 
-func newIndexesKeyspace(p *namespace) (*indexKeyspace, errors.Error) {
+func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, skipSystem bool) (*indexKeyspace, errors.Error) {
 	b := new(indexKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_INDEXES)
+	b.store = store
+	b.skipSystem = skipSystem
+	setKeyspaceBase(&b.keyspaceBase, p, name)
 
 	primary := &indexIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
@@ -517,11 +525,10 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
-	actualStore := pi.keyspace.namespace.store.actualStore
-	namespaceIds, err := actualStore.NamespaceIds()
+	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
 		for _, namespaceId := range namespaceIds {
-			namespace, err := actualStore.NamespaceById(namespaceId)
+			namespace, err := pi.keyspace.store.NamespaceById(namespaceId)
 			if err != nil {
 				continue
 			}
@@ -566,6 +573,10 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 						if scope != nil {
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
+								if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
+									continue
+								}
+
 								keyspace, excp := scope.KeyspaceById(keyspaceId)
 								if keyspace != nil {
 									keys := make(map[string]bool, 64)

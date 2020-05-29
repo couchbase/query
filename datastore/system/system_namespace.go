@@ -126,11 +126,17 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[db.Name()] = db
 
-	ib, e := newIndexesKeyspace(p)
+	ib, e := newIndexesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_INDEXES, true)
 	if e != nil {
 		return e
 	}
 	p.keyspaces[ib.Name()] = ib
+
+	aib, e := newIndexesKeyspace(p, p.store, KEYSPACE_NAME_ALL_INDEXES, false)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[aib.Name()] = aib
 
 	preps, e := newPreparedsKeyspace(p)
 	if e != nil {
