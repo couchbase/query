@@ -69,12 +69,15 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 }
 
 func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
-	for i, info := range this.validatedCoverIdxes {
+	i := 0
+	for _, info := range this.validatedCoverIdxes {
 		key := info.GetKeyspaceName() + "_" + info.GetAlias() + "_" + info.GetIndexName() + "_virtual"
 		if origInfo, ok := m[key]; ok {
 			this.validatedCoverIdxes[i] = this.matchPushdownProperty(key, origInfo)
+			i++
 		}
 	}
+	this.validatedCoverIdxes = this.validatedCoverIdxes[:i]
 	return
 }
 
