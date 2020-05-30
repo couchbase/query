@@ -52,6 +52,10 @@ func (this *KeyScan) Copy() Operator {
 	return rv
 }
 
+func (this *KeyScan) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

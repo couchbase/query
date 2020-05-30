@@ -54,6 +54,10 @@ func (this *IndexJoin) Copy() Operator {
 	return rv
 }
 
+func (this *IndexJoin) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

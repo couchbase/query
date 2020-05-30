@@ -13,6 +13,7 @@
 package execution
 
 import (
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
@@ -32,6 +33,10 @@ func (this *Noop) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Noop) Copy() Operator {
 	return _noop
+}
+
+func (this *Noop) PlanOp() plan.Operator {
+	return nil
 }
 
 func (this *Noop) RunOnce(context *Context, parent value.Value) {

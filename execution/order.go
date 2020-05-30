@@ -54,6 +54,10 @@ func (this *Order) Copy() Operator {
 	return rv
 }
 
+func (this *Order) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Order) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
 	this.runConsumer(this, context, parent)

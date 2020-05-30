@@ -46,6 +46,10 @@ func (this *GrantRole) Copy() Operator {
 	return rv
 }
 
+func (this *GrantRole) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func validateRoles(candidateRoles, allRoles []datastore.Role) errors.Error {
 	for _, candidate := range candidateRoles {
 		foundMatch := false

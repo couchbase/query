@@ -52,6 +52,10 @@ func (this *Intersect) Copy() Operator {
 	return rv
 }
 
+func (this *Intersect) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Intersect) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
@@ -187,6 +191,10 @@ func (this *IntersectAll) Copy() Operator {
 
 	this.base.copy(&rv.base)
 	return rv
+}
+
+func (this *IntersectAll) PlanOp() plan.Operator {
+	return this.plan
 }
 
 func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {

@@ -56,6 +56,10 @@ func (this *SendDelete) Copy() Operator {
 	return rv
 }
 
+func (this *SendDelete) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

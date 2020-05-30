@@ -44,6 +44,10 @@ func (this *Nest) Copy() Operator {
 	return rv
 }
 
+func (this *Nest) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Nest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

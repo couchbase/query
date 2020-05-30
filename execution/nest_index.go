@@ -51,6 +51,10 @@ func (this *IndexNest) Copy() Operator {
 	return rv
 }
 
+func (this *IndexNest) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

@@ -43,6 +43,10 @@ func (this *IndexCountProject) Copy() Operator {
 	return rv
 }
 
+func (this *IndexCountProject) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *IndexCountProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

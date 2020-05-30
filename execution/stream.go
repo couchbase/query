@@ -49,6 +49,10 @@ func (this *Stream) Copy() Operator {
 	return rv
 }
 
+func (this *Stream) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Stream) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 	context.CloseResults()

@@ -53,6 +53,10 @@ func (this *Distinct) Copy() Operator {
 	return rv
 }
 
+func (this *Distinct) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Distinct) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

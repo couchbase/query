@@ -57,6 +57,10 @@ func (this *HashNest) Copy() Operator {
 	return rv
 }
 
+func (this *HashNest) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *HashNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

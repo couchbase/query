@@ -55,6 +55,10 @@ func (this *SendInsert) Copy() Operator {
 	return rv
 }
 
+func (this *SendInsert) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

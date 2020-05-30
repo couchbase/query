@@ -149,6 +149,10 @@ func (this *WindowAggregate) Copy() Operator {
 	return rv
 }
 
+func (this *WindowAggregate) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *WindowAggregate) addFlags(flags uint32) {
 	this.flags |= flags
 }

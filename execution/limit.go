@@ -51,6 +51,10 @@ func (this *Limit) Copy() Operator {
 	return rv
 }
 
+func (this *Limit) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Limit) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

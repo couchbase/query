@@ -51,6 +51,10 @@ func (this *InitialProject) Copy() Operator {
 	return rv
 }
 
+func (this *InitialProject) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

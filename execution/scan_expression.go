@@ -44,6 +44,10 @@ func (this *ExpressionScan) Copy() Operator {
 	return rv
 }
 
+func (this *ExpressionScan) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

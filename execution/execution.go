@@ -18,6 +18,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
@@ -55,6 +56,8 @@ type Operator interface {
 	stopCh() stopChannel          // Never closed, just garbage-collected
 
 	getBase() *base
+
+	PlanOp() plan.Operator
 
 	// local infrastructure to add up times of children of the parallel operator
 	accrueTimes(o Operator)

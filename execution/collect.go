@@ -49,6 +49,10 @@ func (this *Collect) Copy() Operator {
 	return rv
 }
 
+func (this *Collect) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Collect) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

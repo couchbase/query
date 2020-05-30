@@ -42,6 +42,10 @@ func (this *FlushCollection) Copy() Operator {
 	return rv
 }
 
+func (this *FlushCollection) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *FlushCollection) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

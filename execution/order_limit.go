@@ -85,6 +85,10 @@ func (this *OrderLimit) Copy() Operator {
 	return rv
 }
 
+func (this *OrderLimit) PlanOp() plan.Operator {
+	return this.Order.plan
+}
+
 func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
 	this.runConsumer(this, context, parent)

@@ -43,6 +43,10 @@ func (this *AlterIndex) Copy() Operator {
 	return rv
 }
 
+func (this *AlterIndex) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

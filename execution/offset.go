@@ -51,6 +51,10 @@ func (this *Offset) Copy() Operator {
 	return rv
 }
 
+func (this *Offset) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Offset) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

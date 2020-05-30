@@ -42,6 +42,10 @@ func (this *DropCollection) Copy() Operator {
 	return rv
 }
 
+func (this *DropCollection) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *DropCollection) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

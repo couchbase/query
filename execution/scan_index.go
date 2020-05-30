@@ -50,6 +50,10 @@ func (this *IndexScan) Copy() Operator {
 	return rv
 }
 
+func (this *IndexScan) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
@@ -155,6 +159,10 @@ func (this *spanScan) Copy() Operator {
 	}
 	this.base.copy(&rv.base)
 	return rv
+}
+
+func (this *spanScan) PlanOp() plan.Operator {
+	return this.plan
 }
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {

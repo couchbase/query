@@ -41,6 +41,10 @@ func (this *Advise) Copy() Operator {
 	return rv
 }
 
+func (this *Advise) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Advise) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

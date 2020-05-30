@@ -41,6 +41,10 @@ func (this *Alias) Copy() Operator {
 	return rv
 }
 
+func (this *Alias) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Alias) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

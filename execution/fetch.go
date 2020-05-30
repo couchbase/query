@@ -62,6 +62,10 @@ func (this *Fetch) Copy() Operator {
 	return rv
 }
 
+func (this *Fetch) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
@@ -230,6 +234,10 @@ func (this *DummyFetch) Copy() Operator {
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv
+}
+
+func (this *DummyFetch) PlanOp() plan.Operator {
+	return this.plan
 }
 
 func (this *DummyFetch) RunOnce(context *Context, parent value.Value) {

@@ -51,6 +51,10 @@ func (this *Clone) Copy() Operator {
 	return rv
 }
 
+func (this *Clone) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Clone) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

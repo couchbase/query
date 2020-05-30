@@ -54,6 +54,10 @@ func (this *NLNest) Copy() Operator {
 	return rv
 }
 
+func (this *NLNest) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *NLNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

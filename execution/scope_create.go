@@ -42,6 +42,10 @@ func (this *CreateScope) Copy() Operator {
 	return rv
 }
 
+func (this *CreateScope) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *CreateScope) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

@@ -55,6 +55,10 @@ func (this *Filter) Copy() Operator {
 	return rv
 }
 
+func (this *Filter) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Filter) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }

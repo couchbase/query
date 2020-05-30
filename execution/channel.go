@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
@@ -34,6 +35,10 @@ func (this *Channel) Copy() Operator {
 	rv := &Channel{}
 	this.base.copy(&rv.base)
 	return rv
+}
+
+func (this *Channel) PlanOp() plan.Operator {
+	return nil
 }
 
 // This operator is a no-op. It simply provides a shared itemChannel.

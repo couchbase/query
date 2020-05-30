@@ -59,6 +59,10 @@ func (this *Merge) Copy() Operator {
 	return rv
 }
 
+func (this *Merge) PlanOp() plan.Operator {
+	return this.plan
+}
+
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
