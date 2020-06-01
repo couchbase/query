@@ -678,6 +678,21 @@ func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
 	return p
 }
 
+func (this *BaseRequest) FmtOptimizerEstimates(op execution.Operator) map[string]interface{} {
+	var p map[string]interface{} = nil
+
+	if op != nil {
+		planOp := op.PlanOp()
+		if planOp != nil && planOp.Cost() > 0.0 && planOp.Cardinality() > 0.0 {
+			p = make(map[string]interface{}, 2)
+			p["cost"] = planOp.Cost()
+			p["cardinality"] = planOp.Cardinality()
+		}
+	}
+
+	return p
+}
+
 func (this *BaseRequest) SetTimings(o execution.Operator) {
 	this.timings = o
 }

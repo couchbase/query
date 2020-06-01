@@ -105,6 +105,10 @@ func (this *internalOutput) FmtPhaseTimes() map[string]interface{} {
 	return nil
 }
 
+func (this *internalOutput) FmtOptimizerEstimates(op Operator) map[string]interface{} {
+	return nil
+}
+
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
 	var outputBuf internalOutput
 	output := &outputBuf

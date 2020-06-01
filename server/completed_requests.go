@@ -62,6 +62,7 @@ type RequestLogEntry struct {
 	PhaseCounts     map[string]interface{}
 	PhaseOperators  map[string]interface{}
 	Timings         execution.Operator
+	OptEstimates    map[string]interface{}
 	NamedArgs       map[string]value.Value
 	PositionalArgs  value.Values
 	Users           string
@@ -488,6 +489,9 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	if prof == ProfOn {
 		re.Timings = request.GetTimings()
 		request.SetTimings(nil)
+		if re.Timings != nil {
+			re.OptEstimates = request.FmtOptimizerEstimates(re.Timings)
+		}
 	}
 
 	var ctrl bool

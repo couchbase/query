@@ -127,6 +127,7 @@ type Output interface {
 	FmtPhaseOperators() map[string]interface{}
 	AddPhaseTime(phase Phases, duration time.Duration)
 	FmtPhaseTimes() map[string]interface{}
+	FmtOptimizerEstimates(op Operator) map[string]interface{}
 }
 
 type Context struct {

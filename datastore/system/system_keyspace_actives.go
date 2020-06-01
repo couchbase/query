@@ -197,6 +197,11 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if prof == server.ProfOn && t != nil {
 					bytes, _ := json.Marshal(t)
 					meta["plan"] = bytes
+					optEstimates := request.Output().FmtOptimizerEstimates(t)
+					if optEstimates != nil {
+						bytes, _ = json.Marshal(optEstimates)
+						meta["optimizerEstimates"] = bytes
+					}
 				}
 
 				item.SetAttachment("meta", meta)

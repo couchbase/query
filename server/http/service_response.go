@@ -631,6 +631,17 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
 				logging.Infop("Error writing timings", logging.Pair{"error", err})
 			}
+			optEstimates := this.FmtOptimizerEstimates(timings)
+			if optEstimates != nil {
+				if indent != "" {
+					e, err = json.MarshalIndent(optEstimates, "\t", indent)
+				} else {
+					e, err = json.Marshal(optEstimates)
+				}
+				if err != nil || !this.writer.printf(",%s\"optimizerEstimates\": %s", newPrefix, e) {
+					logging.Infop("Error writing optimizer estimates", logging.Pair{"error", err})
+				}
+			}
 		}
 	}
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {

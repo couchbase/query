@@ -181,6 +181,10 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.Timings != nil {
 					bytes, _ := json.Marshal(entry.Timings)
 					meta["plan"] = bytes
+					if entry.OptEstimates != nil {
+						bytes, _ := json.Marshal(entry.OptEstimates)
+						meta["optimizerEstimates"] = bytes
+					}
 				}
 				item.SetAttachment("meta", meta)
 				item.SetId(key)

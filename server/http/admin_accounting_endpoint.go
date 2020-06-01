@@ -682,6 +682,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 			// by the time we marshal, is this still valid?
 			if prof == server.ProfOn && t != nil {
 				reqMap["timings"] = t
+				p = request.Output().FmtOptimizerEstimates(t)
+				if p != nil {
+					reqMap["optimizerEstimates"] = p
+				}
 			}
 
 			var ctrl bool
@@ -868,6 +872,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 			}
 			if request.Timings != nil {
 				reqMap["timings"] = request.Timings
+				if request.OptEstimates != nil {
+					reqMap["optimizerEstimates"] = request.OptEstimates
+				}
 			}
 			if request.Errors != nil {
 				errors := make([]map[string]interface{}, len(request.Errors))
