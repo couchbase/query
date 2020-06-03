@@ -101,7 +101,7 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 
 // derive IS NOT NULL filters for a keyspace based on join filters in the
 // WHERE clause as well as ON-clause of inner joins
-func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, indexApiVersion int) error {
+func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, indexApiVersion int, virtualIndexes []datastore.Index) error {
 
 	// first gather leading index key from all indexes for this keyspace
 	indexes := _INDEX_POOL.Get()
@@ -109,6 +109,10 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	indexes, err := allIndexes(keyspace, nil, indexes, indexApiVersion, false)
 	if err != nil {
 		return err
+	}
+
+	if len(virtualIndexes) > 0 {
+		indexes = append(indexes, virtualIndexes...)
 	}
 
 	if len(indexes) == 0 {
