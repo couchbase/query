@@ -461,6 +461,8 @@ const (
 	API_ADMIN_INDEXES_FUNCTIONS          = 28705
 	API_ADMIN_TASKS                      = 28706
 	API_ADMIN_INDEXES_TASKS              = 28707
+	API_ADMIN_DICTIONARY                 = 28708
+	API_ADMIN_INDEXES_DICTIONARY         = 28709
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {

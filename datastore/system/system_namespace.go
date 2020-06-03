@@ -156,6 +156,18 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[funcs.Name()] = funcs
 
+	dictCache, e := newDictionaryCacheKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[dictCache.Name()] = dictCache
+
+	dict, e := newDictionaryKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[dict.Name()] = dict
+
 	tasksCache, e := newTasksCacheKeyspace(p)
 	if e != nil {
 		return e

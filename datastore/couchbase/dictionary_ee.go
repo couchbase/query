@@ -28,8 +28,47 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-func dropDictCacheEntry(keyspace string) {
+type DictCacheEntry interface {
+	Target(map[string]interface{})
+	Content(map[string]interface{})
+}
+
+func CountDictCacheEntries() int {
+	return dictionary.CountDictCacheEntries()
+}
+
+func DictCacheEntriesForeach(nB func(string, interface{}) bool, b func() bool) {
+	dictionary.DictCacheEntriesForeach(nB, b)
+}
+
+func DictCacheEntryDo(k string, f func(interface{})) {
+	dictionary.DictCacheEntryDo(k, f)
+}
+
+func DropDictCacheEntry(keyspace string) {
 	dictionary.DropKeyspace(keyspace)
+}
+
+func NameDictCacheEntries() []string {
+	return dictionary.NameDictCacheEntries()
+}
+
+// dictionary entries
+
+func Get(key string) (DictCacheEntry, error) {
+	ce, err := dictionary.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return ce.(DictCacheEntry), nil
+}
+
+func Count() (int64, error) {
+	return dictionary.Count()
+}
+
+func Foreach(f func(string) error) error {
+	return dictionary.Foreach(f)
 }
 
 const _GRACE_PERIOD = time.Second

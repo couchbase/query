@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	dictionary "github.com/couchbase/query/datastore/couchbase"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
@@ -36,6 +37,7 @@ const (
 	requestsPrefix   = adminPrefix + "/active_requests"
 	completedsPrefix = adminPrefix + "/completed_requests"
 	functionsPrefix  = adminPrefix + "/functions_cache"
+	dictionaryPrefix = adminPrefix + "/dictionary_cache"
 	tasksPrefix      = adminPrefix + "/tasks_cache"
 	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
@@ -96,6 +98,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	functionsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doFunctions)
 	}
+	dictionaryIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doDictionaryIndex)
+	}
+	dictionaryEntryHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doDictionaryEntry)
+	}
+	dictionaryHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doDictionary)
+	}
 	tasksIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTasksIndex)
 	}
@@ -120,12 +131,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
 		functionsPrefix:                       {handler: functionsHandler, methods: []string{"GET"}},
 		functionsPrefix + "/{name}":           {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
+		dictionaryPrefix:                      {handler: dictionaryHandler, methods: []string{"GET"}},
+		dictionaryPrefix + "/{name}":          {handler: dictionaryEntryHandler, methods: []string{"GET", "POST", "DELETE"}},
 		tasksPrefix:                           {handler: tasksHandler, methods: []string{"GET"}},
 		tasksPrefix + "/{name}":               {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
 		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/functions_cache":    {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/function_cache":     {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/dictionary_cache":   {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
 	}
 
@@ -482,6 +496,82 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		}
 
 		functions.FunctionsForeach(snapshot, nil)
+		return data, nil
+
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	name := vars["name"]
+
+	af.EventTypeId = audit.API_ADMIN_DICTIONARY
+	af.Name = name
+
+	if req.Method == "DELETE" {
+		err := verifyCredentialsFromRequest("dictionary_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+		dictionary.DropDictCacheEntry(name)
+		return true, nil
+	} else if req.Method == "GET" || req.Method == "POST" {
+		if req.Method == "POST" {
+			// Do not audit POST requests. They are an internal API used
+			// only for queries to system:functions_cache, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
+		err := verifyCredentialsFromRequest("dictionary_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		var itemMap map[string]interface{}
+
+		dictionary.DictCacheEntryDo(name, func(d interface{}) {
+			entry := d.(dictionary.DictCacheEntry)
+
+			itemMap = map[string]interface{}{}
+			entry.Target(itemMap)
+			entry.Content(itemMap)
+		})
+		return itemMap, nil
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_DICTIONARY
+	switch req.Method {
+	case "GET":
+		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		numKeyspaces := dictionary.CountDictCacheEntries()
+		data := make([]map[string]interface{}, numKeyspaces)
+		i := 0
+
+		snapshot := func(name string, d interface{}) bool {
+
+			// FIXME quick hack to avoid overruns
+			if i >= numKeyspaces {
+				return false
+			}
+			data[i] = map[string]interface{}{}
+			entry := d.(dictionary.DictCacheEntry)
+			entry.Target(data[i])
+			entry.Content(data[i])
+			i++
+			return true
+		}
+
+		dictionary.DictCacheEntriesForeach(snapshot, nil)
 		return data, nil
 
 	default:
@@ -1009,6 +1099,12 @@ func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	af.EventTypeId = audit.API_ADMIN_INDEXES_FUNCTIONS
 	return functions.NameFunctions(), nil
 }
+
+func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_INDEXES_DICTIONARY
+	return dictionary.NameDictCacheEntries(), nil
+}
+
 func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_INDEXES_TASKS
 	return scheduler.NameTasks(), nil

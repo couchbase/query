@@ -22,8 +22,46 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func dropDictCacheEntry(keyspace string) {
+// dictionary cache entries
+
+// dummy
+type DictCacheEntry interface {
+	Target(map[string]interface{})
+	Content(map[string]interface{})
+}
+
+func CountDictCacheEntries() int {
+	return -1
+}
+
+func DictCacheEntriesForeach(nB func(string, interface{}) bool, b func() bool) {
 	// no-op
+}
+
+func DictCacheEntryDo(k string, f func(interface{})) {
+	// no-op
+}
+
+func DropDictCacheEntry(keyspace string) {
+	// no-op
+}
+
+func NameDictCacheEntries() []string {
+	return []string{}
+}
+
+// dictionary entries
+
+func Get(key string) (DictCacheEntry, error) {
+	return nil, nil
+}
+
+func Count() (int64, error) {
+	return -1, nil
+}
+
+func Foreach(f func(string) error) error {
+	return nil
 }
 
 type chkIndexDict struct {

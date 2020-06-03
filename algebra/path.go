@@ -24,6 +24,39 @@ type Path struct {
 	elements []string `json:"elements"`
 }
 
+func ParsePath(path string) (string, string, string, string) {
+	var namespace string
+	var bucket string
+	var scope string
+
+	n := strings.IndexByte(path, ':')
+	namespace, path = trim(path, n)
+	d := strings.IndexByte(path, '.')
+	if d >= 0 {
+		bucket, path = trim(path, d)
+		d = strings.IndexByte(path, '.')
+		if d >= 0 {
+			scope, path = trim(path, d)
+		}
+	}
+
+	return namespace, bucket, scope, path
+}
+
+func trim(right string, i int) (string, string) {
+	var left string
+
+	if i >= 0 {
+		left = right[:i]
+		if i < len(right)-1 {
+			right = right[i+1:]
+		} else {
+			right = ""
+		}
+	}
+	return left, right
+}
+
 // Create a path from a namespace:keyspace combination.
 func NewPathShort(namespace, keyspace string) *Path {
 	return &Path{
