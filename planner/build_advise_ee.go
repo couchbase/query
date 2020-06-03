@@ -371,6 +371,10 @@ func (this *builder) matchPushdownProperty(key string, idxInfo *iaplan.IndexInfo
 	return idxInfo
 }
 
+func (this *builder) getIdxCandidates() []datastore.Index {
+	return this.idxCandidates
+}
+
 func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
 	joinTerm, ok := from.(algebra.JoinTerm)
 	if !ok {

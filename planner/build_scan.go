@@ -97,7 +97,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		if !join {
 			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
-				err = deriveNotNullFilter(keyspace, baseKeyspace, this.context.IndexApiVersion(), this.idxCandidates)
+				err = deriveNotNullFilter(keyspace, baseKeyspace, this.context.IndexApiVersion(), this.getIdxCandidates())
 				if err != nil {
 					return nil, nil, err
 				}
