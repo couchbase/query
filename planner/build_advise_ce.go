@@ -72,3 +72,7 @@ func (this *builder) addVirtualIndexes(others []datastore.Index) []datastore.Ind
 
 func (this *builder) collectPushdownProperty(index datastore.Index, alias string, property PushDownProperties) {
 }
+
+func (this *builder) getIdxCandidates() []datastore.Index {
+	return nil
+}
