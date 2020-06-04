@@ -25,50 +25,5 @@
         "query": "select * from shellTest12345 where test_id = \"advise\" limit 2"
       }
     ]
-  },
-  {
-    "statements": "ADVISE SELECT t_1.int_field1 , t_1.decimal_field1 , t_1.primary_key_id , t_1.bool_field1 FROM bucket_01 t_1 INNER JOIN bucket_04 t_4 ON ( t_1.primary_key_id = t_4.primary_key_id ) INNER JOIN bucket_04 t_5 ON ( t_1.primary_key_id = t_5.primary_key_id)",
-    "advise": true,
-    "userArgs": {
-      "Administrator": "password"
-    },
-    "results": [
-      {
-        "#operator": "Advise",
-        "advice": {
-          "#operator": "IndexAdvice",
-          "adviseinfo": {
-            "recommended_indexes": {
-              "covering_indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_primary_key_id_int_field1_bool_field1_decimal_field1 ON `bucket_01`(`primary_key_id`,`int_field1`,`bool_field1`,`decimal_field1`)",
-                  "keyspace_alias": "bucket_01_t_1"
-                },
-                {
-                  "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
-                  "keyspace_alias": "bucket_04_t_4;bucket_04_t_5"
-                }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_01`(`primary_key_id`)",
-                  "keyspace_alias": "bucket_01_t_1",
-                  "recommending_rule": "Index keys follow order of predicate types: 6. derived join filter as leading key."
-                },
-                {
-                  "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
-                  "keyspace_alias": "bucket_04_t_4;bucket_04_t_5",
-                  "recommending_rule": {
-                    "bucket_04_t_4": "Index keys follow order of predicate types: 9. non-static join predicate.",
-                    "bucket_04_t_5": "Index keys follow order of predicate types: 9. non-static join predicate."
-                  }
-                }
-              ]
-            }
-          }
-        },
-        "query": "SELECT t_1.int_field1 , t_1.decimal_field1 , t_1.primary_key_id , t_1.bool_field1 FROM bucket_01 t_1 INNER JOIN bucket_04 t_4 ON ( t_1.primary_key_id = t_4.primary_key_id ) INNER JOIN bucket_04 t_5 ON ( t_1.primary_key_id = t_5.primary_key_id);"
-      }
-    ]
   }
 ]
