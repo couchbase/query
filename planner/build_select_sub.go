@@ -24,6 +24,7 @@ import (
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	prevCover := this.cover
 	prevWhere := this.where
+	prevFilter := this.filter
 	prevCorrelated := this.correlated
 	prevCoveringScans := this.coveringScans
 	prevCoveredUnnests := this.coveredUnnests
@@ -40,6 +41,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	defer func() {
 		this.cover = prevCover
 		this.where = prevWhere
+		this.filter = prevFilter
 		this.correlated = prevCorrelated
 		this.coveringScans = prevCoveringScans
 		this.coveredUnnests = prevCoveredUnnests
@@ -84,6 +86,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	} else {
 		this.where = node.Where()
+	}
+
+	if node.Where() != nil {
+		this.filter = node.Where().Copy()
+	} else {
+		this.filter = nil
 	}
 
 	this.extractLetGroupProjOrder(node.Let(), nil, node.Projection(), this.order, nil)
@@ -231,7 +239,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if this.countScan == nil {
 		// Add Let and Filter only when group/aggregates are not pushed
 		if this.group == nil {
-			this.addLetAndPredicate(node.Let(), node.Where())
+			this.addLetAndPredicate(node.Let(), this.filter)
 		}
 
 		if group != nil {
@@ -409,6 +417,13 @@ func (this *builder) coverExpressions() error {
 
 		if this.where != nil {
 			this.where, err = coverer.Map(this.where)
+			if err != nil {
+				return err
+			}
+		}
+
+		if this.filter != nil {
+			this.filter, err = coverer.Map(this.filter)
 			if err != nil {
 				return err
 			}

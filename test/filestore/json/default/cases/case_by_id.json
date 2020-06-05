@@ -39,6 +39,7 @@
                         },
                         {
                             "#operator": "Fetch",
+                            "filter": "((meta(`game`).`id`) = \"damien\")",
                             "keyspace": "game",
                             "namespace": "default"
                         },
@@ -47,10 +48,6 @@
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Filter",
-                                        "condition": "((meta(`game`).`id`) = \"damien\")"
-                                    },
                                     {
                                         "#operator": "InitialProject",
                                         "result_terms": [
@@ -111,6 +108,7 @@
                         },
                         {
                             "#operator": "Fetch",
+                            "filter": "(((meta(`game`).`id`) = \"damien\") or ((`game`.`name`) = \"foo\"))",
                             "keyspace": "game",
                             "namespace": "default"
                         },
@@ -119,10 +117,6 @@
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Filter",
-                                        "condition": "(((meta(`game`).`id`) = \"damien\") or ((`game`.`name`) = \"foo\"))"
-                                    },
                                     {
                                         "#operator": "InitialProject",
                                         "result_terms": [
@@ -171,6 +165,7 @@
                         },
                         {
                             "#operator": "Fetch",
+                            "filter": "any `id` in [\"damien\", \"dustin\", \"junyi\"] satisfies ((meta(`game`).`id`) = `id`) end",
                             "keyspace": "game",
                             "namespace": "default"
                         },
@@ -179,10 +174,6 @@
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Filter",
-                                        "condition": "any `id` in [\"damien\", \"dustin\", \"junyi\"] satisfies ((meta(`game`).`id`) = `id`) end"
-                                    },
                                     {
                                         "#operator": "InitialProject",
                                         "result_terms": [
@@ -243,6 +234,7 @@
                         },
                         {
                             "#operator": "Fetch",
+                            "filter": "any `id` in [\"damien\", \"dustin\", \"does_not_exist\"] satisfies (((meta(`game`).`id`) = `id`) or (`id` is not null)) end",
                             "keyspace": "game",
                             "namespace": "default"
                         },
@@ -251,10 +243,6 @@
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Filter",
-                                        "condition": "any `id` in [\"damien\", \"dustin\", \"does_not_exist\"] satisfies (((meta(`game`).`id`) = `id`) or (`id` is not null)) end"
-                                    },
                                     {
                                         "#operator": "InitialProject",
                                         "result_terms": [
@@ -457,6 +445,7 @@
                 },
                 {
                     "#operator": "Fetch",
+                    "filter": "(5 \u003c (`game`.`score`))",
                     "keyspace": "game",
                     "namespace": "default"
                 },
@@ -465,10 +454,6 @@
                     "~child": {
                         "#operator": "Sequence",
                         "~children": [
-                            {
-                                "#operator": "Filter",
-                                "condition": "(5 \u003c (`game`.`score`))"
-                            },
                             {
                                 "#operator": "InitialGroup",
                                 "aggregates": [

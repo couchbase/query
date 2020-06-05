@@ -430,6 +430,11 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		isJoin = true
 	}
 
+	subqueries, err := expression.ListSubqueries(expression.Expressions{expr}, false)
+	if err != nil {
+		return nil, err
+	}
+
 	// calculate selectivity before removing keyspace references
 	selec := OPT_SELEC_NOT_AVAIL
 	arrSelec := OPT_SELEC_NOT_AVAIL
@@ -466,6 +471,9 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 				filter.SetSelec(selec)
 				filter.SetArraySelec(arrSelec)
 				filter.SetSelecDone()
+			}
+			if len(subqueries) > 0 {
+				filter.SetSubq()
 			}
 
 			if len(keyspaces) == 1 {

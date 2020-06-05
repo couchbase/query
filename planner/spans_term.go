@@ -37,7 +37,7 @@ func (this *TermSpans) CreateScan(
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value,
-	cost, cardinality float64) plan.SecondaryScan {
+	filter expression.Expression, cost, cardinality float64) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
@@ -45,7 +45,7 @@ func (this *TermSpans) CreateScan(
 		dynamicIn := this.spans.HasDynamicIn()
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter, cost, cardinality)
 
 			if cost > 0.0 && cardinality > 0.0 {
 				distCost, distCard := getDistinctScanCost(index, cardinality)
@@ -60,7 +60,7 @@ func (this *TermSpans) CreateScan(
 			return plan.NewDistinctScan(limit, offset, scan, cost, cardinality)
 		} else {
 			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers, cost, cardinality)
+				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter, cost, cardinality)
 		}
 
 	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index, indexApiVersion) {

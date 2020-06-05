@@ -97,6 +97,18 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			actv := value.NewScopeValue(make(map[string]interface{}), parent)
 			actv.SetField(this.plan.Alias(), act)
 			av := value.NewAnnotatedValue(actv)
+
+			if this.plan.Filter() != nil {
+				result, err := this.plan.Filter().Evaluate(av, context)
+				if err != nil {
+					context.Error(errors.NewEvaluationError(err, "expression scan filter"))
+					return
+				}
+				if !result.Truth() {
+					continue
+				}
+			}
+
 			if !correlated {
 				this.results = append(this.results, av)
 			}

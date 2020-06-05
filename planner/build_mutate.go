@@ -88,7 +88,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 					cardinality = OPT_CARD_NOT_AVAIL
 				}
 			}
-			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality)
+			fetch = plan.NewFetch(keyspace, term, names, nil, cost, cardinality)
 		} else {
 			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality)
 		}

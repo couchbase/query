@@ -111,7 +111,7 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection,
-			indexKeyOrders, nil, nil, nil, entry.cost, entry.cardinality)
+			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality)
 
 		if orderEntry != nil && index == orderEntry.index {
 			scans[0] = scan

@@ -267,9 +267,19 @@ outer:
 		}
 	}
 
+	// generate filters for covering index scan
+	var filter expression.Expression
+	var err error
+	if indexGroupAggs == nil {
+		filter, err = this.getFilter(node.Alias(), covers, filterCovers)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), false,
-		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
+		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers, filter,
 		entry.cost, entry.cardinality)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)
@@ -348,7 +358,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(),
-		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers,
+		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
 		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)

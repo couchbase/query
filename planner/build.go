@@ -92,6 +92,7 @@ type builder struct {
 	delayProjection   bool                  // Used to allow ORDER BY non-projected expressions
 	from              algebra.FromTerm      // Used for index selection
 	where             expression.Expression // Used for index selection
+	filter            expression.Expression // for Filter operator
 	setOpDistinct     bool                  // Used for SETOP Distinct to apply DISTINCT on projection
 	children          []plan.Operator
 	subChildren       []plan.Operator

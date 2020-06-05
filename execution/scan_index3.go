@@ -129,6 +129,17 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 						}
 
 						av.SetField(this.plan.Term().Alias(), av)
+
+						if this.plan.Filter() != nil {
+							result, err := this.plan.Filter().Evaluate(av, context)
+							if err != nil {
+								context.Error(errors.NewEvaluationError(err, "filter"))
+								return
+							}
+							if !result.Truth() {
+								continue
+							}
+						}
 					}
 
 					av.SetBit(this.bit)

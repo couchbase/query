@@ -261,8 +261,17 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		}
 	}
 
+	// generate filters for covering index scan
+	var filter expression.Expression
+	if indexGroupAggs == nil {
+		filter, err = this.getFilter(node.Alias(), covers, filterCovers)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct, pred.MayOverlapSpans(), array,
-		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers,
+		this.offset, this.limit, indexProjection, indexKeyOrders, indexGroupAggs, covers, filterCovers, filter,
 		entry.cost, entry.cardinality)
 	if scan != nil {
 		this.coveringScans = append(this.coveringScans, scan)

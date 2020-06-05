@@ -38,13 +38,13 @@ func (this *UnionSpans) CreateScan(
 	reverse, distinct, overlap, array bool, offset, limit expression.Expression,
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value,
+	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
 		return this.spans[0].CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, offset, limit, projection, indexOrder, indexGroupAggs,
-			covers, filterCovers, cost, cardinality)
+			covers, filterCovers, filter, cost, cardinality)
 	}
 
 	lim := offsetPlusLimit(offset, limit)
@@ -52,7 +52,7 @@ func (this *UnionSpans) CreateScan(
 	for i, s := range this.spans {
 		scans[i] = s.CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, nil, lim, projection, nil, indexGroupAggs,
-			covers, filterCovers, cost, cardinality)
+			covers, filterCovers, filter, cost, cardinality)
 	}
 
 	return plan.NewUnionScan(limit, offset, cost, cardinality, scans...)

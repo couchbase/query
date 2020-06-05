@@ -245,7 +245,13 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				cardinality = OPT_CARD_NOT_AVAIL
 			}
 		}
-		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality))
+
+		filter, err := this.getFilter(node.Alias(), nil, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		this.addChildren(plan.NewFetch(keyspace, node, names, filter, cost, cardinality))
 	}
 
 	err = this.processKeyspaceDone(node.Alias())
@@ -270,6 +276,22 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	selOp := sel.(plan.Operator)
 	this.addChildren(selOp, plan.NewAlias(node.Alias(), selOp.Cost(), selOp.Cardinality()))
 
+	filter, err := this.getFilter(node.Alias(), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if filter != nil {
+		// use a Filter operator if there are filters on the subquery term
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality = getFilterCost(this.lastOp, filter,
+				this.baseKeyspaces, this.keyspaceNames)
+		}
+		this.addChildren(plan.NewFilter(filter, cost, cardinality))
+	}
+
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
 		return nil, err
@@ -288,14 +310,19 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
+	filter, err := this.getFilter(node.Alias(), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
 		cost, cardinality = getExpressionScanCost(node.ExpressionTerm(), this.keyspaceNames)
 	}
-	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), cost, cardinality))
+	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality))
 
-	err := this.processKeyspaceDone(node.Alias())
+	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {
 		return nil, err
 	}
@@ -714,4 +741,56 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 	} else {
 		return limit
 	}
+}
+
+func (this *builder) getFilter(alias string, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value) (expression.Expression, error) {
+
+	var err error
+	baseKeyspace, _ := this.baseKeyspaces[alias]
+
+	// cannot do early filtering on subservient side of outer join
+	if baseKeyspace.Outerlevel() > 0 {
+		return nil, nil
+	}
+
+	filters := baseKeyspace.Filters()
+	terms := make(expression.Expressions, 0, len(filters))
+
+	for _, fl := range filters {
+		// unnest filters can only be evaluated after the UNNEST operation
+		// subquery filters are not pushed down
+		if fl.IsUnnest() || fl.HasSubq() {
+			continue
+		}
+
+		if fl.IsJoin() {
+			continue
+		}
+
+		fltr := fl.FltrExpr()
+		terms = append(terms, fltr.Copy())
+		this.filter, err = expression.RemoveExpr(this.filter, fltr)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	var filter expression.Expression
+	if len(terms) == 1 {
+		filter = terms[0]
+	} else if len(terms) > 1 {
+		filter = expression.NewAnd(terms...)
+	}
+
+	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
+		coverer := expression.NewCoverer(covers, filterCovers)
+		filter, err = coverer.Map(filter)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return filter, nil
 }

@@ -14,6 +14,8 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 )
 
 type Fetch struct {
@@ -21,15 +23,18 @@ type Fetch struct {
 	keyspace    datastore.Keyspace
 	term        *algebra.KeyspaceTerm
 	subPaths    []string
+	filter      expression.Expression
 	cost        float64
 	cardinality float64
 }
 
-func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string, cost, cardinality float64) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
+	filter expression.Expression, cost, cardinality float64) *Fetch {
 	return &Fetch{
 		keyspace:    keyspace,
 		term:        term,
 		subPaths:    subPaths,
+		filter:      filter,
 		cost:        cost,
 		cardinality: cardinality,
 	}
@@ -55,6 +60,18 @@ func (this *Fetch) SubPaths() []string {
 	return this.subPaths
 }
 
+func (this *Fetch) Filter() expression.Expression {
+	return this.filter
+}
+
+func (this *Fetch) Cost() float64 {
+	return this.cost
+}
+
+func (this *Fetch) Cardinality() float64 {
+	return this.cardinality
+}
+
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -71,6 +88,10 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	}
 	if this.term.IsUnderNL() {
 		r["nested_loop"] = this.term.IsUnderNL()
+	}
+
+	if this.filter != nil {
+		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
 	if this.cost > 0.0 {
@@ -96,6 +117,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		Keyspace    string   `json:"keyspace"`
 		As          string   `json:"as"`
 		UnderNL     bool     `json:"nested_loop"`
+		Filter      string   `json:"filter"`
 		Cost        float64  `json:"cost"`
 		Cardinality float64  `json:"cardinality"`
 		SubPaths    []string `json:"subpaths"`
@@ -107,6 +129,13 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.subPaths = _unmarshalled.SubPaths
+
+	if _unmarshalled.Filter != "" {
+		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
 
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
@@ -125,14 +154,6 @@ func (this *Fetch) verify(prepared *Prepared) bool {
 
 	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
 	return res
-}
-
-func (this *Fetch) Cost() float64 {
-	return this.cost
-}
-
-func (this *Fetch) Cardinality() float64 {
-	return this.cardinality
 }
 
 type DummyFetch struct {

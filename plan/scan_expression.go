@@ -21,15 +21,18 @@ type ExpressionScan struct {
 	fromExpr    expression.Expression
 	alias       string
 	correlated  bool
+	filter      expression.Expression
 	cost        float64
 	cardinality float64
 }
 
-func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool, cost, cardinality float64) *ExpressionScan {
+func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool,
+	filter expression.Expression, cost, cardinality float64) *ExpressionScan {
 	return &ExpressionScan{
 		fromExpr:    fromExpr,
 		alias:       alias,
 		correlated:  correlated,
+		filter:      filter,
 		cost:        cost,
 		cardinality: cardinality,
 	}
@@ -55,6 +58,10 @@ func (this *ExpressionScan) IsCorrelated() bool {
 	return this.correlated
 }
 
+func (this *ExpressionScan) Filter() expression.Expression {
+	return this.filter
+}
+
 func (this *ExpressionScan) Cost() float64 {
 	return this.cost
 }
@@ -74,6 +81,9 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if !this.correlated {
 		r["uncorrelated"] = !this.correlated
 	}
+	if this.filter != nil {
+		r["filter"] = expression.NewStringer().Visit(this.filter)
+	}
 	if this.cost > 0.0 {
 		r["cost"] = this.cost
 	}
@@ -92,6 +102,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 		FromExpr     string  `json:"expr"`
 		Alias        string  `json:"alias"`
 		UnCorrelated bool    `json:"uncorrelated"`
+		Filter       string  `json:"filter"`
 		Cost         float64 `json:"cost"`
 		Cardinality  float64 `json:"cardinality"`
 	}
@@ -111,6 +122,13 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	// we set correlated to be true just to be safe, i.e., if
 	// no info in the plan, then assume correlated is true.
 	this.correlated = !_unmarshalled.UnCorrelated
+
+	if _unmarshalled.Filter != "" {
+		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
 
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)

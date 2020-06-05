@@ -25,6 +25,7 @@ const (
 	FLTR_HAS_DEF_SELEC             // has default selectivity
 	FLTR_IN_INDEX_SPAN             // used in index span
 	FLTR_IN_HASH_JOIN              // used as join filter for hash join
+	FLTR_HAS_SUBQ                  // has subquery
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -131,6 +132,14 @@ func (this *Filter) SetHJFlag() {
 
 func (this *Filter) HasPlanFlags() bool {
 	return (this.fltrFlags & TEMP_PLAN_FLAGS) != 0
+}
+
+func (this *Filter) SetSubq() {
+	this.fltrFlags |= FLTR_HAS_SUBQ
+}
+
+func (this *Filter) HasSubq() bool {
+	return (this.fltrFlags & FLTR_HAS_SUBQ) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {

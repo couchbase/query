@@ -29,7 +29,7 @@ type SargSpans interface {
 		reverse, distinct, overlap, array bool, offset, limit expression.Expression,
 		projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 		indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
-		filterCovers map[*expression.Cover]value.Value,
+		filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 		cost, cardinality float64) plan.SecondaryScan
 
 	Compose(prev SargSpans) SargSpans              // Apply to previous composite keys
