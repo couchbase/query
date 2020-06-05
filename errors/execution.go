@@ -168,6 +168,11 @@ func NewNoSuchKeyspaceError(bucket string) Error {
 		InternalMsg: fmt.Sprintf("Keyspace %s is not valid.", bucket), InternalCaller: CallerN(1)}
 }
 
+func NewNoSuchScopeError(scope string) Error {
+	return &err{level: EXCEPTION, ICode: 5241, IKey: "execution.no_such_scope",
+		InternalMsg: fmt.Sprintf("Scope %s is not valid.", scope), InternalCaller: CallerN(1)}
+}
+
 func NewRoleNotFoundError(role string) Error {
 	return &err{level: EXCEPTION, ICode: 5250, IKey: "execution.role_not_found",
 		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}

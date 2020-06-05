@@ -25,6 +25,7 @@ returns the instant it time with a nanosecond precision.
 type Context interface {
 	Now() time.Time
 	AuthenticatedUsers() []string
+	Credentials() *auth.Credentials
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
 	Readonly() bool
@@ -34,7 +35,6 @@ type Context interface {
 type CurlContext interface {
 	Context
 	GetWhitelist() map[string]interface{}
-	Credentials() *auth.Credentials
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
 }

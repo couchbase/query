@@ -95,11 +95,9 @@ func (this *ExecuteFunction) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *ExecuteFunction) Privileges() (*auth.Privileges, errors.Error) {
-	privs := auth.NewPrivileges()
-	//	fullName := this.name.Key()
-	//	privs.Add(fullName, auth.PRIV_QUERY_EXECUTE_FUNCTION)
-
-	return privs, nil
+	// we can't determine privileges here because we need to know the
+	// function type, which we get reliably only at execution time
+	return auth.NewPrivileges(), nil
 }
 
 func (this *ExecuteFunction) Type() string {

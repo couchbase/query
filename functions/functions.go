@@ -14,7 +14,7 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
-	//	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -45,6 +45,7 @@ const _LIMIT = 16384
 type FunctionName interface {
 	Name() string
 	Key() string
+	IsGlobal() bool
 	QueryContext() string
 	Signature(object map[string]interface{})
 	Load() (FunctionBody, errors.Error)
@@ -60,11 +61,14 @@ type FunctionBody interface {
 	Body(object map[string]interface{})
 	Indexable() value.Tristate
 	SwitchContext() value.Tristate
+	IsExternal() bool
+	Privileges() (*auth.Privileges, errors.Error)
 }
 
 type FunctionEntry struct {
 	FunctionName
 	FunctionBody
+	privs          *auth.Privileges
 	tag            atomic.AlignedInt64
 	LastUse        time.Time
 	Uses           int32
@@ -83,6 +87,7 @@ type functionCache struct {
 }
 
 var Constructor func(elem []string, namespace string, queryContext string) (FunctionName, errors.Error)
+var Authorize func(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
@@ -96,6 +101,13 @@ func FunctionsNewLanguage(lang Language, runner LanguageRunner) {
 	if runner != nil && lang != _MISSING {
 		languages[lang] = runner
 	}
+}
+
+// support for language runners
+
+// golang UDFs can use this to execute N1QL
+func Run(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, context Context) (value.Value, uint64, error) {
+	return context.EvaluateStatement(statement, namedArgs, positionalArgs, false, context.Readonly())
 }
 
 // configure functions cache
@@ -168,6 +180,10 @@ func (name *mockName) Key() string {
 	return name.namespace + ":" + name.name
 }
 
+func (name *mockName) IsGlobal() bool {
+	return true
+}
+
 func (name *mockName) QueryContext() string {
 	return name.namespace + ":"
 }
@@ -238,7 +254,19 @@ func AddFunction(name FunctionName, body FunctionBody) errors.Error {
 	return err
 }
 
-func DeleteFunction(name FunctionName) errors.Error {
+func DeleteFunction(name FunctionName, context Context) errors.Error {
+	f := preLoad(name)
+	if f != nil {
+		priv := GetPrivilege(name, f.FunctionBody)
+		privs := auth.NewPrivileges()
+		privs.Add(f.Key(), priv)
+		err := Authorize(f.privs, context.Credentials())
+		if err != nil {
+			return err
+		}
+	} else {
+		errors.NewMissingFunctionError(name.Name())
+	}
 
 	// do the delete
 	err := name.Delete()
@@ -257,6 +285,25 @@ func DeleteFunction(name FunctionName) errors.Error {
 			}, distributed.NO_CREDS, "")
 	}
 	return err
+}
+
+func GetPrivilege(name FunctionName, body FunctionBody) auth.Privilege {
+	var priv auth.Privilege
+
+	if name.IsGlobal() {
+		if body.IsExternal() {
+			priv = auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL
+		} else {
+			priv = auth.PRIV_QUERY_MANAGE_FUNCTIONS
+		}
+	} else {
+		if body.IsExternal() {
+			priv = auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL
+		} else {
+			priv = auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS
+		}
+	}
+	return priv
 }
 
 func preLoad(name FunctionName) *FunctionEntry {
@@ -280,9 +327,11 @@ func preLoad(name FunctionName) *FunctionEntry {
 
 	// if all good, cache
 	if entry.FunctionBody != nil && err == nil {
-		entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
-		entry = entry.add()
-		return entry
+		if entry.loadPrivileges() == nil {
+			entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+			entry = entry.add()
+			return entry
+		}
 	}
 	return nil
 }
@@ -318,9 +367,12 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 
 		// if all good, cache
 		if entry.FunctionBody != nil && err == nil {
-			entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
-			entry = entry.add()
-			body = entry.FunctionBody
+			err = entry.loadPrivileges()
+			if err == nil {
+				entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+				entry = entry.add()
+				body = entry.FunctionBody
+			}
 		}
 	} else {
 		entry = ce.(*FunctionEntry)
@@ -338,6 +390,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 			body, err = name.Load()
 
 			if body != nil {
+				resetPrivs := false
 
 				// now that we have a body, we have to amend the cache,
 				// but only if noone has done it in the interim
@@ -349,8 +402,19 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 						e.tag = tag
 						e.FunctionBody = body
 						e.FunctionName.ResetStorage()
+						resetPrivs = true
 					}
 				})
+				if resetPrivs {
+					e := ce.(*FunctionEntry)
+					err = e.loadPrivileges()
+
+					// if we couldn't work out the privileges, this entry is unusable
+					if err != nil {
+						ce = nil
+						functions.cache.Delete(key, nil)
+					}
+				}
 			} else {
 				ce = nil
 			}
@@ -380,12 +444,10 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	}
 
 	// go and do the dirty deed
-	/*
-		err = isAuthorized(context, name, auth.PRIV_FUNCTION_EXECUTE)
-		if err != nil {
-			return nil, err
-		}
-	*/
+	err = Authorize(entry.privs, context.Credentials())
+	if err != nil {
+		return nil, err
+	}
 
 	newContext := context
 	switchContext := body.SwitchContext()
@@ -433,15 +495,30 @@ func (entry *FunctionEntry) add() *FunctionEntry {
 	return entry
 }
 
-/*
-// check privileges
-func isAuthorized(context Context, name FunctionName, priv auth.Privilege) errors.Error {
-        privs := auth.NewPrivileges()
-        privs.Add(name.Key(), priv)
-        _, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
-        return err
+func (entry *FunctionEntry) loadPrivileges() errors.Error {
+	privs, err := entry.FunctionBody.Privileges()
+	if err != nil {
+		return err
+	}
+	if privs == nil {
+		privs = auth.NewPrivileges()
+	}
+	if entry.IsGlobal() {
+		if entry.IsExternal() {
+			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL)
+		} else {
+			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS)
+		}
+	} else {
+		if entry.IsExternal() {
+			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL)
+		} else {
+			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS)
+		}
+	}
+	entry.privs = privs
+	return nil
 }
-*/
 
 // dummy runner throwing errors, for initialization purposes
 type empty struct {
@@ -469,6 +546,14 @@ func (this *missing) Indexable() value.Tristate {
 
 func (this *missing) SwitchContext() value.Tristate {
 	return value.FALSE
+}
+
+func (this *missing) IsExternal() bool {
+	return false
+}
+
+func (this *missing) Privileges() (*auth.Privileges, errors.Error) {
+	return nil, nil
 }
 
 func (this *missing) SetVarNames(vars []string) errors.Error {

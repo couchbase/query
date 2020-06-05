@@ -61,7 +61,7 @@ func (this *DropFunction) RunOnce(context *Context, parent value.Value) {
 
 		// Actually drop function
 		this.switchPhase(_SERVTIME)
-		err := functions.DeleteFunction(this.plan.Name())
+		err := functions.DeleteFunction(this.plan.Name(), context)
 		this.switchPhase(_EXECTIME)
 		if err != nil {
 			context.Error(err)

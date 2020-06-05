@@ -17,6 +17,7 @@ import (
 	"os"
 	"plugin"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/util"
@@ -34,11 +35,6 @@ type golangBody struct {
 
 var _PATH string
 var enabled = true
-
-// golang UDFs can use this to execute N1QL
-func Run(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, context functions.Context) (value.Value, uint64, error) {
-	return context.EvaluateStatement(statement, namedArgs, positionalArgs, false, context.Readonly())
-}
 
 func Init() {
 	functions.FunctionsNewLanguage(functions.GOLANG, &golang{})
@@ -144,4 +140,13 @@ func (this *golangBody) Indexable() value.Tristate {
 
 func (this *golangBody) SwitchContext() value.Tristate {
 	return value.TRUE
+
+}
+
+func (this *golangBody) IsExternal() bool {
+	return true
+}
+
+func (this *golangBody) Privileges() (*auth.Privileges, errors.Error) {
+	return nil, nil
 }

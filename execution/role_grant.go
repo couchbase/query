@@ -96,11 +96,20 @@ func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 		ret := make([]datastore.Role, 0, len(rolesList)*len(keyspaceList))
 		for _, role := range rolesList {
 			for _, ks := range keyspaceList {
-				keyspace, _ := datastore.GetKeyspace(ks.Path().Parts()...)
-				if keyspace == nil {
-					return nil, errors.NewNoSuchKeyspaceError(ks.FullName())
+				parts := ks.Path().Parts()
+				if len(parts) != 3 {
+					keyspace, _ := datastore.GetKeyspace(parts...)
+					if keyspace == nil {
+						return nil, errors.NewNoSuchKeyspaceError(ks.FullName())
+					}
+					ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
+				} else {
+					scope, _ := datastore.GetScope(parts...)
+					if scope == nil {
+						return nil, errors.NewNoSuchScopeError(ks.FullName())
+					}
+					ret = append(ret, datastore.Role{Name: role, Target: scope.AuthKey()})
 				}
-				ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
 			}
 		}
 		return ret, nil

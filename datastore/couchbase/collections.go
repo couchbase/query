@@ -28,8 +28,9 @@ import (
 const _DEFAULT_SCOPE_COLLECTION_NAME = "._default._default"
 
 type scope struct {
-	id     string
-	bucket *keyspace
+	id      string
+	authKey string
+	bucket  *keyspace
 
 	keyspaces map[string]*collection // keyspaces by id
 }
@@ -53,6 +54,10 @@ func (sc *scope) Id() string {
 
 func (sc *scope) Name() string {
 	return sc.id
+}
+
+func (sc *scope) AuthKey() string {
+	return sc.authKey
 }
 
 func (sc *scope) BucketId() string {
@@ -323,6 +328,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 			id:        s.Name,
 			bucket:    bucket,
 			keyspaces: make(map[string]*collection, len(s.Collections)),
+			authKey:   bucket.name + "." + s.Name,
 		}
 		for _, c := range s.Collections {
 			coll := &collection{
@@ -381,6 +387,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			id:        s.Name,
 			bucket:    bucket,
 			keyspaces: make(map[string]*collection, len(s.Collections)),
+			authKey:   bucket.name + "." + s.Name,
 		}
 
 		oldScope := oldScopes[s.Name]

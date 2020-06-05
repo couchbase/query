@@ -89,6 +89,10 @@ func (sc *virtualScope) Name() string {
 	return sc.id
 }
 
+func (sc *virtualScope) AuthKey() string {
+	return sc.id
+}
+
 func (sc *virtualScope) BucketId() string {
 	return sc.bucket.Id()
 }

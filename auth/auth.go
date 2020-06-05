@@ -40,11 +40,6 @@ const (
 	PRIV_QUERY_BUCKET_ADMIN                     Privilege = 25 // Ability to add, drop, flush scopes and collections
 )
 
-func IsStatementTypePrivilege(priv Privilege) bool {
-	return priv == PRIV_QUERY_SELECT || priv == PRIV_QUERY_UPDATE ||
-		priv == PRIV_QUERY_INSERT || priv == PRIV_QUERY_DELETE
-}
-
 type PrivilegePair struct {
 	Target string // For what resource is the privilege requested. Typically a string of
 	// the form "namespace:keyspace". Could be blank, for system-wide

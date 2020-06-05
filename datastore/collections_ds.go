@@ -271,6 +271,10 @@ func (cs *CollectionsScope) Name() string {
 	return cs.id
 }
 
+func (cs *CollectionsScope) AuthKey() string {
+	return cs.id
+}
+
 func (cs *CollectionsScope) BucketId() string {
 	return cs.bucket.Id()
 }

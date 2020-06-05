@@ -461,7 +461,8 @@ tokOffset	 int
 %type <val>              infer_ustat_with opt_infer_ustat_with
 
 %type <ss>               user_list
-%type <keyspaceRefs>     keyspace_list
+%type <keyspaceRefs>     keyspace_scope_list
+%type <keyspaceRef>      keyspace_scope
 %type <ss>               role_list
 %type <s>                role_name
 %type <s>                user
@@ -2161,7 +2162,7 @@ GRANT role_list TO user_list
 	$$ = algebra.NewGrantRole($2, nil, $4)
 }
 |
-GRANT role_list ON keyspace_list TO user_list
+GRANT role_list ON keyspace_scope_list TO user_list
 {
 	$$ = algebra.NewGrantRole($2, $4, $6)
 }
@@ -2206,15 +2207,54 @@ DELETE
 }
 ;
 
-keyspace_list:
-keyspace_ref
+keyspace_scope_list:
+keyspace_scope
 {
 	$$ = []*algebra.KeyspaceRef{ $1 }
 }
 |
-keyspace_list COMMA keyspace_ref
+keyspace_scope_list COMMA keyspace_scope
 {
 	$$ = append($1, $3)
+}
+;
+
+keyspace_scope:
+// keyspaces
+keyspace_name
+{
+    $$ = algebra.NewKeyspaceRefWithContext($1, "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+}
+|
+namespace_name keyspace_name
+{
+    path := algebra.NewPathShort($1, $2)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
+namespace_name bucket_name DOT scope_name DOT keyspace_name
+{
+    path := algebra.NewPathLong($1, $2, $4, $6)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
+bucket_name DOT scope_name DOT keyspace_name
+{
+    path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
+// scopes
+namespace_name bucket_name DOT scope_name
+{
+    path := algebra.NewPathScope($1, $2, $4)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
+bucket_name DOT scope_name
+{
+    path := algebra.NewPathScope(yylex.(*lexer).Namespace(), $1, $3)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 ;
 
@@ -2253,7 +2293,7 @@ REVOKE role_list FROM user_list
 	$$ = algebra.NewRevokeRole($2, nil, $4)
 }
 |
-REVOKE role_list ON keyspace_list FROM user_list
+REVOKE role_list ON keyspace_scope_list FROM user_list
 {
 	$$ = algebra.NewRevokeRole($2, $4, $6)
 }

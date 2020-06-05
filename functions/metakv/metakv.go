@@ -157,8 +157,12 @@ func (name *metaEntry) Key() string {
 	return name.path.FullName()
 }
 
+func (name *metaEntry) IsGlobal() bool {
+	return !name.path.IsCollection()
+}
+
 func (name *metaEntry) QueryContext() string {
-	return name.path.QueryContext()
+	return name.path.FullName()
 }
 
 func (name *metaEntry) Signature(object map[string]interface{}) {

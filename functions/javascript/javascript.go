@@ -17,6 +17,7 @@ import (
 
 	"github.com/couchbase/eventing-ee/js-evaluator/defs"
 	"github.com/couchbase/eventing-ee/js-evaluator/n1ql-client"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
@@ -150,4 +151,12 @@ func (this *javascriptBody) Indexable() value.Tristate {
 // queryContext and readonly are resolved outside of this request
 func (this *javascriptBody) SwitchContext() value.Tristate {
 	return value.FALSE
+}
+
+func (this *javascriptBody) IsExternal() bool {
+	return true
+}
+
+func (this *javascriptBody) Privileges() (*auth.Privileges, errors.Error) {
+	return nil, nil
 }

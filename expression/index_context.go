@@ -12,6 +12,7 @@ package expression
 import (
 	"time"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/value"
 )
 
@@ -48,6 +49,10 @@ func (this *IndexContext) Now() time.Time {
 // 5 next methods are unused and only for expression Context compatibility
 func (this *IndexContext) AuthenticatedUsers() []string {
 	return []string{"NEVER_USED"}
+}
+
+func (this *IndexContext) Credentials() *auth.Credentials {
+	return nil
 }
 
 func (this *IndexContext) DatastoreVersion() string {

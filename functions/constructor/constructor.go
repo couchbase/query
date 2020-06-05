@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/authorize"
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
@@ -24,6 +25,7 @@ import (
 
 func Init(mux *mux.Router) {
 	functions.Constructor = newGlobalFunction
+	authorize.Init()
 	storage.Init()
 	golang.Init()
 	inline.Init()

@@ -14,6 +14,8 @@ package inline
 import (
 	goerrors "errors"
 
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
@@ -135,4 +137,28 @@ func (this *inlineBody) Indexable() value.Tristate {
 // so no need to switch
 func (this *inlineBody) SwitchContext() value.Tristate {
 	return value.FALSE
+}
+
+func (this *inlineBody) IsExternal() bool {
+	return false
+}
+
+func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
+	subqueries, err := expression.ListSubqueries(expression.Expressions{this.expr}, false)
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
+
+	privileges := auth.NewPrivileges()
+	for _, s := range subqueries {
+		sub := s.(*algebra.Subquery)
+		sp, e := sub.Select().Privileges()
+		if e != nil {
+			return nil, e
+		}
+
+		privileges.AddAll(sp)
+	}
+
+	return privileges, nil
 }
