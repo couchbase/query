@@ -40,7 +40,12 @@ func opIsUnimplemented(namespace, bucket string, requested auth.Privilege) bool 
 	return false
 }
 
+func removebackticks(str string) string {
+	return strings.Replace(str, "`", "", -1)
+}
+
 func privilegeString(namespace, bucket string, requested auth.Privilege) (string, error) {
+	bucket = removebackticks(bucket)
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
