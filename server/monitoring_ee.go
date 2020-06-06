@@ -17,7 +17,7 @@ import (
 
 func setProfileAdmin(s *Server, o interface{}) errors.Error {
 	value, _ := o.(string)
-	prof, ok := ParseProfile(value)
+	prof, ok := ParseProfile(value, false)
 	if ok {
 		s.SetProfile(prof)
 	}

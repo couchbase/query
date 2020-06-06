@@ -486,7 +486,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		prof = server.Profile()
 	}
 
-	if prof == ProfOn {
+	if prof == ProfOn || prof == ProfBench {
 		re.Timings = request.GetTimings()
 		request.SetTimings(nil)
 		if re.Timings != nil {

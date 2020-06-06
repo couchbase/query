@@ -236,6 +236,10 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	if this.Halted() {
 		return false
 	}
+	if this.Profile() == server.ProfBench {
+		this.resultCount++
+		return true
+	}
 
 	this.writer.timeFlush()
 	beforeWrites := this.writer.mark()
@@ -620,7 +624,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			}
 		}
 	}
-	if p == server.ProfOn {
+	if p == server.ProfOn || p == server.ProfBench {
 		timings := this.GetTimings()
 		if timings != nil {
 			if indent != "" {

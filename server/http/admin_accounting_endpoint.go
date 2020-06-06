@@ -770,7 +770,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 
 			// TODO - check lifetime of entry
 			// by the time we marshal, is this still valid?
-			if prof == server.ProfOn && t != nil {
+			if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
 				reqMap["timings"] = t
 				p = request.Output().FmtOptimizerEstimates(t)
 				if p != nil {

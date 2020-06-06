@@ -25,7 +25,7 @@ var CONTROLS = flag.Bool("controls", false, "EE only - Response to include contr
 func monitoringInit(configstore clustering.ConfigurationStore) (server.Profile, bool, errors.Error) {
 	var err errors.Error
 
-	prof, _ := server.ParseProfile(*PROFILE)
+	prof, _ := server.ParseProfile(*PROFILE, false)
 	if prof != server.ProfOff {
 		err = errors.NewNotImplemented("Profiling is an EE only feature")
 	}

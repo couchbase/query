@@ -20,7 +20,7 @@ import (
 func getProfileRequest(a httpRequestArgs, parm string, val interface{}) (server.Profile, errors.Error) {
 	profile, err := a.getStringVal(parm, val)
 	if err == nil && profile != "" {
-		prof, ok := server.ParseProfile(profile)
+		prof, ok := server.ParseProfile(profile, true)
 		if ok {
 			return prof, nil
 		} else {

@@ -27,6 +27,6 @@ var CONTROLS = flag.Bool("controls", false, "Response to include controls sectio
 
 func monitoringInit(configstore clustering.ConfigurationStore) (server.Profile, bool, errors.Error) {
 	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
-	prof, _ := server.ParseProfile(*PROFILE)
+	prof, _ := server.ParseProfile(*PROFILE, false)
 	return prof, *CONTROLS, nil
 }

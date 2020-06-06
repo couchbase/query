@@ -46,12 +46,14 @@ const (
 	ProfOff
 	ProfPhases
 	ProfOn
+	ProfBench
 )
 
 var _PROFILE_MAP = map[string]Profile{
-	"off":     ProfOff,
-	"phases":  ProfPhases,
-	"timings": ProfOn,
+	"off":       ProfOff,
+	"phases":    ProfPhases,
+	"timings":   ProfOn,
+	"benchmark": ProfBench,
 }
 
 var _PROFILE_DEFAULT = ProfOff
@@ -61,6 +63,7 @@ var _PROFILE_NAMES = []string{
 	ProfOff:    "off",
 	ProfPhases: "phases",
 	ProfOn:     "timings",
+	ProfBench:  "benchmark",
 }
 
 var _IPv6 = false
@@ -448,13 +451,14 @@ func (this *Server) SetControls(srvcontrols bool) {
 	this.srvcontrols = srvcontrols
 }
 
-func ParseProfile(name string) (Profile, bool) {
+func ParseProfile(name string, bench bool) (Profile, bool) {
 	prof, ok := _PROFILE_MAP[strings.ToLower(name)]
 	if ok {
-		return prof, ok
-	} else {
-		return _PROFILE_DEFAULT, ok
+		if prof != ProfBench || bench {
+			return prof, ok
+		}
 	}
+	return _PROFILE_DEFAULT, ok
 }
 
 func (this *Server) Enterprise() bool {

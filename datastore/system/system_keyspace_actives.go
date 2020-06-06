@@ -194,7 +194,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				}
 
 				t := request.GetTimings()
-				if prof == server.ProfOn && t != nil {
+				if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
 					bytes, _ := json.Marshal(t)
 					meta["plan"] = bytes
 					optEstimates := request.Output().FmtOptimizerEstimates(t)
