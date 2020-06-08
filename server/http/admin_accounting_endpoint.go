@@ -536,7 +536,7 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 
 			itemMap = map[string]interface{}{}
 			entry.Target(itemMap)
-			entry.Content(itemMap)
+			entry.Dictionary(itemMap)
 		})
 		return itemMap, nil
 	} else {
@@ -548,7 +548,7 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		err := verifyCredentialsFromRequest("dictionary_cache", req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +566,7 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 			data[i] = map[string]interface{}{}
 			entry := d.(dictionary.DictCacheEntry)
 			entry.Target(data[i])
-			entry.Content(data[i])
+			entry.Dictionary(data[i])
 			i++
 			return true
 		}

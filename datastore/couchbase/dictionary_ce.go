@@ -27,7 +27,7 @@ import (
 // dummy
 type DictCacheEntry interface {
 	Target(map[string]interface{})
-	Content(map[string]interface{})
+	Dictionary(map[string]interface{})
 }
 
 func CountDictCacheEntries() int {
@@ -62,6 +62,10 @@ func Count() (int64, error) {
 
 func Foreach(f func(string) error) error {
 	return nil
+}
+
+func DropDictionaryEntry(keyspace string) {
+	// no-op
 }
 
 type chkIndexDict struct {

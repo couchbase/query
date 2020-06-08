@@ -452,7 +452,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 		if oldScope != nil {
 			for n, _ := range oldScope.keyspaces {
 				if scope.keyspaces[n] == nil {
-					DropDictCacheEntry(oldScope.keyspaces[n].QualifiedName())
+					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
 				}
 			}
 		}
@@ -478,11 +478,8 @@ func dropDictCacheEntries(bucket *keyspace) {
 }
 
 func clearOldScope(bucket *keyspace, s *scope) {
-
-	// TODO clear distribution metakv
-	// remove dictionary cache entries
 	for c, _ := range s.keyspaces {
-		DropDictCacheEntry(s.keyspaces[c].QualifiedName())
+		DropDictionaryEntry(s.keyspaces[c].QualifiedName())
 		s.keyspaces[c] = nil
 	}
 

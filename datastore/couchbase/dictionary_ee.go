@@ -30,7 +30,7 @@ import (
 
 type DictCacheEntry interface {
 	Target(map[string]interface{})
-	Content(map[string]interface{})
+	Dictionary(map[string]interface{})
 }
 
 func CountDictCacheEntries() int {
@@ -46,7 +46,7 @@ func DictCacheEntryDo(k string, f func(interface{})) {
 }
 
 func DropDictCacheEntry(keyspace string) {
-	dictionary.DropKeyspace(keyspace)
+	dictionary.DropDictCacheEntry(keyspace)
 }
 
 func NameDictCacheEntries() []string {
@@ -69,6 +69,10 @@ func Count() (int64, error) {
 
 func Foreach(f func(string) error) error {
 	return dictionary.Foreach(f)
+}
+
+func DropDictionaryEntry(keyspace string) {
+	dictionary.DropDictionaryEntry(keyspace)
 }
 
 const _GRACE_PERIOD = time.Second

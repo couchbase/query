@@ -156,13 +156,13 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[funcs.Name()] = funcs
 
-	dictCache, e := newDictionaryCacheKeyspace(p)
+	dictCache, e := newDictionaryCacheKeyspace(p, KEYSPACE_NAME_DICTIONARY_CACHE)
 	if e != nil {
 		return e
 	}
 	p.keyspaces[dictCache.Name()] = dictCache
 
-	dict, e := newDictionaryKeyspace(p)
+	dict, e := newDictionaryKeyspace(p, KEYSPACE_NAME_DICTIONARY)
 	if e != nil {
 		return e
 	}

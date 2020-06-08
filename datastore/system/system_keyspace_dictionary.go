@@ -12,6 +12,7 @@ package system
 import (
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/timestamp"
@@ -96,7 +97,7 @@ func (b *dictionaryKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.
 	}
 	itemMap := map[string]interface{}{}
 	entry.Target(itemMap)
-	entry.Content(itemMap)
+	entry.Dictionary(itemMap)
 	return value.NewAnnotatedValue(value.NewValue(itemMap)), nil
 }
 
@@ -116,13 +117,26 @@ func (b *dictionaryKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.
 }
 
 func (b *dictionaryKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	creds, authToken := credsFromContext(context)
+
+	for _, name := range deletes {
+
+		// if we are deleting a dictionary entry, we also must remove it
+		// from all the n1ql node caches
+		distributed.RemoteAccess().DoRemoteOps([]string{}, "dictionary_cache", "DELETE", name, "",
+			func(warn errors.Error) {
+				context.Warning(warn)
+			},
+			creds, authToken)
+
+		dictionary.DropDictCacheEntry(name)
+	}
+	return deletes, nil
 }
 
-func newDictionaryKeyspace(p *namespace) (*dictionaryKeyspace, errors.Error) {
+func newDictionaryKeyspace(p *namespace, name string) (*dictionaryKeyspace, errors.Error) {
 	b := new(dictionaryKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_DICTIONARY)
+	setKeyspaceBase(&b.keyspaceBase, p, name)
 
 	primary := &dictionaryIndex{name: "#primary", keyspace: b}
 	b.si = newSystemIndexer(b, primary)

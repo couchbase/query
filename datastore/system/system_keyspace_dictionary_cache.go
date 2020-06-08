@@ -44,7 +44,7 @@ func (b *dictionaryCacheKeyspace) Count(context datastore.QueryContext) (int64, 
 	var count int
 
 	count = 0
-	distributed.RemoteAccess().GetRemoteKeys([]string{}, "dictionary_cache", func(id string) bool {
+	distributed.RemoteAccess().GetRemoteKeys([]string{}, b.name, func(id string) bool {
 		count++
 		return true
 	}, func(warn errors.Error) {
@@ -78,7 +78,7 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 		// remote entry
 		if len(node) != 0 && node != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
-				"dictionary_cache", "POST",
+				b.name, "POST",
 				func(doc map[string]interface{}) {
 
 					remoteValue := value.NewAnnotatedValue(doc)
@@ -100,7 +100,7 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 				itemMap := map[string]interface{}{}
 				entry := d.(dictionary.DictCacheEntry)
 				entry.Target(itemMap)
-				entry.Content(itemMap)
+				entry.Dictionary(itemMap)
 				item := value.NewAnnotatedValue(itemMap)
 				item.SetAttachment("meta", map[string]interface{}{
 					"id":       key,
@@ -130,7 +130,6 @@ func (b *dictionaryCacheKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, er
 }
 
 func (b *dictionaryCacheKeyspace) Delete(deletes []string, context datastore.QueryContext) ([]string, errors.Error) {
-
 	creds, authToken := credsFromContext(context)
 
 	// now that the node name can change in flight, use a consistent one across deletes
@@ -142,7 +141,7 @@ func (b *dictionaryCacheKeyspace) Delete(deletes []string, context datastore.Que
 		if len(node) != 0 && node != whoAmI {
 
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
-				"dictionary_cache", "DELETE", nil,
+				b.name, "DELETE", nil,
 				func(warn errors.Error) {
 					context.Warning(warn)
 				},
@@ -156,9 +155,9 @@ func (b *dictionaryCacheKeyspace) Delete(deletes []string, context datastore.Que
 	return deletes, nil
 }
 
-func newDictionaryCacheKeyspace(p *namespace) (*dictionaryCacheKeyspace, errors.Error) {
+func newDictionaryCacheKeyspace(p *namespace, name string) (*dictionaryCacheKeyspace, errors.Error) {
 	b := new(dictionaryCacheKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_DICTIONARY_CACHE)
+	setKeyspaceBase(&b.keyspaceBase, p, name)
 
 	primary := &dictionaryCacheIndex{
 		name:     "#primary",
@@ -275,7 +274,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 				})
 			} else {
 				nodes := []string{spanEvaluator.key()}
-				distributed.RemoteAccess().GetRemoteKeys(nodes, "dictionary_cache", func(id string) bool {
+				distributed.RemoteAccess().GetRemoteKeys(nodes, pi.keyspace.name, func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{
 						PrimaryKey: id,
@@ -311,7 +310,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 				}
 			}
 			if len(eligibleNodes) > 0 {
-				distributed.RemoteAccess().GetRemoteKeys(eligibleNodes, "dictionary_cache", func(id string) bool {
+				distributed.RemoteAccess().GetRemoteKeys(eligibleNodes, pi.keyspace.name, func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{
 						PrimaryKey: id,
@@ -340,7 +339,7 @@ func (pi *dictionaryCacheIndex) ScanEntries(requestId string, limit int64, cons 
 	}, func() bool {
 		return sendSystemKey(conn, entry)
 	})
-	distributed.RemoteAccess().GetRemoteKeys([]string{}, "dictionary_cache", func(id string) bool {
+	distributed.RemoteAccess().GetRemoteKeys([]string{}, pi.keyspace.name, func(id string) bool {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
