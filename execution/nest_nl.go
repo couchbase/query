@@ -151,6 +151,16 @@ loop:
 		return false
 	}
 	if joined != nil {
+		if this.plan.Filter() != nil {
+			result, err := this.plan.Filter().Evaluate(joined, context)
+			if err != nil {
+				context.Error(errors.NewEvaluationError(err, "nested-loop nest filter"))
+				return false
+			}
+			if !result.Truth() {
+				return true
+			}
+		}
 		return this.sendItem(joined)
 	}
 

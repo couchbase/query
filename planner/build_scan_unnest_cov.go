@@ -264,7 +264,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// generate filters for covering index scan
 	var filter expression.Expression
 	if indexGroupAggs == nil {
-		filter, err = this.getFilter(node.Alias(), covers, filterCovers)
+		filter, err = this.getFilter(node.Alias(), nil, covers, filterCovers)
 		if err != nil {
 			return nil, nil, err
 		}

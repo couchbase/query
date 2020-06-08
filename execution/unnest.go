@@ -84,6 +84,17 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		actv.SetAttachment("unnest_position", i)
 		av.SetField(this.plan.Alias(), actv)
 
+		if this.plan.Filter() != nil {
+			result, err := this.plan.Filter().Evaluate(av, context)
+			if err != nil {
+				context.Error(errors.NewEvaluationError(err, "unnest filter"))
+				return false
+			}
+			if !result.Truth() {
+				continue
+			}
+		}
+
 		if !this.sendItem(av) {
 			return false
 		}

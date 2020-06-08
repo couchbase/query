@@ -24,22 +24,23 @@ type NLJoin struct {
 	onclause    expression.Expression
 	hintError   string
 	child       Operator
+	filter      expression.Expression
 	cost        float64
 	cardinality float64
 }
 
-func NewNLJoin(join *algebra.AnsiJoin, child Operator, cost, cardinality float64) *NLJoin {
-	rv := &NLJoin{
+func NewNLJoin(join *algebra.AnsiJoin, child Operator, filter expression.Expression,
+	cost, cardinality float64) *NLJoin {
+	return &NLJoin{
 		outer:       join.Outer(),
 		alias:       join.Alias(),
 		onclause:    join.Onclause(),
 		hintError:   join.HintError(),
 		child:       child,
+		filter:      filter,
 		cost:        cost,
 		cardinality: cardinality,
 	}
-
-	return rv
 }
 
 func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
@@ -70,6 +71,10 @@ func (this *NLJoin) Child() Operator {
 	return this.child
 }
 
+func (this *NLJoin) Filter() expression.Expression {
+	return this.filter
+}
+
 func (this *NLJoin) Cost() float64 {
 	return this.cost
 }
@@ -95,6 +100,10 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["hint_not_followed"] = this.hintError
 	}
 
+	if this.filter != nil {
+		r["filter"] = expression.NewStringer().Visit(this.filter)
+	}
+
 	if this.cost > 0.0 {
 		r["cost"] = this.cost
 	}
@@ -118,6 +127,7 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 		Outer       bool            `json:"outer"`
 		Alias       string          `json:"alias"`
 		HintError   string          `json:"hint_not_followed"`
+		Filter      string          `json:"filter"`
 		Cost        float64         `json:"cost"`
 		Cardinality float64         `json:"cardinality"`
 		Child       json.RawMessage `json:"~child"`
@@ -138,6 +148,13 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 	this.outer = _unmarshalled.Outer
 	this.alias = _unmarshalled.Alias
 	this.hintError = _unmarshalled.HintError
+
+	if _unmarshalled.Filter != "" {
+		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
 
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)

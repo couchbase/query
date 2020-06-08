@@ -212,7 +212,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 				this.plan.BuildAliases(), this.ansiFlags, context, "join")
 			if match && ok {
 				matched = true
-				ok = this.sendItem(joined)
+				ok = this.checkSendItem(joined, this.plan.Filter(), context)
 			}
 		} else {
 			context.Error(errors.NewExecutionInternalError("Hash Table Get produced non-Annotated value"))
@@ -227,7 +227,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	}
 
 	if this.plan.Outer() && !matched {
-		return this.sendItem(item)
+		return this.checkSendItem(item, this.plan.Filter(), context)
 	}
 
 	return true
@@ -243,6 +243,20 @@ func (this *HashJoin) dropHashTable() {
 		this.hashTab.Drop()
 		this.hashTab = nil
 	}
+}
+
+func (this *HashJoin) checkSendItem(av value.AnnotatedValue, filter expression.Expression, context *Context) bool {
+	if filter != nil {
+		result, err := filter.Evaluate(av, context)
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "hash join filter"))
+			return false
+		}
+		if !result.Truth() {
+			return true
+		}
+	}
+	return this.sendItem(av)
 }
 
 func (this *HashJoin) MarshalJSON() ([]byte, error) {

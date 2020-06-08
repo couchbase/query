@@ -26,12 +26,13 @@ type HashNest struct {
 	probeExprs  expression.Expressions
 	buildAlias  string
 	hintError   string
+	filter      expression.Expression
 	cost        float64
 	cardinality float64
 }
 
 func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs expression.Expressions,
-	buildAlias string, cost, cardinality float64) *HashNest {
+	buildAlias string, filter expression.Expression, cost, cardinality float64) *HashNest {
 	return &HashNest{
 		outer:       nest.Outer(),
 		onclause:    nest.Onclause(),
@@ -40,6 +41,7 @@ func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs 
 		probeExprs:  probeExprs,
 		buildAlias:  buildAlias,
 		hintError:   nest.HintError(),
+		filter:      filter,
 		cost:        cost,
 		cardinality: cardinality,
 	}
@@ -81,6 +83,10 @@ func (this *HashNest) HintError() string {
 	return this.hintError
 }
 
+func (this *HashNest) Filter() expression.Expression {
+	return this.filter
+}
+
 func (this *HashNest) Cost() float64 {
 	return this.cost
 }
@@ -119,6 +125,10 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 		r["hint_not_followed"] = this.hintError
 	}
 
+	if this.filter != nil {
+		r["filter"] = expression.NewStringer().Visit(this.filter)
+	}
+
 	if this.cost > 0.0 {
 		r["cost"] = this.cost
 	}
@@ -144,6 +154,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 		ProbeExprs  []string        `json:"probe_exprs"`
 		BuildAlias  string          `json:"build_alias"`
 		HintError   string          `json:"hint_not_followed"`
+		Filter      string          `json:"filter"`
 		Cost        float64         `json:"cost"`
 		Cardinality float64         `json:"cardinality"`
 		Child       json.RawMessage `json:"~child"`
@@ -183,6 +194,13 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 
 	this.buildAlias = _unmarshalled.BuildAlias
 	this.hintError = _unmarshalled.HintError
+
+	if _unmarshalled.Filter != "" {
+		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
 
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)

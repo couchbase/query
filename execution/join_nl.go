@@ -129,7 +129,7 @@ loop:
 					aliases, this.ansiFlags, context, "join")
 				if ok && match {
 					matched = true
-					ok = this.sendItem(joined)
+					ok = this.checkSendItem(joined, this.plan.Filter(), context)
 				}
 
 				// TODO break out and child.SendStop() here for semin-scans
@@ -155,7 +155,7 @@ loop:
 	}
 
 	if this.plan.Outer() && !matched {
-		return this.sendItem(item)
+		return this.checkSendItem(item, this.plan.Filter(), context)
 	}
 
 	return true
@@ -216,6 +216,20 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	}
 
 	return match, true, joined
+}
+
+func (this *NLJoin) checkSendItem(av value.AnnotatedValue, filter expression.Expression, context *Context) bool {
+	if filter != nil {
+		result, err := filter.Evaluate(av, context)
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "nested-loop join filter"))
+			return false
+		}
+		if !result.Truth() {
+			return true
+		}
+	}
+	return this.sendItem(av)
 }
 
 func (this *NLJoin) MarshalJSON() ([]byte, error) {

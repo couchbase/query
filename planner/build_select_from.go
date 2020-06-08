@@ -246,7 +246,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 		}
 
-		filter, err := this.getFilter(node.Alias(), nil, nil)
+		filter, err := this.getFilter(node.Alias(), nil, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +276,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	selOp := sel.(plan.Operator)
 	this.addChildren(selOp, plan.NewAlias(node.Alias(), selOp.Cost(), selOp.Cardinality()))
 
-	filter, err := this.getFilter(node.Alias(), nil, nil)
+	filter, err := this.getFilter(node.Alias(), nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +310,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	filter, err := this.getFilter(node.Alias(), nil, nil)
+	filter, err := this.getFilter(node.Alias(), nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -588,12 +588,17 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 
 	_, found := this.coveredUnnests[node]
 	if !found {
+		filter, err := this.getFilter(node.Alias(), nil, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
 			cost, cardinality = getUnnestCost(node, this.lastOp, this.keyspaceNames)
 		}
-		this.addSubChildren(plan.NewUnnest(node, cost, cardinality))
+		this.addSubChildren(plan.NewUnnest(node, filter, cost, cardinality))
 		this.addChildren(this.addSubchildrenParallel())
 	}
 
@@ -743,14 +748,17 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 	}
 }
 
-func (this *builder) getFilter(alias string, covers expression.Covers,
+func (this *builder) getFilter(alias string, onclause expression.Expression, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) (expression.Expression, error) {
 
 	var err error
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 
+	join := onclause != nil
+
 	// cannot do early filtering on subservient side of outer join
-	if baseKeyspace.Outerlevel() > 0 {
+	outer := baseKeyspace.Outerlevel() > 0
+	if outer && !join {
 		return nil, nil
 	}
 
@@ -764,8 +772,17 @@ func (this *builder) getFilter(alias string, covers expression.Covers,
 			continue
 		}
 
-		if fl.IsJoin() {
-			continue
+		if join {
+			if !fl.IsJoin() && !outer {
+				continue
+			}
+			if fl.IsOnclause() && base.SubsetOf(onclause, fl.FltrExpr()) {
+				continue
+			}
+		} else {
+			if fl.IsJoin() {
+				continue
+			}
 		}
 
 		fltr := fl.FltrExpr()

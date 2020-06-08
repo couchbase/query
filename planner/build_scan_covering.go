@@ -271,7 +271,7 @@ outer:
 	var filter expression.Expression
 	var err error
 	if indexGroupAggs == nil {
-		filter, err = this.getFilter(node.Alias(), covers, filterCovers)
+		filter, err = this.getFilter(node.Alias(), nil, covers, filterCovers)
 		if err != nil {
 			return nil, 0, err
 		}
