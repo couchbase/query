@@ -1841,11 +1841,18 @@ func (b *keyspace) ScopeId() string {
 }
 
 func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
-	if ks.defaultCollection != nil {
+	switch d := ks.defaultCollection.(type) {
+	case *collection:
+		if d != nil {
+			return ks.defaultCollection, nil
+		}
+	case *keyspace:
+
+		// there are no scopes, operate in bucket mode
 		return ks.defaultCollection, nil
-	} else {
-		return nil, errors.NewCbBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
 	}
+	return nil, errors.NewCbBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
+
 }
 
 func (ks *keyspace) ScopeIds() ([]string, errors.Error) {
