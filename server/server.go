@@ -455,10 +455,10 @@ func ParseProfile(name string, bench bool) (Profile, bool) {
 	prof, ok := _PROFILE_MAP[strings.ToLower(name)]
 	if ok {
 		if prof != ProfBench || bench {
-			return prof, ok
+			return prof, true
 		}
 	}
-	return _PROFILE_DEFAULT, ok
+	return _PROFILE_DEFAULT, false
 }
 
 func (this *Server) Enterprise() bool {
