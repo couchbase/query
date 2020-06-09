@@ -90,6 +90,10 @@ func (this *Filter) IsDerived() bool {
 	return (this.fltrFlags & FLTR_IS_DERIVED) != 0
 }
 
+func (this *Filter) SetDerived() {
+	this.fltrFlags |= FLTR_IS_DERIVED
+}
+
 func (this *Filter) IsUnnest() bool {
 	return (this.fltrFlags & FLTR_IS_UNNEST) != 0
 }
@@ -168,16 +172,6 @@ func (this *Filter) ArraySelec() float64 {
 
 func (this *Filter) SetArraySelec(arrSelec float64) {
 	this.arrSelec = arrSelec
-}
-
-func AddDerivedFilter(term expression.Expression, keyspaceNames map[string]string, isOnclause bool, newFilters Filters) Filters {
-
-	newExpr := expression.NewIsNotNull(term)
-	newFilter := NewFilter(newExpr, newExpr, keyspaceNames, isOnclause, false)
-	newFilter.fltrFlags |= FLTR_IS_DERIVED
-	newFilters = append(newFilters, newFilter)
-
-	return newFilters
 }
 
 // check whether the join filter is a single join filter involving any of the keyspaces provided

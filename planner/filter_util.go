@@ -101,7 +101,8 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 
 // derive IS NOT NULL filters for a keyspace based on join filters in the
 // WHERE clause as well as ON-clause of inner joins
-func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, indexApiVersion int, virtualIndexes []datastore.Index) error {
+func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, useCBO bool,
+	indexApiVersion int, virtualIndexes []datastore.Index) error {
 
 	// first gather leading index key from all indexes for this keyspace
 	indexes := _INDEX_POOL.Get()
@@ -243,7 +244,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					continue
 				} else {
 					keyMap[val].derive = false
-					newFilters = base.AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters)
+					newFilters = AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters, useCBO)
 				}
 			} else {
 				simple := false
@@ -268,7 +269,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					min, _, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false)
 					if min > 0 {
 						keyMap[val].derive = false
-						newFilters = base.AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters)
+						newFilters = AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters, useCBO)
 					}
 				}
 			}
@@ -280,4 +281,19 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	}
 
 	return nil
+}
+
+func AddDerivedFilter(term expression.Expression, keyspaceNames map[string]string, isOnclause bool,
+	newFilters base.Filters, useCBO bool) base.Filters {
+
+	newExpr := expression.NewIsNotNull(term)
+	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, isOnclause, false)
+	newFilter.SetDerived()
+	if useCBO {
+		selec, _ := optExprSelec(keyspaceNames, newExpr)
+		newFilter.SetSelec(selec)
+	}
+	newFilters = append(newFilters, newFilter)
+
+	return newFilters
 }
