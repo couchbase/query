@@ -244,7 +244,7 @@ func AddFunction(name FunctionName, body FunctionBody) errors.Error {
 		}
 
 		// remove any missing entry remotely
-		distributed.RemoteAccess().DoRemoteOps([]string{}, "function_cache", "DELETE", key, "",
+		distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
 			func(warn errors.Error) {
 				if warn != nil {
 					logging.Infof("failed to remote delete function <ud>%v</ud>: %v", name.Name(), warn)
@@ -277,7 +277,7 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 		functions.cache.Delete(key, nil)
 
 		// and remotely
-		distributed.RemoteAccess().DoRemoteOps([]string{}, "function_cache", "DELETE", key, "",
+		distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
 			func(warn errors.Error) {
 				if warn != nil {
 					logging.Infof("failed to remote delete function <ud>%v</ud>: %v", name.Name(), warn)
