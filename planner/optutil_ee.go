@@ -186,6 +186,10 @@ func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (flo
 	return optutil.CalcSimpleFromTermCost(left, right, filters)
 }
 
+func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
+	return optutil.CalcSimpleFilterCost(cost, cardinality, selec)
+}
+
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) (float64, float64) {
 

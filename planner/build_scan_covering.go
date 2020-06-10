@@ -251,15 +251,17 @@ outer:
 	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, false, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
 	if useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 {
 		if indexGroupAggs != nil {
-			cost, cardinality := getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
+			cost, cardinality = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
 			if cost > 0.0 && cardinality > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
 			}
 		} else {
-			cost, cardinality := getIndexProjectionCost(index, indexProjection, entry.cardinality)
+			cost, cardinality = getIndexProjectionCost(index, indexProjection, entry.cardinality)
 			if cost > 0.0 && cardinality > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
@@ -271,9 +273,14 @@ outer:
 	var filter expression.Expression
 	var err error
 	if indexGroupAggs == nil {
-		filter, err = this.getFilter(node.Alias(), nil, covers, filterCovers)
+		filter, cost, cardinality, err = this.getIndexFilter(index, node.Alias(), entry.spans,
+			covers, filterCovers, entry.cost, entry.cardinality)
 		if err != nil {
 			return nil, 0, err
+		}
+		if useCBO {
+			entry.cost = cost
+			entry.cardinality = cardinality
 		}
 	}
 

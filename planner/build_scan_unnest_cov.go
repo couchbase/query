@@ -245,15 +245,17 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, true, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 {
 		if indexGroupAggs != nil {
-			cost, cardinality := getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
+			cost, cardinality = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
 			if cost > 0.0 && cardinality > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
 			}
 		} else {
-			cost, cardinality := getIndexProjectionCost(index, indexProjection, entry.cardinality)
+			cost, cardinality = getIndexProjectionCost(index, indexProjection, entry.cardinality)
 			if cost > 0.0 && cardinality > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
@@ -264,9 +266,14 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// generate filters for covering index scan
 	var filter expression.Expression
 	if indexGroupAggs == nil {
-		filter, err = this.getFilter(node.Alias(), nil, covers, filterCovers)
+		filter, cost, cardinality, err = this.getIndexFilter(index, node.Alias(), entry.spans,
+			covers, filterCovers, entry.cost, entry.cardinality)
 		if err != nil {
 			return nil, nil, err
+		}
+		if this.useCBO {
+			entry.cost = cost
+			entry.cardinality = cardinality
 		}
 	}
 

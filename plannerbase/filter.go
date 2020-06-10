@@ -174,6 +174,31 @@ func (this *Filter) SetArraySelec(arrSelec float64) {
 	this.arrSelec = arrSelec
 }
 
+func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool) bool {
+	if onclause == nil {
+		return true
+	}
+	if this.IsOnclause() {
+		// part of current ON-clause?
+		if SubsetOf(onclause, this.fltrExpr) {
+			return false
+		}
+		// if it's not part of the current ON-clause, it must be specified
+		// in an ON-clause for a later inner join (pushed), in which case
+		// treat it as postjoin
+		return true
+	} else if this.IsJoin() {
+		// join filter specified in the WHERE clause
+		return true
+	} else if outer {
+		// selection filter on subservient side of an outer join is evaluated postjoin
+		// if it is not part of the ON-clause
+		return true
+	}
+
+	return false
+}
+
 // check whether the join filter is a single join filter involving any of the keyspaces provided
 func (this *Filter) SingleJoinFilter(unnestKeyspaces map[string]bool) bool {
 	for ks, _ := range this.keyspaces {

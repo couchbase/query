@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
@@ -236,7 +237,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 		cost := scan.Cost()
 		cardinality := scan.Cardinality()
-		if this.useCBO && (cost > 0.0) {
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 			fetchCost := getFetchCost(keyspace, cardinality)
 			if fetchCost > 0.0 {
 				cost += fetchCost
@@ -246,9 +247,13 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 		}
 
-		filter, err := this.getFilter(node.Alias(), nil, nil, nil)
+		filter, selec, err := this.getFilter(node.Alias(), nil)
 		if err != nil {
 			return nil, err
+		}
+
+		if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
+			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
 		}
 
 		this.addChildren(plan.NewFetch(keyspace, node, names, filter, cost, cardinality))
@@ -276,7 +281,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	selOp := sel.(plan.Operator)
 	this.addChildren(selOp, plan.NewAlias(node.Alias(), selOp.Cost(), selOp.Cardinality()))
 
-	filter, err := this.getFilter(node.Alias(), nil, nil, nil)
+	filter, _, err := this.getFilter(node.Alias(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +315,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	filter, err := this.getFilter(node.Alias(), nil, nil, nil)
+	filter, selec, err := this.getFilter(node.Alias(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +324,9 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
 		cost, cardinality = getExpressionScanCost(node.ExpressionTerm(), this.keyspaceNames)
+		if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
+			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+		}
 	}
 	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality))
 
@@ -588,7 +596,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 
 	_, found := this.coveredUnnests[node]
 	if !found {
-		filter, err := this.getFilter(node.Alias(), nil, nil, nil)
+		filter, selec, err := this.getFilter(node.Alias(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -597,6 +605,9 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
 			cost, cardinality = getUnnestCost(node, this.lastOp, this.keyspaceNames)
+			if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
+				cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+			}
 		}
 		this.addSubChildren(plan.NewUnnest(node, filter, cost, cardinality))
 		this.addChildren(this.addSubchildrenParallel())
@@ -748,8 +759,58 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 	}
 }
 
-func (this *builder) getFilter(alias string, onclause expression.Expression, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value) (expression.Expression, error) {
+func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans SargSpans,
+	covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
+	cost, cardinality float64) (expression.Expression, float64, float64, error) {
+
+	var err error
+	baseKeyspace, _ := this.baseKeyspaces[alias]
+
+	// cannot do early filtering on subservient side of outer join
+	if baseKeyspace.Outerlevel() > 0 {
+		return nil, cost, cardinality, nil
+	}
+
+	var filter expression.Expression
+	var selec float64
+	var spans plan.Spans2
+	if sargSpans != nil {
+		// since we call this function only from covering index scans,
+		// we expect only TermSpans
+		if termSpans, ok := sargSpans.(*TermSpans); ok {
+			spans = termSpans.Spans()
+		}
+	}
+
+	if len(spans) > 0 {
+		// mark index filters for seletivity calculation
+		markIndexFlags(index, spans, alias, baseKeyspace.Filters())
+	}
+
+	filter, selec, err = this.getFilter(alias, nil)
+	if err != nil {
+		return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
+	}
+
+	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
+		coverer := expression.NewCoverer(covers, filterCovers)
+		filter, err = coverer.Map(filter)
+		if err != nil {
+			return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
+		}
+	}
+
+	// clear the index flags marked above (temporary marking)
+	baseKeyspace.Filters().ClearIndexFlag()
+
+	if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
+		cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+	}
+	return filter, cost, cardinality, nil
+}
+
+func (this *builder) getFilter(alias string, onclause expression.Expression) (
+	expression.Expression, float64, error) {
 
 	var err error
 	baseKeyspace, _ := this.baseKeyspaces[alias]
@@ -759,11 +820,17 @@ func (this *builder) getFilter(alias string, onclause expression.Expression, cov
 	// cannot do early filtering on subservient side of outer join
 	outer := baseKeyspace.Outerlevel() > 0
 	if outer && !join {
-		return nil, nil
+		return nil, OPT_SELEC_NOT_AVAIL, nil
 	}
 
 	filters := baseKeyspace.Filters()
 	terms := make(expression.Expressions, 0, len(filters))
+	selec := OPT_SELEC_NOT_AVAIL
+	doSelec := false
+	if this.useCBO {
+		doSelec = true
+		selec = float64(1.0)
+	}
 
 	for _, fl := range filters {
 		// unnest filters can only be evaluated after the UNNEST operation
@@ -773,10 +840,7 @@ func (this *builder) getFilter(alias string, onclause expression.Expression, cov
 		}
 
 		if join {
-			if !fl.IsJoin() && !outer {
-				continue
-			}
-			if fl.IsOnclause() && base.SubsetOf(onclause, fl.FltrExpr()) {
+			if !fl.IsPostjoinFilter(onclause, outer) {
 				continue
 			}
 		} else {
@@ -789,9 +853,17 @@ func (this *builder) getFilter(alias string, onclause expression.Expression, cov
 		terms = append(terms, fltr.Copy())
 		this.filter, err = expression.RemoveExpr(this.filter, fltr)
 		if err != nil {
-			return nil, err
+			return nil, OPT_SELEC_NOT_AVAIL, err
 		}
 
+		if doSelec && !fl.HasPlanFlags() {
+			if fl.Selec() > 0.0 {
+				selec *= fl.Selec()
+			} else {
+				doSelec = false
+				selec = OPT_SELEC_NOT_AVAIL
+			}
+		}
 	}
 
 	var filter expression.Expression
@@ -801,13 +873,35 @@ func (this *builder) getFilter(alias string, onclause expression.Expression, cov
 		filter = expression.NewAnd(terms...)
 	}
 
-	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
-		coverer := expression.NewCoverer(covers, filterCovers)
-		filter, err = coverer.Map(filter)
-		if err != nil {
-			return nil, err
+	return filter, selec, nil
+}
+
+func (this *builder) adjustForHashFilters(alias string, onclause expression.Expression,
+	selec float64) float64 {
+
+	baseKeyspace, _ := this.baseKeyspaces[alias]
+	outer := baseKeyspace.Outerlevel() > 0
+
+	for _, fl := range baseKeyspace.Filters() {
+		if fl.HasHJFlag() && (fl.Selec() > 0.0) && fl.IsPostjoinFilter(onclause, outer) {
+			selec /= fl.Selec()
 		}
 	}
 
-	return filter, nil
+	return selec
+}
+
+func (this *builder) adjustForIndexFilters(alias string, onclause expression.Expression,
+	selec float64) float64 {
+
+	baseKeyspace, _ := this.baseKeyspaces[alias]
+	outer := baseKeyspace.Outerlevel() > 0
+
+	for _, fl := range baseKeyspace.Filters() {
+		if fl.HasIndexFlag() && (fl.Selec() > 0.0) && fl.IsPostjoinFilter(onclause, outer) {
+			selec /= fl.Selec()
+		}
+	}
+
+	return selec
 }

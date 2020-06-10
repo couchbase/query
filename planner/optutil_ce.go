@@ -132,6 +132,10 @@ func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (flo
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
+func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
