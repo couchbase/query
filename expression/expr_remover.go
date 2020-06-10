@@ -32,6 +32,9 @@ type exprRemover struct {
 }
 
 func newExprRemover(removeExpr Expression) *exprRemover {
+	if or, ok := removeExpr.(*Or); ok {
+		removeExpr, _ = FlattenOr(or)
+	}
 	return &exprRemover{
 		removeExpr: removeExpr,
 	}
@@ -44,18 +47,11 @@ func (this *exprRemover) VisitAnd(expr *And) (interface{}, error) {
 	var sub interface{}
 	var err error
 
-	terms := make(Expressions, 0, len(expr.Operands()))
+	and, _ := FlattenAnd(expr)
+	terms := make(Expressions, 0, len(and.Operands()))
 	useNew := false
-	for _, op := range expr.Operands() {
-		switch op1 := op.(type) {
-		case *And:
-			sub, err = this.VisitAnd(op1)
-			if err == nil && (sub == nil || !op1.EquivalentTo(sub.(Expression))) {
-				useNew = true
-			}
-		default:
-			sub, err = this.visitDefault(op1)
-		}
+	for _, op := range and.Operands() {
+		sub, err = this.visitDefault(op)
 		if err != nil {
 			return nil, err
 		}
@@ -78,6 +74,11 @@ func (this *exprRemover) VisitAnd(expr *And) (interface{}, error) {
 	}
 
 	return NewAnd(terms...), nil
+}
+
+func (this *exprRemover) VisitOr(expr *Or) (interface{}, error) {
+	or, _ := FlattenOr(expr)
+	return this.visitDefault(or)
 }
 
 // Arithmetic
@@ -226,10 +227,6 @@ func (this *exprRemover) VisitObjectConstruct(pred *ObjectConstruct) (interface{
 }
 
 // Logic
-
-func (this *exprRemover) VisitOr(pred *Or) (interface{}, error) {
-	return this.visitDefault(pred)
-}
 
 func (this *exprRemover) VisitNot(pred *Not) (interface{}, error) {
 	return this.visitDefault(pred)
