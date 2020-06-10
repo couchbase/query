@@ -62,7 +62,7 @@ Also flatten and apply constant folding.
 func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	// Flatten nested ANDs
 	var truth bool
-	expr, truth = flattenAnd(expr)
+	expr, truth = expression.FlattenAnd(expr)
 	if !truth {
 		return expression.FALSE_EXPR, nil
 	}
@@ -73,7 +73,7 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	}
 
 	// Flatten nested ANDs
-	expr, _ = flattenAnd(expr)
+	expr, _ = expression.FlattenAnd(expr)
 
 	switch len(expr.Operands()) {
 	case 0:
@@ -96,7 +96,7 @@ Flatten and apply constant folding.
 func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 	// Flatten nested ORs
 	var truth bool
-	expr, truth = flattenOr(expr)
+	expr, truth = expression.FlattenOr(expr)
 	if truth {
 		return expression.TRUE_EXPR, nil
 	}
@@ -107,7 +107,7 @@ func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 	}
 
 	// Flatten nested ORs
-	expr, _ = flattenOr(expr)
+	expr, _ = expression.FlattenOr(expr)
 
 	switch len(expr.Operands()) {
 	case 0:
@@ -248,131 +248,6 @@ func (this *DNF) visitNotIn(first expression.Expression, second *expression.Arra
 	return this.VisitAnd(and)
 }
 
-func flattenOr(or *expression.Or) (*expression.Or, bool) {
-	length, flatten, truth := orLength(or)
-	if !flatten || truth {
-		return or, truth
-	}
-
-	buffer := make(expression.Expressions, 0, length)
-	terms := _STRING_EXPRESSION_POOL.Get()
-	defer _STRING_EXPRESSION_POOL.Put(terms)
-	buffer = orTerms(or, buffer, terms)
-
-	return expression.NewOr(buffer...), false
-}
-
-func flattenAnd(and *expression.And) (*expression.And, bool) {
-	length, flatten, truth := andLength(and)
-	if !flatten || !truth {
-		return and, truth
-	}
-
-	buffer := make(expression.Expressions, 0, length)
-	terms := _STRING_EXPRESSION_POOL.Get()
-	defer _STRING_EXPRESSION_POOL.Put(terms)
-	buffer = andTerms(and, buffer, terms)
-
-	return expression.NewAnd(buffer...), true
-}
-
-func orLength(or *expression.Or) (length int, flatten, truth bool) {
-	l := 0
-	for _, op := range or.Operands() {
-		switch op := op.(type) {
-		case *expression.Or:
-			l, _, truth = orLength(op)
-			if truth {
-				return
-			}
-			length += l
-			flatten = true
-		default:
-			val := op.Value()
-			if val != nil {
-				if val.Truth() {
-					truth = true
-					return
-				}
-			} else {
-				length++
-			}
-		}
-	}
-
-	return
-}
-
-func andLength(and *expression.And) (length int, flatten, truth bool) {
-	truth = true
-	l := 0
-	for _, op := range and.Operands() {
-		switch op := op.(type) {
-		case *expression.And:
-			l, _, truth = andLength(op)
-			if !truth {
-				return
-			}
-			length += l
-			flatten = true
-		default:
-			val := op.Value()
-			if val != nil {
-				if !val.Truth() {
-					truth = false
-					return
-				}
-			} else {
-				length++
-			}
-		}
-	}
-
-	return
-}
-
-func orTerms(or *expression.Or, buffer expression.Expressions,
-	terms map[string]expression.Expression) expression.Expressions {
-	for _, op := range or.Operands() {
-		switch op := op.(type) {
-		case *expression.Or:
-			buffer = orTerms(op, buffer, terms)
-		default:
-			val := op.Value()
-			if val == nil || val.Truth() {
-				str := op.String()
-				if _, found := terms[str]; !found {
-					terms[str] = op
-					buffer = append(buffer, op)
-				}
-			}
-		}
-	}
-
-	return buffer
-}
-
-func andTerms(and *expression.And, buffer expression.Expressions,
-	terms map[string]expression.Expression) expression.Expressions {
-	for _, op := range and.Operands() {
-		switch op := op.(type) {
-		case *expression.And:
-			buffer = andTerms(op, buffer, terms)
-		default:
-			val := op.Value()
-			if val == nil || !val.Truth() {
-				str := op.String()
-				if _, found := terms[str]; !found {
-					terms[str] = op
-					buffer = append(buffer, op)
-				}
-			}
-		}
-	}
-
-	return buffer
-}
-
 /*
 Bounded DNF, to avoid exponential worst-case.
 
@@ -511,4 +386,3 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 const _MAX_DNF_COMPLEXITY = 1024
 
 var _EXPRESSIONS_POOL = expression.NewExpressionsPool(_MAX_DNF_COMPLEXITY)
-var _STRING_EXPRESSION_POOL = expression.NewStringExpressionPool(_MAX_DNF_COMPLEXITY)

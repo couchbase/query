@@ -257,7 +257,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	if pred != nil {
 		//This is for collecting predicates from build_scan when predicates is disjunction.
 		if or, ok := pred.(*expression.Or); ok {
-			orTerms, _ := flattenOr(or)
+			orTerms, _ := expression.FlattenOr(or)
 			var predConjunc expression.Expressions
 			if andTerm, ok := baseKeyspace.OrigPred().(*expression.And); ok {
 				predConjunc = getAndTerms(andTerm)

@@ -85,7 +85,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	minSargLength := 0
 
-	orTerms, truth := flattenOr(pred)
+	orTerms, truth := expression.FlattenOr(pred)
 	if orTerms == nil || truth {
 		return nil, minSargLength, nil
 	}

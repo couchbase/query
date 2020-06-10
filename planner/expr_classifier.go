@@ -107,7 +107,7 @@ func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) 
 
 func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 
-	or, truth := flattenOr(expr)
+	or, truth := expression.FlattenOr(expr)
 	if truth {
 		this.addConstant(true)
 		return expression.TRUE_EXPR, nil
@@ -506,7 +506,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) (
 	expression.Expression, expression.Expression, bool, error) {
 
-	orTerms, truth := flattenOr(or)
+	orTerms, truth := expression.FlattenOr(or)
 	if orTerms == nil || truth {
 		return nil, nil, false, nil
 	}
