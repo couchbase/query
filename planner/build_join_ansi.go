@@ -1077,6 +1077,11 @@ func (this *builder) markPlanFlags(op plan.Operator, term algebra.SimpleFromTerm
 		} else {
 			children = this.children
 		}
+	case *plan.DistinctScan, *plan.IntersectScan, *plan.OrderedIntersectScan, *plan.UnionScan, *plan.IndexScan3:
+		return markPlanFlagsScanOperator(alias, filters, op.(plan.SecondaryScan))
+	case *plan.PrimaryScan3:
+		// nothing to do
+		return nil
 	}
 
 	if len(children) == 0 {
