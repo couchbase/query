@@ -266,8 +266,7 @@ func (coll *collection) loadIndexes() {
 	}
 
 	// FTS indexer
-	// FIXME collections
-	coll.ftsIndexer, qerr = ftsclient.NewFTSIndexer(store.URL(), namespace.name, coll.id)
+	coll.ftsIndexer, qerr = ftsclient.NewFTSIndexer2(store.URL(), namespace.name, coll.bucket.name, coll.scope.id, coll.id)
 	if qerr != nil {
 		logging.Warnf("Error loading FTS indexes for keyspace %s. Error %v", coll.id, qerr)
 	} else {
