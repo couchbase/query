@@ -1894,7 +1894,7 @@ func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
 func (ks *keyspace) CreateScope(name string) errors.Error {
 	err := ks.cbbucket.CreateScope(name)
 	if err != nil {
-		return errors.NewCbBucketCreateScopeError(fullName(ks.namespace.name, name), err)
+		return errors.NewCbBucketCreateScopeError(fullName(ks.namespace.name, ks.name, name), err)
 	}
 	ks.setNeedsManifest()
 	return nil
@@ -1903,7 +1903,7 @@ func (ks *keyspace) CreateScope(name string) errors.Error {
 func (ks *keyspace) DropScope(name string) errors.Error {
 	err := ks.cbbucket.DropScope(name)
 	if err != nil {
-		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, name), err)
+		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, ks.name, name), err)
 	}
 	ks.setNeedsManifest()
 
