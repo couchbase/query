@@ -1851,8 +1851,7 @@ func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
 		// there are no scopes, operate in bucket mode
 		return ks.defaultCollection, nil
 	}
-	return nil, errors.NewCbBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
-
+	return nil, errors.NewBucketNoDefaultCollectionError(fullName(ks.namespace.name, ks.name))
 }
 
 func (ks *keyspace) ScopeIds() ([]string, errors.Error) {

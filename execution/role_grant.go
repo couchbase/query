@@ -98,11 +98,23 @@ func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 			for _, ks := range keyspaceList {
 				parts := ks.Path().Parts()
 				if len(parts) != 3 {
-					keyspace, _ := datastore.GetKeyspace(parts...)
+					keyspace, err := datastore.GetKeyspace(parts...)
 					if keyspace == nil {
-						return nil, errors.NewNoSuchKeyspaceError(ks.FullName())
+
+						// we still want to be able to grant privileges on a bucket even
+						// if it's missing a default collection
+						if err != nil && err.Code() == errors.DS_NO_DEFAULT_COLLECTION {
+							bucket, _ := datastore.GetScope(parts...)
+							if bucket == nil {
+								return nil, errors.NewNoSuchBucketError(ks.FullName())
+							}
+							ret = append(ret, datastore.Role{Name: role, Target: bucket.AuthKey()})
+						} else {
+							return nil, errors.NewNoSuchKeyspaceError(ks.FullName())
+						}
+					} else {
+						ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
 					}
-					ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
 				} else {
 					scope, _ := datastore.GetScope(parts...)
 					if scope == nil {

@@ -186,6 +186,10 @@ func (cb *CollectionsBucket) Name() string {
 	return cb.id
 }
 
+func (cb *CollectionsBucket) AuthKey() string {
+	return cb.id
+}
+
 func (cb *CollectionsBucket) NamespaceId() string {
 	return cb.namespace.Id()
 }

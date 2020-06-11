@@ -121,6 +121,7 @@ type VirtualNamespace interface {
 type Bucket interface {
 	Id() string
 	Name() string
+	AuthKey() string // Key of the object to be used for authorization purposes
 
 	NamespaceId() string
 	Namespace() Namespace

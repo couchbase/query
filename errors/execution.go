@@ -173,6 +173,11 @@ func NewNoSuchScopeError(scope string) Error {
 		InternalMsg: fmt.Sprintf("Scope %s is not valid.", scope), InternalCaller: CallerN(1)}
 }
 
+func NewNoSuchBucketError(bucket string) Error {
+	return &err{level: EXCEPTION, ICode: 5242, IKey: "execution.no_such_bucket",
+		InternalMsg: fmt.Sprintf("Bucket %s is not valid.", bucket), InternalCaller: CallerN(1)}
+}
+
 func NewRoleNotFoundError(role string) Error {
 	return &err{level: EXCEPTION, ICode: 5250, IKey: "execution.role_not_found",
 		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}

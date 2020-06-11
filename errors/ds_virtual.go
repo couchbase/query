@@ -50,10 +50,7 @@ func NewVirtualScopeNotFoundError(e error, msg string) Error {
 		InternalMsg: "Scope not found in virtual datastore " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewVirtualBucketNoDefaultCollectionError(b string) Error {
-	return &err{level: EXCEPTION, ICode: 17008, IKey: "datastore.virtual.no_default_collection",
-		InternalMsg: "Bucket " + b + " does not have a default collection", InternalCaller: CallerN(1)}
-}
+// error 17008 is retired, but can be reused
 
 func NewVirtualBucketCreateScopeError(s string, e error) Error {
 	return &err{level: EXCEPTION, ICode: 17009, IKey: "datastore.virtual.create_scope", ICause: e,

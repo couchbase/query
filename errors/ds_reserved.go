@@ -27,3 +27,10 @@ func NewQueryContextError(w string) Error {
 	return &err{level: EXCEPTION, ICode: DS_BAD_CONTEXT, IKey: "datastore.generic.context_error",
 		InternalMsg: "Invalid query context specified" + w, InternalCaller: CallerN(1)}
 }
+
+const DS_NO_DEFAULT_COLLECTION = 10102
+
+func NewBucketNoDefaultCollectionError(b string) Error {
+	return &err{level: EXCEPTION, ICode: DS_NO_DEFAULT_COLLECTION, IKey: "datastore.generic.no_default_collection",
+		InternalMsg: "Bucket " + b + " does not have a default collection", InternalCaller: CallerN(1)}
+}

@@ -2220,7 +2220,6 @@ keyspace_scope_list COMMA keyspace_scope
 ;
 
 keyspace_scope:
-// keyspaces
 keyspace_name
 {
     $$ = algebra.NewKeyspaceRefWithContext($1, "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
@@ -2244,7 +2243,6 @@ bucket_name DOT scope_name DOT keyspace_name
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 |
-// scopes
 namespace_name bucket_name DOT scope_name
 {
     path := algebra.NewPathScope($1, $2, $4)

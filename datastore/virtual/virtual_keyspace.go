@@ -32,6 +32,10 @@ func (b *virtualBucket) Name() string {
 	return b.id
 }
 
+func (b *virtualBucket) AuthKey() string {
+	return b.id
+}
+
 func (b *virtualBucket) NamespaceId() string {
 	return b.namespace.Id()
 }
@@ -63,7 +67,7 @@ func (b *virtualBucket) ScopeByName(name string) (datastore.Scope, errors.Error)
 }
 
 func (b *virtualBucket) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
-	return nil, errors.NewVirtualBucketNoDefaultCollectionError(b.id)
+	return nil, errors.NewBucketNoDefaultCollectionError(b.id)
 }
 
 func (b *virtualBucket) CreateScope(name string) errors.Error {
