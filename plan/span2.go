@@ -27,6 +27,7 @@ const (
 	RANGE_MISSING_SPAN
 	RANGE_NULL_SPAN
 	RANGE_DERIVED_FROM_LIKE
+	RANGE_FROM_IN_EXPR
 )
 
 const RANGE_SPECIAL_SPAN = (RANGE_SELF_SPAN | RANGE_FULL_SPAN | RANGE_WHOLE_SPAN | RANGE_VALUED_SPAN | RANGE_EMPTY_SPAN | RANGE_MISSING_SPAN | RANGE_NULL_SPAN)
@@ -302,6 +303,10 @@ func (this *Span2) Empty() bool {
 	}
 
 	return false
+}
+
+func (this *Span2) SpanFromInExpr() bool {
+	return len(this.Ranges) == 1 && this.Ranges[0].HasFlag(RANGE_FROM_IN_EXPR)
 }
 
 func (this *Span2) MarshalJSON() ([]byte, error) {

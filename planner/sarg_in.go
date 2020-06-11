@@ -101,6 +101,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			selec, _ = optExprSelec(keyspaces, expression.NewEq(pred.First(), static))
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
+		range2.SetFlag(plan.RANGE_FROM_IN_EXPR)
 		span := plan.NewSpan2(nil, plan.Ranges2{range2}, (val != nil))
 		spans = append(spans, span)
 	}
