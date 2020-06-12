@@ -64,5 +64,7 @@ type SecondaryScan interface {
 
 	CoverJoinSpanExpressions(coverer *expression.Coverer) error
 
+	IsUnderNL() bool
+
 	OrderTerms() IndexKeyOrders
 }

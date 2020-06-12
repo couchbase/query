@@ -199,6 +199,10 @@ func (this *IndexScan3) Filter() expression.Expression {
 	return this.filter
 }
 
+func (this *IndexScan3) IsUnderNL() bool {
+	return this.term.IsUnderNL()
+}
+
 func (this *IndexScan3) Cost() float64 {
 	return this.cost
 }

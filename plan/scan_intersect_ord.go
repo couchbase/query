@@ -111,6 +111,10 @@ func (this *OrderedIntersectScan) String() string {
 	return string(bytes)
 }
 
+func (this *OrderedIntersectScan) IsUnderNL() bool {
+	return this.scans[0].IsUnderNL()
+}
+
 func (this *OrderedIntersectScan) Cost() float64 {
 	return this.cost
 }
