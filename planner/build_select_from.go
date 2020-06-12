@@ -247,6 +247,15 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 		}
 
+		baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+		if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+			// temporarily mark index filters for selectivity calculation
+			err = this.markPlanFlags(scan, node)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		filter, selec, err := this.getFilter(node.Alias(), nil)
 		if err != nil {
 			return nil, err
@@ -254,6 +263,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 		if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
 			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+		}
+
+		if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+			// clear temporary index flags
+			baseKeyspace.Filters().ClearIndexFlag()
 		}
 
 		this.addChildren(plan.NewFetch(keyspace, node, names, filter, cost, cardinality))
@@ -851,9 +865,11 @@ func (this *builder) getFilter(alias string, onclause expression.Expression) (
 
 		fltr := fl.FltrExpr()
 		terms = append(terms, fltr.Copy())
-		this.filter, err = expression.RemoveExpr(this.filter, fltr)
-		if err != nil {
-			return nil, OPT_SELEC_NOT_AVAIL, err
+		if fl.OrigExpr() != nil && this.filter != nil {
+			this.filter, err = expression.RemoveExpr(this.filter, fl.OrigExpr())
+			if err != nil {
+				return nil, OPT_SELEC_NOT_AVAIL, err
+			}
 		}
 
 		if doSelec && !fl.HasPlanFlags() {
