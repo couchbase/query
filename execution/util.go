@@ -19,7 +19,15 @@ import (
 func notifyChildren(children ...Operator) {
 	for _, child := range children {
 		if child != nil {
-			child.SendStop()
+			child.SendAction(_ACTION_STOP)
+		}
+	}
+}
+
+func pauseChildren(children ...Operator) {
+	for _, child := range children {
+		if child != nil {
+			child.SendAction(_ACTION_PAUSE)
 		}
 	}
 }

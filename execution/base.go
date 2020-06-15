@@ -91,10 +91,21 @@ const (
 	_COMPLETED
 	_STOPPED
 
+	// paused - ready to reopen
+	_PAUSED
+
 	// disposed
 	_DONE
 	_ENDED
 	_KILLED
+)
+
+// an operator action can be a STOP or a PAUSE
+type opAction int
+
+const (
+	_ACTION_STOP = opAction(iota)
+	_ACTION_PAUSE
 )
 
 type base struct {
@@ -250,7 +261,7 @@ func (this *base) close(context *Context) {
 	this.inactive()
 
 	// operators that never enter a _RUNNING state have to clean after themselves when they finally go
-	if this.opState == _KILLED {
+	if this.opState == _KILLED || this.opState == _PAUSED {
 		this.valueExchange.dispose()
 		this.stopChannel = nil
 		this.input = nil
@@ -278,14 +289,13 @@ func (this *base) baseDone() {
 
 	// if it hasn't started, kill it
 	switch this.opState {
-	case _CREATED:
+	case _CREATED, _PAUSED:
 		this.opState = _KILLED
 	case _DORMANT:
 		this.opState = _DONE
 
 	// otherwise wait
-	case _RUNNING:
-	case _STOPPING:
+	case _RUNNING, _STOPPING:
 		this.activeCond.Wait()
 	}
 
@@ -324,6 +334,8 @@ func (this *base) baseReopen(context *Context) bool {
 		this.activeCond.L.Unlock()
 		return false
 	}
+
+	// opState of _PAUSED is safe to reopen, just follow through and set to _CREATED state
 
 	if this.stopChannel != nil {
 		// drain the stop channel
@@ -492,20 +504,35 @@ func (this *base) fork(op Operator, context *Context, parent value.Value) {
 // The returned item is nil on no more data (usually, a channel close).
 // The child return value is >=0 if a child message has been received.
 
-// send a stop
-func (this *base) SendStop() {
-	this.baseSendStop()
+// stop the operator
+func (this *base) OpStop() {
+	this.baseSendAction(_ACTION_STOP)
 }
 
-// stop for the terminal operator case
-func (this *base) baseSendStop() {
+// send an action
+func (this *base) SendAction(action opAction) {
+	this.baseSendAction(action)
+}
+
+// action for the terminal operator case
+func (this *base) baseSendAction(action opAction) {
 	if this.stopped && !this.valueExchange.isWaiting() {
 		return
 	}
 
 	this.activeCond.L.Lock()
 	if this.opState == _CREATED {
-		this.opState = _KILLED
+		if action == _ACTION_PAUSE {
+			this.opState = _PAUSED
+		} else { // _ACTION_STOP
+			this.opState = _KILLED
+		}
+		this.activeCond.L.Unlock()
+
+	} else if this.opState == _PAUSED {
+		if action == _ACTION_STOP {
+			this.opState = _KILLED
+		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
 		this.opState = _STOPPING
@@ -518,10 +545,19 @@ func (this *base) baseSendStop() {
 	}
 }
 
-func (this *base) chanSendStop() {
+func (this *base) chanSendAction(action opAction) {
 	this.activeCond.L.Lock()
 	if this.opState == _CREATED {
-		this.opState = _KILLED
+		if action == _ACTION_PAUSE {
+			this.opState = _PAUSED
+		} else { // _ACTION_STOP
+			this.opState = _KILLED
+		}
+		this.activeCond.L.Unlock()
+	} else if this.opState == _PAUSED {
+		if action == _ACTION_STOP {
+			this.opState = _KILLED
+		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
 		this.opState = _STOPPING
@@ -538,10 +574,19 @@ func (this *base) chanSendStop() {
 	}
 }
 
-func (this *base) connSendStop(conn *datastore.IndexConnection) {
+func (this *base) connSendAction(conn *datastore.IndexConnection, action opAction) {
 	this.activeCond.L.Lock()
 	if this.opState == _CREATED {
-		this.opState = _KILLED
+		if action == _ACTION_PAUSE {
+			this.opState = _PAUSED
+		} else { // _ACTION_STOP
+			this.opState = _KILLED
+		}
+		this.activeCond.L.Unlock()
+	} else if this.opState == _PAUSED {
+		if action == _ACTION_STOP {
+			this.opState = _KILLED
+		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
 		this.opState = _STOPPING
@@ -863,7 +908,7 @@ func (this *base) notifyParent() {
 func (this *base) notifyStop() {
 	stop := this.stop
 	if stop != nil {
-		stop.SendStop()
+		stop.SendAction(_ACTION_STOP)
 		this.stop = nil
 	}
 }
@@ -1062,7 +1107,7 @@ func (this *base) inactive() {
 	switch this.opState {
 	case _RUNNING:
 		this.opState = _COMPLETED
-	case _STOPPING:
+	case _STOPPING, _PAUSED:
 		this.opState = _STOPPED
 	}
 	this.activeCond.L.Unlock()
@@ -1101,7 +1146,7 @@ func (this *base) waitComplete() {
 	this.activeCond.L.Lock()
 
 	// still running, just wait
-	if this.opState == _CREATED || this.opState == _RUNNING || this.opState == _STOPPING {
+	if this.opState == _CREATED || this.opState == _PAUSED || this.opState == _RUNNING || this.opState == _STOPPING {
 		this.activeCond.Wait()
 
 		// signal that no go routine should touch this operator

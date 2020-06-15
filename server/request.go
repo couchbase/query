@@ -807,7 +807,7 @@ func (this *BaseRequest) Stop(state State) {
 	// just in case we are being stopped before the root operator is set
 	// (like a syntax error in filestore or multistore)
 	if this.stopOperator != nil {
-		this.stopOperator.SendStop()
+		this.stopOperator.OpStop()
 	}
 	sendStop(this.stopExecute)
 }

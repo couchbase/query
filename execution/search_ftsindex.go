@@ -200,9 +200,9 @@ func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// send a stop
-func (this *IndexFtsSearch) SendStop() {
-	this.connSendStop(this.conn)
+// send a stop/pause
+func (this *IndexFtsSearch) SendAction(action opAction) {
+	this.connSendAction(this.conn, action)
 }
 
 func SetSearchInfo(aliasMap map[string]string, item value.Value,

@@ -329,19 +329,19 @@ func (this *Merge) accrueTimes(o Operator) {
 	}
 }
 
-func (this *Merge) SendStop() {
-	this.baseSendStop()
+func (this *Merge) SendAction(action opAction) {
+	this.baseSendAction(action)
 	update := this.update
 	delete := this.delete
 	insert := this.insert
 	if update != nil {
-		update.SendStop()
+		update.SendAction(action)
 	}
 	if delete != nil {
-		delete.SendStop()
+		delete.SendAction(action)
 	}
 	if insert != nil {
-		insert.SendStop()
+		insert.SendAction(action)
 	}
 }
 

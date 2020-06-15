@@ -267,11 +267,11 @@ func (this *HashJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *HashJoin) SendStop() {
-	this.baseSendStop()
+func (this *HashJoin) SendAction(action opAction) {
+	this.baseSendAction(action)
 	child := this.child
 	if child != nil {
-		child.SendStop()
+		child.SendAction(action)
 	}
 }
 

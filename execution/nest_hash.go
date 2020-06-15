@@ -183,11 +183,11 @@ func (this *HashNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *HashNest) SendStop() {
-	this.baseSendStop()
+func (this *HashNest) SendAction(action opAction) {
+	this.baseSendAction(action)
 	child := this.child
 	if child != nil {
-		child.SendStop()
+		child.SendAction(action)
 	}
 }
 

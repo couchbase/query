@@ -98,7 +98,7 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// send a stop
-func (this *InferKeyspace) SendStop() {
-	this.chanSendStop()
+// send a stop/pause
+func (this *InferKeyspace) SendAction(action opAction) {
+	this.chanSendAction(action)
 }

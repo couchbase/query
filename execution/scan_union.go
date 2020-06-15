@@ -176,11 +176,11 @@ func (this *UnionScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.scans, copy.scans)
 }
 
-func (this *UnionScan) SendStop() {
-	this.baseSendStop()
+func (this *UnionScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	for _, scan := range this.scans {
 		if scan != nil {
-			scan.SendStop()
+			scan.SendAction(action)
 		}
 	}
 }

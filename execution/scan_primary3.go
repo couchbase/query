@@ -209,7 +209,7 @@ func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// send a stop
-func (this *PrimaryScan3) SendStop() {
-	this.connSendStop(this.conn)
+// send a stop/pause
+func (this *PrimaryScan3) SendAction(action opAction) {
+	this.connSendAction(this.conn, action)
 }

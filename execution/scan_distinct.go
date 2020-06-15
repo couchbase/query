@@ -161,11 +161,11 @@ func (this *DistinctScan) accrueTimes(o Operator) {
 	this.scan.accrueTimes(copy.scan)
 }
 
-func (this *DistinctScan) SendStop() {
-	this.baseSendStop()
+func (this *DistinctScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	scan := this.scan
 	if scan != nil {
-		scan.SendStop()
+		scan.SendAction(action)
 	}
 }
 

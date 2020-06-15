@@ -120,15 +120,15 @@ func (this *Intersect) accrueTimes(o Operator) {
 	this.second.accrueTimes(copy.second)
 }
 
-func (this *Intersect) SendStop() {
-	this.baseSendStop()
+func (this *Intersect) SendAction(action opAction) {
+	this.baseSendAction(action)
 	first := this.first
 	second := this.second
 	if first != nil {
-		first.SendStop()
+		first.SendAction(action)
 	}
 	if second != nil {
-		second.SendStop()
+		second.SendAction(action)
 	}
 }
 
@@ -262,15 +262,15 @@ func (this *IntersectAll) accrueTimes(o Operator) {
 	this.second.accrueTimes(copy.second)
 }
 
-func (this *IntersectAll) SendStop() {
-	this.baseSendStop()
+func (this *IntersectAll) SendAction(action opAction) {
+	this.baseSendAction(action)
 	first := this.first
 	second := this.second
 	if first != nil {
-		first.SendStop()
+		first.SendAction(action)
 	}
 	if second != nil {
-		second.SendStop()
+		second.SendAction(action)
 	}
 }
 
