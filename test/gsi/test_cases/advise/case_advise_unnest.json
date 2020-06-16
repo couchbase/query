@@ -11,15 +11,15 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`) WHERE `test_id` = 'advise'",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`,`test_id`)",
                   "keyspace_alias": "shellTest_a1",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 10. flavor for partial index."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing."
                 }
               ]
             }
           }
         },
-        "query": "select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3"
+        "query": "select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3;"
       }
     ]
   },

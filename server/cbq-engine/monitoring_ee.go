@@ -13,7 +13,7 @@ package main
 
 import (
 	"flag"
-
+	index_advisor "github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -28,5 +28,7 @@ var CONTROLS = flag.Bool("controls", false, "Response to include controls sectio
 func monitoringInit(configstore clustering.ConfigurationStore) (server.Profile, bool, errors.Error) {
 	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
 	prof, _ := server.ParseProfile(*PROFILE, false)
+
+	index_advisor.SetConfigStore(configstore)
 	return prof, *CONTROLS, nil
 }

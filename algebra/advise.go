@@ -19,8 +19,9 @@ import (
 type Advise struct {
 	statementBase
 
-	stmt  Statement `json:"stmt"`
-	query string    `json:"query"`
+	stmt    Statement `json:"stmt"`
+	query   string    `json:"query"`
+	context interface{}
 }
 
 func NewAdvise(stmt Statement, text string) *Advise {
@@ -66,4 +67,12 @@ func (this *Advise) Query() string {
 
 func (this *Advise) Type() string {
 	return "Advise"
+}
+
+func (this *Advise) SetContext(context interface{}) {
+	this.context = context
+}
+
+func (this *Advise) Context() interface{} {
+	return this.context
 }

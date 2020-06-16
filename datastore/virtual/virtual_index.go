@@ -19,17 +19,21 @@ import (
 
 //Implement Index{} interface
 type VirtualIndex struct {
-	keyspace  datastore.Keyspace
-	name      string
-	primary   bool
-	condition expression.Expression
-	indexKeys expression.Expressions
-	desc      []bool
-	partnExpr expression.Expressions //partition key expressions
+	keyspace     datastore.Keyspace
+	name         string
+	primary      bool
+	condition    expression.Expression
+	indexKeys    expression.Expressions
+	desc         []bool
+	partnExpr    expression.Expressions //partition key expressions
+	storageMode  datastore.IndexStorageMode
+	storageStats []map[datastore.IndexStatType]value.Value
 }
 
-func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression, indexKeys expression.Expressions, desc []bool, partnExpr expression.Expressions, isPrimary bool) datastore.Index {
-	return &VirtualIndex{
+func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression,
+	indexKeys expression.Expressions, desc []bool, partnExpr expression.Expressions, isPrimary bool,
+	sm datastore.IndexStorageMode, storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
+	rv := &VirtualIndex{
 		keyspace:  keyspace,
 		name:      name,
 		primary:   isPrimary,
@@ -38,6 +42,15 @@ func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition express
 		desc:      desc,
 		partnExpr: expression.CopyExpressions(partnExpr),
 	}
+
+	if sm != "" {
+		rv.storageMode = sm
+	}
+	if len(storageStats) > 0 {
+		rv.storageStats = storageStats
+	}
+
+	return rv
 }
 
 func (this *VirtualIndex) BucketId() string {
@@ -201,6 +214,9 @@ func (this *VirtualIndex) ScanEntries3(requestId string, projection *datastore.I
 //Implement Index4 interface
 
 func (this *VirtualIndex) StorageMode() (datastore.IndexStorageMode, errors.Error) {
+	if this.isCBOEnabledMode() {
+		return this.storageMode, nil
+	}
 	return datastore.INDEX_MODE_VIRTUAL, nil
 }
 
@@ -209,5 +225,12 @@ func (this *VirtualIndex) LeadKeyHistogram(requestId string) (*datastore.Histogr
 }
 
 func (this *VirtualIndex) StorageStatistics(requestid string) ([]map[datastore.IndexStatType]value.Value, errors.Error) {
-	return nil, errors.NewVirtualIdxNotImplementedError(nil, "Storage Statistics")
+	if this.storageStats == nil {
+		return nil, errors.NewVirtualIdxNotSupportedError(nil, "Storage Statistics")
+	}
+	return this.storageStats, nil
+}
+
+func (this *VirtualIndex) isCBOEnabledMode() bool {
+	return this.storageMode == datastore.INDEX_MODE_PLASMA || this.storageMode == datastore.INDEX_MODE_MOI
 }

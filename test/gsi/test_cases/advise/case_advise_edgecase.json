@@ -173,21 +173,21 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_a11ISMISSING_type_c21 ON `shellTest`(`a11` IS MISSING,`c21`) WHERE `type` = 'advise' AND `a11` IS MISSING",
+                  "index_statement": "CREATE INDEX adv_type_a11_c21 ON `shellTest`(`type`,`a11`,`c21`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_a11ISMISSING_type ON `shellTest`(`a11` IS MISSING) WHERE `type` = 'advise' AND `a11` IS MISSING",
+                  "index_statement": "CREATE INDEX adv_type_a11 ON `shellTest`(`type`,`a11`)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 10. flavor for partial index."
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
               ]
             }
           }
         },
-        "query": "select c21 from shellTest where a11 is missing and type=\"advise\""
+        "query": "select c21 from shellTest where a11 is missing and type=\"advise\";"
       }
     ]
   },

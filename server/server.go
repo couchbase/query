@@ -835,6 +835,16 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), optimizer)
 
+		if stmt, ok := stmt.(*algebra.Advise); ok {
+			ec := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
+				this.readonly, 1, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
+				request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
+				request.ScanVectorSource(), request.Output(),
+				prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(), request.UseFts(),
+				optimizer)
+			stmt.SetContext(ec)
+		}
+
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, autoExecute, !autoExecute,
 			&prepContext)
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))

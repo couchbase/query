@@ -115,6 +115,7 @@ type Histogram struct {
 	avgArrayLen float32
 	distrib     DistBins
 	ovrflow     OverflowBins
+	internal    bool
 }
 
 func (this *Histogram) SetHistogram(version int32, keyspace string, key expression.Expression,
@@ -172,4 +173,12 @@ func (this *Histogram) Distrib() DistBins {
 
 func (this *Histogram) Ovrflow() OverflowBins {
 	return this.ovrflow
+}
+
+func (this *Histogram) SetInternal() {
+	this.internal = true
+}
+
+func (this *Histogram) IsInternal() bool {
+	return this.internal
 }

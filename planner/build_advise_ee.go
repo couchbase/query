@@ -39,13 +39,30 @@ var pushdownMap = map[PushDownProperties]string{
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.setAdvisePhase(_RECOMMEND)
 	//Temporarily turn off CBO for rule-based advisor
-	this.useCBO = false
+	considerCBO := false
+	if this.useCBO {
+		considerCBO = true
+		this.useCBO = false
+	}
+
 	this.maxParallelism = 1
 	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
 	stmt.Statement().Accept(this)
 
+	if considerCBO {
+		for _, queryInfo := range this.queryInfos {
+			keyspaceInfos := queryInfo.GetKeyspaceInfos()
+			for _, info := range keyspaceInfos {
+				docCount, err := info.GetKeyspace().Count(datastore.NULL_QUERY_CONTEXT)
+				if err == nil && docCount > 0.0 {
+					info.SetStatsOn()
+				}
+			}
+		}
+	}
+
 	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos,
-		extractExistAndDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()))
+		extractExistAndDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()), stmt.Context())
 
 	this.setAdvisePhase(_VALIDATE)
 	//There are covering indexes to be validated:
@@ -55,10 +72,16 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 			idx := info.VirtualIndex()
 			if idx != nil {
 				this.idxCandidates = append(this.idxCandidates, idx)
+				if considerCBO && !info.IsCostBased() {
+					considerCBO = false
+				}
 			}
 		}
 
 		if len(this.idxCandidates) > 0 {
+			if considerCBO {
+				this.useCBO = true
+			}
 			stmt.Statement().Accept(this)
 			if len(this.validatedCoverIdxes) > 0 {
 				this.matchIdxInfos(coverIdxMap)
@@ -73,6 +96,7 @@ func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
 	for _, info := range this.validatedCoverIdxes {
 		key := info.GetKeyspaceName() + "_" + info.GetIndexName() + "_virtual"
 		if origInfo, ok := m[key]; ok {
+			origInfo.SetVirtual()
 			this.validatedCoverIdxes[i] = this.matchPushdownProperty(key, origInfo)
 			i++
 			delete(m, key)

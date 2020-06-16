@@ -80,7 +80,7 @@
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`c`,`b`)",
+                  "index_statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`b`,`c`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }
@@ -88,7 +88,7 @@
             }
           }
         },
-        "query": "select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c"
+        "query": "select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c;"
       }
     ]
   },
