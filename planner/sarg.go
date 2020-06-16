@@ -235,6 +235,8 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 			}
 
 			exactSpan = exactSpan && rs.Exact()
+		} else if exactSpan && pred.DependsOn(sargKeys[i]) {
+			exactSpan = false
 		}
 	}
 
