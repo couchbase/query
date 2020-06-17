@@ -196,6 +196,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		result, ok := this.fields[field]
 		this.RUnlock()
 		if ok {
+			result.Track()
 			return NewValue(result), true
 		}
 	}
@@ -244,6 +245,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 				}
 				this.fields[field] = val
 				this.Unlock()
+				val.Track()
 			}
 			return val, true
 		}
@@ -295,6 +297,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		if index < len(this.elements) {
 			result := this.elements[index]
 			this.RUnlock()
+			result.Track()
 			return NewValue(result), true
 		}
 		this.RUnlock()
@@ -341,6 +344,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 				this.Lock()
 				this.elements = append(this.elements, val)
 				this.Unlock()
+				val.Track()
 			}
 			return val, true
 		}
