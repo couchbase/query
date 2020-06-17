@@ -81,11 +81,24 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 				b.name, "POST",
 				func(doc map[string]interface{}) {
 
+					distributions := doc["distributions"]
+					delete(doc, "distributions")
+					if distributions != nil {
+						dists := distributions.(map[string]interface{})
+						if len(dists) > 0 {
+							distKeys := make([]interface{}, 0, len(dists))
+							for n, _ := range dists {
+								distKeys = append(distKeys, n)
+							}
+							doc["distributionKeys"] = distKeys
+						}
+					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", map[string]interface{}{
-						"id":       key,
-						"keyspace": b.fullName,
+						"id":            key,
+						"keyspace":      b.fullName,
+						"distributions": distributions,
 					})
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
@@ -101,10 +114,23 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 				entry := d.(dictionary.DictCacheEntry)
 				entry.Target(itemMap)
 				entry.Dictionary(itemMap)
+				distributions := itemMap["distributions"]
+				delete(itemMap, "distributions")
+				if distributions != nil {
+					dists := distributions.(map[string]interface{})
+					if len(dists) > 0 {
+						distKeys := make([]interface{}, 0, len(dists))
+						for n, _ := range dists {
+							distKeys = append(distKeys, n)
+						}
+						itemMap["distributionKeys"] = distKeys
+					}
+				}
 				item := value.NewAnnotatedValue(itemMap)
 				item.SetAttachment("meta", map[string]interface{}{
-					"id":       key,
-					"keyspace": b.fullName,
+					"id":            key,
+					"keyspace":      b.fullName,
+					"distributions": distributions,
 				})
 				item.SetId(key)
 				keysMap[key] = item

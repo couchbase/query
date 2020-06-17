@@ -63,7 +63,7 @@ func (b *dictionaryKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 	for _, k := range keys {
-		item, e := b.fetchOne(k)
+		itemMap, e := b.fetchOne(k)
 		if e != nil {
 			if errs == nil {
 				errs = make([]errors.Error, 0, 1)
@@ -72,10 +72,25 @@ func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 			continue
 		}
 
-		if item != nil {
+		var item value.AnnotatedValue
+		if itemMap != nil {
+			distributions := itemMap["distributions"]
+			delete(itemMap, "distributions")
+			if distributions != nil {
+				dists := distributions.(map[string]interface{})
+				if len(dists) > 0 {
+					distKeys := make([]interface{}, 0, len(dists))
+					for n, _ := range dists {
+						distKeys = append(distKeys, n)
+					}
+					itemMap["distributionKeys"] = distKeys
+				}
+			}
+			item = value.NewAnnotatedValue(value.NewValue(itemMap))
 			item.SetAttachment("meta", map[string]interface{}{
-				"id":       k,
-				"keyspace": b.fullName,
+				"id":            k,
+				"keyspace":      b.fullName,
+				"distributions": distributions,
 			})
 			item.SetId(k)
 		}
@@ -85,7 +100,7 @@ func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return
 }
 
-func (b *dictionaryKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, errors.Error) {
 	entry, err := dictionary.Get(key)
 
 	// get does not return is not found, but nil, nil instead
@@ -98,7 +113,7 @@ func (b *dictionaryKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.
 	itemMap := map[string]interface{}{}
 	entry.Target(itemMap)
 	entry.Dictionary(itemMap)
-	return value.NewAnnotatedValue(value.NewValue(itemMap)), nil
+	return itemMap, nil
 }
 
 func (b *dictionaryKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
