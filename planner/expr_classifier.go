@@ -425,32 +425,14 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 	}
 
-	isJoin := false
-	if len(keyspaces) > 1 {
-		isJoin = true
+	origKeyspaces := make(map[string]string, len(keyspaces))
+	for a, k := range keyspaces {
+		origKeyspaces[a] = k
 	}
 
 	subqueries, err := expression.ListSubqueries(expression.Expressions{expr}, false)
 	if err != nil {
 		return nil, err
-	}
-
-	// calculate selectivity before removing keyspace references
-	selec := OPT_SELEC_NOT_AVAIL
-	arrSelec := OPT_SELEC_NOT_AVAIL
-	if this.doSelec {
-		hasUnnest := false
-		for kspace, _ := range keyspaces {
-			if baseKeyspace, ok := this.baseKeyspaces[kspace]; ok {
-				if baseKeyspace.IsPrimaryUnnest() {
-					hasUnnest = true
-					break
-				}
-			}
-		}
-		if !hasUnnest {
-			selec, arrSelec = optExprSelec(keyspaces, dnfExpr)
-		}
 	}
 
 	if this.isOnclause {
@@ -466,8 +448,10 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 
 	for kspace, _ := range keyspaces {
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
-			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, this.isOnclause, isJoin)
-			if this.doSelec {
+			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
+				this.isOnclause, len(origKeyspaces) > 1)
+			if this.doSelec && !baseKspace.IsPrimaryUnnest() {
+				selec, arrSelec := optExprSelec(origKeyspaces, dnfExpr)
 				filter.SetSelec(selec)
 				filter.SetArraySelec(arrSelec)
 				filter.SetSelecDone()
@@ -490,7 +474,10 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 					if newPred != nil {
 						newKeyspaces := make(map[string]string, 1)
 						newKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
-						newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces, this.isOnclause, orIsJoin)
+						newOrigKeyspaces := make(map[string]string, 1)
+						newOrigKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
+						newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces,
+							newOrigKeyspaces, this.isOnclause, orIsJoin)
 						baseKspace.AddFilter(newFilter)
 					}
 				}

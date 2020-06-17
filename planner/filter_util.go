@@ -206,6 +206,8 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	newFilters := make(base.Filters, 0, n)
 	keyspaceNames := make(map[string]string, 1)
 	keyspaceNames[baseKeyspace.Name()] = baseKeyspace.Keyspace()
+	origKeyspaceNames := make(map[string]string, 1)
+	origKeyspaceNames[baseKeyspace.Name()] = baseKeyspace.Keyspace()
 	for _, jfl := range baseKeyspace.JoinFilters() {
 		terms = terms[:0]
 		pred := jfl.FltrExpr()
@@ -244,7 +246,8 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					continue
 				} else {
 					keyMap[val].derive = false
-					newFilters = AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters, useCBO)
+					newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,
+						jfl.IsOnclause(), newFilters, useCBO)
 				}
 			} else {
 				simple := false
@@ -269,7 +272,8 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					min, _, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false)
 					if min > 0 {
 						keyMap[val].derive = false
-						newFilters = AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters, useCBO)
+						newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,
+							jfl.IsOnclause(), newFilters, useCBO)
 					}
 				}
 			}
@@ -283,14 +287,14 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	return nil
 }
 
-func AddDerivedFilter(term expression.Expression, keyspaceNames map[string]string, isOnclause bool,
-	newFilters base.Filters, useCBO bool) base.Filters {
+func AddDerivedFilter(term expression.Expression, keyspaceNames, origKeyspaceNames map[string]string,
+	isOnclause bool, newFilters base.Filters, useCBO bool) base.Filters {
 
 	newExpr := expression.NewIsNotNull(term)
-	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, isOnclause, false)
+	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, origKeyspaceNames, isOnclause, false)
 	newFilter.SetDerived()
 	if useCBO {
-		selec, _ := optExprSelec(keyspaceNames, newExpr)
+		selec, _ := optExprSelec(origKeyspaceNames, newExpr)
 		newFilter.SetSelec(selec)
 	}
 	newFilters = append(newFilters, newFilter)

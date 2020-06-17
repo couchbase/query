@@ -31,21 +31,25 @@ const (
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
 
 type Filter struct {
-	fltrExpr  expression.Expression // filter expression
-	origExpr  expression.Expression // original filter expression
-	keyspaces map[string]string     // keyspace references
-	fltrFlags uint32                // filter flags
-	selec     float64               // filter selectivity
-	arrSelec  float64               // filter selectivity for array index
+	fltrExpr      expression.Expression // filter expression
+	origExpr      expression.Expression // original filter expression
+	keyspaces     map[string]string     // keyspace references
+	origKeyspaces map[string]string     // original keyspace references
+	fltrFlags     uint32                // filter flags
+	selec         float64               // filter selectivity
+	arrSelec      float64               // filter selectivity for array index
 }
 
 type Filters []*Filter
 
-func NewFilter(fltrExpr, origExpr expression.Expression, keyspaces map[string]string, isOnclause bool, isJoin bool) *Filter {
+func NewFilter(fltrExpr, origExpr expression.Expression, keyspaces, origKeyspaces map[string]string,
+	isOnclause bool, isJoin bool) *Filter {
+
 	rv := &Filter{
-		fltrExpr:  fltrExpr,
-		origExpr:  origExpr,
-		keyspaces: keyspaces,
+		fltrExpr:      fltrExpr,
+		origExpr:      origExpr,
+		keyspaces:     keyspaces,
+		origKeyspaces: origKeyspaces,
 	}
 
 	if isOnclause {
@@ -73,6 +77,11 @@ func (this *Filter) Copy() *Filter {
 	rv.keyspaces = make(map[string]string, len(this.keyspaces))
 	for key, value := range this.keyspaces {
 		rv.keyspaces[key] = value
+	}
+
+	rv.origKeyspaces = make(map[string]string, len(this.origKeyspaces))
+	for key, value := range this.origKeyspaces {
+		rv.origKeyspaces[key] = value
 	}
 
 	return rv
@@ -156,6 +165,10 @@ func (this *Filter) OrigExpr() expression.Expression {
 
 func (this *Filter) Keyspaces() map[string]string {
 	return this.keyspaces
+}
+
+func (this *Filter) OrigKeyspaces() map[string]string {
+	return this.origKeyspaces
 }
 
 func (this *Filter) Selec() float64 {
