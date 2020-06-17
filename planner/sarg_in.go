@@ -83,8 +83,12 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 	}
 
 	spans := make(plan.Spans2, 0, len(array))
-	keyspaces := make(map[string]string, 1)
-	keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+	var keyspaces map[string]string
+	var err error
+	if !this.isJoin {
+		keyspaces = make(map[string]string, 1)
+		keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+	}
 	for _, elem := range array {
 		static := this.getSarg(elem)
 		if static == nil {
@@ -98,7 +102,15 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 		selec := OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			selec, _ = optExprSelec(keyspaces, expression.NewEq(pred.First(), static))
+			newExpr := expression.NewEq(pred.First(), static)
+			if this.isJoin {
+				// for join filter each element of the IN-list may be different
+				keyspaces, err = expression.CountKeySpaces(newExpr, this.keyspaceNames)
+				if err != nil {
+					return nil, err
+				}
+			}
+			selec, _ = optExprSelec(keyspaces, newExpr)
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		range2.SetFlag(plan.RANGE_FROM_IN_EXPR)

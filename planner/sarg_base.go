@@ -15,10 +15,11 @@ import (
 )
 
 type sarg struct {
-	key          expression.Expression
-	baseKeyspace *base.BaseKeyspace
-	isJoin       bool
-	doSelec      bool
+	key           expression.Expression
+	baseKeyspace  *base.BaseKeyspace
+	keyspaceNames map[string]string
+	isJoin        bool
+	doSelec       bool
 }
 
 func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
@@ -68,8 +69,17 @@ func (this *sarg) getSelec(pred expression.Expression) float64 {
 	}
 
 	// if this is a subterm of an OR, it won't be in filters
-	keyspaces := make(map[string]string, 1)
-	keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+	var keyspaces map[string]string
+	var err error
+	if this.isJoin {
+		keyspaces, err = expression.CountKeySpaces(pred, this.keyspaceNames)
+		if err != nil {
+			return OPT_SELEC_NOT_AVAIL
+		}
+	} else {
+		keyspaces = make(map[string]string, 1)
+		keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+	}
 	sel, arrSel := optExprSelec(keyspaces, pred)
 
 	if array {

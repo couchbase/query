@@ -15,18 +15,18 @@ import (
 )
 
 func SargFor(pred expression.Expression, keys expression.Expressions, max int, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace) (SargSpans, bool, error) {
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string) (SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
-		return sargForOr(or, keys, max, isJoin, doSelec, baseKeyspace)
+		return sargForOr(or, keys, max, isJoin, doSelec, baseKeyspace, keyspaceNames)
 	}
 
 	sargKeys := keys[0:max]
 
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
-	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, isJoin, doSelec, baseKeyspace)
+	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, isJoin, doSelec, baseKeyspace, keyspaceNames)
 	if sargSpans == nil || err != nil {
 		return nil, exactSpan, err
 	}
@@ -35,13 +35,13 @@ func SargFor(pred expression.Expression, keys expression.Expressions, max int, i
 }
 
 func sargForOr(or *expression.Or, keys expression.Expressions, max int, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace) (SargSpans, bool, error) {
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string) (SargSpans, bool, error) {
 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
 		_, max, _, _ = SargableFor(c, keys, false, true) // Variable length sarging
-		s, ex, err := SargFor(c, keys, max, isJoin, doSelec, baseKeyspace)
+		s, ex, err := SargFor(c, keys, max, isJoin, doSelec, baseKeyspace, keyspaceNames)
 		if err != nil {
 			return nil, false, err
 		}
@@ -54,10 +54,10 @@ func sargForOr(or *expression.Or, keys expression.Expressions, max int, isJoin, 
 	return rv.Streamline(), exact, nil
 }
 
-func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace) (
-	SargSpans, error) {
+func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
+	keyspaceNames map[string]string) (SargSpans, error) {
 
-	s := &sarg{key, baseKeyspace, isJoin, doSelec}
+	s := &sarg{key, baseKeyspace, keyspaceNames, isJoin, doSelec}
 
 	r, err := pred.Accept(s)
 	if err != nil || r == nil {
@@ -69,7 +69,7 @@ func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace
 }
 
 func SargForFilters(filters base.Filters, keys expression.Expressions, max int, underHash, doSelec bool,
-	baseKeyspace *base.BaseKeyspace) (SargSpans, bool, error) {
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string) (SargSpans, bool, error) {
 
 	sargSpans := make([]SargSpans, max)
 	exactSpan := true
@@ -79,7 +79,8 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, max int, 
 
 	for _, fl := range filters {
 		isJoin := fl.IsJoin() && !underHash
-		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isJoin, doSelec, baseKeyspace)
+		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isJoin,
+			doSelec, baseKeyspace, keyspaceNames)
 		if err != nil {
 			return nil, flExactSpan, err
 		}
@@ -203,7 +204,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 Get sarg spans for index sarg keys.
 */
 func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace) ([]SargSpans, bool, error) {
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string) ([]SargSpans, bool, error) {
 
 	n := len(sargKeys)
 
@@ -212,7 +213,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		s := &sarg{sargKeys[i], baseKeyspace, isJoin, doSelec}
+		s := &sarg{sargKeys[i], baseKeyspace, keyspaceNames, isJoin, doSelec}
 		r, err := pred.Accept(s)
 		if err != nil {
 			return nil, false, err
