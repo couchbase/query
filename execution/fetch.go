@@ -12,7 +12,6 @@ package execution
 import (
 	"encoding/json"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -162,17 +161,6 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
 
-			if this.plan.Filter() != nil {
-				result, err := this.plan.Filter().Evaluate(av, context)
-				if err != nil {
-					context.Error(errors.NewEvaluationError(err, "filter"))
-					return false
-				}
-				if !result.Truth() {
-					return fetchOk
-				}
-			}
-
 			if !this.sendItem(av) {
 				return false
 			}
@@ -200,19 +188,6 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
-
-			if this.plan.Filter() != nil {
-				result, err := this.plan.Filter().Evaluate(av, context)
-				if err != nil {
-					context.Error(errors.NewEvaluationError(err, "filter"))
-					return false
-				}
-				if !result.Truth() {
-					keyCount[key] = 0
-					fetchMap[key] = nil
-					continue
-				}
-			}
 
 			if !this.sendItem(av) {
 				return false

@@ -440,6 +440,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	[]plan.Operator, expression.Expression, expression.Expression, expression.Expression, float64, float64, error) {
 
 	children := this.children
+	subChildren := this.subChildren
 	coveringScans := this.coveringScans
 	countScan := this.countScan
 	orderScan := this.orderScan
@@ -447,6 +448,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	indexPushDowns := this.storeIndexPushDowns()
 	defer func() {
 		this.children = children
+		this.subChildren = subChildren
 		this.countScan = countScan
 		this.orderScan = orderScan
 		this.lastOp = lastOp
@@ -460,6 +462,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	}()
 
 	this.children = make([]plan.Operator, 0, 16)
+	this.subChildren = make([]plan.Operator, 0, 16)
 	this.coveringScans = nil
 	this.countScan = nil
 	this.order = nil
@@ -519,6 +522,10 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		if err != nil {
 			return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
 		}
+	}
+
+	if len(this.subChildren) > 0 {
+		this.addChildren(this.addSubchildrenParallel())
 	}
 
 	// temporarily mark index filters for selectivity calculation
@@ -808,7 +815,9 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	this.lastOp = nil
 
 	children := this.children
+	subChildren := this.subChildren
 	this.children = make([]plan.Operator, 0, 16)
+	this.subChildren = make([]plan.Operator, 0, 16)
 
 	// Note that by this point join filters involving keyspaces that's already done planning
 	// are already moved into filters and thus is available for index selection. This is ok
@@ -901,12 +910,19 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	}
 
 	if buildRight {
+		if len(this.subChildren) > 0 {
+			this.addChildren(this.addSubchildrenParallel())
+		}
 		child = plan.NewSequence(this.children...)
 		this.children = children
+		this.subChildren = subChildren
 		probeExprs = leftExprs
 		buildExprs = rightExprs
 		buildAliases = []string{alias}
 	} else {
+		if len(subChildren) > 0 {
+			children = append(children, this.addParallel(subChildren...))
+		}
 		child = plan.NewSequence(children...)
 		buildExprs = leftExprs
 		probeExprs = rightExprs
@@ -987,6 +1003,10 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	_, err = node.Accept(this)
 	if err != nil {
 		return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, err
+	}
+
+	if len(this.subChildren) > 0 {
+		this.addChildren(this.addSubchildrenParallel())
 	}
 
 	cost := OPT_COST_NOT_AVAIL

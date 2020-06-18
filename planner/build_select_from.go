@@ -246,31 +246,39 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				cardinality = OPT_CARD_NOT_AVAIL
 			}
 		}
+		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality))
 
-		baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-		if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
-			// temporarily mark index filters for selectivity calculation
-			err = this.markPlanFlags(scan, node)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		filter, selec, err := this.getFilter(node.Alias(), nil)
+		filter, _, err := this.getFilter(node.Alias(), nil)
 		if err != nil {
 			return nil, err
 		}
 
-		if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
-			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
-		}
+		if filter != nil {
+			baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+			if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+				// temporarily mark index filters for selectivity calculation
+				// if this keyspace is not under a join, this step is already done above
+				err = this.markPlanFlags(scan, node)
+				if err != nil {
+					return nil, err
+				}
+			}
 
-		if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
-			// clear temporary index flags
-			baseKeyspace.Filters().ClearIndexFlag()
-		}
+			if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
+				cost, cardinality = getFilterCost(this.lastOp, filter,
+					this.baseKeyspaces, this.keyspaceNames)
+			}
 
-		this.addChildren(plan.NewFetch(keyspace, node, names, filter, cost, cardinality))
+			// Add filter as a separate Filter operator since Fetch is already
+			// heavily loaded. This way the filter evaluation can happen on a
+			// separate go thread and can be potentially parallelized
+			this.addSubChildren(plan.NewFilter(filter, cost, cardinality))
+
+			if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+				// clear temporary index flags
+				baseKeyspace.Filters().ClearIndexFlag()
+			}
+		}
 	}
 
 	err = this.processKeyspaceDone(node.Alias())
@@ -308,7 +316,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 			cost, cardinality = getFilterCost(this.lastOp, filter,
 				this.baseKeyspaces, this.keyspaceNames)
 		}
-		this.addChildren(plan.NewFilter(filter, cost, cardinality))
+		this.addSubChildren(plan.NewFilter(filter, cost, cardinality))
 	}
 
 	err = this.processKeyspaceDone(node.Alias())

@@ -31,7 +31,6 @@
                     },
                     {
                         "#operator": "Fetch",
-                        "filter": "((`shellTest`.`f1`) = 5)",
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },
@@ -40,6 +39,10 @@
                         "~child": {
                             "#operator": "Sequence",
                             "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((`shellTest`.`f1`) = 5)"
+                                },
                                 {
                                     "#operator": "InitialProject",
                                     "result_terms": [
@@ -94,7 +97,6 @@
                     {
                         "#operator": "Fetch",
                         "as": "f2",
-                        "filter": "((`f2`.`f1`) = 5)",
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },
@@ -103,6 +105,10 @@
                         "~child": {
                             "#operator": "Sequence",
                             "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((`f2`.`f1`) = 5)"
+                                },
                                 {
                                     "#operator": "InitialProject",
                                     "result_terms": [
@@ -145,7 +151,6 @@
                     {
                         "#operator": "Fetch",
                         "as": "f1",
-                        "filter": "((`f1`.`f2`) = 5)",
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },
@@ -154,6 +159,10 @@
                         "~child": {
                             "#operator": "Sequence",
                             "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((`f1`.`f2`) = 5)"
+                                },
                                 {
                                     "#operator": "InitialProject",
                                     "result_terms": [
@@ -409,7 +418,6 @@
                     {
                         "#operator": "Fetch",
                         "as": "d1",
-                        "filter": "(((`d1`.`k0`) = 1) and ([] <= (`d1`.`a`)) and ((`d1`.`a`) < {}))",
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },
@@ -418,7 +426,11 @@
                         "~child": {
                             "#operator": "Sequence",
                             "~children": [
-                                {
+                               {
+                                    "#operator": "Filter",
+                                    "condition": "(((`d1`.`k0`) = 1) and ([] <= (`d1`.`a`)) and ((`d1`.`a`) < {}))"
+                               },
+                               {
                                     "#operator": "Unnest",
                                     "as": "d2",
                                     "expr": "(`d1`.`a`)",
@@ -708,8 +720,8 @@
                             "cover (((`store`.`main`).`status`))",
                             "cover ((meta(`store`).`id`))"
                         ],
-                        "index": "ixCover6",
                         "filter": "(cover (((`store`.`main`).`status`)) = \"OPEN\")",
+                        "index": "ixCover6",
                         "keyspace": "shellTest",
                         "namespace": "default",
                         "spans": [
