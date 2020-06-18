@@ -1333,6 +1333,21 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, err
 }
 
+// return a document key free from collection ids
+func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
+	if len(clientContext) == 0 {
+		return k
+	}
+
+	i := 1
+	collId := clientContext[0].CollId
+	for collId >= 0x80 {
+		collId >>= 7
+		i++
+	}
+	return k[i:]
+}
+
 //
 // Inferring schemas sometimes requires getting a sample of random documents
 // from a keyspace. Ideally this should come through a random traversal of the
@@ -1353,8 +1368,7 @@ func (k *keyspace) getRandomEntry(clientContext ...*memcached.ClientContext) (st
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
 
-	// FIXME - to be amended after GetRandom for collection is implemented
-	return string(resp.Key[1:]), value.NewValue(resp.Body), nil
+	return string(key(resp.Key, clientContext...)), value.NewValue(resp.Body), nil
 }
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
