@@ -45,7 +45,7 @@ func removebackticks(str string) string {
 }
 
 func privilegeString(namespace, bucket string, requested auth.Privilege) (string, error) {
-//	bucket = removebackticks(bucket)
+	bucket = removebackticks(bucket)
 	var permission string
 	switch requested {
 	case auth.PRIV_WRITE:
