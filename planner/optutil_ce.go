@@ -24,6 +24,10 @@ func checkCostModel(featureControls uint64) {
 	// no-op
 }
 
+func optDocCount(keyspace datastore.Keyspace) float64 {
+	return OPT_CARD_NOT_AVAIL
+}
+
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
 	float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL

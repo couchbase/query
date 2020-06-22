@@ -12,6 +12,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query-ee/optutil"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -26,6 +27,11 @@ func checkCostModel(featureControls uint64) {
 	if util.IsFeatureEnabled(featureControls, util.N1QL_CBO_NEW) {
 		optutil.SetNewCostModel()
 	}
+}
+
+func optDocCount(keyspace datastore.Keyspace) float64 {
+	docCount, _, _ := dictionary.GetKeyspaceInfo(keyspace.QualifiedName())
+	return float64(docCount)
 }
 
 func optExprSelec(keyspaces map[string]string, pred expression.Expression) (

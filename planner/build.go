@@ -229,10 +229,7 @@ func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {
 		return 0.0, err
 	}
 
-	docCount, err := keyspace.Count(datastore.NULL_QUERY_CONTEXT)
-	if err != nil {
-		return 0.0, err
-	}
+	docCount := optDocCount(keyspace)
 
 	return float64(docCount), nil
 }
