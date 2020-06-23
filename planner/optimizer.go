@@ -17,6 +17,29 @@ import (
 )
 
 type Optimizer interface {
-	Initialize(baseKeyspaces map[string]*base.BaseKeyspace, featureControls uint64)
+	Initialize(builder Builder)
 	OptimizeQueryBlock(node algebra.Node) (plan.Operator, error)
+}
+
+type Builder interface {
+	GetBaseKeyspaces() map[string]*base.BaseKeyspace
+	GetPrepareContext() *PrepareContext
+	BuildScan(node algebra.SimpleFromTerm) ([]plan.Operator, []plan.CoveringOperator, error)
+	BuildJoin(node *algebra.AnsiJoin) (plan.Operator, error)
+}
+
+func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
+	return this.baseKeyspaces
+}
+
+func (this *builder) GetPrepareContext() *PrepareContext {
+	return this.context
+}
+
+func (this *builder) BuildScan(node algebra.SimpleFromTerm) ([]plan.Operator, []plan.CoveringOperator, error) {
+	return nil, nil, nil
+}
+
+func (this *builder) BuildJoin(node *algebra.AnsiJoin) (plan.Operator, error) {
+	return nil, nil
 }
