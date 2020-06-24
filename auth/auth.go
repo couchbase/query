@@ -38,6 +38,7 @@ const (
 	PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL  Privilege = 23 // Ability to run CREATE / DROP  FUNCTION statements.
 	PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL Privilege = 24 // Ability to run EXECUTE FUNCTION statements.
 	PRIV_QUERY_BUCKET_ADMIN                     Privilege = 25 // Ability to add, drop, flush scopes and collections
+	PRIV_QUERY_STATS                            Privilege = 26 // Ability to read query stats
 )
 
 type PrivilegePair struct {

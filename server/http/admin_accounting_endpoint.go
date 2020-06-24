@@ -11,6 +11,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -41,6 +42,8 @@ const (
 	tasksPrefix      = adminPrefix + "/tasks_cache"
 	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
+	prometheusLow    = "/_prometheusMetrics"
+	prometheusHigh   = "/_prometheusMetricsHigh"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -113,8 +116,16 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	taskHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTask)
 	}
+
 	tasksHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTasks)
+	}
+
+	prometheusLowHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doPrometheusLow)
+	}
+	prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doEmpty)
 	}
 	routeMap := map[string]struct {
 		handler handlerFunc
@@ -141,6 +152,8 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/function_cache":     {handler: functionsIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/dictionary_cache":   {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
+		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
+		prometheusHigh:                        {handler: prometheusHighHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -214,6 +227,39 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	}
 }
 
+func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_QUERY_STATS, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	acctStore := endpoint.server.AccountingStore()
+	reg := acctStore.MetricRegistry()
+	for name, metric := range reg.Counters() {
+		w.Write([]byte("# TYPE n1ql_" + name + " counter\n"))
+		w.Write([]byte("n1ql_" + name + " "))
+		w.Write([]byte(fmt.Sprintf("%v\n", metric.Count())))
+	}
+	for name, metric := range reg.Gauges() {
+		w.Write([]byte("# TYPE n1ql_" + name + " gauge\n"))
+		w.Write([]byte("n1ql_" + name + " "))
+		w.Write([]byte(fmt.Sprintf("%v\n", metric.Value())))
+	}
+
+	return nil, nil
+}
+
+func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_QUERY_STATS, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	return nil, nil
+}
+
 func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	accounting.UpdateCounter(accounting.INVALID_REQUESTS)
 	return nil, nil
@@ -260,7 +306,7 @@ func getCredentialsFromRequest(req *http.Request) (*auth.Credentials, errors.Err
 	return creds, nil
 }
 
-func verifyCredentialsFromRequest(api string, req *http.Request, af *audit.ApiAuditFields) errors.Error {
+func verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request, af *audit.ApiAuditFields) errors.Error {
 	creds, err := getCredentialsFromRequest(req)
 	if err != nil {
 		return err
@@ -270,10 +316,12 @@ func verifyCredentialsFromRequest(api string, req *http.Request, af *audit.ApiAu
 	for user := range creds.Users {
 		users = append(users, user)
 	}
-	af.Users = users
+	if af != nil {
+		af.Users = users
+	}
 
 	privs := auth.NewPrivileges()
-	privs.Add("system:"+api, auth.PRIV_SYSTEM_READ)
+	privs.Add(api, priv)
 	_, err = datastore.GetDatastore().Authorize(privs, creds)
 	return err
 }
@@ -286,7 +334,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("prepareds", req, af)
+		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -300,7 +348,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		defer req.Body.Close()
 
 		// http.BasicAuth eats the body, so verify credentials after getting the body.
-		err := verifyCredentialsFromRequest("prepareds", req, af)
+		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +375,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("prepareds", req, af)
+		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -375,7 +423,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("prepareds", req, af)
+		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +471,7 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		err := verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -436,7 +484,7 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		err := verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -469,7 +517,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("functions_cache", req, af)
+		err := verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -511,7 +559,7 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("dictionary_cache", req, af)
+		err := verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -524,7 +572,7 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("dictionary_cache", req, af)
+		err := verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -548,7 +596,7 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("dictionary_cache", req, af)
+		err := verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -587,7 +635,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("tasks_cache", req, af)
+		err := verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -600,7 +648,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("task_cache", req, af)
+		err := verifyCredentialsFromRequest("system:task_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -640,7 +688,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	af.EventTypeId = audit.API_ADMIN_TASKS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("tasks_cache", req, af)
+		err := verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -701,7 +749,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("actives", req, af)
+		err := verifyCredentialsFromRequest("system:actives", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -709,7 +757,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("actives", req, af)
+		err := verifyCredentialsFromRequest("system:actives", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -814,7 +862,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
-	err := verifyCredentialsFromRequest("actives", req, af)
+	err := verifyCredentialsFromRequest("system:actives", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -887,14 +935,14 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("completed_requests", req, af)
+		err := verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 		reqMap := completedRequestWorkHorse(requestId, (req.Method == "POST"))
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("completed_requests", req, af)
+		err := verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -989,7 +1037,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
-	err := verifyCredentialsFromRequest("completed_requests", req, af)
+	err := verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
 		return nil, err
 	}
