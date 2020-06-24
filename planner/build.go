@@ -114,6 +114,42 @@ type builder struct {
 	lastOp            plan.Operator // last operator built, to get cost/cardinality info
 }
 
+func (this *builder) Copy() *builder {
+	rv := &builder{
+		context:           this.context,
+		datastore:         this.datastore,
+		systemstore:       this.systemstore,
+		namespace:         this.namespace,
+		subquery:          this.subquery,
+		correlated:        this.correlated,
+		maxParallelism:    this.maxParallelism,
+		delayProjection:   this.delayProjection,
+		from:              this.from,
+		where:             expression.Copy(this.where),
+		filter:            expression.Copy(this.filter),
+		setOpDistinct:     this.setOpDistinct,
+		cover:             this.cover,
+		node:              this.node,
+		skipDynamic:       this.skipDynamic,
+		requirePrimaryKey: this.requirePrimaryKey,
+		baseKeyspaces:     base.CopyBaseKeyspaces(this.baseKeyspaces),
+		keyspaceNames:     this.keyspaceNames,
+		pushableOnclause:  expression.Copy(this.pushableOnclause),
+		builderFlags:      this.builderFlags,
+		indexAdvisor:      this.indexAdvisor,
+		useCBO:            this.useCBO,
+		hintIndexes:       this.hintIndexes,
+		// the following fields are setup during planning process and thus not copied:
+		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
+	}
+
+	this.indexPushDowns.Copy(&rv.indexPushDowns)
+
+	// no need to copy collectQueryInfo
+
+	return rv
+}
+
 type indexPushDowns struct {
 	order         *algebra.Order        // Used to collect aggregates from ORDER BY, and for ORDER pushdown
 	limit         expression.Expression // Used for LIMIT pushdown
@@ -123,6 +159,16 @@ type indexPushDowns struct {
 	group         *algebra.Group        // Group BY
 	aggs          algebra.Aggregates    // all aggregates in query
 	aggConstraint expression.Expression // aggregate Constraint
+}
+
+func (this *indexPushDowns) Copy(newIndexPushdowns *indexPushDowns) {
+	newIndexPushdowns.order = this.order
+	newIndexPushdowns.limit = expression.Copy(this.limit)
+	newIndexPushdowns.offset = expression.Copy(this.offset)
+	newIndexPushdowns.oldAggregates = this.oldAggregates
+	newIndexPushdowns.projection = this.projection
+	newIndexPushdowns.aggs = this.aggs
+	newIndexPushdowns.aggConstraint = expression.Copy(this.aggConstraint)
 }
 
 func (this *builder) storeIndexPushDowns() *indexPushDowns {

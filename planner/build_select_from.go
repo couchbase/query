@@ -125,8 +125,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 		if this.useCBO && this.context.Optimizer() != nil {
 			optimizer := this.context.Optimizer()
-			optimizer.Initialize(newBuilder(this.datastore, this.systemstore,
-				this.namespace, this.subquery, this.context))
+			optimizer.Initialize(this.Copy())
 			op, err = optimizer.OptimizeQueryBlock(node.From())
 			if err != nil {
 				return err
