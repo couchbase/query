@@ -37,7 +37,42 @@ func (this *builder) GetPrepareContext() *PrepareContext {
 }
 
 func (this *builder) BuildScan(node algebra.SimpleFromTerm) ([]plan.Operator, []plan.CoveringOperator, error) {
-	return nil, nil, nil
+	// Test code to check if simple scans can flow through the system completely
+	// Needs a lot more work, will not be invoked for now.
+	children := this.children
+	subChildren := this.subChildren
+	coveringScans := this.coveringScans
+	countScan := this.countScan
+	orderScan := this.orderScan
+	lastOp := this.lastOp
+	indexPushDowns := this.storeIndexPushDowns()
+	defer func() {
+		this.children = children
+		this.subChildren = subChildren
+		this.coveringScans = coveringScans
+		this.countScan = countScan
+		this.orderScan = orderScan
+		this.lastOp = lastOp
+		this.restoreIndexPushDowns(indexPushDowns, true)
+	}()
+
+	this.children = make([]plan.Operator, 0, 16)
+	this.subChildren = make([]plan.Operator, 0, 16)
+	this.coveringScans = nil
+	this.countScan = nil
+	this.order = nil
+	this.orderScan = nil
+	this.limit = nil
+	this.offset = nil
+	this.lastOp = nil
+
+	_, err := node.Accept(this)
+	if err != nil {
+		return nil, nil, err
+	}
+	return this.children, this.coveringScans, nil
+
+	//return nil, nil, nil
 }
 
 func (this *builder) BuildJoin(node *algebra.AnsiJoin) (plan.Operator, error) {
