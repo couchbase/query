@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build !windows
+// +build windows
 
 package http
 
@@ -43,8 +43,8 @@ type HttpEndpoint struct {
 	certFile      string
 	keyFile       string
 	bufpool       BufferPool
-	listener      []net.Listener
-	listenerTLS   []net.Listener
+	listener      net.Listener
+	listenerTLS   net.Listener
 	mux           *mux.Router
 	actives       server.ActiveRequests
 	options       server.ServerOptions
@@ -87,46 +87,20 @@ func (this *HttpEndpoint) Mux() *mux.Router {
 	return this.mux
 }
 
-func getNetwProtocol() []string {
-	if server.IsIPv6() {
-		return []string{"tcp6", "tcp4"}
-	}
-	return []string{"tcp4", "tcp6"}
-}
-
-/*
-1. If ns_server sends us ipv6=true, then we should
-      (1) start listening to ipv6 - fail service if listen fails
-      (2) try to listen to ipv4 - don't fail service even if listen fails.
-2. If ns_server sends us ipv6=false, then we should
-      (1) start listening to ipv4 - fail service if listen fails
-      (2) try to listen to ipv6 - don't fail service even if listen fails.
-*/
-
 func (this *HttpEndpoint) Listen() error {
-
-	srv := &http.Server{
-		Handler:           this.mux,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
-	for i, netW := range getNetwProtocol() {
-		ln, err := net.Listen(netW, this.httpAddr)
-
-		if err != nil {
-			if i == 0 {
-				return fmt.Errorf("Failed to start service: %v", err.Error())
-			} else {
-				logging.Infof("Failed to start service: %v", err.Error())
-			}
-		} else {
-			this.listener = append(this.listener, ln)
-			go srv.Serve(ln)
-			logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
+	ln, err := net.Listen("tcp", this.httpAddr)
+	if err == nil {
+		this.listener = ln
+		srv := &http.Server{
+			Handler:           this.mux,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       30 * time.Second,
 		}
+		go srv.Serve(ln)
+		logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
 	}
 
-	return nil
+	return err
 }
 
 func (this *HttpEndpoint) ListenTLS() error {
@@ -147,58 +121,38 @@ func (this *HttpEndpoint) ListenTLS() error {
 
 	this.connSecConfig.TLSConfig = cbauthTLSsettings
 
-	cfg := &tls.Config{
-		Certificates:             []tls.Certificate{tlsCert},
-		ClientAuth:               cbauthTLSsettings.ClientAuthType,
-		MinVersion:               cbauthTLSsettings.MinVersion,
-		CipherSuites:             cbauthTLSsettings.CipherSuites,
-		PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
-		NextProtos:               []string{"h2", "http/1.1"},
-	}
+	ln, err := net.Listen("tcp", this.httpsAddr)
 
-	if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
-		caCert, err := ioutil.ReadFile(this.certFile)
-		if err != nil {
-			return fmt.Errorf(" Error in reading cacert file, err: %v", err)
+	if err == nil {
+		cfg := &tls.Config{
+			Certificates:             []tls.Certificate{tlsCert},
+			ClientAuth:               cbauthTLSsettings.ClientAuthType,
+			MinVersion:               cbauthTLSsettings.MinVersion,
+			CipherSuites:             cbauthTLSsettings.CipherSuites,
+			PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
+			NextProtos:               []string{"h2", "http/1.1"},
 		}
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-		cfg.ClientCAs = caCertPool
-	}
-
-	srv := &http.Server{
-		Handler:           this.mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		//			ReadTimeout:       30 * time.Second,
-	}
-
-	/*
-		1. If ns_server sends us ipv6=true, then we should
-		      (1) start listening to ipv6 - fail service if listen fails
-		      (2) try to listen to ipv4 - don't fail service even if listen fails.
-		2. If ns_server sends us ipv6=false, then we should
-		      (1) start listening to ipv4 - fail service if listen fails
-		      (2) try to listen to ipv6 - don't fail service even if listen fails.
-	*/
-
-	for i, netW := range getNetwProtocol() {
-		ln, err := net.Listen(netW, this.httpsAddr)
-
-		if err != nil {
-			if i == 0 {
-				return fmt.Errorf("Failed to start service: %v", err.Error())
-			} else {
-				logging.Infof("Failed to start service: %v", err.Error())
+		if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
+			caCert, err := ioutil.ReadFile(this.certFile)
+			if err != nil {
+				return fmt.Errorf(" Error in reading cacert file, err: %v", err)
 			}
-		} else {
-			tls_ln := tls.NewListener(ln, cfg)
-			this.listenerTLS = append(this.listenerTLS, tls_ln)
-			go srv.Serve(tls_ln)
-			logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			cfg.ClientCAs = caCertPool
 		}
-	}
 
-	return nil
+		tls_ln := tls.NewListener(ln, cfg)
+		this.listenerTLS = tls_ln
+		srv := &http.Server{
+			Handler:           this.mux,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       30 * time.Second,
+		}
+		go srv.Serve(tls_ln)
+		logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
+	}
+	return err
 }
 
 // If the server channel is full and we are unable to queue a request,
@@ -235,35 +189,11 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 }
 
 func (this *HttpEndpoint) Close() error {
-	serr := []error{}
-	for _, listener := range this.listener {
-		if listener != nil {
-			err := this.closeListener(listener)
-			if err != nil {
-				serr = append(serr, err)
-			}
-		}
-	}
-	if len(serr) != 0 {
-		return fmt.Errorf("HTTP Listener errors: %v", serr)
-	}
-	return nil
+	return this.closeListener(this.listener)
 }
 
 func (this *HttpEndpoint) CloseTLS() error {
-	serr := []error{}
-	for _, listener := range this.listenerTLS {
-		if listener != nil {
-			err := this.closeListener(listener)
-			if err != nil {
-				serr = append(serr, err)
-			}
-		}
-	}
-	if len(serr) != 0 {
-		return fmt.Errorf("TLS Listener errors: %v", serr)
-	}
-	return nil
+	return this.closeListener(this.listenerTLS)
 }
 
 func (this *HttpEndpoint) closeListener(l net.Listener) error {
