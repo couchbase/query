@@ -16,15 +16,15 @@ import (
 func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.Any:
-		return this.visitCollectionPredicate(expr, expr2)
+		return this.visitCollPredicate(expr, expr2)
 	case *expression.AnyEvery:
-		return this.visitCollectionPredicate(expr, expr2)
+		return this.visitCollPredicate(expr, expr2)
 	default:
 		return this.visitDefault(expr)
 	}
 }
 
-func (this *subset) visitCollectionPredicate(expr, expr2 expression.CollectionPredicate) (
+func (this *subset) visitCollPredicate(expr, expr2 expression.CollPredicate) (
 	interface{}, error) {
 
 	if !expr.Bindings().SubsetOf(expr2.Bindings()) {

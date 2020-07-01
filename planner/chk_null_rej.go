@@ -186,7 +186,7 @@ func (this *chkNullRej) VisitSimpleCase(pred *expression.SimpleCase) (interface{
 
 // Collection
 
-func (this *chkNullRej) visitAnyAndEvery(coll expression.CollectionPredicate) (interface{}, error) {
+func (this *chkNullRej) visitAnyAndEvery(coll expression.CollPredicate) (interface{}, error) {
 	keyspaceNames := this.keyspaceNames
 	this.keyspaceNames = _KEYSPACE_NAMES_POOL.Get()
 	defer func() {

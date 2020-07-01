@@ -24,6 +24,7 @@ type collMap interface {
 	ValueMapping() Expression
 	Bindings() Bindings
 	When() Expression
+	EquivalentCollMap(other Expression) bool
 }
 
 type collMapBase struct {
@@ -43,6 +44,16 @@ func (this *collMapBase) PropagatesNull() bool {
 }
 
 func (this *collMapBase) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(other, true)
+}
+
+func (this *collMapBase) EquivalentCollMap(other Expression) bool {
+	return this.equivalentTo(other, false)
+}
+
+// strict = true: must be exactly the same
+// strict = false: allow binding variable names to be different
+func (this *collMapBase) equivalentTo(other Expression, strict bool) bool {
 	if this.valueEquivalentTo(other) {
 		return true
 	}
@@ -52,9 +63,14 @@ func (this *collMapBase) EquivalentTo(other Expression) bool {
 	}
 
 	o := other.(collMap)
-	return this.valueMapping.EquivalentTo(o.ValueMapping()) &&
-		this.bindings.EquivalentTo(o.Bindings()) &&
-		Equivalent(this.when, o.When()) &&
+	if strict {
+		return this.valueMapping.EquivalentTo(o.ValueMapping()) &&
+			this.bindings.EquivalentTo(o.Bindings()) &&
+			Equivalent(this.when, o.When()) &&
+			Equivalent(this.nameMapping, o.NameMapping())
+	}
+	return equivalentBindingsWithExpression(this.bindings, o.Bindings(),
+		Expressions{this.valueMapping, this.when}, Expressions{o.ValueMapping(), o.When()}) &&
 		Equivalent(this.nameMapping, o.NameMapping())
 }
 

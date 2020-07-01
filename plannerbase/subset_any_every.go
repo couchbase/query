@@ -16,7 +16,7 @@ import (
 func (this *subset) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.AnyEvery:
-		return this.visitCollectionPredicate(expr, expr2)
+		return this.visitCollPredicate(expr, expr2)
 	default:
 		return this.visitDefault(expr)
 	}

@@ -19,10 +19,13 @@ import (
 /*
 Base for ANY, EVERY, and ANY AND EVERY collection predicates.
 */
-type CollectionPredicate interface {
+type CollectionPredicate CollPredicate
+
+type CollPredicate interface {
 	Expression
 	Bindings() Bindings
 	Satisfies() Expression
+	EquivalentCollPred(other Expression) bool
 }
 
 type collPredBase struct {
@@ -40,6 +43,16 @@ func (this *collPredBase) PropagatesNull() bool {
 }
 
 func (this *collPredBase) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(other, true)
+}
+
+func (this *collPredBase) EquivalentCollPred(other Expression) bool {
+	return this.equivalentTo(other, false)
+}
+
+// strict = true: must be exactly the same
+// strict = false: allow binding variable names to be different
+func (this *collPredBase) equivalentTo(other Expression, strict bool) bool {
 	if this.valueEquivalentTo(other) {
 		return true
 	}
@@ -48,9 +61,13 @@ func (this *collPredBase) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	o := other.(CollectionPredicate)
-	return this.bindings.EquivalentTo(o.Bindings()) &&
-		this.satisfies.EquivalentTo(o.Satisfies())
+	o := other.(CollPredicate)
+	if strict {
+		return this.bindings.EquivalentTo(o.Bindings()) &&
+			this.satisfies.EquivalentTo(o.Satisfies())
+	}
+	return equivalentBindingsWithExpression(this.bindings, o.Bindings(),
+		Expressions{this.satisfies}, Expressions{o.Satisfies()})
 }
 
 func (this *collPredBase) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {

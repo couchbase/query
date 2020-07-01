@@ -108,6 +108,56 @@ func (this Bindings) EquivalentTo(other Bindings) bool {
 	return true
 }
 
+// this function allows two bindings to be considered equivalent if the binding variable
+// names are different but everything else is the same; it then replaces binding variable
+// names in the second expression with that of the first expression, then compare the two
+// expressions to see whether they are equivalent
+func equivalentBindingsWithExpression(bindings1, bindings2 Bindings, exprs1, exprs2 Expressions) bool {
+	if len(bindings1) != len(bindings2) || len(exprs1) != len(exprs2) {
+		return false
+	}
+
+	differ := false
+	for i := 0; i < len(bindings1); i++ {
+		b1 := bindings1[i]
+		b2 := bindings2[i]
+		if b1.descend != b2.descend ||
+			!b1.expr.EquivalentTo(b2.expr) {
+			return false
+		}
+		if !differ && (b1.variable != b2.variable || b1.nameVariable != b2.nameVariable) {
+			differ = true
+		}
+	}
+
+	renamer := NewRenamer(bindings2, bindings1)
+
+	for i := 0; i < len(exprs2); i++ {
+		expr1 := exprs1[i]
+		expr2 := exprs2[i]
+		if expr1 == nil && expr2 == nil {
+			continue
+		} else if expr1 == nil || expr2 == nil {
+			return false
+		}
+
+		newExpr2 := expr2
+		if differ {
+			var err error
+			newExpr2, err = renamer.Map(expr2.Copy())
+			if err != nil {
+				return false
+			}
+		}
+
+		if !expr1.EquivalentTo(newExpr2) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this Bindings) SubsetOf(other Bindings) bool {
 	if len(this) != len(other) {
 		return false
