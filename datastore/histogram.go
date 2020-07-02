@@ -105,19 +105,31 @@ func (this OverflowBins) NumBins() int {
 const HISTOGRAM_VERSION = 1
 
 type Histogram struct {
-	version     int32
-	keyspace    string
-	key         expression.Expression
-	docCount    int64
-	sampleSize  int64
-	resolution  float32
-	fdistincts  float64
+	version    int32
+	keyspace   string
+	key        expression.Expression
+	docCount   int64
+	sampleSize int64
+	resolution float32
+	fdistincts float64
+	arrayInfo  *ArrayInfo
+	distrib    DistBins
+	ovrflow    OverflowBins
+	internal   bool
+}
+
+type ArrayInfo struct {
 	avgArrayLen float64
 	missingArr  float64
 	emptyArr    float64
-	distrib     DistBins
-	ovrflow     OverflowBins
-	internal    bool
+}
+
+func NewArrayInfo(avgArrayLen, missingArr, emptyArr float64) *ArrayInfo {
+	return &ArrayInfo{
+		avgArrayLen: avgArrayLen,
+		missingArr:  missingArr,
+		emptyArr:    emptyArr,
+	}
 }
 
 func (this *Histogram) SetHistogram(version int32, keyspace string, key expression.Expression,
@@ -131,11 +143,12 @@ func (this *Histogram) SetHistogram(version int32, keyspace string, key expressi
 	this.sampleSize = sampleSize
 	this.resolution = resolution
 	this.fdistincts = fdistincts
-	this.avgArrayLen = avgArrayLen
-	this.missingArr = missingArr
-	this.emptyArr = emptyArr
 	this.distrib = distrib
 	this.ovrflow = ovrflow
+
+	if avgArrayLen > 0.0 || missingArr > 0.0 || emptyArr > 0.0 {
+		this.arrayInfo = NewArrayInfo(avgArrayLen, missingArr, emptyArr)
+	}
 
 	return
 }
@@ -168,18 +181,6 @@ func (this *Histogram) Fdistincts() float64 {
 	return this.fdistincts
 }
 
-func (this *Histogram) AvgArrayLen() float64 {
-	return this.avgArrayLen
-}
-
-func (this *Histogram) MissingArray() float64 {
-	return this.missingArr
-}
-
-func (this *Histogram) EmptyArray() float64 {
-	return this.emptyArr
-}
-
 func (this *Histogram) Distrib() DistBins {
 	return this.distrib
 }
@@ -194,4 +195,20 @@ func (this *Histogram) SetInternal() {
 
 func (this *Histogram) IsInternal() bool {
 	return this.internal
+}
+
+func (this *Histogram) ArrayInfo() *ArrayInfo {
+	return this.arrayInfo
+}
+
+func (this *ArrayInfo) AvgArrayLen() float64 {
+	return this.avgArrayLen
+}
+
+func (this *ArrayInfo) MissingArray() float64 {
+	return this.missingArr
+}
+
+func (this *ArrayInfo) EmptyArray() float64 {
+	return this.emptyArr
 }

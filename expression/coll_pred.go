@@ -19,8 +19,6 @@ import (
 /*
 Base for ANY, EVERY, and ANY AND EVERY collection predicates.
 */
-type CollectionPredicate CollPredicate
-
 type CollPredicate interface {
 	Expression
 	Bindings() Bindings
