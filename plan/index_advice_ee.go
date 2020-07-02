@@ -22,7 +22,7 @@ type IndexAdvice struct {
 	adviceInfo *iaplan.IndexAdviceInfo
 }
 
-func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, coverIdxes iaplan.IndexInfos) *IndexAdvice {
+func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, coverIdxes iaplan.IndexInfos, queryContext string) *IndexAdvice {
 	rv := &IndexAdvice{}
 	cntKeyspaceNotFound := 0
 	curIndexes := make(iaplan.IndexInfos, 0, 1) //initialize to distinguish between nil and empty for error message
@@ -38,12 +38,17 @@ func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, 
 		}
 
 		if len(v.GetUncoverIndexes()) > 0 {
+			v.GetUncoverIndexes().SetQueryContext(queryContext)
 			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
 		}
 	}
 
 	if cntKeyspaceNotFound == len(queryInfos) && len(curIndexes) == 0 {
 		curIndexes = nil
+	}
+
+	if len(coverIdxes) > 0 {
+		coverIdxes.SetQueryContext(queryContext)
 	}
 
 	rv.adviceInfo = iaplan.NewIndexAdviceInfo(curIndexes, recIndexes, coverIdxes)

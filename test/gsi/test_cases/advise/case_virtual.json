@@ -14,7 +14,7 @@
               "recommended_indexes": {
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_test_id ON `shellTest12345`(`test_id`)",
+                    "statement": "CREATE INDEX adv_test_id ON `shellTest12345`(`test_id`)",
                     "keyspace_alias": "shellTest12345",
                     "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
@@ -41,17 +41,17 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_primary_key_id_int_field1 ON `bucket_01`(`primary_key_id`,`int_field1`)",
+                  "statement": "CREATE INDEX adv_primary_key_id_int_field1 ON `bucket_01`(`primary_key_id`,`int_field1`)",
                   "keyspace_alias": "bucket_01_t_1"
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
+                  "statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
                   "keyspace_alias": "bucket_04_t_4;bucket_04_t_5"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
+                  "statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
                   "keyspace_alias": "bucket_04_t_4;bucket_04_t_5",
                   "recommending_rule": {
                     "bucket_04_t_4": "Index keys follow order of predicate types: 9. non-static join predicate.",
@@ -59,7 +59,7 @@
                   }
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_01`(`primary_key_id`)",
+                  "statement": "CREATE INDEX adv_primary_key_id ON `bucket_01`(`primary_key_id`)",
                   "keyspace_alias": "bucket_01_t_1",
                   "recommending_rule": "Index keys follow order of predicate types: 6. derived join filter as leading key."
                 }

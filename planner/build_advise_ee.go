@@ -88,7 +88,8 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 			}
 		}
 	}
-	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos, this.validatedCoverIdxes), stmt.Query()), nil
+
+	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos, this.validatedCoverIdxes, this.context.QueryContext()), stmt.Query()), nil
 }
 
 func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {

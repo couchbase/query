@@ -1931,6 +1931,10 @@ func (ks *keyspace) Flush() errors.Error {
 	return errors.NewNoFlushError(ks.name)
 }
 
+func (b *keyspace) IsBucket() bool {
+	return true
+}
+
 // primaryIndex performs full keyspace scans.
 type primaryIndex struct {
 	viewIndex

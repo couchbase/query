@@ -584,6 +584,10 @@ func (b *keyspace) Flush() errors.Error {
 	return errors.NewNoFlushError(b.name)
 }
 
+func (b *keyspace) IsBucket() bool {
+	return true
+}
+
 func (b *keyspace) path() string {
 	return filepath.Join(b.namespace.path(), b.name)
 }

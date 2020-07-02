@@ -150,19 +150,29 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 		}
 	}
 
-	stmtMap := this.extractStrs(arg)
-	if len(stmtMap) == 0 {
-		return value.EMPTY_ARRAY_VALUE, nil
+	//{
+	//	"query_context": "default:bucket1.myscope",
+	//	"statement": "create index idx1 on mycollection(name, type);"
+	//}
+
+	stmtMap, err := this.extractStrs(arg)
+	if len(stmtMap) == 0 || err != nil {
+		return value.EMPTY_ARRAY_VALUE, err
 	}
 
 	curMap := make(map[string]queryList, 1)
 	recIdxMap := make(map[string]queryList, 1)
 	recCidxMap := make(map[string]queryList, 1)
-	for k, v := range stmtMap {
-		r, _, err := context.(Context).EvaluateStatement(addPrefix(k, "advise "),
+	for _, v := range stmtMap {
+		newContext := context.(Context)
+		if v.queryContext != "" {
+			newContext = newContext.NewQueryContext(v.queryContext, context.Readonly()).(Context)
+		}
+		r, _, err := newContext.EvaluateStatement(addPrefix(v.stmt, "advise "),
 			nil, nil, false, true)
+
 		if err == nil {
-			this.processResult(k, v, r, curMap, recIdxMap, recCidxMap)
+			this.processResult(v, r, curMap, recIdxMap, recCidxMap)
 		}
 	}
 
@@ -203,7 +213,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 
 func analyzeWorkload(profile, response_limit string, delta, query_count float64) string {
 	start_time := time.Now().Format(DEFAULT_FORMAT)
-	workload := "SELECT RAW statement from system:completed_requests where "
+	workload := "SELECT statement, queryContext as query_context from system:completed_requests where "
 	if len(profile) > 0 {
 		workload += "users like \"%" + profile + "%\" and "
 	}
@@ -356,7 +366,7 @@ func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
 	return "", fmt.Errorf("%s() not valid argument for 'status'", this.Name())
 }
 
-func (this *Advisor) processResult(q string, t int, res value.Value, curMap, recIdxMap, recCidxMap map[string]queryList) {
+func (this *Advisor) processResult(obj *queryObject, res value.Value, curMap, recIdxMap, recCidxMap map[string]queryList) {
 	val := res.Actual().([]interface{})
 	for _, v := range val {
 		v := value.NewValue(v).Actual().(map[string]interface{})
@@ -382,28 +392,28 @@ func (this *Advisor) processResult(q string, t int, res value.Value, curMap, rec
 				}
 				for k5, v5 := range v4a {
 					if k5 == "indexes" {
-						addToMap(recIdxMap, v5, q, t)
+						addToMap(recIdxMap, v5, obj)
 					} else if k5 == "covering_indexes" {
-						addToMap(recCidxMap, v5, q, t)
+						addToMap(recCidxMap, v5, obj)
 					}
 				}
 			} else if k3 == "current_indexes" {
-				addToMap(curMap, v3, q, t)
+				addToMap(curMap, v3, obj)
 			}
 		}
 	}
 }
 
-func addToMap(m map[string]queryList, v interface{}, q string, t int) {
+func addToMap(m map[string]queryList, v interface{}, obj *queryObject) {
 	v1 := value.NewValue(v).Actual().([]interface{})
 	for _, v2 := range v1 {
 		v2 := value.NewValue(v2).Actual().(map[string]interface{})
-		if v3, ok := v2["index_statement"]; ok {
+		if v3, ok := v2["statement"]; ok {
 			list, ok := m[v3.(string)]
 			if !ok {
 				list = NewQueryList()
 			}
-			list = append(list, NewQueryObject(q, t))
+			list = append(list, obj)
 			m[v3.(string)] = list
 		}
 	}
@@ -426,34 +436,64 @@ func validateStmt(s string) bool {
 	return true
 }
 
-func (this *Advisor) extractStrs(arg value.Value) map[string]int {
-	m := make(map[string]int, 1)
+func (this *Advisor) extractStrs(arg value.Value) (map[string]*queryObject, error) {
+	entryMap := make(map[string]*queryObject, 1)
 	actuals := arg.Actual()
 
 	switch actuals := actuals.(type) {
 	case []interface{}:
 		for _, key := range actuals {
 			k := value.NewValue(key).Actual()
-			if k, ok := k.(string); ok {
-				if validateStmt(k) {
-					if _, ok := m[k]; ok {
-						m[k] += 1
+			if str, ok := k.(string); ok {
+				if validateStmt(str) {
+					if _, ok := entryMap[str]; ok {
+						entryMap[str].addOne()
 					} else {
-						m[k] = 1
+						entryMap[str] = NewQueryObject(str, "", 1)
 
+					}
+				}
+			} else if m, ok := k.(map[string]interface{}); ok {
+				if stmt, ok := m["statement"]; ok {
+					str := stmt.(value.Value).Actual().(string)
+					if validateStmt(str) {
+						key := str
+						qc := ""
+						if s, ok := m["query_context"]; ok {
+							qc = s.(value.Value).Actual().(string)
+							if qc != "" {
+								key += "_" + qc
+							}
+						}
+						if s, ok := m["queryContext"]; ok {
+							qc2 := s.(value.Value).Actual().(string)
+							if qc != "" && qc2 != "" && qc != qc2 {
+								return nil, fmt.Errorf("Two different query_context have been set: %s and %s.", qc, qc2)
+							}
+							if qc == "" && qc2 != "" {
+								key += "_" + qc2
+								qc = qc2
+							}
+						}
+
+						if _, ok := m[key]; ok {
+							entryMap[key].addOne()
+						} else {
+							entryMap[key] = NewQueryObject(str, qc, 1)
+						}
 					}
 				}
 			}
 		}
 	case string:
 		if validateStmt(actuals) {
-			m[actuals] = 1
+			entryMap[actuals] = NewQueryObject(actuals, "", 1)
 		}
 	default:
-		return nil
+		return nil, fmt.Errorf("No proper formatted input.")
 	}
 
-	return m
+	return entryMap, nil
 }
 
 func (this *Advisor) Constructor() FunctionConstructor {
@@ -463,14 +503,26 @@ func (this *Advisor) Constructor() FunctionConstructor {
 }
 
 type queryObject struct {
-	text string
-	num  int
+	stmt         string
+	cnt          int
+	queryContext string
 }
 
-func NewQueryObject(s string, n int) *queryObject {
+func NewQueryObject(s, qc string, n int) *queryObject {
 	return &queryObject{
-		text: s,
-		num:  n,
+		stmt:         s,
+		queryContext: qc,
+		cnt:          n,
+	}
+}
+
+func (this *queryObject) addOne() {
+	this.cnt += 1
+}
+
+func (this *queryObject) setQueryContext(qc string) {
+	if this.queryContext == "" {
+		this.queryContext = qc
 	}
 }
 
@@ -480,8 +532,12 @@ func (this *queryObject) MarshalJSON() ([]byte, error) {
 
 func (this *queryObject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{
-		"statement": this.text,
-		"run_count": this.num,
+		"statement": this.stmt,
+		"run_count": this.cnt,
+	}
+
+	if this.queryContext != "" {
+		r["query_context"] = this.queryContext
 	}
 
 	if f != nil {
@@ -492,8 +548,9 @@ func (this *queryObject) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *queryObject) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Text  string `json:"statement"`
-		Times int    `json:"run_count"`
+		Stmt         string `json:"statement"`
+		Times        int    `json:"run_count"`
+		QueryContext string `json:"query_context"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -501,8 +558,11 @@ func (this *queryObject) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.text = _unmarshalled.Text
-	this.num = _unmarshalled.Times
+	this.stmt = _unmarshalled.Stmt
+	this.cnt = _unmarshalled.Times
+	if _unmarshalled.QueryContext != "" {
+		this.queryContext = _unmarshalled.QueryContext
+	}
 
 	return nil
 }

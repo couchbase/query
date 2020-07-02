@@ -311,6 +311,10 @@ func (coll *collection) Flush() errors.Error {
 	return nil
 }
 
+func (coll *collection) IsBucket() bool {
+	return coll.isBucket
+}
+
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
 	scopes := make(map[string]*scope, len(mani.Scopes))
 	var defaultCollection *collection

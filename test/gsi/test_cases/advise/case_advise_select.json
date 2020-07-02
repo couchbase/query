@@ -11,7 +11,7 @@
               "recommended_indexes": {
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                    "statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
                     "keyspace_alias": "shellTest",
                     "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                   }
@@ -35,7 +35,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
+                  "statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -59,7 +59,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
+                  "statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than."
                 }
@@ -83,13 +83,13 @@
               "recommended_indexes": {
                 "covering_indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
+                    "statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
                     "keyspace_alias": "shellTest"
                   }
                 ],
                 "indexes": [
                   {
-                    "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
+                    "statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
                     "keyspace_alias": "shellTest",
                     "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 3. in, 4. not less than/between/not greater than."
                   }
@@ -113,12 +113,12 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
+                  "statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
                   "keyspace_alias": "shellTest_a1",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
+                  "statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
                   "keyspace_alias": "shellTest_a2",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 9. non-static join predicate."
                 }
@@ -142,22 +142,22 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_c11 ON `shellTest`(`test_id`,`c12`,`c11`)",
+                  "statement": "CREATE INDEX adv_test_id_c12_c11 ON `shellTest`(`test_id`,`c12`,`c11`)",
                   "keyspace_alias": "shellTest_a1"
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21_c22 ON `shellTest`(`test_id`,`c21`,`c22`)",
+                  "statement": "CREATE INDEX adv_test_id_c21_c22 ON `shellTest`(`test_id`,`c21`,`c22`)",
                   "keyspace_alias": "shellTest_a2"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
+                  "statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
                   "keyspace_alias": "shellTest_a1",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
+                  "statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
                   "keyspace_alias": "shellTest_a2",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 9. non-static join predicate."
                 }
@@ -181,18 +181,18 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_length_a22_c22 ON `shellTest`(`test_id`,length((`a22`)),`c22`)",
+                  "statement": "CREATE INDEX adv_test_id_length_a22_c22 ON `shellTest`(`test_id`,length((`a22`)),`c22`)",
                   "keyspace_alias": "shellTest_s2"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
+                  "statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
                   "keyspace_alias": "shellTest_s1",
                   "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_length_a22 ON `shellTest`(`test_id`,length((`a22`)))",
+                  "statement": "CREATE INDEX adv_test_id_length_a22 ON `shellTest`(`test_id`,length((`a22`)))",
                   "keyspace_alias": "shellTest_s2",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -216,7 +216,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_DISTINCT_a21_a22 ON `shellTest`(`test_id`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END)",
+                  "statement": "CREATE INDEX adv_test_id_DISTINCT_a21_a22 ON `shellTest`(`test_id`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -240,14 +240,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "LIMIT pushdown",
-                  "index_statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
+                  "property": "LIMIT pushdown",
+                  "statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
@@ -271,13 +271,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
+                  "statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
+                  "statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than."
                 }
@@ -301,13 +301,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21_c11_add_c12 ON `shellTest`(`test_id`,`c21`,`c11`+`c12`)",
+                  "statement": "CREATE INDEX adv_test_id_c21_c11_add_c12 ON `shellTest`(`test_id`,`c21`,`c11`+`c12`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
+                  "statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -331,13 +331,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c11_length_c22 ON `shellTest`(`test_id`,`c11`,length((`c22`)))",
+                  "statement": "CREATE INDEX adv_test_id_c11_length_c22 ON `shellTest`(`test_id`,`c11`,length((`c22`)))",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
+                  "statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 5. less than/greater than)."
                 }
@@ -361,13 +361,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifm2888102778 ON `shellTest`(`test_id`,ifmissing(((`c11`).`rob`), 0)+ifmissing(((`c12`).`matt`), 0)+ifmissing((((`p`).`c21`).`emma`), 0)+ifmissing((((`p`).`c22`).`ali`), 0),`a11`)",
+                  "statement": "CREATE INDEX adv_test_id_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifm2888102778 ON `shellTest`(`test_id`,ifmissing(((`c11`).`rob`), 0)+ifmissing(((`c12`).`matt`), 0)+ifmissing((((`p`).`c21`).`emma`), 0)+ifmissing((((`p`).`c22`).`ali`), 0),`a11`)",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifm1473151068 ON `shellTest`(`test_id`,ifmissing(((`c11`).`rob`), 0)+ifmissing(((`c12`).`matt`), 0)+ifmissing((((`p`).`c21`).`emma`), 0)+ifmissing((((`p`).`c22`).`ali`), 0))",
+                  "statement": "CREATE INDEX adv_test_id_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifm1473151068 ON `shellTest`(`test_id`,ifmissing(((`c11`).`rob`), 0)+ifmissing(((`c12`).`matt`), 0)+ifmissing((((`p`).`c21`).`emma`), 0)+ifmissing((((`p`).`c22`).`ali`), 0))",
                   "keyspace_alias": "shellTest_st",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -391,13 +391,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_type ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END,`type`)",
+                  "statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_type ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END,`type`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22 ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END)",
+                  "statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22 ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -421,13 +421,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than."
                 }
@@ -451,12 +451,12 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
+                  "statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/greater than), 3. in."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
+                  "statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -480,13 +480,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -526,7 +526,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -550,7 +550,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY length((`y`.`name`)) FOR y in `x`.`fields` END) FOR x in `a21` END)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY length((`y`.`name`)) FOR y in `x`.`fields` END) FOR x in `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
@@ -574,13 +574,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than."
                 }
@@ -604,12 +604,12 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
+                  "statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/greater than), 3. in."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
+                  "statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -633,13 +633,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -679,7 +679,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }

@@ -365,6 +365,10 @@ func (b *keyspace) Flush() errors.Error {
 	return errors.NewNoFlushError(b.name)
 }
 
+func (b *keyspace) IsBucket() bool {
+	return true
+}
+
 type mockIndexer struct {
 	keyspace *keyspace
 	indexes  map[string]datastore.Index

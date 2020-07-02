@@ -252,3 +252,7 @@ func (this *virtualKeyspace) Release() {}
 func (this *virtualKeyspace) Flush() errors.Error {
 	return errors.NewVirtualKSNotSupportedError(nil, "Flush for virtual keyspace.")
 }
+
+func (this *virtualKeyspace) IsBucket() bool {
+	return len(this.path) == 2
+}

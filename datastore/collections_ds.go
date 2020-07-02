@@ -463,6 +463,10 @@ func (ks *CollectionsKeyspace) Flush() errors.Error {
 	return errors.NewNoFlushError(ks.Name())
 }
 
+func (ks *CollectionsKeyspace) IsBucket() bool {
+	return false
+}
+
 type CollectionsIndexer struct {
 	keyspace       *CollectionsKeyspace       // keyspace owns indexer
 	primaryIndexes []*CollectionsPrimaryIndex // indexer owns indexes

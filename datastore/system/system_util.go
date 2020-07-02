@@ -60,6 +60,10 @@ func (this *keyspaceBase) Flush() errors.Error {
 	return errors.NewNoFlushError(this.name)
 }
 
+func (this *keyspaceBase) IsBucket() bool {
+	return true
+}
+
 func setKeyspaceBase(base *keyspaceBase, namespace *namespace, name string) {
 	base.namespace = namespace
 	base.name = name

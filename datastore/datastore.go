@@ -208,6 +208,7 @@ type Keyspace interface {
 	Flush() errors.Error // For flush collection
 
 	Release() // Release any resources held by this object
+	IsBucket() bool
 }
 
 type KeyspaceMetadata interface {
