@@ -1158,6 +1158,11 @@ func markPlanFlagsSecondaryScans(alias string, filters base.Filters, scans ...pl
 					return err
 				}
 			}
+		} else if sscan, ok := scan.(plan.SecondaryScan); ok {
+			err = markPlanFlagsScanOperator(alias, filters, sscan)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
