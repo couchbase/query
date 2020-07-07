@@ -14,7 +14,7 @@ package planner
 import (
 	"strings"
 
-	"github.com/couchbase/query-ee/indexadvisor"
+	advisor "github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -46,7 +46,7 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	}
 
 	this.maxParallelism = 1
-	this.queryInfos = make(map[expression.HasExpressions]*iaplan.QueryInfo, 1)
+	this.queryInfos = make(map[expression.HasExpressions]*advisor.QueryInfo, 1)
 	stmt.Statement().Accept(this)
 
 	if considerCBO {
@@ -61,7 +61,7 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 		}
 	}
 
-	coverIdxMap := indexadvisor.AdviseIdxs(this.queryInfos,
+	coverIdxMap := advisor.AdviseIdxs(this.queryInfos,
 		extractExistAndDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()), stmt.Context())
 
 	this.setAdvisePhase(_VALIDATE)
@@ -89,7 +89,38 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 		}
 	}
 
-	return plan.NewAdvise(plan.NewIndexAdvice(this.queryInfos, this.validatedCoverIdxes, this.context.QueryContext()), stmt.Query()), nil
+	return plan.NewAdvise(plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedCoverIdxes, this.context.QueryContext())), stmt.Query()), nil
+}
+
+func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryInfo, coverIdxes iaplan.IndexInfos,
+	queryContext string) (iaplan.IndexInfos, iaplan.IndexInfos, iaplan.IndexInfos) {
+	cntKeyspaceNotFound := 0
+	curIndexes := make(iaplan.IndexInfos, 0, 1) //initialize to distinguish between nil and empty for error message
+	recIndexes := make(iaplan.IndexInfos, 0, 1)
+
+	for _, v := range queryInfos {
+		if !v.IsKeyspaceFound() {
+			cntKeyspaceNotFound += 1
+			continue
+		}
+		if len(v.GetCurIndexes()) > 0 {
+			curIndexes = append(curIndexes, v.GetCurIndexes()...)
+		}
+
+		if len(v.GetUncoverIndexes()) > 0 {
+			v.GetUncoverIndexes().SetQueryContext(queryContext)
+			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
+		}
+	}
+
+	if cntKeyspaceNotFound == len(queryInfos) && len(curIndexes) == 0 {
+		curIndexes = nil
+	}
+
+	if len(coverIdxes) > 0 {
+		coverIdxes.SetQueryContext(queryContext)
+	}
+	return curIndexes, recIndexes, coverIdxes
 }
 
 func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
@@ -108,9 +139,9 @@ func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
 }
 
 type collectQueryInfo struct {
-	keyspaceInfos       iaplan.KeyspaceInfos
-	queryInfo           *iaplan.QueryInfo
-	queryInfos          map[expression.HasExpressions]*iaplan.QueryInfo
+	keyspaceInfos       advisor.KeyspaceInfos
+	queryInfo           *advisor.QueryInfo
+	queryInfos          map[expression.HasExpressions]*advisor.QueryInfo
 	indexCollector      *scanIdxCol
 	idxCandidates       []datastore.Index
 	validatedCoverIdxes iaplan.IndexInfos
@@ -127,8 +158,8 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 	if this.indexAdvisor {
 		if this.advisePhase == _RECOMMEND {
 			if stmt != nil {
-				this.queryInfo = iaplan.NewQueryInfo(stmt.Type())
-				this.keyspaceInfos = iaplan.NewKeyspaceInfos()
+				this.queryInfo = advisor.NewQueryInfo(stmt.Type())
+				this.keyspaceInfos = advisor.NewKeyspaceInfos()
 				if s, ok := stmt.(*algebra.Select); ok {
 					if s.Order() != nil {
 						this.queryInfos[s] = this.queryInfo
@@ -175,7 +206,7 @@ func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.
 				this.keyspaceInfos.SetUncovered()
 			}
 			this.queryInfo.AppendKeyspaceInfos(this.keyspaceInfos)
-			this.keyspaceInfos = iaplan.NewKeyspaceInfos()
+			this.keyspaceInfos = advisor.NewKeyspaceInfos()
 		}
 	}
 }
@@ -207,7 +238,7 @@ func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keys
 				this.keyspaceInfos.SetUncovered()
 			}
 			this.queryInfo.AppendKeyspaceInfos(this.keyspaceInfos)
-			this.keyspaceInfos = iaplan.NewKeyspaceInfos()
+			this.keyspaceInfos = advisor.NewKeyspaceInfos()
 			this.indexCollector = nil
 		}
 	}
@@ -270,7 +301,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	if pred == nil {
 		//This is for collecting predicates from build_scan when predicate is not disjunction.
 		if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()),
+			p := advisor.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()),
 				getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(),
 				false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
@@ -301,7 +332,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				if !ansijoin {
 					addUnnestPreds(baseKeyspacesCopy, bk)
 				}
-				p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()),
+				p := advisor.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()),
 					getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(),
 					op, true, predConjunc)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
@@ -315,7 +346,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				return err
 			}
 			baseKeyspaceCopy, _ := baseKeyspacesCopy[node.Alias()]
-			p := iaplan.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()),
+			p := advisor.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()),
 				getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(),
 				pred, false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
@@ -415,7 +446,7 @@ func (this *builder) getIdxCandidates() []datastore.Index {
 	return this.idxCandidates
 }
 
-func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
+func collectInnerUnnestMap(from algebra.FromTerm, q *advisor.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
 	joinTerm, ok := from.(algebra.JoinTerm)
 	if !ok {
 		return 0
@@ -435,7 +466,7 @@ func collectInnerUnnestMap(from algebra.FromTerm, q *iaplan.QueryInfo, primaryId
 	return level
 }
 
-func extractExistAndDeferredIdxes(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo,
+func extractExistAndDeferredIdxes(queryInfos map[expression.HasExpressions]*advisor.QueryInfo,
 	indexApiVersion int) map[string]iaplan.IndexInfos {
 	if len(queryInfos) == 0 {
 		return nil

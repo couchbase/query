@@ -13,8 +13,8 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
-	"github.com/couchbase/query/expression"
 )
 
 type IndexAdvice struct {
@@ -22,37 +22,10 @@ type IndexAdvice struct {
 	adviceInfo *iaplan.IndexAdviceInfo
 }
 
-func NewIndexAdvice(queryInfos map[expression.HasExpressions]*iaplan.QueryInfo, coverIdxes iaplan.IndexInfos, queryContext string) *IndexAdvice {
-	rv := &IndexAdvice{}
-	cntKeyspaceNotFound := 0
-	curIndexes := make(iaplan.IndexInfos, 0, 1) //initialize to distinguish between nil and empty for error message
-	recIndexes := make(iaplan.IndexInfos, 0, 1)
-
-	for _, v := range queryInfos {
-		if !v.IsKeyspaceFound() {
-			cntKeyspaceNotFound += 1
-			continue
-		}
-		if len(v.GetCurIndexes()) > 0 {
-			curIndexes = append(curIndexes, v.GetCurIndexes()...)
-		}
-
-		if len(v.GetUncoverIndexes()) > 0 {
-			v.GetUncoverIndexes().SetQueryContext(queryContext)
-			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
-		}
+func NewIndexAdvice(curIndexes, recIndexes, coverIdxes iaplan.IndexInfos) *IndexAdvice {
+	return &IndexAdvice{
+		adviceInfo: iaplan.NewIndexAdviceInfo(curIndexes, recIndexes, coverIdxes),
 	}
-
-	if cntKeyspaceNotFound == len(queryInfos) && len(curIndexes) == 0 {
-		curIndexes = nil
-	}
-
-	if len(coverIdxes) > 0 {
-		coverIdxes.SetQueryContext(queryContext)
-	}
-
-	rv.adviceInfo = iaplan.NewIndexAdviceInfo(curIndexes, recIndexes, coverIdxes)
-	return rv
 }
 
 func (this *IndexAdvice) Accept(visitor Visitor) (interface{}, error) {
