@@ -1081,8 +1081,86 @@
         "positionalArgs" : [ "" ]
       }
     },
-    {
+    { 
       "id" : 28709,
+      "name" : "/admin/tasks API request",
+      "description" : "An HTTP request was made to the API at /admin/tasks.",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "httpMethod": "", 
+        "httpResultCode": 1,
+        "errorCode": 1, 
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
+      }
+    },
+    {
+      "id" : 28710,
+      "name" : "/admin/indexes/tasks API request",
+      "description" : "An HTTP request was made to the API at /admin/indexes/tasks.",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    { 
+      "id" : 28711,
+      "name" : "/admin/dictionary_cache API request",
+      "description" : "An HTTP request was made to the API at /admin/dictionary_cache.",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "httpMethod": "", 
+        "httpResultCode": 1,
+        "errorCode": 1, 
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
+      }
+    },
+    {
+      "id" : 28712,
+      "name" : "/admin/indexes/dictionary_cache API request",
+      "description" : "An HTTP request was made to the API at /admin/indexes/dictionary_cache.",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+      }
+    },
+    {
+      "id" : 28713,
       "name" : "CREATE SCOPE statement",
       "description" : "A N1QL CREATE SCOPE statement was executed",
       "sync" : false,
@@ -1120,7 +1198,7 @@
       }
     },
     {
-      "id" : 28710,
+      "id" : 28714,
       "name" : "DROP SCOPE statement",
       "description" : "A N1QL DROP SCOPE statement was executed",
       "sync" : false,
@@ -1158,7 +1236,7 @@
       }
     },
     {
-      "id" : 28711,
+      "id" : 28715,
       "name" : "CREATE COLLECTION statement",
       "description" : "A N1QL CREATE COLLECTION statement was executed",
       "sync" : false,
@@ -1196,7 +1274,7 @@
       }
     },
     {
-      "id" : 28712,
+      "id" : 28716,
       "name" : "DROP COLLECTION statement",
       "description" : "A N1QL DROP COLLECTION statement was executed",
       "sync" : false,
@@ -1234,7 +1312,7 @@
       }
     },
     {
-      "id" : 28713,
+      "id" : 28717,
       "name" : "FLUSH COLLECTION statement",
       "description" : "A N1QL FLUSH COLLECTION statement was executed",
       "sync" : false,

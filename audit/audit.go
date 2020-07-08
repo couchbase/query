@@ -391,11 +391,11 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"CREATE_FUNCTION":      28706,
 	"DROP_FUNCTION":        28707,
 	"EXECUTE_FUNCTION":     28708,
-	"CREATE_SCOPE":         28709,
-	"DROP_SCOPE":           28710,
-	"CREATE_COLLECTION":    28711,
-	"DROP_COLLECTION":      28712,
-	"FLUSH_COLLECTION":     28713,
+	"CREATE_SCOPE":         28713,
+	"DROP_SCOPE":           28714,
+	"CREATE_COLLECTION":    28715,
+	"DROP_COLLECTION":      28716,
+	"FLUSH_COLLECTION":     28717,
 }
 
 func Submit(event Auditable) {
@@ -459,10 +459,10 @@ const (
 	API_ADMIN_COMPLETED_REQUESTS         = 28702
 	API_ADMIN_FUNCTIONS                  = 28704
 	API_ADMIN_INDEXES_FUNCTIONS          = 28705
-	API_ADMIN_TASKS                      = 28706
-	API_ADMIN_INDEXES_TASKS              = 28707
-	API_ADMIN_DICTIONARY                 = 28708
-	API_ADMIN_INDEXES_DICTIONARY         = 28709
+	API_ADMIN_TASKS                      = 28709
+	API_ADMIN_INDEXES_TASKS              = 28710
+	API_ADMIN_DICTIONARY                 = 28711
+	API_ADMIN_INDEXES_DICTIONARY         = 28712
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {
