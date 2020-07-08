@@ -1201,7 +1201,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	logging.Infof("Created New Bucket %s", name)
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
-	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
+	cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
 
 	return rv, nil
 }
@@ -1225,6 +1225,25 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 		p.version++
 	} else {
 		logging.Warnf("Keyspace %v not configured on this server", name)
+	}
+}
+
+// Called by go-couchbase if a configured keyspace is updated
+func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	ks, ok := p.keyspaceCache[bucket.Name]
+	if ok && ks.cbKeyspace != nil {
+		ks.cbKeyspace.Lock()
+		uid, _ := strconv.Atoi(bucket.CollectionsManifestUid)
+		if ks.cbKeyspace.collectionsManifestUid != uint64(uid) {
+			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
+		}
+		ks.cbKeyspace.Unlock()
+	} else {
+		logging.Warnf("Keyspace %v not configured on this server", bucket.Name)
 	}
 }
 
