@@ -18,11 +18,12 @@ import (
 
 type IntersectScan struct {
 	base
-	plan   *plan.IntersectScan
-	scans  []Operator
-	values map[string]value.AnnotatedValue
-	bits   map[string]int64
-	sent   int64
+	plan    *plan.IntersectScan
+	scans   []Operator
+	values  map[string]value.AnnotatedValue
+	bits    map[string]int64
+	sent    int64
+	channel *Channel
 }
 
 func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operator) *IntersectScan {
@@ -98,13 +99,12 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			fullBits |= int64(0x01) << uint8(i)
 		}
 
-		channel := NewChannel(context)
-		defer channel.Done()
-		this.SetInput(channel)
+		this.channel = NewChannel(context)
+		this.SetInput(this.channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
-			scan.SetOutput(channel)
+			scan.SetOutput(this.channel)
 			this.fork(scan, context, parent)
 		}
 
@@ -131,7 +131,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					// now that all children are gone, flag that there's
 					// no more values coming in
 					if n == 0 {
-						channel.close(context)
+						this.channel.close(context)
 					}
 				} else if item != nil {
 					this.addInDocs(1)
@@ -149,7 +149,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				}
 				if n > 0 {
 					this.childrenWaitNoStop(n)
-					channel.close(context)
+					this.channel.close(context)
 				}
 				break loop
 			}
@@ -256,6 +256,11 @@ func (this *IntersectScan) Done() {
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil
+	channel := this.channel
+	this.channel = nil
+	if channel != nil {
+		channel.Done()
+	}
 }
 
 func mergeSearchMeta(dest, src value.AnnotatedValue) {
