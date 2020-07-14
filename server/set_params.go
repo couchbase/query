@@ -118,7 +118,7 @@ var _SETTERS = map[string]Setter{
 		if s.enterprise {
 			util.SetN1qlFeatureControl(uint64(value))
 		} else {
-			util.SetN1qlFeatureControl(uint64(value) | util.CE_N1QL_FEAT_CTRL)
+			util.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
 		}
 		return nil
 	},
