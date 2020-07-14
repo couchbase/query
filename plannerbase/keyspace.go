@@ -88,19 +88,35 @@ func (this *BaseKeyspace) SetPrimaryUnnest() {
 }
 
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
+	return copyBaseKeyspaces(src, false)
+}
+
+func CopyBaseKeyspacesWithFilters(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
+	return copyBaseKeyspaces(src, true)
+}
+
+func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string]*BaseKeyspace {
 	dest := make(map[string]*BaseKeyspace, len(src))
 
 	for _, kspace := range src {
 		dest[kspace.name] = &BaseKeyspace{
-			name:     kspace.name,
-			keyspace: kspace.keyspace,
+			name:       kspace.name,
+			keyspace:   kspace.keyspace,
+			ksFlags:    kspace.ksFlags,
+			outerlevel: kspace.outerlevel,
 		}
-		dest[kspace.name].ksFlags = kspace.ksFlags
-		dest[kspace.name].outerlevel = kspace.outerlevel
 		if len(kspace.unnests) > 0 {
 			dest[kspace.name].unnests = make(map[string]string, len(kspace.unnests))
 			for a, k := range kspace.unnests {
 				dest[kspace.name].unnests[a] = k
+			}
+		}
+		if copyFilter {
+			if len(kspace.filters) > 0 {
+				dest[kspace.name].filters = kspace.filters.Copy()
+			}
+			if len(kspace.joinfilters) > 0 {
+				dest[kspace.name].joinfilters = kspace.joinfilters.Copy()
 			}
 		}
 	}

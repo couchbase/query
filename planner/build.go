@@ -132,7 +132,7 @@ func (this *builder) Copy() *builder {
 		node:              this.node,
 		skipDynamic:       this.skipDynamic,
 		requirePrimaryKey: this.requirePrimaryKey,
-		baseKeyspaces:     base.CopyBaseKeyspaces(this.baseKeyspaces),
+		baseKeyspaces:     base.CopyBaseKeyspacesWithFilters(this.baseKeyspaces),
 		keyspaceNames:     this.keyspaceNames,
 		pushableOnclause:  expression.Copy(this.pushableOnclause),
 		builderFlags:      this.builderFlags,

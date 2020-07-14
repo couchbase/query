@@ -286,6 +286,14 @@ func trimJoinFilters(joinfilters Filters, curlen int) (newlen int) {
 	}
 }
 
+func (this Filters) Copy() Filters {
+	filters := make(Filters, 0, len(this))
+	for _, fl := range this {
+		filters = append(filters, fl.Copy())
+	}
+	return filters
+}
+
 func (this Filters) ClearIndexFlag() {
 	for _, fltr := range this {
 		fltr.fltrFlags &^= FLTR_IN_INDEX_SPAN
