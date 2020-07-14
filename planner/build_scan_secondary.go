@@ -602,26 +602,20 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 
 	indexes := make(map[datastore.Index]*base.IndexCost, len(sargables))
 
-	var bestIndex datastore.Index
-	for s, _ := range sargables {
+	hasOrder := false
+	for s, e := range sargables {
 		indexes[s] = base.NewIndexCost(sargables[s].cost, sargables[s].cardinality, sargables[s].selectivity)
-		if bestIndex == nil || sargables[s].PushDownProperty() > sargables[bestIndex].PushDownProperty() {
-			bestIndex = s
+		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			indexes[s].SetOrder()
+			hasOrder = true
 		}
 	}
 
-	// if pushdown can be used on an index, use that index
-	if bestIndex != nil && sargables[bestIndex].PushDownProperty() > _PUSHDOWN_NONE {
-		for s, _ := range sargables {
-			if s != bestIndex {
-				delete(sargables, s)
-			}
-		}
-
-		return sargables
+	nTerms := 0
+	if hasOrder && this.order != nil {
+		nTerms = len(this.order.Terms())
 	}
-
-	indexes = optChooseIntersectScan(keyspace, indexes)
+	indexes = optChooseIntersectScan(keyspace, indexes, nTerms)
 
 	for s, _ := range sargables {
 		if _, ok := indexes[s]; !ok {

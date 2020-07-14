@@ -9,10 +9,17 @@
 
 package plannerbase
 
+type IdxPushDown uint32
+
+const (
+	IDX_PD_ORDER IdxPushDown = 1 << iota
+)
+
 type IndexCost struct {
 	cost        float64
 	cardinality float64
 	selectivity float64
+	idxPushDown IdxPushDown
 }
 
 func NewIndexCost(cost, cardinality, selectivity float64) *IndexCost {
@@ -28,6 +35,7 @@ func (this *IndexCost) Copy() *IndexCost {
 		cost:        this.cost,
 		cardinality: this.cardinality,
 		selectivity: this.selectivity,
+		idxPushDown: this.idxPushDown,
 	}
 }
 
@@ -41,4 +49,16 @@ func (this *IndexCost) Cardinality() float64 {
 
 func (this *IndexCost) Selectivity() float64 {
 	return this.selectivity
+}
+
+func (this *IndexCost) SetCost(cost float64) {
+	this.cost = cost
+}
+
+func (this *IndexCost) HasOrder() bool {
+	return (this.idxPushDown & IDX_PD_ORDER) != 0
+}
+
+func (this *IndexCost) SetOrder() {
+	this.idxPushDown |= IDX_PD_ORDER
 }

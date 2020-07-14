@@ -247,8 +247,9 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 	return optutil.GetUnnestPredSelec(pred, variable, mapping, keyspaces)
 }
 
-func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost) map[datastore.Index]*base.IndexCost {
-	return optutil.ChooseIntersectScan(keyspace, indexes)
+func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost,
+	nTerms int) map[datastore.Index]*base.IndexCost {
+	return optutil.ChooseIntersectScan(keyspace, indexes, nTerms)
 }
 
 func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
