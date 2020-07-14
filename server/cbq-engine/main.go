@@ -36,7 +36,7 @@ import (
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
-	"github.com/couchbase/query/server"
+	server_package "github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
 )
@@ -64,7 +64,7 @@ var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var PRETTY = flag.Bool("pretty", false, "Pretty output")
 var REQUEST_CAP = flag.Int("request-cap", _DEF_REQUEST_CAP, "Maximum number of queued requests per logical CPU")
-var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
+var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server_package.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int64("scan-cap", _DEF_SCAN_CAP, "Maximum buffer size for index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
 var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servicer count")
@@ -80,7 +80,7 @@ var IPv6 = flag.Bool("ipv6", false, "Query is IPv6 compliant")
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
-var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
+var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server_package.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 var PIPELINE_CAP = flag.Int64("pipeline-cap", _DEF_PIPELINE_CAP, "Maximum number of items each execution operator can buffer")
 var PIPELINE_BATCH = flag.Int("pipeline-batch", _DEF_PIPELINE_BATCH, "Number of items execution operators can batch")
@@ -122,7 +122,7 @@ func main() {
 	flag.Parse()
 
 	// Set Ipv6 or Ipv4
-	server.SetIP(*IPv6)
+	server_package.SetIP(*IPv6)
 
 	// useful for getting list of go-routines
 	// localhost needs to refer to either 127.0.0.1 or [::1]
@@ -216,7 +216,7 @@ func main() {
 	}
 
 	// Start the completed requests log
-	server.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
+	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
 
 	// Initialized the prepared statement cache
 	if *PREPARED_LIMIT <= 0 {
@@ -233,8 +233,6 @@ func main() {
 			logging.Pair{"value", *DICTIONARY_CACHE_LIMIT})
 		*DICTIONARY_CACHE_LIMIT = _DEF_DICTIONARY_CACHE_LIMIT
 	}
-	// Initialize dictionary cache
-	server.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 
@@ -244,7 +242,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
+	server, err := server_package.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, *REQUEST_CAP*numProcs, *REQUEST_CAP*numProcs, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
 		*PRETTY, prof, ctrl)
@@ -313,6 +311,9 @@ func main() {
 			logging.Pair{"error", er})
 	}
 
+	// Initialize dictionary cache
+	server_package.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
+
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
 
@@ -325,7 +326,7 @@ func main() {
 }
 
 // signalCatcher blocks until a signal is received and then takes appropriate action
-func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
+func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 	sig_chan := make(chan os.Signal, 4)
 	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
 

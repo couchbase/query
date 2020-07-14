@@ -30,10 +30,17 @@ const _CHANGE_COUNTER_PATH = "/query/functions_cache/"
 const _CHANGE_COUNTER = _CHANGE_COUNTER_PATH + "counter"
 
 var changeCounter int32
-var whoAmI string
+var hostname string
+
+func whoAmI() string {
+	if hostname != "" {
+		return hostname
+	}
+	hostname = distributed.RemoteAccess().WhoAmI()
+	return hostname
+}
 
 func Init() {
-	whoAmI = distributed.RemoteAccess().WhoAmI()
 
 	// setup the change counter if not there
 	err := metakv.Add(_CHANGE_COUNTER, fmtChangeCounter())
@@ -56,7 +63,7 @@ func callback(path string, val []byte, rev interface{}) error {
 		return nil
 	}
 	node, _ := distributed.RemoteAccess().SplitKey(string(val))
-	if node != whoAmI {
+	if node != whoAmI() {
 		atomic.AddInt32(&changeCounter, 1)
 	}
 	return nil
@@ -85,7 +92,7 @@ func isNotFoundError(err error) bool {
 // we don't act on it, and append the change counter so that repeated store
 // changes by the same node get propagated, and not lumped as one
 func fmtChangeCounter() []byte {
-	return []byte(distributed.RemoteAccess().MakeKey(whoAmI, strconv.Itoa(int(changeCounter))))
+	return []byte(distributed.RemoteAccess().MakeKey(whoAmI(), strconv.Itoa(int(changeCounter))))
 }
 
 // datastore and function store actions

@@ -1015,6 +1015,9 @@ func SetIP(val bool) {
 // The prev version of impl for this function assumed
 // that node is always ip:port. It should not have a protocol component.
 func HostNameandPort(node string) (host, port string) {
+	if len(node) == 0 {
+		return "", ""
+	}
 	tokens := []string{}
 
 	// it's an IPv6 with port

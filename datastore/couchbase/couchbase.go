@@ -126,10 +126,13 @@ func (info *infoImpl) Version() string {
 
 func fullhostName(n string) string {
 	hostName, portVal := server.HostNameandPort(n)
-	if hostName != "" {
+	if hostName != "" && portVal != "" {
 		return n
 	}
-	return server.GetIP(true) + ":" + portVal
+	if portVal != "" {
+		portVal = ":" + portVal
+	}
+	return server.GetIP(true) + portVal
 }
 
 func (info *infoImpl) Topology() ([]string, []errors.Error) {
