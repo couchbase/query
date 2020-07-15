@@ -12,6 +12,7 @@ package expression
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -579,6 +580,10 @@ type indexMap struct {
 }
 
 func NewIndexMap(idx string, ql queryList) *indexMap {
+	sort.Slice(ql, func(i, j int) bool {
+		return ql[i].cnt > ql[j].cnt
+	})
+
 	return &indexMap{
 		index:   idx,
 		queries: ql,
