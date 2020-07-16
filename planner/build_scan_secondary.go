@@ -32,7 +32,6 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		return
 	}
 
-	this.resetProjection()
 	if this.group != nil {
 		this.resetPushDowns()
 	}
@@ -48,6 +47,7 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
 			pred, node.Alias(), false, false)
 	}
+	this.resetProjection()
 
 	indexes = this.minimalIndexes(indexes, true, pred, node)
 	// Already done. need only for one index
