@@ -14,6 +14,7 @@ package planner
 import (
 	"strings"
 
+	"github.com/couchbase/query-ee/dictionary"
 	advisor "github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/algebra"
@@ -53,10 +54,13 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 		for _, queryInfo := range this.queryInfos {
 			keyspaceInfos := queryInfo.GetKeyspaceInfos()
 			for _, info := range keyspaceInfos {
-				docCount, err := info.GetKeyspace().Count(datastore.NULL_QUERY_CONTEXT)
-				if err == nil && docCount > 0.0 {
+				if dictionary.HasKeyspaceInfo(info.GetName()) {
 					info.SetStatsOn()
 				}
+				//docCount, err := info.GetKeyspace().Count(datastore.NULL_QUERY_CONTEXT)
+				//if err == nil && docCount > 0.0 {
+				//	info.SetStatsOn()
+				//}
 			}
 		}
 	}
