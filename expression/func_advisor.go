@@ -409,7 +409,7 @@ func addToMap(m map[string]queryList, v interface{}, obj *queryObject) {
 	v1 := value.NewValue(v).Actual().([]interface{})
 	for _, v2 := range v1 {
 		v2 := value.NewValue(v2).Actual().(map[string]interface{})
-		if v3, ok := v2["statement"]; ok {
+		if v3, ok := v2["index_statement"]; ok {
 			list, ok := m[v3.(string)]
 			if !ok {
 				list = NewQueryList()

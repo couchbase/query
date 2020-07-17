@@ -11,7 +11,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`,`test_id`)",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`,`test_id`)",
                   "keyspace_alias": "shellTest_a1",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing."
                 }
@@ -35,14 +35,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
-                  "statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
                   "keyspace_alias": "shellTest_s"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
+                  "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
                   "keyspace_alias": "shellTest_s",
                   "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (1. leading array index for unnest, 2. equality/null/missing)."
                 }
@@ -66,13 +66,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                 }
@@ -96,7 +96,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                 }
@@ -120,13 +120,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
                   "keyspace_alias": "shellTest_st",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 5. less than/greater than."
                 }
@@ -150,13 +150,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
                   "keyspace_alias": "shellTest_st",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                 }
@@ -180,7 +180,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_address_id ON `shellTest`(ALL `address`,`id`)",
+                  "index_statement": "CREATE INDEX adv_ALL_address_id ON `shellTest`(ALL `address`,`id`)",
                   "keyspace_alias": "shellTest_st",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 5. less than/greater than."
                 }
@@ -204,13 +204,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_branches_Id_type_cur_sub_2 ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`,`cur`-2)",
+                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type_cur_sub_2 ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`,`cur`-2)",
                   "keyspace_alias": "shellTest_t"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_ALL_branches_Id_type ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`)",
+                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`)",
                   "keyspace_alias": "shellTest_t",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 7. not null/not missing/valued."
                 }

@@ -11,14 +11,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
-                  "statement": "CREATE INDEX adv_a_b_d ON `shellTest`(`a`,`b`,`d`)",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_b_d ON `shellTest`(`a`,`b`,`d`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
+                  "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -42,14 +42,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "property": "ORDER pushdown, LIMIT pushdown",
-                  "statement": "CREATE INDEX adv_test_id_c11DESC ON `shellTest`(`test_id`,`c11` DESC)",
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE INDEX adv_test_id_c11DESC ON `shellTest`(`test_id`,`c11` DESC)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
@@ -73,14 +73,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
-                  "statement": "CREATE INDEX adv_a_c_b_d ON `shellTest`(`a`,`c`,`b`,`d`)",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_c_b_d ON `shellTest`(`a`,`c`,`b`,`d`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`b`,`c`)",
+                  "index_statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`b`,`c`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }
@@ -104,14 +104,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
-                  "statement": "CREATE INDEX adv_a_b_d_c ON `shellTest`(`a`,`b`,`d`,`c`)",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_b_d_c ON `shellTest`(`a`,`b`,`d`,`c`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
+                  "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -135,14 +135,14 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "property": "ORDER pushdown",
-                  "statement": "CREATE INDEX adv_countryDESC_name_pro_account ON `default`(`country` DESC,`name`,`pro_account`)",
+                  "index_property": "ORDER pushdown",
+                  "index_statement": "CREATE INDEX adv_countryDESC_name_pro_account ON `default`(`country` DESC,`name`,`pro_account`)",
                   "keyspace_alias": "default"
                 }
               ],
               "indexes": [
                 {
-                  "statement": "CREATE INDEX adv_country_name ON `default`(`country`,`name`)",
+                  "index_statement": "CREATE INDEX adv_country_name ON `default`(`country`,`name`)",
                   "keyspace_alias": "default",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 7. not null/not missing/valued."
                 }
