@@ -287,6 +287,10 @@ func (this *SendUpdate) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
+func (this *SendUpdate) Term() *algebra.KeyspaceRef {
+	return this.term
+}
+
 func (this *SendUpdate) Alias() string {
 	return this.alias
 }
@@ -336,6 +340,8 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 		Bucket      string  `json:"bucket"`
 		Scope       string  `json:"scope"`
 		Keyspace    string  `json:"keyspace"`
+		Expr        string  `json:"expr"`
+		As          string  `json:"as"`
 		Alias       string  `json:"alias"`
 		Limit       string  `json:"limit"`
 		Cost        float64 `json:"cost"`
@@ -356,17 +362,22 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.term = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
-	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
-	if err != nil {
-		return err
-	}
-
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 
-	return nil
+	if _unmarshalled.Expr != "" {
+		var expr expression.Expression
+		expr, err = parser.Parse(_unmarshalled.Expr)
+		if err == nil {
+			this.term = algebra.NewKeyspaceRefFromExpression(expr, _unmarshalled.As)
+		}
+	} else {
+		this.term = algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+			_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As)
+		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
+	}
+
+	return err
 }
 
 func (this *SendUpdate) verify(prepared *Prepared) bool {

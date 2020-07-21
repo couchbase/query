@@ -321,7 +321,7 @@ func verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Req
 	}
 
 	privs := auth.NewPrivileges()
-	privs.Add(api, priv)
+	privs.Add(api, priv, auth.PRIV_PROPS_NONE)
 	_, err = datastore.GetDatastore().Authorize(privs, creds)
 	return err
 }

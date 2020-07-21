@@ -20,7 +20,7 @@ import (
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 
 func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 
 func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +162,15 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 	return plan.NewBuildIndexes(keyspace, stmt), nil
 }
 
-func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef) (datastore.Keyspace, error) {
-	keyspace, err := datastore.GetKeyspace(ks.Path().Parts()...)
+func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (datastore.Keyspace, error) {
+	path := ks.Path()
+	if path == nil {
+		if dynamic {
+			return nil, nil
+		}
+		return nil, errors.NewError(nil, "placeholder is not allowed in keyspace")
+	}
+	keyspace, err := datastore.GetKeyspace(path.Parts()...)
 
 	if err != nil && this.indexAdvisor && ks.Path().Namespace() != "#system" &&
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||

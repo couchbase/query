@@ -76,7 +76,7 @@ Returns all required privileges.
 func (this *BuildIndexes) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_BUILD_INDEX)
+	privs.Add(fullName, auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 

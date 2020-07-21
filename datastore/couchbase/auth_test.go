@@ -75,7 +75,7 @@ type testCase struct {
 
 func TestGrantRole(t *testing.T) {
 	privs := auth.NewPrivileges()
-	privs.Add("", auth.PRIV_SECURITY_WRITE)
+	privs.Add("", auth.PRIV_SECURITY_WRITE, auth.PRIV_PROPS_NONE)
 
 	as := &authSourceImpl{
 		users: []authUser{
@@ -102,7 +102,7 @@ func TestGrantRole(t *testing.T) {
 
 func TestSimpleSelect(t *testing.T) {
 	privs := auth.NewPrivileges()
-	privs.Add("testbucket", auth.PRIV_QUERY_SELECT)
+	privs.Add("testbucket", auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 
 	as := &authSourceImpl{
 		users: []authUser{
@@ -145,7 +145,7 @@ func runCases(t *testing.T, cases []testCase) {
 
 func TestDefaultCredentials(t *testing.T) {
 	privs := auth.NewPrivileges()
-	privs.Add("testbucket", auth.PRIV_QUERY_SELECT)
+	privs.Add("testbucket", auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 
 	asNoDefault := &authSourceImpl{
 		users: []authUser{

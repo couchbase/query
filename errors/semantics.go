@@ -138,6 +138,16 @@ func NewMHDPOnlyFeature(what, iKey string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewMissingUseKeysError(termType string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: 3261, IKey: iKey,
+		InternalMsg: fmt.Sprintf("%s term must have USE KEYS", termType), InternalCaller: CallerN(1)}
+}
+
+func NewHasUseIndexesError(termType string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: 3262, IKey: iKey,
+		InternalMsg: fmt.Sprintf("%s term should not have USE INDEX", termType), InternalCaller: CallerN(1)}
+}
+
 /* ---- BEGIN MOVED error numbers ----
    The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
    although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.

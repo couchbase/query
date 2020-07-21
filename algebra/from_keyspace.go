@@ -43,6 +43,7 @@ having those primary keys will be included as inputs to the query.
 */
 type KeyspaceTerm struct {
 	path     *Path
+	fromExpr expression.Expression
 	as       string
 	keys     expression.Expression
 	indexes  IndexRefs
@@ -53,7 +54,12 @@ type KeyspaceTerm struct {
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{path, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
+}
+
+func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
+	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -67,14 +73,12 @@ clause.
 func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.joinKeys != nil {
 		this.joinKeys, err = mapper.Map(this.joinKeys)
-		if err != nil {
-			return err
-		}
 	} else if this.keys != nil {
 		this.keys, err = mapper.Map(this.keys)
-		if err != nil {
-			return err
-		}
+	}
+
+	if this.fromExpr != nil && err == nil {
+		this.fromExpr, err = mapper.Map(this.fromExpr)
 	}
 
 	return
@@ -84,11 +88,15 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
    Returns all contained Expressions.
 */
 func (this *KeyspaceTerm) Expressions() expression.Expressions {
-	exprs := make(expression.Expressions, 0, 1)
+	exprs := make(expression.Expressions, 0, 2)
 	if this.joinKeys != nil {
 		exprs = append(exprs, this.joinKeys)
 	} else if this.keys != nil {
 		exprs = append(exprs, this.keys)
+	}
+
+	if this.fromExpr != nil {
+		exprs = append(exprs, this.fromExpr)
 	}
 
 	return exprs
@@ -97,20 +105,25 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 /*
 Returns all required privileges.
 */
-func (this *KeyspaceTerm) Privileges() (*auth.Privileges, errors.Error) {
-	privs, err := privilegesFromPath(this.path)
-	if err != nil {
-		return nil, err
+func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error) {
+	if this.path != nil {
+		privs, err = PrivilegesFromPath(this.path)
+	} else {
+		privs = auth.NewPrivileges()
+		privs.Add(this.fromExpr.String(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_DYNAMIC_TARGET)
 	}
-	if this.joinKeys != nil {
-		privs.AddAll(this.joinKeys.Privileges())
-	} else if this.keys != nil {
-		privs.AddAll(this.keys.Privileges())
+
+	if err == nil {
+		if this.joinKeys != nil {
+			privs.AddAll(this.joinKeys.Privileges())
+		} else if this.keys != nil {
+			privs.AddAll(this.keys.Privileges())
+		}
 	}
-	return privs, nil
+	return privs, err
 }
 
-func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
+func PrivilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
 
 	namespace := path.Namespace()
 	fullKeyspace := path.SimpleString()
@@ -118,17 +131,17 @@ func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
 	if namespace == "#system" {
 		switch path.Keyspace() {
 		case "user_info", "applicable_roles":
-			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ)
+			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
 		case "keyspaces", "indexes", "my_user_info":
 			// Do nothing. These tables handle security internally, by
 			// filtering the results.
 		case "datastores", "namespaces", "dual":
 			// Do nothing. These three tables are open to all.
 		default:
-			privs.Add(fullKeyspace, auth.PRIV_SYSTEM_READ)
+			privs.Add(fullKeyspace, auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 		}
 	} else {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 	}
 	return privs, nil
 }
@@ -136,8 +149,13 @@ func privilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
 /*
    Representation as a N1QL string.
 */
-func (this *KeyspaceTerm) String() string {
-	s := this.path.ProtectedString()
+func (this *KeyspaceTerm) String() (s string) {
+
+	if this.path != nil {
+		s = this.path.ProtectedString()
+	} else {
+		s = this.fromExpr.String()
+	}
 
 	if this.as != "" {
 		s += " as `" + this.as + "`"
@@ -240,8 +258,10 @@ Returns the alias string.
 func (this *KeyspaceTerm) Alias() string {
 	if this.as != "" {
 		return this.as
-	} else {
+	} else if this.path != nil {
 		return this.path.Alias()
+	} else {
+		return ""
 	}
 }
 
@@ -249,7 +269,10 @@ func (this *KeyspaceTerm) Alias() string {
 Returns the namespace string.
 */
 func (this *KeyspaceTerm) Namespace() string {
-	return this.path.Namespace()
+	if this.path != nil {
+		return this.path.Namespace()
+	}
+	return ""
 }
 
 /*
@@ -257,14 +280,19 @@ Set the namespace string when it is empty.
 FIXME ideally this should go
 */
 func (this *KeyspaceTerm) SetDefaultNamespace(namespace string) {
-	this.path.SetDefaultNamespace(namespace)
+	if this.path != nil {
+		this.path.SetDefaultNamespace(namespace)
+	}
 }
 
 /*
 Returns the keyspace string
 */
 func (this *KeyspaceTerm) Keyspace() string {
-	return this.path.Keyspace()
+	if this.path != nil {
+		return this.path.Keyspace()
+	}
+	return this.fromExpr.String()
 }
 
 /*
@@ -280,6 +308,10 @@ clause.
 */
 func (this *KeyspaceTerm) Keys() expression.Expression {
 	return this.keys
+}
+
+func (this *KeyspaceTerm) FromExpression() expression.Expression {
+	return this.fromExpr
 }
 
 /*
@@ -468,12 +500,20 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	} else if this.keys != nil {
 		r["keys"] = expression.NewStringer().Visit(this.keys)
 	}
-	r["path"] = this.path
+	if this.path != nil {
+		r["path"] = this.path
+	} else {
+		r["fromExpr"] = this.fromExpr
+	}
 	return json.Marshal(r)
 }
 
 func (this *KeyspaceTerm) MarshalKeyspace(m map[string]interface{}) {
-	this.path.marshalKeyspace(m)
+	if this.path != nil {
+		this.path.marshalKeyspace(m)
+	} else {
+		m["fromExpr"] = this.fromExpr
+	}
 }
 
 func (this *KeyspaceTerm) Path() *Path {

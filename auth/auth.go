@@ -47,7 +47,13 @@ type PrivilegePair struct {
 	// privileges
 	Priv Privilege // The level of privilege requested. Note there could be multiple
 	// privileges against the same target.
+	Props int // propoerties of this privilage
 }
+
+const (
+	PRIV_PROPS_DYNAMIC_TARGET = 1 << iota
+	PRIV_PROPS_NONE           = 0
+)
 
 // A set of permissions required, typically to run a specific query.
 type Privileges struct {
@@ -69,7 +75,7 @@ func (this *Privileges) AddAll(other *Privileges) {
 		return
 	}
 	for _, pair := range other.List {
-		this.Add(pair.Target, pair.Priv)
+		this.Add(pair.Target, pair.Priv, pair.Props)
 	}
 }
 
@@ -81,7 +87,7 @@ func (this *Privileges) ForEach(f func(PrivilegePair)) {
 
 func (this *Privileges) AddPair(pp PrivilegePair) {
 	for _, pair := range this.List {
-		if pair.Target == pp.Target && pair.Priv == pp.Priv {
+		if pair.Target == pp.Target && pair.Priv == pp.Priv && pair.Props == pp.Props {
 			// already present
 			return
 		}
@@ -89,14 +95,14 @@ func (this *Privileges) AddPair(pp PrivilegePair) {
 	this.List = append(this.List, pp)
 }
 
-func (this *Privileges) Add(target string, priv Privilege) {
+func (this *Privileges) Add(target string, priv Privilege, Props int) {
 	for _, pair := range this.List {
-		if pair.Target == target && pair.Priv == priv {
+		if pair.Target == target && pair.Priv == priv && pair.Props == Props {
 			// already present
 			return
 		}
 	}
-	this.List = append(this.List, PrivilegePair{Target: target, Priv: priv})
+	this.List = append(this.List, PrivilegePair{Target: target, Priv: priv, Props: Props})
 }
 
 /*

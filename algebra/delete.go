@@ -144,18 +144,19 @@ Returns all required privileges.
 */
 func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
+	props := this.keyspace.PrivilegeProps()
 	fullKeyspace := this.keyspace.FullName()
 	name := this.keyspace.Keyspace()
 	if this.keyspace.Namespace() == "#system" &&
 		(name == "prepareds" || name == "active_requests" || name == "completed_requests") {
 		// Temp fix. For now, deleting from these three tables should require
 		// the same permissions as reading from them.
-		privs.Add("", auth.PRIV_SYSTEM_READ)
+		privs.Add("", auth.PRIV_SYSTEM_READ, props)
 	} else {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE, props)
 	}
 	if this.returning != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 	}
 
 	exprs := this.Expressions()

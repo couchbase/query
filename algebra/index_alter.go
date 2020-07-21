@@ -66,7 +66,7 @@ Returns all required privileges.
 func (this *AlterIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_ALTER_INDEX)
+	privs.Add(fullName, auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 

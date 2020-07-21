@@ -14,6 +14,8 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 )
 
 type Fetch struct {
@@ -103,6 +105,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		Bucket      string   `json:"bucket"`
 		Scope       string   `json:"scope"`
 		Keyspace    string   `json:"keyspace"`
+		FromExpr    string   `json:"fromExpr"`
 		As          string   `json:"as"`
 		UnderNL     bool     `json:"nested_loop"`
 		Cost        float64  `json:"cost"`
@@ -116,16 +119,23 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.subPaths = _unmarshalled.SubPaths
-
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
-
-	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
-	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
+
+	this.cost = getCost(_unmarshalled.Cost)
+	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	if _unmarshalled.FromExpr != "" {
+		var expr expression.Expression
+		expr, err = parser.Parse(_unmarshalled.FromExpr)
+		if err == nil {
+			this.term = algebra.NewKeyspaceTermFromExpression(expr, _unmarshalled.As, nil, nil, 0)
+		}
+	} else {
+		this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+			_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
+		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
+	}
 	return err
 }
 
@@ -212,6 +222,7 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 		Bucket      string  `json:"bucket"`
 		Scope       string  `json:"scope"`
 		Keyspace    string  `json:"keyspace"`
+		FromExpr    string  `json:"fromExpr"`
 		As          string  `json:"as"`
 		UnderNL     bool    `json:"nested_loop"`
 		Cost        float64 `json:"cost"`
@@ -225,12 +236,20 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	if _unmarshalled.FromExpr != "" {
+		expr, err1 := parser.Parse(_unmarshalled.FromExpr)
+		if err1 != nil {
+			return err1
+		}
+		this.term = algebra.NewKeyspaceTermFromExpression(expr, _unmarshalled.As, nil, nil, 0)
+	} else {
+		this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
+			_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
+		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
+	}
 
-	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
-		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
-	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	return err
 }

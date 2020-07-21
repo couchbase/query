@@ -41,7 +41,7 @@ func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interfac
 
 func (this *builder) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}

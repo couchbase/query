@@ -20,7 +20,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 
 	this.initialIndexAdvisor(stmt)
 	ksref := stmt.KeyspaceRef()
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, true)
 	if err != nil {
 		return nil, err
 	}

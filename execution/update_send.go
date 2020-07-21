@@ -15,6 +15,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -32,8 +33,9 @@ func init() {
 // Send to keyspace
 type SendUpdate struct {
 	base
-	plan  *plan.SendUpdate
-	limit int64
+	plan     *plan.SendUpdate
+	keyspace datastore.Keyspace
+	limit    int64
 }
 
 func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
@@ -78,6 +80,11 @@ func (this *SendUpdate) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	if this.keyspace == nil {
+		return false
+	}
+
 	if this.plan.Limit() == nil {
 		return true
 	}
@@ -179,7 +186,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
-	pairs, e := this.plan.Keyspace().Update(pairs)
+	pairs, e := this.keyspace.Update(pairs)
 
 	this.switchPhase(_EXECTIME)
 

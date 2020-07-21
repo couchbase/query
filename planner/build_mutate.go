@@ -20,7 +20,12 @@ import (
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression, mustFetch bool) error {
 	ksref.SetDefaultNamespace(this.namespace)
-	term := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), keys, indexes)
+	var term *algebra.KeyspaceTerm
+	if ksref.Path() != nil {
+		term = algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), keys, indexes)
+	} else {
+		term = algebra.NewKeyspaceTermFromExpression(ksref.ExpressionTerm(), ksref.As(), keys, indexes, 0)
+	}
 
 	this.children = make([]plan.Operator, 0, 8)
 	this.subChildren = make([]plan.Operator, 0, 8)

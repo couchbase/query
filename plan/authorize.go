@@ -17,15 +17,26 @@ import (
 
 type Authorize struct {
 	readonly
-	privs *auth.Privileges `json:"privileges"`
-	child Operator         `json:"~child"`
+	privs   *auth.Privileges `json:"privileges"`
+	child   Operator         `json:"~child"`
+	dynamic bool             `json:"dynamic"`
 }
 
 func NewAuthorize(privs *auth.Privileges, child Operator) *Authorize {
-	return &Authorize{
+	rv := &Authorize{
 		privs: privs,
 		child: child,
 	}
+
+	if privs != nil {
+		privs.ForEach(func(pp auth.PrivilegePair) {
+			if (pp.Props & auth.PRIV_PROPS_DYNAMIC_TARGET) != 0 {
+				rv.dynamic = true
+			}
+		})
+	}
+
+	return rv
 }
 
 func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
@@ -48,6 +59,10 @@ func (this *Authorize) Child() Operator {
 	return this.child
 }
 
+func (this *Authorize) Dynamic() bool {
+	return this.dynamic
+}
+
 func (this *Authorize) Cost() float64 {
 	return this.child.Cost()
 }
@@ -63,6 +78,9 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 func (this *Authorize) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Authorize"}
 	r["privileges"] = this.privs
+	if this.dynamic {
+		r["dynamic"] = this.dynamic
+	}
 	if f != nil {
 		f(r)
 	} else {
@@ -73,9 +91,10 @@ func (this *Authorize) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *Authorize) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string           `json:"#operator"`
-		Privs *auth.Privileges `json:"privileges"`
-		Child json.RawMessage  `json:"~child"`
+		_       string           `json:"#operator"`
+		Privs   *auth.Privileges `json:"privileges"`
+		Child   json.RawMessage  `json:"~child"`
+		Dynamic bool             `json:"Dynamic"`
 	}
 	var child_type struct {
 		Operator string `json:"#operator"`
@@ -85,6 +104,7 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 		return err
 	}
 	this.privs = _unmarshalled.Privs
+	this.dynamic = _unmarshalled.Dynamic
 
 	err = json.Unmarshal(_unmarshalled.Child, &child_type)
 	if err != nil {

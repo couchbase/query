@@ -138,7 +138,7 @@ Returns all required privileges.
 func (this *CreateIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_CREATE_INDEX)
+	privs.Add(fullName, auth.PRIV_QUERY_CREATE_INDEX, auth.PRIV_PROPS_NONE)
 
 	for _, expr := range this.Expressions() {
 		privs.AddAll(expr.Privileges())

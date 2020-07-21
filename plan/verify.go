@@ -43,6 +43,9 @@ func verifyIndex(index datastore.Index, indexer datastore.Indexer, prepared *Pre
 }
 
 func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.Keyspace, bool) {
+	if keyspace == nil {
+		return keyspace, true
+	}
 	var ks datastore.Keyspace
 	var err errors.Error
 	var meta datastore.KeyspaceMetadata

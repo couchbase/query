@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -29,8 +30,9 @@ func init() {
 
 type SendDelete struct {
 	base
-	plan  *plan.SendDelete
-	limit int64
+	plan     *plan.SendDelete
+	keyspace datastore.Keyspace
+	limit    int64
 }
 
 func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
@@ -75,6 +77,11 @@ func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	if this.keyspace == nil {
+		return false
+	}
+
 	if this.plan.Limit() == nil {
 		return true
 	}
@@ -133,7 +140,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
-	deleted_keys, e := this.plan.Keyspace().Delete(keys, context)
+	deleted_keys, e := this.keyspace.Delete(keys, context)
 
 	this.switchPhase(_EXECTIME)
 

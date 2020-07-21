@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -20,7 +21,8 @@ import (
 
 type SendUpsert struct {
 	base
-	plan *plan.SendUpsert
+	plan     *plan.SendUpsert
+	keyspace datastore.Keyspace
 }
 
 func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
@@ -50,6 +52,11 @@ func (this *SendUpsert) PlanOp() plan.Operator {
 
 func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
+}
+
+func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	return this.keyspace != nil
 }
 
 func (this *SendUpsert) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -154,7 +161,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Perform the actual UPSERT
 	var er errors.Error
-	dpairs, er = this.plan.Keyspace().Upsert(dpairs)
+	dpairs, er = this.keyspace.Upsert(dpairs)
 
 	this.switchPhase(_EXECTIME)
 

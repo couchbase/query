@@ -90,7 +90,7 @@ func (this *RevokeRole) Privileges() (*auth.Privileges, errors.Error) {
 	// This works because no bucket name is needed for this type of authorization.
 	// If we absolutely had to provide a table name, it would make sense to use system:user_info,
 	// because that's the virtual table where the data can be accessed.
-	privs.Add("", auth.PRIV_SECURITY_WRITE)
+	privs.Add("", auth.PRIV_SECURITY_WRITE, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 

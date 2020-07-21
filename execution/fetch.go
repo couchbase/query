@@ -12,6 +12,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -32,6 +33,7 @@ func init() {
 type Fetch struct {
 	base
 	plan       *plan.Fetch
+	keyspace   datastore.Keyspace
 	deepCopy   bool
 	batchSize  int
 	fetchCount uint64
@@ -46,6 +48,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
 	rv.execPhase = FETCH
 	rv.output = rv
+
 	return rv
 }
 
@@ -68,6 +71,13 @@ func (this *Fetch) PlanOp() plan.Operator {
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
+}
+
+func (this *Fetch) beforeItems(context *Context, item value.Value) bool {
+	if this.keyspace = this.plan.Keyspace(); this.keyspace == nil {
+		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
+	}
+	return this.keyspace != nil
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -141,7 +151,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	this.switchPhase(_SERVTIME)
 
 	// Fetch
-	errs := this.plan.Keyspace().Fetch(fetchKeys, fetchMap, context, this.plan.SubPaths())
+	errs := this.keyspace.Fetch(fetchKeys, fetchMap, context, this.plan.SubPaths())
 
 	this.switchPhase(_EXECTIME)
 

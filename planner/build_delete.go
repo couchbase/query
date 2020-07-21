@@ -23,7 +23,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, true)
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -29,8 +30,9 @@ func init() {
 
 type SendInsert struct {
 	base
-	plan  *plan.SendInsert
-	limit int64
+	plan     *plan.SendInsert
+	keyspace datastore.Keyspace
+	limit    int64
 }
 
 func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
@@ -74,6 +76,11 @@ func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	if this.keyspace == nil {
+		return false
+	}
+
 	if this.plan.Limit() == nil {
 		return true
 	}
@@ -193,7 +200,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Perform the actual INSERT
 	var er errors.Error
-	dpairs, er = this.plan.Keyspace().Insert(dpairs)
+	dpairs, er = this.keyspace.Insert(dpairs)
 
 	this.switchPhase(_EXECTIME)
 

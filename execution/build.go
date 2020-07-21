@@ -27,7 +27,7 @@ func Build(plan plan.Operator, context *Context) (Operator, error) {
 		// Collect scanned indexes.
 		m = make(map[scannedIndex]bool, 8)
 	}
-	builder := &builder{context, m, aliasMap}
+	builder := &builder{context, m, aliasMap, true}
 	x, err := plan.Accept(builder)
 
 	if err != nil {
@@ -52,14 +52,21 @@ type scannedIndex struct {
 }
 
 type builder struct {
-	context        *Context
-	scannedIndexes map[scannedIndex]bool // Nil if scanned indexes should not be collected.
-	aliasMap       map[string]string
+	context          *Context
+	scannedIndexes   map[scannedIndex]bool // Nil if scanned indexes should not be collected.
+	aliasMap         map[string]string
+	dynamicAuthorize bool
 }
 
 func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
 	if keyspaceTerm.Namespace() != "#system" {
-		this.aliasMap[keyspaceTerm.Alias()] = keyspaceTerm.Path().ProtectedString()
+		path := keyspaceTerm.Path()
+		if path == nil {
+			path, _ = getKeyspacePath(keyspaceTerm.FromExpression(), this.context)
+		}
+		if path != nil {
+			this.aliasMap[keyspaceTerm.Alias()] = path.ProtectedString()
+		}
 	}
 }
 
@@ -502,7 +509,7 @@ func (this *builder) VisitAuthorize(plan *plan.Authorize) (interface{}, error) {
 		return nil, err
 	}
 
-	return checkOp(NewAuthorize(plan, this.context, child.(Operator)), this.context)
+	return checkOp(NewAuthorize(plan, this.context, child.(Operator), this.dynamicAuthorize), this.context)
 }
 
 // Parallel
@@ -657,11 +664,13 @@ func (this *builder) VisitFlushCollection(plan *plan.FlushCollection) (interface
 
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
+	this.dynamicAuthorize = false
 	return checkOp(NewPrepare(plan, this.context, plan.Prepared()), this.context)
 }
 
 // Explain
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
+	this.dynamicAuthorize = false
 	return checkOp(NewExplain(plan, this.context), this.context)
 }
 
@@ -698,6 +707,7 @@ func (this *builder) VisitIndexAdvice(plan *plan.IndexAdvice) (interface{}, erro
 }
 
 func (this *builder) VisitAdvise(plan *plan.Advise) (interface{}, error) {
+	this.dynamicAuthorize = false
 	return checkOp(NewAdviseIndex(plan, this.context), this.context)
 }
 

@@ -90,7 +90,7 @@ Returns all required privileges.
 func (this *DropIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_DROP_INDEX)
+	privs.Add(fullName, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 

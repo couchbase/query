@@ -195,10 +195,11 @@ Returns all required privileges.
 */
 func (this *Insert) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
+	props := this.keyspace.PrivilegeProps()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT)
+	privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT, props)
 	if this.returning != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 	}
 
 	if this.query != nil {

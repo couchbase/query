@@ -69,7 +69,7 @@ func (this *UpdateStatistics) Expressions() expression.Expressions {
 }
 
 func (this *UpdateStatistics) Privileges() (*auth.Privileges, errors.Error) {
-	privs, err := privilegesFromPath(this.keyspace.path)
+	privs, err := PrivilegesFromPath(this.keyspace.path)
 	if err != nil {
 		return privs, err
 	}

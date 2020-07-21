@@ -10,7 +10,9 @@
 package execution
 
 import (
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -68,6 +70,32 @@ func evalLimitOffset(expr expression.Expression, parent value.Value, defval int6
 	}
 
 	return defval
+}
+
+func getKeyspacePath(expr expression.Expression, context *Context) (*algebra.Path, error) {
+	if expr == nil {
+		return nil, nil
+	}
+
+	v, e := expr.Evaluate(nil, context)
+	if e != nil || v == nil || v.Type() != value.STRING {
+		return nil, e
+	}
+	return algebra.NewPathWithContext(v.Actual().(string), context.Namespace(), context.queryContext), nil
+}
+
+func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, context *Context) datastore.Keyspace {
+	if keyspace == nil {
+		path, err := getKeyspacePath(expr, context)
+		if err == nil && path != nil {
+			keyspace, err = datastore.GetKeyspace(path.Parts()...)
+		}
+		if err != nil || keyspace == nil {
+			context.Error(errors.NewEvaluationError(err, "expr is not valid"))
+			return nil
+		}
+	}
+	return keyspace
 }
 
 var _INDEX_SCAN_POOL = NewOperatorPool(16)

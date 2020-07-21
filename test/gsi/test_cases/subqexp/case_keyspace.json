@@ -1,0 +1,59 @@
+[
+    {
+       "statements": "INSERT INTO $1 VALUES($2, $3)",
+       "positionalArgs": [ "orders", "o101", {"type":"order", "test_id":"subqexp", "a":"o101" } ],
+       "results": [
+        ]
+    },
+    {
+       "statements": "SELECT d.a FROM $1 AS d USE KEYS $2",
+       "positionalArgs": [ "orders", "o101"],
+       "results": [
+        {
+            "a": "o101"
+        }
+        ]
+    },
+    {
+       "statements": "UPSERT INTO $1 VALUES($2, $3)",
+       "positionalArgs": [ "orders", "o101", {"type":"order", "test_id":"subqexp", "a":"o111" } ],
+       "results": [
+        ]
+    },
+    {
+       "statements": "SELECT d.a FROM $1 AS d USE KEYS $2",
+       "positionalArgs": [ "orders", "o101"],
+       "results": [
+        {
+            "a": "o111"
+        }
+        ]
+    },
+    {
+       "statements": "UPDATE $1 AS d USE KEYS $2 SET d = $3",
+       "positionalArgs": [ "orders", "o101", {"type":"order", "test_id":"subqexp", "a":"o101" } ],
+       "results": [
+        ]
+    },
+    {
+       "statements": "SELECT d.a FROM $1 AS d USE KEYS $2",
+       "positionalArgs": [ "orders", "o101"],
+       "results": [
+        {
+            "a": "o101"
+        }
+        ]
+    },
+    {
+       "statements": "DELETE FROM $1 AS d USE KEYS $2",
+       "positionalArgs": [ "orders", "o101"],
+       "results": [
+        ]
+    },
+    {
+       "statements": "SELECT d.a FROM $1 AS d USE KEYS $2",
+       "positionalArgs": [ "orders", "o101"],
+       "results": [
+        ]
+    }
+]

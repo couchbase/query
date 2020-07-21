@@ -29,6 +29,8 @@ func TestSubqexp(t *testing.T) {
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
 
 	runMatch("case_select.json", false, false, qc, t)
+	runMatch("case_keyspace.json", false, false, qc, t)
+	runMatch("case_keyspace.json", true, false, qc, t)
 
 	_, _, errcs := runStmt(qc, "delete from orders where test_id = \"subqexp\"")
 	if errcs != nil {

@@ -163,7 +163,7 @@ func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
 	if this.returning != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 	}
 
 	sp, err := this.source.Privileges()
@@ -574,15 +574,15 @@ The keyspace being acted on is passed down as 'keyspace'.
 */
 func (this *MergeActions) AddPrivilegesFor(privs *auth.Privileges, fullKeyspace string) {
 	if this.update != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, auth.PRIV_PROPS_NONE)
 	}
 
 	if this.delete != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE, auth.PRIV_PROPS_NONE)
 	}
 
 	if this.insert != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT, auth.PRIV_PROPS_NONE)
 	}
 }
 

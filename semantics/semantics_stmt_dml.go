@@ -67,6 +67,15 @@ func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 }
 
 func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err error) {
+	if stmt.KeyspaceRef().Path() == nil {
+		if stmt.Keys() == nil {
+			return nil, errors.NewMissingUseKeysError("<placeholder>", "semantic.delete")
+		}
+		if stmt.Indexes() != nil {
+			return nil, errors.NewHasUseIndexesError("<placeholder>", "semantic.delete")
+		}
+	}
+
 	if stmt.Keys() != nil {
 		if _, err = this.Map(stmt.Keys()); err != nil {
 			return nil, err
@@ -98,6 +107,15 @@ func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err er
 }
 
 func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (r interface{}, err error) {
+	if stmt.KeyspaceRef().Path() == nil {
+		if stmt.Keys() == nil {
+			return nil, errors.NewMissingUseKeysError("<placeholder>", "semantic.update")
+		}
+		if stmt.Indexes() != nil {
+			return nil, errors.NewHasUseIndexesError("<placeholder>", "semantic.update")
+		}
+	}
+
 	if stmt.Keys() != nil {
 		if _, err = this.Map(stmt.Keys()); err != nil {
 			return nil, err

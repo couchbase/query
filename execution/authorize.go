@@ -12,7 +12,11 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -20,8 +24,9 @@ import (
 
 type Authorize struct {
 	base
-	plan  *plan.Authorize
-	child Operator
+	dynamicAuthorize bool
+	plan             *plan.Authorize
+	child            Operator
 }
 
 var _AUTH_OP_POOL util.FastPool
@@ -32,10 +37,11 @@ func init() {
 	})
 }
 
-func NewAuthorize(plan *plan.Authorize, context *Context, child Operator) *Authorize {
+func NewAuthorize(plan *plan.Authorize, context *Context, child Operator, dynamicAuthorize bool) *Authorize {
 	rv := _AUTH_OP_POOL.Get().(*Authorize)
 	rv.plan = plan
 	rv.child = child
+	rv.dynamicAuthorize = dynamicAuthorize
 	newRedirectBase(&rv.base)
 	rv.base.setInline()
 	rv.output = rv
@@ -75,7 +81,17 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_SERVTIME)
 		ds := datastore.GetDatastore()
 		if ds != nil {
-			authenticatedUsers, err := ds.Authorize(this.plan.Privileges(), context.Credentials())
+			privs := this.plan.Privileges()
+			if privs != nil && this.plan.Dynamic() {
+				var perr error
+				privs, perr = this.getPrivileges(privs, context, this.dynamicAuthorize)
+				if perr != nil {
+					context.Fatal(errors.NewError(perr, "dynamic authorization"))
+					this.fail(context)
+					return
+				}
+			}
+			authenticatedUsers, err := ds.Authorize(privs, context.Credentials())
 			if err != nil {
 				context.Fatal(err)
 				this.fail(context)
@@ -136,4 +152,31 @@ func (this *Authorize) Done() {
 	if this.isComplete() {
 		_AUTH_OP_POOL.Put(this)
 	}
+}
+
+func (this *Authorize) getPrivileges(privs *auth.Privileges, context *Context, inclDynamic bool) (*auth.Privileges, error) {
+	var rerr error
+	nprivs := auth.NewPrivileges()
+	privs.ForEach(func(pp auth.PrivilegePair) {
+		if (pp.Props & auth.PRIV_PROPS_DYNAMIC_TARGET) != 0 {
+			if inclDynamic {
+				expr, err := parser.Parse(pp.Target)
+				if err == nil {
+					var path *algebra.Path
+					path, err = getKeyspacePath(expr, context)
+					if err == nil && path != nil {
+						rprivs, _ := algebra.PrivilegesFromPath(path)
+						nprivs.AddAll(rprivs)
+					}
+				}
+				if err != nil {
+					rerr = err
+				}
+			}
+		} else {
+			nprivs.AddPair(pp)
+		}
+	})
+
+	return nprivs, rerr
 }

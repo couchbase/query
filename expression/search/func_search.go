@@ -74,7 +74,7 @@ func (this *FTSQuery) Evaluate(item value.Value, context expression.Context) (va
 
 func (this *FTSQuery) Privileges() *auth.Privileges {
 	unionPrivileges := auth.NewPrivileges()
-	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS)
+	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS, auth.PRIV_PROPS_NONE)
 
 	children := this.Children()
 	for _, child := range children {

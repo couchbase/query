@@ -12,6 +12,7 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -20,16 +21,21 @@ import (
 Represents the keyspace_ref used in DML statements
 */
 type KeyspaceRef struct {
-	path *Path  `json:"path"`
-	as   string `json:"as"`
+	path *Path                 `json:"path"`
+	expr expression.Expression `json:"expr"`
+	as   string                `json:"as"`
 }
 
 func NewKeyspaceRefFromPath(path *Path, as string) *KeyspaceRef {
-	return &KeyspaceRef{path, as}
+	return &KeyspaceRef{path, nil, as}
+}
+
+func NewKeyspaceRefFromExpression(expr expression.Expression, as string) *KeyspaceRef {
+	return &KeyspaceRef{nil, expr, as}
 }
 
 func NewKeyspaceRefWithContext(keyspace, as, namespace, queryContext string) *KeyspaceRef {
-	return &KeyspaceRef{NewPathWithContext(keyspace, namespace, queryContext), as}
+	return &KeyspaceRef{NewPathWithContext(keyspace, namespace, queryContext), nil, as}
 }
 
 /*
@@ -51,12 +57,18 @@ func (this *KeyspaceRef) Path() *Path {
 	return this.path
 }
 
+func (this *KeyspaceRef) ExpressionTerm() expression.Expression {
+	return this.expr
+}
+
 /*
 Returns the namespace string.
 */
 func (this *KeyspaceRef) Namespace() string {
-	return this.path.Namespace()
-
+	if this.path != nil {
+		return this.path.Namespace()
+	}
+	return ""
 }
 
 /*
@@ -64,14 +76,19 @@ Set the default namespace.
 FIXME ideally this should go
 */
 func (this *KeyspaceRef) SetDefaultNamespace(namespace string) {
-	this.path.SetDefaultNamespace(namespace)
+	if this.path != nil {
+		this.path.SetDefaultNamespace(namespace)
+	}
 }
 
 /*
 Returns the keyspace string.
 */
 func (this *KeyspaceRef) Keyspace() string {
-	return this.path.Keyspace()
+	if this.path != nil {
+		return this.path.Keyspace()
+	}
+	return this.expr.String()
 }
 
 /*
@@ -88,8 +105,10 @@ based on if as is empty.
 func (this *KeyspaceRef) Alias() string {
 	if this.as != "" {
 		return this.as
-	} else {
+	} else if this.path != nil {
 		return this.path.Alias()
+	} else {
+		return ""
 	}
 }
 
@@ -98,7 +117,11 @@ Marshals input into byte array.
 */
 func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 3)
-	r["path"] = this.path
+	if this.path != nil {
+		r["path"] = this.path
+	} else {
+		r["expr"] = this.expr
+	}
 	if this.as != "" {
 		r["as"] = this.as
 	}
@@ -107,12 +130,27 @@ func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
 }
 
 func (this *KeyspaceRef) MarshalKeyspace(m map[string]interface{}) {
-	this.path.marshalKeyspace(m)
+	if this.path != nil {
+		this.path.marshalKeyspace(m)
+	} else {
+		m["expr"] = this.expr
+	}
 }
 
 /*
 Returns the full keyspace name, including the namespace.
 */
 func (this *KeyspaceRef) FullName() string {
-	return this.path.SimpleString()
+	if this.path != nil {
+		return this.path.SimpleString()
+	}
+	return this.expr.String()
+}
+
+func (this *KeyspaceRef) PrivilegeProps() int {
+	if this.path != nil {
+		return auth.PRIV_PROPS_NONE
+	} else {
+		return auth.PRIV_PROPS_DYNAMIC_TARGET
+	}
 }

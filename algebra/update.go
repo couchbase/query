@@ -186,9 +186,10 @@ Returns all required privileges.
 func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE)
+	props := this.keyspace.PrivilegeProps()
+	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
 	if this.returning != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 	}
 
 	exprs := this.Expressions()

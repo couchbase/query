@@ -88,7 +88,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 
-	keyspace, err := this.getNameKeyspace(ksref)
+	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
 		return nil, err
 	}

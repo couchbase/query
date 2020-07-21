@@ -105,7 +105,7 @@ func (this *Curl) Evaluate(item value.Value, context Context) (value.Value, erro
 
 func (this *Curl) Privileges() *auth.Privileges {
 	unionPrivileges := auth.NewPrivileges()
-	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS)
+	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS, auth.PRIV_PROPS_NONE)
 
 	children := this.Children()
 	for _, child := range children {

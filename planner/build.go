@@ -247,6 +247,9 @@ func (this *builder) collectKeyspaceNames() {
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {
 	path := node.Path()
+	if path == nil {
+		return nil, nil
+	}
 	path.SetDefaultNamespace(this.namespace)
 	ns := strings.ToLower(path.Namespace())
 	keyspace, err := datastore.GetKeyspace(path.Parts()...)

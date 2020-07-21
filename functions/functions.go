@@ -259,7 +259,7 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 	if f != nil {
 		priv := GetPrivilege(name, f.FunctionBody)
 		privs := auth.NewPrivileges()
-		privs.Add(f.Key(), priv)
+		privs.Add(f.Key(), priv, auth.PRIV_PROPS_NONE)
 		err := Authorize(f.privs, context.Credentials())
 		if err != nil {
 			return err
@@ -505,15 +505,15 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 	}
 	if entry.IsGlobal() {
 		if entry.IsExternal() {
-			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL)
+			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
 		} else {
-			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS)
+			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 		}
 	} else {
 		if entry.IsExternal() {
-			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL)
+			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
 		} else {
-			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS)
+			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 		}
 	}
 	entry.privs = privs

@@ -506,7 +506,7 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
 func canRead(context datastore.QueryContext, elems ...string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_SELECT)
+	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res
@@ -515,7 +515,7 @@ func canRead(context datastore.QueryContext, elems ...string) bool {
 // Do the presented credentials authorize the user to list indexes of the namespace/keyspace bucket?
 func canListIndexes(context datastore.QueryContext, elems ...string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_LIST_INDEX)
+	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_LIST_INDEX, auth.PRIV_PROPS_NONE)
 	_, err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res

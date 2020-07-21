@@ -421,7 +421,7 @@ tokOffset	 int
 %type <statement>        role_stmt grant_role revoke_role
 %type <statement>        function_stmt create_function drop_function execute_function
 
-%type <keyspaceRef>      keyspace_ref
+%type <keyspaceRef>      keyspace_ref simple_keyspace_ref
 %type <pairs>            values values_list next_values
 %type <expr>             key_expr_header value_expr_header options_expr_header
 %type <pair>             key_val_expr key_val_options_expr key_val_options_expr_header
@@ -631,7 +631,7 @@ infer_keyspace
 ;
 
 infer_keyspace:
-INFER opt_keyspace keyspace_ref opt_infer_using opt_infer_ustat_with
+INFER opt_keyspace simple_keyspace_ref opt_infer_using opt_infer_ustat_with
 {
     $$ = algebra.NewInferKeyspace($3, $4, $5)
 }
@@ -981,7 +981,7 @@ FROM from_term
 from_term:
 simple_from_term
 {
-    if $1.JoinHint() != algebra.JOIN_HINT_NONE {
+    if $1 != nil && $1.JoinHint() != algebra.JOIN_HINT_NONE {
         yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s", $1.Alias()))
     }
     $$ = $1
@@ -1069,20 +1069,35 @@ expr opt_as_alias opt_use
          case *algebra.Subquery:
               if $2 == "" {
                    yylex.Error("Subquery in FROM clause must have an alias.")
+	           yylex.(*lexer).Stop()
               }
               if $3.Keys() != nil || $3.Indexes() != nil {
                    yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
+	           yylex.(*lexer).Stop()
               }
               $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
          case *expression.Identifier:
               ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext()),
 							$2, $3.Keys(), $3.Indexes())
               $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
-         default:
-              if $3.Keys() != nil || $3.Indexes() != nil {
-                  yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
+         case *algebra.NamedParameter, *algebra.PositionalParameter:
+              if $3.Indexes() == nil {
+                   if $3.Keys() != nil {
+                        $$ = algebra.NewKeyspaceTermFromExpression(other, $2, $3.Keys(), $3.Indexes(), $3.JoinHint())
+                   } else {
+                        $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
+                   }
+              } else {
+                   yylex.Error("FROM <placeholder> cannot have USE INDEX.")
+	           yylex.(*lexer).Stop()
               }
-              $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
+         default:
+              if $3.Keys() == nil && $3.Indexes() == nil {
+                   $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
+              } else {
+                   yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
+	           yylex.(*lexer).Stop()
+              }
      }
 }
 ;
@@ -1635,7 +1650,7 @@ INSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect op
 }
 ;
 
-keyspace_ref:
+simple_keyspace_ref:
 keyspace_name opt_as_alias
 {
     $$ = algebra.NewKeyspaceRefWithContext($1, $2, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
@@ -1650,6 +1665,18 @@ bucket_name DOT scope_name DOT keyspace_name  opt_as_alias
 {
     path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
     $$ = algebra.NewKeyspaceRefFromPath(path, $6)
+}
+;
+
+keyspace_ref:
+simple_keyspace_ref
+{
+    $$ = $1
+}
+|
+param_expr opt_as_alias
+{
+    $$ = algebra.NewKeyspaceRefFromExpression($1, $2)
 }
 ;
 
@@ -2011,7 +2038,7 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE INTO keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr merge_actions opt_limit opt_returning
+MERGE INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr merge_actions opt_limit opt_returning
 {
      switch other := $6.(type) {
          case *algebra.SubqueryTerm:

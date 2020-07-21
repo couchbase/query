@@ -95,7 +95,7 @@ Returns all required privileges.
 func (this *CreateFunction) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	priv := functions.GetPrivilege(this.name, this.body)
-	privs.Add(this.name.Key(), priv)
+	privs.Add(this.name.Key(), priv, auth.PRIV_PROPS_NONE)
 
 	return privs, nil
 }
