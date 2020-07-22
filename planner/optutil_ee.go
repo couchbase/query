@@ -12,6 +12,8 @@
 package planner
 
 import (
+	"sort"
+
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query-ee/optutil"
 	"github.com/couchbase/query/algebra"
@@ -102,6 +104,42 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 	}
 
 	return cost, sel, (sel * nrows), nil
+}
+
+func indexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool,
+	spans SargSpans, alias string) (sel float64, err error) {
+	switch spans := spans.(type) {
+	case *TermSpans:
+		sel, _ := optutil.CalcIndexSelec(index, sargKeys, skipKeys, spans.spans, alias)
+		return sel, nil
+	case *IntersectSpans:
+		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, false)
+	case *UnionSpans:
+		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, true)
+	}
+
+	return OPT_SELEC_NOT_AVAIL, errors.NewPlanInternalError("indexSelec: unexpected span type")
+}
+
+func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool,
+	spans []SargSpans, alias string, union bool) (sel float64, err error) {
+	for i, span := range spans {
+		tsel, e := indexSelec(index, sargKeys, skipKeys, span, alias)
+		if e != nil {
+			return tsel, e
+		}
+		if i == 0 {
+			sel = tsel
+		} else {
+			if union {
+				sel = sel + tsel - (sel * tsel)
+			} else {
+				sel = sel * tsel
+			}
+		}
+	}
+
+	return sel, nil
 }
 
 func getIndexProjectionCost(index datastore.Index, indexProjection *plan.IndexProjection,
@@ -247,9 +285,108 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 	return optutil.GetUnnestPredSelec(pred, variable, mapping, keyspaces)
 }
 
-func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost,
-	nTerms int) map[datastore.Index]*base.IndexCost {
-	return optutil.ChooseIntersectScan(keyspace, indexes, nTerms)
+func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
+	nTerms int, alias string) map[datastore.Index]*indexEntry {
+
+	indexes := make([]*base.IndexCost, 0, len(sargables))
+
+	hasOrder := false
+	for s, e := range sargables {
+		skipKeys := make([]bool, len(e.sargKeys))
+		icost := base.NewIndexCost(s, e.cost, e.cardinality, e.selectivity, skipKeys)
+		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
+			icost.SetOrder()
+			hasOrder = true
+		}
+		indexes = append(indexes, icost)
+	}
+
+	if hasOrder && nTerms > 0 {
+		// If some plans have Order pushdown, then add a SORT cost to all plans that
+		// do not have Order pushdown.
+		// Note that since we are still at keyspace level, the SORT cost is not going
+		// to be the same as actual SORT cost which is done at the top of the plan,
+		// however this is the best estimation we could do at this level.
+		// (also ignore limit and offset for this calculation).
+		for _, ic := range indexes {
+			if !ic.HasOrder() {
+				sortCost, _ := getSortCost(nTerms, ic.Cardinality(), 0, 0)
+				if sortCost > 0.0 {
+					ic.SetCost(ic.Cost() + sortCost)
+				}
+			}
+		}
+	}
+
+	adjustIndexSelectivity(indexes, sargables, alias)
+
+	indexes = optutil.ChooseIntersectScan(keyspace, indexes)
+
+	newSargables := make(map[datastore.Index]*indexEntry, len(indexes))
+	for _, idx := range indexes {
+		newSargables[idx.Index()] = sargables[idx.Index()]
+	}
+
+	return newSargables
+}
+
+func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.Index]*indexEntry,
+	alias string) {
+
+	if len(indexes) <= 1 {
+		return
+	}
+
+	// first sort the slice
+	sort.Slice(indexes, func(i, j int) bool {
+		return ((indexes[i].Selectivity() < indexes[j].Selectivity()) ||
+			((indexes[i].Selectivity() == indexes[j].Selectivity()) &&
+				(indexes[i].Cost() < indexes[j].Cost())) ||
+			((indexes[i].Selectivity() == indexes[j].Selectivity()) &&
+				(indexes[i].Cost() == indexes[j].Cost()) &&
+				(indexes[i].Cardinality() < indexes[j].Cardinality())))
+	})
+
+	used := make(map[string]bool, len(sargables[indexes[0].Index()].sargKeys))
+	for i, idx := range indexes {
+		entry := sargables[idx.Index()]
+		adjust := false
+		for j, key := range entry.sargKeys {
+			if idx.HasSkipKey(j) {
+				continue
+			}
+			s := key.String()
+			// for array index key, ignore the distinct part
+			if arr, ok := key.(*expression.All); ok {
+				s = arr.Array().String()
+			}
+
+			if i == 0 {
+				// this is the best index
+				used[s] = true
+			} else {
+				// check and adjust remaining indexes
+				if _, ok := used[s]; ok {
+					idx.SetSkipKey(j)
+					adjust = true
+				}
+			}
+		}
+		if adjust {
+			sel, e := indexSelec(idx.Index(), entry.sargKeys, idx.SkipKeys(), entry.spans,
+				alias)
+			if e == nil {
+				origSel := idx.Selectivity()
+				origCard := idx.Cardinality()
+				newCard := (origCard / origSel) * sel
+				idx.SetSelectivity(sel)
+				idx.SetCardinality(newCard)
+			}
+		}
+	}
+
+	// recurse on remaining indexes
+	adjustIndexSelectivity(indexes[1:], sargables, alias)
 }
 
 func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
