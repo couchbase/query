@@ -272,17 +272,38 @@ func ParseQueryContext(queryContext string) []string {
 	elements := []string{}
 	hasNamespace := false
 	start := 0
+	end := 0
+	inBackTicks := false
 	for i, c := range queryContext {
 		switch c {
+		case '`':
+			inBackTicks = !inBackTicks
+			if inBackTicks {
+				start = i + 1
+			} else {
+				end = i
+			}
 		case ':':
-			elements = append(elements, queryContext[0:i])
+			if inBackTicks {
+				continue
+			}
+			if end != i-1 {
+				end = i
+			}
+			elements = append(elements, queryContext[start:end])
 			start = i + 1
 			hasNamespace = true
 		case '.':
+			if inBackTicks {
+				continue
+			}
 			if !hasNamespace {
 				elements = append(elements, "")
 			}
-			elements = append(elements, queryContext[start:i])
+			if end != i-1 {
+				end = i
+			}
+			elements = append(elements, queryContext[start:end])
 			start = i + 1
 		}
 	}
@@ -304,27 +325,52 @@ func ValidateQueryContext(queryContext string) errors.Error {
 	hasNamespace := false
 	parts := 0
 	countPart := true
-	for _, c := range queryContext {
+	lastTerminator := -1
+	lastBackTick := -1
+	inBackTick := false
+	for i, c := range queryContext {
 		switch c {
+		case '`':
+			inBackTick = !inBackTick
+			if inBackTick {
+				if lastTerminator >= 0 && lastTerminator != i-1 {
+					return errors.NewQueryContextError("invalid use of back ticks")
+				}
+			} else {
+				lastBackTick = i
+			}
 		case ':':
+			if inBackTick {
+				continue
+			}
 			if hasNamespace {
 				return errors.NewQueryContextError("repeated namespace")
-			} else {
-				if parts == 0 {
-					parts++ // namespace is implied
-				}
-				hasNamespace = true
-				countPart = true
 			}
+			if lastBackTick >= 0 && lastBackTick != i-1 {
+				return errors.NewQueryContextError("invalid use of back ticks")
+			}
+			if parts == 0 {
+				parts++ // namespace is implied
+			}
+			hasNamespace = true
+			countPart = true
+			lastTerminator = i
 		case '.':
+			if inBackTick {
+				continue
+			}
 			if countPart {
 				return errors.NewQueryContextError("missing bucket")
+			}
+			if lastBackTick >= 0 && lastBackTick != i-1 {
+				return errors.NewQueryContextError("invalid use of back ticks")
 			}
 			if !hasNamespace {
 				parts++ // namespace is implied
 				hasNamespace = true
 			}
 			countPart = true
+			lastTerminator = i
 		default:
 			if countPart {
 				parts++
@@ -334,6 +380,9 @@ func ValidateQueryContext(queryContext string) errors.Error {
 				}
 			}
 		}
+	}
+	if inBackTick {
+		return errors.NewQueryContextError("back tick not terminated")
 	}
 	if parts == 2 {
 		return errors.NewQueryContextError("missing scope")
