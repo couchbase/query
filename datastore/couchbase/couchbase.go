@@ -1237,8 +1237,8 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 	ks, ok := p.keyspaceCache[bucket.Name]
 	if ok && ks.cbKeyspace != nil {
 		ks.cbKeyspace.Lock()
-		uid, _ := strconv.Atoi(bucket.CollectionsManifestUid)
-		if ks.cbKeyspace.collectionsManifestUid != uint64(uid) {
+		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
+		if ks.cbKeyspace.collectionsManifestUid != uid {
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 		}
 		ks.cbKeyspace.Unlock()
