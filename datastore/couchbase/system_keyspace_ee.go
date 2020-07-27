@@ -86,8 +86,9 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 			return
 		}
 
+		// allow "already exists" error in case of duplicated Create call
 		er = sysBucket.CreateScope(N1QL_SYSTEM_SCOPE)
-		if er != nil {
+		if er != nil && !cb.AlreadyExistsError(er) {
 			logging.Errorp("Cannot create System Scope",
 				logging.Pair{"error", er},
 			)
@@ -133,8 +134,9 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 			return
 		}
 
+		// allow "already exists" error in case of duplicated Create call
 		er = sysScope.CreateCollection(N1QL_SYSTEM_COLLECTION)
-		if er != nil {
+		if er != nil && !cb.AlreadyExistsError(er) {
 			logging.Errorp("Cannot create System Collection",
 				logging.Pair{"error", er},
 			)
