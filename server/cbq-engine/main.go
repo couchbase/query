@@ -305,6 +305,14 @@ func main() {
 	}
 	constructor.Init(endpoint.Mux())
 
+	// Get system bucket/scope/collection
+	er = datastore.CreateSystemCollection()
+	if er != nil {
+		// log an error, but allow cbq-engine to start up
+		logging.Errorp("cbq-engine fails to create system collection",
+			logging.Pair{"error", er})
+	}
+
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
 

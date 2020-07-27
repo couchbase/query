@@ -152,6 +152,14 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
 }
 
+func (s *store) CreateSystemCollection() errors.Error {
+	return nil
+}
+
+func (s *store) GetSystemKeyspsace() (datastore.Keyspace, errors.Error) {
+	return nil, nil
+}
+
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
 	s := &store{actualStore: actualStore}
 

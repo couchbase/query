@@ -58,6 +58,9 @@ type Datastore interface {
 	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error
 
 	SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
+
+	CreateSystemCollection() errors.Error
+	GetSystemKeyspsace() (Keyspace, errors.Error)
 }
 
 type AuditInfo struct {

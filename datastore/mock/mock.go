@@ -143,6 +143,14 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
 }
 
+func (s *store) CreateSystemCollection() errors.Error {
+	return nil
+}
+
+func (s *store) GetSystemKeyspsace() (datastore.Keyspace, errors.Error) {
+	return nil, nil
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store

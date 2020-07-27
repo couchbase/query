@@ -159,6 +159,14 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	}, nil
 }
 
+func (s *store) CreateSystemCollection() errors.Error {
+	return nil
+}
+
+func (s *store) GetSystemKeyspsace() (datastore.Keyspace, errors.Error) {
+	return nil, nil
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)
