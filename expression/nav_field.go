@@ -23,6 +23,7 @@ are case sensitive.
 type Field struct {
 	BinaryFunctionBase
 	caseInsensitive bool
+	parenthesis     bool
 }
 
 func NewField(first, second Expression) *Field {
@@ -266,6 +267,40 @@ func (this *Field) FieldNames(base Expression, names map[string]bool) (present b
 	}
 
 	return present
+}
+
+func (this *Field) Parenthesis() bool {
+	return this.parenthesis
+}
+
+func (this *Field) SetParenthesis(parenthesis bool) {
+	this.parenthesis = parenthesis
+}
+
+func (this *Field) Path() []string {
+	var out []string
+
+outer:
+	switch first := this.First().(type) {
+	case *Field:
+		switch one := first.First().(type) {
+		case *Identifier:
+			out = append(out, one.Alias())
+		default:
+			break outer
+		}
+		switch two := first.Second().(type) {
+		case *FieldName:
+			out = append(out, two.name)
+		default:
+			break outer
+		}
+		switch three := this.Second().(type) {
+		case *FieldName:
+			out = append(out, three.name)
+		}
+	}
+	return out
 }
 
 /*

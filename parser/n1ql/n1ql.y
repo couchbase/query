@@ -1065,40 +1065,53 @@ keyspace_term
 |
 expr opt_as_alias opt_use
 {
-     switch other := $1.(type) {
-         case *algebra.Subquery:
-              if $2 == "" {
-                   yylex.Error("Subquery in FROM clause must have an alias.")
-	           yylex.(*lexer).Stop()
-              }
-              if $3.Keys() != nil || $3.Indexes() != nil {
-                   yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
-	           yylex.(*lexer).Stop()
-              }
-              $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
-         case *expression.Identifier:
-              ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext()),
-							$2, $3.Keys(), $3.Indexes())
-              $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
-         case *algebra.NamedParameter, *algebra.PositionalParameter:
-              if $3.Indexes() == nil {
+    isExpr := false
+    switch other := $1.(type) {
+        case *algebra.Subquery:
+            if $2 == "" {
+                 yylex.Error("Subquery in FROM clause must have an alias.")
+	         yylex.(*lexer).Stop()
+            }
+            if $3.Keys() != nil || $3.Indexes() != nil {
+                 yylex.Error("FROM Subquery cannot have USE KEYS or USE INDEX.")
+	         yylex.(*lexer).Stop()
+            }
+            $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
+        case *expression.Identifier:
+            ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext()),
+						      $2, $3.Keys(), $3.Indexes())
+            $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+        case *algebra.NamedParameter, *algebra.PositionalParameter:
+            if $3.Indexes() == nil {
                    if $3.Keys() != nil {
                         $$ = algebra.NewKeyspaceTermFromExpression(other, $2, $3.Keys(), $3.Indexes(), $3.JoinHint())
                    } else {
                         $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
                    }
-              } else {
+            } else {
                    yylex.Error("FROM <placeholder> cannot have USE INDEX.")
 	           yylex.(*lexer).Stop()
-              }
-         default:
-              if $3.Keys() == nil && $3.Indexes() == nil {
-                   $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
-              } else {
-                   yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
-	           yylex.(*lexer).Stop()
-              }
-     }
+            }
+        case *expression.Field:
+	    path := other.Path()
+	    if len(path) == 3 {
+                ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1], path[2]),
+							$2, $3.Keys(), $3.Indexes())
+                  $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+	    } else {
+		isExpr = true
+            }
+        default:
+	    isExpr = true
+    }
+    if isExpr {
+        if $3.Keys() == nil && $3.Indexes() == nil {
+            $$ = algebra.NewExpressionTerm($1, $2, nil, false, $3.JoinHint())
+        } else {
+            yylex.Error("FROM Expression cannot have USE KEYS or USE INDEX.")
+	    yylex.(*lexer).Stop()
+        }
+    }
 }
 ;
 
@@ -3725,6 +3738,9 @@ LPAREN expr RPAREN
 {
     switch other := $2.(type) {
          case *expression.Identifier:
+              other.SetParenthesis(true)
+              $$ = other
+         case *expression.Field:
               other.SetParenthesis(true)
               $$ = other
          default:
