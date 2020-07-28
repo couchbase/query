@@ -82,6 +82,9 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 		if err != nil {
 			return nil, err
 		}
+		if this.operands[1].Static() != nil {
+			this.re = re
+		}
 	}
 
 	return value.NewValue(re.MatchString(f)), nil
