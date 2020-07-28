@@ -1,6 +1,6 @@
 [
     {
-       "statements": "INSERT INTO $1 VALUES($2, $3)",
+       "statements": "INSERT INTO $1 AS d VALUES($2, $3)",
        "positionalArgs": [ "orders", "o101", {"type":"order", "test_id":"subqexp", "a":"o101" } ],
        "results": [
         ]
@@ -15,7 +15,7 @@
         ]
     },
     {
-       "statements": "UPSERT INTO $1 VALUES($2, $3)",
+       "statements": "UPSERT INTO $1 AS d VALUES($2, $3)",
        "positionalArgs": [ "orders", "o101", {"type":"order", "test_id":"subqexp", "a":"o111" } ],
        "results": [
         ]
