@@ -163,7 +163,7 @@ func (s *store) CreateSystemCollection() errors.Error {
 	return nil
 }
 
-func (s *store) GetSystemKeyspsace() (datastore.Keyspace, errors.Error) {
+func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
 

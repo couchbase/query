@@ -181,6 +181,6 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 	return
 }
 
-func (s *store) GetSystemKeyspsace() (datastore.Keyspace, errors.Error) {
+func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return datastore.GetKeyspace("default", N1QL_SYSTEM_BUCKET, N1QL_SYSTEM_SCOPE, N1QL_SYSTEM_COLLECTION)
 }

@@ -60,7 +60,7 @@ type Datastore interface {
 	SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
 
 	CreateSystemCollection() errors.Error
-	GetSystemKeyspsace() (Keyspace, errors.Error)
+	GetSystemKeyspace() (Keyspace, errors.Error)
 }
 
 type AuditInfo struct {
