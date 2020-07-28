@@ -266,3 +266,9 @@ func NewIndexLeadingKeyMissingNotSupportedError() Error {
 		InternalMsg:    fmt.Sprintf("Indexing leading key MISSING values are not supported by indexer."),
 		InternalCaller: CallerN(1)}
 }
+
+func NewIndexNotInMemory(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5390, IKey: "execution.update_statistics.index_not_in_memory",
+		InternalMsg:    msg,
+		InternalCaller: CallerN(1)}
+}
