@@ -430,13 +430,21 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 				}
 
 				// copy the indexers
-				oldColl := bucket.defaultCollection.(*collection)
-				if oldColl != nil {
-					oldColl.Lock()
-					coll.gsiIndexer = oldColl.gsiIndexer
-					coll.ftsIndexer = oldColl.ftsIndexer
-					coll.checked = oldColl.checked
-					oldColl.Unlock()
+				if bucket.defaultCollection != nil {
+					switch old := bucket.defaultCollection.(type) {
+					case *collection:
+						old.Lock()
+						coll.gsiIndexer = old.gsiIndexer
+						coll.ftsIndexer = old.ftsIndexer
+						coll.checked = old.checked
+						old.Unlock()
+					case *keyspace:
+						old.Lock()
+						coll.gsiIndexer = old.gsiIndexer
+						coll.ftsIndexer = old.ftsIndexer
+						coll.checked = old.indexersLoaded
+						old.Unlock()
+					}
 				}
 			} else {
 				coll.authKey = bucket.name + "." + scope.id + "." + coll.name
