@@ -396,6 +396,8 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"CREATE_COLLECTION":    28715,
 	"DROP_COLLECTION":      28716,
 	"FLUSH_COLLECTION":     28717,
+	"UPDATE_STATISTICS":    28718,
+	"ADVISE":               28719,
 }
 
 func Submit(event Auditable) {

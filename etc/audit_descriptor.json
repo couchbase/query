@@ -1348,6 +1348,82 @@
         "namedArgs" : { "name1" : "", "name2" : "" },
         "positionalArgs" : [ "" ]
       }
+    },
+    {
+      "id" : 28718,
+      "name" : "UPDATE STATISTICS statement",
+      "description" : "A N1QL UPDATE STATISTICS statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
+    },
+    {
+      "id" : 28719,
+      "name" : "ADVISE statement",
+      "description" : "A N1QL ADVISE statement was executed",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+
+        "requestId" : "",
+        "statement" : "",
+
+        "isAdHoc" : true,
+        "userAgent" : "",
+        "node" : "",
+
+        "status" : "",
+        "metrics" : {
+          "elapsedTime" : "1.0s",
+          "executionTime" : "0.75s",
+          "resultCount" : 1,
+          "resultSize" : 18,
+          "mutationCount" : 0,
+          "sortCount" : 1,
+          "errorCount" : 0,
+          "warningCount" : 1
+	}
+      },
+      "optional_fields" : {
+	"clientContextId" : "",
+	"queryContext" : "",
+        "namedArgs" : { "name1" : "", "name2" : "" },
+        "positionalArgs" : [ "" ]
+      }
     }
   ]
 }
