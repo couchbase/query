@@ -303,14 +303,6 @@ func main() {
 	}
 	constructor.Init(endpoint.Mux())
 
-	// Get system bucket/scope/collection
-	er = datastore.CreateSystemCollection()
-	if er != nil {
-		// log an error, but allow cbq-engine to start up
-		logging.Errorp("cbq-engine fails to create system collection",
-			logging.Pair{"error", er})
-	}
-
 	// Initialize dictionary cache
 	server_package.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
 
