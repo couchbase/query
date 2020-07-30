@@ -66,7 +66,7 @@ func (this *Advise) Query() string {
 }
 
 func (this *Advise) Type() string {
-	return "Advise"
+	return "ADVISE"
 }
 
 func (this *Advise) SetContext(context interface{}) {
