@@ -43,7 +43,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
 	}
 
-	if len(funcBody.varNames) == 0 {
+	if funcBody.varNames == nil {
 		args := make([]value.Value, len(values))
 		for i, _ := range values {
 			args[i] = value.NewValue(values[i])
@@ -84,7 +84,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	   as correlated
 	*/
 	c := expression.NewConstant("")
-	if len(vars) == 0 {
+	if vars == nil {
 		args := expression.NewSimpleBinding("args", c)
 		args.SetStatic(true)
 		bindings = expression.Bindings{args}
@@ -115,7 +115,7 @@ func (this *inlineBody) Lang() functions.Language {
 func (this *inlineBody) Body(object map[string]interface{}) {
 	object["#language"] = "inline"
 	object["expression"] = this.expr.String()
-	if len(this.varNames) > 0 {
+	if this.varNames != nil {
 		vars := make([]value.Value, len(this.varNames))
 		for v, _ := range this.varNames {
 			vars[v] = value.NewValue(this.varNames[v])

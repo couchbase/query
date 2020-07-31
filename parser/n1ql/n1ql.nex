@@ -129,6 +129,7 @@
 							return AS
 						 }
 /[aA][sS][cC]/					 { yylex.logToken(yylex.Text(), "ASC"); return ASC }
+/[aA][tT]/					 { yylex.logToken(yylex.Text(), "AT"); return AT }
 /[bB][eE][gG][iI][nN]/				 { yylex.logToken(yylex.Text(), "BEGIN"); return BEGIN }
 /[bB][eE][tT][wW][eE][eE][nN]/			 { yylex.logToken(yylex.Text(), "BETWEEN"); return BETWEEN }
 /[bB][iI][nN][aA][rR][yY]/			 { yylex.logToken(yylex.Text(), "BINARY"); return BINARY }

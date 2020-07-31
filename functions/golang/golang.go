@@ -77,7 +77,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		return nil, funcBody.execError(fmt.Errorf("invalid object"), funcName)
 	}
 
-	if len(funcBody.varNames) != 0 {
+	if funcBody.varNames != nil {
 		if len(values) != len(funcBody.varNames) {
 			return nil, errors.NewArgumentsMismatchError(funcName)
 		}
@@ -123,7 +123,7 @@ func (this *golangBody) Body(object map[string]interface{}) {
 	object["#language"] = "golang"
 	object["library"] = this.library
 	object["object"] = this.object
-	if len(this.varNames) > 0 {
+	if this.varNames != nil {
 		vars := make([]value.Value, len(this.varNames))
 		for v, _ := range this.varNames {
 			vars[v] = value.NewValue(this.varNames[v])

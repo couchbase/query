@@ -89,7 +89,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), funcName)
 	}
 
-	if len(funcBody.varNames) != 0 && len(values) != len(funcBody.varNames) {
+	if funcBody.varNames != nil && len(values) != len(funcBody.varNames) {
 		return nil, errors.NewArgumentsMismatchError(funcName)
 	}
 	for i, _ := range values {
@@ -133,7 +133,7 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 	object["#language"] = "javascript"
 	object["library"] = this.library
 	object["object"] = this.object
-	if len(this.varNames) > 0 {
+	if this.varNames != nil {
 		vars := make([]value.Value, len(this.varNames))
 		for v, _ := range this.varNames {
 			vars[v] = value.NewValue(this.varNames[v])

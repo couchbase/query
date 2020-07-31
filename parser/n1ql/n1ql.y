@@ -112,6 +112,7 @@ tokOffset	 int
 %token ARRAY
 %token AS
 %token ASC
+%token AT
 %token BEGIN
 %token BETWEEN
 %token BINARY
@@ -2754,6 +2755,11 @@ namespace_term bucket_name DOT scope_name DOT keyspace_name
 parm_list:
 /* empty */
 {
+    $$ = []string{}
+}
+|
+DOT DOT DOT
+{
     $$ = nil
 }
 |
@@ -2793,9 +2799,9 @@ LANGUAGE INLINE AS expr
     }
 }
 |
-LANGUAGE GOLANG AS LBRACE STR COMMA STR RBRACE
+LANGUAGE GOLANG AS STR AT STR
 {
-    body, err := golang.NewGolangBody($5, $7)
+    body, err := golang.NewGolangBody($6, $4)
     if err != nil {
         yylex.Error(err.Error())
     } else {
@@ -2803,9 +2809,9 @@ LANGUAGE GOLANG AS LBRACE STR COMMA STR RBRACE
     }
 }
 |
-LANGUAGE JAVASCRIPT AS LBRACE STR COMMA STR RBRACE
+LANGUAGE JAVASCRIPT AS STR AT STR
 {
-    body, err := javascript.NewJavascriptBody($5, $7)
+    body, err := javascript.NewJavascriptBody($6, $4)
     if err != nil {
         yylex.Error(err.Error())
     } else {
