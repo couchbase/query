@@ -40,6 +40,7 @@ const (
 	MUTEXPROFILE    = "mutexprofile"
 	FUNCLIMIT       = "functions-limit"
 	TASKLIMIT       = "tasks-limit"
+	MEMORYQUOTA     = "memory-quota"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -70,6 +71,7 @@ var CHECKERS = map[string]Checker{
 	MUTEXPROFILE:    checkBool,
 	FUNCLIMIT:       checkPositiveInteger,
 	TASKLIMIT:       checkPositiveInteger,
+	MEMORYQUOTA:     checkPositiveInteger,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

@@ -110,6 +110,8 @@ type Request interface {
 	QueryContext() string
 	UseFts() bool
 	SetUseFts(a bool)
+	MemoryQuota() uint64
+	SetMemoryQuota(q uint64)
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -259,6 +261,7 @@ type BaseRequest struct {
 	autoExecute     value.Tristate
 	useFts          bool
 	queryContext    string
+	memoryQuota     uint64
 }
 
 type requestIDImpl struct {
@@ -759,6 +762,14 @@ func (this *BaseRequest) SetUseFts(a bool) {
 
 func (this *BaseRequest) UseFts() bool {
 	return this.useFts && util.IsFeatureEnabled(this.featureControls, util.N1QL_FLEXINDEX)
+}
+
+func (this *BaseRequest) SetMemoryQuota(q uint64) {
+	this.memoryQuota = q
+}
+
+func (this *BaseRequest) MemoryQuota() uint64 {
+	return this.memoryQuota
 }
 
 func (this *BaseRequest) SetQueryContext(s string) {

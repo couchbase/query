@@ -466,6 +466,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.AUTOPREPARE] = srvr.AutoPrepare()
 	settings[server.MUTEXPROFILE] = srvr.MutexProfile()
 	settings[server.FUNCLIMIT] = functions.FunctionsLimit()
+	settings[server.MEMORYQUOTA] = srvr.MemoryQuota()
 	return settings
 }
 

@@ -142,6 +142,11 @@ var _SETTERS = map[string]Setter{
 		scheduler.SchedulerSetLimit(int(value))
 		return nil
 	},
+	MEMORYQUOTA: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		s.SetMemoryQuota(uint64(value))
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {

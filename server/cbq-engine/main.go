@@ -52,6 +52,7 @@ const (
 	_DEF_FUNCTIONS_LIMIT        = 16384
 	_DEF_DICTIONARY_CACHE_LIMIT = 16384
 	_DEF_TASKS_LIMIT            = 16384
+	_DEF_MEMORY_QUOTA           = 0
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
@@ -87,6 +88,7 @@ var PIPELINE_BATCH = flag.Int("pipeline-batch", _DEF_PIPELINE_BATCH, "Number of 
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "Max Index API")
 var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
+var MEMORY_QUOTA = flag.Uint64("memory-quota", _DEF_MEMORY_QUOTA, "Maximum amount of document memory allowed per request, in MB")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -269,6 +271,7 @@ func main() {
 	} else {
 		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
 	}
+	server.SetMemoryQuota(*MEMORY_QUOTA)
 
 	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 

@@ -163,6 +163,7 @@ type Context struct {
 	whitelist          map[string]interface{}
 	inlistHashMap      map[*expression.In]*expression.InlistHash
 	inlistHashLock     sync.RWMutex
+	memoryQuota        uint64
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
@@ -360,6 +361,14 @@ func (this *Context) GetReqDeadline() time.Time {
 
 func (this *Context) SetReqDeadline(reqDeadline time.Time) {
 	this.reqDeadline = reqDeadline
+}
+
+func (this *Context) GetMemoryQuota() uint64 {
+	return this.memoryQuota
+}
+
+func (this *Context) SetMemoryQuota(memoryQuota uint64) {
+	this.memoryQuota = memoryQuota * 1024 * 1024
 }
 
 func (this *Context) GetPipelineCap() int64 {

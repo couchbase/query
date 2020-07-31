@@ -522,6 +522,19 @@ func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 	return err
 }
 
+func handleMemoryQuota(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	param, err := httpArgs.getStringVal(parm, val)
+	if err == nil && param != "" {
+		memoryQuota, e := strconv.ParseUint(param, 0, 64)
+		if e != nil {
+			err = errors.NewServiceErrorBadValue(go_errors.New("memory quota is invalid"), MEMORY_QUOTA)
+		} else {
+			rv.SetMemoryQuota(memoryQuota)
+		}
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -608,6 +621,7 @@ const ( // Request argument names
 	AUTO_EXECUTE      = "auto_execute"
 	QUERY_CONTEXT     = "query_context"
 	USE_FTS           = "use_fts"
+	MEMORY_QUOTA      = "memory_quota"
 )
 
 type argHandler struct {
@@ -648,6 +662,7 @@ var _PARAMETERS = map[string]*argHandler{
 	AUTO_PREPARE:      {handleAutoPrepare, false},
 	AUTO_EXECUTE:      {handleAutoExecute, false},
 	USE_FTS:           {handleUseFts, false},
+	MEMORY_QUOTA:      {handleMemoryQuota, false},
 }
 
 // common storage for the httpArgs implementations

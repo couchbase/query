@@ -121,6 +121,7 @@ type Server struct {
 	srvcontrols  bool
 	whitelist    map[string]interface{}
 	autoPrepare  bool
+	memoryQuota  uint64
 }
 
 // Default Keep Alive Length
@@ -461,6 +462,14 @@ func ParseProfile(name string, bench bool) (Profile, bool) {
 	return _PROFILE_DEFAULT, false
 }
 
+func (this *Server) MemoryQuota() uint64 {
+	return this.memoryQuota
+}
+
+func (this *Server) SetMemoryQuota(memoryQuota uint64) {
+	this.memoryQuota = memoryQuota
+}
+
 func (this *Server) Enterprise() bool {
 	return this.enterprise
 }
@@ -754,6 +763,15 @@ func (this *Server) serviceRequest(request Request) {
 	} else {
 		context.SetReqDeadline(time.Time{})
 	}
+
+	memoryQuota := request.MemoryQuota()
+
+	// never allow request side quota to be higher than
+	// server side quota
+	if this.memoryQuota > 0 && (this.memoryQuota < memoryQuota || memoryQuota == 0) {
+		memoryQuota = this.memoryQuota
+	}
+	context.SetMemoryQuota(memoryQuota)
 
 	request.NotifyStop(operator)
 	request.SetExecTime(time.Now())
