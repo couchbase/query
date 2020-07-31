@@ -10,6 +10,8 @@
 package datastore
 
 import (
+	"time"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
@@ -63,4 +65,8 @@ func (this *ValueConnection) Timeout() bool {
 
 func (this *ValueConnection) SetTimeout(timeout bool) {
 	this.timeout = timeout
+}
+
+func (this *ValueConnection) GetReqDeadline() time.Time {
+	return this.context.GetReqDeadline()
 }

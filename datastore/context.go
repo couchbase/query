@@ -26,6 +26,7 @@ type Context interface {
 	Fatal(errors.Error)
 	Error(errors.Error)
 	Warning(errors.Error)
+	GetReqDeadline() time.Time
 }
 
 type contextImpl struct {
@@ -46,6 +47,10 @@ func (ci *contextImpl) Error(err errors.Error) {
 }
 
 func (ci *contextImpl) Warning(err errors.Error) {
+}
+
+func (ci *contextImpl) GetReqDeadline() time.Time {
+	return time.Time{}
 }
 
 // A subset of execution.Context that is useful at the datastore level.
