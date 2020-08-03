@@ -151,6 +151,10 @@ func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
 
+func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+	return false, nil
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store

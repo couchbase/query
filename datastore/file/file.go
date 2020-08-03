@@ -167,6 +167,10 @@ func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
 
+func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+	return false, nil
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)

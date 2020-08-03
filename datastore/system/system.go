@@ -160,6 +160,10 @@ func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
 
+func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+	return false, nil
+}
+
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
 	s := &store{actualStore: actualStore}
 

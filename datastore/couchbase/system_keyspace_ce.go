@@ -26,6 +26,10 @@ func (s *store) CreateSystemCollection() errors.Error {
 	return nil
 }
 
+func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+	return false, nil
+}
+
 func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }

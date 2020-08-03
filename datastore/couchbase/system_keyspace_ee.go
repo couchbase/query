@@ -183,6 +183,30 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 	return
 }
 
+func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+	defaultPool, er := loadNamespace(s, "default")
+	if er != nil {
+		return false, er
+	}
+
+	sysBucket, er := defaultPool.BucketByName(N1QL_SYSTEM_BUCKET)
+	if er != nil {
+		return false, er
+	}
+
+	sysScope, er := sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
+	if er != nil {
+		return false, er
+	}
+
+	sysCollection, er := sysScope.KeyspaceByName(N1QL_SYSTEM_COLLECTION)
+	if er != nil {
+		return false, er
+	}
+
+	return (sysCollection != nil), nil
+}
+
 func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
 	return datastore.GetKeyspace("default", N1QL_SYSTEM_BUCKET, N1QL_SYSTEM_SCOPE, N1QL_SYSTEM_COLLECTION)
 }

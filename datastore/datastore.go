@@ -61,6 +61,7 @@ type Datastore interface {
 
 	CreateSystemCollection() errors.Error
 	GetSystemKeyspace() (Keyspace, errors.Error)
+	HasSystemKeyspace() (bool, errors.Error)
 }
 
 type AuditInfo struct {

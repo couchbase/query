@@ -34,3 +34,10 @@ func NewBucketNoDefaultCollectionError(b string) Error {
 	return &err{level: EXCEPTION, ICode: DS_NO_DEFAULT_COLLECTION, IKey: "datastore.generic.no_default_collection",
 		InternalMsg: "Bucket " + b + " does not have a default collection", InternalCaller: CallerN(1)}
 }
+
+const DS_NO_DATASTORE = 10103
+
+func NewNoDatastoreError() Error {
+	return &err{level: EXCEPTION, ICode: DS_NO_DATASTORE, IKey: "datastore.generic.no_datastore",
+		InternalMsg: "No datastore is available", InternalCaller: CallerN(1)}
+}
