@@ -10,6 +10,8 @@
 package datastore
 
 import (
+	"time"
+
 	"github.com/couchbase/cbauth"
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
@@ -677,6 +679,10 @@ func (this *IndexConnection) Error(err errors.Error) {
 
 func (this *IndexConnection) Warning(wrn errors.Error) {
 	this.context.Warning(wrn)
+}
+
+func (this *IndexConnection) GetReqDeadline() time.Time {
+	return this.context.GetReqDeadline()
 }
 
 func (this *IndexConnection) SetPrimary() {
