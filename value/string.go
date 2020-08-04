@@ -282,6 +282,10 @@ func (this stringValue) ContainsMatchingToken(matcher MatchFunc, options Value) 
 	return this.tokens(tokens, options, "", matcher)
 }
 
+func (this stringValue) Size() uint64 {
+	return uint64(len(this))
+}
+
 func (this stringValue) unwrap() Value {
 	return this
 }

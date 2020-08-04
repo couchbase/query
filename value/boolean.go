@@ -250,6 +250,10 @@ func (this boolValue) ContainsMatchingToken(matcher MatchFunc, options Value) bo
 	return matcher(bool(this))
 }
 
+func (this boolValue) Size() uint64 {
+	return uint64(1)
+}
+
 func (this boolValue) unwrap() Value {
 	return this
 }

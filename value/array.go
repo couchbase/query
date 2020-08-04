@@ -371,6 +371,14 @@ func (this sliceValue) ContainsMatchingToken(matcher MatchFunc, options Value) b
 	return false
 }
 
+func (this sliceValue) Size() uint64 {
+	size := uint64(0)
+	for e, _ := range this {
+		size += NewValue(this[e]).Size()
+	}
+	return size
+}
+
 func (this sliceValue) unwrap() Value {
 	return this
 }
@@ -511,6 +519,14 @@ func (this *listValue) ContainsToken(token, options Value) bool {
 
 func (this *listValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
 	return this.slice.ContainsMatchingToken(matcher, options)
+}
+
+func (this *listValue) Size() uint64 {
+	size := uint64(0)
+	for e, _ := range this.slice {
+		size += NewValue(this.slice[e]).Size()
+	}
+	return size
 }
 
 func (this *listValue) unwrap() Value {

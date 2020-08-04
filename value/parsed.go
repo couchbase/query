@@ -26,6 +26,7 @@ const _THRESHOLD = 2560
 // A Value with delayed parsing.
 type parsedValue struct {
 	raw          []byte
+	len          uint64
 	parsedType   Type
 	parsed       Value
 	sync.RWMutex // to access fields
@@ -84,6 +85,7 @@ func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 
 	rv := newParsedValue()
 	rv.raw = bytes
+	rv.len = uint64(len(bytes))
 	rv.parsedType = parsedType
 	rv.useState = useState
 	return rv
@@ -463,6 +465,10 @@ func (this *parsedValue) ContainsToken(token, options Value) bool {
 
 func (this *parsedValue) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
 	return this.unwrap().ContainsMatchingToken(matcher, options)
+}
+
+func (this *parsedValue) Size() uint64 {
+	return this.len
 }
 
 // Delayed parse.

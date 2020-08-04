@@ -221,6 +221,10 @@ func (this *nullValue) ContainsMatchingToken(matcher MatchFunc, options Value) b
 	return false
 }
 
+func (this *nullValue) Size() uint64 {
+	return uint64(4) // len("null")
+}
+
 func (this *nullValue) unwrap() Value {
 	return this
 }

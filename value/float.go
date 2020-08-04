@@ -323,6 +323,10 @@ func (this floatValue) ContainsMatchingToken(matcher MatchFunc, options Value) b
 	return matcher(float64(this))
 }
 
+func (this floatValue) Size() uint64 {
+	return uint64(8)
+}
+
 func (this floatValue) unwrap() Value {
 	return this
 }

@@ -355,6 +355,11 @@ type Value interface {
 	ContainsMatchingToken(matcher MatchFunc, options Value) bool
 
 	/*
+	   Size in bytes, for memory quota
+	*/
+	Size() uint64
+
+	/*
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value

@@ -489,6 +489,14 @@ func (this objectValue) ContainsMatchingToken(matcher MatchFunc, options Value) 
 	return false
 }
 
+func (this objectValue) Size() uint64 {
+	var size uint64
+	for e, _ := range this {
+		size += NewValue(this[e]).Size() + uint64(len(e))
+	}
+	return size
+}
+
 func (this objectValue) unwrap() Value {
 	return this
 }

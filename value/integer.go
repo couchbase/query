@@ -255,6 +255,10 @@ func (this intValue) ContainsMatchingToken(matcher MatchFunc, options Value) boo
 	return matcher(int64(this))
 }
 
+func (this intValue) Size() uint64 {
+	return uint64(8)
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }

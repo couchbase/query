@@ -231,6 +231,10 @@ func (this missingValue) unwrap() Value {
 	return this
 }
 
+func (this missingValue) Size() uint64 {
+	return uint64(0)
+}
+
 /*
 Cast input field to missingValue.
 */

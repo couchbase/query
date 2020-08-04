@@ -175,6 +175,10 @@ func (this binaryValue) ContainsMatchingToken(matcher MatchFunc, options Value) 
 	return matcher([]byte(this))
 }
 
+func (this binaryValue) Size() uint64 {
+	return uint64(len(this))
+}
+
 func (this binaryValue) unwrap() Value {
 	return this
 }
