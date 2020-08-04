@@ -12,6 +12,7 @@ package mock
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -220,6 +221,10 @@ func (this *testingContext) Warning(wrn errors.Error) {
 
 func (this *testingContext) Fatal(fatal errors.Error) {
 	this.t.Logf("scan fatal: %v", fatal)
+}
+
+func (this *testingContext) GetReqDeadline() time.Time {
+	return time.Time{}
 }
 
 // Helper function to scan the primary index of given keyspace with given span

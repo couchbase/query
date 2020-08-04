@@ -249,6 +249,10 @@ func (this *testingContext) Fatal(fatal errors.Error) {
 	this.t.Logf("scan fatal: %v", fatal)
 }
 
+func (this *testingContext) GetReqDeadline() time.Time {
+	return time.Time{}
+}
+
 // Helper function to perform a primary index scan on the given keyspace. Returns a map of
 // all primary key names.
 func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, excp errors.Error) {
