@@ -127,7 +127,10 @@ func NewCbSecurityConfigNotProvided(bucket string) Error {
 		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: true}
 }
 
-// Error 12024 is retired - but can be reused
+func NewCbCreateSystemBucketError(s string, e error) Error {
+	return &err{level: EXCEPTION, ICode: 12024, IKey: "datastore.couchbase.create_system_bucket", ICause: e,
+		InternalMsg: "Error while creating system bucket " + s, InternalCaller: CallerN(1)}
+}
 
 func NewCbBucketCreateScopeError(s string, e error) Error {
 	return &err{level: EXCEPTION, ICode: 12025, IKey: "datastore.couchbase.create_scope", ICause: e,

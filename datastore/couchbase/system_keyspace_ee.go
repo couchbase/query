@@ -23,7 +23,6 @@ import (
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 )
 
 const (
@@ -38,30 +37,18 @@ func (s *store) CreateSystemCollection() errors.Error {
 		return er
 	}
 
-	// create/get system bucket/scope/collection in a separate go thread
-	go GetSystemStore(&s.client, defaultPool)
-
-	return nil
-}
-
-func GetSystemStore(client *cb.Client, defaultPool *namespace) {
+	// create/get system bucket/scope/collection
 	sysBucket, er := defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
 	if er != nil {
 		// only ignore bucket/keyspace not found error
 		if er.Code() != 12003 && er.Code() != 12020 {
-			logging.Errorp("Cannot get System Bucket",
-				logging.Pair{"error", er},
-			)
-			return
+			return er
 		}
 
 		// create bucket
-		_, err := cb.GetSystemBucket(client, defaultPool.cbNamespace, N1QL_SYSTEM_BUCKET)
+		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, N1QL_SYSTEM_BUCKET)
 		if err != nil {
-			logging.Errorp("Cannot create N1QL System Bucket",
-				logging.Pair{"error", err},
-			)
-			return
+			return errors.NewCbCreateSystemBucketError(N1QL_SYSTEM_BUCKET, err)
 		}
 
 		// no need for a retry loop, cb.GetSystemBucket() call above should
@@ -69,10 +56,7 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 		defaultPool.refresh()
 		sysBucket, er = defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
 		if er != nil {
-			logging.Errorp("Cannot get System Bucket",
-				logging.Pair{"error", er},
-			)
-			return
+			return er
 		}
 	}
 
@@ -80,19 +64,13 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 	if er != nil {
 		if er.Code() != 12021 {
 			// only ignore scope not found error
-			logging.Errorp("Cannot get System Scope",
-				logging.Pair{"error", er},
-			)
-			return
+			return er
 		}
 
 		// allow "already exists" error in case of duplicated Create call
 		er = sysBucket.CreateScope(N1QL_SYSTEM_SCOPE)
 		if er != nil && !cb.AlreadyExistsError(er) {
-			logging.Errorp("Cannot create System Scope",
-				logging.Pair{"error", er},
-			)
-			return
+			return er
 		}
 
 		// retry till we have the newly created scope available
@@ -106,20 +84,14 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 			sysBucket.setNeedsManifest()
 			sysBucket, er = defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
 			if er != nil {
-				logging.Errorp("Cannot get System Bucket",
-					logging.Pair{"error", er},
-				)
-				return
+				return er
 			}
 
 			sysScope, er = sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
 			if sysScope != nil {
 				break
 			} else if er != nil && er.Code() != 12021 {
-				logging.Errorp("Cannot get System Scope",
-					logging.Pair{"error", er},
-				)
-				return
+				return er
 			}
 		}
 	}
@@ -128,19 +100,13 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 	if er != nil {
 		if er.Code() != 12003 {
 			// only ignore keyspace not found error
-			logging.Errorp("Cannot get System Collection",
-				logging.Pair{"error", er},
-			)
-			return
+			return er
 		}
 
 		// allow "already exists" error in case of duplicated Create call
 		er = sysScope.CreateCollection(N1QL_SYSTEM_COLLECTION)
 		if er != nil && !cb.AlreadyExistsError(er) {
-			logging.Errorp("Cannot create System Collection",
-				logging.Pair{"error", er},
-			)
-			return
+			return er
 		}
 
 		// retry till we have the newly created collection available
@@ -154,33 +120,24 @@ func GetSystemStore(client *cb.Client, defaultPool *namespace) {
 			sysBucket.setNeedsManifest()
 			sysBucket, er = defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
 			if er != nil {
-				logging.Errorp("Cannot get System Bucket",
-					logging.Pair{"error", er},
-				)
-				return
+				return er
 			}
 
 			sysScope, er = sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
 			if er != nil {
-				logging.Errorp("Cannot get System Scope",
-					logging.Pair{"error", er},
-				)
-				return
+				return er
 			}
 
 			sysCollection, er := sysScope.KeyspaceByName(N1QL_SYSTEM_COLLECTION)
 			if sysCollection != nil {
 				break
 			} else if er != nil && er.Code() != 12003 {
-				logging.Errorp("Cannot get System Collection",
-					logging.Pair{"error", er},
-				)
-				return
+				return er
 			}
 		}
 	}
 
-	return
+	return nil
 }
 
 func (s *store) HasSystemKeyspace() (bool, errors.Error) {
