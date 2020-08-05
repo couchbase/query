@@ -235,6 +235,8 @@ func main() {
 			logging.Pair{"value", *DICTIONARY_CACHE_LIMIT})
 		*DICTIONARY_CACHE_LIMIT = _DEF_DICTIONARY_CACHE_LIMIT
 	}
+	// Initialize dictionary cache
+	server_package.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 
@@ -305,9 +307,6 @@ func main() {
 		os.Exit(1)
 	}
 	constructor.Init(endpoint.Mux())
-
-	// Initialize dictionary cache
-	server_package.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
