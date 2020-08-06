@@ -141,14 +141,18 @@ func (this *valueExchange) reset() {
 func (this *valueExchange) dispose() {
 
 	// MB-28710 ditch values before pooling
-	for this.itemsCount > 0 {
-		this.items[this.itemsTail].Recycle()
-		this.items[this.itemsTail] = nil
-		this.itemsCount--
-		this.itemsTail++
-		if this.itemsTail >= cap(this.items) {
-			this.itemsTail = 0
+	if this.itemsCount > 0 {
+		this.vLock.Lock()
+		for this.itemsCount > 0 {
+			this.items[this.itemsTail].Recycle()
+			this.items[this.itemsTail] = nil
+			this.itemsCount--
+			this.itemsTail++
+			if this.itemsTail >= cap(this.items) {
+				this.itemsTail = 0
+			}
 		}
+		this.vLock.Unlock()
 	}
 
 	c := cap(this.items)
