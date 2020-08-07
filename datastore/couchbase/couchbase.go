@@ -438,9 +438,9 @@ func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 		roles := make([]datastore.Role, len(u.Roles))
 		for j, r := range u.Roles {
 			roles[j].Name = r.Role
-			if r.CollectionName != "" {
+			if r.CollectionName != "" && r.CollectionName != "*" {
 				roles[j].Target = r.BucketName + "." + r.ScopeName + "." + r.CollectionName
-			} else if r.ScopeName != "" {
+			} else if r.ScopeName != "" && r.ScopeName != "*" {
 				roles[j].Target = r.BucketName + "." + r.ScopeName
 			} else if r.BucketName != "" {
 				roles[j].Target = r.BucketName
