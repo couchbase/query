@@ -10,6 +10,7 @@
 package command
 
 import (
+	"github.com/couchbase/godbc/n1ql"
 	"io"
 	"strings"
 
@@ -55,10 +56,15 @@ func (this *Connect) ExecCommand(args []string) (int, string) {
 		// call command.ParseURL()
 		var errCode int
 		var errStr string
-		SERVICE_URL, errCode, errStr = ParseURL(SERVICE_URL)
+		var pURL *UrlRes
+
+		pURL, errCode, errStr = ParseURL(SERVICE_URL)
+
 		if errCode != 0 {
 			return errCode, errStr
 		}
+
+		SERVICE_URL = pURL.ServerFlag
 
 		// Connect to secure ports depending on -no-ssl-verify flag when cbq is started.
 		if strings.HasPrefix(strings.ToLower(SERVICE_URL), "https://") {
@@ -68,9 +74,11 @@ func (this *Connect) ExecCommand(args []string) (int, string) {
 				PrintStr(W, SSLVERIFY_TRUE)
 			}
 		}
+		if pURL.Username != "" && pURL.Password != "" {
+			n1ql.SetUsernamePassword(pURL.Username, pURL.Password)
+		}
 
 		// Do the check for different values here as well.
-
 		err := Ping(SERVICE_URL)
 		if err != nil {
 			return errors.CONNECTION_REFUSED, err.Error()

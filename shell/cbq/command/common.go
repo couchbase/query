@@ -38,7 +38,7 @@ var (
 type Credential map[string]string
 type Credentials []Credential
 
-var creds Credentials
+//var creds Credentials
 
 func init() {
 
@@ -689,8 +689,16 @@ func PrintStr(W io.Writer, val string) (int, string) {
 	return 0, ""
 }
 
+type UrlRes struct {
+	ServerFlag string
+	Username   string
+	Password   string
+}
+
 // Method to return the new value of the server flag based on input url string
-func ParseURL(serverFlag string) (string, int, string) {
+func ParseURL(serverFlag string) (*UrlRes, int, string) {
+
+	pURL := &UrlRes{serverFlag, "", ""}
 
 	// the URL golang Parse method has the limitation that when we pass in a host that is a string
 	// and not an ip, without the protocol scheme, it mis-interprets the url string. For such cases we
@@ -709,11 +717,11 @@ func ParseURL(serverFlag string) (string, int, string) {
 	//Parse the url
 	parsedURL, err := url.Parse(serverFlag)
 	if err != nil {
-		return "", errors.INVALID_URL, err.Error()
+		return pURL, errors.INVALID_URL, err.Error()
 	}
 
 	if parsedURL.Host == "" {
-		return "", errors.INVALID_URL, INVALIDHOST
+		return pURL, errors.INVALID_URL, INVALIDHOST
 	}
 
 	// We now have a valid URL. Check if we have a port
@@ -751,13 +759,17 @@ func ParseURL(serverFlag string) (string, int, string) {
 		parsedURL.Host = net.JoinHostPort(parsedURL.Host, portNo)
 		// Cannot give port with couchbase:// couchbases://
 		if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
-			return "", errors.INVALID_URL, INVALIDPORT
+			return pURL, errors.INVALID_URL, INVALIDPORT
 		} else {
 			if err != nil {
-				return "", errors.INVALID_URL, err.Error()
+				return pURL, errors.INVALID_URL, err.Error()
 			}
 		}
 	}
 
-	return parsedURL.String(), 0, ""
+	pURL.Password, _ = parsedURL.User.Password()
+	pURL.Username = parsedURL.User.Username()
+	pURL.ServerFlag = parsedURL.String()
+
+	return pURL, 0, ""
 }

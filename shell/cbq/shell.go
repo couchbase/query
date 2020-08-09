@@ -457,12 +457,16 @@ func main() {
 	// call command.ParseURL()
 	var errCode int
 	var errStr string
-	serverFlag, errCode, errStr = command.ParseURL(serverFlag)
+	var pURL *command.UrlRes
+
+	pURL, errCode, errStr = command.ParseURL(serverFlag)
 	if errCode != 0 {
 		s_err := command.HandleError(errCode, errStr)
 		command.PrintError(s_err)
 		os.Exit(1)
 	}
+
+	serverFlag = pURL.ServerFlag
 
 	//-engine
 	if strings.HasSuffix(serverFlag, "/") == false {
@@ -554,6 +558,12 @@ func main() {
 		}
 
 	}
+
+	// Append credentials part of the input server Flag to creds if they exist
+	if pURL.Username != "" && pURL.Password != "" {
+		creds = append(creds, command.Credential{"user": pURL.Username, "pass": pURL.Password})
+	}
+
 	//Append empty credentials. This is used for cases where one of the buckets
 	//is a SASL bucket, and we need to access the other unprotected buckets.
 	//CBauth works this way.
