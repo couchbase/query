@@ -80,6 +80,8 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 }
 
 func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
+	command.REFRESH_URL = serverFlag
+	var err error
 	//This block handles N1QL statements
 	// If connected to a query service then noQueryService == false.
 	if noQueryService {
@@ -97,31 +99,52 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 				return errors.STRING_WRITE, err.Error()
 			}
 		} else {
-			/* Try opening a connection to the endpoint. If successful, ping.
-			   If successful execute the n1ql command. Else try to connect
-			   again.
+			/* If a connection already exists, then use it.
+			   Else Try opening a connection to the endpoint.
+			   If successful execute the n1ql command.
+			   Else try to connect again.
 			*/
-			dBn1ql, err := n1ql.OpenExtended(serverFlag)
-			if err != nil {
-				return errors.DRIVER_OPEN, err.Error()
-			} else {
 
-				// Check if the statement needs to be executed.
-				if batch_run {
-					batch_run = false
-				}
-
-				if line == "" {
-					// In batch mode, if we try execute without any input,
-					// then dont execute anything.
-					return 0, ""
-				}
-
-				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)
-				if err_code != 0 {
-					return err_code, err_str
+			if command.DbN1ql == nil {
+				command.DbN1ql, err = n1ql.OpenExtended(serverFlag)
+				if err != nil {
+					return errors.DRIVER_OPEN, err.Error()
 				}
 			}
+
+			// Check if the statement needs to be executed.
+			if batch_run {
+				batch_run = false
+			}
+
+			if line == "" {
+				// In batch mode, if we try execute without any input,
+				// then dont execute anything.
+				return 0, ""
+			}
+
+			retry := true
+			for {
+				err_code, err_str := ExecN1QLStmt(line, command.DbN1ql, w)
+				if err_code != 0 {
+					// If the error is a connection error then refresh DbN1ql handle
+					// retry the query or not ? How many times ?
+					// For now retry it once
+					if strings.Contains(err_str, "Connection failed") && retry == true {
+						retry = false
+						err = command.Ping(serverFlag)
+						if err != nil {
+							// There was an issue establishing a connection. Throw the error and return
+							return errors.CONNECTION_REFUSED, err.Error()
+						}
+					} else {
+						return err_code, err_str
+					}
+				} else {
+					break
+				}
+			}
+
 		}
 
 	}
@@ -209,13 +232,13 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 			return errors.WRITER_OUTPUT, werr.Error()
 		} else if err != nil {
 			// Return error from godbc if there is one. This is for N1QL errors.
-			return errors.DRIVER_QUERY, ""
+			return errors.DRIVER_QUERY, err.Error()
 		}
 		return 0, ""
 	}
 
 	if err != nil {
-		return errors.DRIVER_QUERY, ""
+		return errors.DRIVER_QUERY, err.Error()
 	}
 
 	// No output, and no error. Strange, but keep going.

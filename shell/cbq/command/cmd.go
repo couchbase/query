@@ -16,22 +16,23 @@ import (
 )
 
 const (
-	ALIAS_CMD      = "ALIAS"
-	CONNECT_CMD    = "CONNECT"
-	DISCONNECT_CMD = "DISCONNECT"
-	EXIT_CMD       = "EXIT"
-	QUIT_CMD       = "QUIT"
-	HELP_CMD       = "HELP"
-	VERSION_CMD    = "VERSION"
-	COPYRIGHT_CMD  = "COPYRIGHT"
-	SET_CMD        = "SET"
-	PUSH_CMD       = "PUSH"
-	POP_CMD        = "POP"
-	UNSET_CMD      = "UNSET"
-	ECHO_CMD       = "ECHO"
-	UNALIAS_CMD    = "UNALIAS"
-	SOURCE_CMD     = "SOURCE"
-	REDIRECT_CMD   = "REDIRECT"
+	ALIAS_CMD               = "ALIAS"
+	CONNECT_CMD             = "CONNECT"
+	DISCONNECT_CMD          = "DISCONNECT"
+	EXIT_CMD                = "EXIT"
+	QUIT_CMD                = "QUIT"
+	HELP_CMD                = "HELP"
+	VERSION_CMD             = "VERSION"
+	COPYRIGHT_CMD           = "COPYRIGHT"
+	SET_CMD                 = "SET"
+	PUSH_CMD                = "PUSH"
+	POP_CMD                 = "POP"
+	UNSET_CMD               = "UNSET"
+	ECHO_CMD                = "ECHO"
+	UNALIAS_CMD             = "UNALIAS"
+	SOURCE_CMD              = "SOURCE"
+	REDIRECT_CMD            = "REDIRECT"
+	REFRESH_CLUSTER_MAP_CMD = "REFRESH_CLUSTER_MAP"
 )
 
 const (
@@ -127,6 +128,8 @@ var COMMAND_LIST = map[string]ShellCommand{
 	/* Scripting Management */
 	"\\source":   &Source{},
 	"\\redirect": &Redirect{},
+
+	"\\refresh_cluster_map": &Refresh_cluster_map{},
 }
 
 /*

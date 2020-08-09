@@ -91,22 +91,23 @@ const (
 	INVALIDHOST = " Empty host name.\n"
 
 	//HELP H-> Help
-	HELPMSG     = "\nHelp information for all shell commands.\n\n"
-	HALIAS      = "\\ALIAS [ name value ]\n"
-	HUNALIAS    = "\\UNALIAS name ...\n"
-	HCONNECT    = "\\CONNECT url\n"
-	HDISCONNECT = "\\DISCONNECT\n"
-	HCOPYRIGHT  = "\\COPYRIGHT\n"
-	HVERSION    = "\\VERSION\n"
-	HECHO       = "\\ECHO args ...\n"
-	HEXIT       = "\\QUIT \n\\EXIT\n"
-	HHELP       = "\\HELP [ args ... ]\n"
-	HSET        = "\\SET [ parameter value ]\n"
-	HPUSH       = "\\PUSH [ parameter value ]\n"
-	HUNSET      = "\\UNSET parameter\n"
-	HPOP        = "\\POP [ parameter ]\n"
-	HREDIRECT   = "\\REDIRECT OFF | filename \n"
-	HSOURCE     = "\\SOURCE filename\n"
+	HELPMSG             = "\nHelp information for all shell commands.\n\n"
+	HALIAS              = "\\ALIAS [ name value ]\n"
+	HUNALIAS            = "\\UNALIAS name ...\n"
+	HCONNECT            = "\\CONNECT url\n"
+	HDISCONNECT         = "\\DISCONNECT\n"
+	HCOPYRIGHT          = "\\COPYRIGHT\n"
+	HVERSION            = "\\VERSION\n"
+	HECHO               = "\\ECHO args ...\n"
+	HEXIT               = "\\QUIT \n\\EXIT\n"
+	HHELP               = "\\HELP [ args ... ]\n"
+	HSET                = "\\SET [ parameter value ]\n"
+	HPUSH               = "\\PUSH [ parameter value ]\n"
+	HUNSET              = "\\UNSET parameter\n"
+	HPOP                = "\\POP [ parameter ]\n"
+	HREDIRECT           = "\\REDIRECT OFF | filename \n"
+	HSOURCE             = "\\SOURCE filename\n"
+	HREFRESH_CLUSTERMAP = "\\REFRESH_CLUSTER_MAP\n"
 
 	//Messages to print description of shell commands. D-> Description
 	DALIAS = " Create an alias (name) for input value. value can be shell command, " +
@@ -166,7 +167,9 @@ const (
 		"To return to STDOUT, execute \\REDIRECT OFF .\n" +
 		"\tExample : \n\t\t \\REDIRECT temp1.txt ;\n\t\t select * from `beer-sample`;\n\t\t \\REDIRECT OFF;"
 
-	DDEFAULT = "Fix : Does not exist.\n"
+	DDEFAULT            = "Fix : Does not exist.\n"
+	DREFRESH_CLUSTERMAP = "Refresh the list of query APIs to reflect input service url as cluster. " +
+		"\tExample : \n\t\t \\REFRESH_CLUSTER_MAP;"
 )
 
 func NewMessage(message string, args ...string) string {

@@ -608,7 +608,7 @@ func main() {
 
 	if noQueryService == false {
 		// Check if connection is possible to the input serverFlag
-		// else failed to connect to.
+		// else failed to connect to. This establishes the dbn1ql handle for future queries
 		pingerr := command.Ping(serverFlag)
 		SERVICE_URL = serverFlag
 		command.SERVICE_URL = serverFlag

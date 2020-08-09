@@ -10,10 +10,10 @@
 package command
 
 import (
-	"github.com/couchbase/godbc/n1ql"
 	"io"
 	"strings"
 
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 )
 

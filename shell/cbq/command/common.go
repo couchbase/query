@@ -38,7 +38,7 @@ var (
 type Credential map[string]string
 type Credentials []Credential
 
-//var creds Credentials
+var DbN1ql n1ql.N1qlDB
 
 func init() {
 
@@ -564,6 +564,9 @@ func printDesc(cmdname string) (int, string) {
 	case REDIRECT_CMD:
 		return PrintStr(W, DREDIRECT)
 
+	case REFRESH_CLUSTER_MAP_CMD:
+		return PrintStr(W, DREFRESH_CLUSTERMAP)
+
 	default:
 		return PrintStr(W, DDEFAULT)
 
@@ -573,12 +576,15 @@ func printDesc(cmdname string) (int, string) {
 }
 
 func Ping(server string) error {
-	db, err := n1ql.OpenExtended(server)
+	var err error
+	oldDbN1ql := DbN1ql
+	DbN1ql, err = n1ql.OpenExtended(server)
 	if err != nil {
+		DbN1ql = oldDbN1ql
 		return err
 	}
 
-	err = db.Ping()
+	err = DbN1ql.Ping()
 	return err
 }
 

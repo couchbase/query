@@ -96,6 +96,8 @@ const (
 	CMD_LINE_ARG_MSG            = "Place input argument URL at the end, after input flags. "
 	INVALID_INPUT_ARGUMENTS     = 179
 	INVALID_INPUT_ARGUMENTS_MSG = "Input Argument format is invalid."
+	ERROR_ON_REFRESH            = 180
+	ERROR_ON_REFRESH_MSG        = "Query APIs cannot be initialized from Cluster Map."
 
 	//Untracked error
 	UNKNOWN_ERROR     = 199
@@ -260,4 +262,8 @@ func NewShellErrorInvalidInputArguments(msg string) Error {
 
 func NewShellErrorUnkownError(msg string) Error {
 	return &err{level: EXCEPTION, ICode: UNKNOWN_ERROR, IKey: "shell.internal.error.uncaptured", InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorOnRefresh(msg string) Error {
+	return &err{level: EXCEPTION, ICode: ERROR_ON_REFRESH, IKey: "shell.cluster.map.refresh.error", InternalMsg: ERROR_ON_REFRESH_MSG + msg, InternalCaller: CallerN(1)}
 }
