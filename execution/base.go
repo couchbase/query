@@ -505,8 +505,8 @@ func (this *base) fork(op Operator, context *Context, parent value.Value) {
 // The child return value is >=0 if a child message has been received.
 
 // stop the operator
-func (this *base) OpStop() {
-	this.baseSendAction(_ACTION_STOP)
+func OpStop(op Operator) {
+	op.SendAction(_ACTION_STOP)
 }
 
 // send an action

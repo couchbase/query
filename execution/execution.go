@@ -47,7 +47,6 @@ type Operator interface {
 	SerializeOutput(op Operator, context *Context) // Has the producer run the consumer inline
 	Copy() Operator                                // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value)  // Uses Once.Do() to run exactly once; never panics
-	OpStop()                                       // Stops the operator
 	SendAction(action opAction)                    // Stop or Pause the operator
 	Done()                                         // Frees and pools resources
 
