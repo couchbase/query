@@ -71,7 +71,7 @@ var CHECKERS = map[string]Checker{
 	MUTEXPROFILE:    checkBool,
 	FUNCLIMIT:       checkPositiveInteger,
 	TASKLIMIT:       checkPositiveInteger,
-	MEMORYQUOTA:     checkPositiveInteger,
+	MEMORYQUOTA:     checkNonNegativeInteger,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {
@@ -142,6 +142,16 @@ func checkPositiveInteger(val interface{}) (bool, errors.Error) {
 		return (val > 1), nil
 	case float64:
 		return (val > 1), nil
+	}
+	return false, nil
+}
+
+func checkNonNegativeInteger(val interface{}) (bool, errors.Error) {
+	switch val := val.(type) {
+	case int64:
+		return (val >= 0), nil
+	case float64:
+		return (val >= 0), nil
 	}
 	return false, nil
 }
