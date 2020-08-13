@@ -278,3 +278,9 @@ func NewMissingSystemKeyspaceError() Error {
 		InternalMsg:    "System Keyspace is required for UPDATE STATISTICS",
 		InternalCaller: CallerN(1)}
 }
+
+func NewMemoryQuotaExceededError() Error {
+	return &err{level: EXCEPTION, ICode: 5500, IKey: "execution.memory_quota.exceeded",
+		InternalMsg:    "Request has exceeded memory quota",
+		InternalCaller: CallerN(1)}
+}

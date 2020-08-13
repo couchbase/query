@@ -161,8 +161,24 @@ loop:
 				return true
 			}
 		}
+		if context.UseRequestQuota() {
+			var stop bool
+
+			iSz := item.Size()
+			jSz := joined.Size()
+			if jSz > iSz {
+				stop = context.TrackValueSize(jSz - iSz)
+			} else {
+				stop = context.TrackValueSize(iSz - jSz)
+			}
+			if stop {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				return false
+			}
+		}
 		return this.sendItem(joined)
 	}
+	// TODO Recycle
 
 	return true
 }

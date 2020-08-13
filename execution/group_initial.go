@@ -65,12 +65,14 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
 			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
+			item.Recycle()
 			return false
 		}
 	}
 
 	// Get or seed the group value
 	gv := this.groups[gk]
+	handleQuota := false
 	if gv == nil {
 		gv = item
 		this.groups[gk] = gv
@@ -80,6 +82,8 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		for _, agg := range this.plan.Aggregates() {
 			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
+	} else {
+		handleQuota = context.UseRequestQuota()
 	}
 
 	// Cumulate aggregates
@@ -87,6 +91,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	if !ok {
 		context.Fatal(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))
+		item.Recycle()
 		return false
 	}
 
@@ -94,11 +99,16 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		v, e := agg.CumulateInitial(item, aggregates[agg.String()], context)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating initial GROUP value."))
+			item.Recycle()
 			return false
 		}
 
 		aggregates[agg.String()] = v
 	}
+	if handleQuota {
+		context.ReleaseValueSize(item.Size())
+	}
+	// TODO Recycle
 
 	return true
 }

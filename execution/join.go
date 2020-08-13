@@ -55,6 +55,9 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
 	keys, ok := this.evaluateKey(this.plan.Term().JoinKeys(), item, context)
 	if !ok {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 		return false
 	}
@@ -82,7 +85,7 @@ func (this *Join) flushBatch(context *Context) bool {
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias(), context)
 }
 
 func (this *Join) MarshalJSON() ([]byte, error) {

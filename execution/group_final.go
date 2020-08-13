@@ -64,6 +64,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
 			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
+			item.Recycle()
 			return false
 		}
 	}
@@ -72,6 +73,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	gv := this.groups[gk]
 	if gv != nil {
 		context.Fatal(errors.NewDuplicateFinalGroupError())
+		item.Recycle()
 		return false
 	}
 
@@ -87,6 +89,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 			if e != nil {
 				context.Fatal(errors.NewGroupUpdateError(
 					e, "Error updating final GROUP value."))
+				item.Recycle()
 				return false
 			}
 
@@ -97,6 +100,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	default:
 		context.Fatal(errors.NewInvalidValueError(fmt.Sprintf(
 			"Invalid or missing aggregates of type %T.", aggregates)))
+		item.Recycle()
 		return false
 	}
 }
@@ -117,7 +121,12 @@ func (this *FinalGroup) afterItems(context *Context) {
 			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
 
-		this.sendItem(av)
+		if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+			context.Error(errors.NewMemoryQuotaExceededError())
+			av.Recycle()
+		} else {
+			this.sendItem(av)
+		}
 	}
 }
 

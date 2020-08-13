@@ -85,6 +85,9 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 		this.limit--
 		return this.sendItem(item)
 	} else {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 		return false
 	}

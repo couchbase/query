@@ -107,7 +107,7 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 			v := value.NewValue(s)
 			if first.Type() > value.NULL && v.Type() > value.NULL {
 				if buildHT {
-					err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue)
+					err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue, 0)
 					if err != nil {
 						return nil, errors.NewHashTablePutError(err)
 					}

@@ -65,12 +65,12 @@ func TestHashTable(t *testing.T) {
 			inputVal1 = fmt.Sprintf("this is payload value for int hash value i = %d j = %d", i, j)
 			inputVal2 = fmt.Sprintf("this is payload value for string hash value i = %d j = %d", i, j)
 
-			e = htab.Put(intVal, inputVal1, getBytesInt, equalInt)
+			e = htab.Put(intVal, inputVal1, getBytesInt, equalInt, 0)
 			if e != nil {
 				t.Errorf("PUT of int value failed, i = %d j = %d", i, j)
 			}
 
-			e = htab.Put(strVal, inputVal2, getBytesStr, equalStr)
+			e = htab.Put(strVal, inputVal2, getBytesStr, equalStr, 0)
 			if e != nil {
 				t.Errorf("PUT of string value failed, i = %d j = %d", i, j)
 			}

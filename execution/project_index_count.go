@@ -53,6 +53,11 @@ func (this *IndexCountProject) RunOnce(context *Context, parent value.Value) {
 
 func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *Context) bool {
 	if this.plan.Projection().Raw() {
+		if context.UseRequestQuota() && context.TrackValueSize(item.Size()) {
+			context.Error(errors.NewMemoryQuotaExceededError())
+			item.Recycle()
+			return false
+		}
 		return this.sendItem(item)
 	} else {
 		var v value.Value
@@ -77,6 +82,11 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 			}
 		}
 		av := value.NewAnnotatedValue(sv)
+		if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+			context.Error(errors.NewMemoryQuotaExceededError())
+			av.Recycle()
+			return false
+		}
 		return this.sendItem(av)
 	}
 }

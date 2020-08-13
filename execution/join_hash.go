@@ -134,12 +134,18 @@ loop:
 					}
 				}
 				var buildVal value.Value
+				var size uint64
+
 				if len(buildVals) == 1 {
 					buildVal = buildVals[0]
 				} else {
 					buildVal = value.NewValue(buildVals)
 				}
-				err = hashTab.Put(buildVal, build_item, value.MarshalValue, value.EqualValue)
+				if context.UseRequestQuota() {
+					size = build_item.Size()
+				}
+
+				err = hashTab.Put(buildVal, build_item, value.MarshalValue, value.EqualValue, size)
 				if err != nil {
 					context.Error(errors.NewHashTablePutError(err))
 					return false
@@ -196,7 +202,6 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 
 	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, context)
 	if probeVal == nil {
-		item.Recycle()
 		return false
 	}
 	outVal, err = this.hashTab.Get(probeVal, value.MarshalValue, value.EqualValue)
@@ -212,7 +217,11 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 				this.plan.BuildAliases(), this.ansiFlags, context, "join")
 			if match && ok {
 				matched = true
-				ok = this.checkSendItem(joined, this.plan.Filter(), context)
+				ok = this.checkSendItem(joined, func() uint64 {
+					return joined.Size()
+				}, true, this.plan.Filter(), context)
+			} else if joined != nil {
+				joined.Recycle()
 			}
 		} else {
 			context.Error(errors.NewExecutionInternalError("Hash Table Get produced non-Annotated value"))
@@ -227,34 +236,56 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	}
 
 	if this.plan.Outer() && !matched {
-		return this.checkSendItem(item, this.plan.Filter(), context)
+		return this.checkSendItem(item, func() uint64 {
+			return 0
+		}, false, this.plan.Filter(), context)
+	} else if context.UseRequestQuota() {
+		context.ReleaseValueSize(item.Size())
 	}
+	// TODO Recycle
 
 	return true
 }
 
 func (this *HashJoin) afterItems(context *Context) {
-	this.dropHashTable()
+	this.dropHashTable(context)
 	this.plan.Onclause().ResetMemory(context)
 }
 
-func (this *HashJoin) dropHashTable() {
+func (this *HashJoin) dropHashTable(context *Context) {
 	if this.hashTab != nil {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(this.hashTab.Size())
+		}
 		this.hashTab.Drop()
 		this.hashTab = nil
 	}
 }
 
-func (this *HashJoin) checkSendItem(av value.AnnotatedValue, filter expression.Expression, context *Context) bool {
+func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *Context) bool {
 	if filter != nil {
 		result, err := filter.Evaluate(av, context)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "hash join filter"))
+			if recycle {
+				av.Recycle()
+			}
 			return false
 		}
 		if !result.Truth() {
+			if recycle {
+				av.Recycle()
+			}
 			return true
 		}
+	}
+	if context.UseRequestQuota() && context.TrackValueSize(quotaFunc()) {
+		context.Error(errors.NewMemoryQuotaExceededError())
+		if recycle {
+			av.Recycle()
+		}
+		return false
+
 	}
 	return this.sendItem(av)
 }

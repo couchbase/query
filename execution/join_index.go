@@ -157,14 +157,21 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 	covers := this.plan.Covers()
 	filterCovers := this.plan.FilterCovers()
 
+	useQuota := context.UseRequestQuota()
 	for j, entry := range entries {
 		var joined value.AnnotatedValue
+		var size uint64
+
 		if j < len(entries)-1 {
 			joined = item.Copy().(value.AnnotatedValue)
+			if useQuota {
+				size = joined.Size()
+			}
 		} else {
 			joined = item
 		}
 
+		// FIXME covers size
 		for c, v := range filterCovers {
 			joined.SetCover(c.Text(), v)
 		}
@@ -180,10 +187,16 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 		jv := this.setDocumentKey(entry.PrimaryKey, value.NewAnnotatedValue(nil), 0, context)
 		joined.SetField(this.plan.Term().Alias(), jv)
 
+		if useQuota && context.TrackValueSize(size) {
+			context.Error(errors.NewMemoryQuotaExceededError())
+			joined.Recycle()
+			return false
+		}
 		if !this.sendItem(joined) {
 			return false
 		}
 	}
+	// TODO Recycle
 
 	return true
 }
@@ -214,7 +227,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias(), context)
 }
 
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {

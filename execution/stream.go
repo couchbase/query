@@ -70,6 +70,9 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	// item not used past this point
+	if context.UseRequestQuota() {
+		context.ReleaseValueSize(item.Size())
+	}
 	item.Recycle()
 	return ok
 }

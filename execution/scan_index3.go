@@ -137,7 +137,14 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 								return
 							}
 							if !result.Truth() {
+								av.Recycle()
 								continue
+							}
+							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+								context.Error(errors.NewMemoryQuotaExceededError())
+								av.Recycle()
+								ok = false
+								break
 							}
 						}
 					}

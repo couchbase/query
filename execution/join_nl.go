@@ -129,7 +129,11 @@ loop:
 					aliases, this.ansiFlags, context, "join")
 				if ok && match {
 					matched = true
-					ok = this.checkSendItem(joined, this.plan.Filter(), context)
+					ok = this.checkSendItem(joined, func() uint64 {
+						return joined.Size()
+					}, true, this.plan.Filter(), context)
+				} else if joined != nil {
+					joined.Recycle()
 				}
 
 				// TODO break out and child.SendAction(_ACTION_STOP) here for semin-scans
@@ -155,8 +159,13 @@ loop:
 	}
 
 	if this.plan.Outer() && !matched {
-		return this.checkSendItem(item, this.plan.Filter(), context)
+		return this.checkSendItem(item, func() uint64 {
+			return 0
+		}, false, this.plan.Filter(), context)
+	} else if context.UseRequestQuota() {
+		context.ReleaseValueSize(item.Size())
 	}
+	// TODO Recycle
 
 	return true
 }
@@ -218,16 +227,30 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	return match, true, joined
 }
 
-func (this *NLJoin) checkSendItem(av value.AnnotatedValue, filter expression.Expression, context *Context) bool {
+func (this *NLJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *Context) bool {
 	if filter != nil {
 		result, err := filter.Evaluate(av, context)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "nested-loop join filter"))
+			if recycle {
+				av.Recycle()
+			}
 			return false
 		}
 		if !result.Truth() {
+			if recycle {
+				av.Recycle()
+			}
 			return true
 		}
+	}
+	if context.UseRequestQuota() && context.TrackValueSize(quotaFunc()) {
+		context.Error(errors.NewMemoryQuotaExceededError())
+		if recycle {
+			av.Recycle()
+		}
+		return false
+
 	}
 	return this.sendItem(av)
 }

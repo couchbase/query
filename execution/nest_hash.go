@@ -157,19 +157,38 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 				return true
 			}
 		}
+		if context.UseRequestQuota() {
+			var stop bool
+
+			iSz := item.Size()
+			jSz := joined.Size()
+			if jSz > iSz {
+				stop = context.TrackValueSize(jSz - iSz)
+			} else {
+				stop = context.TrackValueSize(iSz - jSz)
+			}
+			if stop {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				return false
+			}
+		}
 		return this.sendItem(joined)
 	}
+	// TODO Recycle
 
 	return true
 }
 
 func (this *HashNest) afterItems(context *Context) {
-	this.dropHashTable()
+	this.dropHashTable(context)
 	this.plan.Onclause().ResetMemory(context)
 }
 
-func (this *HashNest) dropHashTable() {
+func (this *HashNest) dropHashTable(context *Context) {
 	if this.hashTab != nil {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(this.hashTab.Size())
+		}
 		this.hashTab.Drop()
 		this.hashTab = nil
 	}

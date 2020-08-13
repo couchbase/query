@@ -84,6 +84,10 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 		}
 		return this.sendItem(item)
 	} else {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 		return true
 	}
 }

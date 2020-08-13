@@ -82,7 +82,25 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			item.SetSelf(true)
 			return this.sendItem(item)
 		} else {
-			return this.sendItem(value.EMPTY_ANNOTATED_OBJECT)
+			pv := value.EMPTY_ANNOTATED_OBJECT
+			if context.UseRequestQuota() {
+				var stop bool
+
+				pv := value.EMPTY_ANNOTATED_OBJECT
+				iSz := item.Size()
+				pSz := pv.Size()
+				if pSz > iSz {
+					stop = context.TrackValueSize(pSz - iSz)
+				} else {
+					stop = context.TrackValueSize(iSz - pSz)
+				}
+				if stop {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					return false
+
+				}
+			}
+			return this.sendItem(pv)
 		}
 	} else if this.plan.Projection().Raw() {
 		// Raw projection of an expression
@@ -99,6 +117,22 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		av := value.NewAnnotatedValue(sv)
 		av.SetAnnotations(item)
 		av.SetProjection(v) //	av.SetAttachment("projection", v)
+		if context.UseRequestQuota() {
+			var stop bool
+
+			iSz := item.Size()
+			aSz := av.Size()
+			if aSz > iSz {
+				stop = context.TrackValueSize(aSz - iSz)
+			} else {
+				stop = context.TrackValueSize(iSz - aSz)
+			}
+			if stop {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				av.Recycle()
+				return false
+			}
+		}
 		return this.sendItem(av)
 	} else {
 		// Any other projection
@@ -151,6 +185,22 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	}
 
 	pv.SetProjection(p) //	pv.SetAttachment("projection", p)
+	if context.UseRequestQuota() {
+		var stop bool
+
+		iSz := item.Size()
+		pSz := pv.Size()
+		if pSz > iSz {
+			stop = context.TrackValueSize(pSz - iSz)
+		} else {
+			stop = context.TrackValueSize(iSz - pSz)
+		}
+		if stop {
+			context.Error(errors.NewMemoryQuotaExceededError())
+			pv.Recycle()
+			return false
+		}
+	}
 	return this.sendItem(pv)
 }
 

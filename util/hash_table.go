@@ -84,6 +84,7 @@ type HashTable struct {
 	mode     int          // hash table mode
 	bucket   int          // when iterate or get, bucket position
 	vector   int          // when iterate or get, vector position
+	size     uint64       // size in byte of the hash table
 }
 
 func NewHashTable(purpose int) *HashTable {
@@ -102,7 +103,7 @@ func NewHashTable(purpose int) *HashTable {
 
 // given a hash value (hashVal), put the inputVal into hash table
 func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface{}) ([]byte, error),
-	equal func(val1, val2 interface{}) bool) error {
+	equal func(val1, val2 interface{}) bool, size uint64) error {
 
 	this.mode = HASH_TABLE_PUT
 
@@ -120,7 +121,11 @@ func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface
 
 	hashEntry := newHashEntry(hashKey, hashVal, inputVal)
 
-	return this.putEntry(hashEntry, equal)
+	err = this.putEntry(hashEntry, equal)
+	if err == nil {
+		this.size += size
+	}
+	return err
 }
 
 func (this *HashTable) putEntry(entry *hashEntry, equal func(val1, val2 interface{}) bool) error {
@@ -295,6 +300,11 @@ func (this *HashTable) Count() int {
 	return this.count
 }
 
+// cumulative size of the items in the hash table
+func (this *HashTable) Size() uint64 {
+	return this.size
+}
+
 func (this *HashTable) Drop() {
 	this.mode = HASH_TABLE_DROP
 	for i := 0; i < len(this.entries); i++ {
@@ -305,6 +315,7 @@ func (this *HashTable) Drop() {
 	}
 	this.count = 0
 	this.distinct = 0
+	this.size = 0
 }
 
 const (

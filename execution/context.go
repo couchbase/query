@@ -17,6 +17,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -131,6 +132,7 @@ type Output interface {
 }
 
 type Context struct {
+	inUseMemory        uint64
 	requestId          string
 	datastore          datastore.Datastore
 	systemstore        datastore.Datastore
@@ -465,6 +467,21 @@ func (this *Context) Fatal(err errors.Error) {
 
 func (this *Context) Warning(wrn errors.Error) {
 	this.output.Warning(wrn)
+}
+
+// memory quota
+
+func (this *Context) UseRequestQuota() bool {
+	return this.memoryQuota > 0
+}
+
+func (this *Context) TrackValueSize(size uint64) bool {
+	sz := atomic.AddUint64(&this.inUseMemory, size)
+	return sz > this.memoryQuota
+}
+
+func (this *Context) ReleaseValueSize(size uint64) {
+	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
 }
 
 // subquery evaluation

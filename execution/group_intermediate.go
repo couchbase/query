@@ -65,6 +65,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
 			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
+			item.Recycle()
 			return false
 		}
 	}
@@ -82,8 +83,14 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	if !ok {
 		context.Fatal(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid partial aggregates %v of type %T", part, part)))
+		item.Recycle()
 		return false
 	}
+
+	if context.UseRequestQuota() {
+		context.ReleaseValueSize(item.Size())
+	}
+	// TODO Recycle
 
 	cumulative := gv.GetAttachment("aggregates").(map[string]value.Value)
 	if !ok {
