@@ -270,7 +270,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				cost = this.lastOp.Cost()
 				cardinality = this.lastOp.Cardinality()
 				if cost > 0.0 && cardinality > 0.0 {
-					dcost, dcard := getDistinctCost(projection.Terms(), cardinality, this.keyspaceNames)
+					dcost, dcard := getDistinctCost(projection.Terms(), cardinality, this.keyspaceNames, this.advisorValidate())
 					if dcost > 0.0 && dcard > 0.0 {
 						cost += dcost
 						cardinality = dcard
@@ -325,6 +325,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {
 	cost := float64(OPT_COST_NOT_AVAIL)
 	cardinality := float64(OPT_CARD_NOT_AVAIL)
+	advisorValidate := this.advisorValidate()
 
 	if let != nil && pred != nil {
 	outer:
@@ -339,7 +340,7 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 			// Predicate does NOT depend on LET
 			if this.useCBO {
 				cost, cardinality = getFilterCost(this.lastOp, pred,
-					this.baseKeyspaces, this.keyspaceNames)
+					this.baseKeyspaces, this.keyspaceNames, advisorValidate)
 			}
 			filter := plan.NewFilter(pred, cost, cardinality)
 			if this.useCBO {
@@ -361,7 +362,7 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 	if pred != nil {
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
-				this.keyspaceNames)
+				this.keyspaceNames, advisorValidate)
 		}
 		this.addSubChildren(plan.NewFilter(pred, cost, cardinality))
 	}

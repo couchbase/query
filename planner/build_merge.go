@@ -318,7 +318,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 func (this *builder) addMergeFilter(pred expression.Expression, cost, cardinality float64) *plan.Filter {
 	if this.useCBO {
 		cost, cardinality = getFilterCostWithInput(pred, this.baseKeyspaces,
-			this.keyspaceNames, cost, cardinality)
+			this.keyspaceNames, cost, cardinality, this.advisorValidate())
 	}
 
 	return plan.NewFilter(pred, cost, cardinality)

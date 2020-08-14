@@ -28,16 +28,16 @@ func optDocCount(keyspace datastore.Keyspace) float64 {
 	return OPT_CARD_NOT_AVAIL
 }
 
-func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
+func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool) (
 	float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
-func optDefInSelec(keyspace, key string) float64 {
+func optDefInSelec(keyspace, key string, advisorValidate bool) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
-func optDefLikeSelec(keyspace, key string) float64 {
+func optDefLikeSelec(keyspace, key string, advisorValidate bool) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
@@ -55,7 +55,7 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cos
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string, advisorValidate bool) (cost float64, sel float64, card float64, err error) {
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 
@@ -114,7 +114,7 @@ func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTe
 
 func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
-	requestId string) (float64, float64) {
+	requestId string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -124,11 +124,11 @@ func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTe
 }
 
 func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string) (float64, float64) {
+	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string) (float64, float64) {
+func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -141,12 +141,12 @@ func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) (float64, float64) {
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
-	keyspaceNames map[string]string, cost, cardinality float64) (float64, float64) {
+	keyspaceNames map[string]string, cost, cardinality float64, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -167,12 +167,12 @@ func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64) {
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
-	keyspaces map[string]string) float64 {
+	keyspaces map[string]string, advisorValidate bool) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string) map[datastore.Index]*indexEntry {
+	nTerms int, alias string, advisorValidate bool) map[datastore.Index]*indexEntry {
 	return sargables
 }
 
@@ -190,7 +190,7 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string) (float64, float64) {
+func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 

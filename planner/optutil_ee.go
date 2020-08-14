@@ -36,21 +36,21 @@ func optDocCount(keyspace datastore.Keyspace) float64 {
 	return float64(docCount)
 }
 
-func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
+func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool) (
 	float64, float64) {
-	sel, arrSel, def := optutil.ExprSelec(keyspaces, pred)
+	sel, arrSel, def := optutil.ExprSelec(keyspaces, pred, advisorValidate)
 	if def {
 		return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 	}
 	return sel, arrSel
 }
 
-func optDefInSelec(keyspace, key string) float64 {
-	return optutil.DefInSelec(keyspace, key)
+func optDefInSelec(keyspace, key string, advisorValidate bool) float64 {
+	return optutil.DefInSelec(keyspace, key, advisorValidate)
 }
 
-func optDefLikeSelec(keyspace, key string) float64 {
-	return optutil.DefLikeSelec(keyspace, key)
+func optDefLikeSelec(keyspace, key string, advisorValidate bool) float64 {
+	return optutil.DefLikeSelec(keyspace, key, advisorValidate)
 }
 
 func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
@@ -67,24 +67,24 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cos
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string, advisorValidate bool) (cost float64, sel float64, card float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias)
+		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias, advisorValidate)
 	case *IntersectSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false)
+		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false, advisorValidate)
 	case *UnionSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, true)
+		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, true, advisorValidate)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
 func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans []SargSpans, alias string, union bool) (cost float64, sel float64, card float64, err error) {
+	spans []SargSpans, alias string, union, advisorValidate bool) (cost float64, sel float64, card float64, err error) {
 	var nrows float64
 	for i, span := range spans {
-		tcost, tsel, tcard, e := indexScanCost(index, sargKeys, requestId, span, alias)
+		tcost, tsel, tcard, e := indexScanCost(index, sargKeys, requestId, span, alias, advisorValidate)
 		if e != nil {
 			return tcost, tsel, tcard, e
 		}
@@ -107,24 +107,24 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 }
 
 func indexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool,
-	spans SargSpans, alias string) (sel float64, err error) {
+	spans SargSpans, alias string, considerInternal bool) (sel float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		sel, _ := optutil.CalcIndexSelec(index, sargKeys, skipKeys, spans.spans, alias)
+		sel, _ := optutil.CalcIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, considerInternal)
 		return sel, nil
 	case *IntersectSpans:
-		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, false)
+		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, false, considerInternal)
 	case *UnionSpans:
-		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, true)
+		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, true, considerInternal)
 	}
 
 	return OPT_SELEC_NOT_AVAIL, errors.NewPlanInternalError("indexSelec: unexpected span type")
 }
 
 func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool,
-	spans []SargSpans, alias string, union bool) (sel float64, err error) {
+	spans []SargSpans, alias string, union, considerInternal bool) (sel float64, err error) {
 	for i, span := range spans {
-		tsel, e := indexSelec(index, sargKeys, skipKeys, span, alias)
+		tsel, e := indexSelec(index, sargKeys, skipKeys, span, alias, considerInternal)
 		if e != nil {
 			return tsel, e
 		}
@@ -162,7 +162,7 @@ func getFetchCost(keyspace datastore.Keyspace, cardinality float64) float64 {
 }
 
 func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64) {
-	return optutil.CalcDistinctScanCost(index, cardinality)
+	return optutil.CalcDistinctScanCost(index, cardinality, true)
 }
 
 func getExpressionScanCost(expr expression.Expression, keyspaces map[string]string) (float64, float64) {
@@ -206,9 +206,9 @@ func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTe
 
 func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
-	requestId string) (float64, float64) {
+	requestId string, advisorValidate bool) (float64, float64) {
 	return optutil.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, covered,
-		index, requestId, optutil.COST_JOIN)
+		index, requestId, optutil.COST_JOIN, advisorValidate)
 }
 
 func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
@@ -217,13 +217,13 @@ func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTe
 }
 
 func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string) (float64, float64) {
+	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string, advisorValidate bool) (float64, float64) {
 	return optutil.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, false,
-		index, requestId, optutil.COST_NEST)
+		index, requestId, optutil.COST_NEST, advisorValidate)
 }
 
-func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string) (float64, float64) {
-	return optutil.CalcUnnestCost(node, lastOp, keyspaces)
+func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
+	return optutil.CalcUnnestCost(node, lastOp, keyspaces, advisorValidate)
 }
 
 func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
@@ -235,7 +235,7 @@ func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) (float64, float64) {
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (float64, float64) {
 
 	// perform expression transformation, but no DNF transformation
 	var err error
@@ -246,11 +246,11 @@ func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	return optutil.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames)
+	return optutil.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames, advisorValidate)
 }
 
 func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
-	keyspaceNames map[string]string, cost, cardinality float64) (float64, float64) {
+	keyspaceNames map[string]string, cost, cardinality float64, advisorValidate bool) (float64, float64) {
 
 	// perform expression transformation, but no DNF transformation
 	var err error
@@ -261,7 +261,7 @@ func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	return optutil.CalcFilterCostWithInput(dnfExpr, baseKeyspaces, keyspaceNames, cost, cardinality)
+	return optutil.CalcFilterCostWithInput(dnfExpr, baseKeyspaces, keyspaceNames, cost, cardinality, advisorValidate)
 }
 
 func getLetCost(lastOp plan.Operator) (float64, float64) {
@@ -281,12 +281,12 @@ func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64) {
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
-	keyspaces map[string]string) float64 {
-	return optutil.GetUnnestPredSelec(pred, variable, mapping, keyspaces)
+	keyspaces map[string]string, advisorValidate bool) float64 {
+	return optutil.GetUnnestPredSelec(pred, variable, mapping, keyspaces, advisorValidate)
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string) map[datastore.Index]*indexEntry {
+	nTerms int, alias string, advisorValidate bool) map[datastore.Index]*indexEntry {
 
 	indexes := make([]*base.IndexCost, 0, len(sargables))
 
@@ -318,7 +318,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		}
 	}
 
-	adjustIndexSelectivity(indexes, sargables, alias)
+	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate)
 
 	indexes = optutil.ChooseIntersectScan(keyspace, indexes)
 
@@ -331,7 +331,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 }
 
 func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.Index]*indexEntry,
-	alias string) {
+	alias string, considerInternal bool) {
 
 	if len(indexes) <= 1 {
 		return
@@ -374,7 +374,7 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 		}
 		if adjust {
 			sel, e := indexSelec(idx.Index(), entry.sargKeys, idx.SkipKeys(), entry.spans,
-				alias)
+				alias, considerInternal)
 			if e == nil {
 				origSel := idx.Selectivity()
 				origCard := idx.Cardinality()
@@ -386,7 +386,7 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 	}
 
 	// recurse on remaining indexes
-	adjustIndexSelectivity(indexes[1:], sargables, alias)
+	adjustIndexSelectivity(indexes[1:], sargables, alias, considerInternal)
 }
 
 func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
@@ -406,7 +406,7 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	return optutil.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
 }
 
-func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string) (float64, float64) {
+func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
 	return optutil.CalcDistinctCost(terms, cardinality, keyspaces)
 }
 

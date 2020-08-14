@@ -266,7 +266,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 			if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 				cost, cardinality = getFilterCost(this.lastOp, filter,
-					this.baseKeyspaces, this.keyspaceNames)
+					this.baseKeyspaces, this.keyspaceNames, this.advisorValidate())
 			}
 
 			// Add filter as a separate Filter operator since Fetch is already
@@ -314,7 +314,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, filter,
-				this.baseKeyspaces, this.keyspaceNames)
+				this.baseKeyspaces, this.keyspaceNames, this.advisorValidate())
 		}
 		this.addSubChildren(plan.NewFilter(filter, cost, cardinality))
 	}
@@ -626,7 +626,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality = getUnnestCost(node, this.lastOp, this.keyspaceNames)
+			cost, cardinality = getUnnestCost(node, this.lastOp, this.keyspaceNames, this.advisorValidate())
 			if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
 				cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
 			}

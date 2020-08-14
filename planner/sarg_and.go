@@ -31,7 +31,7 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 	exactSpans := true
 
 	for _, op := range pred.Operands() {
-		s, err = sargFor(op, this.key, this.isJoin, this.doSelec, this.baseKeyspace, this.keyspaceNames)
+		s, err = sargFor(op, this.key, this.isJoin, this.doSelec, this.baseKeyspace, this.keyspaceNames, this.advisorValidate)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +71,7 @@ func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expressi
 	keySpans := make([]SargSpans, 0, len(pred.Operands()))
 
 	for _, child := range pred.Operands() {
-		cspans, err := sargFor(child, key, this.isJoin, this.doSelec, this.baseKeyspace, this.keyspaceNames)
+		cspans, err := sargFor(child, key, this.isJoin, this.doSelec, this.baseKeyspace, this.keyspaceNames, this.advisorValidate)
 		if err != nil {
 			return nil, err
 		}

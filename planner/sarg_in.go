@@ -69,7 +69,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 			selec := OPT_SELEC_NOT_AVAIL
 			if this.doSelec {
-				selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String())
+				selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
 			}
 			static.SetExprFlag(expression.EXPR_DYNAMIC_IN)
 			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
@@ -110,7 +110,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 					return nil, err
 				}
 			}
-			selec, _ = optExprSelec(keyspaces, newExpr)
+			selec, _ = optExprSelec(keyspaces, newExpr, this.advisorValidate)
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		range2.SetFlag(plan.RANGE_FROM_IN_EXPR)

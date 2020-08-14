@@ -356,13 +356,14 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		sargKey = unnestIdent
 	}
 
+	advisorValidate := this.advisorValidate()
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	if this.useCBO {
 		keyspaces := make(map[string]string, 1)
 		keyspaces[node.Alias()] = node.Keyspace()
 		for _, fl := range baseKeyspace.Filters() {
 			if fl.IsUnnest() {
-				sel := getUnnestPredSelec(fl.FltrExpr(), unnest.As(), unnest.Expression(), keyspaces)
+				sel := getUnnestPredSelec(fl.FltrExpr(), unnest.As(), unnest.Expression(), keyspaces, advisorValidate)
 				fl.SetSelec(sel)
 			}
 		}
@@ -394,7 +395,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		n = max
 	}
 
-	spans, exactSpans, err := SargFor(pred, sargKeys, n, false, this.useCBO, baseKeyspace, this.keyspaceNames)
+	spans, exactSpans, err := SargFor(pred, sargKeys, n, false, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
@@ -403,7 +404,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	cardinality := OPT_CARD_NOT_AVAIL
 	selectivity := OPT_SELEC_NOT_AVAIL
 	if this.useCBO {
-		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(), spans, node.Alias())
+		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(), spans, node.Alias(), this.advisorValidate())
 		if err != nil {
 			cost = OPT_COST_NOT_AVAIL
 			cardinality = OPT_CARD_NOT_AVAIL

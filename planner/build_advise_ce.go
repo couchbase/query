@@ -34,7 +34,7 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 func (this *builder) extractKeyspacePredicates(where, on expression.Expression) {
 }
 
-func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool) {
+func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool, cost, cardinality float64) {
 }
 
 func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, uncovered bool) {
@@ -75,4 +75,8 @@ func (this *builder) collectPushdownProperty(index datastore.Index, alias string
 
 func (this *builder) getIdxCandidates() []datastore.Index {
 	return nil
+}
+
+func (this *builder) advisorValidate() bool {
+	return false
 }

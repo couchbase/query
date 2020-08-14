@@ -20,13 +20,13 @@ import (
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
 func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
-	keyspaceNames map[string]string, isOnclause, doSelec bool) (value.Value, error) {
+	keyspaceNames map[string]string, isOnclause, doSelec, advisorValidate bool) (value.Value, error) {
 
 	if len(baseKeyspaces) == 0 {
 		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
-	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec)
+	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec, advisorValidate)
 	_, err := expr.Accept(classifier)
 	if err != nil {
 		return nil, err
@@ -57,16 +57,18 @@ type exprClassifier struct {
 	nonConstant     bool
 	constant        value.Value
 	doSelec         bool
+	advisorValidate bool
 }
 
 func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
-	isOnclause, doSelec bool) *exprClassifier {
+	isOnclause, doSelec, advisorValidate bool) *exprClassifier {
 
 	return &exprClassifier{
-		baseKeyspaces: baseKeyspaces,
-		keyspaceNames: keyspaceNames,
-		isOnclause:    isOnclause,
-		doSelec:       doSelec,
+		baseKeyspaces:   baseKeyspaces,
+		keyspaceNames:   keyspaceNames,
+		isOnclause:      isOnclause,
+		doSelec:         doSelec,
+		advisorValidate: advisorValidate,
 	}
 }
 
@@ -451,7 +453,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
 				this.isOnclause, len(origKeyspaces) > 1)
 			if this.doSelec && !baseKspace.IsPrimaryUnnest() {
-				selec, arrSelec := optExprSelec(origKeyspaces, dnfExpr)
+				selec, arrSelec := optExprSelec(origKeyspaces, dnfExpr, this.advisorValidate)
 				filter.SetSelec(selec)
 				filter.SetArraySelec(arrSelec)
 				filter.SetSelecDone()
@@ -503,7 +505,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, this.isOnclause, this.doSelec)
+		_, err := ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, this.isOnclause, this.doSelec, this.advisorValidate)
 		if err != nil {
 			return nil, nil, false, err
 		}

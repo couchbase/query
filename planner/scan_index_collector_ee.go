@@ -67,12 +67,16 @@ func (this *scanIdxCol) addIndexInfo(indexInfo *iaplan.IndexInfo) {
 }
 
 func (this *scanIdxCol) VisitPrimaryScan(op *plan.PrimaryScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, op.Keyspace(), false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, op.Keyspace(), false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
@@ -81,17 +85,23 @@ func (this *scanIdxCol) VisitParentScan(op *plan.ParentScan) (interface{}, error
 }
 
 func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
@@ -112,17 +122,23 @@ func (this *scanIdxCol) VisitCountScan(op *plan.CountScan) (interface{}, error) 
 }
 
 func (this *scanIdxCol) VisitIndexCountScan(op *plan.IndexCountScan) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexCountScan2(op *plan.IndexCountScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
 func (this *scanIdxCol) VisitIndexCountDistinctScan2(op *plan.IndexCountDistinctScan2) (interface{}, error) {
-	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
+	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
+	info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+	this.addIndexInfo(info)
 	return nil, nil
 }
 
@@ -485,7 +501,7 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 
 	info := iaplan.NewIndexInfo(index.Name(), keyspaceAlias, keyspace, index.IsPrimary(), "", nil, "", deferred, index.Type())
 	if validatePhase {
-		info.SetVirtual()
+		info.SetCovering()
 	} else if index.Type() == datastore.GSI {
 		if index2, ok := index.(datastore.Index2); ok {
 			info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, getIndexKeyExpressions(index2.RangeKey2())))

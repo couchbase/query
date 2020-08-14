@@ -132,7 +132,10 @@ func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
 	for _, info := range this.validatedCoverIdxes {
 		key := info.GetKeyspaceName() + "_" + info.GetIndexName() + "_virtual"
 		if origInfo, ok := m[key]; ok {
-			origInfo.SetVirtual()
+			origInfo.SetCovering()
+			if !info.IsCostBased() {
+				origInfo.SetCostBased(false)
+			}
 			this.validatedCoverIdxes[i] = this.matchPushdownProperty(key, origInfo)
 			i++
 			delete(m, key)
@@ -192,7 +195,7 @@ func (this *builder) extractKeyspacePredicates(where, on expression.Expression) 
 	}
 }
 
-func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool) {
+func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool, cost, cardinality float64) {
 	if this.indexAdvisor {
 		if index != nil {
 			info := extractInfo(index, node.Alias(), keyspace, false, this.advisePhase == _VALIDATE)
@@ -200,6 +203,7 @@ func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.
 				info.SetIdxStatusCovering()
 			}
 			if this.advisePhase == _VALIDATE {
+				info.SetCostBased(cost > 0 && cardinality > 0)
 				this.validatedCoverIdxes = append(this.validatedCoverIdxes, info)
 				return
 			}
@@ -315,6 +319,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	}
 
 	if pred != nil {
+		advisorValidate := this.advisorValidate()
 		//This is for collecting predicates from build_scan when predicates is disjunction.
 		if or, ok := pred.(*expression.Or); ok {
 			orTerms, _ := expression.FlattenOr(or)
@@ -327,7 +332,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 
 				_, err := ClassifyExpr(op, baseKeyspacesCopy, this.keyspaceNames,
-					ansijoin, this.useCBO)
+					ansijoin, this.useCBO, advisorValidate)
 				if err != nil {
 					continue outer
 				}
@@ -345,7 +350,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 			//This is for collecting predicates for build_join_index.
 			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 			_, err := ClassifyExpr(pred, baseKeyspacesCopy, this.keyspaceNames,
-				false, this.useCBO)
+				false, this.useCBO, advisorValidate)
 			if err != nil {
 				return err
 			}
@@ -448,6 +453,10 @@ func (this *builder) matchPushdownProperty(key string, idxInfo *iaplan.IndexInfo
 
 func (this *builder) getIdxCandidates() []datastore.Index {
 	return this.idxCandidates
+}
+
+func (this *builder) advisorValidate() bool {
+	return this.indexAdvisor && this.advisePhase == _VALIDATE
 }
 
 func collectInnerUnnestMap(from algebra.FromTerm, q *advisor.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {

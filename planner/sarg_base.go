@@ -15,11 +15,12 @@ import (
 )
 
 type sarg struct {
-	key           expression.Expression
-	baseKeyspace  *base.BaseKeyspace
-	keyspaceNames map[string]string
-	isJoin        bool
-	doSelec       bool
+	key             expression.Expression
+	baseKeyspace    *base.BaseKeyspace
+	keyspaceNames   map[string]string
+	isJoin          bool
+	doSelec         bool
+	advisorValidate bool
 }
 
 func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
@@ -80,7 +81,7 @@ func (this *sarg) getSelec(pred expression.Expression) float64 {
 		keyspaces = make(map[string]string, 1)
 		keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
 	}
-	sel, arrSel := optExprSelec(keyspaces, pred)
+	sel, arrSel := optExprSelec(keyspaces, pred, this.advisorValidate)
 
 	if array {
 		return arrSel

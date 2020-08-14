@@ -71,7 +71,7 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 		}
 
 		go updstat.UpdateStatistics(this.plan.Keyspace(), this.plan.Node().Terms(),
-			this.plan.Node().With(), conn, context)
+			this.plan.Node().With(), conn, context, false)
 
 		var val value.Value
 

@@ -103,7 +103,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
 				err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
-					this.context.IndexApiVersion(), this.getIdxCandidates())
+					this.context.IndexApiVersion(), this.getIdxCandidates(), this.advisorValidate())
 				if err != nil {
 					return nil, nil, err
 				}
@@ -502,7 +502,7 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 		}
 	}
 
-	constant, err = ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO)
+	constant, err = ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO, this.advisorValidate())
 	return
 }
 

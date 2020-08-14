@@ -408,9 +408,10 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		predFc = pred.FilterCovers(predFc)
 	}
 
+	advisorValidate := this.advisorValidate()
 	for s, se := range sargables {
 		if this.useCBO && se.cost <= 0.0 {
-			cost, selec, card, e := indexScanCost(se.index, se.sargKeys, this.context.RequestId(), se.spans, alias)
+			cost, selec, card, e := indexScanCost(se.index, se.sargKeys, this.context.RequestId(), se.spans, alias, advisorValidate)
 			if e != nil || (cost <= 0.0 || card <= 0.0) {
 				useCBO = false
 			} else {
@@ -539,6 +540,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 	}
 
+	advisorValidate := this.advisorValidate()
 	for _, se := range sargables {
 		var spans SargSpans
 		var exactSpans bool
@@ -558,10 +560,10 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 
 		if useFilters {
 			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
-				se.maxKeys, underHash, this.useCBO, baseKeyspace, this.keyspaceNames)
+				se.maxKeys, underHash, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
 		} else {
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys,
-				se.maxKeys, orIsJoin, this.useCBO, baseKeyspace, this.keyspaceNames)
+				se.maxKeys, orIsJoin, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},
@@ -605,7 +607,7 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 		nTerms = len(this.order.Terms())
 	}
 
-	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias())
+	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(), this.advisorValidate())
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {

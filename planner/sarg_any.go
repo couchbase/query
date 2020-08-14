@@ -52,7 +52,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		variable := expression.NewIdentifier(bindings[0].Variable())
 		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
-			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, true)
+			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, true, this.advisorValidate)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -71,14 +71,14 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 
 	// Array Index key can have only single binding
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
-		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, true)
+		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, true, this.advisorValidate)
 }
 
 func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, alias string,
-	selec float64, any bool) (SargSpans, error) {
+	selec float64, any, advisorValidate bool) (SargSpans, error) {
 
-	sp, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames)
+	sp, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate)
 	if err != nil || sp == nil {
 		return sp, err
 	}
