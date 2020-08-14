@@ -475,6 +475,10 @@ func (this *Context) UseRequestQuota() bool {
 	return this.memoryQuota > 0
 }
 
+func (this *Context) ProducerThrottleQuota() uint64 {
+	return this.memoryQuota / 10
+}
+
 func (this *Context) TrackValueSize(size uint64) bool {
 	sz := atomic.AddUint64(&this.inUseMemory, size)
 	return sz > this.memoryQuota

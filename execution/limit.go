@@ -33,7 +33,7 @@ func NewLimit(plan *plan.Limit, context *Context) *Limit {
 	// MB-27945 limit does not run inside a parallel group
 	// serialize only if parallelism is off
 	if context.MaxParallelism() == 1 {
-		newSerializedBase(&rv.base)
+		newSerializedBase(&rv.base, context)
 	} else {
 		newBase(&rv.base, context)
 	}

@@ -33,7 +33,7 @@ func NewOffset(plan *plan.Offset, context *Context) *Offset {
 	// MB-27945 offset does not run inside a parallel group
 	// serialize only if parallelism is off
 	if context.MaxParallelism() == 1 {
-		newSerializedBase(&rv.base)
+		newSerializedBase(&rv.base, context)
 	} else {
 		newBase(&rv.base, context)
 	}

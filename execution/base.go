@@ -112,6 +112,7 @@ type base struct {
 	valueExchange
 	conn           *datastore.IndexConnection
 	stopChannel    stopChannel
+	quota          uint64
 	input          Operator
 	output         Operator
 	stop           Operator
@@ -186,6 +187,7 @@ func newBase(dest *base, context *Context) {
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
+	dest.quota = context.ProducerThrottleQuota()
 }
 
 // The output of this operator will be redirected elsewhere, so we
@@ -205,7 +207,7 @@ func newRedirectBase(dest *base) {
 // A few ground rules for serializable operators:
 // - must always be called in a sequence
 // - must follow a producer in a sequence
-func newSerializedBase(dest *base) {
+func newSerializedBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
@@ -214,6 +216,7 @@ func newSerializedBase(dest *base) {
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
 	dest.serializable = true
+	dest.quota = context.ProducerThrottleQuota()
 }
 
 func (this *base) setInline() {
@@ -237,6 +240,7 @@ func (this *base) copy(dest *base) {
 	dest.serialized = false
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
+	dest.quota = this.quota
 }
 
 // reset the operator to an initial state
@@ -624,7 +628,7 @@ func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 // send data down a channel
 func parallelSend(this *base, op Operator, item value.AnnotatedValue) bool {
 	this.switchPhase(_CHANTIME)
-	ok := this.valueExchange.sendItem(op.ValueExchange(), item)
+	ok := this.valueExchange.sendItem(op.ValueExchange(), item, this.quota)
 	this.switchPhase(_EXECTIME)
 	return ok
 }

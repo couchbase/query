@@ -37,6 +37,7 @@ type valueQueue struct {
 	itemsHead    int
 	itemsTail    int
 	itemsCount   int
+	size         uint64
 	closed       bool
 	readWaiters  opQueue
 	writeWaiters opQueue
@@ -188,9 +189,14 @@ func (this *valueExchange) move(dest *valueExchange) {
 }
 
 // send
-func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue) bool {
+func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue, quota uint64) bool {
 	if this.stop {
 		return false
+	}
+
+	var size uint64
+	if quota > 0 {
+		size = item.Size()
 	}
 	op.vLock.Lock()
 	this.oLock.Lock()
@@ -212,8 +218,21 @@ func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue
 			op.vLock.Unlock()
 			return false
 		}
-		if op.itemsCount < cap(op.items) {
+
+		// In order to avoid a stall, we won't throttle on memory usage when no
+		// document is queued, even it it exceeds the throttling threshold
+		if op.itemsCount == 0 {
 			break
+		}
+		if op.itemsCount < cap(op.items) {
+			if quota == 0 {
+				break
+			}
+			newSize := op.size + size
+			if newSize < quota {
+				op.size = newSize
+				break
+			}
 		}
 		this.enqueue(op, &op.writeWaiters)
 
@@ -277,6 +296,9 @@ func (this *valueExchange) getItem(op *valueExchange) (value.AnnotatedValue, boo
 		op.itemsTail = 0
 	}
 	op.itemsCount--
+	if op.size > 0 {
+		op.size -= val.Size()
+	}
 	op.writeWaiters.signal()
 	if op.itemsCount > 0 {
 		op.readWaiters.signal()
@@ -332,6 +354,9 @@ func (this *valueExchange) getItemChildren(op *valueExchange) (value.AnnotatedVa
 		op.itemsTail = 0
 	}
 	op.itemsCount--
+	if op.size > 0 {
+		op.size -= val.Size()
+	}
 	op.writeWaiters.signal()
 	if op.itemsCount > 0 {
 		op.readWaiters.signal()
