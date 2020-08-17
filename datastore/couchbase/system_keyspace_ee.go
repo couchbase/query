@@ -26,12 +26,12 @@ import (
 )
 
 const (
-	N1QL_SYSTEM_BUCKET     = "N1QL_SYSTEM_BUCKET"
-	N1QL_SYSTEM_SCOPE      = "N1QL_SYSTEM_SCOPE"
-	N1QL_SYSTEM_COLLECTION = "N1QL_SYSTEM_COLLECTION"
+	N1QL_SYSTEM_BUCKET = "N1QL_SYSTEM_BUCKET"
+	N1QL_SYSTEM_SCOPE  = "N1QL_SYSTEM_SCOPE"
+	N1QL_CBO_STATS     = "N1QL_CBO_STATS"
 )
 
-func (s *store) CreateSystemCollection() errors.Error {
+func (s *store) CreateSystemCBOStats() errors.Error {
 	defaultPool, er := loadNamespace(s, "default")
 	if er != nil {
 		return er
@@ -96,7 +96,7 @@ func (s *store) CreateSystemCollection() errors.Error {
 		}
 	}
 
-	_, er = sysScope.KeyspaceByName(N1QL_SYSTEM_COLLECTION)
+	_, er = sysScope.KeyspaceByName(N1QL_CBO_STATS)
 	if er != nil {
 		if er.Code() != 12003 {
 			// only ignore keyspace not found error
@@ -104,7 +104,7 @@ func (s *store) CreateSystemCollection() errors.Error {
 		}
 
 		// allow "already exists" error in case of duplicated Create call
-		er = sysScope.CreateCollection(N1QL_SYSTEM_COLLECTION)
+		er = sysScope.CreateCollection(N1QL_CBO_STATS)
 		if er != nil && !cb.AlreadyExistsError(er) {
 			return er
 		}
@@ -128,8 +128,8 @@ func (s *store) CreateSystemCollection() errors.Error {
 				return er
 			}
 
-			sysCollection, er := sysScope.KeyspaceByName(N1QL_SYSTEM_COLLECTION)
-			if sysCollection != nil {
+			cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
+			if cboStats != nil {
 				break
 			} else if er != nil && er.Code() != 12003 {
 				return er
@@ -140,7 +140,7 @@ func (s *store) CreateSystemCollection() errors.Error {
 	return nil
 }
 
-func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	defaultPool, er := loadNamespace(s, "default")
 	if er != nil {
 		return false, er
@@ -156,14 +156,14 @@ func (s *store) HasSystemKeyspace() (bool, errors.Error) {
 		return false, er
 	}
 
-	sysCollection, er := sysScope.KeyspaceByName(N1QL_SYSTEM_COLLECTION)
+	cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
 	if er != nil {
 		return false, er
 	}
 
-	return (sysCollection != nil), nil
+	return (cboStats != nil), nil
 }
 
-func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
-	return datastore.GetKeyspace("default", N1QL_SYSTEM_BUCKET, N1QL_SYSTEM_SCOPE, N1QL_SYSTEM_COLLECTION)
+func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
+	return datastore.GetKeyspace("default", N1QL_SYSTEM_BUCKET, N1QL_SYSTEM_SCOPE, N1QL_CBO_STATS)
 }

@@ -273,9 +273,9 @@ func NewIndexNotInMemory(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewMissingSystemKeyspaceError() Error {
-	return &err{level: EXCEPTION, ICode: 5400, IKey: "execution.update_statistics.missing_system_keyspace",
-		InternalMsg:    "System Keyspace is required for UPDATE STATISTICS",
+func NewMissingSystemCBOStatsError() Error {
+	return &err{level: EXCEPTION, ICode: 5400, IKey: "execution.update_statistics.missing_system_cbostats",
+		InternalMsg:    "System Collection 'N1QL_CBO_STATS' is required for UPDATE STATISTICS",
 		InternalCaller: CallerN(1)}
 }
 
