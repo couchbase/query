@@ -22,14 +22,14 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func (s *store) CreateSystemCollection() errors.Error {
+func (s *store) CreateSystemCBOStats() errors.Error {
 	return nil
 }
 
-func (s *store) HasSystemKeyspace() (bool, errors.Error) {
+func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	return false, nil
 }
 
-func (s *store) GetSystemKeyspace() (datastore.Keyspace, errors.Error) {
+func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
