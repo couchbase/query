@@ -112,6 +112,7 @@ type Request interface {
 	SetUseFts(a bool)
 	MemoryQuota() uint64
 	SetMemoryQuota(q uint64)
+	UsedMemory() uint64
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -212,6 +213,8 @@ func SetActives(ar ActiveRequests) {
 type BaseRequest struct {
 	// Aligned ints need to be declared right at the top
 	// of the struct to avoid alignment issues on x86 platforms
+	inUseMemory   atomic.AlignedUint64
+	usedMemory    atomic.AlignedUint64
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
 	phaseStats    [execution.PHASES]phaseStat
@@ -694,6 +697,19 @@ func (this *BaseRequest) FmtOptimizerEstimates(op execution.Operator) map[string
 	}
 
 	return p
+}
+
+func (this *BaseRequest) TrackMemory(size uint64) {
+	util.TestAndSetUint64(&this.usedMemory, size,
+		func(old, new uint64) bool { return old < new }, 1)
+}
+
+func (this *BaseRequest) ReleaseValueSize(size uint64) {
+	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
+}
+
+func (this *BaseRequest) UsedMemory() uint64 {
+	return uint64(this.usedMemory)
 }
 
 func (this *BaseRequest) SetTimings(o execution.Operator) {

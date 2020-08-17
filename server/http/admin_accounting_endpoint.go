@@ -807,6 +807,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if p != nil {
 			reqMap["phaseOperators"] = p
 		}
+		usedMemory := request.UsedMemory()
+		if usedMemory != 0 {
+			reqMap["usedMemory"] = usedMemory
+		}
 		if profiling {
 			reqMap["phaseTimes"] = request.Output().FmtPhaseTimes()
 
@@ -841,6 +845,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 				pa := request.PositionalArgs()
 				if pa != nil {
 					reqMap["positionalArgs"] = pa
+				}
+				memoryQuota := request.MemoryQuota()
+				if memoryQuota != 0 {
+					reqMap["memoryQuota"] = memoryQuota
 				}
 			}
 		}
@@ -994,6 +1002,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		if request.PhaseOperators != nil {
 			reqMap["phaseOperators"] = request.PhaseOperators
 		}
+		if request.UsedMemory != 0 {
+			reqMap["usedMemory"] = request.UsedMemory
+		}
 		if request.Tag != "" {
 			reqMap["~tag"] = request.Tag
 		}
@@ -1020,6 +1031,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 					errors[i] = e.Object()
 				}
 				reqMap["errors"] = errors
+			}
+			if request.MemoryQuota != 0 {
+				reqMap["memoryQuota"] = request.MemoryQuota
 			}
 		}
 		if request.Users != "" {

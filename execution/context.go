@@ -129,6 +129,7 @@ type Output interface {
 	AddPhaseTime(phase Phases, duration time.Duration)
 	FmtPhaseTimes() map[string]interface{}
 	FmtOptimizerEstimates(op Operator) map[string]interface{}
+	TrackMemory(size uint64)
 }
 
 type Context struct {
@@ -481,6 +482,7 @@ func (this *Context) ProducerThrottleQuota() uint64 {
 
 func (this *Context) TrackValueSize(size uint64) bool {
 	sz := atomic.AddUint64(&this.inUseMemory, size)
+	this.output.TrackMemory(sz)
 	return sz > this.memoryQuota
 }
 

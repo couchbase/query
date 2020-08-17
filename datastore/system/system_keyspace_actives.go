@@ -147,6 +147,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if p != nil {
 					item.SetField("phaseTimes", p)
 				}
+				usedMemory := request.UsedMemory()
+				if usedMemory != 0 {
+					item.SetField("usedMemory", usedMemory)
+				}
 
 				if request.Prepared() != nil {
 					p := request.Prepared()
@@ -168,6 +172,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				userAgent := request.UserAgent()
 				if userAgent != "" {
 					item.SetField("userAgent", userAgent)
+				}
+				memoryQuota := request.MemoryQuota()
+				if memoryQuota != 0 {
+					item.SetField("memoryQuota", memoryQuota)
 				}
 
 				var ctrl bool

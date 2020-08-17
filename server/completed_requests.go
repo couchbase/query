@@ -65,6 +65,8 @@ type RequestLogEntry struct {
 	OptEstimates    map[string]interface{}
 	NamedArgs       map[string]value.Value
 	PositionalArgs  value.Values
+	MemoryQuota     uint64
+	UsedMemory      uint64
 	Users           string
 	RemoteAddr      string
 	UserAgent       string
@@ -471,6 +473,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	re.PhaseCounts = request.FmtPhaseCounts()
 	re.PhaseOperators = request.FmtPhaseOperators()
 	re.PhaseTimes = request.FmtPhaseTimes()
+	re.UsedMemory = request.UsedMemory()
 
 	// in order not to bloat service memory, we only
 	// store timings if they are turned on at the service
@@ -504,6 +507,10 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	if ctrl {
 		re.NamedArgs = request.NamedArgs()
 		re.PositionalArgs = request.PositionalArgs()
+		memoryQuota := request.MemoryQuota()
+		if memoryQuota != 0 {
+			re.MemoryQuota = memoryQuota
+		}
 	}
 
 	re.Users = datastore.CredsString(request.Credentials())

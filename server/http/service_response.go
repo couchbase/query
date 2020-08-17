@@ -458,6 +458,10 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 	}
 
 	buf := this.writer.buf()
+	if this.UsedMemory() > 0 {
+		fmt.Fprintf(buf, ",%s\"usedMemory\": %d", newPrefix, this.UsedMemory())
+	}
+
 	if this.MutationCount() > 0 {
 		fmt.Fprintf(buf, ",%s\"mutationCount\": %d", newPrefix, this.MutationCount())
 	}
@@ -550,6 +554,16 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			return false
 		}
 		if err != nil || !this.writer.printf("%s\"use_fts\": \"%v\"", newPrefix, this.UseFts()) {
+			logging.Infop("Error writing use_fts", logging.Pair{"error", err})
+		}
+	}
+
+	memoryQuota := this.MemoryQuota()
+	if memoryQuota != 0 {
+		if !this.writeString(",") {
+			return false
+		}
+		if err != nil || !this.writer.printf("%s\"memoryQuota\": \"%v\"", newPrefix, memoryQuota) {
 			logging.Infop("Error writing use_fts", logging.Pair{"error", err})
 		}
 	}

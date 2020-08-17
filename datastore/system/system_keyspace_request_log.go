@@ -148,6 +148,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.PhaseOperators != nil {
 					item.SetField("phaseOperators", entry.PhaseOperators)
 				}
+				if entry.UsedMemory != 0 {
+					item.SetField("usedMemory", entry.UsedMemory)
+				}
 				if entry.PositionalArgs != nil {
 					item.SetField("positionalArgs", entry.PositionalArgs)
 				}
@@ -165,6 +168,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 				if entry.Tag != "" {
 					item.SetField("~tag", entry.Tag)
+				}
+				if entry.MemoryQuota != 0 {
+					item.SetField("memoryQuota", entry.MemoryQuota)
 				}
 				if entry.Errors != nil {
 					errors := make([]value.Value, len(entry.Errors))

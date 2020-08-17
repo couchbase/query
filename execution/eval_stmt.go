@@ -109,6 +109,10 @@ func (this *internalOutput) FmtOptimizerEstimates(op Operator) map[string]interf
 	return nil
 }
 
+func (this *internalOutput) TrackMemory(size uint64) {
+	// empty
+}
+
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
 	var outputBuf internalOutput
 	output := &outputBuf
