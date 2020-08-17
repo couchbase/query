@@ -186,6 +186,9 @@ type ActiveRequests interface {
 	// second function processes outside of a lock (can be blocking)
 	// both return false if no more processing should be done
 	ForEach(func(string, Request) bool, func() bool)
+
+	// current active request server load
+	Load() int
 }
 
 var actives ActiveRequests
@@ -204,6 +207,10 @@ func ActiveRequestsGet(id string, f func(Request)) errors.Error {
 
 func ActiveRequestsForEach(nonBlocking func(string, Request) bool, blocking func() bool) {
 	actives.ForEach(nonBlocking, blocking)
+}
+
+func ActiveRequestsLoad() int {
+	return actives.Load()
 }
 
 func SetActives(ar ActiveRequests) {

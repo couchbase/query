@@ -75,7 +75,7 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 		certFile:  certFile,
 		keyFile:   keyFile,
 		bufpool:   NewSyncPool(srv.KeepAlive()),
-		actives:   NewActiveRequests(),
+		actives:   NewActiveRequests(srv),
 		options:   NewHttpOptions(srv),
 	}
 
@@ -413,12 +413,14 @@ func ServicePrefix() string {
 
 // activeHttpRequests implements server.ActiveRequests for http requests
 type activeHttpRequests struct {
-	cache *util.GenCache
+	cache  *util.GenCache
+	server *server.Server
 }
 
-func NewActiveRequests() server.ActiveRequests {
+func NewActiveRequests(server *server.Server) server.ActiveRequests {
 	return &activeHttpRequests{
-		cache: util.NewGenCache(-1),
+		cache:  util.NewGenCache(-1),
+		server: server,
 	}
 }
 
@@ -464,6 +466,10 @@ func (this *activeHttpRequests) ForEach(nonBlocking func(string, server.Request)
 		return nonBlocking(id, r.(*httpRequest))
 	}
 	this.cache.ForEach(dummyF, blocking)
+}
+
+func (this *activeHttpRequests) Load() int {
+	return this.server.Load()
 }
 
 // httpOptions implements server.ServerOptions for http servers

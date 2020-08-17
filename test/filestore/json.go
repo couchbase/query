@@ -220,23 +220,21 @@ func Start(site, pool, namespace string) *MockServer {
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)
 
-	// need to do it before NewServer() or server scope's changes to
-	// the variable and not the package...
-	server.SetActives(http.NewActiveRequests())
-	server, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
+	srv, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true,
 		server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	server.SetActives(http.NewActiveRequests(srv))
 	prepareds.PreparedsReprepareInit(ds, sys)
 	constructor.Init(nil)
 
-	server.SetKeepAlive(1 << 10)
-	server.SetMaxIndexAPI(datastore.INDEX_API_MAX)
+	srv.SetKeepAlive(1 << 10)
+	srv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 
-	mockServer.server = server
+	mockServer.server = srv
 	mockServer.acctstore = acctstore
 	mockServer.dstore = ds
 	return mockServer

@@ -629,6 +629,14 @@ func (this *runQueue) checkWaiters() {
 	}
 }
 
+func (this *runQueue) load() int {
+	return 100 * (int(this.runCnt) + int(this.queueCnt)) / this.servicers
+}
+
+func (this *Server) Load() int {
+	return this.plusQueue.load() + this.unboundQueue.load()
+}
+
 func (this *Server) serviceRequest(request Request) {
 	defer func() {
 		err := recover()

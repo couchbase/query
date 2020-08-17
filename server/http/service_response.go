@@ -451,7 +451,11 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		this.writeString(",") &&
 		this.writeString(newPrefix) &&
 		this.writeString("\"resultSize\": ") &&
-		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(this.resultSize), 10))) {
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(this.resultSize), 10)) &&
+		this.writeString(",") &&
+		this.writeString(newPrefix) &&
+		this.writeString("\"serviceLoad\": ") &&
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(server.ActiveRequestsLoad()), 10))) {
 
 		this.writer.truncate(beforeMetrics)
 		return false
