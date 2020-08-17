@@ -161,9 +161,9 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 		return value.EMPTY_ARRAY_VALUE, err
 	}
 
-	curMap := make(map[string]queryList, 1)
-	recIdxMap := make(map[string]queryList, 1)
-	recCidxMap := make(map[string]queryList, 1)
+	curMap := make(map[string]*mapEntry, 1)
+	recIdxMap := make(map[string]*mapEntry, 1)
+	recCidxMap := make(map[string]*mapEntry, 1)
 	for _, v := range stmtMap {
 		newContext := context.(Context)
 		if v.queryContext != "" {
@@ -367,7 +367,7 @@ func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
 	return "", fmt.Errorf("%s() not valid argument for 'status'", this.Name())
 }
 
-func (this *Advisor) processResult(obj *queryObject, res value.Value, curMap, recIdxMap, recCidxMap map[string]queryList) {
+func (this *Advisor) processResult(obj *queryObject, res value.Value, curMap, recIdxMap, recCidxMap map[string]*mapEntry) {
 	val := res.Actual().([]interface{})
 	for _, v := range val {
 		v := value.NewValue(v).Actual().(map[string]interface{})
@@ -405,17 +405,19 @@ func (this *Advisor) processResult(obj *queryObject, res value.Value, curMap, re
 	}
 }
 
-func addToMap(m map[string]queryList, v interface{}, obj *queryObject) {
+func addToMap(m map[string]*mapEntry, v interface{}, obj *queryObject) {
 	v1 := value.NewValue(v).Actual().([]interface{})
 	for _, v2 := range v1 {
 		v2 := value.NewValue(v2).Actual().(map[string]interface{})
 		if v3, ok := v2["index_statement"]; ok {
-			list, ok := m[v3.(string)]
+			_, ok := m[v3.(string)]
 			if !ok {
-				list = NewQueryList()
+				m[v3.(string)] = NewMapEntry()
 			}
-			list = append(list, obj)
-			m[v3.(string)] = list
+			m[v3.(string)].addToQueryList(obj)
+			if v4, ok := v2["update_statistics"]; ok {
+				m[v3.(string)].setUpdStats(v4.(string))
+			}
 		}
 	}
 }
@@ -574,19 +576,51 @@ func NewQueryList() queryList {
 	return make(queryList, 0, 1)
 }
 
-type indexMap struct {
-	index   string
-	queries queryList
+type mapEntry struct {
+	queryList queryList
+	upd_stats string
 }
 
-func NewIndexMap(idx string, ql queryList) *indexMap {
+func NewMapEntry() *mapEntry {
+	return &mapEntry{
+		queryList: make(queryList, 0, 1),
+	}
+}
+
+func (this *mapEntry) setUpdStats(s string) {
+	if s == "" {
+		return
+	}
+
+	/*For one covering index, there may be more than one kind of update_statistics.
+	  In this situation, save the longest upd_stats to make sure all its queries can use CBO.
+	*/
+	if this.upd_stats == "" {
+		this.upd_stats = s
+	} else if len(strings.Split(s, ",")) > len(strings.Split(this.upd_stats, ",")) {
+		this.upd_stats = s
+	}
+}
+
+func (this *mapEntry) addToQueryList(obj *queryObject) {
+	this.queryList = append(this.queryList, obj)
+}
+
+type indexMap struct {
+	index    string
+	updStats string
+	queries  queryList
+}
+
+func NewIndexMap(idx, upd_stats string, ql queryList) *indexMap {
 	sort.Slice(ql, func(i, j int) bool {
 		return ql[i].cnt > ql[j].cnt
 	})
 
 	return &indexMap{
-		index:   idx,
-		queries: ql,
+		index:    idx,
+		updStats: upd_stats,
+		queries:  ql,
 	}
 }
 
@@ -596,8 +630,9 @@ func (this *indexMap) MarshalJSON() ([]byte, error) {
 
 func (this *indexMap) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{
-		"index":      this.index,
-		"statements": this.queries,
+		"index":             this.index,
+		"update_statistics": this.updStats,
+		"statements":        this.queries,
 	}
 
 	if f != nil {
@@ -608,8 +643,9 @@ func (this *indexMap) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *indexMap) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Index   string            `json:"index"`
-		Queries []json.RawMessage `json:"statements"`
+		Index    string            `json:"index"`
+		UpdStats string            `json:"update_statistics"`
+		Queries  []json.RawMessage `json:"statements"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -618,6 +654,8 @@ func (this *indexMap) UnmarshalJSON(body []byte) error {
 	}
 
 	this.index = _unmarshalled.Index
+	this.updStats = _unmarshalled.UpdStats
+
 	ql := NewQueryList()
 	for _, v1 := range _unmarshalled.Queries {
 		r := &queryObject{}
@@ -634,10 +672,10 @@ func (this *indexMap) UnmarshalJSON(body []byte) error {
 
 type indexMaps []*indexMap
 
-func NewIndexMaps(m map[string]queryList) indexMaps {
+func NewIndexMaps(m map[string]*mapEntry) indexMaps {
 	ims := make([]*indexMap, 0, len(m))
 	for k, v := range m {
-		ims = append(ims, NewIndexMap(k, v))
+		ims = append(ims, NewIndexMap(k, v.upd_stats, v.queryList))
 	}
 	return ims
 }
@@ -648,7 +686,7 @@ type report struct {
 	recommendCidxs indexMaps
 }
 
-func NewReport(current, recIdxs, redCidxs map[string]queryList) *report {
+func NewReport(current, recIdxs, redCidxs map[string]*mapEntry) *report {
 	return &report{
 		currentIdxs:    NewIndexMaps(current),
 		recommendIdxs:  NewIndexMaps(recIdxs),
