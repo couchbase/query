@@ -234,11 +234,25 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
-			ok = this.sendItemOp(update.Input(), item)
+			item1 := item
+			if delete != nil {
+				item1 = item.CopyForUpdate().(value.AnnotatedValue)
+				if context.UseRequestQuota() && context.TrackValueSize(item1.Size()) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					item1.Recycle()
+					item.Recycle()
+					return false
+				}
+			}
+			ok = this.sendItemOp(update.Input(), item1)
 		}
 
-		if ok && delete != nil {
-			ok = this.sendItemOp(delete.Input(), item)
+		if delete != nil {
+			if ok {
+				ok = this.sendItemOp(delete.Input(), item)
+			} else {
+				item.Recycle()
+			}
 		}
 	} else {
 		// Not matched; INSERT
