@@ -22,7 +22,7 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func (s *store) CreateSystemCBOStats() errors.Error {
+func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	return nil
 }
 

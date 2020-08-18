@@ -31,7 +31,7 @@ const (
 	N1QL_CBO_STATS     = "N1QL_CBO_STATS"
 )
 
-func (s *store) CreateSystemCBOStats() errors.Error {
+func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	defaultPool, er := loadNamespace(s, "default")
 	if er != nil {
 		return er
@@ -96,7 +96,7 @@ func (s *store) CreateSystemCBOStats() errors.Error {
 		}
 	}
 
-	_, er = sysScope.KeyspaceByName(N1QL_CBO_STATS)
+	cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
 	if er != nil {
 		if er.Code() != 12003 {
 			// only ignore keyspace not found error
@@ -128,13 +128,31 @@ func (s *store) CreateSystemCBOStats() errors.Error {
 				return er
 			}
 
-			cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
+			cboStats, er = sysScope.KeyspaceByName(N1QL_CBO_STATS)
 			if cboStats != nil {
 				break
 			} else if er != nil && er.Code() != 12003 {
 				return er
 			}
 		}
+	}
+
+	// create primary index
+	// make sure we have indexer3 first
+	indexer, er := cboStats.Indexer(datastore.GSI)
+	if er != nil {
+		return er
+	}
+
+	indexer3, ok := indexer.(datastore.Indexer3)
+	if !ok {
+		cb.DropSystemBucket(&s.client, N1QL_SYSTEM_BUCKET)
+		return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
+	}
+
+	_, er = indexer3.CreatePrimaryIndex3(requestId, "PRIMARY_IDX_CBO_STATS", nil, nil)
+	if er != nil {
+		return er
 	}
 
 	return nil

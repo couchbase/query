@@ -59,7 +59,7 @@ type Datastore interface {
 
 	SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
 
-	CreateSystemCBOStats() errors.Error
+	CreateSystemCBOStats(requestId string) errors.Error
 	GetSystemCBOStats() (Keyspace, errors.Error)
 	HasSystemCBOStats() (bool, errors.Error)
 }

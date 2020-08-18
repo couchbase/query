@@ -159,7 +159,7 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	}, nil
 }
 
-func (s *store) CreateSystemCBOStats() errors.Error {
+func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	return nil
 }
 
