@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"runtime"
 	"sync"
 
 	"github.com/couchbase/query/util"
@@ -18,6 +19,7 @@ import (
 
 const _SMALL_CHILD_POOL = 4
 const _LARGE_CHILD_POOL = 64
+const _MAX_THRESHOLD = 16
 
 // A couple of design considerations: we have to be able to send and receive items from any
 // item channel, but get notified of a stop message or a child specifically on our own.
@@ -38,6 +40,7 @@ type valueQueue struct {
 	itemsTail    int
 	itemsCount   int
 	size         uint64
+	heartbeat    int
 	closed       bool
 	readWaiters  opQueue
 	writeWaiters opQueue
@@ -65,6 +68,8 @@ var smallChildPool util.FastPool
 
 var largeChildPool util.FastPool
 
+var threshold int
+
 func init() {
 	util.NewFastPool(&valueSlicePool, func() interface{} {
 		return make([]value.AnnotatedValue, GetPipelineCap())
@@ -75,6 +80,10 @@ func init() {
 	util.NewFastPool(&largeChildPool, func() interface{} {
 		return make([]int, _LARGE_CHILD_POOL)
 	})
+	threshold = runtime.NumCPU()
+	if threshold > _MAX_THRESHOLD {
+		threshold = _MAX_THRESHOLD
+	}
 }
 
 // constructor
@@ -95,6 +104,7 @@ func newValueExchange(exchange *valueExchange, capacity int64) {
 	if exchange.items == nil || int64(cap(exchange.items)) != GetPipelineCap() {
 		exchange.items = make([]value.AnnotatedValue, capacity)
 	}
+	exchange.heartbeat = 0
 }
 
 func (this *valueExchange) cap() int {
@@ -136,6 +146,7 @@ func (this *valueExchange) reset() {
 	if this.children != nil {
 		this.children = this.children[0:0]
 	}
+	this.heartbeat = 0
 }
 
 // ditch the slices
@@ -219,23 +230,37 @@ func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue
 			return false
 		}
 
-		// In order to avoid a stall, we won't throttle on memory usage when no
-		// document is queued, even it it exceeds the throttling threshold
+		// In order to avoid a stall, we won't throttle when no document
+		// is queued, even it it exceeds any throttling threshold
 		if op.itemsCount == 0 {
 			break
 		}
-		if op.itemsCount < cap(op.items) {
-			if quota == 0 {
-				break
+		if op.itemsCount >= cap(op.items) {
+			this.enqueue(op, &op.writeWaiters)
+			continue
+		}
+		if op.readWaiters.next != nil {
+			op.heartbeat++
+
+			// give precendence to the consumer if it didn't get a chance
+			// to run in a timely manner
+			// ideally we would want to yield to the first waiter, but
+			// golang does not allow that choice
+			if op.heartbeat > threshold {
+				this.enqueue(op, &op.writeWaiters)
+				continue
 			}
+		}
+		if quota != 0 {
 			newSize := op.size + size
 			if newSize < quota {
 				op.size = newSize
-				break
+			} else {
+				this.enqueue(op, &op.writeWaiters)
+				continue
 			}
 		}
-		this.enqueue(op, &op.writeWaiters)
-
+		break
 	}
 	this.oLock.Unlock()
 	op.items[op.itemsHead] = item
@@ -299,6 +324,7 @@ func (this *valueExchange) getItem(op *valueExchange) (value.AnnotatedValue, boo
 	if op.size > 0 {
 		op.size -= val.Size()
 	}
+	op.heartbeat = 0
 	op.writeWaiters.signal()
 	if op.itemsCount > 0 {
 		op.readWaiters.signal()
@@ -357,6 +383,7 @@ func (this *valueExchange) getItemChildren(op *valueExchange) (value.AnnotatedVa
 	if op.size > 0 {
 		op.size -= val.Size()
 	}
+	op.heartbeat = 0
 	op.writeWaiters.signal()
 	if op.itemsCount > 0 {
 		op.readWaiters.signal()
