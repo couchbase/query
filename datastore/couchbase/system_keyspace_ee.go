@@ -135,24 +135,24 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 				return er
 			}
 		}
-	}
 
-	// create primary index
-	// make sure we have indexer3 first
-	indexer, er := cboStats.Indexer(datastore.GSI)
-	if er != nil {
-		return er
-	}
+		// create primary index
+		// make sure we have indexer3 first
+		indexer, er := cboStats.Indexer(datastore.GSI)
+		if er != nil {
+			return er
+		}
 
-	indexer3, ok := indexer.(datastore.Indexer3)
-	if !ok {
-		cb.DropSystemBucket(&s.client, N1QL_SYSTEM_BUCKET)
-		return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
-	}
+		indexer3, ok := indexer.(datastore.Indexer3)
+		if !ok {
+			cb.DropSystemBucket(&s.client, N1QL_SYSTEM_BUCKET)
+			return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
+		}
 
-	_, er = indexer3.CreatePrimaryIndex3(requestId, "PRIMARY_IDX_CBO_STATS", nil, nil)
-	if er != nil {
-		return er
+		_, er = indexer3.CreatePrimaryIndex3(requestId, "PRIMARY_IDX_CBO_STATS", nil, nil)
+		if er != nil {
+			return er
+		}
 	}
 
 	return nil
