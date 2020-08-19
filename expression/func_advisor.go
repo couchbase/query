@@ -25,12 +25,13 @@ import (
 )
 
 const (
-	_CLASS     = "advisor"
-	_ANALYZE   = "analyze"
-	_ACTIVE    = "active"
-	_COMPLETED = "completed"
-	_ALL       = "all"
-	_MAXCOUNT  = 20000
+	_CLASS         = "advisor"
+	_ANALYZE       = "analyze"
+	_ACTIVE        = "active"
+	_COMPLETED     = "completed"
+	_ALL           = "all"
+	_MAXCOUNT      = 20000
+	_MAXCNTPERNODE = 4000
 )
 
 func queryDict() func(string) string {
@@ -103,10 +104,11 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 					return nil, err
 				}
 
-				settings_start := getSettings(profile, sessionName, response_limit, true)
+				numOfQueryNodes := len(distributed.RemoteAccess().GetNodeNames())
+				settings_start := getSettings(profile, sessionName, response_limit, query_count, numOfQueryNodes, true)
 				distributed.RemoteAccess().Settings(settings_start)
 
-				settings_stop := getSettings(profile, sessionName, response_limit, false)
+				settings_stop := getSettings(profile, sessionName, response_limit, query_count, numOfQueryNodes, false)
 				err = this.scheduleTask(sessionName, duration, context, settings_stop, analyzeWorkload(profile, response_limit, duration.Seconds(), query_count))
 				if err != nil {
 					return nil, err
@@ -261,10 +263,17 @@ func listSessions(status string, context Context) (value.Value, error) {
 	return nil, err
 }
 
-func getSettings(profile, tag, response_limit string, start bool) map[string]interface{} {
+func getSettings(profile, tag, response_limit string, query_count float64, numberOfNodes int, start bool) map[string]interface{} {
 	n, _ := strconv.ParseInt(response_limit, 10, 64)
 	settings := make(map[string]interface{}, 2)
 	tagMap := make(map[string]interface{}, 3)
+	if numberOfNodes == 0 {
+		numberOfNodes = 1
+	}
+	countPerNode := int(query_count / float64(numberOfNodes))
+	if countPerNode > _MAXCNTPERNODE {
+		countPerNode = _MAXCNTPERNODE
+	}
 	if start {
 		if len(profile) > 0 {
 			tagMap["user"] = profile
@@ -274,6 +283,7 @@ func getSettings(profile, tag, response_limit string, start bool) map[string]int
 		}
 
 		tagMap["tag"] = tag
+		settings["+completed-limit"] = countPerNode
 	} else {
 		if len(profile) > 0 {
 			tagMap["-user"] = profile
@@ -283,6 +293,7 @@ func getSettings(profile, tag, response_limit string, start bool) map[string]int
 		}
 
 		tagMap["tag"] = tag
+		settings["-completed-limit"] = countPerNode
 	}
 
 	settings["completed"] = tagMap
