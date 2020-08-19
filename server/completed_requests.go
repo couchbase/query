@@ -82,11 +82,19 @@ type qualifier interface {
 	evaluate(request *BaseRequest, req *http.Request) bool
 }
 
+type handler struct {
+	handlerFunc func(e *RequestLogEntry)
+	refCount    int
+}
+
 type RequestLog struct {
 	sync.RWMutex
+	extra            int
+	pushed           int
 	qualifiers       []qualifier
 	taggedQualifiers map[string][]qualifier
 	cache            *util.GenCache
+	handlers         map[string]*handler
 }
 
 var requestLog = &RequestLog{}
@@ -110,6 +118,7 @@ func RequestsInit(threshold int, limit int) {
 	requestLog.taggedQualifiers = make(map[string][]qualifier)
 
 	requestLog.cache = util.NewGenCache(limit)
+	requestLog.handlers = make(map[string]*handler)
 }
 
 // configure completed requests
@@ -118,8 +127,72 @@ func RequestsLimit() int {
 	return requestLog.cache.Limit()
 }
 
-func RequestsSetLimit(limit int) {
+func RequestsSetLimit(limit int, op RequestsOp) {
+	requestLog.Lock()
+	switch op {
+	case CMP_OP_ADD:
+		oldLimit := requestLog.cache.Limit()
+
+		// no temporary extra entries if already unlimited
+		if oldLimit < 0 {
+			requestLog.Unlock()
+			return
+		}
+		requestLog.extra += limit
+		requestLog.pushed++
+		limit += oldLimit
+	case CMP_OP_UPD:
+
+		// remove temporary requests if going unlimited
+		if limit < 0 {
+			requestLog.extra = 0
+			requestLog.pushed = 0
+		} else if requestLog.pushed > 0 {
+			limit += requestLog.extra
+		}
+	case CMP_OP_DEL:
+
+		// don't remove temporary entries if there aren't any
+		if requestLog.pushed == 0 {
+			requestLog.Unlock()
+			return
+		}
+		requestLog.pushed--
+		if requestLog.pushed == 0 {
+			limit = requestLog.cache.Limit() - requestLog.extra
+			requestLog.extra = 0
+		} else {
+			requestLog.Unlock()
+			return
+		}
+	}
 	requestLog.cache.SetLimit(limit)
+	requestLog.Unlock()
+}
+
+func RequestsAddHandler(f func(e *RequestLogEntry), name string) {
+	requestLog.Lock()
+	found := requestLog.handlers[name]
+	if found != nil {
+		found.refCount++
+	} else {
+		requestLog.handlers[name] = &handler{handlerFunc: f, refCount: 1}
+	}
+	requestLog.Unlock()
+}
+
+func RequestsRemoveHandler(name string) bool {
+	requestLog.Lock()
+	found := requestLog.handlers[name]
+	if found != nil {
+		if found.refCount == 1 {
+			delete(requestLog.handlers, name)
+		} else {
+			found.refCount--
+		}
+	}
+	requestLog.Unlock()
+	return found != nil
 }
 
 func (this *RequestLog) getQualList(tag string) []qualifier {
@@ -529,6 +602,9 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	}
 
 	requestLog.cache.Add(re, id, nil)
+	for _, h := range requestLog.handlers {
+		go h.handlerFunc(re)
+	}
 }
 
 // request qualifiers

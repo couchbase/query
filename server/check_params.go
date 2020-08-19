@@ -30,6 +30,8 @@ const (
 	CMPOBJECT       = "completed"
 	CMPTHRESHOLD    = "completed-threshold"
 	CMPLIMIT        = "completed-limit"
+	CMPPUSH         = "+completed-limit"
+	CMPPOP          = "-completed-limit"
 	PRPLIMIT        = "prepared-limit"
 	PRETTY          = "pretty"
 	MAXINDEXAPI     = "max-index-api"
@@ -61,6 +63,8 @@ var CHECKERS = map[string]Checker{
 	CMPOBJECT:       checkCompleted,
 	CMPTHRESHOLD:    checkNumber,
 	CMPLIMIT:        checkNumber,
+	CMPPUSH:         checkPositiveInteger,
+	CMPPOP:          checkPositiveInteger,
 	PRPLIMIT:        checkPositiveInteger,
 	PRETTY:          checkBool,
 	MAXINDEXAPI:     checkNumber,

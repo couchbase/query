@@ -92,7 +92,17 @@ var _SETTERS = map[string]Setter{
 	},
 	CMPLIMIT: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
-		RequestsSetLimit(int(value))
+		RequestsSetLimit(int(value), CMP_OP_UPD)
+		return nil
+	},
+	CMPPUSH: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		RequestsSetLimit(int(value), CMP_OP_ADD)
+		return nil
+	},
+	CMPPOP: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		RequestsSetLimit(int(value), CMP_OP_DEL)
 		return nil
 	},
 	CMPOBJECT: setCompleted,
