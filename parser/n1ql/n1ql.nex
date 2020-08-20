@@ -280,6 +280,7 @@
 /[rR][eE][aA][lL][mM]/				 { yylex.logToken(yylex.Text(), "REALM"); return REALM }
 /[rR][eE][dD][uU][cC][eE]/			 { yylex.logToken(yylex.Text(), "REDUCE"); return REDUCE }
 /[rR][eE][nN][aA][mM][eE]/			 { yylex.logToken(yylex.Text(), "RENAME"); return RENAME }
+/[rR][eE][pP][lL][aA][cC][eE]/			 { yylex.logToken(yylex.Text(), "REPLACE"); return REPLACE }
 /[rR][eE][sS][pP][eE][cC][tT]/			 { yylex.logToken(yylex.Text(), "RESPECT"); return RESPECT }
 /[rR][eE][tT][uU][rR][nN]/			 { yylex.logToken(yylex.Text(), "RETURN"); return RETURN }
 /[rR][eE][tT][uU][rR][nN][iI][nN][gG]/		 { yylex.logToken(yylex.Text(), "RETURNING"); return RETURNING }

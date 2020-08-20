@@ -12,6 +12,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -60,9 +61,16 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Actually create function
-		this.switchPhase(_SERVTIME)
-		err := functions.AddFunction(this.plan.Name(), this.plan.Body())
-		this.switchPhase(_EXECTIME)
+		var err errors.Error
+
+		if this.plan.Replace() {
+			err = functions.CheckDelete(this.plan.Name(), context)
+		}
+		if err == nil {
+			this.switchPhase(_SERVTIME)
+			err = functions.AddFunction(this.plan.Name(), this.plan.Body(), this.plan.Replace())
+			this.switchPhase(_EXECTIME)
+		}
 		if err != nil {
 			context.Error(err)
 		}

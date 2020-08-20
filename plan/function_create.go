@@ -21,14 +21,16 @@ import (
 // Create function
 type CreateFunction struct {
 	ddl
-	name functions.FunctionName
-	body functions.FunctionBody
+	name    functions.FunctionName
+	body    functions.FunctionBody
+	replace bool
 }
 
 func NewCreateFunction(node *algebra.CreateFunction) *CreateFunction {
 	return &CreateFunction{
-		name: node.Name(),
-		body: node.Body(),
+		name:    node.Name(),
+		body:    node.Body(),
+		replace: node.Replace(),
 	}
 }
 
@@ -38,6 +40,10 @@ func (this *CreateFunction) Name() functions.FunctionName {
 
 func (this *CreateFunction) Body() functions.FunctionBody {
 	return this.body
+}
+
+func (this *CreateFunction) Replace() bool {
+	return this.replace
 }
 
 func (this *CreateFunction) Accept(visitor Visitor) (interface{}, error) {
@@ -60,6 +66,7 @@ func (this *CreateFunction) MarshalBase(f func(map[string]interface{})) map[stri
 	this.body.Body(definition)
 	r["identity"] = identity
 	r["definition"] = definition
+	r["replace"] = this.replace
 
 	if f != nil {
 		f(r)
@@ -72,6 +79,7 @@ func (this *CreateFunction) UnmarshalJSON(bytes []byte) error {
 		_          string          `json:"#operator"`
 		Identity   json.RawMessage `json:"identity"`
 		Definition json.RawMessage `json:"definition"`
+		Replace    bool            `json:"replace"`
 	}
 	var newErr errors.Error
 
@@ -88,5 +96,6 @@ func (this *CreateFunction) UnmarshalJSON(bytes []byte) error {
 	if newErr != nil {
 		return newErr.Cause()
 	}
+	this.replace = _unmarshalled.Replace
 	return nil
 }

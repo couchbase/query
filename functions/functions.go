@@ -49,7 +49,7 @@ type FunctionName interface {
 	QueryContext() string
 	Signature(object map[string]interface{})
 	Load() (FunctionBody, errors.Error)
-	Save(body FunctionBody) errors.Error
+	Save(body FunctionBody, replace bool) errors.Error
 	Delete() errors.Error
 	CheckStorage() bool
 	ResetStorage()
@@ -198,7 +198,7 @@ func (name *mockName) Load() (FunctionBody, errors.Error) {
 	return nil, nil
 }
 
-func (name *mockName) Save(body FunctionBody) errors.Error {
+func (name *mockName) Save(body FunctionBody, replace bool) errors.Error {
 	return nil
 }
 
@@ -214,10 +214,10 @@ func (name *mockName) ResetStorage() {
 }
 
 // function primitives
-func AddFunction(name FunctionName, body FunctionBody) errors.Error {
+func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Error {
 
 	// add the function
-	err := name.Save(body)
+	err := name.Save(body, replace)
 	if err == nil {
 		function := &FunctionEntry{FunctionName: name, FunctionBody: body}
 		key := name.Key()
@@ -255,21 +255,15 @@ func AddFunction(name FunctionName, body FunctionBody) errors.Error {
 }
 
 func DeleteFunction(name FunctionName, context Context) errors.Error {
-	f := preLoad(name)
-	if f != nil {
-		priv := GetPrivilege(name, f.FunctionBody)
-		privs := auth.NewPrivileges()
-		privs.Add(f.Key(), priv, auth.PRIV_PROPS_NONE)
-		err := Authorize(f.privs, context.Credentials())
-		if err != nil {
-			return err
-		}
-	} else {
-		errors.NewMissingFunctionError(name.Name())
+	f, err := checkDelete(name, context)
+	if err != nil {
+		return err
+	} else if f == nil {
+		return errors.NewMissingFunctionError(name.Name())
 	}
 
 	// do the delete
-	err := name.Delete()
+	err = name.Delete()
 	if err == nil {
 		key := name.Key()
 
@@ -336,9 +330,28 @@ func preLoad(name FunctionName) *FunctionEntry {
 	return nil
 }
 
+func checkDelete(name FunctionName, context Context) (*FunctionEntry, errors.Error) {
+	f := preLoad(name)
+	if f != nil {
+		priv := GetPrivilege(name, f.FunctionBody)
+		privs := auth.NewPrivileges()
+		privs.Add(f.Key(), priv, auth.PRIV_PROPS_NONE)
+		err := Authorize(f.privs, context.Credentials())
+		if err != nil {
+			return nil, err
+		}
+	}
+	return f, nil
+}
+
 func PreLoad(name FunctionName) bool {
 	f := preLoad(name)
 	return (f != nil)
+}
+
+func CheckDelete(name FunctionName, context Context) errors.Error {
+	_, e := checkDelete(name, context)
+	return e
 }
 
 func Indexable(name FunctionName) value.Tristate {

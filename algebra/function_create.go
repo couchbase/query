@@ -26,18 +26,20 @@ and function body
 type CreateFunction struct {
 	statementBase
 
-	name functions.FunctionName `json:"name"`
-	body functions.FunctionBody `json:"keys"`
+	name    functions.FunctionName `json:"name"`
+	body    functions.FunctionBody `json:"body"`
+	replace bool                   `json:"replace"`
 }
 
 /*
 The function NewCreateFunction returns a pointer to the
 CreateFunction struct with the input argument values as fields.
 */
-func NewCreateFunction(name functions.FunctionName, body functions.FunctionBody) *CreateFunction {
+func NewCreateFunction(name functions.FunctionName, body functions.FunctionBody, replace bool) *CreateFunction {
 	rv := &CreateFunction{
-		name: name,
-		body: body,
+		name:    name,
+		body:    body,
+		replace: replace,
 	}
 
 	rv.stmt = rv
@@ -50,6 +52,10 @@ func (this *CreateFunction) Name() functions.FunctionName {
 
 func (this *CreateFunction) Body() functions.FunctionBody {
 	return this.body
+}
+
+func (this *CreateFunction) Replace() bool {
+	return this.replace
 }
 
 /*

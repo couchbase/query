@@ -213,7 +213,7 @@ func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 	return resolver.MakeBody(name.Name(), _unmarshalled.Definition)
 }
 
-func (name *metaEntry) Save(body functions.FunctionBody) errors.Error {
+func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Error {
 	entry := make(map[string]interface{}, 2)
 	identity := make(map[string]interface{})
 	definition := make(map[string]interface{})
@@ -227,7 +227,11 @@ func (name *metaEntry) Save(body functions.FunctionBody) errors.Error {
 		return errors.NewFunctionEncodingError("encode", name.Name(), err)
 	}
 
-	err = metakv.Add(_FUNC_PATH+name.Key(), bytes)
+	if replace {
+		err = metakv.Set(_FUNC_PATH+name.Key(), bytes, nil)
+	} else {
+		err = metakv.Add(_FUNC_PATH+name.Key(), bytes)
+	}
 	if err == metakv.ErrRevMismatch {
 		return errors.NewDuplicateFunctionError(name.Name())
 	} else if err != nil {

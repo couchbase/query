@@ -249,6 +249,7 @@ tokOffset	 int
 %token REALM
 %token REDUCE
 %token RENAME
+%token REPLACE
 %token RESPECT
 %token RETURN
 %token RETURNING
@@ -373,6 +374,7 @@ tokOffset	 int
 %type <functionName>	 func_name long_func_name short_func_name
 %type <ss>		 parm_list parameter_terms
 %type <functionBody>     func_body
+%type <b>                opt_replace
 
 %type <expr>             paren_expr
 %type <subquery>         subquery_expr
@@ -2703,15 +2705,27 @@ BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
  *************************************************/
 
 create_function:
-CREATE FUNCTION func_name LPAREN parm_list RPAREN func_body
+CREATE opt_replace FUNCTION func_name LPAREN parm_list RPAREN func_body
 {
-    if $7 != nil {
-	err := $7.SetVarNames($5)
+    if $8 != nil {
+	err := $8.SetVarNames($6)
 	if err != nil {
 		yylex.Error(err.Error())
     	}
     }
-    $$ = algebra.NewCreateFunction($3, $7)
+    $$ = algebra.NewCreateFunction($4, $8, $2)
+}
+;
+
+opt_replace:
+/* empty */
+{
+    $$ = false
+}
+|
+OR REPLACE
+{
+    $$ = true
 }
 ;
 
