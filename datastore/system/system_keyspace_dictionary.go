@@ -44,7 +44,7 @@ func (b *dictionaryKeyspace) Count(context datastore.QueryContext) (int64, error
 	if err == nil {
 		return count, nil
 	} else {
-		return 0, errors.NewMetaKVError("Count", err)
+		return 0, errors.NewSystemCollectionError("Count from system collection", err)
 	}
 }
 
@@ -108,7 +108,7 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 		return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
 	}
 	if err != nil {
-		return nil, errors.NewMetaKVError("Fetch", err)
+		return nil, errors.NewSystemCollectionError("Fetch from system collection", err)
 	}
 	itemMap := map[string]interface{}{}
 	entry.Target(itemMap)
@@ -226,6 +226,6 @@ func (pi *dictionaryIndex) ScanEntries(requestId string, limit int64, cons datas
 		return nil
 	})
 	if err != nil {
-		conn.Error(errors.NewMetaKVIndexError(err))
+		conn.Error(errors.NewSystemCollectionError("Iterate through system collection", err))
 	}
 }

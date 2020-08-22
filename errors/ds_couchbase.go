@@ -156,8 +156,3 @@ func NewCbBucketFlushCollectionError(c string, e error) Error {
 	return &err{level: EXCEPTION, ICode: 12029, IKey: "datastore.couchbase.flush_collection", ICause: e,
 		InternalMsg: "Error while flushing collection " + c, InternalCaller: CallerN(1)}
 }
-
-func NewInvalidGSIIndexerError(s string) Error {
-	return &err{level: EXCEPTION, ICode: 12030, IKey: "datastore.couchbase.invalid_indexer",
-		InternalMsg: "GSI Indexer does not support collections - " + s, InternalCaller: CallerN(1)}
-}

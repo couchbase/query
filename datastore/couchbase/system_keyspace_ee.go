@@ -21,6 +21,7 @@ import (
 	"time"
 
 	cb "github.com/couchbase/go-couchbase"
+	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
@@ -149,7 +150,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 			return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
 		}
 
-		_, er = indexer3.CreatePrimaryIndex3(requestId, "PRIMARY_IDX_CBO_STATS", nil, nil)
+		_, er = indexer3.CreatePrimaryIndex3(requestId, dictionary.CBO_STATS_PRIMARY_INDEX, nil, nil)
 		if er != nil {
 			return er
 		}
