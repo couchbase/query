@@ -730,6 +730,13 @@ func ParseURL(serverFlag string) (*UrlRes, int, string) {
 		return pURL, errors.INVALID_URL, INVALIDHOST
 	}
 
+	// Check if the input url is a DNS SRV
+	_, addr, err := net.LookupSRV(parsedURL.Scheme, "tcp", parsedURL.Hostname())
+	if err == nil {
+		// It is a DNS SRV .. Has couchbase or couchbases as a scheme
+		parsedURL.Host = addr[0].Target
+	}
+
 	// We now have a valid URL. Check if we have a port
 	_, portNo, err := net.SplitHostPort(parsedURL.Host)
 
