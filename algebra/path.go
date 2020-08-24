@@ -57,6 +57,11 @@ func trim(right string, i int) (string, string) {
 	return left, right
 }
 
+// the path is expected to be syntactically correct - ie one produced with FullName
+func SplitPath(path string) []string {
+	return parsePathOrContext(path)
+}
+
 // Create a path from a namespace:keyspace combination.
 func NewPathShort(namespace, keyspace string) *Path {
 	return &Path{
@@ -132,6 +137,26 @@ func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 	//	}
 	return &Path{
 		elements: append(elems, keyspace),
+	}
+}
+
+// For use with dynamic keyspaces, creates a full path from a full path string or a keyspace and a context
+func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path, errors.Error) {
+	res, parts := validatePathOrContext(keyspace)
+	if res != "" {
+		return nil, errors.NewDatastoreInvalidPathError(keyspace)
+	}
+	switch parts {
+	case 1:
+		return NewPathWithContext(keyspace, namespace, queryContext), nil
+	case 3:
+		return nil, errors.NewDatastoreInvalidPathError(keyspace)
+	default:
+		elems := parsePathOrContext(keyspace)
+		if elems[0] == "" {
+			elems[0] = namespace
+		}
+		return &Path{elements: elems}, nil
 	}
 }
 
@@ -269,6 +294,10 @@ func ParseQueryContext(queryContext string) []string {
 	if queryContext == "" || queryContext == ":" {
 		return []string{""}
 	}
+	return parsePathOrContext(queryContext)
+}
+
+func parsePathOrContext(queryContext string) []string {
 	elements := []string{}
 	hasNamespace := false
 	start := 0
@@ -322,6 +351,20 @@ func ParseQueryContext(queryContext string) []string {
 // namespace:bucket.scope
 // [:]bucket.scope
 func ValidateQueryContext(queryContext string) errors.Error {
+	res, parts := validatePathOrContext(queryContext)
+	if res != "" {
+		return errors.NewQueryContextError(res)
+	}
+	if parts == 2 {
+		return errors.NewQueryContextError("missing scope")
+	}
+	if parts > 3 {
+		return errors.NewQueryContextError("too many context elements")
+	}
+	return nil
+}
+
+func validatePathOrContext(queryContext string) (string, int) {
 	hasNamespace := false
 	parts := 0
 	countPart := true
@@ -334,7 +377,7 @@ func ValidateQueryContext(queryContext string) errors.Error {
 			inBackTick = !inBackTick
 			if inBackTick {
 				if lastTerminator >= 0 && lastTerminator != i-1 {
-					return errors.NewQueryContextError("invalid use of back ticks")
+					return "invalid use of back ticks", 0
 				}
 			} else {
 				lastBackTick = i
@@ -344,10 +387,10 @@ func ValidateQueryContext(queryContext string) errors.Error {
 				continue
 			}
 			if hasNamespace {
-				return errors.NewQueryContextError("repeated namespace")
+				return "repeated namespace", 0
 			}
 			if lastBackTick >= 0 && lastBackTick != i-1 {
-				return errors.NewQueryContextError("invalid use of back ticks")
+				return "invalid use of back ticks", 0
 			}
 			if parts == 0 {
 				parts++ // namespace is implied
@@ -360,10 +403,10 @@ func ValidateQueryContext(queryContext string) errors.Error {
 				continue
 			}
 			if countPart {
-				return errors.NewQueryContextError("missing bucket")
+				return "missing bucket", 0
 			}
 			if lastBackTick >= 0 && lastBackTick != i-1 {
-				return errors.NewQueryContextError("invalid use of back ticks")
+				return "invalid use of back ticks", 0
 			}
 			if !hasNamespace {
 				parts++ // namespace is implied
@@ -375,17 +418,11 @@ func ValidateQueryContext(queryContext string) errors.Error {
 			if countPart {
 				parts++
 				countPart = false
-				if parts > 3 {
-					return errors.NewQueryContextError("too many context elements")
-				}
 			}
 		}
 	}
 	if inBackTick {
-		return errors.NewQueryContextError("back tick not terminated")
+		return "back tick not terminated", 0
 	}
-	if parts == 2 {
-		return errors.NewQueryContextError("missing scope")
-	}
-	return nil
+	return "", parts
 }

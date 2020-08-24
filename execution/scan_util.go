@@ -81,7 +81,7 @@ func getKeyspacePath(expr expression.Expression, context *Context) (*algebra.Pat
 	if e != nil || v == nil || v.Type() != value.STRING {
 		return nil, e
 	}
-	return algebra.NewPathWithContext(v.Actual().(string), context.Namespace(), context.queryContext), nil
+	return algebra.NewVariablePathWithContext(v.Actual().(string), context.Namespace(), context.queryContext)
 }
 
 func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, context *Context) datastore.Keyspace {
