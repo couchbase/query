@@ -93,22 +93,14 @@ func NewPathShortOrLong(namespace, bucket, scope, keyspace string) *Path {
 // namespace:bucket.scope (produces a long path)
 func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 	if queryContext == "" {
-		return &Path{
-
-			// FIXME this has to be amended once collection privileges are defined
-			// ideally we want the path fully qualified here, as we have been missing
-			// several SetDefaultNamespace calls in planner
-			// elements: []string{namespace, keyspace},
-			elements: []string{"", keyspace},
-		}
+		return &Path{elements: []string{namespace, keyspace}}
 	}
 
 	elems := ParseQueryContext(queryContext)
 
-	// FIXME ditto
-	//	if elems[0] == "" {
-	//		elems[0] = namespace
-	//	}
+	if elems[0] == "" {
+		elems[0] = namespace
+	}
 	return &Path{
 		elements: append(elems, keyspace),
 	}
