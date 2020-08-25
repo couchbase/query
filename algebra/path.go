@@ -15,6 +15,8 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
+const _SYSTEM = "#system"
+
 // A keyspace path. Supported forms:
 //    customers (needs queryContext)
 //    system:prepareds
@@ -24,42 +26,14 @@ type Path struct {
 	elements []string `json:"elements"`
 }
 
-func ParsePath(path string) (string, string, string, string) {
-	var namespace string
-	var bucket string
-	var scope string
-
-	n := strings.IndexByte(path, ':')
-	namespace, path = trim(path, n)
-	d := strings.IndexByte(path, '.')
-	if d >= 0 {
-		bucket, path = trim(path, d)
-		d = strings.IndexByte(path, '.')
-		if d >= 0 {
-			scope, path = trim(path, d)
-		}
-	}
-
-	return namespace, bucket, scope, path
-}
-
-func trim(right string, i int) (string, string) {
-	var left string
-
-	if i >= 0 {
-		left = right[:i]
-		if i < len(right)-1 {
-			right = right[i+1:]
-		} else {
-			right = ""
-		}
-	}
-	return left, right
-}
-
 // the path is expected to be syntactically correct - ie one produced with FullName
-func SplitPath(path string) []string {
+func ParsePath(path string) []string {
 	return parsePathOrContext(path)
+}
+
+func IsSystem(namespaceOrPath string) bool {
+	l := len(_SYSTEM)
+	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == _SYSTEM
 }
 
 // Create a path from a namespace:keyspace combination.
@@ -252,7 +226,7 @@ func (path *Path) string(forceBackticks bool, isContext bool) string {
 			continue
 		}
 		// Wrap any element that contains "." in back-ticks.
-		if forceBackticks || strings.Contains(s, ".") {
+		if forceBackticks || strings.IndexByte(s, '.') >= 0 {
 			acc += "`"
 			acc += s
 			acc += "`"

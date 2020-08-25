@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/cbauth"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -121,41 +122,27 @@ type authSource interface {
 // splits the target into namespace and couchbase target (bucket, or collection path separated by :)
 // determines the type of object to check (bucket, scope, collection)
 func namespaceKeyspaceTypeFromPrivPair(pair auth.PrivilegePair) (string, string, string) {
-	var bytes []byte
-	var namespace string
+	var target string
 	var obj string
 
-	i := strings.IndexByte(pair.Target, ':')
-	if i < 0 {
+	elems := algebra.ParsePath(pair.Target)
+	namespace := elems[0]
+	if namespace == "" {
 		namespace = "default"
-		bytes = []byte(pair.Target)
-	} else {
-		namespace = pair.Target[:i]
-		if i < len(pair.Target)-1 {
-			bytes = []byte(pair.Target[i+1:])
-		}
 	}
 
-	// count the items
-	cnt := 0
-
-	// cbAuth separates target collection path objects with ':', not '.' as N1QL does
-	for i := 0; i < len(bytes); i++ {
-		if bytes[i] == '.' {
-			bytes[i] = ':'
-			cnt++
-		}
-	}
-
-	switch cnt {
-	case 0:
+	switch len(elems) {
+	case 2:
 		obj = "bucket"
-	case 1:
+		target = elems[1]
+	case 3:
 		obj = "scope"
-	default:
+		target = join3Strings(elems[1], ":", elems[2])
+	case 4:
 		obj = "collection"
+		target = join5Strings(elems[1], ":", elems[2], ":", elems[3])
 	}
-	return namespace, string(bytes), obj
+	return namespace, target, obj
 }
 
 // Try to get privsSought privileges from the availableCredentials credentials.
