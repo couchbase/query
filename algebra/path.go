@@ -12,9 +12,10 @@ package algebra
 import (
 	"strings"
 
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
+
+const _SYSTEM = "#system"
 
 // A keyspace path. Supported forms:
 //    customers (needs queryContext)
@@ -31,8 +32,8 @@ func ParsePath(path string) []string {
 }
 
 func IsSystem(namespaceOrPath string) bool {
-	l := len(datastore.SYSTEM_NAMESPACE)
-	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == datastore.SYSTEM_NAMESPACE
+	l := len(_SYSTEM)
+	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == _SYSTEM
 }
 
 // Create a path from a namespace:keyspace combination.

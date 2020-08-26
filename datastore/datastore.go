@@ -220,9 +220,6 @@ type KeyspaceMetadata interface {
 	MetadataId() string      // A unique identifier across all of the stores. We choose the path of the object
 }
 
-// system namespace
-const SYSTEM_NAMESPACE = "#system"
-
 // Globally accessible Datastore instance
 var _DATASTORE Datastore
 var _SYSTEMSTORE Datastore
@@ -251,7 +248,7 @@ func getNamespace(parts ...string) (Namespace, errors.Error) {
 		return nil, errors.NewDatastoreInvalidPathError("empty path")
 	}
 	namespace := parts[0]
-	if namespace == SYSTEM_NAMESPACE {
+	if namespace == "#system" {
 		datastore = _SYSTEMSTORE
 	} else {
 		datastore = _DATASTORE
