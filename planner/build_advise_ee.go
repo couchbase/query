@@ -12,8 +12,6 @@
 package planner
 
 import (
-	"strings"
-
 	"github.com/couchbase/query-ee/dictionary"
 	advisor "github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
@@ -299,7 +297,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		return nil
 	}
 	//not advise index to system keyspace
-	if strings.ToLower(keyspace.Namespace().Name()) == "#system" {
+	if algebra.IsSystem(keyspace.Namespace().Name()) {
 		return nil
 	}
 	if baseKeyspace == nil {

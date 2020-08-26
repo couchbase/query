@@ -1,9 +1,26 @@
-package planner
+//  Copyright (c) 2013 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+package mockstore
+
+// this test should go in auth, or possibly algebra, but it can't because of circular references
+// it lived, at one time, in planner, but since it needs to reference datastore/system, it has
+// even more circular references, so its best that it lives in an isolated place
 
 import (
 	"testing"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/mock"
+	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/parser/n1ql"
 )
 
@@ -17,26 +34,49 @@ func verifyPrivs(t *testing.T, id string, expectedPrivs *auth.Privileges, gotPri
 	if expectedPrivs.Num() != gotPrivs.Num() {
 		t.Fatalf("Case %s: privileges are wrong length. Expected %v, got %v.", id, *expectedPrivs, *gotPrivs)
 	}
+
 outer:
 	for _, pair := range expectedPrivs.List {
+	inner:
 		for _, gPair := range gotPrivs.List {
-			if pair == gPair {
-				continue outer
+			if pair.Priv != gPair.Priv || pair.Props != gPair.Props {
+				continue
 			}
+			elems := algebra.ParsePath(pair.Target)
+			gElems := algebra.ParsePath(gPair.Target)
+			if len(elems) != len(gElems) {
+				continue
+			}
+
+			// we always expect at least one element
+			if len(elems) > 1 {
+				if elems[0] == "" {
+					elems[0] = "default"
+				}
+				if gElems[0] == "" {
+					gElems[0] = "default"
+				}
+			}
+			for i, _ := range elems {
+				if elems[i] != gElems[i] {
+					continue inner
+				}
+			}
+			break outer
 		}
 		t.Fatalf("Case %s: Expected pair %v does not appear in received value %v", id, pair, *gotPrivs)
 	}
-
 }
 
 type testCase struct {
 	id            string
 	text          string
+	queryContext  string
 	expectedPrivs *auth.Privileges
 }
 
 func runCase(t *testing.T, c *testCase) {
-	stmt, err := n1ql.ParseStatement(c.text)
+	stmt, err := n1ql.ParseStatement2(c.text, "default", c.queryContext)
 	if err != nil {
 		t.Fatalf("Case %s: Unable to parse text: %v", c.id, err)
 	}
@@ -120,6 +160,38 @@ func TestStatementPrivileges(t *testing.T) {
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 				auth.PrivilegePair{Target: "otherbucket", Priv: auth.PRIV_QUERY_SELECT},
+			}}},
+		testCase{id: "Select with namespace",
+			text: "select * from default:testbucket",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "default:testbucket", Priv: auth.PRIV_QUERY_SELECT},
+			}}},
+		testCase{id: "Select from collection",
+			text: "select * from testbucket.testscope.testcollection",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "testbucket.testscope.testcollection", Priv: auth.PRIV_QUERY_SELECT},
+			}}},
+		testCase{id: "Select from collection with namespace",
+			text: "select * from default:testbucket.testscope.testcollection",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "default:testbucket.testscope.testcollection", Priv: auth.PRIV_QUERY_SELECT},
+			}}},
+		testCase{id: "Select from collection with query context",
+			text:         "select * from testcollection",
+			queryContext: "testbucket.testscope",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "testbucket.testscope.testcollection", Priv: auth.PRIV_QUERY_SELECT},
+			}}},
+		testCase{id: "Select from collection with query context with namespace",
+			text:         "select * from testcollection",
+			queryContext: "default:testbucket.testscope",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "default:testbucket.testscope.testcollection", Priv: auth.PRIV_QUERY_SELECT},
+			}}},
+		testCase{id: "Select from placeholder",
+			text: "select * from $1 as a use keys $2",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
+				auth.PrivilegePair{Target: "$1", Priv: auth.PRIV_QUERY_SELECT, Props: auth.PRIV_PROPS_DYNAMIC_TARGET},
 			}}},
 		//
 		// INSERT statements
@@ -294,6 +366,21 @@ func TestStatementPrivileges(t *testing.T) {
 			}}},
 	}
 
+	n1ql.SetNamespaces(map[string]interface{}{"default": true, "system": true})
+
+	// technically this is not needed, but for completeness...
+	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")
+	if err != nil {
+		t.Fatalf("failed to create mock store: %v", err)
+	}
+	datastore.SetDatastore(m)
+
+	// Create systems store with mock m as the ActualStore
+	s, err := system.NewDatastore(m)
+	if err != nil {
+		t.Fatalf("failed to create system store: %v", err)
+	}
+	datastore.SetSystemstore(s)
 	for _, testCase := range testCases {
 		runCase(t, &testCase)
 	}

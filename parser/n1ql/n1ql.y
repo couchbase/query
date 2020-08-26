@@ -1155,7 +1155,7 @@ namespace_name
 |
 SYSTEM COLON
 {
-    $$ = "#system"
+    $$ = datastore.SYSTEM_NAMESPACE
 }
 ;
 

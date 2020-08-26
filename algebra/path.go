@@ -12,10 +12,9 @@ package algebra
 import (
 	"strings"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
-
-const _SYSTEM = "#system"
 
 // A keyspace path. Supported forms:
 //    customers (needs queryContext)
@@ -32,8 +31,8 @@ func ParsePath(path string) []string {
 }
 
 func IsSystem(namespaceOrPath string) bool {
-	l := len(_SYSTEM)
-	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == _SYSTEM
+	l := len(datastore.SYSTEM_NAMESPACE)
+	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == datastore.SYSTEM_NAMESPACE
 }
 
 // Create a path from a namespace:keyspace combination.
@@ -109,7 +108,7 @@ func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 // For use with dynamic keyspaces, creates a full path from a full path string or a keyspace and a context
 func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path, errors.Error) {
 	res, parts := validatePathOrContext(keyspace)
-	if res != "" {
+	if res != "" || parts == 0 {
 		return nil, errors.NewDatastoreInvalidPathError(keyspace)
 	}
 	switch parts {
@@ -144,6 +143,10 @@ func (path *Path) ScopePath() *Path {
 
 func (path *Path) Namespace() string {
 	return path.elements[0]
+}
+
+func (path *Path) IsSystem() bool {
+	return len(path.elements) > 0 && path.elements[0] == datastore.SYSTEM_NAMESPACE
 }
 
 // the next three methods are currently unused but left for completeness
@@ -294,6 +297,7 @@ func parsePathOrContext(queryContext string) []string {
 			}
 			if !hasNamespace {
 				elements = append(elements, "")
+				hasNamespace = true
 			}
 			if end != i-1 {
 				end = i
@@ -302,11 +306,11 @@ func parsePathOrContext(queryContext string) []string {
 			start = i + 1
 		}
 	}
+	if !hasNamespace {
+		elements = append(elements, "")
+	}
 	if start < len(queryContext) {
 		elements = append(elements, queryContext[start:])
-	}
-	if len(elements) == 0 {
-		elements = append(elements, "")
 	}
 	return elements
 }

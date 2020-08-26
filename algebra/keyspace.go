@@ -72,6 +72,13 @@ func (this *KeyspaceRef) Namespace() string {
 }
 
 /*
+Is this pointing to the system store?
+*/
+func (this *KeyspaceRef) IsSystem() bool {
+	return this.path != nil && this.path.IsSystem()
+}
+
+/*
 Set the default namespace.
 FIXME ideally this should go
 */

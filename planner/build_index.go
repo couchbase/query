@@ -172,7 +172,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 	}
 	keyspace, err := datastore.GetKeyspace(path.Parts()...)
 
-	if err != nil && this.indexAdvisor && ks.Path().Namespace() != "#system" &&
+	if err != nil && this.indexAdvisor && !ks.IsSystem() &&
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
 			strings.Contains(err.TranslationKey(), "scope_not_found") ||
 			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {

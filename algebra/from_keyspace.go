@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -125,23 +126,11 @@ func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error
 
 func PrivilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
 
-	namespace := path.Namespace()
-	fullKeyspace := path.SimpleString()
 	privs := auth.NewPrivileges()
-	if namespace == "#system" {
-		switch path.Keyspace() {
-		case "user_info", "applicable_roles":
-			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
-		case "keyspaces", "indexes", "my_user_info":
-			// Do nothing. These tables handle security internally, by
-			// filtering the results.
-		case "datastores", "namespaces", "dual":
-			// Do nothing. These three tables are open to all.
-		default:
-			privs.Add(fullKeyspace, auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
-		}
+	if path.IsSystem() {
+		datastore.GetSystemstore().PrivilegesFromPath(path.FullName(), path.Keyspace(), auth.PRIV_QUERY_SELECT, privs)
 	} else {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
+		privs.Add(path.SimpleString(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 	}
 	return privs, nil
 }
@@ -273,6 +262,13 @@ func (this *KeyspaceTerm) Namespace() string {
 		return this.path.Namespace()
 	}
 	return ""
+}
+
+/*
+Is this pointing to the system store?
+*/
+func (this *KeyspaceTerm) IsSystem() bool {
+	return this.path != nil && this.path.IsSystem()
 }
 
 /*

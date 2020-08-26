@@ -59,7 +59,7 @@ type builder struct {
 }
 
 func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
-	if keyspaceTerm.Namespace() != "#system" {
+	if !keyspaceTerm.IsSystem() {
 		path := keyspaceTerm.Path()
 		if path == nil {
 			path, _ = getKeyspacePath(keyspaceTerm.FromExpression(), this.context)

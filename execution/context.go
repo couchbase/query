@@ -136,7 +136,7 @@ type Context struct {
 	inUseMemory        uint64
 	requestId          string
 	datastore          datastore.Datastore
-	systemstore        datastore.Datastore
+	systemstore        datastore.Systemstore
 	namespace          string
 	indexApiVersion    int
 	featureControls    uint64
@@ -169,7 +169,7 @@ type Context struct {
 	memoryQuota        uint64
 }
 
-func NewContext(requestId string, datastore, systemstore datastore.Datastore,
+func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
 	namespace string, readonly bool, maxParallelism int, scanCap, pipelineCap int64,
 	pipelineBatch int, namedArgs map[string]value.Value, positionalArgs value.Values,
 	credentials *auth.Credentials, consistency datastore.ScanConsistency,
@@ -274,7 +274,7 @@ func (this *Context) DatastoreVersion() string {
 	return this.datastore.Info().Version()
 }
 
-func (this *Context) Systemstore() datastore.Datastore {
+func (this *Context) Systemstore() datastore.Systemstore {
 	return this.systemstore
 }
 

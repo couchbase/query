@@ -59,7 +59,7 @@ func TestSystem(t *testing.T) {
 	}
 
 	// The systems store should have keyspaces "system", "namespaces", "keyspaces", "indexes"
-	p, err := s.NamespaceByName("#system")
+	p, err := s.NamespaceByName(datastore.SYSTEM_NAMESPACE)
 	if err != nil {
 		t.Fatalf("failed to get system namespace: %v", err)
 	}

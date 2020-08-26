@@ -105,7 +105,7 @@ type Server struct {
 	unboundQueue runQueue
 	plusQueue    runQueue
 	datastore    datastore.Datastore
-	systemstore  datastore.Datastore
+	systemstore  datastore.Systemstore
 	configstore  clustering.ConfigurationStore
 	acctstore    accounting.AccountingStore
 	namespace    string
@@ -128,7 +128,7 @@ type Server struct {
 
 const KEEP_ALIVE_DEFAULT = 1024 * 16
 
-func NewServer(store datastore.Datastore, sys datastore.Datastore, config clustering.ConfigurationStore,
+func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	requestsCap, plusRequestsCap int, servicers, plusServicers, maxParallelism int,
 	timeout time.Duration, signature, metrics, enterprise, pretty bool,
@@ -199,7 +199,7 @@ func (this *Server) Datastore() datastore.Datastore {
 	return this.datastore
 }
 
-func (this *Server) Systemstore() datastore.Datastore {
+func (this *Server) Systemstore() datastore.Systemstore {
 	return this.systemstore
 }
 

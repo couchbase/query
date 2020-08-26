@@ -23,24 +23,6 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-func opIsUnimplemented(namespace, object string, requested auth.Privilege) bool {
-	if namespace == "#system" {
-		// For system monitoring tables INSERT and UPDATE are not supported.
-		if object == "prepareds" || object == "completed_requests" || object == "active_requests" {
-			if requested == auth.PRIV_QUERY_UPDATE || requested == auth.PRIV_QUERY_INSERT {
-				return true
-			}
-			return false
-		}
-		// For other system buckets, INSERT/UPDATE/DELETE are not supported.
-		if requested == auth.PRIV_QUERY_UPDATE || requested == auth.PRIV_QUERY_INSERT || requested == auth.PRIV_QUERY_DELETE {
-			return true
-		}
-		return false
-	}
-	return false
-}
-
 func privilegeString(namespace, target, obj string, requested auth.Privilege) (string, error) {
 	var permission string
 	switch requested {
@@ -48,6 +30,7 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!write")
 	case auth.PRIV_READ:
 		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!read")
+	case auth.PRIV_SYSTEM_OPEN:
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
@@ -150,23 +133,16 @@ func namespaceKeyspaceTypeFromPrivPair(pair auth.PrivilegePair) (string, string,
 func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
 	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
 	for _, pair := range privsSought {
-		namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(pair)
 		privilege := pair.Priv
 
 		thisPrivGranted := false
 
-		if namespace == "#system" && keyspace == "nodes" && privilege == auth.PRIV_SYSTEM_READ && as.adminIsOpen() {
-			// The system:nodes table follows the underlying ns_server API.
-			// If all tables have passwords, the API requires credentials.
+		if privilege == auth.PRIV_SYSTEM_OPEN && as.adminIsOpen() {
+			// If all buckets have passwords, the API requires credentials.
 			// But if any don't, the API is open to read.
 			continue
 		}
-
-		if opIsUnimplemented(namespace, keyspace, privilege) {
-			// Trivially grant permission for unimplemented operations.
-			// Error reporting will be handled by the execution layer.
-			continue
-		}
+		namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(pair)
 
 		// Check requested privilege against the list of credentials.
 		for _, creds := range availableCredentials {

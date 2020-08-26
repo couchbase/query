@@ -31,8 +31,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-// log channel for the datastore lifecycle
-const CHANNEL = "DATASTORE"
+const SYSTEM_NAMESPACE = "#system"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {
@@ -62,6 +61,11 @@ type Datastore interface {
 	CreateSystemCBOStats(requestId string) errors.Error
 	GetSystemCBOStats() (Keyspace, errors.Error)
 	HasSystemCBOStats() (bool, errors.Error)
+}
+
+type Systemstore interface {
+	Datastore
+	PrivilegesFromPath(fullname string, keyspace string, privilege auth.Privilege, privs *auth.Privileges)
 }
 
 type AuditInfo struct {
@@ -222,7 +226,7 @@ type KeyspaceMetadata interface {
 
 // Globally accessible Datastore instance
 var _DATASTORE Datastore
-var _SYSTEMSTORE Datastore
+var _SYSTEMSTORE Systemstore
 
 func SetDatastore(datastore Datastore) {
 	_DATASTORE = datastore
@@ -232,11 +236,11 @@ func GetDatastore() Datastore {
 	return _DATASTORE
 }
 
-func SetSystemstore(systemstore Datastore) {
+func SetSystemstore(systemstore Systemstore) {
 	_SYSTEMSTORE = systemstore
 }
 
-func GetSystemstore() Datastore {
+func GetSystemstore() Systemstore {
 	return _SYSTEMSTORE
 }
 
@@ -248,7 +252,7 @@ func getNamespace(parts ...string) (Namespace, errors.Error) {
 		return nil, errors.NewDatastoreInvalidPathError("empty path")
 	}
 	namespace := parts[0]
-	if namespace == "#system" {
+	if namespace == SYSTEM_NAMESPACE {
 		datastore = _SYSTEMSTORE
 	} else {
 		datastore = _DATASTORE

@@ -22,8 +22,8 @@ import (
 )
 
 const STORE_ID = "system"
-const NAMESPACE_ID = "#system"
-const NAMESPACE_NAME = "#system"
+const NAMESPACE_ID = datastore.SYSTEM_NAMESPACE
+const NAMESPACE_NAME = datastore.SYSTEM_NAMESPACE
 const KEYSPACE_NAME_DATASTORES = "datastores"
 const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_BUCKETS = "buckets"
@@ -53,6 +53,61 @@ const scanTimeout = 30 * time.Second
 type store struct {
 	actualStore              datastore.Datastore
 	systemDatastoreNamespace *namespace
+}
+
+func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege auth.Privilege, privs *auth.Privileges) {
+	switch privilege {
+	case auth.PRIV_QUERY_DELETE:
+		switch keyspace {
+
+		// currently these keyspaces require system read for delete
+		case KEYSPACE_NAME_ACTIVE:
+		case KEYSPACE_NAME_REQUESTS:
+		case KEYSPACE_NAME_PREPAREDS:
+		case KEYSPACE_NAME_FUNCTIONS_CACHE:
+		case KEYSPACE_NAME_DICTIONARY_CACHE:
+			privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+
+			// for all other keyspaces, we rely on the implementation do deny access
+		}
+
+	// for SELECT previous code specified a target, even though it's not needed
+	// we still specify a target for backward compatibility and to avoid test failures
+	case auth.PRIV_QUERY_SELECT:
+		switch keyspace {
+		case KEYSPACE_NAME_USER_INFO:
+		case KEYSPACE_NAME_APPLICABLE_ROLES:
+			privs.Add(fullname, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
+
+		// may be open, depending whether admin REST endpoint is open
+		case KEYSPACE_NAME_NODES:
+			privs.Add("", auth.PRIV_SYSTEM_OPEN, auth.PRIV_PROPS_NONE)
+
+		// open to all, no privileges required
+		case KEYSPACE_NAME_DATASTORES:
+		case KEYSPACE_NAME_NAMESPACES:
+		case KEYSPACE_NAME_DUAL:
+
+		// these keyspaces filter results according to user privileges
+		// no further privilegs required
+		case KEYSPACE_NAME_KEYSPACES:
+		case KEYSPACE_NAME_ALL_KEYSPACES:
+		case KEYSPACE_NAME_SCOPES:
+		case KEYSPACE_NAME_ALL_SCOPES:
+		case KEYSPACE_NAME_BUCKETS:
+		case KEYSPACE_NAME_INDEXES:
+		case KEYSPACE_NAME_ALL_INDEXES:
+		case KEYSPACE_NAME_MY_USER_INFO:
+
+		// system read for everything else
+		default:
+			privs.Add(fullname, auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+		}
+
+		// for every other privilege, the keyspaces internally deny access
+		// should this change, this method needs to be used in the algebra package
+		// for the privileges of any new DML / DDL involved
+	}
 }
 
 func (s *store) Id() string {
@@ -164,7 +219,7 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	return false, nil
 }
 
-func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
+func NewDatastore(actualStore datastore.Datastore) (datastore.Systemstore, errors.Error) {
 	s := &store{actualStore: actualStore}
 
 	e := s.loadNamespace()
