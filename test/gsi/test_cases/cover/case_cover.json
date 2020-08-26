@@ -365,7 +365,7 @@
                             "~children": [
                                 {
                                     "#operator": "Filter",
-                                    "condition": "(cover ((`d`.`x`)) in (select raw (`b`.`x`) from `shellTest` as `b` where ((`b`.`x`) in correlated (select raw cover ((`d`.`x`)) from `shellTest` as `c` use keys [\"kk02\"]))))"
+                                    "condition": "(cover ((`d`.`x`)) in (select raw (`b`.`x`) from `default`:`shellTest` as `b` where ((`b`.`x`) in correlated (select raw cover ((`d`.`x`)) from `default`:`shellTest` as `c` use keys [\"kk02\"]))))"
                                 },
                                 {
                                     "#operator": "InitialProject",
