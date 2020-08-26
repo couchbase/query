@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -147,7 +148,7 @@ func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 	props := this.keyspace.PrivilegeProps()
 	fullKeyspace := this.keyspace.FullName()
 	name := this.keyspace.Keyspace()
-	if this.keyspace.Namespace() == "#system" &&
+	if this.keyspace.Namespace() == datastore.SYSTEM_NAMESPACE &&
 		(name == "prepareds" || name == "active_requests" || name == "completed_requests") {
 		// Temp fix. For now, deleting from these three tables should require
 		// the same permissions as reading from them.

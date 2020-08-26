@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
@@ -59,7 +60,7 @@ type builder struct {
 }
 
 func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
-	if keyspaceTerm.Namespace() != "#system" {
+	if keyspaceTerm.Namespace() != datastore.SYSTEM_NAMESPACE {
 		path := keyspaceTerm.Path()
 		if path == nil {
 			path, _ = getKeyspacePath(keyspaceTerm.FromExpression(), this.context)

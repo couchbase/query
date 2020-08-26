@@ -299,7 +299,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		return nil
 	}
 	//not advise index to system keyspace
-	if strings.ToLower(keyspace.Namespace().Name()) == "#system" {
+	if strings.ToLower(keyspace.Namespace().Name()) == datastore.SYSTEM_NAMESPACE {
 		return nil
 	}
 	if baseKeyspace == nil {

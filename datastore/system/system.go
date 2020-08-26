@@ -22,8 +22,8 @@ import (
 )
 
 const STORE_ID = "system"
-const NAMESPACE_ID = "#system"
-const NAMESPACE_NAME = "#system"
+const NAMESPACE_ID = datastore.SYSTEM_NAMESPACE
+const NAMESPACE_NAME = datastore.SYSTEM_NAMESPACE
 const KEYSPACE_NAME_DATASTORES = "datastores"
 const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_BUCKETS = "buckets"

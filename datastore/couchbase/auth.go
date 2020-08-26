@@ -19,12 +19,13 @@ import (
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 )
 
 func opIsUnimplemented(namespace, object string, requested auth.Privilege) bool {
-	if namespace == "#system" {
+	if namespace == datastore.SYSTEM_NAMESPACE {
 		// For system monitoring tables INSERT and UPDATE are not supported.
 		if object == "prepareds" || object == "completed_requests" || object == "active_requests" {
 			if requested == auth.PRIV_QUERY_UPDATE || requested == auth.PRIV_QUERY_INSERT {
@@ -155,7 +156,7 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 
 		thisPrivGranted := false
 
-		if namespace == "#system" && keyspace == "nodes" && privilege == auth.PRIV_SYSTEM_READ && as.adminIsOpen() {
+		if namespace == datastore.SYSTEM_NAMESPACE && keyspace == "nodes" && privilege == auth.PRIV_SYSTEM_READ && as.adminIsOpen() {
 			// The system:nodes table follows the underlying ns_server API.
 			// If all tables have passwords, the API requires credentials.
 			// But if any don't, the API is open to read.

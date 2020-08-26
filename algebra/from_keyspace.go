@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -128,7 +129,7 @@ func PrivilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
 	namespace := path.Namespace()
 	fullKeyspace := path.SimpleString()
 	privs := auth.NewPrivileges()
-	if namespace == "#system" {
+	if namespace == datastore.SYSTEM_NAMESPACE {
 		switch path.Keyspace() {
 		case "user_info", "applicable_roles":
 			privs.Add(fullKeyspace, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
