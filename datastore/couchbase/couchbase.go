@@ -1212,13 +1212,14 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 // Called by go-couchbase if a configured keyspace is deleted
 func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 
+	var cbKeyspace *keyspace
+
 	p.lock.Lock()
-	defer p.lock.Unlock()
 
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
-		dropDictCacheEntries(ks.cbKeyspace)
+		cbKeyspace = ks.cbKeyspace
 		ks.cbKeyspace.Lock()
 		ks.cbKeyspace.flags |= _DELETED
 		ks.cbKeyspace.Unlock()
@@ -1228,6 +1229,15 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 		p.version++
 	} else {
 		logging.Warnf("Keyspace %v not configured on this server", name)
+	}
+
+	p.lock.Unlock()
+
+	if cbKeyspace != nil {
+		// dropDictCacheEntries() needs to be called outside p.lock
+		// since it'll need to lock it when trying to delete from
+		// N1QL_SYSTEM_BUCKET.N1QL_SYSTEM_SCOPE.N1QL_CBO_STATS
+		dropDictCacheEntries(cbKeyspace)
 	}
 }
 
