@@ -144,7 +144,7 @@ func (b *dictionaryKeyspace) Delete(deletes []string, context datastore.QueryCon
 			},
 			creds, authToken)
 
-		dictionary.DropDictCacheEntry(name)
+		dictionary.DropDictionaryEntry(name)
 	}
 	return deletes, nil
 }
