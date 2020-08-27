@@ -37755,6 +37755,7 @@ OUTER0:
 		case 180:
 			{
 				yylex.logToken(yylex.Text(), "REPLACE")
+				lval.s = yylex.Text()
 				return REPLACE
 			}
 		case 181:

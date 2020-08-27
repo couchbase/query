@@ -343,6 +343,7 @@ tokOffset	 int
 /* Types */
 %type <s>                STR
 %type <s>                IDENT IDENT_ICASE NAMESPACE_ID
+%type <s>                REPLACE
 %type <s>                NAMED_PARAM
 %type <f>                NUM
 %type <n>                INT
@@ -3647,6 +3648,9 @@ long_func_name LPAREN opt_exprs RPAREN
 
 function_name:
 IDENT
+|
+// replace() needs special treatment because of the CREATE OR REPLACE FUNCTION statement
+REPLACE
 ;
 
 /*************************************************
