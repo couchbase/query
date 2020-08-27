@@ -108,7 +108,7 @@ Returns all required privileges.
 */
 func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error) {
 	if this.path != nil {
-		privs, err = PrivilegesFromPath(this.path)
+		privs, err = PrivilegesFromPath(auth.PRIV_QUERY_SELECT, this.path)
 	} else {
 		privs = auth.NewPrivileges()
 		privs.Add(this.fromExpr.String(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_DYNAMIC_TARGET)
@@ -124,13 +124,13 @@ func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error
 	return privs, err
 }
 
-func PrivilegesFromPath(path *Path) (*auth.Privileges, errors.Error) {
+func PrivilegesFromPath(priv auth.Privilege, path *Path) (*auth.Privileges, errors.Error) {
 
 	privs := auth.NewPrivileges()
 	if path.IsSystem() {
-		datastore.GetSystemstore().PrivilegesFromPath(path.FullName(), path.Keyspace(), auth.PRIV_QUERY_SELECT, privs)
+		datastore.GetSystemstore().PrivilegesFromPath(path.FullName(), path.Keyspace(), priv, privs)
 	} else {
-		privs.Add(path.SimpleString(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
+		privs.Add(path.SimpleString(), priv, auth.PRIV_PROPS_NONE)
 	}
 	return privs, nil
 }

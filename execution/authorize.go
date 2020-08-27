@@ -165,7 +165,7 @@ func (this *Authorize) getPrivileges(privs *auth.Privileges, context *Context, i
 					var path *algebra.Path
 					path, err = getKeyspacePath(expr, context)
 					if err == nil && path != nil {
-						rprivs, _ := algebra.PrivilegesFromPath(path)
+						rprivs, _ := algebra.PrivilegesFromPath(pp.Priv, path)
 						nprivs.AddAll(rprivs)
 					}
 				}
