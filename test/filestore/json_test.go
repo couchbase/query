@@ -17,18 +17,20 @@ import (
 	"testing"
 )
 
+const _NAMESPACE = "default"
+
 func start() *MockServer {
-	return Start("dir:", "json", "json")
+	return Start("dir:", "json", _NAMESPACE)
 }
 
 func TestSyntaxErr(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, true, "this is a bad query", nil, nil, "json")
+	r, _, err := Run(qc, true, "this is a bad query", nil, nil, _NAMESPACE)
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
-	r, _, err = Run(qc, true, "", nil, nil, "json") // empty string query
+	r, _, err = Run(qc, true, "", nil, nil, _NAMESPACE) // empty string query
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
@@ -46,7 +48,7 @@ func TestRoleStatements(t *testing.T) {
 	ds.PutUserInfo(&pete)
 	ds.PutUserInfo(&sam)
 
-	r, _, err := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil, "json")
+	r, _, err := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil, _NAMESPACE)
 	if err != nil {
 		t.Fatalf("Unable to run GRANT: %s", err.Error())
 	}
@@ -82,7 +84,7 @@ func TestRoleStatements(t *testing.T) {
 	}
 	compareUserLists(&expectedAfterGrant, &users, t)
 
-	r, _, err = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam", nil, nil, "json")
+	r, _, err = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam", nil, nil, _NAMESPACE)
 	if err != nil {
 		t.Fatalf("Unable to run REVOKE: %s", err.Error())
 	}
@@ -165,7 +167,7 @@ func compareRoleLists(expected *[]datastore.Role, result *[]datastore.Role, t *t
 func TestSimpleSelect(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, true, "select 1 + 1", nil, nil, "json")
+	r, _, err := Run(qc, true, "select 1 + 1", nil, nil, _NAMESPACE)
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -173,7 +175,7 @@ func TestSimpleSelect(t *testing.T) {
 		t.Errorf("unexpected 0 length result")
 	}
 
-	r, _, err = Run(qc, true, "select * from system:keyspaces", nil, nil, "json")
+	r, _, err = Run(qc, true, "select * from system:keyspaces", nil, nil, _NAMESPACE)
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -181,7 +183,7 @@ func TestSimpleSelect(t *testing.T) {
 		t.Errorf("unexpected 0 length result")
 	}
 
-	r, _, err = Run(qc, true, "select * from default:orders", nil, nil, "json")
+	r, _, err = Run(qc, true, "select * from default:orders", nil, nil, _NAMESPACE)
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -203,12 +205,12 @@ func TestAllCaseFiles(t *testing.T) {
 		t.Errorf("glob failed: %v", err)
 	}
 	for _, m := range matches {
-		FtestCaseFile(m, qc, "json")
+		FtestCaseFile(m, qc, _NAMESPACE)
 	}
 
 	for _, m := range matches {
 		t.Logf("TestCaseFile: %v\n", m)
-		stmt, err := FtestCaseFile(m, qc, "json")
+		stmt, err := FtestCaseFile(m, qc, _NAMESPACE)
 		if err != nil {
 			t.Errorf("Error received : %s \n", err)
 			return

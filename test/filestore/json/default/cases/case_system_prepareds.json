@@ -5,7 +5,7 @@
 	"results": [
         {
             "name": "test",
-	    "namespace": "json",
+	    "namespace": "default",
             "operator": {
                 "#operator": "Authorize",
                 "privileges": {
