@@ -369,7 +369,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
 	oldScopes := bucket.scopes
 
-	// somebody just did it
+	// this shouldn't happen on a refresh, but if there aren't old scopes, just go
 	if oldScopes == nil {
 		return nil, nil
 	}

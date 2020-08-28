@@ -807,26 +807,44 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		// shortcut if good, or only manifest needed
 		switch keyspace.flags {
 		case _NEEDS_MANIFEST:
-			mani, err := keyspace.cbbucket.GetCollectionsManifest()
-			if err == nil {
-				scopes, defaultCollection := refreshScopesAndCollections(mani, keyspace)
 
-				// see later: another case for shared optimistic locks.
-				// only the first one in gets to change scopes, every one else's work is wasted
-				// if any other flag has been set in the interim, we go the reload route
-				keyspace.Lock()
-				if keyspace.flags == _NEEDS_MANIFEST {
-					keyspace.collectionsManifestUid = mani.Uid
-					keyspace.scopes = scopes
-					keyspace.defaultCollection = defaultCollection
-					keyspace.flags = 0
+			// avoid a race condition where we read a manifest while the uid is increased
+			// by the bucket update callback
+			for {
+				mani, err := keyspace.cbbucket.GetCollectionsManifest()
+				if err == nil {
+
+					// see later: another case for shared optimistic locks.
+					// only the first one in gets to change scopes, every one else's work is wasted
+					scopes, defaultCollection := refreshScopesAndCollections(mani, keyspace)
+
+					// if any other flag has been set in the interim, we go the reload route
+					keyspace.Lock()
+					if keyspace.flags == _NEEDS_MANIFEST {
+
+						// another manifest arrived in the interim, and we've loaded the old one
+						// try again
+						if mani.Uid < keyspace.newCollectionsManifestUid {
+							keyspace.Unlock()
+							continue
+						}
+
+						// do not update if somebody has already done it
+						if mani.Uid > keyspace.collectionsManifestUid {
+							keyspace.collectionsManifestUid = mani.Uid
+							keyspace.scopes = scopes
+							keyspace.defaultCollection = defaultCollection
+							keyspace.flags = 0
+						}
+					}
+					keyspace.Unlock()
+					if keyspace.flags == 0 {
+						return keyspace, nil
+					}
+				} else {
+					logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
 				}
-				keyspace.Unlock()
-				if keyspace.flags == 0 {
-					return keyspace, nil
-				}
-			} else {
-				logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
+				break
 			}
 		case 0:
 			return keyspace, nil
@@ -1146,9 +1164,10 @@ type keyspace struct {
 	chkIndex       chkIndexDict
 	indexersLoaded bool
 
-	collectionsManifestUid uint64
-	scopes                 map[string]*scope // scopes by id
-	defaultCollection      datastore.Keyspace
+	collectionsManifestUid    uint64            // current manifest id
+	newCollectionsManifestUid uint64            // announced manifest id
+	scopes                    map[string]*scope // scopes by id
+	defaultCollection         datastore.Keyspace
 }
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
@@ -1257,6 +1276,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
 		if ks.cbKeyspace.collectionsManifestUid != uid {
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
+			ks.cbKeyspace.newCollectionsManifestUid = uid
 		}
 		ks.cbKeyspace.Unlock()
 	} else {
