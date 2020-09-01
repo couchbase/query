@@ -807,12 +807,15 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if p != nil {
 			reqMap["phaseOperators"] = p
 		}
+		p = request.Output().FmtPhaseTimes()
+		if p != nil {
+			reqMap["phaseTimes"] = p
+		}
 		usedMemory := request.UsedMemory()
 		if usedMemory != 0 {
 			reqMap["usedMemory"] = usedMemory
 		}
 		if profiling {
-			reqMap["phaseTimes"] = request.Output().FmtPhaseTimes()
 
 			prof := request.Profile()
 			if prof == server.ProfUnset {
@@ -922,6 +925,10 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		if p != nil {
 			requests[i]["phaseOperators"] = p
 		}
+		p = request.Output().FmtPhaseTimes()
+		if p != nil {
+			requests[i]["phaseTimes"] = p
+		}
 		i++
 		return true
 	}
@@ -1002,6 +1009,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		if request.PhaseOperators != nil {
 			reqMap["phaseOperators"] = request.PhaseOperators
 		}
+		if request.PhaseTimes != nil {
+			reqMap["phaseTimes"] = request.PhaseTimes
+		}
 		if request.UsedMemory != 0 {
 			reqMap["usedMemory"] = request.UsedMemory
 		}
@@ -1010,9 +1020,6 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		}
 
 		if profiling {
-			if request.PhaseTimes != nil {
-				reqMap["phaseTimes"] = request.PhaseTimes
-			}
 			if request.NamedArgs != nil {
 				reqMap["namedArgs"] = request.NamedArgs
 			}
@@ -1097,6 +1104,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		}
 		if request.PhaseOperators != nil {
 			requests[i]["phaseOperators"] = request.PhaseOperators
+		}
+		if request.PhaseTimes != nil {
+			requests[i]["phaseTimes"] = request.PhaseTimes
 		}
 		if request.Users != "" {
 			requests[i]["users"] = request.Users
