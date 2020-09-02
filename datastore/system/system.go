@@ -159,6 +159,9 @@ func (s *store) Authorize(*auth.Privileges, *auth.Credentials) (auth.Authenticat
 	return nil, nil
 }
 
+func (s *store) PreAuthorize(*auth.Privileges) {
+}
+
 func (s *store) CredsString(req *http.Request) string {
 	return ""
 }

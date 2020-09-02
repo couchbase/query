@@ -49,6 +49,10 @@ type PrivilegePair struct {
 	Priv Privilege // The level of privilege requested. Note there could be multiple
 	// privileges against the same target.
 	Props int // propoerties of this privilage
+	// Privileges that have been precompiled, if possible
+	// this is store specific
+	// Since it is specific to the store, it's never marshalled or unmarshalled
+	Ready interface{} `json:"-"`
 }
 
 const (

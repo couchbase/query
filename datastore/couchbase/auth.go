@@ -83,11 +83,9 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 	return permission, nil
 }
 
-func doAuthByCreds(creds cbauth.Creds, namespace string, target string, obj string, requested auth.Privilege) (bool, error) {
-	permission, err := privilegeString(namespace, target, obj, requested)
-	if err != nil {
-		return false, err
-	}
+func doAuthByCreds(creds cbauth.Creds, permission string) (bool, error) {
+	var err error
+
 	authResult, err := creds.IsAllowed(permission)
 	if err != nil || authResult == false {
 		return false, err
@@ -128,43 +126,66 @@ func namespaceKeyspaceTypeFromPrivPair(pair auth.PrivilegePair) (string, string,
 	return namespace, target, obj
 }
 
-// Try to get privsSought privileges from the availableCredentials credentials.
+type cbPrecompiled string
+
+// Try to get the privileges sought from the availableCredentials credentials.
 // Return the privileges that were not granted.
 func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
 	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
-	for _, pair := range privsSought {
-		privilege := pair.Priv
+	for p, _ := range privsSought {
+		var res bool
+		var err error
 
-		thisPrivGranted := false
-
+		privilege := privsSought[p].Priv
 		if privilege == auth.PRIV_SYSTEM_OPEN && as.adminIsOpen() {
 			// If all buckets have passwords, the API requires credentials.
 			// But if any don't, the API is open to read.
 			continue
 		}
-		namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(pair)
 
-		// Check requested privilege against the list of credentials.
-		for _, creds := range availableCredentials {
-			authResult, err := doAuthByCreds(creds, namespace, keyspace, obj, privilege)
+		precompiled, ok := privsSought[p].Ready.(cbPrecompiled)
+		if ok {
+			res, err = authAgainstCred(string(precompiled), availableCredentials)
+		} else {
+			var target string
 
-			if err != nil {
-				return nil, err
+			namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(privsSought[p])
+			target, err = privilegeString(namespace, keyspace, obj, privilege)
+			if err == nil {
+				res, err = authAgainstCred(target, availableCredentials)
 			}
+		}
 
-			// Auth succeeded
-			if authResult == true {
-				thisPrivGranted = true
-				break
-			}
+		if err != nil {
+			return nil, err
 		}
 
 		// This privilege can not be granted by these credentials.
-		if !thisPrivGranted {
-			deniedPrivs = append(deniedPrivs, pair)
+		if !res {
+			deniedPrivs = append(deniedPrivs, privsSought[p])
 		}
 	}
 	return deniedPrivs, nil
+}
+
+func authAgainstCred(cbTarget string, availableCredentials []cbauth.Creds) (bool, error) {
+	thisPrivGranted := false
+
+	// Check requested privilege against the list of credentials.
+	for _, creds := range availableCredentials {
+		authResult, err := doAuthByCreds(creds, cbTarget)
+
+		if err != nil {
+			return false, err
+		}
+
+		// Auth succeeded
+		if authResult == true {
+			thisPrivGranted = true
+			break
+		}
+	}
+	return thisPrivGranted, nil
 }
 
 // Determine the set of keyspaces referenced in the list of privileges, and derive
@@ -348,4 +369,17 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	msg := messageForDeniedPrivilege(deniedPrivileges[0])
 	return nil, errors.NewDatastoreInsufficientCredentials(msg)
+}
+
+func cbPreAuthorize(privileges *auth.Privileges) {
+	if privileges == nil {
+		return
+	}
+	for i, _ := range privileges.List {
+		namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(privileges.List[i])
+		p, err := privilegeString(namespace, keyspace, obj, privileges.List[i].Priv)
+		if err == nil && p != "" {
+			privileges.List[i].Ready = cbPrecompiled(p)
+		}
+	}
 }

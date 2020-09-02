@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 )
 
 type Authorize struct {
@@ -34,6 +35,9 @@ func NewAuthorize(privs *auth.Privileges, child Operator) *Authorize {
 				rv.dynamic = true
 			}
 		})
+	}
+	if !rv.dynamic {
+		datastore.GetDatastore().PreAuthorize(rv.privs)
 	}
 
 	return rv
@@ -105,6 +109,9 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 	}
 	this.privs = _unmarshalled.Privs
 	this.dynamic = _unmarshalled.Dynamic
+	if !this.dynamic {
+		datastore.GetDatastore().PreAuthorize(this.privs)
+	}
 
 	err = json.Unmarshal(_unmarshalled.Child, &child_type)
 	if err != nil {

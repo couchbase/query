@@ -328,6 +328,10 @@ func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credent
 	return cbAuthorize(s, privileges, credentials)
 }
 
+func (s *store) PreAuthorize(privileges *auth.Privileges) {
+	cbPreAuthorize(privileges)
+}
+
 func (s *store) CredsString(req *http.Request) string {
 	if req != nil {
 		creds, err := cbauth.AuthWebCreds(req)

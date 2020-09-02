@@ -43,6 +43,7 @@ type Datastore interface {
 	NamespaceById(id string) (Namespace, errors.Error)                                     // Find a namespace in this datastore using the namespace's Id
 	NamespaceByName(name string) (Namespace, errors.Error)                                 // Find a namespace in this datastore using the namespace's name
 	Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) // Perform authorization and return nil if successful
+	PreAuthorize(*auth.Privileges)                                                         // Transform privileges in the internal format
 	CredsString(*http.Request) string                                                      // return name from credentials in http request
 	SetLogLevel(level logging.Level)                                                       // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)                              // Schema inference provider by name, e.g. INF_DEFAULT
