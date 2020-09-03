@@ -27,6 +27,8 @@ type apiFunc func(*HttpEndpoint, http.ResponseWriter, *http.Request, *audit.ApiA
 
 type handlerFunc func(http.ResponseWriter, *http.Request)
 
+type textPlain string
+
 func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f apiFunc) {
 	auditFields := audit.ApiAuditFields{
 		GenericFields: adt.GetAuditBasicFields(req),
@@ -49,6 +51,13 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		w.WriteHeader(http.StatusNotFound)
 
 		auditFields.HttpResultCode = http.StatusNotFound
+		audit.SubmitApiRequest(&auditFields)
+		return
+	}
+
+	_, ok := obj.(textPlain)
+	if ok {
+		auditFields.HttpResultCode = http.StatusOK
 		audit.SubmitApiRequest(&auditFields)
 		return
 	}

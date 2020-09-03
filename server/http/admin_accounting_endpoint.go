@@ -247,7 +247,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		w.Write([]byte(fmt.Sprintf("%v\n", metric.Value())))
 	}
 
-	return nil, nil
+	return textPlain(""), nil
 }
 
 func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
@@ -257,7 +257,7 @@ func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	return nil, nil
+	return textPlain(""), nil
 }
 
 func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
