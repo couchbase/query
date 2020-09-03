@@ -316,6 +316,8 @@ func (this *annotatedValue) Recycle() {
 		this.original.Recycle()
 		this.original = nil
 	}
-	this.attachments = nil
+	for k := range this.attachments {
+		delete(this.attachments, k)
+	}
 	annotatedPool.Put(unsafe.Pointer(this))
 }

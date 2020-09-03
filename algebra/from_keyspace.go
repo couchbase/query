@@ -43,24 +43,26 @@ Specific primary keys within a keyspace can be specified.  Only values
 having those primary keys will be included as inputs to the query.
 */
 type KeyspaceTerm struct {
-	path     *Path
-	fromExpr expression.Expression
-	as       string
-	keys     expression.Expression
-	indexes  IndexRefs
-	joinKeys expression.Expression
-	joinHint JoinHint
-	property uint32
+	path            *Path
+	fromExpr        expression.Expression
+	as              string
+	keys            expression.Expression
+	indexes         IndexRefs
+	joinKeys        expression.Expression
+	joinHint        JoinHint
+	property        uint32
+	protectedString string
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0}
+	protectedString := path.ProtectedString()
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0}
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, ""}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -514,4 +516,8 @@ func (this *KeyspaceTerm) MarshalKeyspace(m map[string]interface{}) {
 
 func (this *KeyspaceTerm) Path() *Path {
 	return this.path
+}
+
+func (this *KeyspaceTerm) PathString() string {
+	return this.protectedString
 }

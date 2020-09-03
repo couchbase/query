@@ -74,7 +74,10 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		var count int64
 
 		for _, span := range spans {
-			go this.scanCount(span, scanVector, countChannel, context)
+			go func() {
+				primeStack()
+				this.scanCount(span, scanVector, countChannel, context)
+			}()
 		}
 
 		for n > 0 {

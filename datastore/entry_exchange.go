@@ -67,7 +67,7 @@ func newEntryExchange(exchange *EntryExchange, capacity int64) {
 
 	// either non standard scan cap, or server wide scan cap changes
 	// and we are still caching old slices
-	if exchange.items == nil || int64(cap(exchange.items)) != GetScanCap() {
+	if exchange.items == nil || int64(cap(exchange.items)) != capacity {
 		exchange.items = make([]*IndexEntry, capacity)
 	}
 }

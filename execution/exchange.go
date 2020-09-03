@@ -101,7 +101,7 @@ func newValueExchange(exchange *valueExchange, capacity int64) {
 
 	// either non standard pipeline cap, or server wide pipeline cap changes
 	// and we are still caching old slices
-	if exchange.items == nil || int64(cap(exchange.items)) != GetPipelineCap() {
+	if exchange.items == nil || int64(cap(exchange.items)) != capacity {
 		exchange.items = make([]value.AnnotatedValue, capacity)
 	}
 	exchange.heartbeat = 0

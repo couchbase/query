@@ -378,14 +378,14 @@ func RecordMetrics(request_time time.Duration, service_time time.Duration,
 
 func requestType(stmt string) CounterId {
 
-	switch strings.ToLower(stmt) {
-	case "select":
+	switch strings.ToUpper(stmt) {
+	case "SELECT":
 		return SELECTS
-	case "update":
+	case "UPDATE":
 		return UPDATES
-	case "insert":
+	case "INSERT":
 		return INSERTS
-	case "delete":
+	case "DELETE":
 		return DELETES
 	}
 	return UNKNOWN

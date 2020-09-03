@@ -37,5 +37,5 @@ func (this *OperatorPool) Put(s []Operator) {
 		return
 	}
 
-	this.pool.Put(s[0:0])
+	this.pool.Put(s[0:0:this.size])
 }

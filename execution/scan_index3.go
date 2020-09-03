@@ -69,7 +69,10 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		defer this.conn.Dispose()  // Dispose of the connection
 		defer this.conn.SendStop() // Notify index that I have stopped
 
-		go this.scan(context, this.conn, parent)
+		go func() {
+			primeStack()
+			this.scan(context, this.conn, parent)
+		}()
 
 		ok := true
 		var docs uint64 = 0

@@ -76,7 +76,10 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), false, context)
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, false, context)
 
-	go this.scanEntries(context, this.conn, offset, limit)
+	go func() {
+		primeStack()
+		this.scanEntries(context, this.conn, offset, limit)
+	}()
 
 	nitems := uint64(0)
 
@@ -141,7 +144,10 @@ func (this *PrimaryScan3) scanPrimaryChunk(context *Context, parent value.Value,
 	defer conn.Dispose()  // Dispose of the connection
 	defer conn.SendStop() // Notify index that I have stopped
 
-	go this.scanChunk(context, conn, limit, indexEntry)
+	go func() {
+		primeStack()
+		this.scanChunk(context, conn, limit, indexEntry)
+	}()
 
 	nitems := uint64(0)
 	var docs uint64 = 0
