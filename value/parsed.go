@@ -30,7 +30,7 @@ type parsedValue struct {
 	parsed       Value
 	sync.RWMutex // to access fields
 	fields       map[string]Value
-	elements     []Value
+	elements     map[int]Value
 	useState     bool
 	findState    *json.FindState
 	indexState   *json.IndexState
@@ -292,12 +292,11 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 
 	if this.elements != nil {
 		this.RLock()
-		if index < len(this.elements) {
-			result := this.elements[index]
-			this.RUnlock()
+		result, ok := this.elements[index]
+		this.RUnlock()
+		if ok {
 			return NewValue(result), true
 		}
-		this.RUnlock()
 	}
 
 	raw := this.raw
@@ -339,7 +338,10 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 
 			if useState {
 				this.Lock()
-				this.elements = append(this.elements, val)
+				if this.elements == nil {
+					this.elements = make(map[int]Value)
+				}
+				this.elements[index] = val
 				this.Unlock()
 			}
 			return val, true
