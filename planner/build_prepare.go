@@ -67,6 +67,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetNamespace(this.namespace)
 	prep.SetQueryContext(this.context.QueryContext())
 	prep.SetUseFts(this.context.UseFts())
+	prep.SetUseCBO(this.context.UseCBO())
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {

@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/util"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
@@ -25,7 +24,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	plan.Operator, error) {
 
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
-	if util.IsFeatureEnabled(context.FeatureControls(), util.N1QL_CBO) && context.Optimizer() != nil {
+	if context.UseCBO() && context.Optimizer() != nil {
 		builder.useCBO = true
 		checkCostModel(context.FeatureControls())
 	}

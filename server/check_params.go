@@ -43,6 +43,7 @@ const (
 	FUNCLIMIT       = "functions-limit"
 	TASKLIMIT       = "tasks-limit"
 	MEMORYQUOTA     = "memory-quota"
+	USECBO          = "use-cbo"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -76,6 +77,7 @@ var CHECKERS = map[string]Checker{
 	FUNCLIMIT:       checkPositiveInteger,
 	TASKLIMIT:       checkPositiveInteger,
 	MEMORYQUOTA:     checkNonNegativeInteger,
+	USECBO:          checkBool,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

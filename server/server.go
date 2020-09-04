@@ -160,8 +160,10 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 	if rv.enterprise {
 		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL)
+		util.SetUseCBO(util.DEF_USE_CBO)
 	} else {
 		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
+		util.SetUseCBO(util.CE_USE_CBO)
 	}
 
 	// Setup callback function for metakv settings changes
@@ -474,6 +476,14 @@ func (this *Server) Enterprise() bool {
 	return this.enterprise
 }
 
+func (this *Server) UseCBO() bool {
+	return util.GetUseCBO()
+}
+
+func (this *Server) SetUseCBO(useCBO bool) {
+	util.SetUseCBO(useCBO)
+}
+
 func (this *Server) ServiceRequest(request Request) bool {
 	return this.handleRequest(request, &this.unboundQueue)
 }
@@ -685,8 +695,8 @@ func (this *Server) serviceRequest(request Request) {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(),
-		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(), request.UseFts(),
-		optimizer)
+		prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(),
+		request.UseFts(), request.UseCBO(), optimizer)
 
 	context.SetWhitelist(this.whitelist)
 
@@ -811,7 +821,7 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 	if prepared == nil && autoPrepare {
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
-			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), optimizer)
+			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), request.UseCBO(), optimizer)
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
@@ -859,15 +869,16 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
-			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(), optimizer)
+			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
+			request.UseCBO(), optimizer)
 
 		if stmt, ok := stmt.(*algebra.Advise); ok {
 			ec := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
 				this.readonly, 1, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 				request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 				request.ScanVectorSource(), request.Output(),
-				prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(), request.UseFts(),
-				optimizer)
+				prepared, request.IndexApiVersion(), request.FeatureControls(), request.QueryContext(),
+				request.UseFts(), request.UseCBO(), optimizer)
 			stmt.SetContext(ec)
 		}
 
@@ -961,6 +972,7 @@ func (this *Server) getPrepared(request Request, namespace string, optimizer pla
 						prepared.SetNamespace(request.Namespace())
 						prepared.SetQueryContext(request.QueryContext())
 						prepared.SetUseFts(request.UseFts())
+						prepared.SetUseCBO(request.UseCBO())
 
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {

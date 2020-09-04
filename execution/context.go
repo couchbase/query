@@ -142,6 +142,7 @@ type Context struct {
 	featureControls    uint64
 	queryContext       string
 	useFts             bool
+	useCBO             bool
 	optimizer          planner.Optimizer
 	readonly           bool
 	maxParallelism     int
@@ -175,7 +176,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 	credentials *auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output,
 	prepared *plan.Prepared, indexApiVersion int, featureControls uint64, queryContext string,
-	useFts bool, optimizer planner.Optimizer) *Context {
+	useFts, useCBO bool, optimizer planner.Optimizer) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -201,6 +202,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		featureControls:  featureControls,
 		queryContext:     queryContext,
 		useFts:           useFts,
+		useCBO:           useCBO,
 		optimizer:        optimizer,
 		inlistHashMap:    nil,
 	}
@@ -232,6 +234,7 @@ func (this *Context) Copy() *Context {
 		indexApiVersion:  this.indexApiVersion,
 		featureControls:  this.featureControls,
 		useFts:           this.useFts,
+		useCBO:           this.useCBO,
 		optimizer:        this.optimizer,
 	}
 }
@@ -521,7 +524,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 				// MB-32140: do not replace named/positional arguments with its value for prepared statements
 				var prepContext planner.PrepareContext
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
-					this.indexApiVersion, this.featureControls, this.useFts, this.optimizer)
+					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer)
 				subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
 
@@ -547,7 +550,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 			var prepContext planner.PrepareContext
 			planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
-				this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.optimizer)
+				this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO,
+				this.optimizer)
 			subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true, false,
 				&prepContext)
 

@@ -562,13 +562,22 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		}
 	}
 
+	if this.UseCBO() {
+		if !this.writeString(",") {
+			return false
+		}
+		if err != nil || !this.writer.printf("%s\"use_cbo\": \"%v\"", newPrefix, this.UseCBO()) {
+			logging.Infop("Error writing use_cbo", logging.Pair{"error", err})
+		}
+	}
+
 	memoryQuota := this.MemoryQuota()
 	if memoryQuota != 0 {
 		if !this.writeString(",") {
 			return false
 		}
 		if err != nil || !this.writer.printf("%s\"memoryQuota\": \"%v\"", newPrefix, memoryQuota) {
-			logging.Infop("Error writing use_fts", logging.Pair{"error", err})
+			logging.Infop("Error writing memoryQuota", logging.Pair{"error", err})
 		}
 	}
 

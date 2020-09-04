@@ -15,6 +15,7 @@ import (
 
 var MaxIndexApi atomic.AlignedInt64
 var N1qlFeatureControl atomic.AlignedInt64
+var UseCBO bool
 
 func SetMaxIndexAPI(apiVersion int) {
 	atomic.StoreInt64(&MaxIndexApi, int64(apiVersion))
@@ -48,4 +49,18 @@ func GetN1qlFeatureControl() uint64 {
 
 func IsFeatureEnabled(control, feature uint64) bool {
 	return (control & feature) == 0
+}
+
+const DEF_USE_CBO = true
+const CE_USE_CBO = false
+
+func GetUseCBO() bool {
+	return UseCBO && IsFeatureEnabled(GetN1qlFeatureControl(), N1QL_CBO)
+}
+
+func SetUseCBO(useCBO bool) {
+	// use-cbo can only be set if CBO is not turned off in N1qlFeatureControl
+	if IsFeatureEnabled(GetN1qlFeatureControl(), N1QL_CBO) {
+		UseCBO = useCBO
+	}
 }

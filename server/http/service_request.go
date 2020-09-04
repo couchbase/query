@@ -535,6 +535,14 @@ func handleMemoryQuota(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
+func handleUseCBO(rv *httpRequest, httpsArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	useCBO, err := httpsArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetUseCBO(useCBO == value.TRUE)
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -622,6 +630,7 @@ const ( // Request argument names
 	QUERY_CONTEXT     = "query_context"
 	USE_FTS           = "use_fts"
 	MEMORY_QUOTA      = "memory_quota"
+	USE_CBO           = "use_cbo"
 )
 
 type argHandler struct {
@@ -663,6 +672,7 @@ var _PARAMETERS = map[string]*argHandler{
 	AUTO_EXECUTE:      {handleAutoExecute, false},
 	USE_FTS:           {handleUseFts, false},
 	MEMORY_QUOTA:      {handleMemoryQuota, false},
+	USE_CBO:           {handleUseCBO, false},
 }
 
 // common storage for the httpArgs implementations

@@ -147,7 +147,8 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
-		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.optimizer)
+		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO,
+		this.optimizer)
 	prepared, err := planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
 		&prepContext)
 	// output.AddPhaseTime(PLAN, util.Since(prep))

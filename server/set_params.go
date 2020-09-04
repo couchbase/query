@@ -157,6 +157,11 @@ var _SETTERS = map[string]Setter{
 		s.SetMemoryQuota(uint64(value))
 		return nil
 	},
+	USECBO: func(s *Server, o interface{}) errors.Error {
+		value, _ := o.(bool)
+		s.SetUseCBO(value)
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {

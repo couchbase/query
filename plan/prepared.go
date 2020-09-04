@@ -33,6 +33,7 @@ type Prepared struct {
 	namespace       string
 	queryContext    string
 	useFts          bool
+	useCBO          bool
 
 	indexers      []idxVersion // for reprepare checking
 	keyspaces     []ksVersion
@@ -75,6 +76,9 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	if this.useFts {
 		r["useFts"] = this.useFts
 	}
+	if this.useCBO {
+		r["useCBO"] = this.useCBO
+	}
 
 	if f != nil {
 		f(r)
@@ -95,6 +99,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 		Namespace       string          `json:"namespace"`
 		QueryContext    string          `json:"queryContext"`
 		UseFts          bool            `json:"useFts"`
+		UseCBO          bool            `json:"useCBO"`
 	}
 
 	var op_type struct {
@@ -126,6 +131,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	this.namespace = _unmarshalled.Namespace
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
+	this.useCBO = _unmarshalled.UseCBO
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -197,6 +203,14 @@ func (this *Prepared) UseFts() bool {
 
 func (this *Prepared) SetUseFts(useFts bool) {
 	this.useFts = useFts
+}
+
+func (this *Prepared) UseCBO() bool {
+	return this.useCBO
+}
+
+func (this *Prepared) SetUseCBO(useCBO bool) {
+	this.useCBO = useCBO
 }
 
 func (this *Prepared) EncodedPlan() string {

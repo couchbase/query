@@ -188,6 +188,8 @@ func (this *preparedCache) GetName(text, namespace string, context *planner.Prep
 	realm = append(realm, '_')
 	realm = strconv.AppendBool(realm, context.UseFts())
 	realm = append(realm, '_')
+	realm = strconv.AppendBool(realm, context.UseCBO())
+	realm = append(realm, '_')
 	realm = append(realm, namespace...)
 	name, err := util.UUIDV5(string(realm), text)
 	if err != nil {
@@ -213,7 +215,7 @@ func (this *preparedCache) GetPlan(name, text, namespace string, context *planne
 	}
 	if prep.IndexApiVersion() != context.IndexApiVersion() || prep.FeatureControls() != context.FeatureControls() ||
 		prep.Namespace() != namespace || prep.QueryContext() != context.QueryContext() || prep.Text() != text ||
-		prep.UseFts() != context.UseFts() {
+		prep.UseFts() != context.UseFts() || prep.UseCBO() != context.UseCBO() {
 		return nil, nil
 	}
 	return prep, nil
@@ -310,6 +312,8 @@ func GetAutoPrepareName(text string, context *planner.PrepareContext) string {
 	realm = append(realm, '_')
 	realm = strconv.AppendBool(realm, context.UseFts())
 	realm = append(realm, '_')
+	realm = strconv.AppendBool(realm, context.UseCBO())
+	realm = append(realm, '_')
 	realm = append(realm, context.QueryContext()...)
 	name, err := util.UUIDV5(string(realm), text)
 
@@ -345,7 +349,7 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 		return nil
 	}
 	if prep.IndexApiVersion() != context.IndexApiVersion() || prep.FeatureControls() != context.FeatureControls() ||
-		prep.Namespace() != namespace || prep.UseFts() != context.UseFts() {
+		prep.Namespace() != namespace || prep.UseFts() != context.UseFts() || prep.UseCBO() != context.UseCBO() {
 		return nil
 	}
 	return prep
@@ -698,7 +702,8 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	// building prepared statements should not depend on args
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, prepared.QueryContext(), nil, nil,
-		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), optimizer)
+		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(),
+		prepared.UseCBO(), optimizer)
 
 	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
 		false, true, &prepContext)
@@ -717,6 +722,7 @@ func reprepare(prepared *plan.Prepared, phaseTime *time.Duration) (*plan.Prepare
 	pl.SetNamespace(prepared.Namespace())
 	pl.SetQueryContext(prepared.QueryContext())
 	pl.SetUseFts(prepared.UseFts())
+	pl.SetUseCBO(prepared.UseCBO())
 
 	json_bytes, err := pl.MarshalJSON()
 	if err != nil {

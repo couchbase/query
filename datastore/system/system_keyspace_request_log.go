@@ -132,6 +132,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.UseFts {
 					item.SetField("useFts", entry.UseFts)
 				}
+				if entry.UseCBO {
+					item.SetField("useCBO", entry.UseCBO)
+				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)
 					item.SetField("preparedText", entry.PreparedText)

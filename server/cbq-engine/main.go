@@ -272,8 +272,10 @@ func main() {
 	server.SetAutoPrepare(*AUTO_PREPARE)
 	if *ENTERPRISE {
 		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
+		util.SetUseCBO(util.DEF_USE_CBO)
 	} else {
 		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
+		util.SetUseCBO(util.CE_USE_CBO)
 	}
 	server.SetMemoryQuota(*MEMORY_QUOTA)
 
@@ -293,7 +295,8 @@ func main() {
 		logging.Pair{"request-size-cap", server.RequestSizeCap()},
 		logging.Pair{"max-index-api", server.MaxIndexAPI()},
 		logging.Pair{"max-parallelism", server.MaxParallelism()},
-		logging.Pair{"n1ql_feat_cntrl", util.GetN1qlFeatureControl()},
+		logging.Pair{"n1ql-feat-ctrl", util.GetN1qlFeatureControl()},
+		logging.Pair{"use-cbo", util.GetUseCBO()},
 		logging.Pair{"timeout", server.Timeout()},
 	)
 

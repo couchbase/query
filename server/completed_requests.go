@@ -50,6 +50,7 @@ type RequestLogEntry struct {
 	State           string
 	ScanConsistency string
 	UseFts          bool
+	UseCBO          bool
 	ResultCount     int
 	ResultSize      int
 	ErrorCount      int
@@ -531,6 +532,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		Time:            time.Now(),
 		ScanConsistency: string(request.ScanConsistency()),
 		UseFts:          request.UseFts(),
+		UseCBO:          request.UseCBO(),
 		Mutations:       request.MutationCount(),
 		QueryContext:    request.QueryContext(),
 	}

@@ -110,6 +110,8 @@ type Request interface {
 	QueryContext() string
 	UseFts() bool
 	SetUseFts(a bool)
+	UseCBO() bool
+	SetUseCBO(useCBO bool)
 	MemoryQuota() uint64
 	SetMemoryQuota(q uint64)
 	UsedMemory() uint64
@@ -270,6 +272,7 @@ type BaseRequest struct {
 	autoPrepare     value.Tristate
 	autoExecute     value.Tristate
 	useFts          bool
+	useCBO          bool
 	queryContext    string
 	memoryQuota     uint64
 }
@@ -321,6 +324,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.id.id, _ = util.UUIDV3()
 	rv.client_id.id = ""
 	rv.SetMaxParallelism(1)
+	rv.useCBO = util.GetUseCBO()
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -801,6 +805,17 @@ func (this *BaseRequest) SetQueryContext(s string) {
 
 func (this *BaseRequest) QueryContext() string {
 	return this.queryContext
+}
+
+func (this *BaseRequest) UseCBO() bool {
+	return this.useCBO && util.IsFeatureEnabled(this.featureControls, util.N1QL_CBO)
+}
+
+func (this *BaseRequest) SetUseCBO(useCBO bool) {
+	// use-cbo can only be set at request level if it is not turned off in n1ql-feat-ctrl
+	if util.IsFeatureEnabled(this.featureControls, util.N1QL_CBO) {
+		this.useCBO = useCBO
+	}
 }
 
 func (this *BaseRequest) Results() chan bool {
