@@ -45,7 +45,7 @@ func (this AnnotatedValues) Append(val AnnotatedValue, pool *AnnotatedPool) Anno
 	if len(this) == cap(this) {
 		avs := make(AnnotatedValues, len(this), len(this)<<1)
 		copy(avs, this)
-		pool.Put(this)
+		pool.Put(this[0:0])
 		this = avs
 	}
 
@@ -222,8 +222,12 @@ func (this *annotatedValue) InheritCovers(val Value) {
 }
 
 func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {
-	this.attachments = av.Attachments()
-	this.covers = av.Covers()
+	this.attachments = copyMap(av.Attachments(), self)
+	if av.Covers() != nil {
+		this.covers = av.Covers().Copy()
+	} else {
+		this.covers = nil
+	}
 }
 
 func (this *annotatedValue) Bit() uint8 {
