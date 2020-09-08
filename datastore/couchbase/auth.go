@@ -31,6 +31,7 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 	case auth.PRIV_READ:
 		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!read")
 	case auth.PRIV_SYSTEM_OPEN:
+		fallthrough
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
 	case auth.PRIV_SECURITY_READ:
