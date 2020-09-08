@@ -59,6 +59,24 @@ func (this systemRemoteStub) WhoAmI() string {
 	return ""
 }
 
+func (this systemRemoteStub) Starting() bool {
+
+	// always local
+	return false
+}
+
+func (this systemRemoteStub) StandAlone() bool {
+
+	// always local
+	return true
+}
+
+func (this systemRemoteStub) Clustered() bool {
+
+	// always local
+	return false
+}
+
 // get the node names
 func (this systemRemoteStub) GetNodeNames() []string {
 	var names []string

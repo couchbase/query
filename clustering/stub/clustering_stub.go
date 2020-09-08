@@ -62,7 +62,7 @@ func (ConfigurationStoreStub) URL() string {
 	return CONFIGURATION_STORE_STUB_URL
 }
 
-func (ConfigurationStoreStub) SetOptions(httpAddr, httpsAddr string) errors.Error {
+func (ConfigurationStoreStub) SetOptions(httpAddr, httpsAddr string, managed bool) errors.Error {
 	return nil
 }
 

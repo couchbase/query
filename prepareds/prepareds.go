@@ -81,8 +81,15 @@ func PreparedsInit(limit int) {
 
 // initialize the cache from a different node
 func PreparedsRemotePrime() {
+
+	// wait for the node to be part of a cluster
 	thisHost := distributed.RemoteAccess().WhoAmI()
-	if thisHost == "" {
+	for distributed.RemoteAccess().Starting() && thisHost == "" {
+		time.Sleep(time.Second)
+		thisHost = distributed.RemoteAccess().WhoAmI()
+	}
+
+	if distributed.RemoteAccess().StandAlone() {
 		return
 	}
 

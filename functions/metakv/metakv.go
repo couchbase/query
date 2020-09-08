@@ -30,15 +30,6 @@ const _CHANGE_COUNTER_PATH = "/query/functions_cache/"
 const _CHANGE_COUNTER = _CHANGE_COUNTER_PATH + "counter"
 
 var changeCounter int32
-var hostname string
-
-func whoAmI() string {
-	if hostname != "" {
-		return hostname
-	}
-	hostname = distributed.RemoteAccess().WhoAmI()
-	return hostname
-}
 
 func Init() {
 
@@ -63,7 +54,10 @@ func callback(path string, val []byte, rev interface{}) error {
 		return nil
 	}
 	node, _ := distributed.RemoteAccess().SplitKey(string(val))
-	if node != whoAmI() {
+
+	// unclustered nodes can't check against themselves as there may be many of
+	// them, and all present themselves with an empty name
+	if node == "" || node != distributed.RemoteAccess().WhoAmI() {
 		atomic.AddInt32(&changeCounter, 1)
 	}
 	return nil
@@ -92,7 +86,7 @@ func isNotFoundError(err error) bool {
 // we don't act on it, and append the change counter so that repeated store
 // changes by the same node get propagated, and not lumped as one
 func fmtChangeCounter() []byte {
-	return []byte(distributed.RemoteAccess().MakeKey(whoAmI(), strconv.Itoa(int(changeCounter))))
+	return []byte(distributed.RemoteAccess().MakeKey(distributed.RemoteAccess().WhoAmI(), strconv.Itoa(int(changeCounter))))
 }
 
 // datastore and function store actions

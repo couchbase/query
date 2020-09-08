@@ -567,6 +567,39 @@ func (this *systemRemoteHttp) WhoAmI() string {
 	return localNode
 }
 
+func (this *systemRemoteHttp) Starting() bool {
+	this.doState()
+	return this.state == clustering.STARTING
+}
+
+func (this *systemRemoteHttp) Clustered() bool {
+	this.doState()
+	return this.state == clustering.CLUSTERED
+}
+
+func (this *systemRemoteHttp) StandAlone() bool {
+	this.doState()
+	return this.state == clustering.STANDALONE
+}
+
+func (this *systemRemoteHttp) doState() {
+
+	// not part of a cluster if there isn't a configStore
+	if this.configStore == nil {
+		this.state = clustering.STANDALONE
+		return
+	}
+	if this.state == clustering.STANDALONE {
+		return
+	}
+	state, err := this.configStore.State()
+	if err != nil {
+		this.state = clustering.STANDALONE
+		return
+	}
+	this.state = state
+}
+
 func (this *systemRemoteHttp) GetNodeNames() []string {
 	var names []string
 

@@ -49,6 +49,7 @@ type cbConfigStore struct {
 	sync.RWMutex
 	adminUrl     string
 	ourPorts     map[string]int
+	maybeManaged bool
 	noMoreChecks bool
 	poolName     string
 	poolSrvRev   int
@@ -99,7 +100,7 @@ func (this *cbConfigStore) URL() string {
 	return this.adminUrl
 }
 
-func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
+func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string, maybeManaged bool) errors.Error {
 	if httpAddr != "" {
 		_, port := server.HostNameandPort(httpAddr)
 		if port != "" {
@@ -126,6 +127,7 @@ func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string) errors.Error {
 			return errors.NewAdminBadServicePort("<no port>")
 		}
 	}
+	this.maybeManaged = maybeManaged
 	return nil
 }
 
@@ -473,25 +475,37 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 			}
 		}
 
-		// we found no n1ql service port - is n1ql provisioned in this node?
-		if found == 0 {
+		// We don't assume that there is precisely one query node per host.
+		// Query nodes are unique per mgmt endpoint, so we add the mgmt
+		// port to the whoami string to uniquely identify the query node.
+		whoAmI := hostname + ":" + strconv.Itoa(mgmtPort)
+		if found != 0 {
+			return whoAmI, clustering.CLUSTERED, nil
+		} else {
+
+			// we found no n1ql service port - is n1ql provisioned in this node?
 			for _, node := range pool.Nodes {
+				if !node.ThisNode {
+					continue
+				}
 				for _, s := range node.Services {
 
 					// yes, but clearly, not yet advertised
 					// place ourselves in a holding pattern
 					if s == n1qlService {
-						return "", clustering.STARTING, nil
+
+						// if we had been signalled that the couchbase orchestrator may
+						// have started us, the fact that we find a n1ql service on our
+						// node means that's us, but we haven't yet been reballanced in
+						if this.maybeManaged {
+							return whoAmI, clustering.STARTING, nil
+						} else {
+							return "", clustering.STARTING, nil
+						}
 					}
 				}
 			}
 		}
-
-		// We don't assume that there is precisely one query node per host.
-		// Query nodes are unique per mgmt endpoint, so we add the mgmt
-		// port to the whoami string to uniquely identify the query node.
-		whoAmI := hostname + ":" + strconv.Itoa(mgmtPort)
-		return whoAmI, clustering.CLUSTERED, nil
 	}
 	return "", "", nil
 }

@@ -44,6 +44,15 @@ type SystemRemoteAccess interface {
 	// local node name, if known
 	WhoAmI() string
 
+	// node is not yet part of a cluster
+	Starting() bool
+
+	// node is part of a cluster
+	Clustered() bool
+
+	// node is not part of a clustered
+	StandAlone() bool
+
 	// all the node names
 	GetNodeNames() []string
 

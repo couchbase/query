@@ -42,6 +42,8 @@ import (
 )
 
 const (
+	_DEF_HTTP                   = ":8093"
+	_DEF_HTTPS                  = ":18093"
 	_DEF_REQUEST_CAP            = 256
 	_DEF_SCAN_CAP               = 512
 	_DEF_PIPELINE_CAP           = 512
@@ -72,8 +74,8 @@ var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servi
 var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to use maximum")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
-var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
-var HTTPS_ADDR = flag.String("https", ":18093", "HTTPS service address")
+var HTTP_ADDR = flag.String("http", _DEF_HTTP, "HTTP service address")
+var HTTPS_ADDR = flag.String("https", _DEF_HTTPS, "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var IPv6 = flag.Bool("ipv6", false, "Query is IPv6 compliant")
@@ -180,7 +182,7 @@ func main() {
 		)
 	}
 
-	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR)
+	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
 	// ditto for distributed access for monitoring
 	// also distributed is used by many init() functions and should be done as early as possible
