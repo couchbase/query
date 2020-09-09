@@ -210,7 +210,7 @@ func (this *httpRequest) writeSignature(server_flag bool, signature value.Value,
 	if s == value.FALSE || (s == value.NONE && !server_flag) {
 		return true
 	}
-	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"signature\": ") && this.writeValue(signature, prefix, indent)
+	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"signature\": ") && this.writeValue(signature, prefix, indent, true)
 }
 
 func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, string) {
@@ -276,12 +276,12 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	return success
 }
 
-func (this *httpRequest) writeValue(item value.Value, prefix, indent string) bool {
+func (this *httpRequest) writeValue(item value.Value, prefix, indent string, fast bool) bool {
 	if item == nil {
 		return this.writeString("null")
 	}
 	beforeWriteJSON := this.writer.mark()
-	err := item.WriteJSON(this.writer.buf(), prefix, indent, false)
+	err := item.WriteJSON(this.writer.buf(), prefix, indent, fast)
 	if err != nil {
 		this.writer.truncate(beforeWriteJSON)
 		return this.writer.printf("\"ERROR: %v\"", err)

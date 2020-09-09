@@ -130,9 +130,9 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 		}
 	} else if l > 0 {
 
-		var nameBuf [_NAME_CAP]string
 		var names []string
-		if l <= len(nameBuf) {
+		if l <= _NAME_CAP {
+			var nameBuf [_NAME_CAP]string
 			names = nameBuf[0:len(this)]
 		} else {
 			names = _NAME_POOL.GetCapped(len(this))

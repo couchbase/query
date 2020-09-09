@@ -10,6 +10,7 @@
 package value
 
 import (
+	"bytes"
 	"fmt"
 	json "github.com/couchbase/go_json"
 	"io"
@@ -53,12 +54,7 @@ func (this stringValue) MarshalJSON() ([]byte, error) {
 }
 
 func (this stringValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
-	b, err := json.MarshalNoEscape(string(this))
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(b)
-	return err
+	return json.MarshalNoEscapeToBuffer(string(this), w.(*bytes.Buffer))
 }
 
 /*
