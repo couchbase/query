@@ -57,31 +57,35 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		return false
 	}
 
-	actuals := ev.Actual()
-	switch actuals.(type) {
-	case []interface{}:
-		// do nothing
-	default:
-		actuals = _EMPTY_ACTUALS
+	// not an array, treat as outer unnest
+	if ev.Type() != value.ARRAY {
+		return !this.plan.Term().Outer() || this.sendItem(item)
 	}
 
-	acts := actuals.([]interface{})
-	if len(acts) == 0 {
-		// Outer unnest
+	idx := 0
+
+	// empty, treat as outer unnest
+	act, ok := ev.Index(idx)
+	if act.Type() == value.MISSING && !ok {
 		return !this.plan.Term().Outer() || this.sendItem(item)
 	}
 
 	// Attach and send
-	for i, act := range acts {
+	for {
 		var av value.AnnotatedValue
-		if i < len(acts)-1 {
-			av = value.NewAnnotatedValue(item.Copy())
-		} else {
-			av = item
-		}
 
 		actv := value.NewAnnotatedValue(act)
-		actv.SetAttachment("unnest_position", i)
+		actv.SetAttachment("unnest_position", idx)
+
+		idx++
+		newAct, ok := ev.Index(idx)
+
+		isEnd := newAct.Type() == value.MISSING && !ok
+		if isEnd {
+			av = item
+		} else {
+			av = value.NewAnnotatedValue(item.Copy())
+		}
 		av.SetField(this.plan.Alias(), actv)
 
 		if this.plan.Filter() != nil {
@@ -90,14 +94,22 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
 			}
-			if !result.Truth() {
-				continue
+			if result.Truth() {
+				if !this.sendItem(av) {
+					return false
+				}
+			} else {
+				av.Recycle()
 			}
-		}
-
-		if !this.sendItem(av) {
+		} else if !this.sendItem(av) {
 			return false
 		}
+
+		// no more
+		if isEnd {
+			break
+		}
+		act = newAct
 	}
 
 	return true
