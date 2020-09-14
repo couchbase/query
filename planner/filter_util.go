@@ -67,7 +67,7 @@ func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause, onclauseOn
 	}
 
 	if predHasOr {
-		dnf := NewDNF(dnfPred.Copy(), true, true)
+		dnf := base.NewDNF(dnfPred.Copy(), true, true)
 		dnfPred, err = dnf.Map(dnfPred)
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause, onclauseOn
 	}
 
 	if onHasOr {
-		dnf := NewDNF(onclause.Copy(), true, true)
+		dnf := base.NewDNF(onclause.Copy(), true, true)
 		onclause, err = dnf.Map(onclause)
 		if err != nil {
 			return err

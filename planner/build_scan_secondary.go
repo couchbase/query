@@ -301,7 +301,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 					return
 				}
 
-				dnf := NewDNF(key, true, true)
+				dnf := base.NewDNF(key, true, true)
 				key, err = dnf.Map(key)
 				if err != nil {
 					return
@@ -333,7 +333,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 			origCond = cond.Copy()
 
-			dnf := NewDNF(cond, true, true)
+			dnf := base.NewDNF(cond, true, true)
 			cond, err = dnf.Map(cond)
 			if err != nil {
 				return

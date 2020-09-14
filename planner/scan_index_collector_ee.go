@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 type scanIdxCol struct {
@@ -522,7 +523,7 @@ func formalizeExpr(formalizer *expression.Formalizer, key expression.Expression)
 		return nil, err
 	}
 
-	dnf := NewDNF(key, true, true)
+	dnf := base.NewDNF(key, true, true)
 	key, err = dnf.Map(key)
 	if err != nil {
 		return nil, err

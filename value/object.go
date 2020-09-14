@@ -23,6 +23,8 @@ objectValue is a type of map from string to interface.
 */
 type objectValue map[string]interface{}
 
+var EMPTY_OBJECT_VALUE = objectValue(map[string]interface{}{})
+
 func (this objectValue) String() string {
 	return marshalString(this)
 }

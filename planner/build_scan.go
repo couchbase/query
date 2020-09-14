@@ -418,7 +418,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 
 		dynamicPred := baseKeyspace.OrigPred().Copy()
-		dnf := NewDNF(dynamicPred, false, true)
+		dnf := base.NewDNF(dynamicPred, false, true)
 		dynamicPred, err = dnf.Map(dynamicPred)
 		if err != nil {
 			return nil, 0, err

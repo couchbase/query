@@ -115,7 +115,7 @@ func (this *dynamic) VisitExists(expr *expression.Exists) (interface{}, error) {
 		),
 		expression.NewLT(
 			this.NewVariable(),
-			_EMPTY_OBJECT_EXPR,
+			expression.EMPTY_OBJECT_EXPR,
 		),
 	)
 	any := expression.NewAny(this.NewBindings(), sat)

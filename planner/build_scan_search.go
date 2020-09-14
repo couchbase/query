@@ -334,7 +334,7 @@ func (this *builder) sargableSearchCondition(index datastore.Index, subset expre
 	}
 
 	origCond = cond.Copy()
-	dnf := NewDNF(cond, true, true)
+	dnf := base.NewDNF(cond, true, true)
 	cond, err = dnf.Map(cond)
 	if err != nil {
 		return false, nil, nil, err

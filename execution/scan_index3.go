@@ -239,7 +239,7 @@ func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, co
 					arr = set.Actuals()
 					sort.Sort(value.NewSorter(value.NewValue(arr)))
 					newlength := numspans + (maxPos-minPos+1)*(len(arr)-1)
-					if newlength <= _FULL_SPAN_FANOUT {
+					if newlength <= plan.FULL_SPAN_FANOUT {
 						ospans := spans
 						spans = make(plan.Spans2, 0, newlength)
 						add := 0
@@ -339,5 +339,3 @@ func (this *IndexScan3) Done() {
 	this.baseDone()
 	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }
-
-const _FULL_SPAN_FANOUT = 8192

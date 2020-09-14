@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -90,7 +91,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			return nil, nil, nil, err
 		}
 
-		dnf := NewDNF(key, true, true)
+		dnf := base.NewDNF(key, true, true)
 		key, err = dnf.Map(key)
 		if err != nil {
 			return nil, nil, nil, err
@@ -108,7 +109,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	var pred expression.Expression
 	pred = expression.NewIsNotNull(node.JoinKeys().Copy())
-	dnf := NewDNF(pred, true, true)
+	dnf := base.NewDNF(pred, true, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {
 		return nil, nil, nil, err
@@ -123,7 +124,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 		if kspace.DnfPred() != nil {
 			subset = expression.NewAnd(subset, kspace.DnfPred().Copy())
-			dnf = NewDNF(subset, true, true)
+			dnf = base.NewDNF(subset, true, true)
 			subset, err = dnf.Map(subset)
 			if err != nil {
 				return nil, nil, nil, err

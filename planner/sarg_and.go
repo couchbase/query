@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
@@ -118,7 +119,7 @@ func addArrayKeys(keySpans []SargSpans) SargSpans {
 		}
 
 		size *= cspans.Size()
-		if size > _FULL_SPAN_FANOUT {
+		if size > plan.FULL_SPAN_FANOUT {
 			fullSpan = true
 			continue
 		}

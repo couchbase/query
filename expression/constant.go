@@ -29,6 +29,7 @@ var ZERO_EXPR = NewConstant(value.ZERO_VALUE)
 var ONE_EXPR = NewConstant(value.ONE_VALUE)
 var EMPTY_STRING_EXPR = NewConstant(value.EMPTY_STRING_VALUE)
 var EMPTY_ARRAY_EXPR = NewConstant(value.EMPTY_ARRAY_VALUE)
+var EMPTY_OBJECT_EXPR = NewConstant(value.EMPTY_OBJECT_VALUE)
 
 func NewConstant(val interface{}) Expression {
 	rv := &Constant{

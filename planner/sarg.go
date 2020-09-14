@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
@@ -151,7 +152,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 		}
 
 		if sz == 0 ||
-			(sz > 1 && size > 1 && sz*size > _FULL_SPAN_FANOUT) {
+			(sz > 1 && size > 1 && sz*size > plan.FULL_SPAN_FANOUT) {
 			exactSpan = false
 			break
 		}
@@ -243,5 +244,3 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 
 	return sargSpans, exactSpan, nil
 }
-
-const _FULL_SPAN_FANOUT = 8192

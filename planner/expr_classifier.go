@@ -378,7 +378,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 
 	// perform expression transformation, but no DNF transformation
 	dnfExpr := expr.Copy()
-	dnf := NewDNF(dnfExpr, true, false)
+	dnf := base.NewDNF(dnfExpr, true, false)
 	dnfExpr, err = dnf.Map(dnfExpr)
 	if err != nil {
 		return nil, err

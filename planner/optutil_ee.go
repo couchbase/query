@@ -237,31 +237,12 @@ func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (float64, float64) {
 
-	// perform expression transformation, but no DNF transformation
-	var err error
-	dnfExpr := expr.Copy()
-	dnf := NewDNF(dnfExpr, true, false)
-	dnfExpr, err = dnf.Map(dnfExpr)
-	if err != nil {
-		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
-	}
-
-	return optutil.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, keyspaceNames, advisorValidate)
+	return optutil.CalcFilterCost(lastOp, expr, baseKeyspaces, keyspaceNames, advisorValidate)
 }
 
 func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
 	keyspaceNames map[string]string, cost, cardinality float64, advisorValidate bool) (float64, float64) {
-
-	// perform expression transformation, but no DNF transformation
-	var err error
-	dnfExpr := expr.Copy()
-	dnf := NewDNF(dnfExpr, true, false)
-	dnfExpr, err = dnf.Map(dnfExpr)
-	if err != nil {
-		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
-	}
-
-	return optutil.CalcFilterCostWithInput(dnfExpr, baseKeyspaces, keyspaceNames, cost, cardinality, advisorValidate)
+	return optutil.CalcFilterCostWithInput(expr, baseKeyspaces, keyspaceNames, cost, cardinality, advisorValidate)
 }
 
 func getLetCost(lastOp plan.Operator) (float64, float64) {

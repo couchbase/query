@@ -36,7 +36,7 @@ func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datas
 
 	var err error
 	pred = pred.Copy()
-	dnf := NewDNF(pred, false, true)
+	dnf := base.NewDNF(pred, false, true)
 	pred, err = dnf.Map(pred)
 	if err != nil {
 		return err
@@ -244,7 +244,7 @@ outer:
 				continue
 			}
 
-			dnf := NewDNF(cond, true, true)
+			dnf := base.NewDNF(cond, true, true)
 			cond, err = dnf.Map(cond)
 			if err != nil {
 				return

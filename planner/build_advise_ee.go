@@ -540,7 +540,7 @@ func getExistAndDeferredIndexes(keyspace datastore.Keyspace, alias string, index
 func doDNF(stmtExprs expression.Expressions) expression.Expressions {
 	exprs := make(expression.Expressions, 0, len(stmtExprs))
 	for _, e := range stmtExprs {
-		dnf := NewDNF(e, true, true)
+		dnf := base.NewDNF(e, true, true)
 		e, err := dnf.Map(e)
 		if err != nil {
 			return nil

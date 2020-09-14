@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
@@ -160,7 +161,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		expr = expression.NewIsArray(bexpr)
 		fc = expr.FilterCovers(fc)
 
-		dnf := NewDNF(expr, true, true)
+		dnf := base.NewDNF(expr, true, true)
 		expr, err = dnf.Map(expr)
 		if err != nil {
 			return nil, nil, err
