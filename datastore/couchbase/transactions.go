@@ -107,6 +107,7 @@ const (
 	_TM_DEF_LOGSIZE    = 256 //fixed log size
 	_TM_DEF_SAVEPOINTS = 4
 	_TM_DEF_KEYSPACES  = 4
+	_WRITE_BATCH_SIZE  = 16
 )
 
 /* New Mutations structure. One per transaction
@@ -683,8 +684,8 @@ func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gct
 		return
 	}
 
-	if bSize > _DK_DEF_SIZE {
-		bSize = _DK_DEF_SIZE
+	if bSize > _WRITE_BATCH_SIZE {
+		bSize = _WRITE_BATCH_SIZE
 	}
 
 	wops := make(gcagent.WriteOps, 0, bSize)
