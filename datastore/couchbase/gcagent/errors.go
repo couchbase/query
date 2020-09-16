@@ -14,6 +14,9 @@ import (
 )
 
 var (
+	// indicates transactions are not supported in ce
+	ErrCENotSupported = errors.New("transactions are not supported in community edition")
+
 	// indicates init transactions is not called
 	ErrNoInitTransactions = errors.New("init transactions is not called")
 

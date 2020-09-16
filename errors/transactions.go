@@ -31,6 +31,12 @@ func NewMemoryAllocationError(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewTranCENotsupported() Error {
+	return &err{level: EXCEPTION, ICode: 17097, IKey: "transaction.ce.not_supported",
+		InternalMsg:    fmt.Sprintf("Transactions are not supported in Community Edition"),
+		InternalCaller: CallerN(1)}
+}
+
 func NewTranDatastoreNotSupportedError(msg string) Error {
 	return &err{level: EXCEPTION, ICode: 17001, IKey: "transaction.datastore.not_supported",
 		InternalMsg:    fmt.Sprintf("Transactions are not supported on %s store", msg),

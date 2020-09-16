@@ -11,24 +11,40 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 )
 
 func (this *SemChecker) VisitStartTransaction(stmt *algebra.StartTransaction) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("Transactions", "semantics.visit_transactions")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitCommitTransaction(stmt *algebra.CommitTransaction) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("Transactions", "semantics.visit_transactions")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("Transactions", "semantics.visit_transactions")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("Transactions", "semantics.visit_transactions")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitSavepoint(stmt *algebra.Savepoint) (interface{}, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("Transactions", "semantics.visit_transactions")
+	}
 	return nil, stmt.MapExpressions(this)
 }
