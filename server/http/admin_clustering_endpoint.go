@@ -461,7 +461,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.PRETTY] = srvr.Pretty()
 	settings[server.MAXINDEXAPI] = srvr.MaxIndexAPI()
 	settings[server.N1QLFEATCTRL] = util.GetN1qlFeatureControl()
-	settings[server.TXTIMEOUT] = srvr.TxTimeout()
+	settings[server.TXTIMEOUT] = srvr.TxTimeout().String()
 	settings = server.GetProfileAdmin(settings, srvr)
 	settings = server.GetControlsAdmin(settings, srvr)
 	settings[server.AUTOPREPARE] = srvr.AutoPrepare()
