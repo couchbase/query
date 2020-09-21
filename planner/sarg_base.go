@@ -54,9 +54,8 @@ func (this *sarg) getSelec(pred expression.Expression) float64 {
 	}
 
 	var array bool
-	if _, ok := pred.(*expression.Any); ok {
-		array = true
-	} else if _, ok := pred.(*expression.AnyEvery); ok {
+	switch pred.(type) {
+	case *expression.Any, *expression.AnyEvery, *expression.Every:
 		array = true
 	}
 

@@ -26,6 +26,7 @@ const (
 	FLTR_IN_INDEX_SPAN             // used in index span
 	FLTR_IN_HASH_JOIN              // used as join filter for hash join
 	FLTR_HAS_SUBQ                  // has subquery
+	FLTR_HAS_ADJ_SELEC             // has adjusted selectivity
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -38,6 +39,7 @@ type Filter struct {
 	fltrFlags     uint32                // filter flags
 	selec         float64               // filter selectivity
 	arrSelec      float64               // filter selectivity for array index
+	adjSelec      float64               // selectivity adjustment
 }
 
 type Filters []*Filter
@@ -155,6 +157,14 @@ func (this *Filter) HasSubq() bool {
 	return (this.fltrFlags & FLTR_HAS_SUBQ) != 0
 }
 
+func (this *Filter) SetAdjustedSelec() {
+	this.fltrFlags |= FLTR_HAS_ADJ_SELEC
+}
+
+func (this *Filter) HasAdjustedSelec() bool {
+	return (this.fltrFlags & FLTR_HAS_ADJ_SELEC) != 0
+}
+
 func (this *Filter) FltrExpr() expression.Expression {
 	return this.fltrExpr
 }
@@ -185,6 +195,14 @@ func (this *Filter) ArraySelec() float64 {
 
 func (this *Filter) SetArraySelec(arrSelec float64) {
 	this.arrSelec = arrSelec
+}
+
+func (this *Filter) AdjSelec() float64 {
+	return this.adjSelec
+}
+
+func (this *Filter) SetAdjSelec(adjSelec float64) {
+	this.adjSelec = adjSelec
 }
 
 func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool) bool {

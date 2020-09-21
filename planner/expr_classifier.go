@@ -456,6 +456,22 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 				selec, arrSelec := optExprSelec(origKeyspaces, dnfExpr, this.advisorValidate)
 				filter.SetSelec(selec)
 				filter.SetArraySelec(arrSelec)
+				setAdjSel := true
+				if anyEvery, ok := filter.FltrExpr().(*expression.AnyEvery); ok && selec > 0.0 {
+					// for ANY and EVERY predicate, also calculate selectivity
+					// for just ANY (used in index scan)
+					any := expression.NewAny(anyEvery.Bindings(), anyEvery.Satisfies())
+					selec1, arrSelec1 := optExprSelec(origKeyspaces, any, this.advisorValidate)
+					if selec1 > 0.0 && arrSelec1 > 0.0 {
+						filter.SetArraySelec(arrSelec1)
+						filter.SetAdjSelec(selec / selec1)
+						filter.SetAdjustedSelec()
+						setAdjSel = false
+					}
+				}
+				if setAdjSel {
+					filter.SetAdjSelec(OPT_SELEC_NOT_AVAIL)
+				}
 				filter.SetSelecDone()
 			}
 			if len(subqueries) > 0 {
