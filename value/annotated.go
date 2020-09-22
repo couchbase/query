@@ -127,7 +127,7 @@ func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string, fast b
 func (this *annotatedValue) Copy() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.Copy()
-	rv.attachments = copyMap(this.attachments, self)
+	copyAttachments(this.attachments, rv)
 	rv.bit = this.bit
 	if this.covers != nil {
 		rv.covers = this.covers.Copy()
@@ -139,7 +139,7 @@ func (this *annotatedValue) Copy() Value {
 func (this *annotatedValue) CopyForUpdate() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.CopyForUpdate()
-	rv.attachments = copyMap(this.attachments, self)
+	copyAttachments(this.attachments, rv)
 	rv.covers = this.covers
 	rv.bit = this.bit
 	return rv
@@ -222,11 +222,24 @@ func (this *annotatedValue) InheritCovers(val Value) {
 }
 
 func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {
-	this.attachments = copyMap(av.Attachments(), self)
+
+	// get rid of previous attachments
+	for k := range this.attachments {
+		delete(this.attachments, k)
+	}
+	copyAttachments(av.Attachments(), this)
 	if av.Covers() != nil {
 		this.covers = av.Covers().Copy()
 	} else {
 		this.covers = nil
+	}
+}
+func copyAttachments(source map[string]interface{}, dest *annotatedValue) {
+	if dest.attachments == nil {
+		dest.attachments = make(map[string]interface{}, len(source))
+	}
+	for k := range source {
+		dest.attachments[k] = source[k]
 	}
 }
 
@@ -320,6 +333,9 @@ func (this *annotatedValue) Recycle() {
 		this.original.Recycle()
 		this.original = nil
 	}
+
+	// pool the map if it exists
+	// this is optimized as a map clear by golang
 	for k := range this.attachments {
 		delete(this.attachments, k)
 	}
