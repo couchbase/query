@@ -451,9 +451,9 @@ func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 		for j, r := range u.Roles {
 			roles[j].Name = r.Role
 			if r.CollectionName != "" && r.CollectionName != "*" {
-				roles[j].Target = r.BucketName + "." + r.ScopeName + "." + r.CollectionName
+				roles[j].Target = r.BucketName + ":" + r.ScopeName + ":" + r.CollectionName
 			} else if r.ScopeName != "" && r.ScopeName != "*" {
-				roles[j].Target = r.BucketName + "." + r.ScopeName
+				roles[j].Target = r.BucketName + ":" + r.ScopeName
 			} else if r.BucketName != "" {
 				roles[j].Target = r.BucketName
 			}
@@ -472,13 +472,7 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	for i, r := range u.Roles {
 		outputUser.Roles[i].Role = r.Name
 		if len(r.Target) > 0 {
-			bytes := []byte(r.Target)
-			for i := 0; i < len(bytes); i++ {
-				if bytes[i] == '.' {
-					bytes[i] = ':'
-				}
-			}
-			outputUser.Roles[i].BucketName = string(bytes)
+			outputUser.Roles[i].BucketName = r.Target
 		}
 	}
 	err := s.client.PutUserInfo(&outputUser)

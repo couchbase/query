@@ -330,7 +330,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 			id:        s.Name,
 			bucket:    bucket,
 			keyspaces: make(map[string]*collection, len(s.Collections)),
-			authKey:   bucket.name + "." + s.Name,
+			authKey:   bucket.name + ":" + s.Name,
 		}
 		for _, c := range s.Collections {
 			coll := &collection{
@@ -364,7 +364,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 					isBucket:  true,
 				}
 			} else {
-				coll.authKey = bucket.name + "." + scope.id + "." + coll.name
+				coll.authKey = bucket.name + ":" + scope.id + ":" + coll.name
 			}
 		}
 		scopes[s.Name] = scope
@@ -389,7 +389,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			id:        s.Name,
 			bucket:    bucket,
 			keyspaces: make(map[string]*collection, len(s.Collections)),
-			authKey:   bucket.name + "." + s.Name,
+			authKey:   bucket.name + ":" + s.Name,
 		}
 
 		oldScope := oldScopes[s.Name]
@@ -453,7 +453,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					}
 				}
 			} else {
-				coll.authKey = bucket.name + "." + scope.id + "." + coll.name
+				coll.authKey = bucket.name + ":" + scope.id + ":" + coll.name
 			}
 		}
 		scopes[s.Name] = scope
