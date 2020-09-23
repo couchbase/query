@@ -112,7 +112,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 
 		// Await child scan
 		if n > 0 {
-			notifyChildren(this.scan)
+			sendChildren(this.plan, this.scan)
 			this.childrenWaitNoStop(n)
 		}
 	})
