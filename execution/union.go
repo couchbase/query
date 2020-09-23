@@ -128,12 +128,13 @@ func (this *UnionAll) reopen(context *Context) bool {
 
 func (this *UnionAll) Done() {
 	this.baseDone()
-	for c, child := range this.children {
-		this.children[c] = nil
+	children := this.children
+	this.children = nil
+	for c, child := range children {
+		children[c] = nil
 		child.Done()
 	}
-	_UNION_POOL.Put(this.children)
-	this.children = nil
+	_UNION_POOL.Put(children)
 }
 
 var _UNION_POOL = NewOperatorPool(4)

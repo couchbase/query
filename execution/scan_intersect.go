@@ -250,12 +250,13 @@ func (this *IntersectScan) reopen(context *Context) bool {
 
 func (this *IntersectScan) Done() {
 	this.baseDone()
-	for s, scan := range this.scans {
-		this.scans[s] = nil
+	scans := this.scans
+	this.scans = nil
+	for s, scan := range scans {
+		scans[s] = nil
 		scan.Done()
 	}
-	_INDEX_SCAN_POOL.Put(this.scans)
-	this.scans = nil
+	_INDEX_SCAN_POOL.Put(scans)
 	channel := this.channel
 	this.channel = nil
 	if channel != nil {

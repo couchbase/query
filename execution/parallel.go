@@ -167,13 +167,14 @@ func (this *Parallel) reopen(context *Context) bool {
 
 func (this *Parallel) Done() {
 	this.baseDone()
-	for c, child := range this.children {
-		this.children[c] = nil
-		child.Done()
-	}
-	_PARALLEL_POOL.Put(this.children)
+	children := this.children
 	this.children = nil
 	this.child = nil
+	for c, child := range children {
+		children[c] = nil
+		child.Done()
+	}
+	_PARALLEL_POOL.Put(children)
 	if this.isComplete() {
 		_PARALLEL_OP_POOL.Put(this)
 	}

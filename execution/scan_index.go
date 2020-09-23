@@ -132,12 +132,13 @@ func (this *IndexScan) reopen(context *Context) bool {
 
 func (this *IndexScan) Done() {
 	this.baseDone()
-	for c, _ := range this.children {
-		// we happen to know that there's nothing to be done for the chilren spans
-		this.children[c] = nil
-	}
-	_INDEX_SCAN_POOL.Put(this.children)
+	children := this.children
 	this.children = nil
+	for c, _ := range children {
+		// we happen to know that there's nothing to be done for the chilren spans
+		children[c] = nil
+	}
+	_INDEX_SCAN_POOL.Put(children)
 	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }
 

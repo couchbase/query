@@ -162,12 +162,13 @@ func (this *Sequence) reopen(context *Context) bool {
 
 func (this *Sequence) Done() {
 	this.baseDone()
-	for c, child := range this.children {
-		this.children[c] = nil
+	children := this.children
+	this.children = nil
+	for c, child := range children {
+		children[c] = nil
 		child.Done()
 	}
-	_SEQUENCE_POOL.Put(this.children)
-	this.children = nil
+	_SEQUENCE_POOL.Put(children)
 	if this.isComplete() {
 		_SEQUENCE_OP_POOL.Put(this)
 	}
