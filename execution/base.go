@@ -912,7 +912,18 @@ func (this *base) notifyParent() {
 func (this *base) notifyStop() {
 	stop := this.stop
 	if stop != nil {
-		stop.SendAction(_ACTION_STOP)
+		var action opAction
+		this.activeCond.L.Lock()
+
+		// if we stopped normally, flag that a reopen is possible
+		// if not, just stop for good
+		if this.opState == _RUNNING || this.opState == _COMPLETED {
+			action = _ACTION_PAUSE
+		} else {
+			action = _ACTION_STOP
+		}
+		this.activeCond.L.Unlock()
+		stop.SendAction(action)
 		this.stop = nil
 	}
 }
