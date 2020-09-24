@@ -177,6 +177,7 @@ type Context struct {
 	txTimeout           time.Duration
 	txImplicit          bool
 	txData              []byte
+	txDataVal           value.Value
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -250,6 +251,8 @@ func (this *Context) Copy() *Context {
 		txTimeout:           this.txTimeout,
 		txImplicit:          this.txImplicit,
 		txContext:           this.txContext,
+		txData:              this.txData,
+		txDataVal:           this.txDataVal,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -349,6 +352,10 @@ func (this *Context) GetTxContext() interface{} {
 
 func (this *Context) TxContext() *transactions.TranContext {
 	return this.txContext
+}
+
+func (this *Context) TxDataVal() value.Value {
+	return this.txDataVal
 }
 
 func (this *Context) SetTxContext(tc interface{}) {
@@ -609,6 +616,11 @@ func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTx
 	txData []byte) (err errors.Error) {
 
 	if this.txContext != nil || txImplicit || stmtType == "START_TRANSACTION" {
+		this.txData = txData
+		if len(txData) > 0 && stmtType != "START_TRANSACTION" {
+			this.txDataVal = value.NewValue(txData)
+		}
+
 		if this.txContext == nil {
 			// start transaction or implicit transaction
 			if sTxTimeout > 0 && sTxTimeout < rTxTimeout {
@@ -616,9 +628,7 @@ func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTx
 			}
 			this.txTimeout = rTxTimeout
 
-			if stmtType == "START_TRANSACTION" {
-				this.txData = txData
-			} else {
+			if stmtType != "START_TRANSACTION" {
 				// start implicit transaction
 				this.txImplicit = txImplicit
 				txId, _, err := this.ExecuteTranStatement("START", !txImplicit)

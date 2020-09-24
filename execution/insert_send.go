@@ -189,8 +189,8 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			continue
 		}
 
-		dpair.Value = val
 		dpair.Options = adjustExpiration(options)
+		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), getExpiration(dpair.Options), context)
 		i++
 	}
 
@@ -213,7 +213,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Capture the inserted keys in case there is a RETURNING clause
 	for _, dp := range dpairs {
-		dv := this.setDocumentKey(dp.Name, value.NewAnnotatedValue(dp.Value), getExpiration(dp.Options), context)
+		dv := value.NewAnnotatedValue(dp.Value)
 		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.SetAnnotations(dv)
 		av.SetField(this.plan.Alias(), dv)

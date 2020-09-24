@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 var NULL_CONTEXT Context = &contextImpl{}
@@ -62,6 +63,7 @@ type QueryContext interface {
 	GetTxContext() interface{}
 	SetTxContext(tc interface{})
 	Datastore() Datastore
+	TxDataVal() value.Value
 }
 
 type queryContextImpl struct {
@@ -91,4 +93,8 @@ func (ci *queryContextImpl) Datastore() Datastore {
 }
 
 func (ci *queryContextImpl) SetTxContext(tc interface{}) {
+}
+
+func (ci *queryContextImpl) TxDataVal() value.Value {
+	return nil
 }

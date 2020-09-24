@@ -45,7 +45,7 @@ func (ks *keyspace) txReady(txContext *transactions.TranContext) errors.Error {
 }
 
 func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName string, collId uint32, keys []string,
-	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string,
+	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string, sdkKvInsert bool,
 	txContext *transactions.TranContext) errors.Errors {
 	return errors.Errors{errors.NewTranCENotsupported()}
 }

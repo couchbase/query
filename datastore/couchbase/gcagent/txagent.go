@@ -83,7 +83,7 @@ func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName 
 // bulk transactional get
 
 func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketName, scopeName, collectionName string,
-	collectionID uint32, keys, paths []string, reqDeadline time.Time, replica bool,
+	collectionID uint32, keys, paths []string, reqDeadline time.Time, replica, notFoundErr bool,
 	fetchMap map[string]value.AnnotatedValue) (errs []error) {
 
 	if len(paths) > 0 && paths[0] != "$document.exptime" {
@@ -129,7 +129,7 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 	for _, item := range items {
 		if item.Err == nil && item.Val != nil {
 			fetchMap[item.Key] = item.Val
-		} else if !errors.Is(item.Err, gocbcore.ErrDocumentNotFound) {
+		} else if notFoundErr || !errors.Is(item.Err, gocbcore.ErrDocumentNotFound) {
 			// handle key not found error
 			errs = append(errs, item.Err)
 		}

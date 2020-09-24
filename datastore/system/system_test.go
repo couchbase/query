@@ -47,6 +47,10 @@ func (ci *queryContextImpl) Datastore() datastore.Datastore {
 func (ci *queryContextImpl) SetTxContext(tc interface{}) {
 }
 
+func (ci *queryContextImpl) TxDataVal() value.Value {
+	return nil
+}
+
 func (ci *queryContextImpl) AuthenticatedUsers() []string {
 	return []string{"local:ivanivanov", "local:petrpetrov"}
 }

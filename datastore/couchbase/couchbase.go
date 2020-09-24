@@ -1443,7 +1443,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
 		return b.txFetch(fullName, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
-			keys, fetchMap, context, subPaths, txContext)
+			keys, fetchMap, context, subPaths, false, txContext)
 	}
 
 	var noVirtualDocAttr bool
@@ -1689,6 +1689,16 @@ func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, 
 
 	return cas, flags, txnMeta, nil
 
+}
+
+func SetMetaCas(val value.Value, cas uint64) bool {
+	if av, ok := val.(value.AnnotatedValue); ok && av != nil {
+		if meta, ok := av.GetAttachment("meta").(map[string]interface{}); ok && meta != nil {
+			meta["cas"] = cas
+			return true
+		}
+	}
+	return false
 }
 
 func getExpiration(options value.Value) (exptime uint32) {

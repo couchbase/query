@@ -87,12 +87,19 @@ func (this *StartTransaction) RunOnce(context *Context, parent value.Value) {
 		if durabilityLevel == datastore.DL_UNSET {
 			durabilityLevel = datastore.DEF_DURABILITY_LEVEL
 		}
+
 		consistency := context.consistency
 		if !context.txImplicit &&
 			(context.originalConsistency == datastore.NOT_SET || context.originalConsistency == datastore.AT_PLUS) {
 			consistency = datastore.SCAN_PLUS
 		}
-		context.txContext = transactions.NewTxContext(context.txImplicit, context.txData, context.txTimeout,
+
+		txData := context.txData
+		if context.txImplicit {
+			txData = nil
+		}
+
+		context.txContext = transactions.NewTxContext(context.txImplicit, txData, context.txTimeout,
 			context.durabilityTimeout, durabilityLevel, this.plan.IsolationLevel(),
 			consistency)
 
