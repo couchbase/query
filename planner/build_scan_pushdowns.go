@@ -431,10 +431,6 @@ outer:
 			return false, nil
 		}
 
-		if isArray, _ := keys[i].IsArrayIndexKey(); isArray {
-			return false, nil
-		}
-
 		for {
 			projexpr, projalias := hashProj[orderTerm.Expression().Alias()]
 			if indexKeyIsDescCollation(i, indexKeys) == orderTerm.Descending() &&
