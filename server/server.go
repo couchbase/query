@@ -616,33 +616,33 @@ func (this *Server) handlePreTxRequest(request Request, queue *runQueue, transac
 	}
 
 	transactionQueues.mutex.Lock()
-	defer transactionQueues.mutex.Unlock()
 
 	if txContext.TxInUse() {
 		txQueue, ok := transactionQueues.txQueues[txId]
 		if !ok {
-			txQueue := &runQueue{servicers: 1}
+			txQueue = &runQueue{servicers: 1}
 			newRunQueue(txQueue, int(transactionQueues.size), true)
 			transactionQueues.txQueues[txId] = txQueue
 		}
 		txQueue.mutex.Lock()
 		if txQueue.runCnt >= txQueue.size {
 			txQueue.mutex.Unlock()
+			transactionQueues.mutex.Unlock()
 			return errors.NewTransactionQueueFull()
 		}
 		txQueue.runCnt++
 		transactionQueues.queueCnt++
-		txQueue.addRequest(request, true) // unlock done inside
+		txQueue.addRequest(request, &txQueue.mutex, &transactionQueues.mutex) // unlock done inside
 		return nil
 	}
 
+	defer transactionQueues.mutex.Unlock()
 	return txContext.SetTxInUse(true)
 }
 
 func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) bool {
 	txId := request.TxId()
 	transactionQueues.mutex.Lock()
-	defer transactionQueues.mutex.Unlock()
 	txContext := request.ExecutionContext().TxContext()
 
 	txQueue, ok := transactionQueues.txQueues[txId]
@@ -651,7 +651,7 @@ func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transa
 		if txQueue.runCnt > 0 {
 			txQueue.runCnt--
 			transactionQueues.queueCnt--
-			txQueue.releaseRequest(true) // unlock done inside
+			txQueue.releaseRequest(&txQueue.mutex, &transactionQueues.mutex) // unlock done inside
 			return false
 		} else {
 			delete(transactionQueues.txQueues, txId)
@@ -662,6 +662,7 @@ func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transa
 	if txContext != nil {
 		txContext.SetTxInUse(false)
 	}
+	transactionQueues.mutex.Unlock()
 
 	return true
 }
@@ -695,7 +696,7 @@ func (this *runQueue) enqueue(request Request) bool {
 		}
 
 		// (RC #1) wait
-		this.addRequest(request, false)
+		this.addRequest(request, nil, nil)
 	}
 	return true
 }
@@ -715,7 +716,7 @@ func (this *runQueue) dequeue() {
 	}
 
 	if wakeUp {
-		this.releaseRequest(false)
+		this.releaseRequest(nil, nil)
 	} else {
 		atomic.AddInt32(&this.runCnt, -1)
 	}
@@ -723,7 +724,7 @@ func (this *runQueue) dequeue() {
 
 // in this next couple of methods, the waiter populates the wait entry and then tries the CAS
 // the waker tries the CAS and then empties
-func (this *runQueue) addRequest(request Request, txflag bool) {
+func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *sync.RWMutex) {
 
 	// get the next available entry
 	entry := atomic.AddInt32(&this.tail, 1) % this.size
@@ -732,8 +733,12 @@ func (this *runQueue) addRequest(request Request, txflag bool) {
 	request.setSleep()
 	this.queue[entry].request = request
 
-	if txflag {
-		this.mutex.Unlock()
+	if txQueueMutex != nil {
+		txQueueMutex.Unlock()
+	}
+
+	if txQueuesMutex != nil {
+		txQueuesMutex.Unlock()
 	}
 
 	// atomically set the state to full
@@ -749,13 +754,17 @@ func (this *runQueue) addRequest(request Request, txflag bool) {
 	}
 }
 
-func (this *runQueue) releaseRequest(txflag bool) {
+func (this *runQueue) releaseRequest(txQueueMutex, txQueuesMutex *sync.RWMutex) {
 
 	// get the next available entry
 	entry := atomic.AddInt32(&this.head, 1) % this.size
 
-	if txflag {
-		this.mutex.Unlock()
+	if txQueueMutex != nil {
+		txQueueMutex.Unlock()
+	}
+
+	if txQueuesMutex != nil {
+		txQueuesMutex.Unlock()
 	}
 
 	// can we mark the entry as ready to go?
@@ -821,7 +830,7 @@ func (this *runQueue) checkWaiters() {
 
 				// let it free
 				runCnt = atomic.AddInt32(&this.runCnt, 1)
-				this.releaseRequest(false)
+				this.releaseRequest(nil, nil)
 			}
 		}
 	}
