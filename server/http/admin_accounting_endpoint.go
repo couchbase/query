@@ -313,7 +313,11 @@ func getCredentialsFromRequest(req *http.Request) (*auth.Credentials, errors.Err
 				if !user_ok || !pass_ok {
 					return nil, errors.NewAdminCredsError(creds_json, nil)
 				}
-				creds.Users[user] = pass
+
+				// temporary fix for cbq
+				if user != "" {
+					creds.Users[user] = pass
+				}
 			}
 		}
 	}
@@ -326,11 +330,11 @@ func verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Req
 		return err
 	}
 
-	users := make([]string, 0, len(creds.Users))
-	for user := range creds.Users {
-		users = append(users, user)
-	}
 	if af != nil {
+		users := make([]string, 0, len(creds.Users))
+		for user := range creds.Users {
+			users = append(users, user)
+		}
 		af.Users = users
 	}
 

@@ -62,11 +62,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		switch keyspace {
 
 		// currently these keyspaces require system read for delete
-		case KEYSPACE_NAME_ACTIVE:
-		case KEYSPACE_NAME_REQUESTS:
-		case KEYSPACE_NAME_PREPAREDS:
-		case KEYSPACE_NAME_FUNCTIONS_CACHE:
-		case KEYSPACE_NAME_DICTIONARY_CACHE:
+		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_FUNCTIONS_CACHE, KEYSPACE_NAME_DICTIONARY_CACHE:
 			privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 
 			// for all other keyspaces, we rely on the implementation do deny access
@@ -76,8 +72,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	// we still specify a target for backward compatibility and to avoid test failures
 	case auth.PRIV_QUERY_SELECT:
 		switch keyspace {
-		case KEYSPACE_NAME_USER_INFO:
-		case KEYSPACE_NAME_APPLICABLE_ROLES:
+		case KEYSPACE_NAME_USER_INFO, KEYSPACE_NAME_APPLICABLE_ROLES:
 			privs.Add(fullname, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
 
 		// may be open, depending whether admin REST endpoint is open
