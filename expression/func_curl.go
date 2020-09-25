@@ -22,10 +22,9 @@ import (
 	curl "github.com/andelf/go-curl"
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
-
-	"github.com/couchbase/query/logging"
 )
 
 ///////////////////////////////////////////////////
@@ -116,16 +115,6 @@ func (this *Curl) Privileges() *auth.Privileges {
 }
 
 func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, error) {
-
-	// Get ip addresses to display in error
-	name, _ := os.Hostname()
-
-	addrs, err := net.LookupHost(name)
-	if err != nil {
-		logging.Infof("Error looking up hostname: %v", err)
-	}
-
-	hostname = strings.Join(addrs, ",")
 
 	// In order to have restricted access, the administrator will have to create
 	// curl_whitelist on the UI with the all_access field set to false.
@@ -599,6 +588,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			// Get directory of currently running file.
 			certDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 			if err != nil {
+				// Get ip addresses to display in error
+				name, _ := os.Hostname()
+				addrs, err := net.LookupHost(name)
+				if err != nil {
+					logging.Infof("Error looking up hostname: %v", err)
+				}
+
+				hostname = strings.Join(addrs, ",")
 				return nil, fmt.Errorf(_PATH + " does not exist on node " + hostname)
 			}
 
