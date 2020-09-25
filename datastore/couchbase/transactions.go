@@ -214,9 +214,9 @@ func (this *TransactionMutations) SetSavepoint(sname string) (err errors.Error) 
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
-	// Add savepoint marker to transaction log and set log position
-	err = this.AddMarker(sname, TL_SAVEPOINT)
+	// set log position and Add savepoint marker to transaction log
 	this.savepoints[sname] = this.TotalMutations()
+	err = this.AddMarker(sname, TL_SAVEPOINT)
 	return err
 
 }
@@ -409,10 +409,10 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 		*/
 		if addMarker {
 			// Add keyspace marker to transaction log
+			this.curStartLogIndex = this.TotalMutations()
 			if err = this.AddMarker(keyspace, TL_KEYSPACE); err != nil {
 				return retCas, err
 			}
-			this.curStartLogIndex = this.TotalMutations()
 		}
 
 		// Add document to transaction log
@@ -586,8 +586,9 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 				tl.logValues = tl.logValues[:sci]
 			}
 		}
-		this.curLog = cl
+		this.curLog = startLog
 		this.logs = this.logs[:this.curLog+1]
+		this.curKeyspace = ""
 		this.curStartLogIndex = this.TotalMutations()
 		for s, v := range this.savepoints {
 			if v > this.curStartLogIndex {
@@ -649,7 +650,6 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 	if len(this.savepoints) > 0 {
 		// savepoints present add end TL_KEYSPACE marker
 		err = this.AddMarker(keyspace, TL_KEYSPACE)
-		this.curStartLogIndex = this.TotalMutations()
 	}
 
 	// reset curKeyspace
