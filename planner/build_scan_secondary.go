@@ -48,7 +48,6 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
 			pred, node.Alias(), false, false)
 	}
-	this.resetProjection()
 
 	indexes = this.minimalIndexes(indexes, true, pred, node)
 	// Already done. need only for one index
@@ -127,6 +126,8 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 			sargLength = len(entry.sargKeys)
 		}
 	}
+
+	this.resetProjection()
 
 	// Search() access path for flex indexes
 	for index, entry := range flex {
