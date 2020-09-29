@@ -68,8 +68,6 @@ func (b *dictionaryCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
 
-	creds, authToken := credsFromContext(context)
-
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -105,7 +103,7 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 				},
 				func(warn errors.Error) {
 					context.Warning(warn)
-				}, creds, authToken)
+				}, distributed.NO_CREDS, "")
 		} else {
 
 			// local entry
@@ -156,7 +154,6 @@ func (b *dictionaryCacheKeyspace) Upsert(upserts []value.Pair, context datastore
 }
 
 func (b *dictionaryCacheKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	creds, authToken := credsFromContext(context)
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -172,7 +169,7 @@ func (b *dictionaryCacheKeyspace) Delete(deletes []value.Pair, context datastore
 				func(warn errors.Error) {
 					context.Warning(warn)
 				},
-				creds, authToken)
+				distributed.NO_CREDS, "")
 
 		} else {
 			// local entry

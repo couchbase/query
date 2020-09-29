@@ -328,12 +328,9 @@ func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, 
 					return nil, errors.NewAdminCredsError(creds_json, nil), false
 				}
 
-				// temporary fix for cbq
-				if user != "" {
-					creds.Users[user] = pass
-					if endpoint.internalUser == user {
-						isInternal = true
-					}
+				creds.Users[user] = pass
+				if endpoint.internalUser == user {
+					isInternal = true
 				}
 			}
 		}

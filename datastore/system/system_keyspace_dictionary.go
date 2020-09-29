@@ -132,8 +132,6 @@ func (b *dictionaryKeyspace) Upsert(upserts []value.Pair, context datastore.Quer
 }
 
 func (b *dictionaryKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	creds, authToken := credsFromContext(context)
-
 	for _, pair := range deletes {
 		name := pair.Name
 
@@ -143,7 +141,7 @@ func (b *dictionaryKeyspace) Delete(deletes []value.Pair, context datastore.Quer
 			func(warn errors.Error) {
 				context.Warning(warn)
 			},
-			creds, authToken)
+			distributed.NO_CREDS, "")
 
 		dictionary.DropDictionaryEntry(name)
 	}

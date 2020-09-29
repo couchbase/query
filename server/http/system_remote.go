@@ -461,7 +461,7 @@ func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint str
 	} else {
 		fullEndpoint = node.ClusterEndpoint() + "/" + endpoint
 	}
-	if numCredentials > 1 {
+	if numCredentials > 0 {
 		fullEndpoint += "?creds=" + credsAsJSON(creds)
 	}
 	authenticator := cbauth.Default
