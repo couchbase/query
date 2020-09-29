@@ -48,6 +48,7 @@ type HttpEndpoint struct {
 	actives       server.ActiveRequests
 	options       server.ServerOptions
 	connSecConfig datastore.ConnectionSecurityConfig
+	internalUser  string
 }
 
 const (

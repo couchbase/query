@@ -454,6 +454,7 @@ func submitAuditEntries(entries []auditQueueEntry) {
 	}
 }
 
+// the ...INDEX... events are there for completeness as they are used internally and not currently audited
 const (
 	API_DO_NOT_AUDIT                     = 0
 	API_ADMIN_STATS                      = 28689

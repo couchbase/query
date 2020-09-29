@@ -16,11 +16,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
@@ -183,10 +185,9 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
 
-	af.EventTypeId = audit.API_ADMIN_STATS
-
 	switch req.Method {
 	case "GET":
+		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		stats := make(map[string]interface{})
 		for name, metric := range reg.Counters() {
 			addMetricData(name, stats, getMetricData(metric))
@@ -205,6 +206,7 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		}
 		return stats, nil
 	default:
+		af.EventTypeId = audit.API_ADMIN_STATS
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
@@ -228,6 +230,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 
 	switch req.Method {
 	case "GET":
+		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		metric := reg.Get(name)
 		if metric != nil {
 			return getMetricData(metric), nil
@@ -242,7 +245,8 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 }
 
 func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_QUERY_STATS, req, nil)
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +269,8 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 }
 
 func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_QUERY_STATS, req, nil)
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -294,40 +299,53 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 // from basic authorizatio, and from a "creds" value, which encodes
 // in JSON an array of username/password pairs, like this:
 //   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
-func getCredentialsFromRequest(req *http.Request) (*auth.Credentials, errors.Error) {
+func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials, errors.Error, bool) {
+	isInternal := false
+
+	// only avoid auditing for internal users
+	if endpoint.internalUser == "" {
+		endpoint.internalUser, _, _ = cbauth.Default.GetHTTPServiceAuth(distributed.RemoteAccess().WhoAmI())
+	}
 	creds := auth.NewCredentials()
 	user, pass, ok := req.BasicAuth()
 	if ok {
 		creds.Users[user] = pass
+		if endpoint.internalUser == user {
+			isInternal = true
+		}
 	}
 	creds_json := req.FormValue("creds")
 	if creds_json != "" {
 		cred_list := make([]map[string]string, 0, 2)
 		err := json.Unmarshal([]byte(creds_json), &cred_list)
 		if err != nil {
-			return nil, errors.NewAdminCredsError(creds_json, err)
+			return nil, errors.NewAdminCredsError(creds_json, err), false
 		} else {
 			for _, v := range cred_list {
 				user, user_ok := v["user"]
 				pass, pass_ok := v["pass"]
 				if !user_ok || !pass_ok {
-					return nil, errors.NewAdminCredsError(creds_json, nil)
+					return nil, errors.NewAdminCredsError(creds_json, nil), false
 				}
 
 				// temporary fix for cbq
 				if user != "" {
 					creds.Users[user] = pass
+					if endpoint.internalUser == user {
+						isInternal = true
+					}
 				}
 			}
 		}
 	}
-	return creds, nil
+	return creds, nil, isInternal
 }
 
-func verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request, af *audit.ApiAuditFields) errors.Error {
-	creds, err := getCredentialsFromRequest(req)
+func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request, af *audit.ApiAuditFields) (errors.Error, bool) {
+	ds := datastore.GetDatastore()
+	creds, err, isInternal := endpoint.getCredentialsFromRequest(ds, req)
 	if err != nil {
-		return err
+		return err, false
 	}
 
 	if af != nil {
@@ -340,8 +358,8 @@ func verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Req
 
 	privs := auth.NewPrivileges()
 	privs.Add(api, priv, auth.PRIV_PROPS_NONE)
-	_, err = datastore.GetDatastore().Authorize(privs, creds)
-	return err
+	_, err = ds.Authorize(privs, creds)
+	return err, isInternal
 }
 
 func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
@@ -352,7 +370,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +384,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		defer req.Body.Close()
 
 		// http.BasicAuth eats the body, so verify credentials after getting the body.
-		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -387,15 +405,15 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		}
 		return "", nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:prepareds, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
-		}
-		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
 		}
 
 		var itemMap map[string]interface{}
@@ -452,7 +470,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -508,22 +526,22 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 		functions.FunctionClear(name, nil)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:functions_cache, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
-		}
-		err := verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
 		}
 
 		var itemMap map[string]interface{}
@@ -554,7 +572,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -596,22 +614,22 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 		dictionary.DropDictCacheEntry(name)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:functions_cache, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
-		}
-		err := verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
 		}
 
 		var itemMap map[string]interface{}
@@ -633,7 +651,7 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -672,22 +690,22 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 		scheduler.DeleteTask(name)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:task_cache", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:tasks_cache, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
-		}
-		err := verifyCredentialsFromRequest("system:task_cache", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
 		}
 
 		var itemMap map[string]interface{}
@@ -725,7 +743,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	af.EventTypeId = audit.API_ADMIN_TASKS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -781,21 +799,21 @@ func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Requ
 	af.Name = txId
 
 	if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 		return true, transactions.DeleteTransContext(txId, true)
 	} else if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:transactions, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
-		}
-		err := verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
 		}
 
 		var itemMap map[string]interface{}
@@ -815,7 +833,7 @@ func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	af.EventTypeId = audit.API_ADMIN_TRANSACTIONS
 	switch req.Method {
 	case "GET":
-		err := verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -846,21 +864,21 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	af.Request = requestId
 
 	if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:active_requests, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
-		}
-		err := verifyCredentialsFromRequest("system:actives", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
 		}
 		reqMap := activeRequestWorkHorse(endpoint, requestId, (req.Method == "POST"))
 
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:actives", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -982,7 +1000,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
-	err := verifyCredentialsFromRequest("system:actives", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -1059,20 +1077,20 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	af.Request = requestId
 
 	if req.Method == "GET" || req.Method == "POST" {
-		if req.Method == "POST" {
-			// Do not audit POST requests. They are an internal API used
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
 			// only for queries to system:completed_requests, and would cause too
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		err := verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
-		if err != nil {
-			return nil, err
-		}
 		reqMap := completedRequestWorkHorse(requestId, (req.Method == "POST"))
 		return reqMap, nil
 	} else if req.Method == "DELETE" {
-		err := verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1179,7 +1197,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
-	err := verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -1248,12 +1266,12 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 }
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_PREPAREDS
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	return prepareds.NamePrepareds(), nil
 }
 
 func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_ACTIVE_REQUESTS
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	numEntries, err := endpoint.actives.Count()
 	if err != nil {
 		return nil, err
@@ -1274,7 +1292,7 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 }
 
 func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_COMPLETED_REQUESTS
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	numEntries := server.RequestsCount()
 	completed := make([]string, numEntries)
 	i := 0
@@ -1292,23 +1310,23 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 }
 
 func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_FUNCTIONS
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	return functions.NameFunctions(), nil
 }
 
 func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_DICTIONARY
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	return dictionary.NameDictCacheEntries(), nil
 }
 
 func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_TASKS
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	return scheduler.NameTasks(), nil
 }
 
 func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_ADMIN_INDEXES_TRANSACTIONS
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	return transactions.NameTransactions(), nil
 }
 
