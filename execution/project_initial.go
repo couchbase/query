@@ -115,8 +115,8 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			sv.SetField(result.As(), v)
 		}
 		av := value.NewAnnotatedValue(sv)
-		av.SetAnnotations(item)
-		av.SetProjection(v) //	av.SetAttachment("projection", v)
+		av.ShareAnnotations(item)
+		av.SetProjection(v)
 		if context.UseRequestQuota() {
 			var stop bool
 
@@ -144,7 +144,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	n := len(this.plan.Terms())
 	sv := value.NewScopeValue(make(map[string]interface{}, n), item)
 	pv := value.NewAnnotatedValue(sv)
-	pv.SetAnnotations(item)
+	pv.ShareAnnotations(item)
 
 	p := value.NewValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
 

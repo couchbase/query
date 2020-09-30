@@ -163,7 +163,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			}
 
 			cav := value.NewAnnotatedValue(cv)
-			cav.SetAnnotations(av)
+			cav.CopyAnnotations(av)
 			pairs[i].Value = cav
 
 			if mv := clone.GetAttachment("options"); mv != nil {

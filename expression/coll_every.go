@@ -68,7 +68,7 @@ func (this *Every) Evaluate(item value.Value, context Context) (value.Value, err
 
 		av := value.NewAnnotatedValue(cv)
 		if ai, ok := item.(value.AnnotatedValue); ok {
-			av.SetAnnotations(ai)
+			av.CopyAnnotations(ai)
 		}
 
 		sv, e := this.satisfies.Evaluate(av, context)

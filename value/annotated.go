@@ -38,6 +38,7 @@ func newAnnotatedValue() *annotatedValue {
 	rv.bit = 0
 	rv.self = false
 	rv.noRecycle = false
+	rv.sharedAnnotations = false
 	return rv
 }
 
@@ -70,7 +71,8 @@ type AnnotatedValue interface {
 	GetCover(key string) Value
 	SetCover(key string, val Value)
 	InheritCovers(val Value)
-	SetAnnotations(av AnnotatedValue)
+	CopyAnnotations(av AnnotatedValue)
+	ShareAnnotations(av AnnotatedValue)
 	Bit() uint8
 	SetBit(b uint8)
 	Self() bool
@@ -101,15 +103,16 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 
 type annotatedValue struct {
 	Value
-	attachments   map[string]interface{}
-	covers        Value
-	bit           uint8
-	id            interface{}
-	refCnt        int32
-	self          bool
-	original      Value
-	annotatedOrig AnnotatedValue
-	noRecycle     bool
+	attachments       map[string]interface{}
+	sharedAnnotations bool
+	covers            Value
+	bit               uint8
+	id                interface{}
+	refCnt            int32
+	self              bool
+	original          Value
+	annotatedOrig     AnnotatedValue
+	noRecycle         bool
 }
 
 func (this *annotatedValue) String() string {
@@ -221,11 +224,15 @@ func (this *annotatedValue) InheritCovers(val Value) {
 	}
 }
 
-func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {
+func (this *annotatedValue) CopyAnnotations(av AnnotatedValue) {
 
 	// get rid of previous attachments
-	for k := range this.attachments {
-		delete(this.attachments, k)
+	if this.sharedAnnotations {
+		this.attachments = nil
+	} else {
+		for k := range this.attachments {
+			delete(this.attachments, k)
+		}
 	}
 	copyAttachments(av.Attachments(), this)
 	if av.Covers() != nil {
@@ -233,7 +240,18 @@ func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {
 	} else {
 		this.covers = nil
 	}
+	this.sharedAnnotations = false
 }
+func (this *annotatedValue) ShareAnnotations(av AnnotatedValue) {
+	this.attachments = av.Attachments()
+	if av.Covers() != nil {
+		this.covers = av.Covers()
+	} else {
+		this.covers = nil
+	}
+	this.sharedAnnotations = true
+}
+
 func copyAttachments(source map[string]interface{}, dest *annotatedValue) {
 	if dest.attachments == nil {
 		dest.attachments = make(map[string]interface{}, len(source))
@@ -319,7 +337,9 @@ func (this *annotatedValue) Recycle() {
 	this.Value.Recycle()
 	this.Value = nil
 	if this.covers != nil {
-		this.covers.Recycle()
+		if !this.sharedAnnotations {
+			this.covers.Recycle()
+		}
 		this.covers = nil
 	}
 	if this.annotatedOrig != nil {
@@ -334,10 +354,16 @@ func (this *annotatedValue) Recycle() {
 		this.original = nil
 	}
 
-	// pool the map if it exists
-	// this is optimized as a map clear by golang
-	for k := range this.attachments {
-		delete(this.attachments, k)
+	if this.sharedAnnotations {
+		this.attachments = nil
+	} else {
+
+		// pool the map if it exists
+		// this is optimized as a map clear by golang
+		for k := range this.attachments {
+			delete(this.attachments, k)
+		}
 	}
+	this.sharedAnnotations = false
 	annotatedPool.Put(unsafe.Pointer(this))
 }
