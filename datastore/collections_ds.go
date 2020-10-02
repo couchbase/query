@@ -360,7 +360,6 @@ func (ks *CollectionsKeyspace) AddDocument(id string, jsonDoc string) {
 		logging.Errorf("Unable to parse document value %s: %v", id, err)
 	}
 	doc := value.NewAnnotatedValue(jsonVal)
-	doc.SetAttachment("meta", map[string]interface{}{"id": id})
 	doc.SetId(id)
 	ks.docs[id] = doc
 }

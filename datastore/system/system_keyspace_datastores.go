@@ -66,10 +66,7 @@ func (b *storeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedV
 		}
 
 		if item != nil {
-			item.SetAttachment("meta", map[string]interface{}{
-				"id":       k,
-				"keyspace": b.fullName,
-			})
+			item.NewMeta()["keyspace"] = b.fullName
 			item.SetId(k)
 		}
 		keysMap[k] = item

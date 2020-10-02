@@ -158,10 +158,9 @@ func TestIndexAccess(t *testing.T) {
 
 func TestAttachments(t *testing.T) {
 	val := NewAnnotatedValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
-	val.SetAttachment("meta", map[string]interface{}{"id": "doc1"})
 	val.SetId("doc1")
 
-	meta := val.GetAttachment("meta").(map[string]interface{})
+	meta := val.GetMeta()
 	if meta == nil {
 		t.Errorf("metadata missing")
 	} else {
@@ -188,7 +187,7 @@ func TestAttachments(t *testing.T) {
 func TestRealWorkflow(t *testing.T) {
 	// get a doc from some source
 	doc := NewAnnotatedValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
-	doc.SetAttachment("meta", map[string]interface{}{"id": "doc1"})
+	doc.SetId("doc1")
 
 	// mutate the document somehow
 	active := NewValue(true)

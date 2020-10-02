@@ -186,7 +186,7 @@ func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, erro
 
 	switch val := val.(type) {
 	case value.AnnotatedValue:
-		return value.NewValue(val.GetAttachment("meta")), nil
+		return value.NewValue(val.GetMeta()), nil
 	default:
 		return value.NULL_VALUE, nil
 	}

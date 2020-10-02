@@ -81,10 +81,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", map[string]interface{}{
-						"id":       key,
-						"keyspace": b.fullName,
-					})
+					remoteValue.NewMeta()["keyspace"] = b.fullName
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -121,10 +118,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 
 				item := value.NewAnnotatedValue(itemMap)
-				item.SetAttachment("meta", map[string]interface{}{
-					"id":       key,
-					"keyspace": b.fullName,
-				})
+				item.NewMeta()["keyspace"] = b.fullName
 				item.SetId(key)
 				keysMap[key] = item
 			})

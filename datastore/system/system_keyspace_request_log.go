@@ -81,18 +81,17 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				"completed_requests", "POST",
 				func(doc map[string]interface{}) {
 
-					meta := map[string]interface{}{
-						"id":       key,
-						"keyspace": b.fullName,
-					}
 					t, ok := doc["timings"]
 					if ok {
-						meta["plan"] = t
 						delete(doc, "timings")
 					}
 					remoteValue := value.NewAnnotatedValue(doc)
+					meta := remoteValue.NewMeta()
+					meta["keyspace"] = b.fullName
+					if ok {
+						meta["plan"] = t
+					}
 					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", meta)
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -184,10 +183,8 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					item.SetField("errors", errors)
 				}
 
-				meta := map[string]interface{}{
-					"id":       key,
-					"keyspace": b.fullName,
-				}
+				meta := item.NewMeta()
+				meta["keyspace"] = b.fullName
 				if entry.Timings != nil {
 					bytes, _ := json.Marshal(entry.Timings)
 					meta["plan"] = bytes
@@ -196,7 +193,6 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 						meta["optimizerEstimates"] = bytes
 					}
 				}
-				item.SetAttachment("meta", meta)
 				item.SetId(key)
 				keysMap[key] = item
 			})

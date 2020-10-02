@@ -1056,16 +1056,15 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 }
 
 func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, context *Context) value.AnnotatedValue {
-	cv := value.NewScopeValue(make(map[string]interface{}), parent)
+	cv := value.NewNestedScopeValue(parent)
 	av := value.NewAnnotatedValue(cv)
-	av.SetAttachment("meta", map[string]interface{}{"id": key})
 	av.SetId(key)
 	return av
 }
 
 func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue,
 	expiration uint32, context *Context) value.AnnotatedValue {
-	item.SetAttachment("meta", map[string]interface{}{"id": key, "expiration": expiration})
+	item.NewMeta()["expiration"] = expiration
 	item.SetId(key)
 	return item
 }
@@ -1089,17 +1088,10 @@ func (this *base) getDocumentKey(item value.AnnotatedValue, context *Context) (s
 	} else {
 
 		// slow path (to be deprecated)
-		mv := item.GetAttachment("meta")
-		if mv == nil {
+		meta := item.GetMeta()
+		if meta == nil {
 			context.Error(errors.NewInvalidValueError(
 				fmt.Sprintf("Value does not contain META: %v", item)))
-			return "", false
-		}
-
-		meta, ok := mv.(map[string]interface{})
-		if !ok {
-			context.Error(errors.NewInvalidValueError(
-				fmt.Sprintf("Missing or invalid meta %v of type %T.", mv, mv)))
 			return "", false
 		}
 

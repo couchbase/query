@@ -17,6 +17,8 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+const _DEFAULT_OBJECT_SIZE = 10
+
 /*
 ScopeValue provides alias scoping for subqueries, ranging, LETs,
 projections, etc. It is a type struct that inherits Value and
@@ -24,31 +26,55 @@ has a parent Value.
 */
 type ScopeValue struct {
 	Value
+	nested bool
 	refCnt int32
 	parent Value
 }
 
 var scopePool util.LocklessPool
+var nestedPool util.LocklessPool
 
 func init() {
 	util.NewLocklessPool(&scopePool, func() unsafe.Pointer {
 		return unsafe.Pointer(&ScopeValue{})
 	})
+	util.NewLocklessPool(&nestedPool, func() unsafe.Pointer {
+		return unsafe.Pointer(&ScopeValue{Value: objectValue(make(map[string]interface{}, _DEFAULT_OBJECT_SIZE))})
+	})
 }
 
-func newScopeValue() *ScopeValue {
-	rv := (*ScopeValue)(scopePool.Get())
+func newScopeValue(nested bool) *ScopeValue {
+	var rv *ScopeValue
+
+	if nested {
+		rv = (*ScopeValue)(nestedPool.Get())
+	} else {
+		rv = (*ScopeValue)(scopePool.Get())
+	}
 	rv.refCnt = 1
 	return rv
 }
 
 func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
-	rv := newScopeValue()
+	rv := newScopeValue(false)
 	rv.Value = objectValue(val)
 	rv.parent = parent
 	if parent != nil {
 		parent.Track()
 	}
+	rv.nested = false
+	return rv
+}
+
+// shorthand for a scope value that is going to contain nested annotated values
+func NewNestedScopeValue(parent Value) *ScopeValue {
+	rv := newScopeValue(true)
+	rv.Value = objectValue(make(map[string]interface{}))
+	rv.parent = parent
+	if parent != nil {
+		parent.Track()
+	}
+	rv.nested = true
 	return rv
 }
 
@@ -66,23 +92,39 @@ func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 }
 
 func (this *ScopeValue) Copy() Value {
-	rv := newScopeValue()
+	rv := newScopeValue(false)
 	rv.Value = this.Value.Copy()
 	rv.parent = this.parent
 	if this.parent != nil {
 		this.parent.Track()
 	}
+
+	// counterintuitive but nested values copies share fields,
+	// hence they don't recycle
+	rv.nested = false
 	return rv
 }
 
 func (this *ScopeValue) CopyForUpdate() Value {
-	rv := newScopeValue()
+	rv := newScopeValue(this.nested)
 	rv.Value = this.Value.CopyForUpdate()
 	rv.parent = this.parent
 	if this.parent != nil {
 		this.parent.Track()
 	}
+	rv.nested = this.nested
 	return rv
+}
+
+func (this *ScopeValue) SetField(field string, val interface{}) error {
+	err := this.Value.SetField(field, val)
+	if err == nil {
+		v, ok := val.(Value)
+		if ok {
+			v.Track()
+		}
+	}
+	return err
 }
 
 /*
@@ -161,11 +203,23 @@ func (this *ScopeValue) Recycle() {
 	if refcnt > 0 {
 		return
 	}
-	this.Value.Recycle()
-	this.Value = nil
 	if this.parent != nil {
 		this.parent.Recycle()
 		this.parent = nil
+	}
+	if this.nested {
+		fields := this.Value.(objectValue)
+		for _, v := range fields {
+			switch v := v.(type) {
+			case *ScopeValue:
+				v.Recycle()
+			case *annotatedValue:
+				v.Recycle()
+			}
+		}
+	} else {
+		this.Value.Recycle()
+		this.Value = nil
 	}
 	scopePool.Put(unsafe.Pointer(this))
 }

@@ -95,10 +95,7 @@ func (b *userInfoKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 		}
 
 		item := value.NewAnnotatedValue(val)
-		item.SetAttachment("meta", map[string]interface{}{
-			"id":       k,
-			"keyspace": b.fullName,
-		})
+		item.NewMeta()["keyspace"] = b.fullName
 		item.SetId(k)
 		keysMap[k] = item
 	}

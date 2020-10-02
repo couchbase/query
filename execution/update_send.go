@@ -252,11 +252,7 @@ func adjustExpiration(options value.Value) value.Value {
 }
 
 func setMetaExpiration(av value.AnnotatedValue, options value.Value) {
-	if mv := av.GetAttachment("meta"); mv != nil {
-		if m, ok := mv.(map[string]interface{}); ok && m != nil {
-			m["expiration"] = getExpiration(options)
-		}
-	}
+	av.NewMeta()["expiration"] = getExpiration(options)
 }
 
 var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)

@@ -1532,14 +1532,12 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse) value.Annotat
 		meta_type = "base64"
 	}
 
-	val.SetAttachment("meta", map[string]interface{}{
-		"id":         k,
-		"keyspace":   fullName,
-		"cas":        v.Cas,
-		"type":       meta_type,
-		"flags":      flags,
-		"expiration": expiration,
-	})
+	meta := val.NewMeta()
+	meta["keyspace"] = fullName
+	meta["cas"] = v.Cas
+	meta["type"] = meta_type
+	meta["flags"] = flags
+	meta["expiration"] = expiration
 	val.SetId(k)
 
 	// Uncomment when needed
@@ -1613,19 +1611,15 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 		delete(xVal, "$document")
 	}
 
-	a := map[string]interface{}{
-		"id":         k,
-		"cas":        v.Cas,
-		"type":       meta_type,
-		"flags":      flags,
-		"expiration": exptime,
-	}
-
+	meta := val.NewMeta()
+	meta["cas"] = v.Cas
+	meta["type"] = meta_type
+	meta["flags"] = flags
+	meta["expiration"] = exptime
 	if len(xVal) > 0 {
-		a["xattrs"] = xVal
+		meta["xattrs"] = xVal
 	}
 
-	val.SetAttachment("meta", a)
 	val.SetId(k)
 
 	return val
@@ -1664,7 +1658,7 @@ func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, 
 	var ok bool
 
 	if av, ok = val.(value.AnnotatedValue); ok && av != nil {
-		meta, ok = av.GetAttachment("meta").(map[string]interface{})
+		meta = av.GetMeta()
 	}
 
 	if _, ok = meta["cas"]; ok {
@@ -1693,10 +1687,7 @@ func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, 
 
 func SetMetaCas(val value.Value, cas uint64) bool {
 	if av, ok := val.(value.AnnotatedValue); ok && av != nil {
-		if meta, ok := av.GetAttachment("meta").(map[string]interface{}); ok && meta != nil {
-			meta["cas"] = cas
-			return true
-		}
+		av.NewMeta()["cas"] = cas
 	}
 	return false
 }
@@ -1736,7 +1727,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			exptime = int(getExpiration(kv.Options))
 		}
 
-		//mv := kv.Value.GetAttachment("meta")
+		//mv := kv.Value.GetMeta()
 
 		// TODO Need to also set meta
 

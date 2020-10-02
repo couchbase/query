@@ -349,15 +349,13 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 
 		for k, mv := range mvs {
 			av := value.NewAnnotatedValue(mv.Val)
-			av.SetAttachment("meta", map[string]interface{}{
-				"id":         k,
-				"keyspace":   fullName,
-				"cas":        mv.Cas,
-				"type":       "json",
-				"flags":      uint32(0),
-				"expiration": mv.Expiration,
-				"txnMeta":    mv.TxnMeta,
-			})
+			meta := av.GetMeta()
+			meta["keyspace"] = fullName
+			meta["cas"] = mv.Cas
+			meta["type"] = "json"
+			meta["flags"] = uint32(0)
+			meta["expiration"] = mv.Expiration
+			meta["txnMeta"] = mv.TxnMeta
 			av.SetId(k)
 			fetchMap[k] = av
 		}
@@ -369,15 +367,13 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			// Transformed SDK REPLACE, DELETE with CAS don't read the document
 			k := fkeys[0]
 			av := value.NewAnnotatedValue(value.NewValue(nil))
-			av.SetAttachment("meta", map[string]interface{}{
-				"id":         k,
-				"keyspace":   fullName,
-				"cas":        sdkCas,
-				"type":       "json",
-				"flags":      uint32(0),
-				"expiration": uint32(0),
-				"txnMeta":    sdkTxnMeta,
-			})
+			meta := av.GetMeta()
+			meta["keyspace"] = fullName
+			meta["cas"] = sdkCas
+			meta["type"] = "json"
+			meta["flags"] = uint32(0)
+			meta["expiration"] = uint32(0)
+			meta["txnMeta"] = sdkTxnMeta
 			av.SetId(k)
 			fetchMap[k] = av
 		} else {

@@ -67,6 +67,8 @@ type AnnotatedValue interface {
 	RemoveAttachment(key string)
 	GetId() interface{}
 	SetId(id interface{})
+	NewMeta() map[string]interface{}
+	GetMeta() map[string]interface{}
 	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
@@ -105,6 +107,7 @@ type annotatedValue struct {
 	Value
 	attachments       map[string]interface{}
 	sharedAnnotations bool
+	meta              map[string]interface{}
 	covers            Value
 	bit               uint8
 	id                interface{}
@@ -131,6 +134,8 @@ func (this *annotatedValue) Copy() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.Copy()
 	copyAttachments(this.attachments, rv)
+	copyMeta(this.meta, rv)
+	rv.id = this.id
 	rv.bit = this.bit
 	if this.covers != nil {
 		rv.covers = this.covers.Copy()
@@ -143,9 +148,24 @@ func (this *annotatedValue) CopyForUpdate() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.CopyForUpdate()
 	copyAttachments(this.attachments, rv)
-	rv.covers = this.covers
+	copyMeta(this.meta, rv)
+	rv.id = this.id
 	rv.bit = this.bit
+	if this.covers != nil {
+		rv.covers = this.covers.CopyForUpdate()
+	}
 	return rv
+}
+
+func (this *annotatedValue) SetField(field string, val interface{}) error {
+	err := this.Value.SetField(field, val)
+	if err == nil {
+		v, ok := val.(Value)
+		if ok {
+			v.Track()
+		}
+	}
+	return err
 }
 
 func (this *annotatedValue) GetValue() Value {
@@ -176,6 +196,21 @@ func (this *annotatedValue) RemoveAttachment(key string) {
 	if this.attachments != nil {
 		delete(this.attachments, key)
 	}
+}
+
+func (this *annotatedValue) NewMeta() map[string]interface{} {
+	if this.meta == nil {
+		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+	}
+	return this.meta
+}
+
+func (this *annotatedValue) GetMeta() map[string]interface{} {
+	if this.id != nil && this.meta == nil {
+		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		this.meta["id"] = this.id
+	}
+	return this.meta
 }
 
 func (this *annotatedValue) Covers() Value {
@@ -224,28 +259,39 @@ func (this *annotatedValue) InheritCovers(val Value) {
 	}
 }
 
-func (this *annotatedValue) CopyAnnotations(av AnnotatedValue) {
+func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 
 	// get rid of previous attachments
 	if this.sharedAnnotations {
 		this.attachments = nil
+		this.meta = nil
 	} else {
 		for k := range this.attachments {
 			delete(this.attachments, k)
 		}
+		for k := range this.meta {
+			delete(this.meta, k)
+		}
 	}
-	copyAttachments(av.Attachments(), this)
+	av := sv.(*annotatedValue) // we don't have any other annotated value implementation
+	copyAttachments(av.attachments, this)
+	copyMeta(av.meta, this)
+	this.id = av.id
 	if av.Covers() != nil {
-		this.covers = av.Covers().Copy()
+		this.covers = av.covers.Copy()
 	} else {
 		this.covers = nil
 	}
 	this.sharedAnnotations = false
 }
-func (this *annotatedValue) ShareAnnotations(av AnnotatedValue) {
-	this.attachments = av.Attachments()
+
+func (this *annotatedValue) ShareAnnotations(sv AnnotatedValue) {
+	av := sv.(*annotatedValue) // we don't have any other annotated value implementation
+	this.attachments = av.attachments
+	this.meta = av.meta
+	this.id = av.id
 	if av.Covers() != nil {
-		this.covers = av.Covers()
+		this.covers = av.covers
 	} else {
 		this.covers = nil
 	}
@@ -253,11 +299,26 @@ func (this *annotatedValue) ShareAnnotations(av AnnotatedValue) {
 }
 
 func copyAttachments(source map[string]interface{}, dest *annotatedValue) {
+	if len(source) == 0 {
+		return
+	}
 	if dest.attachments == nil {
 		dest.attachments = make(map[string]interface{}, len(source))
 	}
 	for k := range source {
 		dest.attachments[k] = source[k]
+	}
+}
+
+func copyMeta(source map[string]interface{}, dest *annotatedValue) {
+	if len(source) == 0 {
+		return
+	}
+	if dest.meta == nil {
+		dest.meta = make(map[string]interface{}, len(source))
+	}
+	for k := range source {
+		dest.meta[k] = source[k]
 	}
 }
 
@@ -283,6 +344,9 @@ func (this *annotatedValue) GetId() interface{} {
 
 func (this *annotatedValue) SetId(id interface{}) {
 	this.id = id
+	if this.meta != nil {
+		this.meta["id"] = id
+	}
 }
 
 func (this *annotatedValue) SetProjection(proj Value) {
@@ -308,10 +372,12 @@ func (this *annotatedValue) Original() AnnotatedValue {
 		av.Value = val.Value
 		av.covers = this.covers
 		av.attachments = this.attachments
+		av.meta = this.meta
 	case *ScopeValue:
 		av.Value = val
 		av.covers = this.covers
 		av.attachments = this.attachments
+		av.meta = this.meta
 	case Value:
 		av.Value = val
 	default:
@@ -346,6 +412,7 @@ func (this *annotatedValue) Recycle() {
 		val := this.annotatedOrig.(*annotatedValue)
 		val.covers = nil
 		val.attachments = nil
+		val.meta = nil
 		annotatedPool.Put(unsafe.Pointer(val))
 		this.annotatedOrig = nil
 	}
@@ -356,12 +423,16 @@ func (this *annotatedValue) Recycle() {
 
 	if this.sharedAnnotations {
 		this.attachments = nil
+		this.meta = nil
 	} else {
 
-		// pool the map if it exists
-		// this is optimized as a map clear by golang
+		// pool the maps if they exist
+		// these are optimized as maps clear by golang
 		for k := range this.attachments {
 			delete(this.attachments, k)
+		}
+		for k := range this.meta {
+			delete(this.meta, k)
 		}
 	}
 	this.sharedAnnotations = false

@@ -464,9 +464,6 @@ func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 		}
 
 		if item != nil {
-			item.SetAttachment("meta", map[string]interface{}{
-				"id": k,
-			})
 			item.SetId(k)
 		}
 
@@ -917,7 +914,6 @@ func fetch(path string) (item value.AnnotatedValue, e errors.Error) {
 	}
 
 	doc := value.NewAnnotatedValue(value.NewValue(bytes))
-	doc.SetAttachment("meta", map[string]interface{}{"id": documentPathToId(path)})
 	doc.SetId(documentPathToId(path))
 	item = doc
 

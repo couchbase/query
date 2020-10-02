@@ -245,10 +245,7 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			"state":        string(state),
 		})
 
-		doc.SetAttachment("meta", map[string]interface{}{
-			"id":       key,
-			"keyspace": b.fullName,
-		})
+		doc.NewMeta()["keyspace"] = b.fullName
 		doc.SetId(key)
 
 		partition := indexPartitionToString(index)
@@ -330,10 +327,7 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			"state":        string(state),
 		})
 
-		doc.SetAttachment("meta", map[string]interface{}{
-			"id":       key,
-			"keyspace": b.fullName,
-		})
+		doc.NewMeta()["keyspace"] = b.fullName
 		doc.SetId(key)
 
 		partition := indexPartitionToString(index)

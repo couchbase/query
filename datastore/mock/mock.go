@@ -332,9 +332,6 @@ func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 		}
 
 		if item != nil {
-			item.SetAttachment("meta", map[string]interface{}{
-				"id": k,
-			})
 			item.SetId(k)
 		}
 
@@ -360,7 +357,6 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	}
 	id := strconv.Itoa(i)
 	doc := value.NewAnnotatedValue(map[string]interface{}{"id": id, "i": float64(i)})
-	doc.SetAttachment("meta", map[string]interface{}{"id": id})
 	doc.SetId(id)
 	return doc, nil
 }

@@ -63,15 +63,9 @@ func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool
 	clone := item.CopyForUpdate()
 	if av, ok := clone.(value.AnnotatedValue); ok && av != nil {
 		options := map[string]interface{}{"expiration": uint32(0)}
-		mv := av.GetAttachment("meta")
-		if mv == nil {
-			av.SetAttachment("meta", map[string]interface{}{})
-			mv = av.GetAttachment("meta")
-		}
-		if m, mok := mv.(map[string]interface{}); mok && m != nil {
-			m["expiration"] = uint32(0)
-			options["xattrs"] = m["xattrs"]
-		}
+		mv := av.NewMeta()
+		mv["expiration"] = uint32(0)
+		options["xattrs"] = mv["xattrs"]
 		av.SetAttachment("options", value.NewValue(options))
 	}
 

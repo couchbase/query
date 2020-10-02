@@ -78,13 +78,9 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
 				"transactions", "POST",
 				func(doc map[string]interface{}) {
-					m := map[string]interface{}{
-						"id":       key,
-						"keyspace": b.fullName,
-					}
 					remoteValue := value.NewAnnotatedValue(doc)
+					remoteValue.NewMeta()["keyspace"] = b.fullName
 					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", m)
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -102,10 +98,7 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 					itemMap["node"] = node
 				}
 				item := value.NewAnnotatedValue(itemMap)
-				item.SetAttachment("meta", map[string]interface{}{
-					"id":       key,
-					"keyspace": b.fullName,
-				})
+				item.NewMeta()["keyspace"] = b.fullName
 				item.SetId(key)
 				keysMap[key] = item
 			})

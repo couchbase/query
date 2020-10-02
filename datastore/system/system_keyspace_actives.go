@@ -83,18 +83,17 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				"active_requests", "POST",
 				func(doc map[string]interface{}) {
 
-					meta := map[string]interface{}{
-						"id":       key,
-						"keyspace": b.fullName,
-					}
 					t, ok := doc["timings"]
 					if ok {
-						meta["plan"] = t
 						delete(doc, "timings")
 					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", meta)
+					meta := remoteValue.NewMeta()
+					meta["keyspace"] = b.fullName
+					if ok {
+						meta["plan"] = t
+					}
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -200,10 +199,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					}
 				}
 
-				meta := map[string]interface{}{
-					"id":       key,
-					"keyspace": b.fullName,
-				}
+				meta := item.NewMeta()
+				meta["keyspace"] = b.fullName
 
 				t := request.GetTimings()
 				if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
@@ -216,7 +213,6 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					}
 				}
 
-				item.SetAttachment("meta", meta)
 				item.SetId(key)
 			})
 			if err != nil {
