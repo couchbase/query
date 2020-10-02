@@ -19,12 +19,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	curl "github.com/andelf/go-curl"
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+	curl "github.com/couchbasedeps/go-curl"
 )
 
 ///////////////////////////////////////////////////

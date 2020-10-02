@@ -26,6 +26,12 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 
 SET (GOVERSION 1.13.7)
+GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
+GoPrivateMod (MODULE eventing-ee)
+GoPrivateMod (MODULE query-ee)
+GoPrivateMod (MODULE gocbcore-transactions
+  PATH ../../../../../godeps/src/github.com/couchbaselabs/gocbcore-transactions)
+
 SET (LDFLAGS)
 IF (APPLE)
   # Suppress warning from FindCouchbaseGo
@@ -43,9 +49,9 @@ IF (NOT CBQ_ONLY)
   GoYacc (GOVERSION 1.13.7 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
-  GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
-    GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
-    DEPENDS n1ql-yacc proto-generated INSTALL_PATH bin
+
+  GoModBuild (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
+    DEPENDS n1ql-yacc proto-generated evaluator-generated INSTALL_PATH bin
     CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR}"
     CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR}"
     LDFLAGS "${LDFLAGS}"
@@ -56,13 +62,11 @@ IF (NOT CBQ_ONLY)
     ADD_DEPENDENCIES (cbq-engine js-evaluator)
   ENDIF ()
 
-  GoInstall (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
-    GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
+  GoModBuild (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
     DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
     GOVERSION ${GOVERSION})
 ENDIF (NOT CBQ_ONLY)
 
-GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
-  GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
+GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   INSTALL_PATH bin
   GOVERSION ${GOVERSION})
