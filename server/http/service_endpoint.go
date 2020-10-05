@@ -141,7 +141,7 @@ func (this *HttpEndpoint) Listen() error {
 
 func (this *HttpEndpoint) ListenTLS() error {
 	// create tls configuration
-	if this.certFile == "" {
+	if this.certFile == "" || this.keyFile == "" {
 		logging.Errorf("No certificate passed. Secure listener not brought up.")
 		return nil
 	}
@@ -152,7 +152,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 
 	cbauthTLSsettings, err1 := cbauth.GetTLSConfig()
 	if err1 != nil {
-		return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
+		return fmt.Errorf("Failed to get cbauth tls config: %v", err1.Error())
 	}
 
 	this.connSecConfig.TLSConfig = cbauthTLSsettings
