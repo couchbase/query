@@ -113,12 +113,20 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 		return cerr
 	}
 
+	var prevErr error
 	items := make([]*GetOp, 0, len(keys))
 	for _, k := range keys {
 		gop := &GetOp{Key: k}
 		if err := sendOneGet(gop); err != nil {
-			// request send failed. no need to wait to complete.
-			return append(errs, err)
+			// process other errors before processing PreviousOperationFailed
+			if err1, ok1 := err.(*gctx.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+				prevErr = err
+				break
+			} else {
+				// request send failed. no need to wait to complete.
+				return append(errs, err)
+			}
 		}
 		items = append(items, gop)
 	}
@@ -133,6 +141,10 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			// handle key not found error
 			errs = append(errs, item.Err)
 		}
+	}
+
+	if len(errs) == 0 && prevErr != nil {
+		errs = append(errs, prevErr)
 	}
 
 	return errs
@@ -215,6 +227,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 		return cerr
 	}
 
+	var prevErr error
 	for _, op := range wops {
 		switch op.Op {
 		case MOP_INSERT:
@@ -251,7 +264,14 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 			errOut = ErrUnknownOperation
 		}
 		if errOut != nil {
-			return errOut
+			// process other errors before processing PreviousOperationFailed
+			if err1, ok1 := errOut.(*gctx.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+				prevErr = errOut
+				break
+			} else {
+				return errOut
+			}
 
 		}
 	}
@@ -263,5 +283,5 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 		}
 	}
 
-	return nil
+	return prevErr
 }
