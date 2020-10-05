@@ -182,8 +182,9 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
 		if this.useCBO {
+			leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(right.Alias())
 			cost, cardinality = getLookupJoinCost(this.lastOp, node.Outer(),
-				newKeyspaceTerm, this.baseKeyspaces[right.Alias()])
+				newKeyspaceTerm, leftKeyspaces, rightKeyspace)
 		}
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), cost, cardinality), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
@@ -360,8 +361,9 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
 		if this.useCBO {
+			leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(right.Alias())
 			cost, cardinality = getLookupNestCost(this.lastOp, node.Outer(),
-				newKeyspaceTerm, this.baseKeyspaces[right.Alias()])
+				newKeyspaceTerm, leftKeyspaces, rightKeyspace)
 		}
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), cost, cardinality), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
@@ -616,10 +618,10 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	cost := float64(OPT_COST_NOT_AVAIL)
 	cardinality := float64(OPT_CARD_NOT_AVAIL)
 	useCBO := this.useCBO
-	if useCBO {
-		if len(this.children) > 0 {
-			cost, cardinality = getNLJoinCost(lastOp, this.lastOp, baseKeyspace.Filters(), outer, op)
-		}
+	if useCBO && len(this.children) > 0 {
+		leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(node.Alias())
+		cost, cardinality = getNLJoinCost(lastOp, this.lastOp, leftKeyspaces, rightKeyspace,
+			baseKeyspace.Filters(), outer, op)
 	}
 
 	return this.children, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, nil
@@ -898,9 +900,11 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		}
 	}
 
+	leftKeyspaces, leftAliases, rightKeyspace, rightAlias := this.getKeyspacesAliases(alias)
+
 	if useCBO {
 		var bldRight bool
-		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, filters, outer, op)
+		cost, cardinality, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, leftKeyspaces, rightKeyspace, buildRight, force, filters, outer, op)
 		if cost > 0.0 && cardinality > 0.0 {
 			buildRight = bldRight
 		}
@@ -918,7 +922,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		this.subChildren = subChildren
 		probeExprs = leftExprs
 		buildExprs = rightExprs
-		buildAliases = []string{alias}
+		buildAliases = []string{rightAlias}
 	} else {
 		if len(subChildren) > 0 {
 			children = append(children, this.addParallel(subChildren...))
@@ -926,16 +930,31 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		child = plan.NewSequence(children...)
 		buildExprs = leftExprs
 		probeExprs = rightExprs
-		buildAliases = make([]string, 0, len(this.baseKeyspaces))
-		for _, kspace := range this.baseKeyspaces {
-			if kspace.PlanDone() && kspace.Name() != alias {
-				buildAliases = append(buildAliases, kspace.Name())
-			}
-		}
+		buildAliases = leftAliases
 		this.lastOp = this.children[len(this.children)-1]
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, newFilter, cost, cardinality, nil
+}
+
+func (this *builder) getKeyspacesAliases(alias string) (
+	leftKeyspaces, leftAliases []string, rightKeyspace, rightAliase string) {
+
+	leftAliases = make([]string, 0, len(this.baseKeyspaces)-1)
+	leftKeyspaces = make([]string, 0, len(this.baseKeyspaces)-1)
+	for _, kspace := range this.baseKeyspaces {
+		if kspace.PlanDone() {
+			if kspace.Name() == alias {
+				rightAliase = kspace.Name()
+				rightKeyspace = kspace.Keyspace()
+			} else {
+				leftAliases = append(leftAliases, kspace.Name())
+				leftKeyspaces = append(leftKeyspaces, kspace.Keyspace())
+			}
+		}
+	}
+
+	return
 }
 
 func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression) (

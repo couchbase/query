@@ -107,7 +107,9 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if stmt.IsOnKey() {
 		if this.useCBO {
-			joinCost, joinCard = getLookupJoinCost(this.lastOp, outer, right, targetKeyspace)
+			leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(targetKeyspace.Name())
+			joinCost, joinCard = getLookupJoinCost(this.lastOp, outer, right,
+				leftKeyspaces, rightKeyspace)
 		}
 	} else {
 		// use ANSI JOIN to handle the ON-clause

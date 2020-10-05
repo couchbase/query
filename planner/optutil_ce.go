@@ -98,33 +98,36 @@ func getCountScanCost() (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getNLJoinCost(left, right plan.Operator, filters base.Filters, outer bool, op string) (float64, float64) {
+func getNLJoinCost(left, right plan.Operator, leftKeyspaces []string, rightKeyspace string,
+	filters base.Filters, outer bool, op string) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
-	buildRight, force bool, filters base.Filters, outer bool, op string) (float64, float64, bool) {
+	leftKeyspaces []string, rightKeyspace string, buildRight, force bool, filters base.Filters,
+	outer bool, op string) (float64, float64, bool) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, false
 }
 
 func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace) (float64, float64) {
+	leftKeyspaces []string, rightKeyspace string) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
+	leftKeyspaces []string, rightKeyspace string, covered bool, index datastore.Index,
 	requestId string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace) (float64, float64) {
+	leftKeyspaces []string, rightKeyspace string) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string, advisorValidate bool) (float64, float64) {
+	leftKeyspaces []string, rightKeyspace string, index datastore.Index,
+	requestId string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 

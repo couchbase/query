@@ -181,45 +181,48 @@ func getCountScanCost() (float64, float64) {
 	return optutil.CalcCountScanCost()
 }
 
-func getNLJoinCost(left, right plan.Operator, filters base.Filters, outer bool, op string) (float64, float64) {
+func getNLJoinCost(left, right plan.Operator, leftKeyspaces []string, rightKeyspace string,
+	filters base.Filters, outer bool, op string) (float64, float64) {
 	jointype := optutil.COST_JOIN
 	if op == "nest" {
 		jointype = optutil.COST_NEST
 	}
-	return optutil.CalcNLJoinCost(left, right, filters, outer, jointype)
+	return optutil.CalcNLJoinCost(left, right, leftKeyspaces, rightKeyspace, filters, outer, jointype)
 }
 
 func getHashJoinCost(left, right plan.Operator, buildExprs, probeExprs expression.Expressions,
-	buildRight, force bool, filters base.Filters, outer bool, op string) (float64, float64, bool) {
+	leftKeyspaces []string, rightKeyspace string, buildRight, force bool, filters base.Filters,
+	outer bool, op string) (float64, float64, bool) {
 	jointype := optutil.COST_JOIN
 	if op == "nest" {
 		jointype = optutil.COST_NEST
 	}
-	return optutil.CalcHashJoinCost(left, right, buildExprs, probeExprs, buildRight, force,
-		filters, outer, jointype)
+	return optutil.CalcHashJoinCost(left, right, buildExprs, probeExprs,
+		leftKeyspaces, rightKeyspace, buildRight, force, filters, outer, jointype)
 }
 
 func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace) (float64, float64) {
-	return optutil.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optutil.COST_JOIN)
+	leftKeyspaces []string, rightKeyspace string) (float64, float64) {
+	return optutil.CalcLookupJoinNestCost(left, outer, right, leftKeyspaces, rightKeyspace, optutil.COST_JOIN)
 }
 
 func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace, covered bool, index datastore.Index,
+	leftKeyspaces []string, rightKeyspace string, covered bool, index datastore.Index,
 	requestId string, advisorValidate bool) (float64, float64) {
-	return optutil.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, covered,
-		index, requestId, optutil.COST_JOIN, advisorValidate)
+	return optutil.CalcIndexJoinNestCost(left, outer, right, leftKeyspaces, rightKeyspace,
+		covered, index, requestId, optutil.COST_JOIN, advisorValidate)
 }
 
 func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace) (float64, float64) {
-	return optutil.CalcLookupJoinNestCost(left, outer, right, rightKeyspace, optutil.COST_NEST)
+	leftKeyspaces []string, rightKeyspace string) (float64, float64) {
+	return optutil.CalcLookupJoinNestCost(left, outer, right, leftKeyspaces, rightKeyspace, optutil.COST_NEST)
 }
 
 func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
-	rightKeyspace *base.BaseKeyspace, index datastore.Index, requestId string, advisorValidate bool) (float64, float64) {
-	return optutil.CalcIndexJoinNestCost(left, outer, right, rightKeyspace, false,
-		index, requestId, optutil.COST_NEST, advisorValidate)
+	leftKeyspaces []string, rightKeyspace string, index datastore.Index,
+	requestId string, advisorValidate bool) (float64, float64) {
+	return optutil.CalcIndexJoinNestCost(left, outer, right, leftKeyspaces, rightKeyspace,
+		false, index, requestId, optutil.COST_NEST, advisorValidate)
 }
 
 func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
