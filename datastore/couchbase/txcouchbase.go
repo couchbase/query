@@ -62,6 +62,13 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			return
 		}
 
+		defer func() {
+			// protect from the panics
+			if r := recover(); r != nil {
+				err = errors.NewStartTransactionError(fmt.Errorf("Panic: %v", r))
+			}
+		}()
+
 		gcAgentTxs := s.gcClient.Transactions()
 		if gcAgentTxs == nil {
 			return nil, errors.NewStartTransactionError(gcagent.ErrNoInitTransactions)
@@ -123,7 +130,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 	return
 }
 
-func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryContext) errors.Error {
+func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryContext) (errOut errors.Error) {
 	txContext, _ := context.GetTxContext().(*transactions.TranContext)
 	if txContext == nil {
 		return nil
@@ -158,6 +165,13 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	if transaction != nil {
 		var wg sync.WaitGroup
 
+		defer func() {
+			// protect from the panics
+			if r := recover(); r != nil {
+				errOut = errors.NewCommitTransactionError(fmt.Errorf("Panic: %v", r), diag)
+			}
+		}()
+
 		logging.Tracef("=====%v=====Actual Commit begin========", txId)
 		wg.Add(1)
 		err = transaction.Commit(func(resErr error) {
@@ -189,7 +203,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	return nil
 }
 
-func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
+func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryContext, sname string) (errOut errors.Error) {
 	txContext, _ := context.GetTxContext().(*transactions.TranContext)
 	if txContext == nil {
 		return nil
@@ -219,6 +233,13 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 	transaction := txMutations.Transaction()
 	if transaction != nil {
 		var wg sync.WaitGroup
+
+		defer func() {
+			// protect from the panics
+			if r := recover(); r != nil {
+				errOut = errors.NewRollbackTransactionError(fmt.Errorf("Panic: %v", r), diag)
+			}
+		}()
 
 		wg.Add(1)
 		err = transaction.Rollback(func(resErr error) {

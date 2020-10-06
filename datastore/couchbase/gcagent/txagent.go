@@ -14,6 +14,7 @@ package gcagent
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -89,6 +90,13 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 	if len(paths) > 0 && paths[0] != "$document.exptime" {
 		return append(errs, ErrNoSubDocInTransaction)
 	}
+
+	defer func() {
+		// protect from panics
+		if r := recover(); r != nil {
+			errs = append(errs, fmt.Errorf("TxGet() Panic: %v", r))
+		}
+	}()
 
 	// send the request and get results in call back
 	wg := &sync.WaitGroup{}
@@ -168,6 +176,13 @@ type WriteOp struct {
 func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gctx.TransactionsInternal,
 	bucketName, scopeName, collectionName string,
 	collectionID uint32, reqDeadline time.Time, wops WriteOps) (errOut error) {
+
+	defer func() {
+		// protect from panics
+		if r := recover(); r != nil {
+			errOut = fmt.Errorf("TxWrite() Panic: %v", r)
+		}
+	}()
 
 	wg := &sync.WaitGroup{}
 	txId := transaction.Attempt().ID
