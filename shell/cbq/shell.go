@@ -564,12 +564,6 @@ func main() {
 		creds = append(creds, command.Credential{"user": pURL.Username, "pass": pURL.Password})
 	}
 
-	//Append empty credentials. This is used for cases where one of the buckets
-	//is a SASL bucket, and we need to access the other unprotected buckets.
-	//CBauth works this way.
-
-	creds = append(creds, command.Credential{"user": "", "pass": ""})
-
 	/* Add the credentials set by -user and -credentials to the
 	   n1ql creds parameter.
 	*/

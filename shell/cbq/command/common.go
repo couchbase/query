@@ -342,7 +342,6 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 			creds = append(creds, Credential{"user": up[0], "pass": up[1]})
 		}
 	}
-	creds = append(creds, Credential{"user": "", "pass": ""})
 	return creds, 0, ""
 
 }
