@@ -1,25 +1,60 @@
 #!/bin/bash
 #
-# to build the enterprise version, launch this 
-# as './build.sh -tags "enterprise"
+# To build the enterprise version, launch this  AS './build.sh -tags enterprise'
+# To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
+# Add -s to fix standalone build issues. Keep indexer, eventing-ee generated files in ~/devbld
 
-args=$*
+
+args=""
 
 enterprise=0
+uflag=
+sflag=0
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
       shift
       [[ "$1" == "enterprise" ]] && enterprise=1
+      args="$args -tags $1"
       ;;
+    -u) uflag=-u ;;
+    -s) sflag=1 ;;
+    *) args="$args $1" ;;
   esac
   shift
 done
 
 set -- $args
 
-echo go get $* -d -v ./...
-go get $* -d -v ./...
+DevStandaloneSetup() {
+    # curl fix match manifest
+       (cd ../../couchbasedeps/go-curl; git switch 20161221-couchbase)
+    # indexer generated files
+       if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) && ( -f ~/devbld/query.pb.go ) ]]; then
+           cp ~/devbld/query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
+       fi
+    # eventing-ee generated files
+       if [[ ( ! -d ../eventing-ee/gen/nftp ) && ( -d ~/devbld/nftp ) ]]; then
+           cp -rp ~/devbld/nftp ../eventing-ee/gen/nftp
+       fi
+    # gocbcore v9 version point to master
+       if [[ ! -h ../gocbcore/v9 ]]; then
+           (cd ../gocbcore; ln -s . v9)
+       fi
+    # bleve old commit match manifest
+       (cd ../../blevesearch/bleve; git checkout e42e7143c87e72f8046d32898f117a27c0db1d4d; go get $* -d -v ./...)
+}
+
+# turn off go module for non repo sync build or standalone build
+if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag == 1) ]]; then
+     export GO111MODULE=off
+     echo go get $* $uflag -d -v ./...
+     go get $* $uflag -d -v ./...
+     if [[ $sflag == 1 ]]; then
+         DevStandaloneSetup
+     fi
+fi
+
 
 echo cd parser/n1ql
 cd parser/n1ql
@@ -29,10 +64,7 @@ cd ../..
 echo go fmt ./...
 go fmt ./...
 if [[ $enterprise == 1 ]]; then
-  echo go fmt ../query-ee/...
-  cd ../query-ee
-  go fmt ./...
-  cd ../query
+  (echo go fmt ../query-ee/...; cd ../query-ee; export GO111MODULE=off; go fmt ./...)
 fi
 
 echo cd server/cbq-engine
