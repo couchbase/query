@@ -21,8 +21,10 @@ INCLUDE (FindCouchbaseGo)
 
 IF (BUILD_ENTERPRISE)
     SET (_gotags "enterprise")
+    SET (_extra_deps "evaluator-generated")
 ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
+    SET (_extra_deps)
 ENDIF(BUILD_ENTERPRISE)
 
 SET (GOVERSION 1.13.7)
@@ -51,7 +53,7 @@ IF (NOT CBQ_ONLY)
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
 
   GoModBuild (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
-    DEPENDS n1ql-yacc proto-generated evaluator-generated INSTALL_PATH bin
+    DEPENDS n1ql-yacc proto-generated ${_extra_deps} INSTALL_PATH bin
     CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR}"
     CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR}"
     LDFLAGS "${LDFLAGS}"
