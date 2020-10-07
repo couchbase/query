@@ -32,7 +32,7 @@ GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
 GoPrivateMod (MODULE gocbcore-transactions
-  PATH ../../../../../godeps/src/github.com/couchbaselabs/gocbcore-transactions)
+  PATH ../../couchbaselabs/gocbcore-transactions)
 
 SET (LDFLAGS)
 IF (APPLE)
