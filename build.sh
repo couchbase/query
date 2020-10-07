@@ -28,7 +28,7 @@ set -- $args
 
 DevStandaloneSetup() {
     # curl fix match manifest
-       (cd ../../couchbasedeps/go-curl; git switch 20161221-couchbase)
+       (cd ../../couchbasedeps/go-curl; git checkout 20161221-couchbase)
     # indexer generated files
        if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) && ( -f ~/devbld/query.pb.go ) ]]; then
            cp ~/devbld/query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
