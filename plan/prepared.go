@@ -355,23 +355,29 @@ func (this *Prepared) SetTxPrepared(txPrepared *Prepared, hashCode string) {
 }
 
 func (this *Prepared) GetTxPrepared(deltaKeyspaces map[string]bool) (*Prepared, string) {
+	good := this.Type() != "DELETE"
 	if len(deltaKeyspaces) > 0 {
 		if len(this.indexScanKeyspaces) == 0 {
-			return this, ""
+			if good {
+				return this, ""
+			} else {
+				deltaKeyspaces = nil
+			}
 		} else if len(this.indexScanKeyspaces) > _TX_KEYSPACES {
 			return nil, ""
 		}
-		good := true
-		for ks, _ := range this.indexScanKeyspaces {
-			if _, ok := deltaKeyspaces[ks]; ok {
-				good = false
-				break
+		if good {
+			for ks, _ := range this.indexScanKeyspaces {
+				if _, ok := deltaKeyspaces[ks]; ok {
+					good = false
+					break
+				}
+			}
+			if good {
+				return this, ""
 			}
 		}
 
-		if good {
-			return this, ""
-		}
 	}
 
 	hashCode := this.txHashCode(deltaKeyspaces)
