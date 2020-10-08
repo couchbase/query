@@ -604,13 +604,21 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// MB-19509 we now have to check that the encoded plan matches
 	// the prepared statement named in the rest API
 	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
-	if prepared_key != prepared.Name() {
-		return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name())
-	}
 
-	// If a query context is specified, it has to match
-	if queryContext != "" && queryContext != prepared.QueryContext() {
-		return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext, prepared.QueryContext())
+	// if a query context is specified, name and query context have to match
+	// if it isn't, encoded name and query context before comapring to key
+	if queryContext != "" {
+		if prepared_key != prepared.Name() {
+			return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name())
+		}
+		if queryContext != prepared.QueryContext() {
+			return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext, prepared.QueryContext())
+		}
+	} else {
+		name := encodeName(prepared.Name(), prepared.QueryContext())
+		if prepared_key != name {
+			return nil, errors.NewEncodingNameMismatchError(prepared_name, name)
+		}
 	}
 
 	// we don't trust anything strangers give us.
