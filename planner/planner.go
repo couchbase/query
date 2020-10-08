@@ -27,6 +27,9 @@ type PlanCache interface {
 
 	// check if plan already exists for name / text / options combo
 	GetPlan(name, text, namespace string, context *PrepareContext) (*plan.Prepared, errors.Error)
+
+	// Predefined prepare name
+	IsPredefinedPrepareName(name string) bool
 }
 
 var planCache PlanCache

@@ -30,6 +30,8 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else if planCache.IsPredefinedPrepareName(name) {
+		return nil, errors.NewPredefinedPreparedNameError(name)
 	}
 
 	if !force {

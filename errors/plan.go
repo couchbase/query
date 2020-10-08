@@ -93,6 +93,11 @@ func NewEncodingContextMismatchError(name, expected, found string) Error {
 		InternalMsg: fmt.Sprintf("Mismatching query_context in encoded plan, expecting: %s, found: %s", expected, found), InternalCaller: CallerN(1)}
 }
 
+func NewPredefinedPreparedNameError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 4092, IKey: "plan.build_prepared.reserved",
+		InternalMsg: fmt.Sprintf("Prepared name %s is predefined (reserved). ", msg), InternalCaller: CallerN(1)}
+}
+
 const NO_INDEX_JOIN = 4100
 
 func NewNoIndexJoinError(alias, op string) Error {

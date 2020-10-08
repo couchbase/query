@@ -171,8 +171,8 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	_, isPrepare := stmt.(*algebra.Prepare)
 
 	if isPrepare {
-		namedArgs = nil
-		positionalArgs = nil
+		prepContext.SetNamedArgs(nil)
+		prepContext.SetPositionalArgs(nil)
 	}
 
 	//  monitoring code TBD

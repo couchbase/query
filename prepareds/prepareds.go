@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/rewrite"
+	"github.com/couchbase/query/semantics"
 	"github.com/couchbase/query/util"
 )
 
@@ -72,11 +73,19 @@ type CacheEntry struct {
 var prepareds = &preparedCache{}
 var store datastore.Datastore
 var systemstore datastore.Datastore
+var predefinedPrepareStatements map[string]string
 
 // init prepareds cache
 func PreparedsInit(limit int) {
 	prepareds.cache = util.NewGenCache(limit)
 	planner.SetPlanCache(prepareds)
+	predefinedPrepareStatements = map[string]string{
+		"__get":    "PREPARE __get FROM SELECT META(d).id, META(d).cas, META(d).txnMeta, d AS doc FROM $1 AS d USE KEYS $2;",
+		"__insert": "PREPARE __insert FROM INSERT INTO $1 AS d VALUES ($2, $3, $4);",
+		"__upsert": "PREPARE __upsert FROM UPSERT INTO $1 AS d VALUES ($2, $3, $4);",
+		"__update": "PREPARE __update FROM UPDATE $1 AS d USE KEYS $2 SET d = $3, META(d).expiration = $4.expiration RETURNING META(d).cas, META(d).cas, META(d).txnMeta, d AS doc;",
+		"__delete": "PREPARE __delete FROM DELETE FROM $1 AS d USE KEYS $2;",
+	}
 }
 
 // initialize the cache from a different node
@@ -146,6 +155,11 @@ func PreparedsRemotePrime() {
 }
 
 // preparedCache implements planner.PlanCache
+func (this *preparedCache) IsPredefinedPrepareName(name string) bool {
+	_, ok := predefinedPrepareStatements[name]
+	return ok
+}
+
 func (this *preparedCache) GetText(text string, offset int) string {
 
 	// in order to get the force option to not to mistake the
@@ -473,11 +487,25 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 	metaCheck := (options & OPT_METACHECK) != 0
 
 	host, name := distributed.RemoteAccess().SplitKey(preparedName)
+	statement, ok := predefinedPrepareStatements[name]
+	if ok {
+		queryContext = ""
+	}
+
 	encodedName := encodeName(name, queryContext)
 	ce := prepareds.get(encodedName, track)
 	if ce != nil {
 		prepared = ce.Prepared
+	} else if ok {
+		_, err = predefinedPrepareStatement(name, statement, "", "default")
+		if err == nil {
+			ce = prepareds.get(encodedName, track)
+			if ce != nil {
+				prepared = ce.Prepared
+			}
+		}
 	}
+
 	if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
 		distributed.RemoteAccess().GetRemoteDoc(host, encodedName, "prepareds", "GET",
 			func(doc map[string]interface{}) {
@@ -752,6 +780,67 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	}
 	pl.BuildEncodedPlan(json_bytes)
 	return pl, nil
+}
+
+func predefinedPrepareStatement(name, statement, queryContext, namespace string) (*plan.Prepared, errors.Error) {
+	var optimizer planner.Optimizer
+
+	useCBO := util.GetUseCBO()
+	if useCBO {
+		optimizer = getNewOptimizer()
+	}
+
+	requestId, err := util.UUIDV3()
+	if err != nil {
+		return nil, errors.NewPlanError(nil, "request id is nil")
+	}
+
+	var prepContext planner.PrepareContext
+	planner.NewPrepareContext(&prepContext, requestId, queryContext, nil, nil,
+		util.GetMaxIndexAPI(), util.GetN1qlFeatureControl(), false, useCBO, optimizer, nil)
+
+	stmt, err := n1ql.ParseStatement2(statement, namespace, queryContext)
+	if err != nil {
+		return nil, errors.NewParseSyntaxError(err, "")
+	}
+
+	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
+		return nil, errors.NewRewriteError(err, "")
+	}
+
+	semChecker := semantics.NewSemChecker(true, stmt.Type(), false)
+	_, err = stmt.Accept(semChecker)
+	if err != nil {
+		return nil, errors.NewSemanticsError(err, "")
+	}
+
+	prepared, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, namespace, false, true, &prepContext)
+	if err != nil {
+		return nil, errors.NewPlanError(err, "BuildPrepared")
+	}
+
+	if prepared == nil {
+		return nil, errors.NewNoSuchPreparedWithContextError(name, "")
+	}
+
+	prepared.SetName(name)
+	prepared.SetText(statement)
+	prepared.SetIndexApiVersion(prepContext.IndexApiVersion())
+	prepared.SetFeatureControls(prepContext.FeatureControls())
+	prepared.SetNamespace(namespace)
+	prepared.SetQueryContext(prepContext.QueryContext())
+	prepared.SetUseFts(prepContext.UseFts())
+	prepared.SetUseCBO(prepContext.UseCBO())
+	prepared.SetType(stmt.Type())
+
+	json_bytes, err := prepared.MarshalJSON()
+	if err != nil {
+		return nil, errors.NewPlanError(err, "")
+	}
+
+	prepared.BuildEncodedPlan(json_bytes)
+
+	return prepared, AddPrepared(prepared)
 }
 
 const (

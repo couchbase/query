@@ -83,6 +83,14 @@ func (this *PrepareContext) SetDeltaKeyspaces(dk map[string]bool) {
 	this.deltaKeyspaces = dk
 }
 
+func (this *PrepareContext) SetNamedArgs(na map[string]value.Value) {
+	this.namedArgs = na
+}
+
+func (this *PrepareContext) SetPositionalArgs(pa value.Values) {
+	this.positionalArgs = pa
+}
+
 func (this *PrepareContext) DeltaKeyspaces() map[string]bool {
 	return this.deltaKeyspaces
 }
