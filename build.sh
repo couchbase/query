@@ -41,8 +41,22 @@ DevStandaloneSetup() {
        if [[ ! -h ../gocbcore/v9 ]]; then
            (cd ../gocbcore; ln -s . v9)
        fi
-    # bleve old commit match manifest
-       (cd ../../blevesearch; git clone -b v11.0.12 http://github.com/blevesearch/zap.git zap/v11; git clone -b v12.0.12 http://github.com/blevesearch/zap.git zap/v12; git clone -b v13.0.4 http://github.com/blevesearch/zap.git zap/v13; git clone -b v14.0.3 http://github.com/blevesearch/zap.git zap/v14; git clone -b v15.0.1 http://github.com/blevesearch/zap.git zap/v15)
+    # zap versions
+       if [[ ! -d ../../blevesearch/zap/v11 ]]; then
+           (cd ../../blevesearch; git clone -b v11.0.12 http://github.com/blevesearch/zap.git zap/v11)
+       fi
+       if [[ ! -d ../../blevesearch/zap/v12 ]]; then
+           (cd ../../blevesearch; git clone -b v12.0.12 http://github.com/blevesearch/zap.git zap/v12)
+       fi
+       if [[ ! -d ../../blevesearch/zap/v13 ]]; then
+           (cd ../../blevesearch; git clone -b v13.0.4 http://github.com/blevesearch/zap.git zap/v13)
+       fi
+       if [[ ! -d ../../blevesearch/zap/v14 ]]; then
+           (cd ../../blevesearch; git clone -b v14.0.3 http://github.com/blevesearch/zap.git zap/v14)
+       fi
+       if [[ ! -d ../../blevesearch/zap/v15 ]]; then
+           (cd ../../blevesearch; git clone -b v15.0.1 http://github.com/blevesearch/zap.git zap/v15)
+       fi
 }
 
 # turn off go module for non repo sync build or standalone build
