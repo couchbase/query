@@ -68,16 +68,15 @@ func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName 
 		meta_type = "base64"
 	}
 
-	av.SetAttachment("meta", map[string]interface{}{
-		"id":         key,
-		"keyspace":   fullName,
-		"cas":        uint64(res.Cas),
-		"type":       meta_type,
-		"flags":      uint32(0),
-		"expiration": uint32(0),
-		"txnMeta":    txnMetaBytes,
-	})
+	meta := av.NewMeta()
+	meta["keyspace"] = fullName
+	meta["cas"] = uint64(res.Cas)
+	meta["type"] = meta_type
+	meta["flags"] = uint32(0)
+	meta["expiration"] = uint32(0)
+	meta["txnMeta"] = txnMetaBytes
 	av.SetId(key)
+
 	return av, nil
 }
 
