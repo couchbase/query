@@ -370,7 +370,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 
 		for k, mv := range mvs {
 			av := value.NewAnnotatedValue(mv.Val)
-			meta := av.GetMeta()
+			meta := av.NewMeta()
 			meta["keyspace"] = fullName
 			meta["cas"] = mv.Cas
 			meta["type"] = "json"
@@ -388,7 +388,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			// Transformed SDK REPLACE, DELETE with CAS don't read the document
 			k := fkeys[0]
 			av := value.NewAnnotatedValue(value.NewValue(nil))
-			meta := av.GetMeta()
+			meta := av.NewMeta()
 			meta["keyspace"] = fullName
 			meta["cas"] = sdkCas
 			meta["type"] = "json"

@@ -1688,6 +1688,7 @@ func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, 
 func SetMetaCas(val value.Value, cas uint64) bool {
 	if av, ok := val.(value.AnnotatedValue); ok && av != nil {
 		av.NewMeta()["cas"] = cas
+		return true
 	}
 	return false
 }
