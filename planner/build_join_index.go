@@ -33,7 +33,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(node.Alias())
+		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, node.Alias())
 		cost, cardinality = getIndexJoinCost(this.lastOp, node.Outer(), node.Right(),
 			leftKeyspaces, rightKeyspace, covers != nil, index,
 			this.context.RequestId(), this.advisorValidate())
@@ -59,7 +59,7 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(node.Alias())
+		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, node.Alias())
 		cost, cardinality = getIndexNestCost(this.lastOp, node.Outer(), node.Right(),
 			leftKeyspaces, rightKeyspace, index,
 			this.context.RequestId(), this.advisorValidate())

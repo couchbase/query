@@ -135,25 +135,29 @@ func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[str
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
+func getSimpleFromTermCost(baseKeyspaces map[string]*base.BaseKeyspace, left, right plan.Operator,
+	filters base.Filters) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
+func getSimpleFilterCost(baseKeyspaces map[string]*base.BaseKeyspace, alias string,
+	cost, cardinality, selec float64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (float64, float64) {
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
+	alias string, advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
-	keyspaceNames map[string]string, cost, cardinality float64, advisorValidate bool) (float64, float64) {
+	keyspaceNames map[string]string, alias string, cost, cardinality float64,
+	advisorValidate bool) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getLetCost(lastOp plan.Operator) (float64, float64) {
+func getLetCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -161,11 +165,11 @@ func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64) {
+func getOffsetCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, noffset int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64) {
+func getLimitCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, nlimit int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -175,21 +179,24 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string, advisorValidate bool) map[datastore.Index]*indexEntry {
+	nTerms int, alias string, baseKeyspaces map[string]*base.BaseKeyspace,
+	advisorValidate bool) map[datastore.Index]*indexEntry {
 	return sargables
 }
 
-func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
+func getSortCost(baseKeyspaces map[string]*base.BaseKeyspace, nterms int, cardinality float64,
+	limit, offset int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getInitialProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
+func getInitialProjectCost(baseKeyspaces map[string]*base.BaseKeyspace,
+	projection *algebra.Projection, cardinality float64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, cardinality float64,
-	keyspaces map[string]string, maxParallelism int) (
-	float64, float64, float64, float64, float64, float64) {
+func getGroupCosts(baseKeyspaces map[string]*base.BaseKeyspace, group *algebra.Group,
+	aggregates algebra.Aggregates, cost, cardinality float64, keyspaces map[string]string,
+	maxParallelism int) (float64, float64, float64, float64, float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -245,6 +252,7 @@ func getUpdateSendCost(keyspace datastore.Keyspace, limit expression.Expression,
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getWindowAggCost(aggs algebra.Aggregates, cost, cardinality float64) (float64, float64) {
+func getWindowAggCost(baseKeyspaces map[string]*base.BaseKeyspace, aggs algebra.Aggregates,
+	cost, cardinality float64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }

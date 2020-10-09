@@ -32,7 +32,7 @@ func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren
 		cost = last.Cost()
 		cardinality = last.Cardinality()
 		if cost > 0.0 && cardinality > 0.0 {
-			ipcost, ipcard := getInitialProjectCost(projection, cardinality)
+			ipcost, ipcard := getInitialProjectCost(this.baseKeyspaces, projection, cardinality)
 			if ipcost > 0.0 && ipcard > 0.0 {
 				cost += ipcost
 				cardinality = ipcard

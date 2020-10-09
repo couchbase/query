@@ -229,39 +229,43 @@ func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[str
 	return optutil.CalcUnnestCost(node, lastOp, keyspaces, advisorValidate)
 }
 
-func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64) {
-	return optutil.CalcSimpleFromTermCost(left, right, filters)
+func getSimpleFromTermCost(baseKeyspaces map[string]*base.BaseKeyspace, left, right plan.Operator,
+	filters base.Filters) (float64, float64) {
+	return optutil.CalcSimpleFromTermCost(baseKeyspaces, left, right, filters)
 }
 
-func getSimpleFilterCost(cost, cardinality, selec float64) (float64, float64) {
-	return optutil.CalcSimpleFilterCost(cost, cardinality, selec)
+func getSimpleFilterCost(baseKeyspaces map[string]*base.BaseKeyspace, alias string,
+	cost, cardinality, selec float64) (float64, float64) {
+	return optutil.CalcSimpleFilterCost(baseKeyspaces, alias, cost, cardinality, selec)
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (float64, float64) {
-
-	return optutil.CalcFilterCost(lastOp, expr, baseKeyspaces, keyspaceNames, advisorValidate)
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
+	alias string, advisorValidate bool) (float64, float64) {
+	return optutil.CalcFilterCost(lastOp, expr, baseKeyspaces, keyspaceNames, alias, advisorValidate)
 }
 
 func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
-	keyspaceNames map[string]string, cost, cardinality float64, advisorValidate bool) (float64, float64) {
-	return optutil.CalcFilterCostWithInput(expr, baseKeyspaces, keyspaceNames, cost, cardinality, advisorValidate)
+	keyspaceNames map[string]string, alias string, cost, cardinality float64,
+	advisorValidate bool) (float64, float64) {
+	return optutil.CalcFilterCostWithInput(expr, baseKeyspaces, keyspaceNames, alias,
+		cost, cardinality, advisorValidate)
 }
 
-func getLetCost(lastOp plan.Operator) (float64, float64) {
-	return optutil.CalcLetCost(lastOp)
+func getLetCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator) (float64, float64) {
+	return optutil.CalcLetCost(baseKeyspaces, lastOp)
 }
 
 func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float64) {
 	return optutil.CalcWithCost(lastOp, with)
 }
 
-func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64) {
-	return optutil.CalcOffsetCost(lastOp, noffset)
+func getOffsetCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, noffset int64) (float64, float64) {
+	return optutil.CalcOffsetCost(baseKeyspaces, lastOp, noffset)
 }
 
-func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64) {
-	return optutil.CalcLimitCost(lastOp, nlimit)
+func getLimitCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, nlimit int64) (float64, float64) {
+	return optutil.CalcLimitCost(baseKeyspaces, lastOp, nlimit)
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
@@ -270,7 +274,8 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string, advisorValidate bool) map[datastore.Index]*indexEntry {
+	nTerms int, alias string, baseKeyspaces map[string]*base.BaseKeyspace,
+	advisorValidate bool) map[datastore.Index]*indexEntry {
 
 	indexes := make([]*base.IndexCost, 0, len(sargables))
 
@@ -294,7 +299,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		// (also ignore limit and offset for this calculation).
 		for _, ic := range indexes {
 			if !ic.HasOrder() {
-				sortCost, _ := getSortCost(nTerms, ic.Cardinality(), 0, 0)
+				sortCost, _ := getSortCost(baseKeyspaces, nTerms, ic.Cardinality(), 0, 0)
 				if sortCost > 0.0 {
 					ic.SetCost(ic.Cost() + sortCost)
 				}
@@ -373,21 +378,23 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 	adjustIndexSelectivity(indexes[1:], sargables, alias, considerInternal)
 }
 
-func getSortCost(nterms int, cardinality float64, limit, offset int64) (float64, float64) {
-	return optutil.CalcSortCost(nterms, cardinality, limit, offset)
+func getSortCost(baseKeyspaces map[string]*base.BaseKeyspace, nterms int, cardinality float64,
+	limit, offset int64) (float64, float64) {
+	return optutil.CalcSortCost(baseKeyspaces, nterms, cardinality, limit, offset)
 }
 
-func getInitialProjectCost(projection *algebra.Projection, cardinality float64) (float64, float64) {
-	return optutil.CalcInitialProjectionCost(projection, cardinality)
+func getInitialProjectCost(baseKeyspaces map[string]*base.BaseKeyspace,
+	projection *algebra.Projection, cardinality float64) (float64, float64) {
+	return optutil.CalcInitialProjectionCost(baseKeyspaces, projection, cardinality)
 }
 
-func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, cardinality float64,
-	keyspaces map[string]string, maxParallelism int) (
-	float64, float64, float64, float64, float64, float64) {
+func getGroupCosts(baseKeyspaces map[string]*base.BaseKeyspace, group *algebra.Group,
+	aggregates algebra.Aggregates, cost, cardinality float64, keyspaces map[string]string,
+	maxParallelism int) (float64, float64, float64, float64, float64, float64) {
 	if maxParallelism <= 0 {
 		maxParallelism = plan.GetMaxParallelism()
 	}
-	return optutil.CalcGroupCosts(group, aggregates, cost, cardinality, keyspaces, maxParallelism)
+	return optutil.CalcGroupCosts(baseKeyspaces, group, aggregates, cost, cardinality, keyspaces, maxParallelism)
 }
 
 func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
@@ -442,6 +449,7 @@ func getUpdateSendCost(keyspace datastore.Keyspace, limit expression.Expression,
 	return optutil.CalcUpdateSendCost(keyspace, limit, cost, cardinality)
 }
 
-func getWindowAggCost(aggs algebra.Aggregates, cost, cardinality float64) (float64, float64) {
-	return optutil.CalcWindowAggCost(aggs, cost, cardinality)
+func getWindowAggCost(baseKeyspaces map[string]*base.BaseKeyspace, aggs algebra.Aggregates,
+	cost, cardinality float64) (float64, float64) {
+	return optutil.CalcWindowAggCost(baseKeyspaces, aggs, cost, cardinality)
 }

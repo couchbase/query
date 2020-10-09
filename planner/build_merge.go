@@ -87,6 +87,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
+	ksAlias := ksref.Alias()
 
 	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
@@ -107,7 +108,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if stmt.IsOnKey() {
 		if this.useCBO {
-			leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(targetKeyspace.Name())
+			leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, ksAlias)
 			joinCost, joinCard = getLookupJoinCost(this.lastOp, outer, right,
 				leftKeyspaces, rightKeyspace)
 		}
@@ -173,7 +174,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 		cardinality = matchCard
 		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where(), cost, cardinality)
+			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality)
 			ops = append(ops, filter)
 			cost = filter.Cost()
 			cardinality = filter.Cardinality()
@@ -182,7 +183,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
 			cost, cardinality = getCloneCost(keyspace, cost, cardinality)
 		}
-		ops = append(ops, plan.NewClone(ksref.Alias(), cost, cardinality))
+		ops = append(ops, plan.NewClone(ksAlias, cost, cardinality))
 
 		if act.Set() != nil {
 			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
@@ -220,7 +221,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 		cardinality = matchCard
 		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where(), cost, cardinality)
+			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality)
 			ops = append(ops, filter)
 			cost = filter.Cost()
 			cardinality = filter.Cardinality()
@@ -249,7 +250,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 		cardinality = nonMatchCard
 		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where(), cost, cardinality)
+			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality)
 			ops = append(ops, filter)
 			cost = filter.Cost()
 			cardinality = filter.Cardinality()
@@ -317,10 +318,11 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	return plan.NewSequence(this.children...), nil
 }
 
-func (this *builder) addMergeFilter(pred expression.Expression, cost, cardinality float64) *plan.Filter {
+func (this *builder) addMergeFilter(pred expression.Expression, alias string,
+	cost, cardinality float64) *plan.Filter {
 	if this.useCBO {
 		cost, cardinality = getFilterCostWithInput(pred, this.baseKeyspaces,
-			this.keyspaceNames, cost, cardinality, this.advisorValidate())
+			this.keyspaceNames, alias, cost, cardinality, this.advisorValidate())
 	}
 
 	return plan.NewFilter(pred, cost, cardinality)

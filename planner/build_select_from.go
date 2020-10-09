@@ -266,7 +266,8 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 			if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 				cost, cardinality = getFilterCost(this.lastOp, filter,
-					this.baseKeyspaces, this.keyspaceNames, this.advisorValidate())
+					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
+					this.advisorValidate())
 			}
 
 			// Add filter as a separate Filter operator since Fetch is already
@@ -281,9 +282,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 	}
 
-	err = this.processKeyspaceDone(node.Alias())
-	if err != nil {
-		return nil, err
+	if !node.IsAnsiJoinOp() {
+		err = this.processKeyspaceDone(node.Alias())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -314,14 +317,17 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		cardinality := OPT_CARD_NOT_AVAIL
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, filter,
-				this.baseKeyspaces, this.keyspaceNames, this.advisorValidate())
+				this.baseKeyspaces, this.keyspaceNames, node.Alias(),
+				this.advisorValidate())
 		}
 		this.addSubChildren(plan.NewFilter(filter, cost, cardinality))
 	}
 
-	err = this.processKeyspaceDone(node.Alias())
-	if err != nil {
-		return nil, err
+	if !node.IsAnsiJoinOp() {
+		err = this.processKeyspaceDone(node.Alias())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -347,14 +353,17 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	if this.useCBO {
 		cost, cardinality = getExpressionScanCost(node.ExpressionTerm(), this.keyspaceNames)
 		if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
-			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+			cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, node.Alias(),
+				cost, cardinality, selec)
 		}
 	}
 	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality))
 
-	err = this.processKeyspaceDone(node.Alias())
-	if err != nil {
-		return nil, err
+	if !node.IsAnsiJoinOp() {
+		err = this.processKeyspaceDone(node.Alias())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -386,7 +395,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(right.Alias())
+		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, right.Alias())
 		cost, cardinality = getLookupJoinCost(this.lastOp, node.Outer(), right,
 			leftKeyspaces, rightKeyspace)
 	}
@@ -512,7 +521,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	if this.useCBO {
-		leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(right.Alias())
+		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, right.Alias())
 		cost, cardinality = getLookupNestCost(this.lastOp, node.Outer(), right,
 			leftKeyspaces, rightKeyspace)
 	}
@@ -630,7 +639,8 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		if this.useCBO {
 			cost, cardinality = getUnnestCost(node, this.lastOp, this.keyspaceNames, this.advisorValidate())
 			if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
-				cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+				cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, node.Alias(),
+					cost, cardinality, selec)
 			}
 		}
 		this.addSubChildren(plan.NewUnnest(node, filter, cost, cardinality))
@@ -832,7 +842,8 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 	baseKeyspace.Filters().ClearIndexFlag()
 
 	if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
-		cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+		cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, alias,
+			cost, cardinality, selec)
 	}
 	return filter, cost, cardinality, nil
 }

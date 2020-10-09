@@ -137,7 +137,8 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			}
 			if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) {
 				selec = this.adjustForIndexFilters(right.Alias(), origOnclause, selec)
-				cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+				cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, right.Alias(),
+					cost, cardinality, selec)
 			}
 			return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality), nil
 		} else if hjCost > 0.0 {
@@ -182,7 +183,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
 		if this.useCBO {
-			leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(right.Alias())
+			leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, right.Alias())
 			cost, cardinality = getLookupJoinCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, leftKeyspaces, rightKeyspace)
 		}
@@ -219,7 +220,8 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) {
-			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+			cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, right.Alias(),
+				cost, cardinality, selec)
 		}
 
 		return plan.NewNLJoin(node, plan.NewSequence(scans...), filter, cost, cardinality), nil
@@ -316,7 +318,8 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			}
 			if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) {
 				selec = this.adjustForIndexFilters(right.Alias(), origOnclause, selec)
-				cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+				cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, right.Alias(),
+					cost, cardinality, selec)
 			}
 			return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality), nil
 		} else if hnCost > 0.0 {
@@ -361,7 +364,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
 		if this.useCBO {
-			leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(right.Alias())
+			leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, right.Alias())
 			cost, cardinality = getLookupNestCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, leftKeyspaces, rightKeyspace)
 		}
@@ -393,7 +396,8 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		}
 
 		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) {
-			cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+			cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, right.Alias(),
+				cost, cardinality, selec)
 		}
 
 		return plan.NewNLNest(node, plan.NewSequence(scans...), filter, cost, cardinality), nil
@@ -619,7 +623,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	cardinality := float64(OPT_CARD_NOT_AVAIL)
 	useCBO := this.useCBO
 	if useCBO && len(this.children) > 0 {
-		leftKeyspaces, _, rightKeyspace, _ := this.getKeyspacesAliases(node.Alias())
+		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, node.Alias())
 		cost, cardinality = getNLJoinCost(lastOp, this.lastOp, leftKeyspaces, rightKeyspace,
 			baseKeyspace.Filters(), outer, op)
 	}
@@ -635,7 +639,8 @@ func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Exp
 	}
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) {
 		selec = this.adjustForHashFilters(node.Alias(), node.Onclause(), selec)
-		cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+		cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, node.Alias(),
+			cost, cardinality, selec)
 	}
 	if newOnclause != nil {
 		node.SetOnclause(newOnclause)
@@ -654,7 +659,8 @@ func (this *builder) buildHashNest(node *algebra.AnsiNest, filter expression.Exp
 	}
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) {
 		selec = this.adjustForHashFilters(node.Alias(), node.Onclause(), selec)
-		cost, cardinality = getSimpleFilterCost(cost, cardinality, selec)
+		cost, cardinality = getSimpleFilterCost(this.baseKeyspaces, node.Alias(),
+			cost, cardinality, selec)
 	}
 	if newOnclause != nil {
 		node.SetOnclause(newOnclause)
@@ -900,7 +906,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		}
 	}
 
-	leftKeyspaces, leftAliases, rightKeyspace, rightAlias := this.getKeyspacesAliases(alias)
+	leftKeyspaces, leftAliases, rightKeyspace, rightAlias := base.GetKeyspacesAliases(this.baseKeyspaces, alias)
 
 	if useCBO {
 		var bldRight bool
@@ -935,26 +941,6 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, newFilter, cost, cardinality, nil
-}
-
-func (this *builder) getKeyspacesAliases(alias string) (
-	leftKeyspaces, leftAliases []string, rightKeyspace, rightAliase string) {
-
-	leftAliases = make([]string, 0, len(this.baseKeyspaces)-1)
-	leftKeyspaces = make([]string, 0, len(this.baseKeyspaces)-1)
-	for _, kspace := range this.baseKeyspaces {
-		if kspace.PlanDone() {
-			if kspace.Name() == alias {
-				rightAliase = kspace.Name()
-				rightKeyspace = kspace.Keyspace()
-			} else {
-				leftAliases = append(leftAliases, kspace.Name())
-				leftKeyspaces = append(leftKeyspaces, kspace.Keyspace())
-			}
-		}
-	}
-
-	return
 }
 
 func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression) (
@@ -1032,7 +1018,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	cardinality := OPT_CARD_NOT_AVAIL
 
 	if this.useCBO {
-		cost, cardinality = getSimpleFromTermCost(lastOp, this.lastOp, filters)
+		cost, cardinality = getSimpleFromTermCost(this.baseKeyspaces, lastOp, this.lastOp, filters)
 	}
 
 	return this.children, newOnclause, cost, cardinality, nil

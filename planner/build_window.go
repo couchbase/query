@@ -40,7 +40,8 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 		order := wOrderGroup.sortGroups.buildOrder()
 		if order != nil {
 			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-				scost, scardinality := getSortCost(len(order.Terms()), cardinality, 0, 0)
+				scost, scardinality := getSortCost(this.baseKeyspaces,
+					len(order.Terms()), cardinality, 0, 0)
 				if scost > 0.0 && scardinality > 0.0 {
 					cost += scost
 					cardinality = scardinality
@@ -55,7 +56,8 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {
 			if wOrderGroup.pbys[i] != nil && len(wOrderGroup.pbys[i].aggs) > 0 {
 				if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-					cost, cardinality = getWindowAggCost(wOrderGroup.pbys[i].aggs, cost, cardinality)
+					cost, cardinality = getWindowAggCost(this.baseKeyspaces,
+						wOrderGroup.pbys[i].aggs, cost, cardinality)
 				}
 				this.addSubChildren(plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs, cost, cardinality))
 			}

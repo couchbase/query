@@ -112,7 +112,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 			}
 		}
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			scost, scardinality := getSortCost(len(stmtOrder.Terms()), cardinality, nlimit, noffset)
+			scost, scardinality := getSortCost(this.baseKeyspaces, len(stmtOrder.Terms()),
+				cardinality, nlimit, noffset)
 			if scost > 0.0 && scardinality > 0.0 {
 				cost += scost
 				cardinality = scardinality
@@ -128,7 +129,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	if stmtOffset != nil && this.offset == nil {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			cost, cardinality = getOffsetCost(lastOp, noffset)
+			cost, cardinality = getOffsetCost(this.baseKeyspaces, lastOp, noffset)
 		}
 		offset := plan.NewOffset(stmtOffset, cost, cardinality)
 		children = append(children, offset)
@@ -137,7 +138,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	if stmtLimit != nil {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			cost, cardinality = getLimitCost(lastOp, nlimit)
+			cost, cardinality = getLimitCost(this.baseKeyspaces, lastOp, nlimit)
 		}
 		limit := plan.NewLimit(stmtLimit, cost, cardinality)
 		children = append(children, limit)

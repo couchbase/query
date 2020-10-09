@@ -198,3 +198,21 @@ func (this *BaseKeyspace) AddUnnestAlias(alias, keyspace string, size int) {
 func (this *BaseKeyspace) GetUnnests() map[string]string {
 	return this.unnests
 }
+
+func GetKeyspacesAliases(baseKeyspaces map[string]*BaseKeyspace, alias string) (
+	leftKeyspaces, leftAliases []string, rightKeyspace, rightAlias string) {
+
+	leftAliases = make([]string, 0, len(baseKeyspaces))
+	leftKeyspaces = make([]string, 0, len(baseKeyspaces))
+	for _, kspace := range baseKeyspaces {
+		if alias != "" && kspace.Name() == alias {
+			rightAlias = kspace.Name()
+			rightKeyspace = kspace.Keyspace()
+		} else if kspace.PlanDone() {
+			leftAliases = append(leftAliases, kspace.Name())
+			leftKeyspaces = append(leftKeyspaces, kspace.Keyspace())
+		}
+	}
+
+	return
+}
