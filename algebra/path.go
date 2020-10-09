@@ -310,7 +310,11 @@ func parsePathOrContext(queryContext string) []string {
 		elements = append(elements, "")
 	}
 	if start < len(queryContext) {
-		elements = append(elements, queryContext[start:])
+		if start < end {
+			elements = append(elements, queryContext[start:end])
+		} else {
+			elements = append(elements, queryContext[start:])
+		}
 	}
 	return elements
 }
