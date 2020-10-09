@@ -29,6 +29,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -72,6 +73,8 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
+
+	logging.Infof("host is %v", req.Host)
 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
@@ -674,6 +677,11 @@ func (this *httpRequest) EventGenericFields() adt.GenericFields {
 // for audit.Auditable interface.
 func (this *httpRequest) EventRemoteAddress() string {
 	return this.req.RemoteAddr
+}
+
+// for audit.Auditable interface.
+func (this *httpRequest) EventLocalAddress() string {
+	return this.req.Host
 }
 
 const ( // Request argument names

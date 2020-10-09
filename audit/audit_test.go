@@ -38,6 +38,7 @@ func (ma *mockAuditor) metricRegistry() accounting.MetricRegistry {
 type simpleAuditable struct {
 	genericFields       adt.GenericFields
 	remote              string
+	local               string
 	status              string
 	statement           string
 	queryContext        string
@@ -68,6 +69,10 @@ func (sa *simpleAuditable) EventGenericFields() adt.GenericFields {
 
 func (sa *simpleAuditable) EventRemoteAddress() string {
 	return sa.remote
+}
+
+func (sa *simpleAuditable) EventLocalAddress() string {
+	return sa.local
 }
 
 func (sa *simpleAuditable) EventStatus() string {

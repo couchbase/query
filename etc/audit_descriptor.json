@@ -13,6 +13,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -52,6 +53,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -91,6 +93,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -130,6 +133,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -168,6 +172,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -207,6 +212,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -246,6 +252,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -285,6 +292,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -324,6 +332,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -363,6 +372,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -401,6 +411,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -439,6 +450,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -475,6 +487,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -513,6 +526,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -551,6 +565,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -589,6 +604,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -627,6 +643,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -665,6 +682,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -686,6 +704,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -706,6 +725,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -727,6 +747,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -748,6 +769,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -768,6 +790,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -788,6 +811,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -808,6 +832,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -828,6 +853,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -848,6 +874,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -868,6 +895,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -889,6 +917,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -912,6 +941,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "httpMethod": "",
         "httpResultCode": 1,
@@ -947,6 +977,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "", 
         "httpResultCode": 1,
         "errorCode": 1, 
@@ -967,6 +998,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
@@ -986,6 +1018,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1024,6 +1057,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1062,6 +1096,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1100,6 +1135,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "", 
         "httpResultCode": 1,
         "errorCode": 1, 
@@ -1120,6 +1156,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
@@ -1139,6 +1176,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "", 
         "httpResultCode": 1,
         "errorCode": 1, 
@@ -1159,6 +1197,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
@@ -1178,6 +1217,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1216,6 +1256,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1254,6 +1295,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1292,6 +1334,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1330,6 +1373,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1368,6 +1412,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1406,6 +1451,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1444,6 +1490,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1477,6 +1524,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1511,6 +1559,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1545,6 +1594,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1579,6 +1629,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1613,6 +1664,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
 
         "requestId" : "",
         "statement" : "",
@@ -1647,6 +1699,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
@@ -1667,6 +1720,7 @@
         "timestamp" : "",
         "real_userid" : {"domain" : "", "user" : ""},
         "remote" : {"ip" : "", "port" : 1},
+	"local" : {"ip" : "", "port" : 1},
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,

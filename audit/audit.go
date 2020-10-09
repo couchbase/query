@@ -44,6 +44,9 @@ type Auditable interface {
 	// Address from which the request originated.
 	EventRemoteAddress() string
 
+	// Address which accepted the request.
+	EventLocalAddress() string
+
 	// success/fatal/stopped/etc.
 	EventStatus() string
 
@@ -97,6 +100,7 @@ type Auditable interface {
 type ApiAuditFields struct {
 	GenericFields  adt.GenericFields
 	RemoteAddress  string
+	LocalAddress   string
 	EventTypeId    uint32
 	Users          []string
 	HttpMethod     string
@@ -512,23 +516,23 @@ func SubmitApiRequest(event *ApiAuditFields) {
 	submitAuditEntries(auditEntries)
 }
 
-func parseRemoteFields(remoteAddr string) *remoteFields {
-	if remoteAddr == "" {
+func parseAddress(addr string) *addressFields {
+	if addr == "" {
 		return nil
 	}
-	lastColon := strings.LastIndex(remoteAddr, ":")
+	lastColon := strings.LastIndex(addr, ":")
 	if lastColon == -1 {
 		// No host:port separator. Put everything in Ip field.
-		return &remoteFields{Ip: remoteAddr}
+		return &addressFields{Ip: addr}
 	}
-	host := remoteAddr[:lastColon]
-	port := remoteAddr[lastColon+1:] // Not including the colon itself.
+	host := addr[:lastColon]
+	port := addr[lastColon+1:] // Not including the colon itself.
 	p, err := strconv.Atoi(port)
 	if err != nil {
-		logging.Errorf("Auditing: unable to parse port %s of remote url %s", port, remoteAddr)
-		return &remoteFields{Ip: remoteAddr}
+		logging.Errorf("Auditing: unable to parse port %s of address %s", port, addr)
+		return &addressFields{Ip: addr}
 	}
-	return &remoteFields{Ip: host, Port: p}
+	return &addressFields{Ip: host, Port: p}
 }
 
 // Returns a list of audit entries, because each user credential submitted as part of
@@ -537,7 +541,8 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	// Grab the data from the event, so we don't query the duplicated data
 	// multiple times.
 	genericFields := event.EventGenericFields()
-	remote := parseRemoteFields(event.EventRemoteAddress())
+	remote := parseAddress(event.EventRemoteAddress())
+	local := parseAddress(event.EventLocalAddress())
 	requestId := event.EventId()
 	statement := event.EventStatement()
 	queryContext := event.EventQueryContext()
@@ -567,6 +572,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 		record := &n1qlAuditEvent{
 			GenericFields:   genericFields,
 			Remote:          remote,
+			Local:           local,
 			RequestId:       requestId,
 			Statement:       statement,
 			QueryContext:    queryContext,
@@ -604,6 +610,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 		record := &n1qlAuditEvent{
 			GenericFields:   genericFields,
 			Remote:          remote,
+			Local:           local,
 			RequestId:       requestId,
 			Statement:       statement,
 			QueryContext:    queryContext,
@@ -646,13 +653,15 @@ func userInfoFromUsername(user string) datastore.UserInfo {
 // the requests generates a separate audit record.
 func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, auditInfo *datastore.AuditInfo) []auditQueueEntry {
 
-	remote := parseRemoteFields(event.RemoteAddress)
+	remote := parseAddress(event.RemoteAddress)
+	local := parseAddress(event.LocalAddress)
 	// No credentials at all? Generate one record.
 	usernames := event.Users
 	if len(usernames) == 0 {
 		record := &n1qlAuditApiRequestEvent{
 			GenericFields:  event.GenericFields,
 			Remote:         remote,
+			Local:          local,
 			HttpMethod:     event.HttpMethod,
 			HttpResultCode: event.HttpResultCode,
 			ErrorCode:      event.ErrorCode,
@@ -688,6 +697,7 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 		record := &n1qlAuditApiRequestEvent{
 			GenericFields:  event.GenericFields,
 			Remote:         remote,
+			Local:          local,
 			HttpMethod:     event.HttpMethod,
 			HttpResultCode: event.HttpResultCode,
 			ErrorCode:      event.ErrorCode,
@@ -717,7 +727,8 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 // If no standard exists for the field, use camelCase.
 type n1qlAuditEvent struct {
 	adt.GenericFields
-	Remote *remoteFields `json:"remote,omitempty"`
+	Remote *addressFields `json:"remote,omitempty"`
+	Local  *addressFields `json:"local,omitempty"`
 
 	RequestId       string                 `json:"requestId"`
 	Statement       string                 `json:"statement"`
@@ -737,7 +748,7 @@ type n1qlAuditEvent struct {
 	Metrics *n1qlMetrics `json:"metrics"`
 }
 
-type remoteFields struct {
+type addressFields struct {
 	Ip   string `json:"ip"`
 	Port int    `json:"port,omitempty"`
 }
@@ -755,7 +766,8 @@ type n1qlMetrics struct {
 
 type n1qlAuditApiRequestEvent struct {
 	adt.GenericFields
-	Remote *remoteFields `json:"remote,omitempty"`
+	Remote *addressFields `json:"remote,omitempty"`
+	Local  *addressFields `json:"local,omitempty"`
 
 	HttpMethod     string `json:"httpMethod"`
 	HttpResultCode int    `json:"httpResultCode"`
