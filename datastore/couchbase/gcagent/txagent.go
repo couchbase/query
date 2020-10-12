@@ -12,6 +12,7 @@
 package gcagent
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,11 +41,85 @@ type GetOp struct {
 }
 
 type AgentProvider struct {
-	provider *gocbcore.Agent
+	mutex      sync.RWMutex
+	client     *Client
+	bucketName string
+	provider   *gocbcore.Agent
+}
+
+/* gocbcore will not allow Refresh the SSL certificates.
+ * We must close old agent and create new one each time cerificate change.
+ * Close old agent after 2 minutes so that any transient connections will be serviced.
+ * If still not finished we will return error
+ */
+func (ap *AgentProvider) CreateOrRefreshAgent() error {
+	var config gocbcore.AgentConfig
+
+	rootCAs := ap.client.TLSRootCAs()
+	if rootCAs != nil {
+		// Use SSL config
+		config = *ap.client.sslConfig
+		config.UseTLS = true
+		config.TLSRootCAProvider = func() *x509.CertPool {
+			return rootCAs
+		}
+	} else {
+		// use non-SSL config
+		config = *ap.client.config
+	}
+
+	config.UserAgent = ap.bucketName
+	config.BucketName = ap.bucketName
+
+	agent, err := gocbcore.CreateAgent(&config)
+	if err != nil {
+		return err
+	}
+
+	if _WARMUP && config.BucketName != "" {
+		// Warm up by calling wait until ready
+		warmWaitCh := make(chan struct{}, 1)
+		if _, werr := agent.WaitUntilReady(
+			time.Now().Add(_WARMUPTIMEOUT),
+			gocbcore.WaitUntilReadyOptions{},
+			func(result *gocbcore.WaitUntilReadyResult, cerr error) {
+				if cerr != nil {
+					err = cerr
+				}
+				warmWaitCh <- struct{}{}
+			}); werr != nil && err == nil {
+			err = werr
+		}
+		<-warmWaitCh
+	}
+
+	ap.mutex.Lock()
+	oldAgent := ap.provider
+	ap.provider = agent
+	ap.mutex.Unlock()
+	if oldAgent != nil {
+		// close old agent after 2 minutes
+		go func() {
+			time.Sleep(_CLOSEWAIT)
+			oldAgent.Close()
+		}()
+	}
+
+	return nil
+}
+
+func (ap *AgentProvider) Refresh() error {
+	return ap.CreateOrRefreshAgent()
+}
+
+func (ap *AgentProvider) Agent() *gocbcore.Agent {
+	ap.mutex.RLock()
+	defer ap.mutex.RUnlock()
+	return ap.provider
 }
 
 func (ap *AgentProvider) Close() error {
-	return ap.provider.Close()
+	return ap.Agent().Close()
 }
 
 func (ap *AgentProvider) Deadline(d time.Time, n int) time.Time {
@@ -102,7 +177,7 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 	sendOneGet := func(item *GetOp) error {
 		wg.Add(1)
 		cerr := transaction.Get(gctx.GetOptions{
-			Agent:          ap.provider,
+			Agent:          ap.Agent(),
 			ScopeName:      scopeName,
 			CollectionName: collectionName,
 			Key:            []byte(item.Key),
@@ -192,7 +267,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	sendInsertOne := func(wop *WriteOp) error {
 		wg.Add(1)
 		cerr := transaction.Insert(gctx.InsertOptions{
-			Agent:          ap.provider,
+			Agent:          ap.Agent(),
 			ScopeName:      scopeName,
 			CollectionName: collectionName,
 			Key:            []byte(wop.Key),
@@ -251,7 +326,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 			errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
 			if errOut == nil {
 				tmpRes := txnInternal.CreateGetResult(gctx.CreateGetResultOptions{
-					Agent:          ap.provider,
+					Agent:          ap.Agent(),
 					ScopeName:      scopeName,
 					CollectionName: collectionName,
 					Key:            []byte(op.Key),
@@ -265,7 +340,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 			errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
 			if errOut == nil {
 				tmpRes := txnInternal.CreateGetResult(gctx.CreateGetResultOptions{
-					Agent:          ap.provider,
+					Agent:          ap.Agent(),
 					ScopeName:      scopeName,
 					CollectionName: collectionName,
 					Key:            []byte(op.Key),

@@ -16,6 +16,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -31,6 +32,7 @@ const (
 	_CLEANUPWINDOW    = 2500 * time.Millisecond
 	_WARMUP           = false
 	_WARMUPTIMEOUT    = 1000 * time.Millisecond
+	_CLOSEWAIT        = 2 * time.Minute
 	_kVDURABLETIMEOUT = _KVTIMEOUT
 	_kVPOOLSIZE       = 8
 	_MAXQUEUESIZE     = 32 * 1024
@@ -71,31 +73,33 @@ func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*t
 // Call this method with a TLS certificate file name to make communication
 type Client struct {
 	config        *gocbcore.AgentConfig
+	sslConfig     *gocbcore.AgentConfig
 	transactions  *gctx.Transactions
 	rootCAs       *x509.CertPool
 	agentProvider *AgentProvider
+	mutex         sync.RWMutex
 }
 
 func NewClient(url, certFile string, defExpirationTime time.Duration) (rv *Client, err error) {
-	auth := &MemcachedAuthProvider{}
-	config := &gocbcore.AgentConfig{
-		ConnectTimeout:       _CONNECTTIMEOUT,
-		KVConnectTimeout:     _KVCONNECTTIMEOUT,
-		UseCollections:       true,
-		KvPoolSize:           _kVPOOLSIZE,
-		MaxQueueSize:         _MAXQUEUESIZE,
-		Auth:                 auth,
-		DefaultRetryStrategy: gocbcore.NewBestEffortRetryStrategy(nil),
-		//UseTLS:           true,
+	var connSpec *connstr.ConnSpec
+
+	rv = &Client{}
+	if rv.config, connSpec, err = agentConfig(url); err != nil {
+		return nil, err
 	}
 
-	var connSpec connstr.ConnSpec
-	if connSpec, err = connstr.Parse(url); err == nil {
-		err = config.FromConnStr(connSpec.String())
+	// create SSL agent config file
+	if len(connSpec.Addresses) > 0 {
+		surl := "couchbases://" + connSpec.Addresses[0].Host
+		if rv.sslConfig, _, err = agentConfig(surl); err != nil {
+			return nil, err
+		}
 	}
 
-	if err != nil {
-		return
+	if certFile != "" {
+		if err = rv.InitTLS(certFile); err != nil {
+			return nil, err
+		}
 	}
 
 	txConfig := &gctx.Config{ExpirationTime: defExpirationTime,
@@ -104,52 +108,37 @@ func NewClient(url, certFile string, defExpirationTime time.Duration) (rv *Clien
 		CleanupLostAttempts:   true,
 	}
 
-	rv = &Client{config: config}
-	if certFile != "" {
-		err = rv.InitTLS(certFile)
-	}
-
-	if err == nil {
-		rv.transactions, err = gctx.Init(txConfig)
-	}
-
-	if err == nil {
+	if rv.transactions, err = gctx.Init(txConfig); err == nil {
 		// generic provider
 		rv.agentProvider, err = rv.CreateAgentProvider("")
 	}
-	return
+
+	return rv, err
+}
+
+func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
+	config = &gocbcore.AgentConfig{
+		ConnectTimeout:       _CONNECTTIMEOUT,
+		KVConnectTimeout:     _KVCONNECTTIMEOUT,
+		UseCollections:       true,
+		KvPoolSize:           _kVPOOLSIZE,
+		MaxQueueSize:         _MAXQUEUESIZE,
+		Auth:                 &MemcachedAuthProvider{},
+		DefaultRetryStrategy: gocbcore.NewBestEffortRetryStrategy(nil),
+	}
+
+	var connSpec connstr.ConnSpec
+	if connSpec, err = connstr.Parse(url); err == nil {
+		err = config.FromConnStr(connSpec.String())
+	}
+
+	return config, &connSpec, err
 }
 
 func (c *Client) CreateAgentProvider(bucketName string) (*AgentProvider, error) {
-	config := *c.config
-	config.UserAgent = bucketName
-	config.BucketName = bucketName
-	config.TLSRootCAProvider = func() *x509.CertPool {
-		return c.rootCAs
-	}
-	agent, err := gocbcore.CreateAgent(&config)
-	if err != nil {
-		return nil, err
-	}
-
-	if _WARMUP && bucketName != "" {
-		// Warm up by calling wait until ready
-		warmWaitCh := make(chan struct{}, 1)
-		if _, werr := agent.WaitUntilReady(
-			time.Now().Add(_WARMUPTIMEOUT),
-			gocbcore.WaitUntilReadyOptions{},
-			func(result *gocbcore.WaitUntilReadyResult, cerr error) {
-				if cerr != nil {
-					err = cerr
-				}
-				warmWaitCh <- struct{}{}
-			}); werr != nil && err == nil {
-			err = werr
-		}
-		<-warmWaitCh
-	}
-
-	return &AgentProvider{provider: agent}, err
+	ap := &AgentProvider{client: c, bucketName: bucketName}
+	err := ap.CreateOrRefreshAgent()
+	return ap, err
 }
 
 func (c *Client) AgentProvider() *AgentProvider {
@@ -157,7 +146,7 @@ func (c *Client) AgentProvider() *AgentProvider {
 }
 
 func (c *Client) Agent() *gocbcore.Agent {
-	return c.agentProvider.provider
+	return c.agentProvider.Agent()
 }
 
 func (c *Client) Close() {
@@ -169,7 +158,9 @@ func (c *Client) Close() {
 	}
 	c.agentProvider = nil
 	c.transactions = nil
-	c.ClearTLS()
+	c.mutex.Lock()
+	c.rootCAs = nil
+	c.mutex.Unlock()
 }
 
 // with the KV engine encrypted.
@@ -180,12 +171,28 @@ func (c *Client) InitTLS(certFile string) error {
 	}
 	CA_Pool := x509.NewCertPool()
 	CA_Pool.AppendCertsFromPEM(serverCert)
+	c.mutex.Lock()
 	c.rootCAs = CA_Pool
+	c.mutex.Unlock()
+	if c.agentProvider != nil {
+		return c.agentProvider.Refresh()
+	}
 	return nil
 }
 
 func (c *Client) ClearTLS() {
+	c.mutex.Lock()
 	c.rootCAs = nil
+	c.mutex.Unlock()
+	if c.agentProvider != nil {
+		c.agentProvider.Refresh()
+	}
+}
+
+func (c *Client) TLSRootCAs() *x509.CertPool {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.rootCAs
 }
 
 func (c *Client) Transactions() *gctx.Transactions {

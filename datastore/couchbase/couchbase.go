@@ -514,7 +514,6 @@ func (s *store) SetClientConnectionSecurityConfig() (err error) {
 		}
 	}
 	return
-
 }
 
 func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionSecurityConfig) {
@@ -533,6 +532,9 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 
 			// Make new TLS settings take effect in the buckets.
 			k.cbKeyspace.cbbucket.RefreshFully()
+			if k.cbKeyspace.agentProvider != nil {
+				k.cbKeyspace.agentProvider.Refresh()
+			}
 
 			// Pass new settings to indexers.
 			indexers, _ := k.cbKeyspace.Indexers()

@@ -36,3 +36,6 @@ type AgentProvider struct {
 func (ap *AgentProvider) Close() error {
 	return nil
 }
+
+func (ap *AgentProvider) Refresh() {
+}
