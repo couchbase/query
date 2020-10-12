@@ -618,9 +618,9 @@ func handleDurabilityTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm str
 }
 
 func handleTxData(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	txData, err := httpArgs.getStringVal(parm, val)
-	if err == nil && txData != "" {
-		rv.SetTxData([]byte(txData))
+	txData, err := httpArgs.getTxData(parm, val)
+	if err == nil && len(txData) > 0 {
+		rv.SetTxData(txData)
 	}
 	return err
 }
@@ -1039,6 +1039,7 @@ type httpRequestArgs interface {
 	getCredentials() ([]map[string]string, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
 	getScanVectors() (map[string]timestamp.Vector, errors.Error)
+	getTxData(parm string, val interface{}) ([]byte, errors.Error)
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
@@ -1168,6 +1169,11 @@ func (this *urlArgs) getPositionalArgs(parm string, val interface{}) (value.Valu
 	}
 
 	return positionalArgs, nil
+}
+
+func (this *urlArgs) getTxData(parm string, val interface{}) ([]byte, errors.Error) {
+	txData, err := this.checkFormValue(parm, val)
+	return []byte(txData), err
 }
 
 // Note: This function has no receiver, which makes it easier to test.
@@ -1465,6 +1471,20 @@ func (this *jsonArgs) getPositionalArgs(parm string, val interface{}) (value.Val
 	}
 
 	return positionalArgs, nil
+}
+
+func (this *jsonArgs) getTxData(parm string, val interface{}) (txData []byte, err errors.Error) {
+	if rval, ok := val.(map[string]interface{}); ok {
+		var err1 error
+		txData, err1 = json.Marshal(rval)
+		if err1 != nil {
+			err = errors.NewServiceErrorBadValue(err1, TXDATA)
+		}
+	} else {
+		err = errors.NewServiceErrorBadValue(go_errors.New("txdata is invalid"), TXDATA)
+	}
+
+	return
 }
 
 func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
