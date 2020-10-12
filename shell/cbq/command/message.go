@@ -34,7 +34,6 @@ const (
 	UEXIT       = " Exit shell after first error encountered."
 	UINPUT      = " File to load commands from. \n\t For example : -file temp.txt"
 	UOUTPUT     = " File to output commands and their results. \n\t For example : -output temp.txt"
-	ULOG        = " File to log commands into. \n\t For example : -logfile temp.txt"
 	USSLVERIFY  = " Skip verification of Certificates. "
 	UBATCH      = " Batch mode for sending queries to the Analytics service. Values : on/off"
 	UANALYTICS  = " Auto discover analytics server from input cluster. Batch mode on. "

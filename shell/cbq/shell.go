@@ -250,24 +250,6 @@ func init() {
 }
 
 /*
-   Option        : -log-file or -l
-   Args          : <filename>
-   Log commands for session.
-*/
-
-var logFlag string
-
-func init() {
-	const (
-		defaultval = ""
-		usage      = command.ULOG
-	)
-	flag.StringVar(&logFlag, "logfile", defaultval, usage)
-	flag.StringVar(&logFlag, "l", defaultval, command.NewShorthandMsg("-logfile"))
-
-}
-
-/*
    Option        : -no-ssl-verify
    Default Value : false
    Skip verification of Certificates.
