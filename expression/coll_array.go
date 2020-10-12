@@ -47,6 +47,10 @@ func (this *Array) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Array) Type() value.Type { return value.ARRAY }
 
+func (this *Array) IsIdentityMapping() bool {
+	return this.identity
+}
+
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
 	if this.identity {
 		return this.identityEval(item, context)
