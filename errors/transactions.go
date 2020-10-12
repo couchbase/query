@@ -120,3 +120,9 @@ func NewTransactionInuse() Error {
 		InternalMsg:    "Parallel execution of the statements are not allowed within the transaction",
 		InternalCaller: CallerN(1)}
 }
+
+func NewKeyNotFoundError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 17014, IKey: "transaction.statement.keynotfound",
+		InternalMsg:    fmt.Sprintf("Key not found : %v", e),
+		InternalCaller: CallerN(1)}
+}

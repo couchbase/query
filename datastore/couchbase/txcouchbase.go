@@ -12,10 +12,12 @@
 package couchbase
 
 import (
+	gerrors "errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/errors"
@@ -404,6 +406,9 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			errs := ks.agentProvider.TxGet(transaction, fullName, ks.name, scopeName, collectionName,
 				collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
 			if len(errs) > 0 {
+				if notFoundErr && gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) {
+					return errors.Errors{errors.NewKeyNotFoundError(errs[0])}
+				}
 				return errors.NewErrors(errs, "txFetch")
 			}
 		}
