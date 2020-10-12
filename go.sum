@@ -54,8 +54,8 @@ github.com/couchbase/clog v0.0.0-20190523192451-b8e6d5d421bc/go.mod h1:7tzUpEOsE
 github.com/couchbase/ghistogram v0.1.0 h1:b95QcQTCzjTUocDXp/uMgSNQi8oj1tGwnJ4bODWZnps=
 github.com/couchbase/ghistogram v0.1.0/go.mod h1:s1Jhy76zqfEecpNWJfWUiKZookAFaiGOEoyzgHt9i7k=
 github.com/couchbase/go-couchbase v0.0.0-20200618135536-fe11fe60aa9d/go.mod h1:TWI8EKQMs5u5jLKW/tsb9VwauIrMIxQG1r5fMsswK5U=
-github.com/couchbase/go-couchbase v0.0.0-20200924154014-2968b8d07a13 h1:4rCehqed4ztQ5NMP7cAa1LZfTIZj+XUK09bhhVEhHV4=
-github.com/couchbase/go-couchbase v0.0.0-20200924154014-2968b8d07a13/go.mod h1:TWI8EKQMs5u5jLKW/tsb9VwauIrMIxQG1r5fMsswK5U=
+github.com/couchbase/go-couchbase v0.0.0-20201012155338-a3885f7e1f01 h1:z8HCpz+RkptQ+inzZalkfwDi7jv5dwrckCvvKj778HE=
+github.com/couchbase/go-couchbase v0.0.0-20201012155338-a3885f7e1f01/go.mod h1:TWI8EKQMs5u5jLKW/tsb9VwauIrMIxQG1r5fMsswK5U=
 github.com/couchbase/go_json v0.0.0-20200921122841-4294af405215 h1:rGZRcAgmHylBvlRqPP2MbGj9WJWdg1OtAyZHtHyu6Wo=
 github.com/couchbase/go_json v0.0.0-20200921122841-4294af405215/go.mod h1:oEYbGkDL9t/YMyR0V82uGFJp6arFfwQHihkYdxl7NO0=
 github.com/couchbase/gocb/v2 v2.1.4-0.20200720200147-96c39282132f h1:x0dM24/Une+uKlyJnrYS3NYs5QsrihP+yHlLE3IuKDI=
