@@ -451,6 +451,7 @@ Is se narrower or equivalent to te.
 
 */
 func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]value.Value) bool {
+
 	snk, snc := matchedKeysConditions(se, te, shortest, predFc)
 
 	be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond)
@@ -494,7 +495,21 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return len(se.keys) < len(te.keys)
 	}
 
-	return se.cond != nil
+	return se.cond != nil || equalIndexes(se, te)
+}
+
+func equalIndexes(se, te *indexEntry) bool {
+	if te.nSargKeys != se.nSargKeys || !expression.Equivalent(se.cond, te.cond) {
+		return false
+	}
+
+	for i, _ := range te.sargKeys {
+		if te.skeys[i] != se.skeys[i] || !expression.Equivalent(se.sargKeys[i], te.sargKeys[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
