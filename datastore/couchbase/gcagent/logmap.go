@@ -10,6 +10,8 @@
 package gcagent
 
 import (
+	"strings"
+
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/query/logging"
 )
@@ -28,7 +30,13 @@ func (l GocbcoreLogger) Log(level gocbcore.LogLevel, offset int, format string,
 	case gocbcore.LogWarn:
 		logging.Warnf(prefixedFormat, args...)
 	case gocbcore.LogInfo:
-		logging.Infof(prefixedFormat, args...)
+		// Add retry request in debug mode
+		// Avoid query.log flooding and reduce contention of mutex of log write
+		if strings.Contains(format, "Will retry request") {
+			logging.Debugf(prefixedFormat, args...)
+		} else {
+			logging.Infof(prefixedFormat, args...)
+		}
 	case gocbcore.LogDebug:
 		logging.Debugf(prefixedFormat, args...)
 	default:
