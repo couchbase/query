@@ -786,7 +786,34 @@ func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
 	rv := make([]datastore.Object, len(p.cbNamespace.BucketMap))
 	i := 0
 	for name, _ := range p.cbNamespace.BucketMap {
-		rv[i] = datastore.Object{name, name, true, true}
+		o := datastore.Object{name, name, false, false}
+		p.lock.RLock()
+		entry := p.keyspaceCache[name]
+		p.lock.RUnlock()
+
+		// if we have loaded the bucket, check if the bucket has a default collection
+		// if we haven't loaded the bucket, see if you can get the default collection id
+		// the bucket is a keyspace if the default collection exists
+		if entry != nil {
+			switch k := entry.cbKeyspace.defaultCollection.(type) {
+			case *collection:
+				o.IsKeyspace = (k != nil)
+				o.IsBucket = true
+			case *keyspace:
+				o.IsKeyspace = (k != nil)
+				o.IsBucket = false
+			}
+		} else {
+			bucket, _ := p.cbNamespace.GetBucket(name)
+			if bucket != nil {
+				_, _, err := bucket.GetCollectionCID("_default", "_default", time.Time{})
+				if err == nil {
+					o.IsKeyspace = true
+				}
+			}
+			o.IsBucket = true
+		}
+		rv[i] = o
 		i++
 	}
 	p.nslock.RUnlock()
@@ -843,7 +870,13 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 						if mani.Uid > keyspace.collectionsManifestUid {
 							keyspace.collectionsManifestUid = mani.Uid
 							keyspace.scopes = scopes
-							keyspace.defaultCollection = defaultCollection
+
+							// if there's no scopes fall back to bucket access
+							if len(scopes) == 0 {
+								keyspace.defaultCollection = keyspace
+							} else {
+								keyspace.defaultCollection = defaultCollection
+							}
 							keyspace.flags = 0
 						}
 					}
