@@ -458,6 +458,9 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		nop := op
 
 		if op != MOP_DELETE {
+			if val.Type() == value.BINARY {
+				return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+			}
 			data = val.ActualForIndex()
 			exptime = getExpiration(kv.Options)
 		}

@@ -156,3 +156,9 @@ func NewCbBucketFlushCollectionError(c string, e error) Error {
 	return &err{level: EXCEPTION, ICode: 12029, IKey: "datastore.couchbase.flush_collection", ICause: e,
 		InternalMsg: "Error while flushing collection " + c, InternalCaller: CallerN(1)}
 }
+
+func NewBinaryDocumentMutationError(op, key string) Error {
+	return &err{level: EXCEPTION, ICode: 12030, IKey: "mutation.binarydocument.not_supported",
+		InternalMsg:    op + " of binary document is not supported: " + key,
+		InternalCaller: CallerN(1)}
+}

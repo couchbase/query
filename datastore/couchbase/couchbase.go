@@ -1751,6 +1751,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 		key := kv.Name
 		if op != MOP_DELETE {
+			if kv.Value.Type() == value.BINARY {
+				return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+			}
 			val = kv.Value.ActualForIndex()
 			exptime = int(getExpiration(kv.Options))
 		}
