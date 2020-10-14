@@ -108,8 +108,8 @@ func (this *ScopeValue) Copy() Value {
 func (this *ScopeValue) CopyForUpdate() Value {
 	rv := newScopeValue(this.nested)
 	rv.Value = this.Value.CopyForUpdate()
-	rv.parent = this.parent
 	if this.parent != nil {
+		rv.parent = this.parent.Copy()
 		this.parent.Track()
 	}
 	rv.nested = this.nested

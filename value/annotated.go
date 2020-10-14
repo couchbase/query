@@ -11,6 +11,7 @@ package value
 
 import (
 	"io"
+	"reflect"
 	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -259,13 +260,36 @@ func (this *annotatedValue) InheritCovers(val Value) {
 	}
 }
 
+// the erroneous case of two annotated values having the same attachments or meta but not sharing
+// is not covered. You have been warned.
 func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
+	av := sv.(*annotatedValue) // we don't have any other annotated value implementation
+
+	// no need to share with ourselves
+	if av == this {
+		return
+	}
+
+	amp := reflect.ValueOf(av.meta).Pointer()
+	tmp := reflect.ValueOf(this.meta).Pointer()
+	aap := reflect.ValueOf(av.attachments).Pointer()
+	tap := reflect.ValueOf(this.attachments).Pointer()
 
 	// get rid of previous attachments
 	if this.sharedAnnotations {
+
+		// if we are already sharing with the source no need to do anything
+		if amp == tmp && aap == tap {
+			return
+		}
 		this.attachments = nil
 		this.meta = nil
 	} else {
+
+		// if the source is already sharing with us no need to do anything
+		if av.sharedAnnotations && amp == tmp && aap == tap {
+			return
+		}
 		for k := range this.attachments {
 			delete(this.attachments, k)
 		}
@@ -273,7 +297,6 @@ func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 			delete(this.meta, k)
 		}
 	}
-	av := sv.(*annotatedValue) // we don't have any other annotated value implementation
 	copyAttachments(av.attachments, this)
 	copyMeta(av.meta, this)
 	this.id = av.id
