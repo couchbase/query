@@ -39,10 +39,8 @@ import (
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -1199,7 +1197,6 @@ type keyspace struct {
 	cbbucket       *cb.Bucket
 	agentProvider  *gcagent.AgentProvider
 	flags          int
-	viewIndexer    datastore.Indexer // View index provider
 	gsiIndexer     datastore.Indexer // GSI index provider
 	ftsIndexer     datastore.Indexer // FTS index provider
 	chkIndex       chkIndexDict
@@ -1402,8 +1399,6 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 			return b.ftsIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("FTS may not be enabled"))
-	case datastore.VIEW:
-		return b.viewIndexer, nil
 	default:
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
@@ -1422,9 +1417,6 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 		indexers = append(indexers, b.ftsIndexer)
 	}
 
-	if b.viewIndexer != nil {
-		indexers = append(indexers, b.viewIndexer)
-	}
 	return indexers, err
 }
 
@@ -1923,11 +1915,6 @@ func (b *keyspace) loadIndexes() {
 	}
 	p := b.namespace
 	store := p.store
-	b.viewIndexer = newViewIndexer(b)
-	viewIndexer := b.viewIndexer.(*viewIndexer)
-	if err := viewIndexer.loadViewIndexes(); err != nil {
-		logging.Warnf("Error loading indexes for keyspace %s, Error %v", b.name, err)
-	}
 
 	b.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), b.name, store.connSecConfig)
 	if qerr != nil {
@@ -2032,62 +2019,6 @@ func (ks *keyspace) Flush() errors.Error {
 
 func (b *keyspace) IsBucket() bool {
 	return true
-}
-
-// primaryIndex performs full keyspace scans.
-type primaryIndex struct {
-	viewIndex
-}
-
-func (pi *primaryIndex) KeyspaceId() string {
-	return pi.keyspace.Id()
-}
-
-func (pi *primaryIndex) Id() string {
-	return pi.Name()
-}
-
-func (pi *primaryIndex) Name() string {
-	return pi.name
-}
-
-func (pi *primaryIndex) Type() datastore.IndexType {
-	return pi.viewIndex.Type()
-}
-
-func (pi *primaryIndex) SeekKey() expression.Expressions {
-	return pi.viewIndex.SeekKey()
-}
-
-func (pi *primaryIndex) RangeKey() expression.Expressions {
-	return pi.viewIndex.RangeKey()
-}
-
-func (pi *primaryIndex) Condition() expression.Expression {
-	return pi.viewIndex.Condition()
-}
-
-func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
-	return pi.viewIndex.State()
-}
-
-func (pi *primaryIndex) Statistics(requestId string, span *datastore.Span) (
-	datastore.Statistics, errors.Error) {
-	return pi.viewIndex.Statistics(requestId, span)
-}
-
-func (pi *primaryIndex) Drop(requestId string) errors.Error {
-	return pi.viewIndex.Drop(requestId)
-}
-
-func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
-	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.viewIndex.Scan(requestId, span, distinct, limit, cons, vector, conn)
-}
-
-func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.viewIndex.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
 func getCollectionId(clientContext ...*memcached.ClientContext) uint32 {

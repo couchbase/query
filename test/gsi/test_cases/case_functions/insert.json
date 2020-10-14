@@ -1,5 +1,5 @@
 [
-{ "statements":"CREATE PRIMARY INDEX ON orders USING VIEW"} ,
+{ "statements":"CREATE PRIMARY INDEX ON orders"} ,
 { "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1234_case_func\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 2, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"tea111\"}], \"custId\": \"customer312\", \"id\": \"1234\", \"test_id\" : \"case_func\" })" } ,
 { "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1235_case_func\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"tea111\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer12\", \"id\": \"1235\", \"test_id\" : \"case_func\" })" } ,
 { "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1200_case_func\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer18\", \"id\": \"1200\", \"shipped-on\": \"2012/01/02\", \"test_id\" : \"case_func\" })" } ,
