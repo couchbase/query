@@ -140,8 +140,9 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 		rv.SetNamedArgs(httpArgs.getNamedArgs())
 		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
-		creds.HttpRequest = req
+
 		if err == nil {
+			creds.HttpRequest = req
 			rv.SetCredentials(creds)
 
 			if rv.consCnt > 0 {
