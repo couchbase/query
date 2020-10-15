@@ -152,13 +152,13 @@ func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 				continue
 			}
-			item, e = b.fetchOne(elems[0], elems[1])
+			item, e = b.fetchOne(elems[0], elems[1], context)
 		} else {
 			if !canAccessAll && !canRead(context, elems[0], elems[1], elems[2], elems[3]) {
 				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 				continue
 			}
-			item, e = b.fetchOneCollection(elems[0], elems[1], elems[2], elems[3])
+			item, e = b.fetchOneCollection(elems[0], elems[1], elems[2], elems[3], context)
 		}
 
 		if e != nil {
@@ -186,7 +186,7 @@ func path(elems ...string) string {
 	return out
 }
 
-func (b *keyspaceKeyspace) fetchOne(ns string, ks string) (value.AnnotatedValue, errors.Error) {
+func (b *keyspaceKeyspace) fetchOne(ns string, ks string, context datastore.QueryContext) (value.AnnotatedValue, errors.Error) {
 	namespace, err := b.store.NamespaceById(ns)
 	if namespace != nil {
 		keyspace, err := namespace.KeyspaceById(ks)
@@ -199,6 +199,14 @@ func (b *keyspaceKeyspace) fetchOne(ns string, ks string) (value.AnnotatedValue,
 				"name":         keyspace.Name(),
 				"path":         path(namespace.Name(), keyspace.Name()),
 			})
+			if b.skipSystem {
+				count, err1 := keyspace.Count(context)
+				size, err2 := keyspace.Size(context)
+				if err1 == nil && err2 == nil {
+					doc.SetField("count", count)
+					doc.SetField("size", size)
+				}
+			}
 			return doc, nil
 		}
 		if err != nil {
@@ -208,7 +216,7 @@ func (b *keyspaceKeyspace) fetchOne(ns string, ks string) (value.AnnotatedValue,
 	return nil, err
 }
 
-func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string) (value.AnnotatedValue, errors.Error) {
+func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context datastore.QueryContext) (value.AnnotatedValue, errors.Error) {
 	var err errors.Error
 	var namespace datastore.Namespace
 	var bucket datastore.Bucket
@@ -238,6 +246,14 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string) (value.Anno
 						"scope":        scope.Name(),
 						"path":         path(namespace.Name(), bucket.Name(), scope.Name(), keyspace.Name()),
 					})
+					if b.skipSystem {
+						count, err1 := keyspace.Count(context)
+						size, err2 := keyspace.Size(context)
+						if err1 == nil && err2 == nil {
+							doc.SetField("count", count)
+							doc.SetField("size", size)
+						}
+					}
 					return doc, nil
 				}
 			}
