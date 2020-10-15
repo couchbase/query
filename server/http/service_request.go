@@ -1058,6 +1058,11 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 
 	for arg, val := range req.Form {
 		newArg := util.TrimSpace(arg)
+
+		// ignore empty parameters
+		if newArg == "" {
+			continue
+		}
 		if newArg[0] == '$' {
 			delete(req.Form, arg)
 			switch len(val) {
@@ -1072,10 +1077,6 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 			continue
 		}
 
-		// ignore empty parameters
-		if newArg == "" {
-			continue
-		}
 		lowerArg := strings.ToLower(newArg)
 		pType := _PARAMETERS[lowerArg]
 		if pType == nil {
