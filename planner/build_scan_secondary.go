@@ -475,6 +475,23 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return true
 	}
 
+	// if te and se has same sargKeys (or equivalent condition), and there exists
+	// a non-sarged array key, prefer the one without the array key
+	if te.nSargKeys > 0 && te.nSargKeys == snk+snc &&
+		se.PushDownProperty() == te.PushDownProperty() {
+		teHasArrayKey := indexHasArrayIndexKey(te.index)
+		seHasArrayKey := indexHasArrayIndexKey(se.index)
+		if teHasArrayKey != seHasArrayKey {
+			if !hasArrayIndexKey(te.sargKeys) && !hasArrayIndexKey(se.sargKeys) {
+				if teHasArrayKey && !seHasArrayKey {
+					return true
+				} else if seHasArrayKey && !teHasArrayKey {
+					return false
+				}
+			}
+		}
+	}
+
 	if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
 		return false
 	}
@@ -610,7 +627,11 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 }
 
 func indexHasArrayIndexKey(index datastore.Index) bool {
-	for _, sk := range index.RangeKey() {
+	return hasArrayIndexKey(index.RangeKey())
+}
+
+func hasArrayIndexKey(keys expression.Expressions) bool {
+	for _, sk := range keys {
 		if isArray, _ := sk.IsArrayIndexKey(); isArray {
 			return true
 		}
