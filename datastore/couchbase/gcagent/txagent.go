@@ -221,7 +221,13 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			fetchMap[item.Key] = item.Val
 		} else if notFoundErr || !errors.Is(item.Err, gocbcore.ErrDocumentNotFound) {
 			// handle key not found error
-			errs = append(errs, item.Err)
+			// process other errors before processing PreviousOperationFailed
+			if err1, ok1 := item.Err.(*gctx.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+				prevErr = item.Err
+			} else {
+				errs = append(errs, item.Err)
+			}
 		}
 	}
 
@@ -368,7 +374,13 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	wg.Wait()
 	for _, op := range wops {
 		if op.Err != nil {
-			return op.Err
+			// process other errors before processing PreviousOperationFailed
+			if err1, ok1 := op.Err.(*gctx.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+				prevErr = op.Err
+			} else {
+				return op.Err
+			}
 		}
 	}
 

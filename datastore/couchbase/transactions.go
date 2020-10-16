@@ -547,17 +547,25 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 		var tlv *TransactionLogValue
 		var tl *TransactionLog
 		var dk *DeltaKeyspace
+		var cl, ci int
 
 		// current keyspace logs can be truncated and no replay required. (Those are only in current delata keyspace)
 		startLog := int(sLog)
 		startLogValIndex := int(sLogValIndex)
 		cKeyspace := this.curKeyspace
-		cl := int(this.curStartLogIndex / uint64(this.logSize))
-		ci := int(this.curStartLogIndex % uint64(this.logSize))
+		if cKeyspace == "" {
+			cl = len(this.logs) - 1
+			if tl = this.logs[cl]; tl != nil {
+				ci = len(tl.logValues) - 1
+			}
+		} else {
+			cl = int(this.curStartLogIndex / uint64(this.logSize))
+			ci = int(this.curStartLogIndex % uint64(this.logSize))
 
-		this.logs = this.logs[:cl+1]
-		if tl = this.logs[cl]; tl != nil {
-			tl.logValues = tl.logValues[:ci]
+			this.logs = this.logs[:cl+1]
+			if tl = this.logs[cl]; tl != nil {
+				tl.logValues = tl.logValues[:ci]
+			}
 		}
 
 		// replay previous statement logs
