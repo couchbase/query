@@ -417,22 +417,37 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		predFc = pred.FilterCovers(predFc)
 	}
 
-	advisorValidate := this.advisorValidate()
-	for s, se := range sargables {
-		if this.useCBO && se.cost <= 0.0 {
-			cost, selec, card, e := indexScanCost(se.index, se.sargKeys, this.context.RequestId(), se.spans, alias, advisorValidate)
-			if e != nil || (cost <= 0.0 || card <= 0.0) {
-				useCBO = false
-			} else {
-				se.cost = cost
-				se.cardinality = card
-				se.selectivity = selec
+	if useCBO {
+		advisorValidate := this.advisorValidate()
+		for _, se := range sargables {
+			if se.cost <= 0.0 {
+				cost, selec, card, e := indexScanCost(se.index, se.sargKeys,
+					this.context.RequestId(), se.spans, alias, advisorValidate)
+				if e != nil || (cost <= 0.0 || card <= 0.0) {
+					useCBO = false
+				} else {
+					se.cost = cost
+					se.cardinality = card
+					se.selectivity = selec
+				}
 			}
 		}
+	}
 
+	for s, se := range sargables {
 		for t, te := range sargables {
-			if t != s && narrowerOrEquivalent(se, te, shortest, predFc) {
-				delete(sargables, t)
+			if t == s {
+				continue
+			}
+
+			if useCBO && shortest {
+				if matchedLeadingKeys(se, te, predFc) && se.cost < te.cost {
+					delete(sargables, t)
+				}
+			} else {
+				if narrowerOrEquivalent(se, te, shortest, predFc) {
+					delete(sargables, t)
+				}
 			}
 		}
 	}
@@ -540,27 +555,71 @@ outer:
 
 		for si, sk := range se.sargKeys {
 			if se.skeys[si] {
-				if base.SubsetOf(sk, tk) || sk.DependsOn(tk) {
+				if matchedIndexKey(sk, tk) {
 					nk++
 					continue outer
 				}
 			}
 		}
 
-		/* Count number of matches
-		 * Indexkey is part of other index condition as equality predicate
-		 * If trying to determine shortest index(For: IntersectScan)
-		 *     indexkey is not equality predicate and indexkey is part of other index condition
-		 *     (In case of equality predicate keeping IntersectScan might be better)
-		 */
-		_, condEq := se.condFc[tk.String()]
-		_, predEq := predFc[tk.String()]
-		if condEq || (shortest && !predEq && se.cond != nil && se.cond.DependsOn(tk)) {
+		if matchedIndexCondition(se, tk, predFc, shortest) {
 			nc++
 		}
 	}
 
 	return
+}
+
+// for CBO, prune indexes that has similar leading index keys
+func matchedLeadingKeys(se, te *indexEntry, predFc map[string]value.Value) bool {
+	nkeys := 0
+	ncond := 0
+	for i, tk := range te.sargKeys {
+		if !te.skeys[i] {
+			continue
+		}
+
+		if i >= len(se.sargKeys) {
+			break
+		}
+
+		if !se.skeys[i] {
+			continue
+		}
+
+		sk := se.sargKeys[i]
+		if matchedIndexKey(sk, tk) {
+			nkeys++
+		} else if matchedIndexCondition(se, tk, predFc, true) {
+			ncond++
+		} else {
+			break
+		}
+	}
+
+	return (nkeys + ncond) > 0
+}
+
+func matchedIndexKey(sk, tk expression.Expression) bool {
+	return base.SubsetOf(sk, tk) || sk.DependsOn(tk)
+}
+
+func matchedIndexCondition(se *indexEntry, tk expression.Expression, predFc map[string]value.Value,
+	shortest bool) bool {
+
+	/* Count number of matches
+	 * Indexkey is part of other index condition as equality predicate
+	 * If trying to determine shortest index(For: IntersectScan)
+	 *     indexkey is not equality predicate and indexkey is part of other index condition
+	 *     (In case of equality predicate keeping IntersectScan might be better)
+	 */
+	_, condEq := se.condFc[tk.String()]
+	_, predEq := predFc[tk.String()]
+	if condEq || (shortest && !predEq && se.cond != nil && se.cond.DependsOn(tk)) {
+		return true
+	}
+
+	return false
 }
 
 func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool,
