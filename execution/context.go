@@ -617,7 +617,7 @@ func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTx
 
 	if this.txContext != nil || txImplicit || stmtType == "START_TRANSACTION" {
 		this.txData = txData
-		if len(txData) > 0 && stmtType != "START_TRANSACTION" {
+		if len(txData) > 0 {
 			this.txDataVal = value.NewValue(txData)
 		}
 

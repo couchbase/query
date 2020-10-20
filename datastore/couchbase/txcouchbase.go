@@ -82,12 +82,20 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		var expiryTime time.Time
 
 		if len(txnData) > 0 {
+			if terr = validateResumeTxInfo(context.TxDataVal(), txContext); terr != nil {
+				return nil, errors.NewStartTransactionError(terr)
+			}
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
 			expiryTime = time.Now().Add(txContext.TxTimeout())
 		} else {
 			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
 				DurabilityLevel:  gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
-				KvDurableTimeout: txContext.TxDurabilityTimeout()}
+				KvDurableTimeout: txContext.TxDurabilityTimeout(),
+			}
+
+			if txConfig.KvDurableTimeout > datastore.DEF_DURABILITY_TIMEOUT {
+				txConfig.KeyValueTimeout = txConfig.KvDurableTimeout
+			}
 
 			transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
 			if terr == nil {
@@ -457,10 +465,11 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		val := kv.Value
 		nop := op
 
+		if val != nil && val.Type() == value.BINARY {
+			return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+		}
+
 		if op != MOP_DELETE {
-			if val.Type() == value.BINARY {
-				return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
-			}
 			data = val.ActualForIndex()
 			exptime = getExpiration(kv.Options)
 		}
@@ -537,6 +546,51 @@ func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interf
 		}
 	}
 	return
+}
+
+func validateResumeTxInfo(txDataVal value.Value, txContext *transactions.TranContext) error {
+
+	var rTimeout, rDurableTimeout time.Duration
+	var rDurabilityLevel datastore.DurabilityLevel
+
+	if v, ok := txDataVal.Field("state"); ok {
+		if v1, ok := v.Field("timeLeftMs"); ok && v1.Type() == value.NUMBER {
+			if v2, ok := v1.(value.NumberValue); ok {
+				rTimeout = time.Duration(v2.Float64()) * time.Millisecond
+			}
+		}
+	}
+
+	if rTimeout != txContext.TxTimeout() {
+		return gerrors.New("txtimeout missmatch")
+	}
+
+	if v, ok := txDataVal.Field("config"); ok {
+		if v1, ok := v.Field("kvDurableTimeoutMs"); ok && v1.Type() == value.NUMBER {
+			if v2, ok := v1.(value.NumberValue); ok {
+				rDurableTimeout = time.Duration(v2.Float64()) * time.Millisecond
+			}
+		}
+
+		if v1, ok := v.Field("durabilityLevel"); ok {
+			if v2, ok := v1.Actual().(string); ok {
+				rDurabilityLevel = datastore.DurabilityNameToLevel(v2)
+				if rDurabilityLevel < 0 {
+					rDurabilityLevel = datastore.DL_MAJORITY
+				}
+			}
+		}
+	}
+
+	if rDurabilityLevel != txContext.TxDurabilityLevel() {
+		return gerrors.New("durability_level missmatch")
+	}
+
+	if rDurableTimeout > 0 && rDurableTimeout != txContext.TxDurabilityTimeout() {
+		return gerrors.New("durability_timeout missmatch")
+	}
+
+	return nil
 }
 
 func initGocb(s *store) (err errors.Error) {
