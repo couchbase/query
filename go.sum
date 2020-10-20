@@ -56,8 +56,8 @@ github.com/couchbase/clog v0.0.0-20190523192451-b8e6d5d421bc/go.mod h1:7tzUpEOsE
 github.com/couchbase/ghistogram v0.1.0 h1:b95QcQTCzjTUocDXp/uMgSNQi8oj1tGwnJ4bODWZnps=
 github.com/couchbase/ghistogram v0.1.0/go.mod h1:s1Jhy76zqfEecpNWJfWUiKZookAFaiGOEoyzgHt9i7k=
 github.com/couchbase/go-couchbase v0.0.0-20200618135536-fe11fe60aa9d/go.mod h1:TWI8EKQMs5u5jLKW/tsb9VwauIrMIxQG1r5fMsswK5U=
-github.com/couchbase/go-couchbase v0.0.0-20201020135452-0d6ea75c3305 h1:9A+IOKV9knwR3k51gr0IBPlZuwlnURuvs1xtRMfVhcA=
-github.com/couchbase/go-couchbase v0.0.0-20201020135452-0d6ea75c3305/go.mod h1:TWI8EKQMs5u5jLKW/tsb9VwauIrMIxQG1r5fMsswK5U=
+github.com/couchbase/go-couchbase v0.0.0-20201020180151-9d3a2a7bfd44 h1:FAZXqWeGXFCQ/SxkywV0LaE+SsSPAPfejgu4ObQ10UM=
+github.com/couchbase/go-couchbase v0.0.0-20201020180151-9d3a2a7bfd44/go.mod h1:TWI8EKQMs5u5jLKW/tsb9VwauIrMIxQG1r5fMsswK5U=
 github.com/couchbase/go_json v0.0.0-20200921122841-4294af405215 h1:rGZRcAgmHylBvlRqPP2MbGj9WJWdg1OtAyZHtHyu6Wo=
 github.com/couchbase/go_json v0.0.0-20200921122841-4294af405215/go.mod h1:oEYbGkDL9t/YMyR0V82uGFJp6arFfwQHihkYdxl7NO0=
 github.com/couchbase/gocb/v2 v2.1.4-0.20200720200147-96c39282132f h1:x0dM24/Une+uKlyJnrYS3NYs5QsrihP+yHlLE3IuKDI=
@@ -69,8 +69,8 @@ github.com/couchbase/gocbcore/v9 v9.0.6/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ci
 github.com/couchbase/godbc v0.0.0-20200914134902-3290e3e2ccbc h1:pttOR7047FjahzRDPa0eZgJwpLluuFGGWMrASCl4zPo=
 github.com/couchbase/godbc v0.0.0-20200914134902-3290e3e2ccbc/go.mod h1:kxcbSjRRwXYcmaOaA5oHOtwHfZq7NUyKFtcyC4NbjQU=
 github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71/go.mod h1:srVSlQLB8iXBVXHgnqemxUXqN6FCvClgCMPCsjBDR7c=
-github.com/couchbase/gomemcached v0.1.1-0.20200914210256-83e1dde05ac9 h1:AcL8NGdF/atoASkbTsQUBnkLWYTK8KCXMA0QlQdUsFc=
-github.com/couchbase/gomemcached v0.1.1-0.20200914210256-83e1dde05ac9/go.mod h1:srVSlQLB8iXBVXHgnqemxUXqN6FCvClgCMPCsjBDR7c=
+github.com/couchbase/gomemcached v0.1.1-0.20201019224916-153cfe02081a h1:qkgFA23ZBGu4tah8c/UAzQ4n3IwXMOEv+E8kta29U2o=
+github.com/couchbase/gomemcached v0.1.1-0.20201019224916-153cfe02081a/go.mod h1:srVSlQLB8iXBVXHgnqemxUXqN6FCvClgCMPCsjBDR7c=
 github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 h1:lAvXevmaBKNOjCsYjE1vJhhAF2+4J1gJNYLW2VgA/jY=
 github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711/go.mod h1:yF3vd+GQtq/NtmfnHlzELZh130fQ9v6hGumdqEuis04=
 github.com/couchbase/goutils v0.0.0-20191018232750-b49639060d85 h1:0WMIDtuXCKEm4wtAJgAAXa/qtM5O9MariLwgHaRlYmk=

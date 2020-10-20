@@ -26,11 +26,11 @@ require (
 	github.com/couchbase/cbauth v0.0.0-20200923220950-efdafddb9bd2
 	github.com/couchbase/clog v0.0.0-20190523192451-b8e6d5d421bc
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
-	github.com/couchbase/go-couchbase v0.0.0-20201020135452-0d6ea75c3305
+	github.com/couchbase/go-couchbase v0.0.0-20201020180151-9d3a2a7bfd44
 	github.com/couchbase/go_json v0.0.0-20200921122841-4294af405215
 	github.com/couchbase/gocbcore/v9 v9.0.6
 	github.com/couchbase/godbc v0.0.0-20200914134902-3290e3e2ccbc
-	github.com/couchbase/gomemcached v0.1.1-0.20200914210256-83e1dde05ac9
+	github.com/couchbase/gomemcached v0.1.1-0.20201019224916-153cfe02081a
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
 	github.com/couchbase/goutils v0.0.0-20191018232750-b49639060d85
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
