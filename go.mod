@@ -25,8 +25,8 @@ replace github.com/couchbase/query-ee => ../query-ee
 require (
 	github.com/couchbase/cbauth v0.0.0-20200923220950-efdafddb9bd2
 	github.com/couchbase/clog v0.0.0-20190523192451-b8e6d5d421bc
-	github.com/couchbase/eventing-ee v0.0.0-00010101000000-0000 0000 0000
-	github.com/couchbase/go-couchbase v0.0.0-20201020135452-0d6e a75c 3305
+	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
+	github.com/couchbase/go-couchbase v0.0.0-20201020135452-0d6ea75c3305
 	github.com/couchbase/go_json v0.0.0-20200921122841-4294af405215
 	github.com/couchbase/gocbcore/v9 v9.0.6
 	github.com/couchbase/godbc v0.0.0-20200914134902-3290e3e2ccbc
