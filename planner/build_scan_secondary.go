@@ -511,8 +511,13 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return false
 	}
 
-	if te.nSargKeys > 0 && te.nSargKeys > (snk+snc) {
-		return false
+	if te.nSargKeys > 0 {
+		if te.nSargKeys > (snk + snc) {
+			return false
+		} else if te.nSargKeys == (snk+snc) &&
+			se.PushDownProperty() == te.PushDownProperty() {
+			return true
+		}
 	}
 
 	if se.sumKeys+se.nEqCond != te.sumKeys+te.nEqCond {
@@ -527,21 +532,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return len(se.keys) < len(te.keys)
 	}
 
-	return se.cond != nil || equalIndexes(se, te)
-}
-
-func equalIndexes(se, te *indexEntry) bool {
-	if te.nSargKeys != se.nSargKeys || !expression.Equivalent(se.cond, te.cond) {
-		return false
-	}
-
-	for i, _ := range te.sargKeys {
-		if te.skeys[i] != se.skeys[i] || !expression.Equivalent(se.sargKeys[i], te.sargKeys[i]) {
-			return false
-		}
-	}
-
-	return true
+	return se.cond != nil
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
