@@ -169,6 +169,13 @@ func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (value.Value, *string)
 			error_msg := err.Error()
 			return nil, &error_msg
 		}
+
+		// MB-42205 this may need improvement: a nil value only means that we run on of documents
+		// on the last node we queried. There may be corner cases with many nodes and few documents
+		// where we get a KEY_NOENT from one node, but there are more documents in other nodes
+		if value == nil {
+			break
+		}
 		if krdr.docIdsSeen[key] { // seen it before?
 			duplicatesSeen++
 			continue

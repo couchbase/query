@@ -1248,6 +1248,11 @@ func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
 
 	if err != nil {
 		k.checkRefresh(err)
+
+		// Ignore "Not found" errors
+		if isNotFoundError(err) {
+			return "", nil, nil
+		}
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
 
