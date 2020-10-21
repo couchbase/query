@@ -89,12 +89,12 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			expiryTime = time.Now().Add(txContext.TxTimeout())
 		} else {
 			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
-				DurabilityLevel:  gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
-				KvDurableTimeout: txContext.TxDurabilityTimeout(),
+				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
 			}
 
-			if txConfig.KvDurableTimeout > datastore.DEF_DURABILITY_TIMEOUT {
-				txConfig.KeyValueTimeout = txConfig.KvDurableTimeout
+			keyValueTimeout := txContext.TxDurabilityTimeout()
+			if keyValueTimeout > datastore.DEF_DURABILITY_TIMEOUT {
+				txConfig.KeyValueTimeout = keyValueTimeout
 			}
 
 			transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
@@ -550,7 +550,7 @@ func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interf
 
 func validateResumeTxInfo(txDataVal value.Value, txContext *transactions.TranContext) error {
 
-	var rTimeout, rDurableTimeout time.Duration
+	var rTimeout time.Duration
 	var rDurabilityLevel datastore.DurabilityLevel
 
 	if v, ok := txDataVal.Field("state"); ok {
@@ -566,12 +566,6 @@ func validateResumeTxInfo(txDataVal value.Value, txContext *transactions.TranCon
 	}
 
 	if v, ok := txDataVal.Field("config"); ok {
-		if v1, ok := v.Field("kvDurableTimeoutMs"); ok && v1.Type() == value.NUMBER {
-			if v2, ok := v1.(value.NumberValue); ok {
-				rDurableTimeout = time.Duration(v2.Float64()) * time.Millisecond
-			}
-		}
-
 		if v1, ok := v.Field("durabilityLevel"); ok {
 			if v2, ok := v1.Actual().(string); ok {
 				rDurabilityLevel = datastore.DurabilityNameToLevel(v2)
@@ -584,10 +578,6 @@ func validateResumeTxInfo(txDataVal value.Value, txContext *transactions.TranCon
 
 	if rDurabilityLevel != txContext.TxDurabilityLevel() {
 		return gerrors.New("durability_level missmatch")
-	}
-
-	if rDurableTimeout > 0 && rDurableTimeout != txContext.TxDurabilityTimeout() {
-		return gerrors.New("durability_timeout missmatch")
 	}
 
 	return nil
