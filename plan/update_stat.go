@@ -57,11 +57,16 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 	r := map[string]interface{}{"#operator": "UpdateStatistics"}
 	this.node.Keyspace().MarshalKeyspace(r)
 
-	terms := make([]interface{}, 0, len(this.node.Terms()))
-	for _, term := range this.node.Terms() {
-		terms = append(terms, expression.NewStringer().Visit(term))
+	if len(this.node.Terms()) > 0 {
+		terms := make([]interface{}, 0, len(this.node.Terms()))
+		for _, term := range this.node.Terms() {
+			terms = append(terms, expression.NewStringer().Visit(term))
+		}
+		r["terms"] = terms
 	}
-	r["terms"] = terms
+	if this.node.Delete() {
+		r["delete"] = this.node.Delete()
+	}
 	if this.node.With() != nil {
 		r["with"] = this.node.With()
 	}
@@ -80,6 +85,7 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		Scope     string          `json:"scope"`
 		Keyspace  string          `json:"keyspace"`
 		Terms     []string        `json:"terms"`
+		Delete    bool            `json:"delete"`
 		With      json.RawMessage `json:"with"`
 	}
 
@@ -97,14 +103,18 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 	}
 
 	var expr expression.Expression
-	terms := make(expression.Expressions, len(_unmarshalled.Terms))
+	var terms expression.Expressions
 
-	for i, term := range _unmarshalled.Terms {
-		expr, err = parser.Parse(term)
-		if err != nil {
-			return err
+	if len(_unmarshalled.Terms) > 0 {
+		terms = make(expression.Expressions, len(_unmarshalled.Terms))
+
+		for i, term := range _unmarshalled.Terms {
+			expr, err = parser.Parse(term)
+			if err != nil {
+				return err
+			}
+			terms[i] = expr
 		}
-		terms[i] = expr
 	}
 
 	var with value.Value
@@ -112,7 +122,7 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
-	this.node = algebra.NewUpdateStatistics(ksref, terms, with)
+	this.node = algebra.NewUpdateStatistics(ksref, terms, with, _unmarshalled.Delete)
 	return nil
 }
 

@@ -424,7 +424,7 @@ tokOffset	 int
 
 %type <statement>        stmt_body
 %type <statement>        stmt advise explain prepare execute select_stmt dml_stmt ddl_stmt
-%type <statement>        infer infer_keyspace
+%type <statement>        infer
 %type <statement>        update_statistics
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
@@ -646,22 +646,20 @@ USING construction_expr
 ;
 
 infer:
-infer_keyspace
-;
-
-infer_keyspace:
-INFER opt_keyspace simple_keyspace_ref opt_infer_using opt_infer_ustat_with
+INFER opt_keyspace_collection simple_keyspace_ref opt_infer_using opt_infer_ustat_with
 {
     $$ = algebra.NewInferKeyspace($3, $4, $5)
 }
 ;
 
-opt_keyspace:
+opt_keyspace_collection:
 /* empty */
 {
 }
 |
 KEYSPACE
+|
+COLLECTION
 ;
 
 opt_infer_using:
@@ -2897,7 +2895,32 @@ EXECUTE FUNCTION func_name LPAREN opt_exprs RPAREN
 update_statistics:
 UPDATE STATISTICS opt_for named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($4, $6, $8)
+    $$ = algebra.NewUpdateStatistics($4, $6, $8, false)
+}
+|
+UPDATE STATISTICS opt_for named_keyspace_ref DELETE LPAREN update_stat_terms RPAREN
+{
+    $$ = algebra.NewUpdateStatistics($4, $7, nil, true)
+}
+|
+UPDATE STATISTICS opt_for named_keyspace_ref DELETE ALL
+{
+    $$ = algebra.NewUpdateStatistics($4, nil, nil, true)
+}
+|
+ANALYZE opt_keyspace_collection named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
+{
+    $$ = algebra.NewUpdateStatistics($3, $5, $7, false)
+}
+|
+ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS LPAREN update_stat_terms RPAREN
+{
+    $$ = algebra.NewUpdateStatistics($3, $7, nil, true)
+}
+|
+ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS
+{
+    $$ = algebra.NewUpdateStatistics($3, nil, nil, true)
 }
 ;
 

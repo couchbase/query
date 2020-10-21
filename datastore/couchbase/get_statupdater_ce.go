@@ -37,6 +37,12 @@ func (dsu *NopStatUpdater) UpdateStatistics(ks datastore.Keyspace, terms express
 	close(conn.ValueChannel())
 }
 
+func (dsu *NopStatUpdater) DeleteStatistics(ks datastore.Keyspace, terms expression.Expressions,
+	conn *datastore.ValueConnection, exContext interface{}) {
+	conn.Error(errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS. This is an Enterprise only feature."))
+	close(conn.ValueChannel())
+}
+
 func GetDefaultStatUpdater(store datastore.Datastore) (datastore.StatUpdater, errors.Error) {
 	statUpdater := new(NopStatUpdater)
 	return statUpdater, nil
