@@ -1453,6 +1453,11 @@ func (k *keyspace) getRandomEntry(scopeName, collectionName string,
 
 	if err != nil {
 		k.checkRefresh(err)
+
+		// Ignore "Not found" errors
+		if isNotFoundError(err) {
+			return "", nil, nil
+		}
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
 
