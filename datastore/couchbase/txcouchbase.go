@@ -331,7 +331,7 @@ func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext,
 }
 
 func (ks *keyspace) txReady(txContext *transactions.TranContext) errors.Error {
-	if txContext.TxExpired() {
+	if txContext != nil && txContext.TxExpired() {
 		return errors.NewTransactionExpired()
 	}
 
@@ -589,7 +589,24 @@ func initGocb(s *store) (err errors.Error) {
 		certFile = s.connSecConfig.CertFile
 	}
 
-	client, cerr := gcagent.NewClient(s.URL(), certFile, datastore.DEF_TXTIMEOUT)
+	client, cerr := gcagent.NewClient(s.URL(), certFile, datastore.DEF_TXTIMEOUT,
+		func(bucketName string) (agent *gocbcore.Agent, rerr error) {
+			parts := []string{"default", bucketName, "_default", "_default"}
+
+			ks, cerr := datastore.GetKeyspace(parts...)
+			if cerr != nil {
+				return nil, cerr.Cause()
+			}
+			coll, ok := ks.(*collection)
+			if !ok {
+				return nil, fmt.Errorf("%v is not a collection", ks.QualifiedName())
+			}
+
+			if cerr = coll.bucket.txReady(nil); cerr != nil {
+				return nil, cerr.Cause()
+			}
+			return coll.bucket.agentProvider.Agent(), nil
+		})
 
 	s.nslock.Lock()
 	defer s.nslock.Unlock()

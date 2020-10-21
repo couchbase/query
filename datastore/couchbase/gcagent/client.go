@@ -80,7 +80,7 @@ type Client struct {
 	mutex         sync.RWMutex
 }
 
-func NewClient(url, certFile string, defExpirationTime time.Duration) (rv *Client, err error) {
+func NewClient(url, certFile string, defExpirationTime time.Duration, bfn gctx.BucketAgentProviderFn) (rv *Client, err error) {
 	var connSpec *connstr.ConnSpec
 
 	rv = &Client{}
@@ -106,6 +106,7 @@ func NewClient(url, certFile string, defExpirationTime time.Duration) (rv *Clien
 		CleanupWindow:         _CLEANUPWINDOW,
 		CleanupClientAttempts: true,
 		CleanupLostAttempts:   true,
+		BucketAgentProvider:   bfn,
 	}
 
 	if rv.transactions, err = gctx.Init(txConfig); err == nil {
