@@ -516,7 +516,15 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 			return false
 		} else if te.nSargKeys == (snk+snc) &&
 			se.PushDownProperty() == te.PushDownProperty() {
-			return true
+			if se.minKeys != te.minKeys {
+				// for two indexes with the same sargKeys, favor the one
+				// with more consecutive leading sargKeys
+				// e.g (c1, c4) vs (c1, c2, c4) with predicates on c1 and c4
+				return se.minKeys > te.minKeys
+			} else {
+				// favor the one with shorter sargKeys
+				return se.maxKeys <= te.maxKeys
+			}
 		}
 	}
 
