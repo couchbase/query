@@ -33,6 +33,8 @@ const (
 	MOP_DELETE
 )
 
+var _MutateOpNames = [...]string{"UNKNOWN", "INSERT", "UPSERT", "UPDATE", "DELETE"}
+
 type GetOp struct {
 	Key    string
 	Val    value.AnnotatedValue
@@ -203,11 +205,11 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := err.(*gctx.TransactionOperationFailedError); ok1 &&
 				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
-				prevErr = err
+				prevErr = fmt.Errorf("key (%v), OP(GET), %v", k, err)
 				break
 			} else {
 				// request send failed. no need to wait to complete.
-				return append(errs, err)
+				return append(errs, fmt.Errorf("key (%v), OP(GET), %v", k, err))
 			}
 		}
 		items = append(items, gop)
@@ -224,9 +226,9 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := item.Err.(*gctx.TransactionOperationFailedError); ok1 &&
 				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
-				prevErr = item.Err
+				prevErr = fmt.Errorf("key (%v), OP(GET), %v", item.Key, item.Err)
 			} else {
-				errs = append(errs, item.Err)
+				errs = append(errs, fmt.Errorf("key (%v), OP(GET), %v", item.Key, item.Err))
 			}
 		}
 	}
@@ -362,10 +364,10 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := errOut.(*gctx.TransactionOperationFailedError); ok1 &&
 				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
-				prevErr = errOut
+				prevErr = fmt.Errorf("key (%v), OP (%v), Cas(%v), %v", op.Key, _MutateOpNames[op.Op], op.Cas, errOut)
 				break
 			} else {
-				return errOut
+				return fmt.Errorf("key (%v), OP (%v), Cas(%v), %v", op.Key, _MutateOpNames[op.Op], op.Cas, errOut)
 			}
 
 		}
@@ -377,9 +379,9 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := op.Err.(*gctx.TransactionOperationFailedError); ok1 &&
 				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
-				prevErr = op.Err
+				prevErr = fmt.Errorf("key (%v), OP (%v), Cas(%v), %v", op.Key, _MutateOpNames[op.Op], op.Cas, op.Err)
 			} else {
-				return op.Err
+				return fmt.Errorf("key (%v), OP (%v), Cas(%v), %v", op.Key, _MutateOpNames[op.Op], op.Cas, op.Err)
 			}
 		}
 	}
