@@ -119,10 +119,6 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.subPaths = _unmarshalled.SubPaths
-	if _unmarshalled.UnderNL {
-		this.term.SetUnderNL()
-	}
-
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 	if _unmarshalled.FromExpr != "" {
@@ -136,6 +132,10 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 			_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	}
+	if err == nil && _unmarshalled.UnderNL {
+		this.term.SetUnderNL()
+	}
+
 	return err
 }
 
@@ -248,7 +248,7 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	}
 
-	if _unmarshalled.UnderNL {
+	if err == nil && _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
 	return err
