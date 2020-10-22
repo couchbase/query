@@ -23,12 +23,15 @@ import (
 type UpdateStatistics struct {
 	execution
 	keyspace datastore.Keyspace
+	indexes  []datastore.Index
 	node     *algebra.UpdateStatistics
 }
 
-func NewUpdateStatistics(keyspace datastore.Keyspace, node *algebra.UpdateStatistics) *UpdateStatistics {
+func NewUpdateStatistics(keyspace datastore.Keyspace, indexes []datastore.Index,
+	node *algebra.UpdateStatistics) *UpdateStatistics {
 	return &UpdateStatistics{
 		keyspace: keyspace,
+		indexes:  indexes,
 		node:     node,
 	}
 }
@@ -43,6 +46,10 @@ func (this *UpdateStatistics) New() Operator {
 
 func (this *UpdateStatistics) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *UpdateStatistics) Indexes() []datastore.Index {
+	return this.indexes
 }
 
 func (this *UpdateStatistics) Node() *algebra.UpdateStatistics {
@@ -67,6 +74,9 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 	if this.node.Delete() {
 		r["delete"] = this.node.Delete()
 	}
+	if len(this.node.IndexNames()) > 0 {
+		r["indexNames"] = this.node.IndexNames()
+	}
 	if this.node.With() != nil {
 		r["with"] = this.node.With()
 	}
@@ -86,6 +96,7 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		Keyspace  string          `json:"keyspace"`
 		Terms     []string        `json:"terms"`
 		Delete    bool            `json:"delete"`
+		IdxNames  []string        `json:"indexNames"`
 		With      json.RawMessage `json:"with"`
 	}
 
@@ -100,6 +111,22 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 	this.keyspace, err = datastore.GetKeyspace(ksref.Path().Parts()...)
 	if err != nil {
 		return err
+	}
+
+	if len(_unmarshalled.IdxNames) > 0 {
+		indexer, err := this.keyspace.Indexer(datastore.DEFAULT)
+		if err != nil {
+			return err
+		}
+		indexes := make([]datastore.Index, 0, len(_unmarshalled.IdxNames))
+		for _, name := range _unmarshalled.IdxNames {
+			index, err := indexer.IndexByName(name)
+			if err != nil {
+				return err
+			}
+			indexes = append(indexes, index)
+		}
+		this.indexes = indexes
 	}
 
 	var expr expression.Expression
@@ -122,7 +149,7 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
-	this.node = algebra.NewUpdateStatistics(ksref, terms, with, _unmarshalled.Delete)
+	this.node = algebra.NewUpdateStatistics(ksref, terms, with, _unmarshalled.IdxNames, _unmarshalled.Delete)
 	return nil
 }
 

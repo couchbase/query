@@ -74,8 +74,8 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 			go updstat.DeleteStatistics(this.plan.Keyspace(), this.plan.Node().Terms(),
 				conn, context)
 		} else {
-			go updstat.UpdateStatistics(this.plan.Keyspace(), this.plan.Node().Terms(),
-				this.plan.Node().With(), conn, context, false)
+			go updstat.UpdateStatistics(this.plan.Keyspace(), this.plan.Indexes(),
+				this.plan.Node().Terms(), this.plan.Node().With(), conn, context, false)
 		}
 
 		var val value.Value

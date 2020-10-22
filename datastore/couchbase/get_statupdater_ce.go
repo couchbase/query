@@ -31,8 +31,9 @@ func (dsu *NopStatUpdater) Name() datastore.StatUpdaterType {
 	return ("UpdateStatisticsUnsuppored")
 }
 
-func (dsu *NopStatUpdater) UpdateStatistics(ks datastore.Keyspace, terms expression.Expressions,
-	with value.Value, conn *datastore.ValueConnection, exContext interface{}, internal bool) {
+func (dsu *NopStatUpdater) UpdateStatistics(ks datastore.Keyspace, indexes []datastore.Index,
+	terms expression.Expressions, with value.Value, conn *datastore.ValueConnection,
+	exContext interface{}, internal bool) {
 	conn.Error(errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS. This is an Enterprise only feature."))
 	close(conn.ValueChannel())
 }

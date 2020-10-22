@@ -27,15 +27,17 @@ type UpdateStatistics struct {
 	keyspace *KeyspaceRef           `json:"keyspace"`
 	terms    expression.Expressions `json:"terms"`
 	with     value.Value            `json:"with"`
+	idxNames []string               `json:"indexNames"`
 	delete   bool                   `json:"delete"`
 }
 
 func NewUpdateStatistics(keyspace *KeyspaceRef, terms expression.Expressions,
-	with value.Value, delete bool) *UpdateStatistics {
+	with value.Value, idxNames []string, delete bool) *UpdateStatistics {
 	rv := &UpdateStatistics{
 		keyspace: keyspace,
 		terms:    terms,
 		with:     with,
+		idxNames: idxNames,
 		delete:   delete,
 	}
 
@@ -96,6 +98,10 @@ func (this *UpdateStatistics) With() value.Value {
 	return this.with
 }
 
+func (this *UpdateStatistics) IndexNames() []string {
+	return this.idxNames
+}
+
 func (this *UpdateStatistics) Delete() bool {
 	return this.delete
 }
@@ -105,6 +111,7 @@ func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
 	r["keyspaceRef"] = this.keyspace
 	r["terms"] = this.terms
 	r["with"] = this.with
+	r["indexNames"] = this.idxNames
 	r["delete"] = this.delete
 
 	return json.Marshal(r)

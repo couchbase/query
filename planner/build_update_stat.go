@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 )
 
@@ -21,5 +22,22 @@ func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (inte
 		return nil, err
 	}
 
-	return plan.NewUpdateStatistics(keyspace, stmt), nil
+	var indexes []datastore.Index
+	if len(stmt.IndexNames()) > 0 {
+		indexer, err := keyspace.Indexer(datastore.DEFAULT)
+		if err != nil {
+			return nil, err
+		}
+
+		indexes = make([]datastore.Index, 0, len(stmt.IndexNames()))
+		for _, name := range stmt.IndexNames() {
+			index, err := indexer.IndexByName(name)
+			if err != nil {
+				return nil, err
+			}
+			indexes = append(indexes, index)
+		}
+	}
+
+	return plan.NewUpdateStatistics(keyspace, indexes, stmt), nil
 }
