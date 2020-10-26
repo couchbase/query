@@ -223,10 +223,15 @@ func (this *IntersectScan) accrueTimes(o Operator) {
 }
 
 func (this *IntersectScan) SendAction(action opAction) {
-	this.baseSendAction(action)
-	for _, scan := range this.scans {
-		if scan != nil {
-			scan.SendAction(action)
+	if this.baseSendAction(action) {
+		scans := this.scans
+		for _, scan := range scans {
+			if scan != nil {
+				scan.SendAction(action)
+			}
+			if this.scans == nil {
+				break
+			}
 		}
 	}
 }

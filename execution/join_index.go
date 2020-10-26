@@ -221,9 +221,9 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 
 // send a stop
 func (this *IndexJoin) SendAction(action opAction) {
-	this.baseSendAction(action)
+	rv := this.baseSendAction(action)
 	this.Lock()
-	if this.conn != nil {
+	if rv && this.conn != nil {
 		this.conn.SendStop()
 	}
 	this.Unlock()

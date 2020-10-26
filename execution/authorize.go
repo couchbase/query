@@ -107,9 +107,9 @@ func (this *Authorize) accrueTimes(o Operator) {
 }
 
 func (this *Authorize) SendAction(action opAction) {
-	this.baseSendAction(action)
+	rv := this.baseSendAction(action)
 	child := this.child
-	if child != nil {
+	if rv && child != nil {
 		child.SendAction(action)
 	}
 }

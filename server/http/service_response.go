@@ -119,7 +119,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeString("\n}\n")
 	this.writer.noMoreData()
 
-	this.stopAndAlert(server.FATAL)
+	this.Stop(server.FATAL)
 }
 
 func (this *httpRequest) markTimeOfCompletion(now time.Time) {
@@ -158,17 +158,11 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 	state := this.State()
 	this.writeSuffix(srvr, state, this.prefix, this.indent)
 	this.writer.noMoreData()
-	this.Alert()
 }
 
 func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
 	this.Error(errors.NewTimeoutError(timeout))
 	this.Stop(state)
-}
-
-func (this *httpRequest) stopAndAlert(state server.State) {
-	this.Stop(state)
-	this.Alert()
 }
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value, prefix, indent string) bool {

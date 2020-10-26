@@ -135,10 +135,15 @@ func (this *Sequence) accrueTimes(o Operator) {
 }
 
 func (this *Sequence) SendAction(action opAction) {
-	this.baseSendAction(action)
-	for _, child := range this.children {
-		if child != nil {
-			child.SendAction(action)
+	if this.baseSendAction(action) {
+		children := this.children
+		for _, child := range children {
+			if child != nil {
+				child.SendAction(action)
+			}
+			if this.children == nil {
+				break
+			}
 		}
 	}
 }

@@ -62,8 +62,12 @@ type annotatedChannel chan value.AnnotatedValue
 // come to life later and will need certain information to notify other operators:
 // _KILLED operators will have to clean up after themselves and remove any residual
 // references to other objects so as to help the GC.
-// This also means that ait is not safe to pool _KILLED operators, as they may later
+// This also means that it is not safe to pool _KILLED operators, as they may later
 // come to life
+// The Done() method should only be called when it is known that no further actions
+// are going to be sent, and the request as completed, either naturally, or via an
+// OpStop(), as, as much as we try, it's difficult to control race conditions when
+// SendAction() should take decisions based on structures that are being torn down.
 
 // Conversely, dormant operators should never change state during request execution,
 // because marking them as inactive will terminate early a result stream.
@@ -473,9 +477,11 @@ func (this *base) SendAction(action opAction) {
 }
 
 // action for the terminal operator case
-func (this *base) baseSendAction(action opAction) {
+func (this *base) baseSendAction(action opAction) bool {
+	rv := true
+
 	if this.stopped && !this.valueExchange.isWaiting() {
-		return
+		return this.opState < _DONE
 	}
 
 	this.activeCond.L.Lock()
@@ -483,13 +489,15 @@ func (this *base) baseSendAction(action opAction) {
 		if action == _ACTION_PAUSE {
 			this.opState = _PAUSED
 		} else { // _ACTION_STOP
-			this.opState = _KILLED
+			this.kill()
+			rv = false
 		}
 		this.activeCond.L.Unlock()
 
 	} else if this.opState == _PAUSED {
 		if action == _ACTION_STOP {
-			this.opState = _KILLED
+			this.kill()
+			rv = false
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
@@ -501,6 +509,7 @@ func (this *base) baseSendAction(action opAction) {
 	} else {
 		this.activeCond.L.Unlock()
 	}
+	return rv
 }
 
 func (this *base) chanSendAction(action opAction) {
@@ -509,12 +518,12 @@ func (this *base) chanSendAction(action opAction) {
 		if action == _ACTION_PAUSE {
 			this.opState = _PAUSED
 		} else { // _ACTION_STOP
-			this.opState = _KILLED
+			this.kill()
 		}
 		this.activeCond.L.Unlock()
 	} else if this.opState == _PAUSED {
 		if action == _ACTION_STOP {
-			this.opState = _KILLED
+			this.kill()
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
@@ -538,12 +547,12 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 		if action == _ACTION_PAUSE {
 			this.opState = _PAUSED
 		} else { // _ACTION_STOP
-			this.opState = _KILLED
+			this.kill()
 		}
 		this.activeCond.L.Unlock()
 	} else if this.opState == _PAUSED {
 		if action == _ACTION_STOP {
-			this.opState = _KILLED
+			this.kill()
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
@@ -558,6 +567,15 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 	} else {
 		this.activeCond.L.Unlock()
 	}
+}
+
+func (this *base) kill() {
+	this.opState = _KILLED
+
+	// This operator is being killed before it started as part of a request wide OpStop() or Done()
+	// it doesn't need to warn anyone else anymore
+	this.stop = nil
+	this.parent = nil
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
