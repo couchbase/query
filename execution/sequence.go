@@ -140,10 +140,15 @@ func (this *Sequence) accrueTimes(o Operator) {
 }
 
 func (this *Sequence) SendAction(action opAction) {
-	this.baseSendAction(action)
-	for _, child := range this.children {
-		if child != nil {
-			child.SendAction(action)
+	if this.baseSendAction(action) {
+		children := this.children
+		for _, child := range children {
+			if child != nil {
+				child.SendAction(action)
+			}
+			if this.children == nil {
+				break
+			}
 		}
 	}
 }
@@ -162,13 +167,12 @@ func (this *Sequence) reopen(context *Context) bool {
 
 func (this *Sequence) Done() {
 	this.baseDone()
-	children := this.children
-	this.children = nil
-	for c, child := range children {
-		children[c] = nil
+	for c, child := range this.children {
+		this.children[c] = nil
 		child.Done()
 	}
-	_SEQUENCE_POOL.Put(children)
+	_SEQUENCE_POOL.Put(this.children)
+	this.children = nil
 	if this.isComplete() {
 		_SEQUENCE_OP_POOL.Put(this)
 	}

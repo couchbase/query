@@ -110,10 +110,15 @@ func (this *IndexScan) accrueTimes(o Operator) {
 }
 
 func (this *IndexScan) SendAction(action opAction) {
-	this.baseSendAction(action)
-	for _, child := range this.children {
-		if child != nil {
-			child.SendAction(action)
+	if this.baseSendAction(action) {
+		children := this.children
+		for _, child := range children {
+			if child != nil {
+				child.SendAction(action)
+			}
+			if this.children == nil {
+				break
+			}
 		}
 	}
 }
@@ -132,13 +137,12 @@ func (this *IndexScan) reopen(context *Context) bool {
 
 func (this *IndexScan) Done() {
 	this.baseDone()
-	children := this.children
-	this.children = nil
-	for c, _ := range children {
+	for c, _ := range this.children {
 		// we happen to know that there's nothing to be done for the chilren spans
-		children[c] = nil
+		this.children[c] = nil
 	}
-	_INDEX_SCAN_POOL.Put(children)
+	_INDEX_SCAN_POOL.Put(this.children)
+	this.children = nil
 	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 }
 

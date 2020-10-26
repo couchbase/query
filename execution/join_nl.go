@@ -264,9 +264,9 @@ func (this *NLJoin) MarshalJSON() ([]byte, error) {
 }
 
 func (this *NLJoin) SendAction(action opAction) {
-	this.baseSendAction(action)
+	rv := this.baseSendAction(action)
 	child := this.child
-	if child != nil {
+	if rv && child != nil {
 		child.SendAction(action)
 	}
 }

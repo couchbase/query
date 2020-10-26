@@ -228,9 +228,9 @@ func (this *NLNest) MarshalJSON() ([]byte, error) {
 }
 
 func (this *NLNest) SendAction(action opAction) {
-	this.baseSendAction(action)
+	rv := this.baseSendAction(action)
 	child := this.child
-	if child != nil {
+	if rv && child != nil {
 		child.SendAction(action)
 	}
 }

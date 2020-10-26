@@ -279,7 +279,7 @@ type BaseRequest struct {
 	aborted           bool
 	errors            []errors.Error
 	warnings          []errors.Error
-	results           sync.WaitGroup
+	stopGate          sync.WaitGroup
 	servicerGate      sync.WaitGroup
 	stopResult        chan bool          // stop consuming results
 	stopExecute       chan bool          // stop executing request
@@ -336,7 +336,6 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.txTimeout = datastore.DEF_TXTIMEOUT
 	rv.serviceTime = time.Now()
-	rv.results.Add(1)
 	rv.state = SUBMITTED
 	rv.aborted = false
 	rv.stopResult = make(chan bool, 1)
@@ -965,17 +964,18 @@ func (this *BaseRequest) StopExecute() chan bool {
 func (this *BaseRequest) Stop(state State) {
 	this.SetState(state)
 
-	// just in case we are being stopped before the root operator is set
-	// (like a syntax error in filestore or multistore)
+	// guard against the root operator not being set (eg fatal error)
+	// and make sure that a stop can only be sent once (eg close OR timeout)
 	if this.stopOperator != nil {
+
+		// only one in between Stop() and Done() can happen at any one time
+		this.stopGate.Wait()
+		this.stopGate.Add(1)
 		execution.OpStop(this.stopOperator)
+		this.stopGate.Done()
+		this.stopOperator = nil
 	}
 	sendStop(this.stopExecute)
-}
-
-// alert requestor that the request has completed
-func (this *BaseRequest) Alert() {
-	this.results.Done()
 }
 
 // load control gate
@@ -1005,7 +1005,12 @@ func (this *BaseRequest) CompleteRequest(requestTime time.Duration, serviceTime 
 	// Request Profiling - signal that request has completed and
 	// resources can be pooled / released as necessary
 	if this.timings != nil {
+
+		// only one in between Stop() and Done() can happen at any one time
+		this.stopGate.Wait()
+		this.stopGate.Add(1)
 		this.timings.Done()
+		this.stopGate.Done()
 		this.timings = nil
 	}
 }

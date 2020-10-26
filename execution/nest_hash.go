@@ -203,9 +203,9 @@ func (this *HashNest) MarshalJSON() ([]byte, error) {
 }
 
 func (this *HashNest) SendAction(action opAction) {
-	this.baseSendAction(action)
+	rv := this.baseSendAction(action)
 	child := this.child
-	if child != nil {
+	if rv && child != nil {
 		child.SendAction(action)
 	}
 }

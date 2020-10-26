@@ -286,10 +286,15 @@ func (this *OrderedIntersectScan) accrueTimes(o Operator) {
 }
 
 func (this *OrderedIntersectScan) SendAction(action opAction) {
-	this.baseSendAction(action)
-	for _, scan := range this.scans {
-		if scan != nil {
-			scan.SendAction(action)
+	if this.baseSendAction(action) {
+		scans := this.scans
+		for _, scan := range scans {
+			if scan != nil {
+				scan.SendAction(action)
+			}
+			if this.scans == nil {
+				break
+			}
 		}
 	}
 }
@@ -308,13 +313,12 @@ func (this *OrderedIntersectScan) reopen(context *Context) bool {
 
 func (this *OrderedIntersectScan) Done() {
 	this.baseDone()
-	scans := this.scans
-	this.scans = nil
-	for s, scan := range scans {
-		scans[s] = nil
+	for s, scan := range this.scans {
+		this.scans[s] = nil
 		scan.Done()
 	}
-	_INDEX_SCAN_POOL.Put(scans)
+	_INDEX_SCAN_POOL.Put(this.scans)
+	this.scans = nil
 	channel := this.channel
 	this.channel = nil
 	if channel != nil {

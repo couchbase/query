@@ -71,9 +71,9 @@ func (this *MockQuery) Fail(err errors.Error) {
 func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
 	select {
 	case <-this.Results():
-		this.stopAndAlert(server.COMPLETED)
+		this.Stop(server.COMPLETED)
 	case <-this.StopExecute():
-		this.stopAndAlert(server.STOPPED)
+		this.Stop(server.STOPPED)
 
 		// wait for operator before continuing
 		<-this.Results()
@@ -82,19 +82,14 @@ func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, 
 }
 
 func (this *MockQuery) Failed(srvr *server.Server) {
-	this.stopAndAlert(server.FATAL)
+	this.Stop(server.FATAL)
 }
 
 func (this *MockQuery) Expire(state server.State, timeout time.Duration) {
-	defer this.stopAndAlert(state)
+	defer this.Stop(state)
 
 	this.response.err = errors.NewError(nil, "Query timed out")
 	close(this.response.done)
-}
-
-func (this *MockQuery) stopAndAlert(state server.State) {
-	this.Stop(state)
-	this.Alert()
 }
 
 func (this *MockQuery) SetUp() {

@@ -106,10 +106,15 @@ func (this *UnionAll) accrueTimes(o Operator) {
 }
 
 func (this *UnionAll) SendAction(action opAction) {
-	this.baseSendAction(action)
-	for _, child := range this.children {
-		if child != nil {
-			child.SendAction(action)
+	if this.baseSendAction(action) {
+		children := this.children
+		for _, child := range children {
+			if child != nil {
+				child.SendAction(action)
+			}
+			if this.children == nil {
+				break
+			}
 		}
 	}
 }
@@ -128,13 +133,12 @@ func (this *UnionAll) reopen(context *Context) bool {
 
 func (this *UnionAll) Done() {
 	this.baseDone()
-	children := this.children
-	this.children = nil
-	for c, child := range children {
-		children[c] = nil
+	for c, child := range this.children {
+		this.children[c] = nil
 		child.Done()
 	}
-	_UNION_POOL.Put(children)
+	_UNION_POOL.Put(this.children)
+	this.children = nil
 }
 
 var _UNION_POOL = NewOperatorPool(4)

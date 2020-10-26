@@ -162,9 +162,9 @@ func (this *DistinctScan) accrueTimes(o Operator) {
 }
 
 func (this *DistinctScan) SendAction(action opAction) {
-	this.baseSendAction(action)
+	rv := this.baseSendAction(action)
 	scan := this.scan
-	if scan != nil {
+	if rv && scan != nil {
 		scan.SendAction(action)
 	}
 }
