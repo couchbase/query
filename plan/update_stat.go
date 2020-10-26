@@ -74,8 +74,20 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 	if this.node.Delete() {
 		r["delete"] = this.node.Delete()
 	}
-	if len(this.node.IndexNames()) > 0 {
-		r["indexNames"] = this.node.IndexNames()
+	if len(this.node.Indexes()) > 0 {
+		indexes := make([]interface{}, 0, len(this.node.Indexes()))
+		for _, idxRef := range this.node.Indexes() {
+			name := idxRef.Name()
+			using := idxRef.Using()
+			if name == "" || (using != datastore.GSI && using != datastore.DEFAULT) {
+				continue
+			}
+			index := map[string]interface{}{}
+			index["name"] = name
+			index["using"] = using
+			indexes = append(indexes, index)
+		}
+		r["indexes"] = indexes
 	}
 	if this.node.With() != nil {
 		r["with"] = this.node.With()
@@ -89,15 +101,18 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 
 func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string          `json:"#operator"`
-		Namespace string          `json:"namespace"`
-		Bucket    string          `json:"bucket"`
-		Scope     string          `json:"scope"`
-		Keyspace  string          `json:"keyspace"`
-		Terms     []string        `json:"terms"`
-		Delete    bool            `json:"delete"`
-		IdxNames  []string        `json:"indexNames"`
-		With      json.RawMessage `json:"with"`
+		_         string   `json:"#operator"`
+		Namespace string   `json:"namespace"`
+		Bucket    string   `json:"bucket"`
+		Scope     string   `json:"scope"`
+		Keyspace  string   `json:"keyspace"`
+		Terms     []string `json:"terms"`
+		Delete    bool     `json:"delete"`
+		Indexes   []struct {
+			Name  string              `json:"name"`
+			Using datastore.IndexType `json:"using"`
+		} `json:"indexes"`
+		With json.RawMessage `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -113,14 +128,18 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if len(_unmarshalled.IdxNames) > 0 {
-		indexer, err := this.keyspace.Indexer(datastore.DEFAULT)
+	var idxRefs algebra.IndexRefs
+	if len(_unmarshalled.Indexes) > 0 {
+		gsiIndexer, err := this.keyspace.Indexer(datastore.GSI)
 		if err != nil {
 			return err
 		}
-		indexes := make([]datastore.Index, 0, len(_unmarshalled.IdxNames))
-		for _, name := range _unmarshalled.IdxNames {
-			index, err := indexer.IndexByName(name)
+		indexes := make([]datastore.Index, 0, len(_unmarshalled.Indexes))
+		idxRefs := make(algebra.IndexRefs, 0, len(_unmarshalled.Indexes))
+		for _, idxRef := range _unmarshalled.Indexes {
+			idxRefs = append(idxRefs, algebra.NewIndexRef(idxRef.Name, idxRef.Using))
+			// only GSI indexes supported, check done in semantics
+			index, err := gsiIndexer.IndexByName(idxRef.Name)
 			if err != nil {
 				return err
 			}
@@ -149,7 +168,7 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
-	this.node = algebra.NewUpdateStatistics(ksref, terms, with, _unmarshalled.IdxNames, _unmarshalled.Delete)
+	this.node = algebra.NewUpdateStatistics(ksref, terms, with, idxRefs, _unmarshalled.Delete)
 	return nil
 }
 

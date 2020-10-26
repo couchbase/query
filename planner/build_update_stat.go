@@ -23,15 +23,16 @@ func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (inte
 	}
 
 	var indexes []datastore.Index
-	if len(stmt.IndexNames()) > 0 {
-		indexer, err := keyspace.Indexer(datastore.DEFAULT)
+	if len(stmt.Indexes()) > 0 {
+		gsiIndexer, err := keyspace.Indexer(datastore.GSI)
 		if err != nil {
 			return nil, err
 		}
 
-		indexes = make([]datastore.Index, 0, len(stmt.IndexNames()))
-		for _, name := range stmt.IndexNames() {
-			index, err := indexer.IndexByName(name)
+		indexes = make([]datastore.Index, 0, len(stmt.Indexes()))
+		for _, idxRef := range stmt.Indexes() {
+			// only GSI indexes supported, check done in semantics
+			index, err := gsiIndexer.IndexByName(idxRef.Name())
 			if err != nil {
 				return nil, err
 			}

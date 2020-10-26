@@ -148,6 +148,20 @@ func NewHasUseIndexesError(termType string, iKey string) Error {
 		InternalMsg: fmt.Sprintf("%s term should not have USE INDEX", termType), InternalCaller: CallerN(1)}
 }
 
+const UPDATE_STAT_INDEX_NAME = 3270
+
+func NewUpdateStatMissingIndexNameError() Error {
+	return &err{level: EXCEPTION, ICode: UPDATE_STAT_INDEX_NAME, IKey: "semantics_update_statistics",
+		InternalMsg: "UPDATE STATISTICS (ANALYZE) must specify index name for INDEX option.", InternalCaller: CallerN(1)}
+}
+
+const UPDATE_STAT_INDEX_TYPE = 3271
+
+func NewUpdateStatInvalidIndexTypeError() Error {
+	return &err{level: EXCEPTION, ICode: UPDATE_STAT_INDEX_TYPE, IKey: "semantics_update_statistics",
+		InternalMsg: "UPDATE STATISTICS (ANALYZE) supports GSI indexes only for INDEX option.", InternalCaller: CallerN(1)}
+}
+
 /* ---- BEGIN MOVED error numbers ----
    The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
    although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.

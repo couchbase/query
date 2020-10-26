@@ -2908,14 +2908,19 @@ UPDATE STATISTICS opt_for named_keyspace_ref DELETE ALL
     $$ = algebra.NewUpdateStatistics($4, nil, nil, nil, true)
 }
 |
-UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_infer_ustat_with
+UPDATE STATISTICS opt_for named_keyspace_ref INDEX LPAREN index_refs RPAREN opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($5, nil, $8, []string{$7}, false)
+    $$ = algebra.NewUpdateStatistics($4, nil, $9, $7, false)
 }
 |
-UPDATE STATISTICS FOR INDEX index_name ON simple_named_keyspace_ref opt_infer_ustat_with
+UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($7, nil, $8, []string{$5}, false)
+    $$ = algebra.NewUpdateStatistics($5, nil, $9, algebra.IndexRefs{algebra.NewIndexRef($7, $8)}, false)
+}
+|
+UPDATE STATISTICS FOR INDEX index_name ON simple_named_keyspace_ref opt_index_using opt_infer_ustat_with
+{
+    $$ = algebra.NewUpdateStatistics($7, nil, $9, algebra.IndexRefs{algebra.NewIndexRef($5, $8)}, false)
 }
 |
 ANALYZE opt_keyspace_collection named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
@@ -2933,14 +2938,19 @@ ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS
     $$ = algebra.NewUpdateStatistics($3, nil, nil, nil, true)
 }
 |
-ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_infer_ustat_with
+ANALYZE opt_keyspace_collection named_keyspace_ref INDEX LPAREN index_refs RPAREN opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($3, nil, $6, []string{$5}, false)
+    $$ = algebra.NewUpdateStatistics($3, nil, $8, $6, false)
 }
 |
-ANALYZE INDEX index_name ON simple_named_keyspace_ref opt_infer_ustat_with
+ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($5, nil, $6, []string{$3}, false)
+    $$ = algebra.NewUpdateStatistics($3, nil, $7, algebra.IndexRefs{algebra.NewIndexRef($5, $6)}, false)
+}
+|
+ANALYZE INDEX index_name ON simple_named_keyspace_ref opt_index_using opt_infer_ustat_with
+{
+    $$ = algebra.NewUpdateStatistics($5, nil, $7, algebra.IndexRefs{algebra.NewIndexRef($3, $6)}, false)
 }
 ;
 

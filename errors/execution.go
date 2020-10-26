@@ -275,7 +275,7 @@ func NewIndexNotInMemory(msg string) Error {
 
 func NewMissingSystemCBOStatsError() Error {
 	return &err{level: EXCEPTION, ICode: 5400, IKey: "execution.update_statistics.missing_system_cbostats",
-		InternalMsg:    "System Collection 'N1QL_CBO_STATS' is required for UPDATE STATISTICS",
+		InternalMsg:    "System Collection 'N1QL_CBO_STATS' is required for UPDATE STATISTICS (ANALYZE)",
 		InternalCaller: CallerN(1)}
 }
 
