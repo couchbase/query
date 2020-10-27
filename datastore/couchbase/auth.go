@@ -30,6 +30,8 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!write")
 	case auth.PRIV_READ:
 		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!read")
+	case auth.PRIV_UPSERT:
+		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!upsert")
 	case auth.PRIV_SYSTEM_OPEN:
 		fallthrough
 	case auth.PRIV_SYSTEM_READ:
@@ -138,6 +140,10 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 		var err error
 
 		privilege := privsSought[p].Priv
+		if privilege == auth.PRIV_QUERY_TRANSACTION_STMT {
+			// ignore transaction statements
+			continue
+		}
 		if privilege == auth.PRIV_SYSTEM_OPEN && as.adminIsOpen() {
 			// If all buckets have passwords, the API requires credentials.
 			// But if any don't, the API is open to read.
@@ -377,6 +383,11 @@ func cbPreAuthorize(privileges *auth.Privileges) {
 		return
 	}
 	for i, _ := range privileges.List {
+		if privileges.List[i].Priv == auth.PRIV_QUERY_TRANSACTION_STMT {
+			// ignore transaction statements
+			continue
+		}
+
 		namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(privileges.List[i])
 		p, err := privilegeString(namespace, keyspace, obj, privileges.List[i].Priv)
 		if err == nil && p != "" {

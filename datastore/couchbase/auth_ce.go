@@ -29,6 +29,9 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 	case auth.PRIV_WRITE:
 		privilege = "data write queries"
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
+	case auth.PRIV_UPSERT:
+		privilege = "data upsert queries"
+		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_SYSTEM_READ:
 		privilege = "queries accessing the system tables"
 		role = "admin"

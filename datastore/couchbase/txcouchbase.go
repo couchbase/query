@@ -82,9 +82,6 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		var expiryTime time.Time
 
 		if len(txnData) > 0 {
-			if terr = validateResumeTxInfo(context.TxDataVal(), txContext); terr != nil {
-				return nil, errors.NewStartTransactionError(terr)
-			}
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
 			expiryTime = time.Now().Add(txContext.TxTimeout())
 		} else {
@@ -548,41 +545,6 @@ func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interf
 		}
 	}
 	return
-}
-
-func validateResumeTxInfo(txDataVal value.Value, txContext *transactions.TranContext) error {
-
-	var rTimeout time.Duration
-	var rDurabilityLevel datastore.DurabilityLevel
-
-	if v, ok := txDataVal.Field("state"); ok {
-		if v1, ok := v.Field("timeLeftMs"); ok && v1.Type() == value.NUMBER {
-			if v2, ok := v1.(value.NumberValue); ok {
-				rTimeout = time.Duration(v2.Float64()) * time.Millisecond
-			}
-		}
-	}
-
-	if rTimeout != txContext.TxTimeout() {
-		return gerrors.New("txtimeout missmatch")
-	}
-
-	if v, ok := txDataVal.Field("config"); ok {
-		if v1, ok := v.Field("durabilityLevel"); ok {
-			if v2, ok := v1.Actual().(string); ok {
-				rDurabilityLevel = datastore.DurabilityNameToLevel(v2)
-				if rDurabilityLevel < 0 {
-					rDurabilityLevel = datastore.DL_MAJORITY
-				}
-			}
-		}
-	}
-
-	if rDurabilityLevel != txContext.TxDurabilityLevel() {
-		return gerrors.New("durability_level missmatch")
-	}
-
-	return nil
 }
 
 func initGocb(s *store) (err errors.Error) {

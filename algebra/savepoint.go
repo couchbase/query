@@ -79,7 +79,9 @@ func (this *Savepoint) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *Savepoint) Privileges() (*auth.Privileges, errors.Error) {
-	return auth.NewPrivileges(), nil
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_QUERY_TRANSACTION_STMT, auth.PRIV_PROPS_NONE)
+	return privs, nil
 }
 
 /*

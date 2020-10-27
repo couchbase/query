@@ -80,7 +80,9 @@ func (this *StartTransaction) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *StartTransaction) Privileges() (*auth.Privileges, errors.Error) {
-	return auth.NewPrivileges(), nil
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_QUERY_TRANSACTION_STMT, auth.PRIV_PROPS_NONE)
+	return privs, nil
 }
 
 /*
@@ -161,7 +163,9 @@ func (this *CommitTransaction) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *CommitTransaction) Privileges() (*auth.Privileges, errors.Error) {
-	return auth.NewPrivileges(), nil
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_QUERY_TRANSACTION_STMT, auth.PRIV_PROPS_NONE)
+	return privs, nil
 }
 
 /*
@@ -236,7 +240,9 @@ func (this *RollbackTransaction) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *RollbackTransaction) Privileges() (*auth.Privileges, errors.Error) {
-	return auth.NewPrivileges(), nil
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_QUERY_TRANSACTION_STMT, auth.PRIV_PROPS_NONE)
+	return privs, nil
 }
 
 /*
@@ -318,7 +324,9 @@ func (this *TransactionIsolation) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *TransactionIsolation) Privileges() (*auth.Privileges, errors.Error) {
-	return auth.NewPrivileges(), nil
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_QUERY_TRANSACTION_STMT, auth.PRIV_PROPS_NONE)
+	return privs, nil
 }
 
 /*

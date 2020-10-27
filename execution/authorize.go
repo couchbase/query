@@ -81,9 +81,9 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_SERVTIME)
 		ds := datastore.GetDatastore()
 		if ds != nil {
+			var perr error
 			privs := this.plan.Privileges()
 			if privs != nil && this.plan.Dynamic() {
-				var perr error
 				privs, perr = this.getPrivileges(privs, context, this.dynamicAuthorize)
 				if perr != nil {
 					context.Fatal(errors.NewError(perr, "dynamic authorization"))
@@ -91,6 +91,14 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 			}
+
+			privs, perr = this.addTxPrivileges(privs, context)
+			if perr != nil {
+				context.Fatal(errors.NewError(perr, "transactional authorization"))
+				this.fail(context)
+				return
+			}
+
 			authenticatedUsers, err := ds.Authorize(privs, context.Credentials())
 			if err != nil {
 				context.Fatal(err)

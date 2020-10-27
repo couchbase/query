@@ -178,6 +178,7 @@ type Context struct {
 	txImplicit          bool
 	txData              []byte
 	txDataVal           value.Value
+	atrPath             *algebra.Path
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -253,6 +254,7 @@ func (this *Context) Copy() *Context {
 		txContext:           this.txContext,
 		txData:              this.txData,
 		txDataVal:           this.txDataVal,
+		atrPath:             this.atrPath,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -617,7 +619,7 @@ func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTx
 
 	if this.txContext != nil || txImplicit || stmtType == "START_TRANSACTION" {
 		this.txData = txData
-		if len(txData) > 0 {
+		if len(txData) > 0 && stmtType != "START_TRANSACTION" {
 			this.txDataVal = value.NewValue(txData)
 		}
 

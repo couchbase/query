@@ -40,6 +40,8 @@ const (
 	PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL Privilege = 24 // Ability to run EXECUTE FUNCTION statements.
 	PRIV_QUERY_BUCKET_ADMIN                     Privilege = 25 // Ability to add, drop, flush scopes and collections
 	PRIV_QUERY_STATS                            Privilege = 26 // Ability to read query stats
+	PRIV_QUERY_TRANSACTION_STMT                 Privilege = 27 // Ability to run Transaction statements.
+	PRIV_UPSERT                                 Privilege = 28 // Ability to run docs UPSERT
 )
 
 type PrivilegePair struct {
