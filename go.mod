@@ -36,7 +36,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.0.0-20200618135536-fe11fe60aa9d
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
-	github.com/couchbase/gocbcore/v9 v9.0.6
+	github.com/couchbase/gocbcore/v9 v9.0.7
 	github.com/couchbase/godbc v0.0.0-20200914134902-3290e3e2ccbc
 	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
