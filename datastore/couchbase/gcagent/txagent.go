@@ -133,13 +133,8 @@ func (ap *AgentProvider) Deadline(d time.Time, n int) time.Time {
 
 // Create annotated value
 
-func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName string) (value.AnnotatedValue, error) {
-	txnMetaBytes, err := json.Marshal(res.Meta)
-	if err != nil {
-		return nil, err
-	}
-
-	av := value.NewAnnotatedValue(value.NewParsedValue(res.Value, false))
+func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName string) (av value.AnnotatedValue, err error) {
+	av = value.NewAnnotatedValue(value.NewParsedValue(res.Value, false))
 	meta_type := "json"
 	if av.Type() == value.BINARY {
 		meta_type = "base64"
@@ -151,9 +146,13 @@ func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName 
 	meta["type"] = meta_type
 	meta["flags"] = uint32(0)
 	meta["expiration"] = uint32(0)
-	meta["txnMeta"] = txnMetaBytes
+	if res.Meta != nil {
+		meta["txnMeta"], err = json.Marshal(*res.Meta)
+		if err != nil {
+			return nil, err
+		}
+	}
 	av.SetId(key)
-
 	return av, nil
 }
 
@@ -330,8 +329,11 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 		case MOP_INSERT:
 			errOut = sendInsertOne(op)
 		case MOP_UPDATE:
-			var txnMeta gctx.MutableItemMeta
-			errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
+			var txnMeta *gctx.MutableItemMeta
+			if len(op.TxnMeta) > 0 {
+				txnMeta = &gctx.MutableItemMeta{}
+				errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
+			}
 			if errOut == nil {
 				tmpRes := txnInternal.CreateGetResult(gctx.CreateGetResultOptions{
 					Agent:          ap.Agent(),
@@ -344,8 +346,11 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 				errOut = sendUpdateOne(op, tmpRes)
 			}
 		case MOP_DELETE:
-			var txnMeta gctx.MutableItemMeta
-			errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
+			var txnMeta *gctx.MutableItemMeta
+			if len(op.TxnMeta) > 0 {
+				txnMeta = &gctx.MutableItemMeta{}
+				errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
+			}
 			if errOut == nil {
 				tmpRes := txnInternal.CreateGetResult(gctx.CreateGetResultOptions{
 					Agent:          ap.Agent(),

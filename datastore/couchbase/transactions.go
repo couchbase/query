@@ -712,7 +712,10 @@ func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gct
 				}
 			}
 
-			txnMeta, _ := mv.TxnMeta.([]byte)
+			var txnMeta []byte
+			if mv.TxnMeta != nil {
+				txnMeta, _ = mv.TxnMeta.([]byte)
+			}
 
 			// batch of write ops
 			wops = append(wops, &gcagent.WriteOp{Op: int(mv.Op),

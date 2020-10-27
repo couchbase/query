@@ -386,7 +386,9 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			meta["type"] = "json"
 			meta["flags"] = uint32(0)
 			meta["expiration"] = mv.Expiration
-			meta["txnMeta"] = mv.TxnMeta
+			if mv.TxnMeta != nil {
+				meta["txnMeta"] = mv.TxnMeta
+			}
 			av.SetId(k)
 			fetchMap[k] = av
 		}
@@ -394,7 +396,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 
 	if len(fkeys) > 0 {
 		sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
-		if sdkKv && sdkCas != 0 && len(fkeys) == 1 && sdkTxnMeta != nil {
+		if sdkKv && sdkCas != 0 && len(fkeys) == 1 {
 			// Transformed SDK REPLACE, DELETE with CAS don't read the document
 			k := fkeys[0]
 			av := value.NewAnnotatedValue(value.NewValue(nil))
@@ -404,7 +406,9 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			meta["type"] = "json"
 			meta["flags"] = uint32(0)
 			meta["expiration"] = uint32(0)
-			meta["txnMeta"] = sdkTxnMeta
+			if sdkTxnMeta != nil {
+				meta["txnMeta"] = sdkTxnMeta
+			}
 			av.SetId(k)
 			fetchMap[k] = av
 		} else {
@@ -436,7 +440,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 
 	txMutations := txContext.TxMutations().(*TransactionMutations)
 	var fetchMap map[string]value.AnnotatedValue
-	sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
+	sdkKv, sdkCas, _ := GetTxDataValues(context.TxDataVal())
 	sdkKvInsert := sdkKv && op == MOP_INSERT
 
 	if op == MOP_UPSERT || sdkKvInsert {
@@ -491,9 +495,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		must := (nop == MOP_UPDATE || nop == MOP_DELETE)
 		cas, _, txnMeta, err1 := getMeta(kv.Name, val, must)
 		if err1 == nil && must {
-			if txnMeta == nil || (sdkKv && sdkTxnMeta == nil) {
-				err1 = fmt.Errorf("Not valid txnMeta value for key %v", kv.Name)
-			} else if sdkKv && sdkCas != cas {
+			if sdkKv && sdkCas != cas {
 				err1 = fmt.Errorf("Missmatch cas values(%v,%v) for key %v", sdkCas, cas, kv.Name)
 			}
 		}
@@ -503,7 +505,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		}
 
 		if nop == MOP_INSERT {
-			txnMeta = []byte("{}")
+			txnMeta = nil
 		}
 
 		// Add to mutations
