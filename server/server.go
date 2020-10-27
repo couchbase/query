@@ -885,9 +885,7 @@ func (this *Server) serviceRequest(request Request) {
 			(prepared != nil && !prepared.Readonly()) {
 			request.Fail(errors.NewServiceErrorReadonly("The server or request is read-only" +
 				" and cannot accept this write statement."))
-		} else if request.IsPrepare() {
-			context.ResetTxContext()
-		} else if request.TxId() == "" {
+		} else if request.TxId() == "" && !request.IsPrepare() {
 			if err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
 				request.TxTimeout(), this.TxTimeout(), request.TxData()); err != nil {
 				request.Fail(err)
