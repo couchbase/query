@@ -341,7 +341,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 					CollectionName: collectionName,
 					Key:            []byte(op.Key),
 					Cas:            gocbcore.Cas(op.Cas),
-					Meta:           &txnMeta,
+					Meta:           txnMeta,
 				})
 				errOut = sendUpdateOne(op, tmpRes)
 			}
@@ -358,7 +358,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 					CollectionName: collectionName,
 					Key:            []byte(op.Key),
 					Cas:            gocbcore.Cas(op.Cas),
-					Meta:           &txnMeta,
+					Meta:           txnMeta,
 				})
 				errOut = sendDeleteOne(op, tmpRes)
 			}
