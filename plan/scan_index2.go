@@ -112,6 +112,10 @@ func (this *IndexScan2) SetOffset(offset expression.Expression) {
 	this.offset = offset
 }
 
+func (this *IndexScan2) IsUnderNL() bool {
+	return this.term.IsUnderNL()
+}
+
 func (this *IndexScan2) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	var err error
 	for _, span := range this.spans {

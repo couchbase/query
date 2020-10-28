@@ -110,6 +110,10 @@ func (this *IntersectScan) Offset() expression.Expression {
 func (this *IntersectScan) SetOffset(limit expression.Expression) {
 }
 
+func (this *IntersectScan) IsUnderNL() bool {
+	return this.scans[0].IsUnderNL()
+}
+
 func (this *IntersectScan) Cost() float64 {
 	return this.cost
 }

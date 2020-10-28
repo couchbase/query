@@ -26,6 +26,7 @@ type OrderedIntersectScan struct {
 	queue     *util.Queue
 	sent      int64
 	fullCount int64
+	channel   *Channel
 }
 
 func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, context *Context, scans []Operator) *OrderedIntersectScan {
@@ -100,13 +101,12 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 			fullBits |= int64(0x01) << uint8(i)
 		}
 
-		channel := NewChannel(context)
-		defer channel.Done()
-		this.SetInput(channel)
+		this.channel = NewChannel(context)
+		this.SetInput(this.channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
-			scan.SetOutput(channel)
+			scan.SetOutput(this.channel)
 			go scan.RunOnce(context, parent)
 		}
 
@@ -128,7 +128,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 					// MB-22321 we stop when the first scan finishes
 					if childBit == 0 || n == nscans {
 						if nscans > 1 {
-							notifyChildren(this.scans[1:]...)
+							sendChildren(this.plan, this.scans[1:]...)
 						}
 						childBits |= int64(0x01) << uint(childBit)
 					}
@@ -146,7 +146,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 					// now that all children are gone, flag that there's
 					// no more values coming in
 					if n == 0 {
-						channel.close(context)
+						this.channel.close(context)
 					}
 				} else if item != nil {
 					this.addInDocs(1)
@@ -162,7 +162,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 							needProcessing--
 						}
 						if needProcessing == 0 && !firstStopped && len(this.bits) == 0 {
-							notifyChildren(this.scans[0])
+							sendChildren(this.plan, this.scans[0])
 							firstStopped = true
 						}
 						if limit > 0 && this.fullCount >= limit {
@@ -178,12 +178,12 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 
 				// if not done already, stop children, wait and clean up
 				if n == nscans {
-					notifyChildren(this.scans...)
+					sendChildren(this.plan, this.scans...)
 				}
 				if n > 0 {
-					notifyChildren(this.scans[0])
+					sendChildren(this.plan, this.scans[0])
 					this.childrenWaitNoStop(n)
-					channel.close(context)
+					this.channel.close(context)
 				}
 				break loop
 			}
@@ -280,11 +280,11 @@ func (this *OrderedIntersectScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.scans, copy.scans)
 }
 
-func (this *OrderedIntersectScan) SendStop() {
-	this.baseSendStop()
+func (this *OrderedIntersectScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	for _, scan := range this.scans {
 		if scan != nil {
-			scan.SendStop()
+			scan.SendAction(action)
 		}
 	}
 }
@@ -309,6 +309,11 @@ func (this *OrderedIntersectScan) Done() {
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil
+	channel := this.channel
+	this.channel = nil
+	if channel != nil {
+		channel.Done()
+	}
 }
 
 var _QUEUE_POOL = util.NewQueuePool(1024)

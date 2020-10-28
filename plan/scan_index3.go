@@ -191,6 +191,10 @@ func (this *IndexScan3) Covering() bool {
 	return len(this.covers) > 0
 }
 
+func (this *IndexScan3) IsUnderNL() bool {
+	return this.term.IsUnderNL()
+}
+
 func (this *IndexScan3) Cost() float64 {
 	return this.cost
 }

@@ -18,9 +18,10 @@ import (
 
 type UnionScan struct {
 	base
-	plan  *plan.UnionScan
-	scans []Operator
-	keys  map[string]bool
+	plan    *plan.UnionScan
+	scans   []Operator
+	keys    map[string]bool
+	channel *Channel
 }
 
 func NewUnionScan(plan *plan.UnionScan, context *Context, scans []Operator) *UnionScan {
@@ -80,13 +81,12 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			this.keys = make(map[string]bool, pipelineCap)
 		}
 
-		channel := NewChannel(context)
-		defer channel.Done()
-		this.SetInput(channel)
+		this.channel = NewChannel(context)
+		this.SetInput(this.channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
-			scan.SetOutput(channel)
+			scan.SetOutput(this.channel)
 			go scan.RunOnce(context, parent)
 		}
 
@@ -108,7 +108,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 					// now that no child is left behind, signal that there
 					// is no further input coming in past what already queued
 					if n == 0 {
-						channel.close(context)
+						this.channel.close(context)
 					}
 				} else {
 					break loop
@@ -117,9 +117,9 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 
 				// stop children, wait and clean up
 				if n > 0 {
-					notifyChildren(this.scans...)
+					sendChildren(this.plan, this.scans...)
 					this.childrenWaitNoStop(n)
-					channel.close(context)
+					this.channel.close(context)
 				}
 				break loop
 			}
@@ -171,11 +171,11 @@ func (this *UnionScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.scans, copy.scans)
 }
 
-func (this *UnionScan) SendStop() {
-	this.baseSendStop()
+func (this *UnionScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	for _, scan := range this.scans {
 		if scan != nil {
-			scan.SendStop()
+			scan.SendAction(action)
 		}
 	}
 }
@@ -200,4 +200,9 @@ func (this *UnionScan) Done() {
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil
+	channel := this.channel
+	this.channel = nil
+	if channel != nil {
+		channel.Done()
+	}
 }

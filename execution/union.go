@@ -101,11 +101,11 @@ func (this *UnionAll) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.children, copy.children)
 }
 
-func (this *UnionAll) SendStop() {
-	this.baseSendStop()
+func (this *UnionAll) SendAction(action opAction) {
+	this.baseSendAction(action)
 	for _, child := range this.children {
 		if child != nil {
-			child.SendStop()
+			child.SendAction(action)
 		}
 	}
 }

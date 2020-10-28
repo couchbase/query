@@ -98,6 +98,10 @@ func (this *IndexFtsSearch) SetOffset(offset expression.Expression) {
 	}
 }
 
+func (this *IndexFtsSearch) IsUnderNL() bool {
+	return this.term.IsUnderNL()
+}
+
 func (this *IndexFtsSearch) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	return nil
 }

@@ -110,6 +110,10 @@ func (this *UnionScan) SetOffset(offset expression.Expression) {
 	}
 }
 
+func (this *UnionScan) IsUnderNL() bool {
+	return this.scans[0].IsUnderNL()
+}
+
 func (this *UnionScan) Cost() float64 {
 	return this.cost
 }

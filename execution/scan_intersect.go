@@ -18,11 +18,12 @@ import (
 
 type IntersectScan struct {
 	base
-	plan   *plan.IntersectScan
-	scans  []Operator
-	values map[string]value.AnnotatedValue
-	bits   map[string]int64
-	sent   int64
+	plan    *plan.IntersectScan
+	scans   []Operator
+	values  map[string]value.AnnotatedValue
+	bits    map[string]int64
+	sent    int64
+	channel *Channel
 }
 
 func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operator) *IntersectScan {
@@ -93,13 +94,12 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			fullBits |= int64(0x01) << uint8(i)
 		}
 
-		channel := NewChannel(context)
-		defer channel.Done()
-		this.SetInput(channel)
+		this.channel = NewChannel(context)
+		this.SetInput(this.channel)
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
-			scan.SetOutput(channel)
+			scan.SetOutput(this.channel)
 			go scan.RunOnce(context, parent)
 		}
 
@@ -118,7 +118,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 					// MB-22321 terminate when first child terminates
 					if n == nscans {
-						notifyChildren(this.scans...)
+						sendChildren(this.plan, this.scans...)
 						childBits |= int64(0x01) << uint(childBit)
 					}
 					n--
@@ -126,7 +126,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					// now that all children are gone, flag that there's
 					// no more values coming in
 					if n == 0 {
-						channel.close(context)
+						this.channel.close(context)
 					}
 				} else if item != nil {
 					this.addInDocs(1)
@@ -140,11 +140,11 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 				// if not done already, stop children, wait and clean up
 				if n == nscans {
-					notifyChildren(this.scans...)
+					sendChildren(this.plan, this.scans...)
 				}
 				if n > 0 {
 					this.childrenWaitNoStop(n)
-					channel.close(context)
+					this.channel.close(context)
 				}
 				break loop
 			}
@@ -222,11 +222,11 @@ func (this *IntersectScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.scans, copy.scans)
 }
 
-func (this *IntersectScan) SendStop() {
-	this.baseSendStop()
+func (this *IntersectScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	for _, scan := range this.scans {
 		if scan != nil {
-			scan.SendStop()
+			scan.SendAction(action)
 		}
 	}
 }
@@ -251,6 +251,11 @@ func (this *IntersectScan) Done() {
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil
+	channel := this.channel
+	this.channel = nil
+	if channel != nil {
+		channel.Done()
+	}
 }
 
 func mergeSearchMeta(dest, src value.AnnotatedValue) {
@@ -269,5 +274,13 @@ func mergeSearchMeta(dest, src value.AnnotatedValue) {
 			d[n] = v
 		}
 		dest.SetAttachment("smeta", d)
+	}
+}
+
+func sendChildren(op plan.SecondaryScan, children ...Operator) {
+	if op.IsUnderNL() {
+		pauseChildren(children...)
+	} else {
+		notifyChildren(children...)
 	}
 }

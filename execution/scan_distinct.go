@@ -108,7 +108,7 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 
 		// Await child scan
 		if n > 0 {
-			notifyChildren(this.scan)
+			sendChildren(this.plan, this.scan)
 			this.childrenWaitNoStop(n)
 		}
 	})
@@ -157,11 +157,11 @@ func (this *DistinctScan) accrueTimes(o Operator) {
 	this.scan.accrueTimes(copy.scan)
 }
 
-func (this *DistinctScan) SendStop() {
-	this.baseSendStop()
+func (this *DistinctScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	scan := this.scan
 	if scan != nil {
-		scan.SendStop()
+		scan.SendAction(action)
 	}
 }
 

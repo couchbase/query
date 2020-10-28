@@ -96,7 +96,7 @@ func (this *NLJoin) processItem(item value.AnnotatedValue, context *Context) boo
 
 		// If the reopen failed, we should propagate the stop signal to the inner scan again
 		// to terminate any operator that we had successfully restarted
-		this.child.SendStop()
+		this.child.SendAction(_ACTION_STOP)
 		return false
 	}
 
@@ -128,7 +128,7 @@ loop:
 					ok = this.sendItem(joined)
 				}
 
-				// TODO break out and child.SendStop() here for semin-scans
+				// TODO break out and child.SendAction(_ACTION_STOP) here for semin-scans
 			} else if child >= 0 {
 				n--
 			} else {
@@ -143,7 +143,7 @@ loop:
 	// There is no need to terminate the inner scan under normal completion
 	if stopped || !ok {
 		if n > 0 {
-			this.child.SendStop()
+			this.child.SendAction(_ACTION_STOP)
 			this.childrenWaitNoStop(n)
 		}
 
@@ -222,11 +222,11 @@ func (this *NLJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *NLJoin) SendStop() {
-	this.baseSendStop()
+func (this *NLJoin) SendAction(action opAction) {
+	this.baseSendAction(action)
 	child := this.child
 	if child != nil {
-		child.SendStop()
+		child.SendAction(action)
 	}
 }
 

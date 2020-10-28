@@ -28,6 +28,7 @@ type Merge struct {
 	matched  map[string]bool
 	inserted map[string]bool
 	children []Operator
+	inputs   []*Channel
 }
 
 func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
@@ -76,14 +77,11 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		go this.input.RunOnce(context, parent)
 
 		update, updateInput := this.wrapChild(this.update, context)
-		defer releaseChannel(updateInput)
 		delete, deleteInput := this.wrapChild(this.delete, context)
-		defer releaseChannel(deleteInput)
 		insert, insertInput := this.wrapChild(this.insert, context)
-		defer releaseChannel(insertInput)
 
 		this.children = _MERGE_OPERATOR_POOL.Get()
-		inputs := _MERGE_CHANNEL_POOL.Get()
+		this.inputs = _MERGE_CHANNEL_POOL.Get()
 		if update != nil || delete != nil {
 			this.matched = _MERGE_KEY_POOL.Get()
 		}
@@ -91,7 +89,6 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			this.inserted = _MERGE_KEY_POOL.Get()
 		}
 		defer func() {
-			_MERGE_CHANNEL_POOL.Put(inputs)
 			if this.matched != nil {
 				_MERGE_KEY_POOL.Put(this.matched)
 				this.matched = nil
@@ -104,17 +101,17 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		if update != nil {
 			this.children = append(this.children, update)
-			inputs = append(inputs, updateInput)
+			this.inputs = append(this.inputs, updateInput)
 		}
 
 		if delete != nil {
 			this.children = append(this.children, delete)
-			inputs = append(inputs, deleteInput)
+			this.inputs = append(this.inputs, deleteInput)
 		}
 
 		if insert != nil {
 			this.children = append(this.children, insert)
-			inputs = append(inputs, insertInput)
+			this.inputs = append(this.inputs, insertInput)
 		}
 
 		for _, child := range this.children {
@@ -138,7 +135,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Close child input Channels, which will signal children
-		for _, input := range inputs {
+		for _, input := range this.inputs {
 			input.close(context)
 		}
 
@@ -287,12 +284,6 @@ func (this *Merge) wrapChild(op Operator, context *Context) (Operator, *Channel)
 	return op, ch
 }
 
-func releaseChannel(ch *Channel) {
-	if ch != nil {
-		ch.Done()
-	}
-}
-
 func (this *Merge) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
@@ -325,19 +316,19 @@ func (this *Merge) accrueTimes(o Operator) {
 	}
 }
 
-func (this *Merge) SendStop() {
-	this.baseSendStop()
+func (this *Merge) SendAction(action opAction) {
+	this.baseSendAction(action)
 	update := this.update
 	delete := this.delete
 	insert := this.insert
 	if update != nil {
-		update.SendStop()
+		update.SendAction(action)
 	}
 	if delete != nil {
-		delete.SendStop()
+		delete.SendAction(action)
 	}
 	if insert != nil {
-		insert.SendStop()
+		insert.SendAction(action)
 	}
 }
 
@@ -374,6 +365,13 @@ func (this *Merge) Done() {
 	}
 	_MERGE_OPERATOR_POOL.Put(this.children)
 	this.children = nil
+
+	inputs := this.inputs
+	this.inputs = nil
+	for _, input := range inputs {
+		input.Done()
+	}
+	_MERGE_CHANNEL_POOL.Put(inputs)
 }
 
 var _MERGE_OPERATOR_POOL = NewOperatorPool(3)

@@ -93,11 +93,11 @@ func (this *IndexScan) accrueTimes(o Operator) {
 	childrenAccrueTimes(this.children, copy.children)
 }
 
-func (this *IndexScan) SendStop() {
-	this.baseSendStop()
+func (this *IndexScan) SendAction(action opAction) {
+	this.baseSendAction(action)
 	for _, child := range this.children {
 		if child != nil {
-			child.SendStop()
+			child.SendAction(action)
 		}
 	}
 }
@@ -291,7 +291,7 @@ func (this *spanScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// send a stop
-func (this *spanScan) SendStop() {
-	this.connSendStop(this.conn)
+// send a stop/pause
+func (this *spanScan) SendAction(action opAction) {
+	this.connSendAction(this.conn, action)
 }

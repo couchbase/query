@@ -78,17 +78,21 @@ func (this *DistinctScan) SetLimit(limit expression.Expression) {
 	this.scan.SetLimit(limit)
 }
 
+func (this *DistinctScan) SetOffset(offset expression.Expression) {
+	this.offset = offset
+	this.scan.SetOffset(offset)
+}
+
+func (this *DistinctScan) IsUnderNL() bool {
+	return this.scan.IsUnderNL()
+}
+
 func (this *DistinctScan) Cost() float64 {
 	return this.cost
 }
 
 func (this *DistinctScan) Cardinality() float64 {
 	return this.cardinality
-}
-
-func (this *DistinctScan) SetOffset(offset expression.Expression) {
-	this.offset = offset
-	this.scan.SetOffset(offset)
 }
 
 func (this *DistinctScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {

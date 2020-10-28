@@ -236,7 +236,7 @@ func (this *IndexScan2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// send a stop
-func (this *IndexScan2) SendStop() {
-	this.connSendStop(this.conn)
+// send a stop/pause
+func (this *IndexScan2) SendAction(action opAction) {
+	this.connSendAction(this.conn, action)
 }

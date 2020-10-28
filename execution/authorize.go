@@ -106,11 +106,11 @@ func (this *Authorize) accrueTimes(o Operator) {
 	this.child.accrueTimes(copy.child)
 }
 
-func (this *Authorize) SendStop() {
-	this.baseSendStop()
+func (this *Authorize) SendAction(action opAction) {
+	this.baseSendAction(action)
 	child := this.child
 	if child != nil {
-		child.SendStop()
+		child.SendAction(action)
 	}
 }
 

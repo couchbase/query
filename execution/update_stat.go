@@ -92,7 +92,7 @@ func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// send a stop
-func (this *UpdateStatistics) SendStop() {
-	this.chanSendStop()
+// send a stop/pause
+func (this *UpdateStatistics) SendAction(action opAction) {
+	this.chanSendAction(action)
 }
