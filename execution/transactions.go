@@ -89,8 +89,7 @@ func (this *StartTransaction) RunOnce(context *Context, parent value.Value) {
 		}
 
 		consistency := context.consistency
-		if !context.txImplicit &&
-			(context.originalConsistency == datastore.NOT_SET || context.originalConsistency == datastore.AT_PLUS) {
+		if context.originalConsistency == datastore.NOT_SET || context.originalConsistency == datastore.AT_PLUS {
 			consistency = datastore.SCAN_PLUS
 		}
 
