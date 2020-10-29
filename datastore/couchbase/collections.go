@@ -488,9 +488,11 @@ func dropDictCacheEntries(bucket *keyspace) {
 }
 
 func clearOldScope(bucket *keyspace, s *scope) {
-	for c, _ := range s.keyspaces {
-		DropDictionaryEntry(s.keyspaces[c].QualifiedName())
-		s.keyspaces[c] = nil
+	for n, val := range s.keyspaces {
+		if val != nil {
+			s.keyspaces[n] = nil
+			DropDictionaryEntry(val.QualifiedName())
+		}
 	}
 
 	functions.DropScope(bucket.namespace.name, bucket.name, s.Name())
