@@ -137,5 +137,5 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 }
 
 func (this *AlterIndex) verify(prepared *Prepared) bool {
-	return verifyIndex(this.index, this.indexer, prepared)
+	return verifyIndex(this.index, this.indexer, nil, prepared)
 }

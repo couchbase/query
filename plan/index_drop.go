@@ -106,5 +106,5 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 }
 
 func (this *DropIndex) verify(prepared *Prepared) bool {
-	return verifyIndex(this.index, this.indexer, prepared)
+	return verifyIndex(this.index, this.indexer, nil, prepared)
 }

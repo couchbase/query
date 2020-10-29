@@ -223,5 +223,5 @@ func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 }
 
 func (this *IndexCountScan2) verify(prepared *Prepared) bool {
-	return verifyIndex(this.index, this.indexer, prepared)
+	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
