@@ -641,9 +641,12 @@ func (this *indexMap) MarshalJSON() ([]byte, error) {
 
 func (this *indexMap) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{
-		"index":             this.index,
-		"update_statistics": this.updStats,
-		"statements":        this.queries,
+		"index":      this.index,
+		"statements": this.queries,
+	}
+
+	if this.updStats != "" {
+		r["update_statistics"] = this.updStats
 	}
 
 	if f != nil {
@@ -665,7 +668,9 @@ func (this *indexMap) UnmarshalJSON(body []byte) error {
 	}
 
 	this.index = _unmarshalled.Index
-	this.updStats = _unmarshalled.UpdStats
+	if _unmarshalled.UpdStats != "" {
+		this.updStats = _unmarshalled.UpdStats
+	}
 
 	ql := NewQueryList()
 	for _, v1 := range _unmarshalled.Queries {
