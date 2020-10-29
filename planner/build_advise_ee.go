@@ -105,8 +105,30 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 			cntKeyspaceNotFound += 1
 			continue
 		}
-		if len(v.GetCurIndexes()) > 0 {
-			curIndexes = append(curIndexes, v.GetCurIndexes()...)
+		cIndexes := v.GetCurIndexes()
+		if len(cIndexes) > 0 {
+			curIdxMap := make(map[string]iaplan.IndexInfos, len(cIndexes))
+			for _, cIdx := range cIndexes {
+				idxName := cIdx.GetIndexName()
+				if infos, ok := curIdxMap[idxName]; ok {
+					found := false
+					for _, info := range infos {
+						if info.EquivalentTo(cIdx, false) {
+							info.AddAlias(cIdx.GetAlias())
+							found = true
+							break
+						}
+					}
+					if !found {
+						infos = append(infos, cIdx)
+						curIdxMap[idxName] = infos
+						curIndexes = append(curIndexes, cIdx)
+					}
+				} else {
+					curIdxMap[idxName] = iaplan.IndexInfos{cIdx}
+					curIndexes = append(curIndexes, cIdx)
+				}
+			}
 		}
 
 		if len(v.GetUncoverIndexes()) > 0 {

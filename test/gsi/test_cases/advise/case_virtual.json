@@ -46,13 +46,19 @@
                 },
                 {
                   "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
-                  "keyspace_alias": "bucket_04_t_4;bucket_04_t_5"
+                  "keyspace_aliases": [
+                      "bucket_04_t_4",
+                      "bucket_04_t_5"
+                  ]
                 }
               ],
               "indexes": [
                 {
                   "index_statement": "CREATE INDEX adv_primary_key_id ON `bucket_04`(`primary_key_id`)",
-                  "keyspace_alias": "bucket_04_t_4;bucket_04_t_5",
+                  "keyspace_aliases": [
+                      "bucket_04_t_4",
+                      "bucket_04_t_5"
+                  ],
                   "recommending_rule": {
                     "bucket_04_t_4": "Index keys follow order of predicate types: 9. non-static join predicate.",
                     "bucket_04_t_5": "Index keys follow order of predicate types: 9. non-static join predicate."

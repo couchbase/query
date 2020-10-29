@@ -60,7 +60,7 @@ func (this *scanIdxCol) addIndexInfo(indexInfo *iaplan.IndexInfo) {
 	}
 
 	for _, info := range this.indexInfos {
-		if info.EquivalentTo(indexInfo) {
+		if info.EquivalentTo(indexInfo, true) {
 			return
 		}
 	}
