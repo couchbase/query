@@ -214,49 +214,49 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id                requestIDImpl
-	client_id         clientContextIDImpl
-	statement         string
-	prepared          *plan.Prepared
-	reqType           string
-	isPrepare         bool
-	namedArgs         map[string]value.Value
-	positionalArgs    value.Values
-	namespace         string
-	timeout           time.Duration
-	timer             *time.Timer
-	maxParallelism    int
-	scanCap           int64
-	pipelineCap       int64
-	pipelineBatch     int
-	readonly          value.Tristate
-	signature         value.Tristate
-	metrics           value.Tristate
-	pretty            value.Tristate
-	consistency       ScanConfiguration
-	credentials       auth.Credentials
-	remoteAddr        string
-	userAgent         string
-	requestTime       time.Time
-	serviceTime       time.Time
-	execTime          time.Time
-	state             State
-	aborted           bool
-	errors            []errors.Error
-	warnings          []errors.Error
-	stopGate          sync.WaitGroup
-	servicerGate      sync.WaitGroup
-	stopResult        chan bool          // stop consuming results
-	stopExecute       chan bool          // stop executing request
-	stopOperator      execution.Operator // notified when request execution stops
-	timings           execution.Operator
-	controls          value.Tristate
-	profile           Profile
-	indexApiVersion   int    // Index API version
-	featureControls   uint64 // feature bit controls
-	autoPrepare       value.Tristate
-	autoExecute       value.Tristate
-	useFts            bool
+	id              requestIDImpl
+	client_id       clientContextIDImpl
+	statement       string
+	prepared        *plan.Prepared
+	reqType         string
+	isPrepare       bool
+	namedArgs       map[string]value.Value
+	positionalArgs  value.Values
+	namespace       string
+	timeout         time.Duration
+	timer           *time.Timer
+	maxParallelism  int
+	scanCap         int64
+	pipelineCap     int64
+	pipelineBatch   int
+	readonly        value.Tristate
+	signature       value.Tristate
+	metrics         value.Tristate
+	pretty          value.Tristate
+	consistency     ScanConfiguration
+	credentials     auth.Credentials
+	remoteAddr      string
+	userAgent       string
+	requestTime     time.Time
+	serviceTime     time.Time
+	execTime        time.Time
+	state           State
+	aborted         bool
+	errors          []errors.Error
+	warnings        []errors.Error
+	stopGate        sync.WaitGroup
+	servicerGate    sync.WaitGroup
+	stopResult      chan bool          // stop consuming results
+	stopExecute     chan bool          // stop executing request
+	stopOperator    execution.Operator // notified when request execution stops
+	timings         execution.Operator
+	controls        value.Tristate
+	profile         Profile
+	indexApiVersion int    // Index API version
+	featureControls uint64 // feature bit controls
+	autoPrepare     value.Tristate
+	autoExecute     value.Tristate
+	useFts          bool
 }
 
 type requestIDImpl struct {
