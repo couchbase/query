@@ -517,6 +517,13 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 			return nil, errors.NewTransactionError(fmt.Errorf("Setting return cas error"), _MutateOpNames[op])
 		}
 
+		// upsert and not already in the fetchMap then add so that same upsert key will make it update in same statement
+		if op == MOP_UPSERT {
+			if _, ok := fetchMap[key]; !ok {
+				fetchMap[key] = val.(value.AnnotatedValue)
+			}
+		}
+
 		mPairs = append(mPairs, kv)
 	}
 
