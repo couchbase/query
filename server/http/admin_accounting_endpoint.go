@@ -615,7 +615,7 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 		if err != nil {
 			return nil, err
 		}
-		dictionary.DropDictCacheEntry(name)
+		dictionary.DropDictCacheEntry(name, true)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
 		err, isInternal := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)

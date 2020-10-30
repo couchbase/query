@@ -169,7 +169,7 @@ func (b *dictionaryCacheKeyspace) Delete(deletes []value.Pair, context datastore
 
 		} else {
 			// local entry
-			dictionary.DropDictCacheEntry(localKey)
+			dictionary.DropDictCacheEntry(localKey, false)
 		}
 	}
 	return deletes, nil

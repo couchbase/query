@@ -45,8 +45,8 @@ func DictCacheEntryDo(k string, f func(interface{})) {
 	dictionary.DictCacheEntryDo(k, f)
 }
 
-func DropDictCacheEntry(keyspace string) {
-	dictionary.DropDictCacheEntry(keyspace)
+func DropDictCacheEntry(keyspace string, remote bool) {
+	dictionary.DropDictCacheEntry(keyspace, remote)
 }
 
 func NameDictCacheEntries() []string {
