@@ -225,9 +225,17 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := item.Err.(*gctx.TransactionOperationFailedError); ok1 &&
 				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
-				prevErr = fmt.Errorf("key (%v), OP(GET), %v", item.Key, item.Err)
+				if notFoundErr {
+					prevErr = item.Err
+				} else {
+					prevErr = fmt.Errorf("key (%v), OP(GET), %v", item.Key, item.Err)
+				}
 			} else {
-				errs = append(errs, fmt.Errorf("key (%v), OP(GET), %v", item.Key, item.Err))
+				if notFoundErr {
+					errs = append(errs, item.Err)
+				} else {
+					errs = append(errs, fmt.Errorf("key (%v), OP(GET), %v", item.Key, item.Err))
+				}
 			}
 		}
 	}
