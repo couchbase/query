@@ -547,7 +547,7 @@ func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interf
 			cas = uint64(value.AsNumberValue(v).Int64())
 		}
 
-		if v, ok := txDataVal.Field("txnMeta"); ok && v.Type() == value.OBJECT {
+		if v, ok := txDataVal.Field("txnMeta"); ok && v.Type() != value.MISSING {
 			txnMeta, _ = v.MarshalJSON()
 		}
 	}
