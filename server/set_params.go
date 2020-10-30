@@ -230,31 +230,37 @@ func setCompleted(s *Server, o interface{}) errors.Error {
 	return nil
 }
 
-func ProcessSettings(settings map[string]interface{}, srvr *Server) errors.Error {
+func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.Error) {
 	for setting, value := range settings {
-		if check_it, ok := CHECKERS[setting]; !ok {
-			return errors.NewAdminUnknownSettingError(setting)
+		var cerr errors.Error
+		check_it, ok := CHECKERS[setting]
+		if ok {
+			ok, cerr = check_it(value)
+		}
+
+		if !ok {
+			if cerr == nil {
+				cerr = errors.NewAdminSettingTypeError(setting, value)
+				logging.Infof("Query Configuration %v", cerr.Error())
+			} else {
+				logging.Infof("Query Configuration incorrect value %v for setting: %s, error: %v ", value, setting, cerr)
+			}
+
+			if err == nil {
+				err = cerr
+			}
 		} else {
-			ok, err := check_it(value)
-			if !ok {
-				if err == nil {
-					return errors.NewAdminSettingTypeError(setting, value)
-				} else {
-					return err
-				}
+			set_it := _SETTERS[setting]
+			serr := set_it(srvr, value)
+			if serr == nil {
+				logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
+			} else {
+				logging.Infof("Could not change query Configuration %v to %v: %v", setting, value, serr)
 			}
 		}
 	}
-	for setting, value := range settings {
-		set_it := _SETTERS[setting]
-		err := set_it(srvr, value)
-		if err == nil {
-			logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
-		} else {
-			logging.Infof("Could not change query Configuration %v to %v: %v", setting, value, err)
-		}
-	}
-	return nil
+
+	return err
 }
 
 func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
