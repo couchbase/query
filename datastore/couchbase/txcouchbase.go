@@ -14,6 +14,7 @@ package couchbase
 import (
 	gerrors "errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -545,6 +546,13 @@ func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interf
 
 		if v, ok := txDataVal.Field("cas"); ok && v.Type() == value.NUMBER {
 			cas = uint64(value.AsNumberValue(v).Int64())
+		}
+
+		if v, ok := txDataVal.Field("scas"); ok && v.Type() == value.STRING {
+			s, _ := v.Actual().(string)
+			if u64, err := strconv.ParseUint(s, 10, 64); err == nil {
+				cas = u64
+			}
 		}
 
 		if v, ok := txDataVal.Field("txnMeta"); ok && v.Type() != value.MISSING {
