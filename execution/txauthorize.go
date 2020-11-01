@@ -12,11 +12,9 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/datastore"
 )
 
 const (
@@ -33,25 +31,6 @@ type jsonSerializedMutation struct {
 }
 
 type jsonSerializedAttempt struct {
-	ID struct {
-		Transaction string `json:"txn"`
-		Attempt     string `json:"atmpt"`
-	} `json:"id"`
-	ATR struct {
-		Bucket     string `json:"bkt"`
-		Scope      string `json:"scp"`
-		Collection string `json:"coll"`
-		ID         string `json:"id"`
-	} `json:"atr"`
-	Config struct {
-		KvTimeoutMs        int    `json:"kvTimeoutMs"`
-		KvDurableTimeoutMs int    `json:"kvDurableTimeoutMs"`
-		DurabilityLevel    string `json:"durabilityLevel"`
-		NumAtrs            int    `json:"numAtrs"`
-	} `json:"config"`
-	State struct {
-		TimeLeftMs int `json:"timeLeftMs"`
-	} `json:"state"`
 	Mutations []jsonSerializedMutation `json:"mutations"`
 }
 
@@ -59,47 +38,22 @@ func (this *Authorize) getTxPrivileges(privs *auth.Privileges, checkAtrPrivs boo
 	atrPrivs, keyspacePrivs *auth.Privileges, err error) {
 
 	var txData jsonSerializedAttempt
-	var kPath *algebra.Path
+	var kPath, atrPath *algebra.Path
 
 	atrPrivs = auth.NewPrivileges()
 	keyspacePrivs = auth.NewPrivileges()
-	atrPath := context.atrPath
+
+	if context.atrCollection != "" {
+		atrPath, err = algebra.NewVariablePathWithContext(context.atrCollection, context.Namespace(), context.queryContext)
+		if err != nil {
+			return
+		}
+	}
 
 	if len(context.txData) > 0 && context.txContext == nil {
 		// SDK resumed transactions (BEGIN WORK).
 		if err = json.Unmarshal(context.txData, &txData); err != nil {
 			return
-		}
-
-		// Get the transaction required data from txData and set in then context.
-		context.durabilityLevel = datastore.DurabilityNameToLevel(txData.Config.DurabilityLevel)
-		if context.durabilityLevel < 0 {
-			return nil, nil, fmt.Errorf("Invalid DurabilityLevel %v", txData.Config.DurabilityLevel)
-		}
-
-		if txData.State.TimeLeftMs > 0 {
-			context.txTimeout = time.Duration(txData.State.TimeLeftMs) * time.Millisecond
-		}
-
-		if txData.Config.KvDurableTimeoutMs > 0 {
-			context.durabilityTimeout = time.Duration(txData.Config.KvDurableTimeoutMs) * time.Millisecond
-		} else if txData.Config.KvTimeoutMs > 0 {
-			// set durabilityTimeout as KvTimeout
-			context.durabilityTimeout = time.Duration(txData.Config.KvTimeoutMs) * time.Millisecond
-		}
-
-		// ATR collection is provided. At present N1QL doesn't support it or will not allow to change it.
-		if txData.ATR.Bucket != "" {
-			if atrPath == nil {
-				return nil, nil, fmt.Errorf("Transactions are not configured for ATR Bucket")
-			}
-
-			txAtrPath := algebra.NewPathLong(context.namespace, txData.ATR.Bucket, txData.ATR.Scope, txData.ATR.Collection)
-			if atrPath.SimpleString() != txAtrPath.SimpleString() {
-				return nil, nil,
-					fmt.Errorf("Transactions configured ATR collection(%s) didn't matched with passed in collection(%s)",
-						atrPath.SimpleString(), txAtrPath.SimpleString())
-			}
 		}
 
 		var priv auth.Privilege

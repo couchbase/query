@@ -469,6 +469,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.FUNCLIMIT] = functions.FunctionsLimit()
 	settings[server.MEMORYQUOTA] = srvr.MemoryQuota()
 	settings[server.USECBO] = srvr.UseCBO()
+	settings[server.ATRCOLLECTION] = srvr.AtrCollection()
 	return settings
 }
 

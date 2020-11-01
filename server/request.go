@@ -131,6 +131,12 @@ type Request interface {
 	SetDurabilityLevel(l datastore.DurabilityLevel)
 	DurabilityTimeout() time.Duration
 	SetDurabilityTimeout(d time.Duration)
+	KvTimeout() time.Duration
+	SetKvTimeout(d time.Duration)
+	AtrCollection() string
+	SetAtrCollection(s string)
+	NumAtrs() int
+	SetNumAtrs(n int)
 	ExecutionContext() *execution.Context
 	SetExecutionContext(ctx *execution.Context)
 	SetExecTime(time time.Time)
@@ -302,6 +308,9 @@ type BaseRequest struct {
 	txData            []byte
 	durabilityTimeout time.Duration
 	durabilityLevel   datastore.DurabilityLevel
+	kvTimeout         time.Duration
+	atrCollection     string
+	numAtrs           int
 	executionContext  *execution.Context
 }
 
@@ -921,12 +930,36 @@ func (this *BaseRequest) DurabilityTimeout() time.Duration {
 	return this.durabilityTimeout
 }
 
-func (this *BaseRequest) ExecutionContext() *execution.Context {
-	return this.executionContext
+func (this *BaseRequest) SetKvTimeout(d time.Duration) {
+	this.kvTimeout = d
+}
+
+func (this *BaseRequest) KvTimeout() time.Duration {
+	return this.kvTimeout
+}
+
+func (this *BaseRequest) SetAtrCollection(s string) {
+	this.atrCollection = s
+}
+
+func (this *BaseRequest) AtrCollection() string {
+	return this.atrCollection
+}
+
+func (this *BaseRequest) SetNumAtrs(n int) {
+	this.numAtrs = n
+}
+
+func (this *BaseRequest) NumAtrs() int {
+	return this.numAtrs
 }
 
 func (this *BaseRequest) SetExecutionContext(ctx *execution.Context) {
 	this.executionContext = ctx
+}
+
+func (this *BaseRequest) ExecutionContext() *execution.Context {
+	return this.executionContext
 }
 
 func (this *BaseRequest) Results() chan bool {

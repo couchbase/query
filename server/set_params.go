@@ -166,6 +166,12 @@ var _SETTERS = map[string]Setter{
 		s.SetTxTimeout(getDuration(o))
 		return nil
 	},
+	ATRCOLLECTION: func(s *Server, o interface{}) errors.Error {
+		if value, ok := o.(string); ok {
+			s.SetAtrCollection(value)
+		}
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {

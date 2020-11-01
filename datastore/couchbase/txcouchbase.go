@@ -12,6 +12,7 @@
 package couchbase
 
 import (
+	"encoding/json"
 	gerrors "errors"
 	"fmt"
 	"strconv"
@@ -79,28 +80,31 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 
 		txnData := txContext.TxData()
 		var transaction *gctx.Transaction
-		var terr error
 		var expiryTime time.Time
 
-		if len(txnData) > 0 {
-			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
-			expiryTime = time.Now().Add(txContext.TxTimeout())
-		} else {
-			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
-				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
-			}
-
-			keyValueTimeout := txContext.TxDurabilityTimeout()
-			if keyValueTimeout > datastore.DEF_DURABILITY_TIMEOUT {
-				txConfig.KeyValueTimeout = keyValueTimeout
-			}
-
-			transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
-			if terr == nil {
-				terr = transaction.NewAttempt()
+		resume, terr := isResumeTransaction(txnData)
+		if terr == nil {
+			if resume {
+				transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
 				expiryTime = time.Now().Add(txContext.TxTimeout())
+			} else {
+				txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
+					DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
+				}
+
+				keyValueTimeout := txContext.KvTimeout()
+				if keyValueTimeout > 0 {
+					txConfig.KeyValueTimeout = keyValueTimeout
+				}
+
+				transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
+				if terr == nil {
+					terr = transaction.NewAttempt()
+					expiryTime = time.Now().Add(txContext.TxTimeout())
+				}
 			}
 		}
+
 		if terr != nil {
 			return nil, errors.NewStartTransactionError(terr)
 		}
@@ -562,6 +566,27 @@ func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interf
 	return
 }
 
+func isResumeTransaction(b []byte) (bool, error) {
+	if len(b) == 0 {
+		return false, nil
+	}
+
+	type jsonSerializedAttempt struct {
+		ID struct {
+			Transaction string `json:"txn"`
+			Attempt     string `json:"atmpt"`
+		} `json:"id"`
+	}
+
+	var txData jsonSerializedAttempt
+
+	if err := json.Unmarshal(b, &txData); err != nil {
+		return false, err
+	}
+
+	return txData.ID.Transaction != "", nil
+}
+
 func initGocb(s *store) (err errors.Error) {
 	var certFile string
 	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
@@ -570,6 +595,10 @@ func initGocb(s *store) (err errors.Error) {
 
 	client, cerr := gcagent.NewClient(s.URL(), certFile, datastore.DEF_TXTIMEOUT,
 		func(bucketName string) (agent *gocbcore.Agent, rerr error) {
+			if bucketName == "" {
+				return nil, fmt.Errorf("not valid bucket name: %v ", bucketName)
+			}
+
 			parts := []string{"default", bucketName, "_default", "_default"}
 
 			ks, cerr := datastore.GetKeyspace(parts...)

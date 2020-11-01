@@ -31,10 +31,13 @@ const (
 type TranContext struct {
 	txId                string
 	txTimeout           time.Duration
+	kvTimeout           time.Duration
 	txDurabilityTimeout time.Duration
 	txDurabilityLevel   datastore.DurabilityLevel
 	txIsolationLevel    datastore.IsolationLevel
 	txScanConsistency   datastore.ScanConsistency
+	atrCollection       string
+	numAtrs             int
 	txData              []byte
 	txImplicit          bool
 	txStatus            TxStatus
@@ -46,16 +49,19 @@ type TranContext struct {
 	txMutations         interface{}
 }
 
-func NewTxContext(txImplicit bool, txData []byte, txTimeout, txDurabilityTimeout time.Duration,
+func NewTxContext(txImplicit bool, txData []byte, txTimeout, txDurabilityTimeout, kvTimeout time.Duration,
 	txDurabilityLevel datastore.DurabilityLevel, txIsolationLevel datastore.IsolationLevel,
-	txScanConsistency datastore.ScanConsistency) *TranContext {
+	txScanConsistency datastore.ScanConsistency, atrCollection string, numAtrs int) *TranContext {
 	rv := &TranContext{txTimeout: txTimeout,
+		kvTimeout:           kvTimeout,
 		txDurabilityTimeout: txDurabilityTimeout,
 		txDurabilityLevel:   txDurabilityLevel,
 		txIsolationLevel:    txIsolationLevel,
 		txScanConsistency:   txScanConsistency,
 		txImplicit:          txImplicit,
 		txData:              txData,
+		atrCollection:       atrCollection,
+		numAtrs:             numAtrs,
 	}
 
 	return rv
@@ -135,6 +141,12 @@ func (this *TranContext) TxData() []byte {
 	return this.txData
 }
 
+func (this *TranContext) KvTimeout() time.Duration {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.kvTimeout
+}
+
 func (this *TranContext) TxDurabilityTimeout() time.Duration {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
@@ -163,6 +175,18 @@ func (this *TranContext) TxScanConsistency() datastore.ScanConsistency {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.txScanConsistency
+}
+
+func (this *TranContext) AtrCollection() string {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.atrCollection
+}
+
+func (this *TranContext) NumAtrs() int {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.numAtrs
 }
 
 func (this *TranContext) SetTxImplicit(b bool) {
@@ -247,12 +271,27 @@ func (this *TranContext) SetTxMutations(txMutations interface{}) {
 func (this *TranContext) Content(r map[string]interface{}) {
 	r["id"] = this.txId
 	r["timeout"] = this.txTimeout.String()
-	r["durabilityTimeout"] = this.txDurabilityTimeout.String()
+	if this.kvTimeout > 0 {
+		r["kvTimeout"] = this.kvTimeout.String()
+	}
+	if this.txDurabilityTimeout > 0 {
+		r["durabilityTimeout"] = this.txDurabilityTimeout.String()
+	}
 	r["durabilityLevel"] = datastore.DurabilityLevelToName(this.txDurabilityLevel)
 	r["isolationLevel"] = datastore.IsolationLevelToName(this.txIsolationLevel)
 	r["scanConsistency"] = this.txScanConsistency
-	r["implicit"] = this.txImplicit
-	r["lastStmtNum"] = this.txLastStmtNum
+	if this.atrCollection != "" {
+		r["atrCollection"] = this.atrCollection
+	}
+	if this.numAtrs > 0 {
+		r["numAtrs"] = this.numAtrs
+	}
+	if this.txImplicit {
+		r["implicit"] = this.txImplicit
+	}
+	if this.txLastStmtNum > 0 {
+		r["lastStmtNum"] = this.txLastStmtNum
+	}
 	r["lastUse"] = this.lastUse.Format(_DEFAULT_DATE_FORMAT)
 	r["expiryTime"] = this.expiryTime.Format(_DEFAULT_DATE_FORMAT)
 	r["uses"] = this.uses

@@ -136,6 +136,7 @@ type Server struct {
 	whitelist         map[string]interface{}
 	autoPrepare       bool
 	memoryQuota       uint64
+	atrCollection     string
 }
 
 // Default Keep Alive Length
@@ -498,6 +499,14 @@ func (this *Server) SetMemoryQuota(memoryQuota uint64) {
 	this.memoryQuota = memoryQuota
 }
 
+func (this *Server) AtrCollection() string {
+	return this.atrCollection
+}
+
+func (this *Server) SetAtrCollection(s string) {
+	this.atrCollection = s
+}
+
 func (this *Server) Enterprise() bool {
 	return this.enterprise
 }
@@ -544,7 +553,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), nil, request.IndexApiVersion(), request.FeatureControls(),
-		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer)
+		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout())
 	context.SetWhitelist(this.whitelist)
 	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
@@ -866,8 +875,13 @@ func (this *Server) serviceRequest(request Request) {
 
 	context := request.ExecutionContext()
 	if request.TxId() != "" {
+		atrCollection := this.AtrCollection()
+		if request.AtrCollection() != "" {
+			atrCollection = request.AtrCollection()
+		}
 		if err := context.SetTransactionContext(request.Type(), request.TxImplicit(),
-			request.TxTimeout(), this.TxTimeout(), request.TxData()); err != nil {
+			request.TxTimeout(), this.TxTimeout(), atrCollection, request.NumAtrs(),
+			request.TxData()); err != nil {
 			request.Fail(err)
 			request.Failed(this)
 			return
@@ -886,8 +900,13 @@ func (this *Server) serviceRequest(request Request) {
 			request.Fail(errors.NewServiceErrorReadonly("The server or request is read-only" +
 				" and cannot accept this write statement."))
 		} else if request.TxId() == "" && !request.IsPrepare() {
+			atrCollection := this.AtrCollection()
+			if request.AtrCollection() != "" {
+				atrCollection = request.AtrCollection()
+			}
 			if err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
-				request.TxTimeout(), this.TxTimeout(), request.TxData()); err != nil {
+				request.TxTimeout(), this.TxTimeout(), atrCollection, request.NumAtrs(),
+				request.TxData()); err != nil {
 				request.Fail(err)
 			}
 		}

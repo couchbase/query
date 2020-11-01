@@ -12,6 +12,7 @@ package server
 import (
 	"time"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 )
@@ -47,6 +48,7 @@ const (
 	MEMORYQUOTA     = "memory-quota"
 	USECBO          = "use-cbo"
 	TXTIMEOUT       = "txtimeout"
+	ATRCOLLECTION   = "atrcollection"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -82,6 +84,7 @@ var CHECKERS = map[string]Checker{
 	MEMORYQUOTA:     checkNonNegativeInteger,
 	USECBO:          checkBool,
 	TXTIMEOUT:       checkDuration,
+	ATRCOLLECTION:   checkPath,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {
@@ -192,5 +195,16 @@ func checkLogLevel(val interface{}) (bool, errors.Error) {
 		return false, nil
 	}
 	_, ok := logging.ParseLevel(level)
+	return ok, nil
+}
+
+func checkPath(val interface{}) (bool, errors.Error) {
+	s, ok := val.(string)
+	if ok && s != "" {
+		if _, err := algebra.NewVariablePathWithContext(s, "default", ""); err != nil {
+			return false, errors.NewAdminSettingTypeError("atrcollection", val)
+		}
+	}
+
 	return ok, nil
 }
