@@ -2011,6 +2011,9 @@ var validTxDataFields = map[string]bool{"id": true, "txn": true, "atmpt": true, 
 	"state": true, "timeLeftMillis": true, "config": true, "numAtrs": true, "durabilityLevel": true, "kvTimeoutMs": true}
 
 func txDataValidation(tgt interface{}) (err error) {
+
+	return nil
+
 	if obj, ok := tgt.(map[string]interface{}); ok {
 		for s, v := range obj {
 			mv, ok := validTxDataFields[s]
