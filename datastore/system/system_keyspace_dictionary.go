@@ -12,7 +12,6 @@ package system
 import (
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/timestamp"
@@ -135,13 +134,7 @@ func (b *dictionaryKeyspace) Delete(deletes []value.Pair, context datastore.Quer
 
 		// if we are deleting a dictionary entry, we also must remove it
 		// from all the n1ql node caches
-		distributed.RemoteAccess().DoRemoteOps([]string{}, "dictionary_cache", "DELETE", name, "",
-			func(warn errors.Error) {
-				context.Warning(warn)
-			},
-			distributed.NO_CREDS, "")
-
-		dictionary.DropDictionaryEntry(name)
+		dictionary.DropDictEntryAndAllCache(name, context)
 	}
 	return deletes, nil
 }

@@ -68,6 +68,10 @@ func DropDictionaryEntry(keyspace string) {
 	// no-op
 }
 
+func DropDictEntryAndAllCache(keyspace string, context interface{}) {
+	// no-op
+}
+
 type chkIndexDict struct {
 	// dummy struct
 }

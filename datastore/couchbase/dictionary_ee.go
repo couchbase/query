@@ -75,6 +75,10 @@ func DropDictionaryEntry(keyspace string) {
 	dictionary.DropDictionaryEntry(keyspace)
 }
 
+func DropDictEntryAndAllCache(keyspace string, context interface{}) {
+	dictionary.DropDictEntryAndAllCache(keyspace, context)
+}
+
 const _GRACE_PERIOD = time.Second
 
 type chkIndexDict struct {
