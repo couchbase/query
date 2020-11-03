@@ -272,7 +272,8 @@ func (this *TransactionMutations) Fetch(keyspace string, keys []string, mvs map[
 
 	rkeys = make([]string, 0, len(keys))
 	for _, k := range keys {
-		if mv, ok := dk.values[k]; ok {
+		if mv, ok := dk.values[k]; ok && (mv.Flags&MV_FLAGS_WRITE) != 0 {
+			// consider only n1ql mutated  keys
 			// delta keyspace has entry. ignore deleted key
 			if mv.Op != MOP_DELETE && mv.Op != MOP_NONE {
 				mvs[k] = mv

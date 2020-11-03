@@ -27,7 +27,7 @@ func NewTransactionError(e error, msg string) Error {
 
 func NewMemoryAllocationError(msg string) Error {
 	return &err{level: EXCEPTION, ICode: 17098, IKey: "nomemory",
-		InternalMsg:    fmt.Sprintf("Memory allocation errorr: %s", msg),
+		InternalMsg:    fmt.Sprintf("Memory allocation error: %s", msg),
 		InternalCaller: CallerN(1)}
 }
 
