@@ -583,6 +583,11 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			logging.Infop("Error writing memoryQuota", logging.Pair{"error", err})
 		}
 	}
+
+	if !this.writeString(",") || !this.writer.printf("%s\"stmtType\": \"%v\"", prefix, this.Type()) {
+		logging.Infop("Error writing Type")
+	}
+
 	this.writeTransactionInfo(newPrefix, indent)
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
