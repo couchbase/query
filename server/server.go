@@ -1291,6 +1291,7 @@ func GetProfile() Profile {
 	return options.Profile()
 }
 
+// FIXME should the IPv6 / host name and port code be in util?
 func IsIPv6() bool {
 	return _IPv6
 }

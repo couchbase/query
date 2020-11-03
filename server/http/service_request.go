@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -715,7 +716,14 @@ func (this *httpRequest) EventRemoteAddress() string {
 
 // for audit.Auditable interface.
 func (this *httpRequest) EventLocalAddress() string {
-	return this.req.Host
+	ctx := this.req.Context()
+	if ctx != nil {
+		addr, ok := ctx.Value(http.LocalAddrContextKey).(net.Addr)
+		if ok && addr != nil {
+			return addr.String()
+		}
+	}
+	return ""
 }
 
 const ( // Request argument names

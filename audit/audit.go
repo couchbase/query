@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server"
 )
 
 // We keep counters for four things. All of these counters are available from the /admin/stats API.
@@ -520,13 +521,7 @@ func parseAddress(addr string) *addressFields {
 	if addr == "" {
 		return nil
 	}
-	lastColon := strings.LastIndex(addr, ":")
-	if lastColon == -1 {
-		// No host:port separator. Put everything in Ip field.
-		return &addressFields{Ip: addr}
-	}
-	host := addr[:lastColon]
-	port := addr[lastColon+1:] // Not including the colon itself.
+	host, port := server.HostNameandPort(addr)
 	p, err := strconv.Atoi(port)
 	if err != nil {
 		logging.Errorf("Auditing: unable to parse port %s of address %s", port, addr)

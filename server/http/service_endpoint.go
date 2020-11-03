@@ -117,7 +117,6 @@ func (this *HttpEndpoint) Listen() error {
 	srv := &http.Server{
 		Handler:           this.mux,
 		ReadHeaderTimeout: 5 * time.Second,
-		//			ReadTimeout:       30 * time.Second,
 	}
 
 	for i, netW := range getNetwProtocol() {
@@ -190,7 +189,6 @@ func (this *HttpEndpoint) ListenTLS() error {
 	srv := &http.Server{
 		Handler:           this.mux,
 		ReadHeaderTimeout: 5 * time.Second,
-		//			ReadTimeout:       30 * time.Second,
 	}
 
 	/*
