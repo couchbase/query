@@ -6,7 +6,7 @@
 {
      "description":"error for array functions",
      "statements":"SELECT array_vg(LENGTH(id)) FROM orders WHERE test_id=\"err_cases\" ORDER BY id",
-     "error": "Invalid function array_vg. - at FROM"
+     "error": "Invalid function array_vg (resolving to default:array_vg) - at FROM"
 },
 {
 	"statements": "SELECT  META() FROM orders AS ord UNNEST ord.lineItems.product AS prod WHERE ord.test_id=\"err_cases\"",

@@ -182,9 +182,11 @@ func (this *lexer) Error(s string) {
 	this.errs = append(this.errs, s)
 }
 
-func (this *lexer) Stop() {
+func (this *lexer) FatalError(s string) int {
 	this.stop = true
 	this.nex.Stop()
+	this.Error(s)
+	return 1
 }
 
 func (this *lexer) ScannerError(s string) {
