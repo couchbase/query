@@ -81,8 +81,8 @@ func PreparedsInit(limit int) {
 	planner.SetPlanCache(prepareds)
 	predefinedPrepareStatements = map[string]string{
 		"__get":    "PREPARE __get FROM SELECT META(d).id, META(d).cas, TO_STR(META(d).cas) AS scas, META(d).txnMeta, d AS doc FROM $1 AS d USE KEYS $2;",
-		"__insert": "PREPARE __insert FROM INSERT INTO $1 AS d VALUES ($2, $3, $4);",
-		"__upsert": "PREPARE __upsert FROM UPSERT INTO $1 AS d VALUES ($2, $3, $4);",
+		"__insert": "PREPARE __insert FROM INSERT INTO $1 AS d VALUES ($2, $3, $4) RETURNING TO_STR(META(d).cas) AS scas;",
+		"__upsert": "PREPARE __upsert FROM UPSERT INTO $1 AS d VALUES ($2, $3, $4) RETURNING TO_STR(META(d).cas) AS scas;",
 		"__update": "PREPARE __update FROM UPDATE $1 AS d USE KEYS $2 SET d = $3, META(d).expiration = $4.expiration RETURNING META(d).id, META(d).cas, TO_STR(META(d).cas) AS scas, META(d).txnMeta, d AS doc;",
 		"__delete": "PREPARE __delete FROM DELETE FROM $1 AS d USE KEYS $2;",
 	}

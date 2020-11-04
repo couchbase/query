@@ -489,6 +489,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 					return nil, errors.NewDuplicateKeyError(key)
 				}
 				val = av
+				kv.Value = val
 			} else {
 				nop = MOP_INSERT
 			}
@@ -498,7 +499,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		cas, _, txnMeta, err1 := getMeta(kv.Name, val, must)
 		if err1 == nil && must {
 			if sdkKv && sdkCas != cas {
-				err1 = fmt.Errorf("Missmatch cas values(%v,%v) for key %v", sdkCas, cas, kv.Name)
+				return nil, errors.NewCasMissmatch(_MutateOpNames[op], kv.Name, sdkCas, cas)
 			}
 		}
 

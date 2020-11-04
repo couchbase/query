@@ -126,3 +126,9 @@ func NewKeyNotFoundError(e error) Error {
 		InternalMsg:    fmt.Sprintf("Key not found : %v", e),
 		InternalCaller: CallerN(1)}
 }
+
+func NewCasMissmatch(op, key string, aCas, eCas uint64) Error {
+	return &err{level: EXCEPTION, ICode: 17015, IKey: "transaction.statement.keynotfound",
+		InternalMsg:    fmt.Sprintf("%s cas (actual:%v, expected:%v) missmatch for key: %v", op, aCas, eCas, key),
+		InternalCaller: CallerN(1)}
+}
