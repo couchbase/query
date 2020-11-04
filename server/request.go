@@ -779,13 +779,16 @@ func (this *BaseRequest) Stop(state State) {
 	this.SetState(state)
 
 	// guard against the root operator not being set (eg fatal error)
-	// and make sure that a stop can only be sent once (eg close OR timeout)
 	if this.stopOperator != nil {
 
 		// only one in between Stop() and Done() can happen at any one time
 		this.stopGate.Wait()
 		this.stopGate.Add(1)
-		execution.OpStop(this.stopOperator)
+
+		// make sure that a stop can only be sent once (eg close OR timeout)
+		if this.stopOperator != nil {
+			execution.OpStop(this.stopOperator)
+		}
 		this.stopGate.Done()
 		this.stopOperator = nil
 	}
