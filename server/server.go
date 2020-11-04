@@ -878,13 +878,18 @@ func (this *Server) serviceRequest(request Request) {
 
 	context := request.ExecutionContext()
 	if request.TxId() != "" {
-		atrCollection := this.AtrCollection()
-		if request.AtrCollection() != "" {
-			atrCollection = request.AtrCollection()
+		err := context.TxContext().TxValid()
+		if err == nil {
+			atrCollection := this.AtrCollection()
+			if request.AtrCollection() != "" {
+				atrCollection = request.AtrCollection()
+			}
+			err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
+				request.TxTimeout(), this.TxTimeout(), atrCollection, request.NumAtrs(),
+				request.TxData())
 		}
-		if err := context.SetTransactionContext(request.Type(), request.TxImplicit(),
-			request.TxTimeout(), this.TxTimeout(), atrCollection, request.NumAtrs(),
-			request.TxData()); err != nil {
+
+		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
 			return

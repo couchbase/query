@@ -118,8 +118,14 @@ func (this *TranContextCache) doTransactionCleanup() {
 
 		snapshot := func(name string, d interface{}) bool {
 			tranContext := d.(*TranContext)
-			if tranContext.TxExpired() && !tranContext.TxInUse() {
-				data = append(data, tranContext)
+			if tranContext.TxExpired() {
+				if !tranContext.TxInUse() {
+					data = append(data, tranContext)
+				} else if tranContext.TxTimeRemaining() < _TX_CLEANUP_AFTER {
+					// reset inuse expired more than minute back
+					tranContext.SetTxInUse(false)
+					data = append(data, tranContext)
+				}
 			}
 			return true
 		}

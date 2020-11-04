@@ -18,7 +18,11 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-const _DEFAULT_DATE_FORMAT = "2006-01-02T15:04:05.999Z07:00"
+const (
+	_DEFAULT_DATE_FORMAT = "2006-01-02T15:04:05.999Z07:00"
+	_TXCONTEXT_SIZE      = 256
+	_TX_CLEANUP_AFTER    = -5 * time.Minute
+)
 
 type TxStatus uint32
 
@@ -49,8 +53,6 @@ type TranContext struct {
 	txMutations         interface{}
 	memoryQuota         uint64
 }
-
-const _TXCONTEXT_SIZE = 256
 
 func NewTxContext(txImplicit bool, txData []byte, txTimeout, txDurabilityTimeout, kvTimeout time.Duration,
 	txDurabilityLevel datastore.DurabilityLevel, txIsolationLevel datastore.IsolationLevel,
@@ -127,9 +129,6 @@ func (this *TranContext) TxTimeRemaining() time.Duration {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	timeoutMS := this.expiryTime.Sub(time.Now()) * time.Millisecond
-	if timeoutMS < 0 {
-		timeoutMS = time.Duration(0)
-	}
 	return timeoutMS
 }
 
