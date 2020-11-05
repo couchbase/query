@@ -287,6 +287,27 @@ func (this *TransactionMutations) Fetch(keyspace string, keys []string, mvs map[
 	return rkeys, nil
 }
 
+// Document Deleted returns true
+
+func (this *TransactionMutations) IsDeletedMutation(keyspace string, key string) bool {
+
+	// lock is not required. Only set at start. can't read local mutations for implicit transaction.
+	if this.tranImplicit {
+		return false
+	}
+
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+
+	if dk, _ := this.keyspaces[keyspace]; dk != nil {
+		if mv, ok := dk.values[key]; ok && mv.Op == MOP_DELETE {
+			return true
+		}
+	}
+
+	return false
+}
+
 /*
  Add the entries to transaction mutations.
      current Delta keysapce

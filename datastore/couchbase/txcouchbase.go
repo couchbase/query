@@ -372,6 +372,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 
 	var transaction *gctx.Transaction
 	fkeys := keys
+	sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
 	if txMutations, _ := txContext.TxMutations().(*TransactionMutations); txMutations != nil {
 		var err errors.Error
 		mvs := make(map[string]*MutationValue, len(keys))
@@ -381,6 +382,15 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 		fkeys, err = txMutations.Fetch(qualifiedName, keys, mvs)
 		if err != nil {
 			return errors.Errors{err}
+		}
+
+		if sdkKv && sdkCas != 0 && len(keys) == 1 && len(fkeys) == 0 {
+			// Transformed SDK REPLACE, DELETE with CAS don't read the document
+			k := keys[0]
+			if txMutations.IsDeletedMutation(qualifiedName, k) {
+				return errors.Errors{errors.NewKeyNotFoundError(fmt.Errorf("%v", k))}
+			}
+			mvs[k] = &MutationValue{Val: value.NewValue(nil), Cas: sdkCas, TxnMeta: sdkTxnMeta}
 		}
 
 		for k, mv := range mvs {
@@ -400,34 +410,16 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 	}
 
 	if len(fkeys) > 0 {
-		sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
-		if sdkKv && sdkCas != 0 && len(fkeys) == 1 {
-			// Transformed SDK REPLACE, DELETE with CAS don't read the document
-			k := fkeys[0]
-			av := value.NewAnnotatedValue(value.NewValue(nil))
-			meta := av.NewMeta()
-			meta["keyspace"] = fullName
-			meta["cas"] = sdkCas
-			meta["type"] = "json"
-			meta["flags"] = uint32(0)
-			meta["expiration"] = uint32(0)
-			if sdkTxnMeta != nil {
-				meta["txnMeta"] = sdkTxnMeta
+		// Transformed SDK operation, don't ignore key not found error (except insert check)
+		notFoundErr := sdkKv && !sdkKvInsert
+		// fetch the keys that are not present in delta keyspace
+		errs := ks.agentProvider.TxGet(transaction, fullName, ks.name, scopeName, collectionName,
+			collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
+		if len(errs) > 0 {
+			if notFoundErr && gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) {
+				return errors.Errors{errors.NewKeyNotFoundError(errs[0])}
 			}
-			av.SetId(k)
-			fetchMap[k] = av
-		} else {
-			// Transformed SDK operation, don't ignore key not found error (except insert check)
-			notFoundErr := sdkKv && !sdkKvInsert
-			// fetch the keys that are not present in delta keyspace
-			errs := ks.agentProvider.TxGet(transaction, fullName, ks.name, scopeName, collectionName,
-				collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
-			if len(errs) > 0 {
-				if notFoundErr && gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) {
-					return errors.Errors{errors.NewKeyNotFoundError(errs[0])}
-				}
-				return errors.NewErrors(errs, "txFetch")
-			}
+			return errors.NewErrors(errs, "txFetch")
 		}
 	}
 
