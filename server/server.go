@@ -463,6 +463,7 @@ func (this *Server) SetTxTimeout(timeout time.Duration) {
 		timeout = 0
 	}
 	this.txTimeout = timeout
+	datastore.GetTransactionSettings().SetTxTimeout(timeout)
 }
 
 func (this *Server) Profile() Profile {
@@ -505,6 +506,8 @@ func (this *Server) AtrCollection() string {
 
 func (this *Server) SetAtrCollection(s string) {
 	this.atrCollection = s
+	datastore.GetTransactionSettings().SetAtrCollection(s)
+
 }
 
 func (this *Server) Enterprise() bool {

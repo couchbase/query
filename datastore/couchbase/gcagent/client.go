@@ -29,11 +29,9 @@ const (
 	_CONNECTTIMEOUT   = 10000 * time.Millisecond
 	_KVCONNECTTIMEOUT = 7000 * time.Millisecond
 	_KVTIMEOUT        = 2500 * time.Millisecond
-	_CLEANUPWINDOW    = 2500 * time.Millisecond
-	_WARMUP           = false
 	_WARMUPTIMEOUT    = 1000 * time.Millisecond
+	_WARMUP           = false
 	_CLOSEWAIT        = 2 * time.Minute
-	_kVDURABLETIMEOUT = _KVTIMEOUT
 	_kVPOOLSIZE       = 8
 	_MAXQUEUESIZE     = 32 * 1024
 )
@@ -80,7 +78,7 @@ type Client struct {
 	mutex         sync.RWMutex
 }
 
-func NewClient(url, certFile string, defExpirationTime time.Duration, bfn gctx.BucketAgentProviderFn) (rv *Client, err error) {
+func NewClient(url, certFile string) (rv *Client, err error) {
 	var connSpec *connstr.ConnSpec
 
 	rv = &Client{}
@@ -102,17 +100,8 @@ func NewClient(url, certFile string, defExpirationTime time.Duration, bfn gctx.B
 		}
 	}
 
-	txConfig := &gctx.Config{ExpirationTime: defExpirationTime,
-		CleanupWindow:         _CLEANUPWINDOW,
-		CleanupClientAttempts: true,
-		CleanupLostAttempts:   true,
-		BucketAgentProvider:   bfn,
-	}
-
-	if rv.transactions, err = gctx.Init(txConfig); err == nil {
-		// generic provider
-		rv.agentProvider, err = rv.CreateAgentProvider("")
-	}
+	// generic provider
+	rv.agentProvider, err = rv.CreateAgentProvider("")
 
 	return rv, err
 }
@@ -134,6 +123,11 @@ func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnS
 	}
 
 	return config, &connSpec, err
+}
+
+func (c *Client) InitTransactions(txConfig *gctx.Config) (err error) {
+	c.transactions, err = gctx.Init(txConfig)
+	return err
 }
 
 func (c *Client) CreateAgentProvider(bucketName string) (*AgentProvider, error) {

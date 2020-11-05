@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/errors"
@@ -92,9 +93,10 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 					DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
 				}
 
-				keyValueTimeout := txContext.KvTimeout()
-				if keyValueTimeout > 0 {
-					txConfig.KeyValueTimeout = keyValueTimeout
+				txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
+					txConfig.CustomATRLocation.Agent, terr = AtrCollectionAgentPovider(txContext.AtrCollection())
+				if terr != nil {
+					return nil, errors.NewStartTransactionError(terr)
 				}
 
 				transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
@@ -105,14 +107,12 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			}
 		}
 
+		// no detach for resume
 		if terr != nil {
 			return nil, errors.NewStartTransactionError(terr)
 		}
 
-		txMutations.SetTransaction(transaction, gcAgentTxs.Internal())
-		txContext.SetTxMutations(txMutations)
-		txContext.SetTxId(transaction.Attempt().ID, expiryTime)
-		if len(txnData) > 0 {
+		if resume {
 			for _, mutation := range transaction.GetMutations() {
 				var op MutateOp
 				switch mutation.OpType {
@@ -137,6 +137,9 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 				}
 			}
 		}
+		txMutations.SetTransaction(transaction, gcAgentTxs.Internal())
+		txContext.SetTxMutations(txMutations)
+		txContext.SetTxId(transaction.Attempt().ID, expiryTime)
 	}
 
 	return
@@ -588,35 +591,58 @@ func isResumeTransaction(b []byte) (bool, error) {
 	return txData.ID.Transaction != "", nil
 }
 
+func AtrCollectionAgentPovider(atrCollection string) (string, string, *gocbcore.Agent, error) {
+	if atrCollection == "" {
+		return "", "", nil, nil
+	}
+	path, err := algebra.NewVariablePathWithContext(atrCollection, "default", "")
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	agent, cerr := CollectionAgentProvider(path.Bucket(), path.Scope(), path.Keyspace())
+	return path.Scope(), path.Keyspace(), agent, cerr
+}
+
+func CollectionAgentProvider(bucketName, scpName, collName string) (agent *gocbcore.Agent, rerr error) {
+	if bucketName == "" || scpName == "" || collName == "" {
+		return nil, fmt.Errorf("Not valid collection : `%v`.`%v`.`%v`", bucketName, scpName, collName)
+	}
+
+	ks, cerr := datastore.GetKeyspace("default", bucketName, scpName, collName)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	coll, ok := ks.(*collection)
+	if !ok {
+		return nil, fmt.Errorf("%v is not a collection", ks.QualifiedName())
+	}
+
+	if cerr = coll.bucket.txReady(nil); cerr != nil {
+		return nil, cerr.Cause()
+	}
+	return coll.bucket.agentProvider.Agent(), nil
+}
+
 func initGocb(s *store) (err errors.Error) {
 	var certFile string
 	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
 		certFile = s.connSecConfig.CertFile
 	}
 
-	client, cerr := gcagent.NewClient(s.URL(), certFile, datastore.DEF_TXTIMEOUT,
-		func(bucketName string) (agent *gocbcore.Agent, rerr error) {
-			if bucketName == "" {
-				return nil, fmt.Errorf("not valid bucket name: %v ", bucketName)
-			}
+	tranSettings := datastore.GetTransactionSettings()
+	txConfig := &gctx.Config{
+		ExpirationTime:        tranSettings.TxTimeout(),
+		CleanupWindow:         tranSettings.CleanupWindow(),
+		CleanupClientAttempts: tranSettings.CleanupClientAttempts(),
+		CleanupLostAttempts:   tranSettings.CleanupLostAttempts(),
+		BucketAgentProvider: func(bucketName string) (agent *gocbcore.Agent, rerr error) {
+			return CollectionAgentProvider(bucketName, "_default", "_default")
+		},
+	}
 
-			parts := []string{"default", bucketName, "_default", "_default"}
-
-			ks, cerr := datastore.GetKeyspace(parts...)
-			if cerr != nil {
-				return nil, cerr.Cause()
-			}
-			coll, ok := ks.(*collection)
-			if !ok {
-				return nil, fmt.Errorf("%v is not a collection", ks.QualifiedName())
-			}
-
-			if cerr = coll.bucket.txReady(nil); cerr != nil {
-				return nil, cerr.Cause()
-			}
-			return coll.bucket.agentProvider.Agent(), nil
-		})
-
+	client, cerr := gcagent.NewClient(s.URL(), certFile)
 	s.nslock.Lock()
 	defer s.nslock.Unlock()
 
@@ -632,6 +658,20 @@ func initGocb(s *store) (err errors.Error) {
 		logging.Errorf(err.Error())
 		return err
 	}
+
 	s.gcClient = client
+
+	// don't raise error not able to setup ATR Collection. Disable time being
+
+	//	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
+	//		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
+
+	cerr = client.InitTransactions(txConfig)
+	if cerr != nil {
+		client.Close()
+		s.gcClient = nil
+		return errors.NewError(cerr, "Transaction initalization failed")
+	}
+
 	return nil
 }
