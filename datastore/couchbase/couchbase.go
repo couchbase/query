@@ -779,21 +779,27 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 }
 
 func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
+	var defaultCollection datastore.Keyspace
 	p.refresh()
 	p.nslock.RLock()
 	rv := make([]datastore.Object, len(p.cbNamespace.BucketMap))
 	i := 0
+
 	for name, _ := range p.cbNamespace.BucketMap {
 		o := datastore.Object{name, name, false, false}
+		defaultCollection = nil
 		p.lock.RLock()
 		entry := p.keyspaceCache[name]
+		if entry != nil && entry.cbKeyspace != nil {
+			defaultCollection = entry.cbKeyspace.defaultCollection
+		}
 		p.lock.RUnlock()
 
 		// if we have loaded the bucket, check if the bucket has a default collection
 		// if we haven't loaded the bucket, see if you can get the default collection id
 		// the bucket is a keyspace if the default collection exists
-		if entry != nil {
-			switch k := entry.cbKeyspace.defaultCollection.(type) {
+		if defaultCollection != nil {
+			switch k := defaultCollection.(type) {
 			case *collection:
 				o.IsKeyspace = (k != nil)
 				o.IsBucket = true
