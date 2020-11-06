@@ -1,0 +1,200 @@
+?   	github.com/couchbase/query/accounting	[no test files]
+ok  	github.com/couchbase/query/accounting/gometrics	0.048s
+ok  	github.com/couchbase/query/accounting/metrics	0.185s
+?   	github.com/couchbase/query/accounting/resolver	[no test files]
+?   	github.com/couchbase/query/accounting/stub	[no test files]
+?   	github.com/couchbase/query/algebra	[no test files]
+?   	github.com/couchbase/query/algebra/unmarshal	[no test files]
+ok  	github.com/couchbase/query/audit	0.084s
+ok  	github.com/couchbase/query/auth	0.024s
+?   	github.com/couchbase/query/clustering	[no test files]
+ok  	github.com/couchbase/query/clustering/couchbase	0.305s
+?   	github.com/couchbase/query/clustering/resolver	[no test files]
+ok  	github.com/couchbase/query/clustering/stub	0.084s
+ok  	github.com/couchbase/query/clustering/zookeeper	0.114s
+?   	github.com/couchbase/query/datastore	[no test files]
+ok  	github.com/couchbase/query/datastore/couchbase	0.128s
+?   	github.com/couchbase/query/datastore/couchbase/gcagent	[no test files]
+ok  	github.com/couchbase/query/datastore/file	0.050s
+ok  	github.com/couchbase/query/datastore/mock	0.045s
+?   	github.com/couchbase/query/datastore/resolver	[no test files]
+ok  	github.com/couchbase/query/datastore/system	0.081s
+?   	github.com/couchbase/query/datastore/virtual	[no test files]
+?   	github.com/couchbase/query/distributed	[no test files]
+?   	github.com/couchbase/query/errors	[no test files]
+ok  	github.com/couchbase/query/execution	0.081s
+ok  	github.com/couchbase/query/expression	0.094s
+?   	github.com/couchbase/query/expression/parser	[no test files]
+?   	github.com/couchbase/query/expression/search	[no test files]
+?   	github.com/couchbase/query/expression/unmarshal	[no test files]
+?   	github.com/couchbase/query/functions	[no test files]
+?   	github.com/couchbase/query/functions/authorize	[no test files]
+?   	github.com/couchbase/query/functions/constructor	[no test files]
+?   	github.com/couchbase/query/functions/golang	[no test files]
+?   	github.com/couchbase/query/functions/inline	[no test files]
+?   	github.com/couchbase/query/functions/javascript	[no test files]
+?   	github.com/couchbase/query/functions/metakv	[no test files]
+?   	github.com/couchbase/query/functions/resolver	[no test files]
+?   	github.com/couchbase/query/inferencer	[no test files]
+?   	github.com/couchbase/query/inferencer/inferencer-test	[no test files]
+?   	github.com/couchbase/query/logging	[no test files]
+ok  	github.com/couchbase/query/logging/logger_golog	0.028s
+ok  	github.com/couchbase/query/logging/logger_retriever	0.056s
+?   	github.com/couchbase/query/logging/resolver	[no test files]
+?   	github.com/couchbase/query/parser/n1ql	[no test files]
+?   	github.com/couchbase/query/plan	[no test files]
+?   	github.com/couchbase/query/planner	[no test files]
+?   	github.com/couchbase/query/plannerbase	[no test files]
+?   	github.com/couchbase/query/prepareds	[no test files]
+?   	github.com/couchbase/query/rewrite	[no test files]
+?   	github.com/couchbase/query/scheduler	[no test files]
+?   	github.com/couchbase/query/semantics	[no test files]
+?   	github.com/couchbase/query/server	[no test files]
+ok  	github.com/couchbase/query/server/cbq-engine	0.098s
+ok  	github.com/couchbase/query/server/http	0.225s
+?   	github.com/couchbase/query/server/settings/couchbase	[no test files]
+ok  	github.com/couchbase/query/shell/cbq	0.327s
+ok  	github.com/couchbase/query/shell/cbq/command	0.041s
+?   	github.com/couchbase/query/shell/cbq.old	[no test files]
+?   	github.com/couchbase/query/sort	[no test files]
+ok  	github.com/couchbase/query/test/filestore	2.651s
+ok  	github.com/couchbase/query/test/filestore/test_cases/aggregate_functions/testfs	5.646s
+ok  	github.com/couchbase/query/test/filestore/test_cases/alias_functions/testfs	3.972s
+ok  	github.com/couchbase/query/test/filestore/test_cases/any_functions/testfs	48.648s
+ok  	github.com/couchbase/query/test/filestore/test_cases/array_functions/testfs	0.230s
+ok  	github.com/couchbase/query/test/filestore/test_cases/bitwise_functions/testfs	0.109s
+ok  	github.com/couchbase/query/test/filestore/test_cases/case_functions/testfs	0.122s
+ok  	github.com/couchbase/query/test/filestore/test_cases/comp_functions/testfs	16.329s
+ok  	github.com/couchbase/query/test/filestore/test_cases/conditional_unkn_functions/testfs	0.380s
+ok  	github.com/couchbase/query/test/filestore/test_cases/date_functions/testfs	0.188s
+ok  	github.com/couchbase/query/test/filestore/test_cases/error_cases/testfs	3.278s
+ok  	github.com/couchbase/query/test/filestore/test_cases/from_functions/testfs	0.175s
+ok  	github.com/couchbase/query/test/filestore/test_cases/integers/testfs	0.177s
+ok  	github.com/couchbase/query/test/filestore/test_cases/joins/testfs	43.987s
+ok  	github.com/couchbase/query/test/filestore/test_cases/json_functions/testfs	4.373s
+ok  	github.com/couchbase/query/test/filestore/test_cases/key_functions/testfs	23.871s
+ok  	github.com/couchbase/query/test/filestore/test_cases/meta_functions/testfs	3.435s
+ok  	github.com/couchbase/query/test/filestore/test_cases/number_functions/testfs	4.702s
+ok  	github.com/couchbase/query/test/filestore/test_cases/obj_functions/testfs	3.659s
+ok  	github.com/couchbase/query/test/filestore/test_cases/order_functions/testfs	0.155s
+ok  	github.com/couchbase/query/test/filestore/test_cases/select_functions/testfs	0.186s
+ok  	github.com/couchbase/query/test/filestore/test_cases/string_functions/testfs	4.969s
+ok  	github.com/couchbase/query/test/filestore/test_cases/subqexp/testfs	0.167s
+ok  	github.com/couchbase/query/test/filestore/test_cases/system/testfs	0.134s
+ok  	github.com/couchbase/query/test/filestore/test_cases/typeconv_functions/testfs	0.128s
+ok  	github.com/couchbase/query/test/filestore/test_cases/unnest/testfs	33.438s
+ok  	github.com/couchbase/query/test/filestore/test_cases/where_functions/testfs	5.576s
+?   	github.com/couchbase/query/test/gsi	[no test files]
+ok  	github.com/couchbase/query/test/gsi/test_cases/advise	0.095s
+ok  	github.com/couchbase/query/test/gsi/test_cases/aggflt	0.120s
+ok  	github.com/couchbase/query/test/gsi/test_cases/aggregate_functions	0.106s
+ok  	github.com/couchbase/query/test/gsi/test_cases/alias_functions	0.104s
+ok  	github.com/couchbase/query/test/gsi/test_cases/ansijoin	0.085s
+ok  	github.com/couchbase/query/test/gsi/test_cases/any_functions	0.125s
+ok  	github.com/couchbase/query/test/gsi/test_cases/array_functions	0.098s
+ok  	github.com/couchbase/query/test/gsi/test_cases/bitwise_functions	0.072s
+ok  	github.com/couchbase/query/test/gsi/test_cases/case_functions	0.134s
+ok  	github.com/couchbase/query/test/gsi/test_cases/comp_functions	0.075s
+ok  	github.com/couchbase/query/test/gsi/test_cases/conditional_unkn_functions	0.143s
+ok  	github.com/couchbase/query/test/gsi/test_cases/cover	0.111s
+ok  	github.com/couchbase/query/test/gsi/test_cases/curl	0.096s
+ok  	github.com/couchbase/query/test/gsi/test_cases/date_functions	0.185s
+ok  	github.com/couchbase/query/test/gsi/test_cases/error_cases	0.116s
+ok  	github.com/couchbase/query/test/gsi/test_cases/from_functions	0.099s
+ok  	github.com/couchbase/query/test/gsi/test_cases/fts	0.142s
+ok  	github.com/couchbase/query/test/gsi/test_cases/hashjoin	0.158s
+ok  	github.com/couchbase/query/test/gsi/test_cases/indexga	0.109s
+ok  	github.com/couchbase/query/test/gsi/test_cases/indexscan	0.078s
+ok  	github.com/couchbase/query/test/gsi/test_cases/inlist	0.076s
+ok  	github.com/couchbase/query/test/gsi/test_cases/integers	0.085s
+ok  	github.com/couchbase/query/test/gsi/test_cases/json_functions	0.135s
+ok  	github.com/couchbase/query/test/gsi/test_cases/key_functions	0.146s
+ok  	github.com/couchbase/query/test/gsi/test_cases/lookupjoins	0.217s
+ok  	github.com/couchbase/query/test/gsi/test_cases/merge	0.112s
+ok  	github.com/couchbase/query/test/gsi/test_cases/meta_functions	0.154s
+ok  	github.com/couchbase/query/test/gsi/test_cases/number_functions	0.138s
+ok  	github.com/couchbase/query/test/gsi/test_cases/obj_functions	0.155s
+ok  	github.com/couchbase/query/test/gsi/test_cases/order_functions	0.165s
+ok  	github.com/couchbase/query/test/gsi/test_cases/select_functions	0.174s
+ok  	github.com/couchbase/query/test/gsi/test_cases/string_functions	0.167s
+ok  	github.com/couchbase/query/test/gsi/test_cases/subqexp	0.196s
+ok  	github.com/couchbase/query/test/gsi/test_cases/system	0.125s
+ok  	github.com/couchbase/query/test/gsi/test_cases/ttl	0.086s
+ok  	github.com/couchbase/query/test/gsi/test_cases/typeconv_functions	0.074s
+ok  	github.com/couchbase/query/test/gsi/test_cases/unnest	0.070s
+ok  	github.com/couchbase/query/test/gsi/test_cases/where_functions	0.071s
+ok  	github.com/couchbase/query/test/gsi/test_cases/window	0.045s
+ok  	github.com/couchbase/query/test/gsi/test_cases/xattrs	0.052s
+ok  	github.com/couchbase/query/test/mockstore	0.154s
+?   	github.com/couchbase/query/timestamp	[no test files]
+?   	github.com/couchbase/query/transactions	[no test files]
+?   	github.com/couchbase/query/tutorial	[no test files]
+ok  	github.com/couchbase/query/util	0.094s
+ok  	github.com/couchbase/query/value	0.046s
+?   	github.com/couchbase/query/value/example	[no test files]
+ok  	github.com/couchbase/query/test/gsi/test_cases/advise	4.650s
+ok  	github.com/couchbase/query/test/gsi/test_cases/aggflt	6.240s
+ok  	github.com/couchbase/query/test/gsi/test_cases/aggregate_functions	8.334s
+ok  	github.com/couchbase/query/test/gsi/test_cases/alias_functions	5.591s
+ok  	github.com/couchbase/query/test/gsi/test_cases/ansijoin	72.246s
+ok  	github.com/couchbase/query/test/gsi/test_cases/any_functions	15.232s
+ok  	github.com/couchbase/query/test/gsi/test_cases/array_functions	2.950s
+ok  	github.com/couchbase/query/test/gsi/test_cases/bitwise_functions	0.141s
+ok  	github.com/couchbase/query/test/gsi/test_cases/case_functions	4.038s
+ok  	github.com/couchbase/query/test/gsi/test_cases/comp_functions	10.342s
+ok  	github.com/couchbase/query/test/gsi/test_cases/conditional_unkn_functions	7.070s
+ok  	github.com/couchbase/query/test/gsi/test_cases/cover	51.448s
+_time=2020-11-06T12:19:24.352+00:00 _level=INFO _msg= Initialization of cbauth succeeded  
+_time=2020-11-06T12:19:24.392+00:00 _level=INFO _msg=New store created with url http://Administrator:password@127.0.0.1:8091/ 
+_time=2020-11-06T12:19:24.420+00:00 _level=INFO _msg= keyspace N1QL_SYSTEM_BUCKET not found No bucket named N1QL_SYSTEM_BUCKET 
+_time=2020-11-06T12:19:24.447+00:00 _level=INFO _msg= Retrying bucket N1QL_SYSTEM_BUCKET 
+_time=2020-11-06T12:19:24.449+00:00 _level=INFO _msg=New settings received: {"timeout":0,"n1ql-feat-ctrl":12,"max-parallelism":1,"query.settings.curl_whitelist":{"all_access":false,"allowed_urls":[],"disallowed_urls":[]},"query.settings.tmp_space_dir":"/opt/couchbase/var/lib/couchbase/tmp","completed-limit":4000,"prepared-limit":16384,"pipeline-batch":16,"pipeline-cap":512,"scan-cap":512,"loglevel":"info","completed-threshold":1000,"query.settings.tmp_space_size":5120} 
+_time=2020-11-06T12:19:24.449+00:00 _level=INFO _msg=Unable to start javascript evaluator client, err : evaluator error 
+_time=2020-11-06T12:19:24.449+00:00 _level=INFO _msg=Settings notifier from metakv 
+_time=2020-11-06T12:19:24.450+00:00 _level=INFO _msg=New Value for curl whitelist <ud>map[all_access:false allowed_urls:[] disallowed_urls:[]]</ud> 
+2020-11-06T12:19:24.454+00:00 [Info] GSIC - Setting config map[query_tmpspace_dir:/opt/couchbase/var/lib/couchbase/tmp query_tmpspace_limit:5120]
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg= GSI indexer settings have been updated map[query_tmpspace_dir:/opt/couchbase/var/lib/couchbase/tmp query_tmpspace_limit:5120] 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg= n1fty indexer settings have been updated map[query_tmpspace_dir:/opt/couchbase/var/lib/couchbase/tmp query_tmpspace_limit:5120] 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for loglevel. New value is info 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for timeout. New value is 0 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for completed-limit. New value is 4000 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for pipeline-cap. New value is 512 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for completed-threshold. New value is 1000 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for max-parallelism. New value is 1 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for pipeline-batch. New value is 16 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for scan-cap. New value is 512 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for n1ql-feat-ctrl. New value is 12 
+_time=2020-11-06T12:19:24.454+00:00 _level=INFO _msg=Query Configuration changed for prepared-limit. New value is 16384 
+--- FAIL: TestCover (0.11s)
+    json.go:789: TestCaseFile: case_curl.json
+    json.go:793: Error : results len don't match, 0 vs 1, [] vs [map[res:11210]], (select res from curl("http://127.0.0.1:8091/pools/default/nodeServices", {"get":true,"user":"Administrator:password"}).nodesExt[0].services.kv res)for case file: case_curl.json, index: 0
+FAIL
+FAIL	github.com/couchbase/query/test/gsi/test_cases/curl	0.137s
+FAIL
+ok  	github.com/couchbase/query/test/gsi/test_cases/date_functions	2.988s
+ok  	github.com/couchbase/query/test/gsi/test_cases/error_cases	8.223s
+ok  	github.com/couchbase/query/test/gsi/test_cases/from_functions	3.515s
+ok  	github.com/couchbase/query/test/gsi/test_cases/fts	0.033s
+ok  	github.com/couchbase/query/test/gsi/test_cases/hashjoin	63.417s
+ok  	github.com/couchbase/query/test/gsi/test_cases/indexga	142.650s
+ok  	github.com/couchbase/query/test/gsi/test_cases/indexscan	148.414s
+ok  	github.com/couchbase/query/test/gsi/test_cases/inlist	10.408s
+ok  	github.com/couchbase/query/test/gsi/test_cases/integers	3.177s
+ok  	github.com/couchbase/query/test/gsi/test_cases/json_functions	5.022s
+ok  	github.com/couchbase/query/test/gsi/test_cases/key_functions	11.748s
+ok  	github.com/couchbase/query/test/gsi/test_cases/lookupjoins	24.523s
+ok  	github.com/couchbase/query/test/gsi/test_cases/merge	34.888s
+ok  	github.com/couchbase/query/test/gsi/test_cases/meta_functions	5.388s
+ok  	github.com/couchbase/query/test/gsi/test_cases/number_functions	5.110s
+ok  	github.com/couchbase/query/test/gsi/test_cases/obj_functions	4.604s
+ok  	github.com/couchbase/query/test/gsi/test_cases/order_functions	3.543s
+ok  	github.com/couchbase/query/test/gsi/test_cases/select_functions	0.486s
+ok  	github.com/couchbase/query/test/gsi/test_cases/string_functions	8.833s
+ok  	github.com/couchbase/query/test/gsi/test_cases/subqexp	4.350s
+ok  	github.com/couchbase/query/test/gsi/test_cases/system	2.181s
+ok  	github.com/couchbase/query/test/gsi/test_cases/ttl	0.570s
+ok  	github.com/couchbase/query/test/gsi/test_cases/typeconv_functions	3.294s
+ok  	github.com/couchbase/query/test/gsi/test_cases/unnest	32.447s
+ok  	github.com/couchbase/query/test/gsi/test_cases/where_functions	9.349s
+ok  	github.com/couchbase/query/test/gsi/test_cases/window	7.396s
+ok  	github.com/couchbase/query/test/gsi/test_cases/xattrs	4.751s
