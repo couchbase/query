@@ -46,6 +46,7 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 		"case_indexga_primary.json",
 		"case_indexga_unionscan.json",
 		"case_indexga_intersectscan.json",
+		"case_indexga_bugs.json",
 	}
 	indexes := []string{
 		"CREATE PRIMARY INDEX oprimary ON orders",
@@ -59,7 +60,10 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 		"CREATE INDEX ixgar101 ON orders(c1,c0) WHERE test_id = 'indexga' AND type = 'numeric'",
 		"DROP INDEX orders.ixgar101",
 		"CREATE INDEX ixgar102 ON orders(c10) WHERE test_id = 'indexga' AND type = 'numeric'",
-		"DROP INDEX orders.ixgar102"}
+		"DROP INDEX orders.ixgar102",
+		"CREATE INDEX ixga201 ON orders(c1, a1) WHERE test_id = 'indexga' AND type = 'bugs'",
+		"DROP INDEX orders.ixga201",
+	}
 
 	var primary int
 	var testcases []string
@@ -91,6 +95,10 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 	primary, testcases = buildtestcase(cases, indexes, 5, 2, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
 	runStmt(qc, indexes[11])
+
+	// misc bugs
+	primary, testcases = buildtestcase(cases, indexes, 6, 12, 13)
+	run_testcase(primary, prepare, qc, t, testcases)
 }
 
 func case_delete(qc *gsi.MockServer, t *testing.T) {
