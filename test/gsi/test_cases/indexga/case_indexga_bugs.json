@@ -1,0 +1,21 @@
+[
+    {
+        "testcase": "MB-42774",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS MISSING END"
+        },
+        "statements": "SELECT count(1) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'bugs') AND c1 = 'doc' AND (EVERY v IN a1 SATISFIES v.name != 'b1' END OR a1 IS MISSING)",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    }
+]
