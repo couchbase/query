@@ -162,7 +162,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		return nil, false, errors.NewRewriteError(err, "")
 	}
 
-	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.GetTxContext() != nil)
+	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.TxContext() != nil)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
 		return nil, false, err
