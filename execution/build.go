@@ -61,14 +61,13 @@ type builder struct {
 func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
 	if !keyspaceTerm.IsSystem() {
 		path := keyspaceTerm.Path()
-		protectedString := keyspaceTerm.PathString()
 		if path == nil {
 			path, _ = getKeyspacePath(keyspaceTerm.FromExpression(), this.context)
 			if path != nil {
 				this.aliasMap[keyspaceTerm.Alias()] = path.ProtectedString()
 			}
 		} else {
-			this.aliasMap[keyspaceTerm.Alias()] = protectedString
+			this.aliasMap[keyspaceTerm.Alias()] = keyspaceTerm.PathString()
 		}
 	}
 }
