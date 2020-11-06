@@ -15,12 +15,13 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func SargFor(pred expression.Expression, keys expression.Expressions, max int, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (SargSpans, bool, error) {
+func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expressions, max int,
+	isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
+	advisorValidate bool) (SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
-		return sargForOr(or, keys, max, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate)
+		return sargForOr(or, entry, keys, max, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate)
 	}
 
 	sargKeys := keys[0:max]
@@ -35,20 +36,33 @@ func SargFor(pred expression.Expression, keys expression.Expressions, max int, i
 	return composeSargSpan(sargSpans, exactSpan)
 }
 
-func sargForOr(or *expression.Or, keys expression.Expressions, max int, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool) (SargSpans, bool, error) {
+func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions, max int,
+	isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
+	advisorValidate bool) (SargSpans, bool, error) {
 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
-		_, max, _, _ = SargableFor(c, keys, false, true) // Variable length sarging
-		s, ex, err := SargFor(c, keys, max, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate)
+		_, max1, _, _ := SargableFor(c, keys, false, true) // Variable length sarging
+		s, ex, err := SargFor(c, entry, keys, max1, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate)
 		if err != nil {
 			return nil, false, err
 		}
 
 		spans[i] = s
 		exact = exact && ex
+
+		if exact && (max1 < max) {
+			// check for non-sargable key in predicate
+			exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name())
+			if err != nil {
+				return nil, false, err
+			}
+
+			if !expression.IsCovered(c, baseKeyspace.Name(), exprs) {
+				exact = false
+			}
+		}
 	}
 
 	var rv SargSpans = NewUnionSpans(spans...)

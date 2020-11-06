@@ -661,7 +661,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
 				se.maxKeys, underHash, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
 		} else {
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se.keys,
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
 				se.maxKeys, orIsJoin, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
 		}
 		if err != nil || spans.Size() == 0 {

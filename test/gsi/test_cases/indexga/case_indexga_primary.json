@@ -14,7 +14,7 @@
         "statements": "SELECT COUNT(1) AS cnt FROM orders",
         "results": [
             {
-                "cnt": 47
+                "cnt": 51
             }
         ]
     },
@@ -33,7 +33,7 @@
         "statements": "SELECT COUNT(*) AS cnt FROM orders",
         "results": [
             {
-                "cnt": 47
+                "cnt": 51
             }
         ]
     },
@@ -259,8 +259,8 @@
         "statements": "SELECT COUNT(META().id) AS cnt, SUM(TONUMBER(SUBSTR(META().id,2,4))) AS s FROM orders",
         "results": [
             {
-                "cnt": 47,
-                "s": 61757
+                "cnt": 51,
+                "s": 77767
             }
         ]
     },
@@ -279,8 +279,8 @@
         "statements": "SELECT COUNT(META().id) AS a, AVG(TONUMBER(SUBSTR(META().id,2,4))) AS s FROM orders",
         "results": [
             {
-                "a": 47,
-                "s": 1313.9787234042553
+                "a": 51,
+                "s": 1524.8431372549019
             }
         ]
     },
@@ -486,6 +486,22 @@
             {
                 "cnt": 1,
                 "s": 3058
+            },
+            {
+                "cnt": 1,
+                "s": 4001
+            },
+            {
+                "cnt": 1,
+                "s": 4002
+            },
+            {
+                "cnt": 1,
+                "s": 4003
+            },
+            {
+                "cnt": 1,
+                "s": 4004
             }
         ]
     },
