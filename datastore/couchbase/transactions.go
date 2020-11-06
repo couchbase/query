@@ -315,24 +315,24 @@ func (this *TransactionMutations) IsDeletedMutation(keyspace string, key string)
      KV has INSERT, UPDATE, DELETE ops separate and we are staging localy we must go through transformation
      and protect original operation. ALso need to preserve orginal CAS.
 
-prev  +  cur     --->  future
----------------------------
-INSERT   INSERT   ---  error
-         UPSERT   ---  INSERT
-         UPDATE   ---  INSERT
-         DELETE   ---  Remove with 0 cas
-UPSERT   INSERT   ---  error
-         UPSERT   ---- UPSERT
-         UPDATE   ---- UPSERT
-         DELETE   ---- DELETE
-UPDATE   INSERT   ---  error
-         UPSERT   ---- UPDATE
-         UPDATE   ---- UPDATE
-         DELETE   ---- DELETE
-DELETE   INSERT   ---  UPDATE with cas  *
-         UPSERT   ---- UPDATE with cas  *
-         UPDATE   ---- N/A
-         DELETE   ---- N/A
+prev  +  cur     --->  future                  SDK-Mutations
+------------------------------------------------------------
+INSERT   INSERT   ---  error                   error
+         UPSERT   ---  INSERT                  UPDATE
+         UPDATE   ---  INSERT                  UPDATE
+         DELETE   ---  Remove with 0 cas       DELETE
+UPSERT   INSERT   ---  error                   error
+         UPSERT   ---- UPSERT                  UPDATE
+         UPDATE   ---- UPSERT                  UPDATE
+         DELETE   ---- DELETE                  DELETE
+UPDATE   INSERT   ---  error                   error
+         UPSERT   ---- UPDATE                  UPDATE
+         UPDATE   ---- UPDATE                  UPDATE
+         DELETE   ---- DELETE                  DELETE
+DELETE   INSERT   ---  UPDATE with cas  *      INSERT
+         UPSERT   ---- UPDATE with cas  *      INSERT
+         UPDATE   ---- N/A                     N/A
+         DELETE   ---- N/A                     N/A
 */
 
 func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeName, collectionName string,
@@ -390,26 +390,33 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 		}
 
 		// Previous statement has MOP_DELETE and non zero CAS transform to MOP_UPDATE
-		if mmv != nil && mmv.Op == MOP_DELETE && cas != 0 {
+		if mmv != nil && mmv.Op == MOP_DELETE && cas != 0 && (mmv.Flags&MV_FLAGS_WRITE) != 0 {
 			op = MOP_UPDATE
 		}
 
 	case MOP_UPSERT:
 		if mmv != nil {
-			if mmv.Op == MOP_INSERT || mmv.Op == MOP_UPDATE {
-				// Previous statement has MOP_INSERT, MOP_UPDATE retain previous Operation
-				op = mmv.Op
-			} else if mmv.Op == MOP_DELETE && cas != 0 {
-				// Previous statement has MOP_DELETE and non zero CAS transform to MOP_UPDATE
+			if (mmv.Flags & MV_FLAGS_WRITE) != 0 {
+				if mmv.Op == MOP_INSERT || mmv.Op == MOP_UPDATE {
+					// Previous statement has MOP_INSERT, MOP_UPDATE retain previous Operation
+					op = mmv.Op
+				} else if mmv.Op == MOP_DELETE && cas != 0 {
+					// Previous statement has MOP_DELETE and non zero CAS transform to MOP_UPDATE
+					op = MOP_UPDATE
+				}
+			} else if mmv.Op == MOP_DELETE {
+				op = MOP_INSERT
+			} else {
 				op = MOP_UPDATE
 			}
 		}
 	case MOP_UPDATE:
-		if mmv != nil && (mmv.Op == MOP_INSERT || mmv.Op == MOP_UPSERT) {
+		if mmv != nil && (mmv.Op == MOP_INSERT || mmv.Op == MOP_UPSERT) && (mmv.Flags&MV_FLAGS_WRITE) != 0 {
 			// Previous statement has MOP_INSERT, MOP_UPSERT retain previous Operation
 			op = mmv.Op
 		}
 	case MOP_DELETE:
+
 	default:
 		return retCas, nil
 	}

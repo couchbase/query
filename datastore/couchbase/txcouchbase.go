@@ -384,13 +384,14 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			return errors.Errors{err}
 		}
 
-		if sdkKv && sdkCas != 0 && len(keys) == 1 && len(fkeys) == 0 {
+		if sdkKv && sdkCas != 0 && len(keys) == 1 {
 			// Transformed SDK REPLACE, DELETE with CAS don't read the document
 			k := keys[0]
-			if txMutations.IsDeletedMutation(qualifiedName, k) {
+			if len(fkeys) == 0 && txMutations.IsDeletedMutation(qualifiedName, k) {
 				return errors.Errors{errors.NewKeyNotFoundError(fmt.Errorf("%v", k))}
+			} else if len(fkeys) == 1 {
+				mvs[k] = &MutationValue{Val: value.NewValue(nil), Cas: sdkCas, TxnMeta: sdkTxnMeta}
 			}
-			mvs[k] = &MutationValue{Val: value.NewValue(nil), Cas: sdkCas, TxnMeta: sdkTxnMeta}
 		}
 
 		for k, mv := range mvs {
