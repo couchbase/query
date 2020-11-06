@@ -104,8 +104,14 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.Results != nil {
 					itemMap["results"] = entry.Results
 				}
-				if entry.Errors != nil {
-					itemMap["errors"] = entry.Errors
+				if len(entry.Errors) > 0 {
+					errors := make([]map[string]interface{}, 0, len(entry.Errors))
+					for _, err := range entry.Errors {
+						if err != nil {
+							errors = append(errors, err.Object())
+						}
+					}
+					itemMap["errors"] = errors
 				}
 				if !entry.StartTime.IsZero() {
 					itemMap["startTime"] = entry.StartTime.String()
