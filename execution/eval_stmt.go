@@ -168,11 +168,12 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		return nil, false, err
 	}
 
-	_, isPrepare := stmt.(*algebra.Prepare)
-
-	if isPrepare {
+	switch st := stmt.(type) {
+	case *algebra.Prepare:
 		prepContext.SetNamedArgs(nil)
 		prepContext.SetPositionalArgs(nil)
+	case *algebra.Advise:
+		st.SetContext(this)
 	}
 
 	//  monitoring code TBD
