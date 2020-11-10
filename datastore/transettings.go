@@ -69,9 +69,11 @@ func (this *TransactionSettings) TxTimeout() time.Duration {
 }
 
 func (this *TransactionSettings) SetTxTimeout(d time.Duration) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.txTimeout = d
+	if d > 0 {
+		this.mutex.Lock()
+		defer this.mutex.Unlock()
+		this.txTimeout = d
+	}
 }
 
 func (this *TransactionSettings) CleanupWindow() time.Duration {
