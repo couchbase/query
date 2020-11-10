@@ -19,6 +19,8 @@ const (
 	_SEM_WHERE
 	_SEM_ON
 	_SEM_TRANSACTION
+	_SEM_PROJECTION
+	_SEM_ADVISOR_FUNC
 )
 
 type SemChecker struct {

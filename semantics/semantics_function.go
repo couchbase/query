@@ -52,9 +52,14 @@ func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err e
 		return errors.NewEnterpriseFeature("Advisor Function", "semantics.visit_advisor_function")
 	}
 
+	if !this.hasSemFlag(_SEM_PROJECTION) {
+		return errors.NewAdvisorProjOnly()
+	}
+
 	if this.hasSemFlag(_SEM_TRANSACTION) {
 		return errors.NewTranFunctionNotSupportedError(advisor.Name())
 	}
 
+	this.setSemFlag(_SEM_ADVISOR_FUNC)
 	return nil
 }

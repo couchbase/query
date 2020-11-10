@@ -130,6 +130,20 @@ func NewAdviseUnsupportedStmtError(iKey string) Error {
 		InternalMsg: fmt.Sprintf("Advise supports SELECT, MERGE, UPDATE and DELETE statements only."), InternalCaller: CallerN(1)}
 }
 
+const ADVISOR_PROJECTION_ONLY = 3255
+
+func NewAdvisorProjOnly() Error {
+	return &err{level: EXCEPTION, ICode: ADVISOR_PROJECTION_ONLY, IKey: "semantics_advisor_function",
+		InternalMsg: fmt.Sprintf("Advisor function is only allowed in projection clause."), InternalCaller: CallerN(1)}
+}
+
+const ADVISOR_NO_FROM = 3256
+
+func NewAdvisorNoFrom() Error {
+	return &err{level: EXCEPTION, ICode: ADVISOR_NO_FROM, IKey: "semantics_advisor_function",
+		InternalMsg: fmt.Sprintf("FROM clause is not allowed when Advisor function is present in projection clause."), InternalCaller: CallerN(1)}
+}
+
 const MH_DP_ONLY_FEATURE = 3260
 
 func NewMHDPOnlyFeature(what, iKey string) Error {

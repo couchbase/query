@@ -11,6 +11,7 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
 
@@ -21,7 +22,7 @@ func (this *SemChecker) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, 
 func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, err error) {
 	saveSemFlag := this.semFlag
 	defer func() { this.semFlag = saveSemFlag }()
-	this.unsetSemFlag(_SEM_WHERE | _SEM_ON)
+	this.unsetSemFlag(_SEM_WHERE | _SEM_ON | _SEM_PROJECTION | _SEM_ADVISOR_FUNC)
 	if node.With() != nil {
 		if err = node.With().MapExpressions(this); err != nil {
 			return nil, err
@@ -55,7 +56,13 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 		}
 	}
 
+	this.setSemFlag(_SEM_PROJECTION)
 	err = node.Projection().MapExpressions(this)
+	this.unsetSemFlag(_SEM_PROJECTION)
+
+	if this.hasSemFlag(_SEM_ADVISOR_FUNC) && node.From() != nil {
+		return nil, errors.NewAdvisorNoFrom()
+	}
 
 	return nil, err
 }
