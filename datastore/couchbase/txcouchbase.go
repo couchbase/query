@@ -391,6 +391,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 				return errors.Errors{errors.NewKeyNotFoundError(fmt.Errorf("%v", k))}
 			} else if len(fkeys) == 1 {
 				mvs[k] = &MutationValue{Val: value.NewValue(nil), Cas: sdkCas, TxnMeta: sdkTxnMeta}
+				fkeys = fkeys[0:0]
 			}
 		}
 
