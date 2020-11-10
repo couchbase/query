@@ -92,7 +92,7 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 		meta = namespace.(datastore.KeyspaceMetadata)
 	}
 
-	if ks == nil || err != nil {
+	if ks == nil || err != nil || ks.Uid() != keyspace.Uid() {
 		return keyspace, false
 	}
 
@@ -139,7 +139,7 @@ func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket
 	bkt, err = namespace.BucketById(bucket.Id())
 	meta = namespace.(datastore.KeyspaceMetadata)
 
-	if bkt == nil || err != nil {
+	if bkt == nil || err != nil || bkt.Uid() != bucket.Uid() {
 		return bucket, false
 	}
 

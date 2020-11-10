@@ -48,6 +48,10 @@ func (this *keyspaceBase) AuthKey() string {
 	return this.name
 }
 
+func (this *keyspaceBase) Uid() string {
+	return this.name
+}
+
 func (this *keyspaceBase) CreateScope(name string) errors.Error {
 	return errors.NewScopesNotSupportedError(this.name)
 }

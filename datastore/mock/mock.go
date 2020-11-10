@@ -289,6 +289,10 @@ func (b *keyspace) Name() string {
 	return b.name
 }
 
+func (b *keyspace) Uid() string {
+	return b.name
+}
+
 func (b *keyspace) QualifiedName() string {
 	return b.namespace.name + ":" + b.name
 }

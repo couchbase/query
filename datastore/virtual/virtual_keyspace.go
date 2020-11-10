@@ -32,6 +32,10 @@ func (b *virtualBucket) Name() string {
 	return b.id
 }
 
+func (b *virtualBucket) Uid() string {
+	return b.id
+}
+
 func (b *virtualBucket) AuthKey() string {
 	return b.id
 }
@@ -90,6 +94,10 @@ func (sc *virtualScope) Id() string {
 }
 
 func (sc *virtualScope) Name() string {
+	return sc.id
+}
+
+func (sc *virtualScope) Uid() string {
 	return sc.id
 }
 
@@ -166,6 +174,10 @@ func (this *virtualKeyspace) Id() string {
 }
 
 func (this *virtualKeyspace) Name() string {
+	return this.path[len(this.path)-1]
+}
+
+func (this *virtualKeyspace) Uid() string {
 	return this.path[len(this.path)-1]
 }
 

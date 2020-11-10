@@ -186,6 +186,10 @@ func (cb *CollectionsBucket) Name() string {
 	return cb.id
 }
 
+func (cb *CollectionsBucket) Uid() string {
+	return cb.id
+}
+
 func (cb *CollectionsBucket) AuthKey() string {
 	return cb.id
 }
@@ -369,6 +373,10 @@ func (ks *CollectionsKeyspace) Id() string {
 }
 
 func (ks *CollectionsKeyspace) Name() string {
+	return ks.id
+}
+
+func (ks *CollectionsKeyspace) Uid() string {
 	return ks.id
 }
 

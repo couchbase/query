@@ -11,6 +11,7 @@ package couchbase
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
 	cb "github.com/couchbase/go-couchbase"
@@ -132,6 +133,7 @@ type collection struct {
 	id         string
 	name       string
 	uid        uint32
+	uidString  string
 	namespace  *namespace
 	scope      *scope
 	bucket     *keyspace
@@ -162,6 +164,10 @@ func (coll *collection) QualifiedName() string {
 
 func (coll *collection) AuthKey() string {
 	return coll.authKey
+}
+
+func (coll *collection) Uid() string {
+	return coll.uidString
 }
 
 func (coll *collection) NamespaceId() string {
@@ -339,6 +345,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				namespace: bucket.namespace,
 				fullName:  bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + c.Name,
 				uid:       uint32(c.Uid),
+				uidString: strconv.FormatUint(c.Uid, 16),
 				scope:     scope,
 			}
 			scope.keyspaces[c.Name] = coll
@@ -358,6 +365,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 					fullName:  bucket.namespace.name + ":" + bucket.name,
 					authKey:   bucket.name,
 					uid:       uint32(c.Uid),
+					uidString: strconv.FormatUint(c.Uid, 16),
 					scope:     scope,
 					bucket:    bucket,
 					isDefault: true,
@@ -400,6 +408,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 				namespace: bucket.namespace,
 				fullName:  bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + c.Name,
 				uid:       uint32(c.Uid),
+				uidString: strconv.FormatUint(c.Uid, 16),
 				scope:     scope,
 			}
 			scope.keyspaces[c.Name] = coll
@@ -429,6 +438,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					fullName:  bucket.namespace.name + ":" + bucket.name,
 					authKey:   bucket.name,
 					uid:       uint32(c.Uid),
+					uidString: strconv.FormatUint(c.Uid, 16),
 					scope:     scope,
 					bucket:    bucket,
 					isDefault: true,

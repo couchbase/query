@@ -1200,6 +1200,7 @@ type keyspace struct {
 	namespace      *namespace
 	name           string
 	fullName       string
+	uidString      string
 	cbbucket       *cb.Bucket
 	agentProvider  *gcagent.AgentProvider
 	flags          int
@@ -1251,6 +1252,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		namespace: p,
 		name:      name,
 		fullName:  p.Name() + ":" + name,
+		uidString: cbbucket.UUID,
 		cbbucket:  cbbucket,
 	}
 
@@ -1340,6 +1342,10 @@ func (b *keyspace) Id() string {
 
 func (b *keyspace) Name() string {
 	return b.name
+}
+
+func (b *keyspace) Uid() string {
+	return b.uidString
 }
 
 // keyspace (as a bucket) implements KeyspaceMetadata

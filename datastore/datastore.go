@@ -136,6 +136,7 @@ type Bucket interface {
 	Id() string
 	Name() string
 	AuthKey() string // Key of the object to be used for authorization purposes
+	Uid() string     // unique key for the purpose of detecting object change
 
 	NamespaceId() string
 	Namespace() Namespace
@@ -193,6 +194,8 @@ type Keyspace interface {
 	Name() string          // Name of this keyspace
 	QualifiedName() string // Full path of the storage object supporting keyspace, including default or system names if implied
 	AuthKey() string       // Key of the object to be used for authorization purposes
+
+	Uid() string // unique key for the purpose of detecting object change
 
 	// A keyspace is found either directly under a namespace or under a scope.
 	// If the keyspace is directly under a namespace, the ScopeId() returns "" and Scope() returns nil,
