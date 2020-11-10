@@ -29,6 +29,7 @@ var transactionSettings *TransactionSettings
 func init() {
 	transactionSettings = &TransactionSettings{
 		txTimeout:             DEF_TXTIMEOUT,
+		cleanupWindow:         time.Minute,
 		cleanupClientAttempts: true,
 		cleanupLostAttempts:   true,
 	}
@@ -83,9 +84,11 @@ func (this *TransactionSettings) CleanupWindow() time.Duration {
 }
 
 func (this *TransactionSettings) SetCleanupWindow(d time.Duration) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.cleanupWindow = d
+	if d > 0 {
+		this.mutex.Lock()
+		defer this.mutex.Unlock()
+		this.cleanupWindow = d
+	}
 }
 
 func (this *TransactionSettings) CleanupClientAttempts() bool {

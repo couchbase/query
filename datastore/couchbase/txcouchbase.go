@@ -660,6 +660,9 @@ func initGocb(s *store) (err errors.Error) {
 	//	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
 	//		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
 
+	logging.Infof("Transaction Initalization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
+		txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts, txConfig.CleanupLostAttempts)
+
 	cerr = client.InitTransactions(txConfig)
 	if cerr != nil {
 		client.Close()
