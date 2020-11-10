@@ -148,14 +148,7 @@ func NewHasUseIndexesError(termType string, iKey string) Error {
 		InternalMsg: fmt.Sprintf("%s term should not have USE INDEX", termType), InternalCaller: CallerN(1)}
 }
 
-const UPDATE_STAT_INDEX_NAME = 3270
-
-func NewUpdateStatMissingIndexNameError() Error {
-	return &err{level: EXCEPTION, ICode: UPDATE_STAT_INDEX_NAME, IKey: "semantics_update_statistics",
-		InternalMsg: "UPDATE STATISTICS (ANALYZE) must specify index name for INDEX option.", InternalCaller: CallerN(1)}
-}
-
-const UPDATE_STAT_INDEX_TYPE = 3271
+const UPDATE_STAT_INDEX_TYPE = 3270
 
 func NewUpdateStatInvalidIndexTypeError() Error {
 	return &err{level: EXCEPTION, ICode: UPDATE_STAT_INDEX_TYPE, IKey: "semantics_update_statistics",

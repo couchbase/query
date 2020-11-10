@@ -2890,62 +2890,62 @@ EXECUTE FUNCTION func_name LPAREN opt_exprs RPAREN
 update_statistics:
 UPDATE STATISTICS opt_for named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($4, $6, $8, nil, false)
+    $$ = algebra.NewUpdateStatistics($4, $6, $8)
 }
 |
 UPDATE STATISTICS opt_for named_keyspace_ref DELETE LPAREN update_stat_terms RPAREN
 {
-    $$ = algebra.NewUpdateStatistics($4, $7, nil, nil, true)
+    $$ = algebra.NewUpdateStatisticsDelete($4, $7)
 }
 |
 UPDATE STATISTICS opt_for named_keyspace_ref DELETE ALL
 {
-    $$ = algebra.NewUpdateStatistics($4, nil, nil, nil, true)
+    $$ = algebra.NewUpdateStatisticsDelete($4, nil)
 }
 |
-UPDATE STATISTICS opt_for named_keyspace_ref INDEX LPAREN index_refs RPAREN opt_infer_ustat_with
+UPDATE STATISTICS opt_for named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($4, nil, $9, $7, false)
+    $$ = algebra.NewUpdateStatisticsIndex($4, $7, $9, $10)
 }
 |
 UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($5, nil, $9, algebra.IndexRefs{algebra.NewIndexRef($7, $8)}, false)
+    $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($7)}, $8, $9)
 }
 |
 UPDATE STATISTICS FOR INDEX index_name ON simple_named_keyspace_ref opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($7, nil, $9, algebra.IndexRefs{algebra.NewIndexRef($5, $8)}, false)
+    $$ = algebra.NewUpdateStatisticsIndex($7, expression.Expressions{expression.NewIdentifier($5)}, $8, $9)
 }
 |
 ANALYZE opt_keyspace_collection named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($3, $5, $7, nil, false)
+    $$ = algebra.NewUpdateStatistics($3, $5, $7)
 }
 |
 ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS LPAREN update_stat_terms RPAREN
 {
-    $$ = algebra.NewUpdateStatistics($3, $7, nil, nil, true)
+    $$ = algebra.NewUpdateStatisticsDelete($3, $7)
 }
 |
 ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS
 {
-    $$ = algebra.NewUpdateStatistics($3, nil, nil, nil, true)
+    $$ = algebra.NewUpdateStatisticsDelete($3, nil)
 }
 |
-ANALYZE opt_keyspace_collection named_keyspace_ref INDEX LPAREN index_refs RPAREN opt_infer_ustat_with
+ANALYZE opt_keyspace_collection named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($3, nil, $8, $6, false)
+    $$ = algebra.NewUpdateStatisticsIndex($3, $6, $8, $9)
 }
 |
 ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($3, nil, $7, algebra.IndexRefs{algebra.NewIndexRef($5, $6)}, false)
+    $$ = algebra.NewUpdateStatisticsIndex($3, expression.Expressions{expression.NewIdentifier($5)}, $6, $7)
 }
 |
 ANALYZE INDEX index_name ON simple_named_keyspace_ref opt_index_using opt_infer_ustat_with
 {
-    $$ = algebra.NewUpdateStatistics($5, nil, $7, algebra.IndexRefs{algebra.NewIndexRef($3, $6)}, false)
+    $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($3)}, $6, $7)
 }
 ;
 

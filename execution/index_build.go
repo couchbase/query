@@ -11,7 +11,6 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -77,15 +76,15 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		names, err1 := this.getIndexNames(context, parent, node.Names())
+		names, err1 := getIndexNames(context, parent, node.Names(), "build_index")
 		if err1 != nil {
-			context.Error(errors.NewError(err1, ""))
+			context.Error(err1)
 			return
 		}
 
 		for _, name := range names {
 			if _, err = indexer.IndexByName(name); err != nil {
-				context.Error(err)
+				context.Error(errors.NewIndexNotFoundError(name, "execution.build_index.index_by_name", err))
 				return
 			}
 		}
@@ -97,12 +96,13 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *BuildIndexes) getIndexNames(context *Context, av value.Value, exprs expression.Expressions) ([]string, error) {
+func getIndexNames(context *Context, av value.Value, exprs expression.Expressions, err_key string) ([]string, errors.Error) {
+	ikey := "execution." + err_key + ".get_index_name"
 	rv := make([]string, 0, len(exprs))
 	for _, expr := range exprs {
 		val, err := expr.Evaluate(av, context)
 		if err != nil {
-			return nil, err
+			return nil, errors.NewEvaluationError(err, "index name expression")
 		}
 
 		actual := val.Actual()
@@ -113,13 +113,13 @@ func (this *BuildIndexes) getIndexNames(context *Context, av value.Value, exprs 
 				if s, ok := ac.(string); ok {
 					rv = append(rv, s)
 				} else {
-					return nil, fmt.Errorf("index name(%v) must be string", ac)
+					return nil, errors.NewInvalidIndexNameError(ac, ikey)
 				}
 			}
 		} else if s, ok := actual.(string); ok {
 			rv = append(rv, s)
 		} else {
-			return nil, fmt.Errorf("index name(%v) must be string", actual)
+			return nil, errors.NewInvalidIndexNameError(actual, ikey)
 		}
 	}
 	return rv, nil

@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -74,7 +75,17 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 			go updstat.DeleteStatistics(this.plan.Keyspace(), this.plan.Node().Terms(),
 				conn, context)
 		} else {
-			go updstat.UpdateStatistics(this.plan.Keyspace(), this.plan.Indexes(),
+			var indexes []datastore.Index
+			var err1 errors.Error
+			if len(this.plan.Node().Indexes()) > 0 {
+				indexes, err1 = getIndexes(context, parent, this.plan.Keyspace(),
+					this.plan.Node().Indexes(), this.plan.Node().Using())
+				if err1 != nil {
+					context.Error(err1)
+					return
+				}
+			}
+			go updstat.UpdateStatistics(this.plan.Keyspace(), indexes,
 				this.plan.Node().Terms(), this.plan.Node().With(), conn, context, false)
 		}
 
@@ -92,6 +103,35 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 	})
+}
+
+func getIndexes(context *Context, parent value.Value, keyspace datastore.Keyspace,
+	idxExprs expression.Expressions, using datastore.IndexType) ([]datastore.Index, errors.Error) {
+
+	idxNames, err := getIndexNames(context, parent, idxExprs, "update_statistics")
+	if err != nil {
+		return nil, err
+	}
+
+	indexer, err := keyspace.Indexer(using)
+	if err != nil {
+		return nil, err
+	}
+
+	ikey := "execution.update_statistics.index_by_name"
+	indexes := make([]datastore.Index, 0, len(idxExprs))
+	for _, idxName := range idxNames {
+		index, err := indexer.IndexByName(idxName)
+		if err != nil {
+			return nil, errors.NewIndexNotFoundError(idxName, ikey, err)
+		}
+		if index.IsPrimary() {
+			continue
+		}
+		indexes = append(indexes, index)
+	}
+
+	return indexes, nil
 }
 
 func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {

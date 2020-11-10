@@ -11,7 +11,6 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 )
 
@@ -22,23 +21,5 @@ func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (inte
 		return nil, err
 	}
 
-	var indexes []datastore.Index
-	if len(stmt.Indexes()) > 0 {
-		gsiIndexer, err := keyspace.Indexer(datastore.GSI)
-		if err != nil {
-			return nil, err
-		}
-
-		indexes = make([]datastore.Index, 0, len(stmt.Indexes()))
-		for _, idxRef := range stmt.Indexes() {
-			// only GSI indexes supported, check done in semantics
-			index, err := gsiIndexer.IndexByName(idxRef.Name())
-			if err != nil {
-				return nil, err
-			}
-			indexes = append(indexes, index)
-		}
-	}
-
-	return plan.NewUpdateStatistics(keyspace, indexes, stmt), nil
+	return plan.NewUpdateStatistics(keyspace, stmt), nil
 }
