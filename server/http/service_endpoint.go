@@ -181,10 +181,10 @@ func (this *HttpEndpoint) ListenTLS() error {
 	http2Srv := http.Server{TLSConfig: cfg}
 	err2 := http2.ConfigureServer(&http2Srv, nil)
 	if err2 != nil {
-		return fmt.Errorf(" Error configuring http2, err: %v", err2)
+		logging.Errorf(" Error configuring http2, err: %v", err2)
+	} else {
+		cfg = http2Srv.TLSConfig
 	}
-
-	cfg = http2Srv.TLSConfig
 
 	srv := &http.Server{
 		Handler:           this.mux,
