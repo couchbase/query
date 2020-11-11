@@ -105,7 +105,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					itemMap["results"] = entry.Results
 				}
 				if len(entry.Errors) > 0 {
-					errors := make([]map[string]interface{}, 0, len(entry.Errors))
+					errors := make([]interface{}, 0, len(entry.Errors))
 					for _, err := range entry.Errors {
 						if err != nil {
 							errors = append(errors, err.Object())

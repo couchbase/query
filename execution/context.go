@@ -63,6 +63,9 @@ const (
 	FTS_SEARCH
 	UPDATE_STAT
 
+	// Expression layer
+	ADVISOR
+
 	// Server layer
 	INSTANTIATE
 	PARSE
@@ -101,6 +104,8 @@ var _PHASE_NAMES = []string{
 	INFER:        "inferKeySpace",
 	FTS_SEARCH:   "ftsSearch",
 	UPDATE_STAT:  "updateStatistics",
+
+	ADVISOR: "advisor",
 
 	INSTANTIATE: "instantiate",
 	PARSE:       "parse",

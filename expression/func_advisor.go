@@ -224,6 +224,7 @@ func analyzeWorkload(profile, response_limit string, delta, query_count float64)
 		workload += "str_to_duration(elapsedTime)/1000000 > " + response_limit + " and "
 	}
 
+	workload += "phaseOperators.advisor is missing and "
 	workload += "requestTime between \"" + start_time + "\" and DATE_ADD_STR(\"" + start_time + "\", " + strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") "
 	workload += "order by requestTime limit " + strconv.FormatFloat(query_count, 'f', 0, 64)
 	return "SELECT RAW Advisor((" + workload + "))"
@@ -270,7 +271,7 @@ func getSettings(profile, tag, response_limit string, query_count float64, numbe
 	if numberOfNodes == 0 {
 		numberOfNodes = 1
 	}
-	countPerNode := int(query_count / float64(numberOfNodes))
+	countPerNode := int64(query_count / float64(numberOfNodes))
 	if countPerNode > _MAXCNTPERNODE {
 		countPerNode = _MAXCNTPERNODE
 	}
