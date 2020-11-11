@@ -672,7 +672,7 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 	for key, mv := range dk.GetAll() {
 		if mv.Op == MOP_DELETE {
 			// current is DELETE and original one is INSERT remove from delta keyspace
-			if mmv, ok := mdk.values[key]; ok && mmv.Op == MOP_INSERT {
+			if mmv, ok := mdk.values[key]; ok && mmv.Op == MOP_INSERT && (mmv.Flags&MV_FLAGS_WRITE) != 0 {
 				mdk.values[key] = nil
 				delete(mdk.values, key)
 				continue
