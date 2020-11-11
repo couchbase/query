@@ -457,6 +457,16 @@ func readAndExec(liner *liner.State) (int, string) {
 		if errCode != 0 {
 			s_err := command.HandleError(errCode, errStr)
 			command.PrintError(s_err)
+
+			if *errorExitFlag {
+				_, werr := io.WriteString(command.W, command.EXITONERR)
+				if werr != nil {
+					command.PrintError(command.HandleError(errors.WRITER_OUTPUT, werr.Error()))
+				}
+				liner.Close()
+				os.Clearenv()
+				os.Exit(1)
+			}
 		}
 		io.WriteString(command.W, "\n\n")
 		final_input = " "
