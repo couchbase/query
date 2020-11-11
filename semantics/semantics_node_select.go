@@ -59,12 +59,18 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 	this.setSemFlag(_SEM_PROJECTION)
 	err = node.Projection().MapExpressions(this)
 	this.unsetSemFlag(_SEM_PROJECTION)
-
-	if this.hasSemFlag(_SEM_ADVISOR_FUNC) && node.From() != nil {
-		return nil, errors.NewAdvisorNoFrom()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, err
+	if this.hasSemFlag(_SEM_ADVISOR_FUNC) {
+		if node.From() != nil {
+			return nil, errors.NewAdvisorNoFrom()
+		}
+		node.SetAdvisor()
+	}
+
+	return nil, nil
 }
 
 func (this *SemChecker) VisitSubquery(expr expression.Subquery) (r interface{}, err error) {

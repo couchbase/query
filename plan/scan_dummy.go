@@ -17,12 +17,14 @@ import (
 type DummyScan struct {
 	readonly
 
+	advisor     bool // dummy scan for Advisor() function
 	cost        float64
 	cardinality float64
 }
 
-func NewDummyScan(cost, cardinality float64) *DummyScan {
+func NewDummyScan(advisor bool, cost, cardinality float64) *DummyScan {
 	return &DummyScan{
+		advisor:     advisor,
 		cost:        cost,
 		cardinality: cardinality,
 	}
@@ -34,6 +36,10 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *DummyScan) New() Operator {
 	return &DummyScan{}
+}
+
+func (this *DummyScan) IsAdvisor() bool {
+	return this.advisor
 }
 
 func (this *DummyScan) Cost() float64 {
@@ -50,6 +56,9 @@ func (this *DummyScan) MarshalJSON() ([]byte, error) {
 
 func (this *DummyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DummyScan"}
+	if this.advisor {
+		r["advisor"] = this.advisor
+	}
 	if this.cost > 0.0 {
 		r["cost"] = this.cost
 	}
@@ -65,6 +74,7 @@ func (this *DummyScan) MarshalBase(f func(map[string]interface{})) map[string]in
 func (this *DummyScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string  `json:"#operator"`
+		Advisor     bool    `json:"advisor"`
 		Cost        float64 `json:"cost"`
 		Cardinality float64 `json:"cardinality"`
 	}
@@ -74,6 +84,9 @@ func (this *DummyScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	if _unmarshalled.Advisor {
+		this.advisor = _unmarshalled.Advisor
+	}
 	this.cost = getCost(_unmarshalled.Cost)
 	this.cardinality = getCardinality(_unmarshalled.Cardinality)
 

@@ -61,6 +61,5 @@ func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err e
 	}
 
 	this.setSemFlag(_SEM_ADVISOR_FUNC)
-	this.setPermFlag(_SEM_ADVISOR_FUNC)
 	return nil
 }

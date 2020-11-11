@@ -32,6 +32,7 @@ type Subselect struct {
 	projection *Projection           `json:"projection"`
 	window     WindowTerms           `json:"window"`
 	correlated bool                  `json:"correlated"`
+	advisor    bool                  `json:"advisor"`
 }
 
 /*
@@ -49,7 +50,7 @@ func NewSubselect(with expression.Bindings, from FromTerm, let expression.Bindin
 		group:      group,
 		projection: projection,
 		window:     window,
-		correlated: false}
+	}
 }
 
 /*
@@ -320,6 +321,14 @@ func (this *Subselect) IsCorrelated() bool {
 
 func (this *Subselect) SetCorrelated() {
 	this.correlated = true
+}
+
+func (this *Subselect) IsAdvisor() bool {
+	return this.advisor
+}
+
+func (this *Subselect) SetAdvisor() {
+	this.advisor = true
 }
 
 /*

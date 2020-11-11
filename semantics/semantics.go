@@ -27,7 +27,6 @@ type SemChecker struct {
 	expression.MapperBase
 	semFlag  uint32
 	stmtType string
-	permFlag uint32
 }
 
 func NewSemChecker(enterprise bool, stmtType string, txn bool) *SemChecker {
@@ -55,18 +54,6 @@ func (this *SemChecker) unsetSemFlag(flag uint32) {
 
 func (this *SemChecker) hasSemFlag(flag uint32) bool {
 	return (this.semFlag & flag) != 0
-}
-
-func (this *SemChecker) setPermFlag(flag uint32) {
-	this.permFlag |= flag
-}
-
-func (this *SemChecker) hasPermFlag(flag uint32) bool {
-	return (this.permFlag & flag) != 0
-}
-
-func (this *SemChecker) IsAdvisor() bool {
-	return this.hasPermFlag(_SEM_ADVISOR_FUNC)
 }
 
 func (this *SemChecker) StmtType() string {

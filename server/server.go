@@ -1056,9 +1056,6 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		if err != nil {
 			return nil, errors.NewSemanticsError(err, "")
 		}
-		if semChecker.IsAdvisor() {
-			request.Output().AddPhaseOperator(execution.ADVISOR)
-		}
 
 		prep := time.Now()
 
