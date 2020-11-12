@@ -520,7 +520,7 @@ func (this *Advisor) extractStrs(arg value.Value) (map[string]*queryObject, erro
 							}
 						}
 
-						if _, ok := m[key]; ok {
+						if _, ok := entryMap[key]; ok {
 							entryMap[key].addOne()
 						} else {
 							entryMap[key] = NewQueryObject(str, qc, 1)
