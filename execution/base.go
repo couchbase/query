@@ -524,35 +524,46 @@ func (this *base) SendAction(action opAction) {
 
 // action for the terminal operator case
 func (this *base) baseSendAction(action opAction) bool {
-	rv := true
 
+	// CREATED and DORMANT cannot apply, as they have neither sent or received
+	// PANICKED, COMPLETED and STOPPED have already sent a notifyStop
+	// DONE, ENDED and KILLED can no longer be operated upon
 	if this.stopped && !this.valueExchange.isWaiting() {
-		return this.opState < _DONE
+		opState := this.opState
+		return opState == _RUNNING || opState == _STOPPING || opState == _PAUSED
 	}
 
+	// STOPPED, COMPLETED, DONE, ENDED, KILLED have already sent signals or stopped operating
+	rv := false
 	this.activeCond.L.Lock()
-	if this.opState == _CREATED {
+	switch this.opState {
+	case _CREATED:
 		if action == _ACTION_PAUSE {
 			this.opState = _PAUSED
+			rv = true
 		} else { // _ACTION_STOP
 			this.kill()
-			rv = false
 		}
 		this.activeCond.L.Unlock()
 
-	} else if this.opState == _PAUSED {
+	case _PAUSED:
 		if action == _ACTION_STOP {
 			this.kill()
-			rv = false
-		} // else action == _ACTION_PAUSE, no-op
+		} else { // action == _ACTION_PAUSE, no-op
+			rv = true
+		}
 		this.activeCond.L.Unlock()
-	} else if this.opState == _RUNNING {
+	case _RUNNING:
+		rv = true
 		this.opState = _STOPPING
 		this.activeCond.L.Unlock()
 		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
 		this.switchPhase(_EXECTIME)
-	} else {
+	case _STOPPING:
+		rv = true
+		this.activeCond.L.Unlock()
+	default:
 		this.activeCond.L.Unlock()
 	}
 	return rv
