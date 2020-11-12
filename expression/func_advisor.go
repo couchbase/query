@@ -89,7 +89,11 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 		  “query_count” : 20000})
 	*/
 	if arg.Type() == value.OBJECT {
-		actual := value.NewValue(arg).Actual().(map[string]interface{})
+		err := validateSessionArgs(arg)
+		if err != nil {
+			return nil, err
+		}
+		actual := arg.Actual().(map[string]interface{})
 		val, ok := actual["action"]
 		if ok {
 			val = strings.ToLower(value.NewValue(val).Actual().(string))
@@ -262,6 +266,31 @@ func listSessions(status string, context Context) (value.Value, error) {
 		return value.NewValue(r), nil
 	}
 	return nil, err
+}
+
+func validateSessionArgs(arg value.Value) error {
+	if arg == nil {
+		return nil
+	}
+
+	invalidNames := make([]string, 0, 8)
+	for fieldName, _ := range arg.Fields() {
+		if !strings.EqualFold(fieldName, "action") &&
+			!strings.EqualFold(fieldName, "profile") &&
+			!strings.EqualFold(fieldName, "response") &&
+			!strings.EqualFold(fieldName, "duration") &&
+			!strings.EqualFold(fieldName, "query_count") &&
+			!strings.EqualFold(fieldName, "status") &&
+			!strings.EqualFold(fieldName, "session") {
+			invalidNames = append(invalidNames, fieldName)
+		}
+	}
+
+	if len(invalidNames) > 0 {
+		return fmt.Errorf("Invalid arguments to Advisor() function: %v", invalidNames)
+	}
+
+	return nil
 }
 
 func getSettings(profile, tag, response_limit string, query_count float64, numberOfNodes int, start bool) map[string]interface{} {
