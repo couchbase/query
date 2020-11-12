@@ -1112,6 +1112,7 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 
 		// ignore empty parameters
 		if newArg == "" {
+			delete(req.Form, arg)
 			continue
 		}
 		if newArg[0] == '$' {
