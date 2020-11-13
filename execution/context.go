@@ -728,7 +728,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 				}
 
 				// Cache plan
-				this.prepared.SetSubqueryPlan(query, subplanIsks, subplan)
+				this.prepared.SetSubqueryPlan(query, subplan, subplanIsks)
 				planFound = true
 			}
 			this.prepared.Unlock()
