@@ -1226,6 +1226,7 @@ type joinPlannerState struct {
 	subChildren   []plan.Operator
 	coveringScans []plan.CoveringOperator
 	lastOp        plan.Operator
+	filter        expression.Expression
 }
 
 func (this *builder) saveJoinPlannerState() *joinPlannerState {
@@ -1234,6 +1235,7 @@ func (this *builder) saveJoinPlannerState() *joinPlannerState {
 		subChildren:   this.subChildren,
 		coveringScans: this.coveringScans,
 		lastOp:        this.lastOp,
+		filter:        this.filter,
 	}
 }
 
@@ -1242,4 +1244,5 @@ func (this *builder) restoreJoinPlannerState(jps *joinPlannerState) {
 	this.subChildren = jps.subChildren
 	this.coveringScans = jps.coveringScans
 	this.lastOp = jps.lastOp
+	this.filter = jps.filter
 }
