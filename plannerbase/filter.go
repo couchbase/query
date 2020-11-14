@@ -27,6 +27,7 @@ const (
 	FLTR_IN_HASH_JOIN              // used as join filter for hash join
 	FLTR_HAS_SUBQ                  // has subquery
 	FLTR_HAS_ADJ_SELEC             // has adjusted selectivity
+	FLTR_PRIMARY_JOIN              // join on meta id
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -163,6 +164,14 @@ func (this *Filter) SetAdjustedSelec() {
 
 func (this *Filter) HasAdjustedSelec() bool {
 	return (this.fltrFlags & FLTR_HAS_ADJ_SELEC) != 0
+}
+
+func (this *Filter) SetPrimaryJoin() {
+	this.fltrFlags |= FLTR_PRIMARY_JOIN
+}
+
+func (this *Filter) IsPrimaryJoin() bool {
+	return (this.fltrFlags & FLTR_PRIMARY_JOIN) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {

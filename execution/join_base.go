@@ -12,6 +12,7 @@ package execution
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -104,7 +105,8 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, keyCount map[string
 	return fetchOk
 }
 
-func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue, outer bool, alias string, context *Context) bool {
+func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
+	outer bool, onFilter expression.Expression, alias string, context *Context) bool {
 	for _, item := range this.joinBatch {
 		foundKeys := 0
 		if len(pairMap) > 0 {
@@ -116,6 +118,7 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 			}
 		}
 
+		matched := false
 		if foundKeys != 0 {
 			useQuota := context.UseRequestQuota()
 			for _, key := range item.Keys {
@@ -127,7 +130,7 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 				}
 
 				var joined value.AnnotatedValue
-				if foundKeys > 1 {
+				if foundKeys > 1 || (outer && onFilter != nil) {
 					joined = value.NewAnnotatedValue(item.Value.Copy())
 				} else {
 					joined = item.Value
@@ -154,12 +157,28 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 					context.Error(errors.NewMemoryQuotaExceededError())
 					return false
 				}
+
+				if onFilter != nil {
+					result, err := onFilter.Evaluate(joined, context)
+					if err != nil {
+						context.Error(errors.NewEvaluationError(err, "lookup join filter"))
+						return false
+					}
+					if !result.Truth() {
+						continue
+					}
+				}
+
+				matched = true
 				if !this.sendItem(joined) {
 					return false
 				}
 			}
-		} else if outer && !this.sendItem(item.Value) {
-			return false
+		}
+		if outer && !matched {
+			if !this.sendItem(item.Value) {
+				return false
+			}
 		}
 	}
 
@@ -167,7 +186,7 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 }
 
 func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
-	outer bool, alias string, context *Context) bool {
+	outer bool, onFilter expression.Expression, alias string, context *Context) bool {
 	useQuota := context.UseRequestQuota()
 
 	for _, item := range this.joinBatch {
@@ -193,6 +212,16 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 				}
 				keyCount[key]--
 
+				if onFilter != nil {
+					result, err := onFilter.Evaluate(jv, context)
+					if err != nil {
+						context.Error(errors.NewEvaluationError(err, "lookup nest filter"))
+						return false
+					}
+					if !result.Truth() {
+						continue
+					}
+				}
 				nvs = append(nvs, jv)
 			}
 		}

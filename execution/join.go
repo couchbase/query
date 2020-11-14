@@ -85,7 +85,7 @@ func (this *Join) flushBatch(context *Context) bool {
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias(), context)
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.OnFilter(), this.plan.Term().Alias(), context)
 }
 
 func (this *Join) MarshalJSON() ([]byte, error) {

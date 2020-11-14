@@ -180,6 +180,10 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		newKeyspaceTerm := algebra.NewKeyspaceTermFromPath(right.Path(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
+
+		// need to get extra filters in the ON-clause that's not the primary join filter
+		onFilter := getOnclauseFilter(baseKeyspace.Filters())
+
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
 		if this.useCBO {
@@ -187,7 +191,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			cost, cardinality = getLookupJoinCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, leftKeyspaces, rightKeyspace)
 		}
-		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), cost, cardinality), nil
+		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
@@ -361,6 +365,10 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		newKeyspaceTerm := algebra.NewKeyspaceTermFromPath(right.Path(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
+
+		// need to get extra filters in the ON-clause that's not the primary join filter
+		onFilter := getOnclauseFilter(baseKeyspace.Filters())
+
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
 		if this.useCBO {
@@ -368,7 +376,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			cost, cardinality = getLookupNestCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, leftKeyspaces, rightKeyspace)
 		}
-		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), cost, cardinality), nil
+		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		filter, selec, err := this.getFilter(right.Alias(), node.Onclause())
 		if err != nil {
@@ -493,16 +501,19 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 			if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
 				if eqFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()
+					fltr.SetPrimaryJoin()
 					primaryJoinKeys = eqFltr.Second().Copy()
 					break
 				} else if eqFltr.Second().EquivalentTo(id) {
 					node.SetPrimaryJoin()
+					fltr.SetPrimaryJoin()
 					primaryJoinKeys = eqFltr.First().Copy()
 					break
 				}
 			} else if inFltr, ok := fltr.FltrExpr().(*expression.In); ok {
 				if inFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()
+					fltr.SetPrimaryJoin()
 					primaryJoinKeys = inFltr.Second().Copy()
 					break
 				}
@@ -1216,6 +1227,21 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, alias string, filt
 	optMarkIndexFilters(keys, spans, condition, filters)
 
 	return nil
+}
+
+func getOnclauseFilter(filters base.Filters) expression.Expression {
+	terms := make(expression.Expressions, 0, len(filters))
+	for _, fltr := range filters {
+		if fltr.IsOnclause() && !fltr.IsPrimaryJoin() {
+			terms = append(terms, fltr.FltrExpr())
+		}
+	}
+	if len(terms) == 0 {
+		return nil
+	} else if len(terms) == 1 {
+		return terms[0]
+	}
+	return expression.NewAnd(terms...)
 }
 
 // if both nested-loop join and hash join are to be attempted (in case of CBO),
