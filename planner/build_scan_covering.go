@@ -144,7 +144,7 @@ outer:
 			entry := indexes[c]
 			if entry.cost <= 0.0 {
 				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.context.RequestId(),
-					entry.spans, node.Alias(), this.advisorValidate())
+					entry.spans, node.Alias(), this.advisorValidate(), this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					useCBO = false
 				} else {

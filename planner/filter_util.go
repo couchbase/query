@@ -102,7 +102,8 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 // derive IS NOT NULL filters for a keyspace based on join filters in the
 // WHERE clause as well as ON-clause of inner joins
 func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, useCBO bool,
-	indexApiVersion int, virtualIndexes []datastore.Index, advisorValidate bool) error {
+	indexApiVersion int, virtualIndexes []datastore.Index, advisorValidate bool,
+	context *PrepareContext) error {
 
 	// first gather leading index key from all indexes for this keyspace
 	indexes := _INDEX_POOL.Get()
@@ -247,7 +248,8 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 				} else {
 					keyMap[val].derive = false
 					newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,
-						jfl.IsOnclause(), newFilters, useCBO, advisorValidate)
+						jfl.IsOnclause(), newFilters, useCBO, advisorValidate,
+						context)
 				}
 			} else {
 				simple := false
@@ -273,7 +275,8 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					if min > 0 {
 						keyMap[val].derive = false
 						newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,
-							jfl.IsOnclause(), newFilters, useCBO, advisorValidate)
+							jfl.IsOnclause(), newFilters, useCBO, advisorValidate,
+							context)
 					}
 				}
 			}
@@ -288,13 +291,14 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 }
 
 func AddDerivedFilter(term expression.Expression, keyspaceNames, origKeyspaceNames map[string]string,
-	isOnclause bool, newFilters base.Filters, useCBO, advisorValidate bool) base.Filters {
+	isOnclause bool, newFilters base.Filters, useCBO, advisorValidate bool,
+	context *PrepareContext) base.Filters {
 
 	newExpr := expression.NewIsNotNull(term)
 	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, origKeyspaceNames, isOnclause, false)
 	newFilter.SetDerived()
 	if useCBO {
-		selec, _ := optExprSelec(origKeyspaceNames, newExpr, advisorValidate)
+		selec, _ := optExprSelec(origKeyspaceNames, newExpr, advisorValidate, context)
 		newFilter.SetSelec(selec)
 	}
 	newFilters = append(newFilters, newFilter)

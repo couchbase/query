@@ -322,7 +322,7 @@ func (this *builder) addMergeFilter(pred expression.Expression, alias string,
 	cost, cardinality float64) *plan.Filter {
 	if this.useCBO {
 		cost, cardinality = getFilterCostWithInput(pred, this.baseKeyspaces,
-			this.keyspaceNames, alias, cost, cardinality, this.advisorValidate())
+			this.keyspaceNames, alias, cost, cardinality, this.advisorValidate(), this.context)
 	}
 
 	return plan.NewFilter(pred, cost, cardinality)

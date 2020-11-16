@@ -252,6 +252,20 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 	ubs expression.Bindings, join bool) (
 	sargables, all, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
+	flexPred := pred
+	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
+		namedArgs := this.context.NamedArgs()
+		positionalArgs := this.context.PositionalArgs()
+		subset, err = base.ReplaceParameters(subset, namedArgs, positionalArgs)
+		if err != nil {
+			return
+		}
+		flexPred, err = base.ReplaceParameters(flexPred, namedArgs, positionalArgs)
+		if err != nil {
+			return
+		}
+	}
+
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
 	all = make(map[datastore.Index]*indexEntry, len(indexes))
 	arrays = make(map[datastore.Index]*indexEntry, len(indexes))
@@ -266,7 +280,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 				// FTS Flex index sargability
 				if flexRequest == nil {
 					flex = make(map[datastore.Index]*indexEntry, len(indexes))
-					flexRequest = this.buildFTSFlexRequest(formalizer.Keyspace(), pred, ubs)
+					flexRequest = this.buildFTSFlexRequest(formalizer.Keyspace(), flexPred, ubs)
 				}
 
 				entry, err = this.sargableFlexSearchIndex(index, flexRequest, join)
@@ -422,7 +436,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
 				cost, selec, card, e := indexScanCost(se.index, se.sargKeys,
-					this.context.RequestId(), se.spans, alias, advisorValidate)
+					this.context.RequestId(), se.spans, alias, advisorValidate,
+					this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0) {
 					useCBO = false
 				} else {
@@ -659,10 +674,12 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 
 		if useFilters {
 			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
-				se.maxKeys, underHash, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
+				se.maxKeys, underHash, this.useCBO, baseKeyspace, this.keyspaceNames,
+				advisorValidate, this.context)
 		} else {
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
-				se.maxKeys, orIsJoin, this.useCBO, baseKeyspace, this.keyspaceNames, advisorValidate)
+				se.maxKeys, orIsJoin, this.useCBO, baseKeyspace, this.keyspaceNames,
+				advisorValidate, this.context)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},
@@ -711,7 +728,7 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 	}
 
 	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
-		this.baseKeyspaces, this.advisorValidate())
+		this.baseKeyspaces, this.advisorValidate(), this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {

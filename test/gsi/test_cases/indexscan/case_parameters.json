@@ -1,0 +1,152 @@
+[
+    {
+        "testcase": "Named parameter for index WHERE clause matching. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' END"
+        },
+	"namedArgs": {"testid": "parameters"},
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $testid AND o.c1 = 10 AND o.c2 = 100",
+        "results": [
+            {
+                "id": "pa0001"
+            }
+        ]
+    },
+    {
+        "testcase": "Positional parameter for index WHERE clause matching. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' END"
+        },
+	"positionalArgs": [ "parameters" ],
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $1 AND o.c1 = 10 AND o.c2 = 100",
+        "results": [
+            {
+                "id": "pa0001"
+            }
+        ]
+    },
+    {
+        "testcase": "Named parameter for index span. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' END"
+        },
+	"namedArgs": {"testid": "parameters", "c1": 10, "c2": 100},
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $testid AND o.c1 = $c1 AND o.c2 = $c2",
+        "results": [
+            {
+                "id": "pa0001"
+            }
+        ]
+    },
+    {
+        "testcase": "Positional parameter for index span. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' END"
+        },
+	"positionalArgs": [ "parameters", 10, 100 ],
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $1 AND o.c1 = $2 AND o.c2 = $3",
+        "results": [
+            {
+                "id": "pa0001"
+            }
+        ]
+    },
+    {
+        "testcase": "Named parameter for array index span. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix2' AND v.`covers` IS NOT MISSING END"
+        },
+	"namedArgs": {"testid": "parameters", "id": 11},
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $testid AND ANY v IN o.a3 SATISFIES v.id = $id END ORDER BY META(o).id",
+        "results": [
+            {
+                "id": "pa0001"
+            },
+            {
+                "id": "pa0002"
+            },
+            {
+                "id": "pa0003"
+            },
+            {
+                "id": "pa0004"
+            },
+            {
+                "id": "pa0005"
+            },
+            {
+                "id": "pa0006"
+            }
+        ]
+    },
+    {
+        "testcase": "Positional parameter for array index span. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix2' AND v.`covers` IS NOT MISSING END"
+        },
+	"positionalArgs": [ "parameters", 11 ],
+        "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $1 AND ANY v IN o.a3 SATISFIES v.id = $2 END ORDER BY META(o).id",
+        "results": [
+            {
+                "id": "pa0001"
+            },
+            {
+                "id": "pa0002"
+            },
+            {
+                "id": "pa0003"
+            },
+            {
+                "id": "pa0004"
+            },
+            {
+                "id": "pa0005"
+            },
+            {
+                "id": "pa0006"
+            }
+        ]
+    }
+]

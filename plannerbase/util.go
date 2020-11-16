@@ -10,7 +10,9 @@
 package plannerbase
 
 import (
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 func GetStaticInt(expr expression.Expression) (int64, bool) {
@@ -25,4 +27,36 @@ func GetStaticInt(expr expression.Expression) (int64, bool) {
 	}
 
 	return 0, false
+}
+
+func ReplaceParameters(pred expression.Expression, namedArgs map[string]value.Value,
+	positionalArgs value.Values) (expression.Expression, error) {
+
+	if pred == nil || (len(namedArgs) == 0 && len(positionalArgs) == 0) {
+		return pred, nil
+	}
+
+	var err error
+
+	pred = pred.Copy()
+
+	for name, value := range namedArgs {
+		nameExpr := algebra.NewNamedParameter(name)
+		valueExpr := expression.NewConstant(value)
+		pred, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for pos, value := range positionalArgs {
+		posExpr := algebra.NewPositionalParameter(pos + 1)
+		valueExpr := expression.NewConstant(value)
+		pred, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return pred, nil
 }

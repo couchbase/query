@@ -329,9 +329,10 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	if pred == nil {
 		//This is for collecting predicates from build_scan when predicate is not disjunction.
 		if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
-			p := advisor.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspace.Filters()),
-				getFilterInfos(baseKeyspace.JoinFilters()), baseKeyspace.Onclause(), baseKeyspace.DnfPred(),
-				false, nil)
+			p := advisor.NewKeyspaceInfo(keyspace, node,
+				getFilterInfos(baseKeyspace.Filters(), this.context),
+				getFilterInfos(baseKeyspace.JoinFilters(), this.context),
+				baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		} else {
 			pred = baseKeyspace.DnfPred()
@@ -352,7 +353,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 
 				_, err := ClassifyExpr(op, baseKeyspacesCopy, this.keyspaceNames,
-					ansijoin, this.useCBO, advisorValidate)
+					ansijoin, this.useCBO, advisorValidate, this.context)
 				if err != nil {
 					continue outer
 				}
@@ -361,23 +362,25 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				if !ansijoin {
 					addUnnestPreds(baseKeyspacesCopy, bk)
 				}
-				p := advisor.NewKeyspaceInfo(keyspace, node, getFilterInfos(bk.Filters()),
-					getFilterInfos(bk.JoinFilters()), baseKeyspace.Onclause(),
-					op, true, predConjunc)
+				p := advisor.NewKeyspaceInfo(keyspace, node,
+					getFilterInfos(bk.Filters(), this.context),
+					getFilterInfos(bk.JoinFilters(), this.context),
+					baseKeyspace.Onclause(), op, true, predConjunc)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
 			//This is for collecting predicates for build_join_index.
 			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 			_, err := ClassifyExpr(pred, baseKeyspacesCopy, this.keyspaceNames,
-				false, this.useCBO, advisorValidate)
+				false, this.useCBO, advisorValidate, this.context)
 			if err != nil {
 				return err
 			}
 			baseKeyspaceCopy, _ := baseKeyspacesCopy[node.Alias()]
-			p := advisor.NewKeyspaceInfo(keyspace, node, getFilterInfos(baseKeyspaceCopy.Filters()),
-				getFilterInfos(baseKeyspaceCopy.JoinFilters()), baseKeyspace.Onclause(),
-				pred, false, nil)
+			p := advisor.NewKeyspaceInfo(keyspace, node,
+				getFilterInfos(baseKeyspaceCopy.Filters(), this.context),
+				getFilterInfos(baseKeyspaceCopy.JoinFilters(), this.context),
+				baseKeyspace.Onclause(), pred, false, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		}
 	}
@@ -423,10 +426,27 @@ func getAndTerms(pred *expression.And) expression.Expressions {
 	return res
 }
 
-func getFilterInfos(filters base.Filters) base.Filters {
+func getFilterInfos(filters base.Filters, context *PrepareContext) base.Filters {
 	exprs := make(base.Filters, 0, len(filters))
 	for _, f := range filters {
-		exprs = append(exprs, f.Copy())
+		var fl *base.Filter
+		if context != nil && (len(context.NamedArgs()) > 0 || len(context.PositionalArgs()) > 0) {
+			namedArgs := context.NamedArgs()
+			positionalArgs := context.PositionalArgs()
+			fltrExpr, err := base.ReplaceParameters(f.FltrExpr(), namedArgs, positionalArgs)
+			if err != nil {
+				continue
+			}
+			origExpr, err := base.ReplaceParameters(f.OrigExpr(), namedArgs, positionalArgs)
+			if err != nil {
+				continue
+			}
+			fl = base.NewFilter(fltrExpr, origExpr, f.Keyspaces(), f.OrigKeyspaces(),
+				f.IsOnclause(), f.IsJoin())
+		} else {
+			fl = f.Copy()
+		}
+		exprs = append(exprs, fl)
 	}
 	return exprs
 }

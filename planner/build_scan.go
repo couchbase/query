@@ -109,7 +109,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
 				err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
-					this.context.IndexApiVersion(), this.getIdxCandidates(), this.advisorValidate())
+					this.context.IndexApiVersion(), this.getIdxCandidates(),
+					this.advisorValidate(), this.context)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -488,30 +489,10 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 }
 
 func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (
-	constant value.Value, err error) {
+	value.Value, error) {
 
-	pred = pred.Copy()
-
-	for name, value := range this.context.NamedArgs() {
-		nameExpr := algebra.NewNamedParameter(name)
-		valueExpr := expression.NewConstant(value)
-		pred, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
-		if err != nil {
-			return
-		}
-	}
-
-	for pos, value := range this.context.PositionalArgs() {
-		posExpr := algebra.NewPositionalParameter(pos + 1)
-		valueExpr := expression.NewConstant(value)
-		pred, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
-		if err != nil {
-			return
-		}
-	}
-
-	constant, err = ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO, this.advisorValidate())
-	return
+	return ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO,
+		this.advisorValidate(), this.context)
 }
 
 func (this *builder) processWhere(where expression.Expression) (err error) {

@@ -110,7 +110,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 					return nil, err
 				}
 			}
-			selec, _ = optExprSelec(keyspaces, newExpr, this.advisorValidate)
+			selec, _ = optExprSelec(keyspaces, newExpr, this.advisorValidate, this.context)
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		range2.SetFlag(plan.RANGE_FROM_IN_EXPR)

@@ -20,13 +20,15 @@ import (
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
 func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
-	keyspaceNames map[string]string, isOnclause, doSelec, advisorValidate bool) (value.Value, error) {
+	keyspaceNames map[string]string, isOnclause, doSelec, advisorValidate bool,
+	context *PrepareContext) (value.Value, error) {
 
 	if len(baseKeyspaces) == 0 {
 		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
-	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec, advisorValidate)
+	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec,
+		advisorValidate, context)
 	_, err := expr.Accept(classifier)
 	if err != nil {
 		return nil, err
@@ -58,10 +60,11 @@ type exprClassifier struct {
 	constant        value.Value
 	doSelec         bool
 	advisorValidate bool
+	context         *PrepareContext
 }
 
 func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
-	isOnclause, doSelec, advisorValidate bool) *exprClassifier {
+	isOnclause, doSelec, advisorValidate bool, context *PrepareContext) *exprClassifier {
 
 	return &exprClassifier{
 		baseKeyspaces:   baseKeyspaces,
@@ -69,6 +72,7 @@ func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, keyspaceName
 		isOnclause:      isOnclause,
 		doSelec:         doSelec,
 		advisorValidate: advisorValidate,
+		context:         context,
 	}
 }
 
@@ -453,7 +457,8 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
 				this.isOnclause, len(origKeyspaces) > 1)
 			if this.doSelec && !baseKspace.IsPrimaryUnnest() {
-				selec, arrSelec := optExprSelec(origKeyspaces, dnfExpr, this.advisorValidate)
+				selec, arrSelec := optExprSelec(origKeyspaces, dnfExpr,
+					this.advisorValidate, this.context)
 				filter.SetSelec(selec)
 				filter.SetArraySelec(arrSelec)
 				setAdjSel := true
@@ -461,7 +466,8 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 					// for ANY and EVERY predicate, also calculate selectivity
 					// for just ANY (used in index scan)
 					any := expression.NewAny(anyEvery.Bindings(), anyEvery.Satisfies())
-					selec1, arrSelec1 := optExprSelec(origKeyspaces, any, this.advisorValidate)
+					selec1, arrSelec1 := optExprSelec(origKeyspaces, any,
+						this.advisorValidate, this.context)
 					if selec1 > 0.0 && arrSelec1 > 0.0 {
 						filter.SetArraySelec(arrSelec1)
 						filter.SetAdjSelec(selec / selec1)
@@ -521,7 +527,8 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, this.isOnclause, this.doSelec, this.advisorValidate)
+		_, err := ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, this.isOnclause,
+			this.doSelec, this.advisorValidate, this.context)
 		if err != nil {
 			return nil, nil, false, err
 		}

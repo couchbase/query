@@ -21,6 +21,7 @@ type sarg struct {
 	isJoin          bool
 	doSelec         bool
 	advisorValidate bool
+	context         *PrepareContext
 }
 
 func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
@@ -80,7 +81,7 @@ func (this *sarg) getSelec(pred expression.Expression) float64 {
 		keyspaces = make(map[string]string, 1)
 		keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
 	}
-	sel, arrSel := optExprSelec(keyspaces, pred, this.advisorValidate)
+	sel, arrSel := optExprSelec(keyspaces, pred, this.advisorValidate, this.context)
 
 	if array {
 		return arrSel

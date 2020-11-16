@@ -28,8 +28,8 @@ func optDocCount(keyspace datastore.Keyspace) float64 {
 	return OPT_CARD_NOT_AVAIL
 }
 
-func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool) (
-	float64, float64) {
+func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool,
+	context *PrepareContext) (float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
@@ -50,12 +50,13 @@ func optMinCost() float64 {
 	return OPT_COST_NOT_AVAIL
 }
 
-func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
+func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, context *PrepareContext) (
+	cost, cardinality float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias string, advisorValidate bool) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string, advisorValidate bool, context *PrepareContext) (cost float64, sel float64, card float64, err error) {
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 
@@ -116,7 +117,7 @@ func getLookupJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTe
 
 func getIndexJoinCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	leftKeyspaces []string, rightKeyspace string, covered bool, index datastore.Index,
-	requestId string, advisorValidate bool) (float64, float64) {
+	requestId string, advisorValidate bool, context *PrepareContext) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -127,7 +128,7 @@ func getLookupNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTe
 
 func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTerm,
 	leftKeyspaces []string, rightKeyspace string, index datastore.Index,
-	requestId string, advisorValidate bool) (float64, float64) {
+	requestId string, advisorValidate bool, context *PrepareContext) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -147,13 +148,13 @@ func getSimpleFilterCost(baseKeyspaces map[string]*base.BaseKeyspace, alias stri
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
-	alias string, advisorValidate bool) (float64, float64) {
+	alias string, advisorValidate bool, context *PrepareContext) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func getFilterCostWithInput(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
 	keyspaceNames map[string]string, alias string, cost, cardinality float64,
-	advisorValidate bool) (float64, float64) {
+	advisorValidate bool, context *PrepareContext) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -174,13 +175,13 @@ func getLimitCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Opera
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
-	keyspaces map[string]string, advisorValidate bool) float64 {
+	keyspaces map[string]string, advisorValidate bool, context *PrepareContext) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
 	nTerms int, alias string, baseKeyspaces map[string]*base.BaseKeyspace,
-	advisorValidate bool) map[datastore.Index]*indexEntry {
+	advisorValidate bool, context *PrepareContext) map[datastore.Index]*indexEntry {
 	return sargables
 }
 

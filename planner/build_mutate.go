@@ -113,7 +113,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, this.where,
 				this.baseKeyspaces, this.keyspaceNames, term.Alias(),
-				this.advisorValidate())
+				this.advisorValidate(), this.context)
 		}
 
 		filter := plan.NewFilter(this.where, cost, cardinality)

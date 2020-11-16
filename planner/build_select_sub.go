@@ -340,7 +340,7 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 			// Predicate does NOT depend on LET
 			if this.useCBO {
 				cost, cardinality = getFilterCost(this.lastOp, pred,
-					this.baseKeyspaces, this.keyspaceNames, "", advisorValidate)
+					this.baseKeyspaces, this.keyspaceNames, "", advisorValidate, this.context)
 			}
 			filter := plan.NewFilter(pred, cost, cardinality)
 			if this.useCBO {
@@ -362,7 +362,7 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 	if pred != nil {
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
-				this.keyspaceNames, "", advisorValidate)
+				this.keyspaceNames, "", advisorValidate, this.context)
 		}
 		this.addSubChildren(plan.NewFilter(pred, cost, cardinality))
 	}

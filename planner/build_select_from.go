@@ -267,7 +267,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 				cost, cardinality = getFilterCost(this.lastOp, filter,
 					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
-					this.advisorValidate())
+					this.advisorValidate(), this.context)
 			}
 
 			// Add filter as a separate Filter operator since Fetch is already
@@ -318,7 +318,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		if this.useCBO {
 			cost, cardinality = getFilterCost(this.lastOp, filter,
 				this.baseKeyspaces, this.keyspaceNames, node.Alias(),
-				this.advisorValidate())
+				this.advisorValidate(), this.context)
 		}
 		this.addSubChildren(plan.NewFilter(filter, cost, cardinality))
 	}
