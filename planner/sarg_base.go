@@ -19,6 +19,7 @@ type sarg struct {
 	baseKeyspace *base.BaseKeyspace
 	isJoin       bool
 	doSelec      bool
+	context      *PrepareContext
 }
 
 func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
@@ -70,7 +71,7 @@ func (this *sarg) getSelec(pred expression.Expression) float64 {
 	// if this is a subterm of an OR, it won't be in filters
 	keyspaces := make(map[string]string, 1)
 	keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
-	sel, arrSel := optExprSelec(keyspaces, pred)
+	sel, arrSel := optExprSelec(keyspaces, pred, this.context)
 
 	if array {
 		return arrSel

@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
@@ -34,6 +35,16 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 	}
 
 	var array expression.Expressions
+
+	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
+		replaced, err := base.ReplaceParameters(pred, this.context.NamedArgs(), this.context.PositionalArgs())
+		if err != nil {
+			return nil, err
+		}
+		if repIn, ok := replaced.(*expression.In); ok {
+			pred = repIn
+		}
+	}
 
 	aval := pred.Second().Value()
 	if aval != nil {
@@ -97,7 +108,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 		selec := OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			selec, _ = optExprSelec(keyspaces, static)
+			selec, _ = optExprSelec(keyspaces, static, this.context)
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		// set exact to true to allow query parameters, join fields, etc to be able

@@ -20,14 +20,14 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func optCalcSelectivity(filter *base.Filter) {
-	optimizer.CalcSelectivity(filter)
+func optCalcSelectivity(filter *base.Filter, context *PrepareContext) {
+	optimizer.CalcSelectivity(filter, context)
 	return
 }
 
-func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
+func optExprSelec(keyspaces map[string]string, pred expression.Expression, context *PrepareContext) (
 	float64, float64) {
-	sel, arrSel, def := optimizer.ExprSelec(keyspaces, pred)
+	sel, arrSel, def := optimizer.ExprSelec(keyspaces, pred, context)
 	if def {
 		return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 	}
@@ -47,29 +47,32 @@ func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
 	optimizer.MarkIndexFilters(keys, spans, condition, filters)
 }
 
-func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
-	return optimizer.CalcPrimaryIndexScanCost(primary, requestId)
+func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, context *PrepareContext) (
+	cost, cardinality float64) {
+	return optimizer.CalcPrimaryIndexScanCost(primary, requestId, context)
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string, context *PrepareContext) (
+	cost float64, sel float64, card float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		return optimizer.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias)
+		return optimizer.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias, context)
 	case *IntersectSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false)
+		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false, context)
 	case *UnionSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, true)
+		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, true, context)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
 func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans []SargSpans, alias string, union bool) (cost float64, sel float64, card float64, err error) {
+	spans []SargSpans, alias string, union bool, context *PrepareContext) (
+	cost float64, sel float64, card float64, err error) {
 	var nrows float64
 	for i, span := range spans {
-		tcost, tsel, tcard, e := indexScanCost(index, sargKeys, requestId, span, alias)
+		tcost, tsel, tcard, e := indexScanCost(index, sargKeys, requestId, span, alias, context)
 		if e != nil {
 			return tcost, tsel, tcard, e
 		}
@@ -117,7 +120,7 @@ func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (flo
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace) (float64, float64) {
+	baseKeyspaces map[string]*base.BaseKeyspace, context *PrepareContext) (float64, float64) {
 
 	// perform expression transformation, but no DNF transformation
 	var err error
@@ -128,7 +131,7 @@ func getFilterCost(lastOp plan.Operator, expr expression.Expression,
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	return optimizer.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces)
+	return optimizer.CalcFilterCost(lastOp, dnfExpr, baseKeyspaces, context)
 }
 
 func getLetCost(lastOp plan.Operator) (float64, float64) {
@@ -136,8 +139,8 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
-	keyspaces map[string]string) float64 {
-	return optimizer.GetUnnestPredSelec(pred, variable, mapping, keyspaces)
+	keyspaces map[string]string, context *PrepareContext) float64 {
+	return optimizer.GetUnnestPredSelec(pred, variable, mapping, keyspaces, context)
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, indexes map[datastore.Index]*base.IndexCost) map[datastore.Index]*base.IndexCost {

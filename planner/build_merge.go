@@ -201,7 +201,7 @@ func (this *builder) addMergeFilter(pred expression.Expression) *plan.Filter {
 	cardinality := float64(OPT_CARD_NOT_AVAIL)
 
 	if this.useCBO {
-		cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces)
+		cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces, this.context)
 	}
 
 	filter := plan.NewFilter(pred, cost, cardinality)

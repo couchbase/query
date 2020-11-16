@@ -19,11 +19,11 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func optCalcSelectivity(filter *base.Filter) {
+func optCalcSelectivity(filter *base.Filter, context *PrepareContext) {
 	return
 }
 
-func optExprSelec(keyspaces map[string]string, pred expression.Expression) (
+func optExprSelec(keyspaces map[string]string, pred expression.Expression, context *PrepareContext) (
 	float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
@@ -41,12 +41,14 @@ func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
 	// no-op
 }
 
-func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string) (cost, cardinality float64) {
+func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, context *PrepareContext) (
+	cost, cardinality float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias string) (cost float64, sel float64, card float64, err error) {
+	spans SargSpans, alias string, context *PrepareContext) (
+	cost float64, sel float64, card float64, err error) {
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 
@@ -76,7 +78,7 @@ func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (flo
 }
 
 func getFilterCost(lastOp plan.Operator, expr expression.Expression,
-	baseKeyspaces map[string]*base.BaseKeyspace) (float64, float64) {
+	baseKeyspaces map[string]*base.BaseKeyspace, context *PrepareContext) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -85,7 +87,7 @@ func getLetCost(lastOp plan.Operator) (float64, float64) {
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
-	keyspaces map[string]string) float64 {
+	keyspaces map[string]string, context *PrepareContext) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 

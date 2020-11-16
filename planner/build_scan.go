@@ -476,27 +476,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (
 	constant value.Value, err error) {
 
-	pred = pred.Copy()
-
-	for name, value := range this.context.NamedArgs() {
-		nameExpr := algebra.NewNamedParameter(name)
-		valueExpr := expression.NewConstant(value)
-		pred, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
-		if err != nil {
-			return
-		}
-	}
-
-	for pos, value := range this.context.PositionalArgs() {
-		posExpr := algebra.NewPositionalParameter(pos + 1)
-		valueExpr := expression.NewConstant(value)
-		pred, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
-		if err != nil {
-			return
-		}
-	}
-
-	constant, err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause, this.useCBO)
+	constant, err = ClassifyExpr(pred, this.baseKeyspaces, isOnclause, this.useCBO, this.context)
 	return
 }
 

@@ -444,12 +444,6 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			ordered = o.(bool)
 		}
 
-		if explain {
-			if errstring = checkExplain(qc, namespace, statements, c, ordered, fname, i); errstring != nil {
-				return
-			}
-		}
-
 		fin_stmt = strconv.Itoa(i) + ": " + statements
 		var resultsActual []interface{}
 		var errActual errors.Error
@@ -481,6 +475,12 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				for user, password := range uv {
 					userArgs[user] = password.(string)
 				}
+			}
+		}
+
+		if explain {
+			if errstring = checkExplain(qc, namespace, statements, c, ordered, namedArgs, positionalArgs, fname, i); errstring != nil {
+				return
 			}
 		}
 
@@ -630,7 +630,7 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 }
 
 func checkExplain(qc *MockServer, namespace string, statement string, c map[string]interface{}, ordered bool,
-	fname string, i int) (errstring error) {
+	namedArgs map[string]value.Value, positionalArgs value.Values, fname string, i int) (errstring error) {
 	var ev map[string]interface{}
 
 	e, ok := c["explain"]
@@ -648,6 +648,7 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 	ed, dok := ev["disabled"]
 	es, sok := ev["statement"]
 	er, rok := ev["results"]
+	ea, aok := ev["use_args"]
 
 	if dok {
 		if disabled := ed.(bool); disabled {
@@ -667,11 +668,23 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 		erExpected, rok = er.([]interface{})
 	}
 
+	useArgs := false
+	if aok {
+		var bv bool
+		if bv, aok = ea.(bool); aok {
+			useArgs = bv
+		}
+	}
+	if !useArgs {
+		namedArgs = nil
+		positionalArgs = nil
+	}
+
 	explainStmt := "EXPLAIN " + statement
-	resultsActual, _, errActual := Run(qc, explainStmt, namespace, nil, nil, nil)
+	resultsActual, _, errActual := Run(qc, explainStmt, namespace, namedArgs, positionalArgs, nil)
 	if errActual != nil || len(resultsActual) != 1 {
-		return go_er.New(fmt.Sprintf("(%v) error actual: %#v"+
-			", for case file: %v, index: %v", explainStmt, resultsActual, fname, i))
+		return go_er.New(fmt.Sprintf("(%v) error actual: code - %d, msg - %s"+
+			", for case file: %v, index: %v", explainStmt, errActual.Code(), errActual.Error(), fname, i))
 	}
 
 	namedParams := make(map[string]value.Value, 1)
@@ -679,8 +692,8 @@ func checkExplain(qc *MockServer, namespace string, statement string, c map[stri
 
 	resultsActual, _, errActual = Run(qc, eStmt, namespace, namedParams, nil, nil)
 	if errActual != nil {
-		return go_er.New(fmt.Sprintf("unexpected err: %v, statement: %v"+
-			", for case file: %v, index: %v", errActual, eStmt, fname, i))
+		return go_er.New(fmt.Sprintf("unexpected err: code - %d, msg - %s, statement: %v"+
+			", for case file: %v, index: %v", errActual.Code(), errActual.Error(), eStmt, fname, i))
 	}
 
 	if rok {
