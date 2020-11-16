@@ -2913,7 +2913,7 @@ UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_index_u
     $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($7)}, $8, $9)
 }
 |
-UPDATE STATISTICS FOR INDEX index_name ON simple_named_keyspace_ref opt_index_using opt_infer_ustat_with
+UPDATE STATISTICS FOR INDEX index_name ON named_keyspace_ref opt_index_using opt_infer_ustat_with
 {
     $$ = algebra.NewUpdateStatisticsIndex($7, expression.Expressions{expression.NewIdentifier($5)}, $8, $9)
 }
@@ -2943,7 +2943,7 @@ ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer
     $$ = algebra.NewUpdateStatisticsIndex($3, expression.Expressions{expression.NewIdentifier($5)}, $6, $7)
 }
 |
-ANALYZE INDEX index_name ON simple_named_keyspace_ref opt_index_using opt_infer_ustat_with
+ANALYZE INDEX index_name ON named_keyspace_ref opt_index_using opt_infer_ustat_with
 {
     $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($3)}, $6, $7)
 }
