@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/scheduler"
@@ -73,6 +74,29 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 }
 
 func (this *Advisor) Indexable() bool {
+	return false
+}
+
+func (this *Advisor) Privileges() *auth.Privileges {
+	// For session management user must have priviledge to
+	// access system keyspaces.
+	// Priledges for underlying statements are checked at
+	// the time of the ADVISE statement
+	privs := auth.NewPrivileges()
+	if this.isSession() {
+		privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+	}
+	return privs
+}
+
+func (this *Advisor) isSession() bool {
+	arg := this.operands[0].Value()
+	if arg != nil && arg.Type() == value.OBJECT {
+		actual := arg.Actual().(map[string]interface{})
+		if _, ok := actual["action"]; ok {
+			return true
+		}
+	}
 	return false
 }
 
