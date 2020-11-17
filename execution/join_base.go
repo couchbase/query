@@ -132,11 +132,11 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 				var joined value.AnnotatedValue
 				if foundKeys > 1 || (outer && onFilter != nil) {
 					joined = value.NewAnnotatedValue(item.Value.Copy())
-				} else {
-					joined = item.Value
 					if useQuota {
 						size += joined.Size()
 					}
+				} else {
+					joined = item.Value
 				}
 				foundKeys--
 
