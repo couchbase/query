@@ -356,7 +356,7 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 
 		_, _, err = this.ExecuteTranStatement(tranStmt, !this.txImplicit)
 		if err != nil && tranStmt == "COMMIT" && this.txContext != nil {
-			_, _, err = this.ExecuteTranStatement("ROLLBACK", !this.txImplicit)
+			this.ExecuteTranStatement("ROLLBACK", !this.txImplicit)
 		}
 
 		if this.txContext != nil {

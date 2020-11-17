@@ -210,6 +210,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 
 	// Release transaction mutations
 	txMutations.DeleteAll(true)
+	txContext.SetTxMutations(nil)
 
 	if err != nil {
 		return errors.NewCommitTransactionError(err, diag)
