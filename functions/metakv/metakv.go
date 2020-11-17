@@ -163,7 +163,7 @@ func (name *metaEntry) IsGlobal() bool {
 }
 
 func (name *metaEntry) QueryContext() string {
-	return name.path.FullName()
+	return name.path.QueryContext()
 }
 
 func (name *metaEntry) Signature(object map[string]interface{}) {
