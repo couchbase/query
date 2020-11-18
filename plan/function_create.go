@@ -94,7 +94,7 @@ func (this *CreateFunction) UnmarshalJSON(bytes []byte) error {
 	}
 	this.body, newErr = resolver.MakeBody(this.name.Name(), _unmarshalled.Definition)
 	if newErr != nil {
-		return newErr.Cause()
+		return newErr.GetICause()
 	}
 	this.replace = _unmarshalled.Replace
 	return nil

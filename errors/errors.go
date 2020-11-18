@@ -41,14 +41,15 @@ type Error interface {
 	error
 	Code() int32
 	TranslationKey() string
-	Cause() error
+	GetICause() error
 	Level() int
 	IsFatal() bool
 	IsWarning() bool
 	OnceOnly() bool
 	Object() map[string]interface{}
 	Retry() bool
-	Diagnostics() interface{}
+	Cause() interface{}
+	SetCause(cause interface{})
 }
 
 type ErrorChannel chan Error
@@ -99,7 +100,7 @@ type err struct {
 	level          int
 	onceOnly       bool
 	retry          bool // Retrying this query might be useful.
-	diagnostics    interface{}
+	cause          interface{}
 }
 
 func (e *err) Error() string {
@@ -122,13 +123,13 @@ func (e *err) Object() map[string]interface{} {
 		"message": e.InternalMsg,
 	}
 	if e.ICause != nil {
-		m["cause"] = e.ICause.Error()
+		m["icause"] = e.ICause.Error()
 	}
 	if e.retry {
 		m["retry"] = true
 	}
-	if e.diagnostics != nil {
-		m["diagnostics"] = e.diagnostics
+	if e.cause != nil {
+		m["cause"] = e.cause
 	}
 	return m
 }
@@ -144,12 +145,13 @@ func (e *err) MarshalJSON() ([]byte, error) {
 
 func (e *err) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Caller      string      `json:"caller"`
-		Code        int32       `json:"code"`
-		Key         string      `json:"key"`
-		Message     string      `json:"message"`
-		Retry       bool        `json:"retry"`
-		Diagnostics interface{} `json:"diagnostics"`
+		Caller  string      `json:"caller"`
+		Code    int32       `json:"code"`
+		ICause  string      `json:"icasue"`
+		Key     string      `json:"key"`
+		Message string      `json:"message"`
+		Retry   bool        `json:"retry"`
+		Cause   interface{} `json:"cause"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -162,7 +164,10 @@ func (e *err) UnmarshalJSON(body []byte) error {
 	e.InternalMsg = _unmarshalled.Message
 	e.InternalCaller = _unmarshalled.Caller
 	e.retry = _unmarshalled.Retry
-	e.diagnostics = _unmarshalled.Diagnostics
+	e.cause = _unmarshalled.Cause
+	if _unmarshalled.ICause != "" {
+		e.ICause = fmt.Errorf("%v", _unmarshalled.ICause)
+	}
 	return nil
 }
 
@@ -186,7 +191,7 @@ func (e *err) TranslationKey() string {
 	return e.IKey
 }
 
-func (e *err) Cause() error {
+func (e *err) GetICause() error {
 	return e.ICause
 }
 
@@ -198,8 +203,12 @@ func (e *err) Retry() bool {
 	return e.retry
 }
 
-func (e *err) Diagnostics() interface{} {
-	return e.diagnostics
+func (e *err) Cause() interface{} {
+	return e.cause
+}
+
+func (e *err) SetCause(cause interface{}) {
+	e.cause = cause
 }
 
 // only put errors in the reserved range here (7000-9999)

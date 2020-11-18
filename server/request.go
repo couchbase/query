@@ -649,8 +649,14 @@ func (this *BaseRequest) Abort(err errors.Error) {
 
 func (this *BaseRequest) Error(err errors.Error) {
 	this.Lock()
+	defer this.Unlock()
+	// don't add duplicate errors
+	for _, e := range this.errors {
+		if err.Code() != 0 && err.Code() == e.Code() && err.Error() == e.Error() {
+			return
+		}
+	}
 	this.errors = append(this.errors, err)
-	this.Unlock()
 }
 
 func (this *BaseRequest) Warning(wrn errors.Error) {

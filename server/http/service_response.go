@@ -404,8 +404,8 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 	if err.Retry() {
 		m["retry"] = true
 	}
-	if err.Diagnostics() != nil {
-		m["diagnstics"] = err.Diagnostics()
+	if err.Cause() != nil {
+		m["cause"] = err.Cause()
 	}
 
 	var er error

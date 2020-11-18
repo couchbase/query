@@ -70,13 +70,13 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		defer func() {
 			// protect from the panics
 			if r := recover(); r != nil {
-				err = errors.NewStartTransactionError(fmt.Errorf("Panic: %v", r))
+				err = errors.NewStartTransactionError(fmt.Errorf("Panic: %v", r), nil)
 			}
 		}()
 
 		gcAgentTxs := s.gcClient.Transactions()
 		if gcAgentTxs == nil {
-			return nil, errors.NewStartTransactionError(gcagent.ErrNoInitTransactions)
+			return nil, errors.NewStartTransactionError(gcagent.ErrNoInitTransactions, nil)
 		}
 
 		txnData := txContext.TxData()
@@ -84,32 +84,35 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		var expiryTime time.Time
 
 		resume, terr := isResumeTransaction(txnData)
-		if terr == nil {
-			if resume {
-				transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
+		if terr != nil {
+			return nil, errors.NewStartTransactionError(terr, nil)
+		}
+
+		if resume {
+			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
+			expiryTime = time.Now().Add(txContext.TxTimeout())
+		} else {
+			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
+				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
+			}
+
+			txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
+				txConfig.CustomATRLocation.Agent, terr = AtrCollectionAgentPovider(txContext.AtrCollection())
+			if terr != nil {
+				return nil, errors.NewStartTransactionError(terr, nil)
+			}
+
+			transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
+			if terr == nil {
+				terr = transaction.NewAttempt()
 				expiryTime = time.Now().Add(txContext.TxTimeout())
-			} else {
-				txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
-					DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
-				}
-
-				txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
-					txConfig.CustomATRLocation.Agent, terr = AtrCollectionAgentPovider(txContext.AtrCollection())
-				if terr != nil {
-					return nil, errors.NewStartTransactionError(terr)
-				}
-
-				transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
-				if terr == nil {
-					terr = transaction.NewAttempt()
-					expiryTime = time.Now().Add(txContext.TxTimeout())
-				}
 			}
 		}
 
 		// no detach for resume
 		if terr != nil {
-			return nil, errors.NewStartTransactionError(terr)
+			e, c := errorType(terr)
+			return nil, errors.NewStartTransactionError(e, c)
 		}
 
 		if resume {
@@ -166,14 +169,14 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	}
 
 	var err, cerr error
-	var diag interface{}
 
 	transaction := txMutations.Transaction()
 	txId := transaction.Attempt().ID
 	logging.Tracef("=====%v=====Commit begin write========", txId)
 	// write all mutations to KV
 	if err = txMutations.Write(context.GetReqDeadline()); err != nil {
-		return errors.NewCommitTransactionError(err, diag)
+		e, c := errorType(err)
+		return errors.NewCommitTransactionError(e, c)
 	}
 	logging.Tracef("=====%v=====Commit end   write========", txId)
 
@@ -183,7 +186,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		defer func() {
 			// protect from the panics
 			if r := recover(); r != nil {
-				errOut = errors.NewCommitTransactionError(fmt.Errorf("Panic: %v", r), diag)
+				errOut = errors.NewCommitTransactionError(fmt.Errorf("Panic: %v", r), nil)
 			}
 		}()
 
@@ -213,7 +216,8 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
-		return errors.NewCommitTransactionError(err, diag)
+		e, c := errorType(err)
+		return errors.NewCommitTransactionError(e, c)
 	}
 
 	return nil
@@ -244,7 +248,6 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 	}
 
 	var err, cerr error
-	var diag interface{}
 
 	transaction := txMutations.Transaction()
 	if transaction != nil {
@@ -253,7 +256,7 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 		defer func() {
 			// protect from the panics
 			if r := recover(); r != nil {
-				errOut = errors.NewRollbackTransactionError(fmt.Errorf("Panic: %v", r), diag)
+				errOut = errors.NewRollbackTransactionError(fmt.Errorf("Panic: %v", r), nil)
 			}
 		}()
 
@@ -279,7 +282,8 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
-		return errors.NewRollbackTransactionError(err, diag)
+		e, c := errorType(err)
+		return errors.NewRollbackTransactionError(e, c)
 	}
 
 	return nil
@@ -389,7 +393,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			// Transformed SDK REPLACE, DELETE with CAS don't read the document
 			k := keys[0]
 			if len(fkeys) == 0 && txMutations.IsDeletedMutation(qualifiedName, k) {
-				return errors.Errors{errors.NewKeyNotFoundError(fmt.Errorf("%v", k))}
+				return errors.Errors{errors.NewKeyNotFoundError(k, nil)}
 			} else if len(fkeys) == 1 {
 				mvs[k] = &MutationValue{Val: value.NewValue(nil), Cas: sdkCas, TxnMeta: sdkTxnMeta}
 				fkeys = fkeys[0:0]
@@ -420,9 +424,20 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
 		if len(errs) > 0 {
 			if notFoundErr && gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) {
-				return errors.Errors{errors.NewKeyNotFoundError(errs[0])}
+				_, c := errorType(errs[0])
+				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], c)}
 			}
-			return errors.NewErrors(errs, "txFetch")
+
+			var rerrs errors.Errors
+			for _, e := range errs {
+				e1, c := errorType(e)
+				rerr := errors.NewError(e1, "txFetch")
+				if c != nil {
+					rerr.SetCause(c)
+				}
+				rerrs = append(rerrs, rerr)
+			}
+			return rerrs
 		}
 	}
 
@@ -615,9 +630,30 @@ func CollectionAgentProvider(bucketName, scpName, collName string) (agent *gocbc
 	}
 
 	if cerr = coll.bucket.txReady(nil); cerr != nil {
-		return nil, cerr.Cause()
+		return nil, cerr.GetICause()
 	}
 	return coll.bucket.agentProvider.Agent(), nil
+}
+
+func errorType(err error) (error, interface{}) {
+	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+		// TODO:: Until gocbcore-transactions provides API populate the info.
+		c := make(map[string]interface{}, 5)
+		if terr.Retry() {
+			c["retry"] = terr.Retry()
+		}
+
+		if terr.Rollback() {
+			c["rollback"] = terr.Rollback()
+		}
+
+		c["raise"] = terr.ToRaise()
+		c["class"] = terr.ErrorClass()
+		c["msg"] = terr.Unwrap().Error()
+
+		return nil, c
+	}
+	return err, nil
 }
 
 func initGocb(s *store) (err errors.Error) {

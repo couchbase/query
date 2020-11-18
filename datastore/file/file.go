@@ -456,7 +456,7 @@ func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 		item, e := b.fetchOne(k)
 
 		if e != nil {
-			if os.IsNotExist(e.Cause()) {
+			if os.IsNotExist(e.GetICause()) {
 				// file doesn't exist => key denotes non-existent doc => ignore it
 				continue
 			}

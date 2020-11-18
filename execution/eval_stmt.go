@@ -324,7 +324,7 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 			}
 		}
 		if txId == "" {
-			return "", nil, errors.NewStartTransactionError(fmt.Errorf("Implicit Transaction"))
+			return "", nil, errors.NewStartTransactionError(fmt.Errorf("Implicit Transaction"), nil)
 		}
 	}
 
