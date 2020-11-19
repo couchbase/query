@@ -70,7 +70,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c21_length_a21_c22 ON `shellTest`(`c21`,length((`a21`)),`c22`)",
+                  "index_statement": "CREATE INDEX adv_c21_length_a21_c22 ON `shellTest`(`c21`,length(`a21`),`c22`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than, 5. less than/greater than."
                 }

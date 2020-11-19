@@ -120,13 +120,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower(`id`))",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower((`id`)))",
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower(`id`))",
                   "keyspace_alias": "shellTest_st",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 5. less than/greater than."
                 }

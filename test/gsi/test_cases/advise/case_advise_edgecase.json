@@ -125,7 +125,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_object_pairs_productIds_name_array_count_val_metada4251025607 ON `shellTest`(DISTINCT ARRAY [`p`.`name`, 0 < array_count((`p`.`val`)), `metadata`.`configurations`.[`p`.`name`].`enabled`, array_contains(ifmissingornull((`deletedFor`), []), (`p`.`name`))] FOR p in object_pairs((`productIds`)) END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_object_pairs_productIds_name_array_count_val_metada4251025607 ON `shellTest`(DISTINCT ARRAY [`p`.`name`, 0 < array_count((`p`.`val`)), `metadata`.`configurations`.[`p`.`name`].`enabled`, array_contains(ifmissingornull(`deletedFor`, []), (`p`.`name`))] FOR p in object_pairs(`productIds`) END)",
                   "keyspace_alias": "shellTest_c",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
@@ -296,7 +296,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_guestCode_checkinTime_array_distinct_ifmissing_array_star_rooms_num ON `shellTest`(`guestCode`,`checkinTime`,array_distinct(ifmissing((array_star((`rooms`)).`num`), [])))",
+                  "index_statement": "CREATE INDEX adv_guestCode_checkinTime_array_distinct_ifmissing_array_star_rooms_num ON `shellTest`(`guestCode`,`checkinTime`,array_distinct(ifmissing((array_star(`rooms`).`num`), [])))",
                   "keyspace_alias": "shellTest_p"
                 }
               ],
@@ -326,7 +326,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_rooms_level_size_num_checkinTime_guestCode_array_di1747996179 ON `shellTest`(DISTINCT ARRAY [`s`.`level`, `s`.`size`, `s`.`num`] FOR s in `rooms` END,`checkinTime`,`guestCode`,array_distinct(ifmissing((array_star((`rooms`)).`num`), [])))",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_rooms_level_size_num_checkinTime_guestCode_array_di1747996179 ON `shellTest`(DISTINCT ARRAY [`s`.`level`, `s`.`size`, `s`.`num`] FOR s in `rooms` END,`checkinTime`,`guestCode`,array_distinct(ifmissing((array_star(`rooms`).`num`), [])))",
                   "keyspace_alias": "shellTest_p"
                 }
               ],
@@ -356,13 +356,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va1738526945 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,length((`c`)),`b`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va1738526945 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,length(`c`),`b`)",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va1738526945 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,length((`c`)),`b`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_type_val_name_type_val_name_type_va1738526945 ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR cba in `a` END,length(`c`),`b`)",
                   "keyspace_alias": "shellTest_st",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }

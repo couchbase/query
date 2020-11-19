@@ -11,13 +11,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_meta_self_expiration_meta_self_cas ON `shellTest`(meta(self).`expiration`,meta(self).`cas`)",
+                  "index_statement": "CREATE INDEX adv_meta_expiration_meta_cas ON `shellTest`(meta().`expiration`,meta().`cas`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_meta_self_expiration ON `shellTest`(meta(self).`expiration`)",
+                  "index_statement": "CREATE INDEX adv_meta_expiration ON `shellTest`(meta().`expiration`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -41,7 +41,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_sqrt_meta_self_expiration ON `shellTest`(sqrt((meta(self).`expiration`)))",
+                  "index_statement": "CREATE INDEX adv_sqrt_meta_expiration ON `shellTest`(sqrt((meta().`expiration`)))",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -65,7 +65,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_length_meta_self_cas_id ON `shellTest`(length((meta(self).`cas`)),`id`)",
+                  "index_statement": "CREATE INDEX adv_length_meta_cas_id ON `shellTest`(length((meta().`cas`)),`id`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 7. not null/not missing/valued."
                 }
@@ -90,13 +90,13 @@
               "covering_indexes": [
                 {
                   "index_property": "ORDER pushdown",
-                  "index_statement": "CREATE INDEX adv_length_meta_self_cas_id_meta_self_expiration_name ON `shellTest`(length((meta(self).`cas`)),`id`,meta(self).`expiration`,`name`)",
+                  "index_statement": "CREATE INDEX adv_length_meta_cas_id_meta_expiration_name ON `shellTest`(length((meta().`cas`)),`id`,meta().`expiration`,`name`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_length_meta_self_cas_meta_self_expiration_id ON `shellTest`(length((meta(self).`cas`)),meta(self).`expiration`,`id`)",
+                  "index_statement": "CREATE INDEX adv_length_meta_cas_meta_expiration_id ON `shellTest`(length((meta().`cas`)),meta().`expiration`,`id`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }

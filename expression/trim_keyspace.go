@@ -68,6 +68,22 @@ func (this *keyspaceTrimmer) VisitField(expr *Field) (interface{}, error) {
 	return second, nil
 }
 
+func (this *keyspaceTrimmer) VisitFunction(expr Function) (interface{}, error) {
+	err := expr.MapChildren(this)
+	if err != nil {
+		return expr, err
+	}
+
+	// special handling of Meta() function
+	if meta, ok := expr.(*Meta); ok {
+		if len(meta.operands) > 0 && meta.operands[0] == MISSING_EXPR {
+			meta.operands = meta.operands[:0]
+		}
+	}
+
+	return expr, nil
+}
+
 func (this *keyspaceTrimmer) VisitSubquery(expr Subquery) (interface{}, error) {
 	// since a Subquery expression is not copied via Copy() call,
 	// do not traverse inside the subquery
