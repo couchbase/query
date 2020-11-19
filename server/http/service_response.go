@@ -584,7 +584,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		}
 	}
 
-	if !this.writeString(",") || !this.writer.printf("%s\"stmtType\": \"%v\"", prefix, this.Type()) {
+	if !this.writeString(",") || !this.writer.printf("%s\"stmtType\": \"%v\"", newPrefix, this.Type()) {
 		logging.Infop("Error writing Type")
 	}
 
