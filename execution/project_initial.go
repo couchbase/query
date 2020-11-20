@@ -84,20 +84,16 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		} else {
 			pv := value.EMPTY_ANNOTATED_OBJECT
 			if context.UseRequestQuota() {
-				var stop bool
-
 				pv := value.EMPTY_ANNOTATED_OBJECT
 				iSz := item.Size()
 				pSz := pv.Size()
 				if pSz > iSz {
-					stop = context.TrackValueSize(pSz - iSz)
+					if context.TrackValueSize(pSz - iSz) {
+						context.Error(errors.NewMemoryQuotaExceededError())
+						return false
+					}
 				} else {
-					stop = context.TrackValueSize(iSz - pSz)
-				}
-				if stop {
-					context.Error(errors.NewMemoryQuotaExceededError())
-					return false
-
+					context.ReleaseValueSize(iSz - pSz)
 				}
 			}
 			return this.sendItem(pv)
@@ -118,19 +114,16 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		av.ShareAnnotations(item)
 		av.SetProjection(v)
 		if context.UseRequestQuota() {
-			var stop bool
-
 			iSz := item.Size()
 			aSz := av.Size()
 			if aSz > iSz {
-				stop = context.TrackValueSize(aSz - iSz)
+				if context.TrackValueSize(aSz - iSz) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					av.Recycle()
+					return false
+				}
 			} else {
-				stop = context.TrackValueSize(iSz - aSz)
-			}
-			if stop {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return false
+				context.ReleaseValueSize(iSz - aSz)
 			}
 		}
 		return this.sendItem(av)
@@ -186,19 +179,16 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 
 	pv.SetProjection(p) //	pv.SetAttachment("projection", p)
 	if context.UseRequestQuota() {
-		var stop bool
-
 		iSz := item.Size()
 		pSz := pv.Size()
 		if pSz > iSz {
-			stop = context.TrackValueSize(pSz - iSz)
+			if context.TrackValueSize(pSz - iSz) {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				pv.Recycle()
+				return false
+			}
 		} else {
-			stop = context.TrackValueSize(iSz - pSz)
-		}
-		if stop {
-			context.Error(errors.NewMemoryQuotaExceededError())
-			pv.Recycle()
-			return false
+			context.ReleaseValueSize(iSz - pSz)
 		}
 	}
 	return this.sendItem(pv)
