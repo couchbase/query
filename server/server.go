@@ -1038,12 +1038,21 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			request.SetAutoExecute(value.FALSE)
 		}
 
-		stype := stmt.Type()
-		if estmt, ok := stmt.(*algebra.Explain); ok {
+		var stype string
+		var allow bool
+		switch estmt := stmt.(type) {
+		case *algebra.Explain:
 			stype = estmt.Statement().Type()
+			allow = true
+		case *algebra.Advise:
+			stype = estmt.Statement().Type()
+			allow = true
+		default:
+			stype = stmt.Type()
+			allow = isPrepare && !autoExecute
 		}
 
-		if ok, msg := IsValidStatement(request.TxId(), stype, request.TxImplicit(), isPrepare && !autoExecute); !ok {
+		if ok, msg := IsValidStatement(request.TxId(), stype, request.TxImplicit(), allow); !ok {
 			return nil, errors.NewTranStatementNotSupportedError(stype, msg)
 		}
 
