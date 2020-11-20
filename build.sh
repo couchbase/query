@@ -43,19 +43,19 @@ DevStandaloneSetup() {
        fi
     # zap versions
        if [[ ! -d ../../blevesearch/zap/v11 ]]; then
-           (cd ../../blevesearch; git clone -b v11.0.12 http://github.com/blevesearch/zap.git zap/v11)
+           (cd ../../blevesearch; git clone -b v11.0.13 http://github.com/blevesearch/zap.git zap/v11)
        fi
        if [[ ! -d ../../blevesearch/zap/v12 ]]; then
-           (cd ../../blevesearch; git clone -b v12.0.12 http://github.com/blevesearch/zap.git zap/v12)
+           (cd ../../blevesearch; git clone -b v12.0.13 http://github.com/blevesearch/zap.git zap/v12)
        fi
        if [[ ! -d ../../blevesearch/zap/v13 ]]; then
-           (cd ../../blevesearch; git clone -b v13.0.4 http://github.com/blevesearch/zap.git zap/v13)
+           (cd ../../blevesearch; git clone -b v13.0.5 http://github.com/blevesearch/zap.git zap/v13)
        fi
        if [[ ! -d ../../blevesearch/zap/v14 ]]; then
-           (cd ../../blevesearch; git clone -b v14.0.3 http://github.com/blevesearch/zap.git zap/v14)
+           (cd ../../blevesearch; git clone -b v14.0.4 http://github.com/blevesearch/zap.git zap/v14)
        fi
        if [[ ! -d ../../blevesearch/zap/v15 ]]; then
-           (cd ../../blevesearch; git clone -b v15.0.1 http://github.com/blevesearch/zap.git zap/v15)
+           (cd ../../blevesearch; git clone -b v15.0.2 http://github.com/blevesearch/zap.git zap/v15)
        fi
 }
 
