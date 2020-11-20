@@ -70,3 +70,7 @@ func (this *IndexContext) Readonly() bool {
 func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) interface{} {
 	return nil
 }
+
+func (this *IndexContext) SetAdvisor() {
+	// no-op
+}

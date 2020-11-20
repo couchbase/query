@@ -133,6 +133,12 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	}
 }
 
+func (this *InitialProject) afterItems(context *Context) {
+	if context.IsAdvisor() {
+		context.AddPhaseOperator(ADVISOR)
+	}
+}
+
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
 	sv := value.NewScopeValue(make(map[string]interface{}, n), item)

@@ -149,7 +149,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		if this.useCBO {
 			cost, cardinality = getDummyScanCost()
 		}
-		this.addChildren(plan.NewDummyScan(node.IsAdvisor(), cost, cardinality))
+		this.addChildren(plan.NewDummyScan(cost, cardinality))
 		this.maxParallelism = 1
 	}
 

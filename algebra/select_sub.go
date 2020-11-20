@@ -32,7 +32,6 @@ type Subselect struct {
 	projection *Projection           `json:"projection"`
 	window     WindowTerms           `json:"window"`
 	correlated bool                  `json:"correlated"`
-	advisor    bool                  `json:"advisor"`
 }
 
 /*
@@ -321,14 +320,6 @@ func (this *Subselect) IsCorrelated() bool {
 
 func (this *Subselect) SetCorrelated() {
 	this.correlated = true
-}
-
-func (this *Subselect) IsAdvisor() bool {
-	return this.advisor
-}
-
-func (this *Subselect) SetAdvisor() {
-	this.advisor = true
 }
 
 /*

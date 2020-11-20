@@ -105,6 +105,8 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 		return value.MISSING_VALUE, nil
 	}
 
+	context.SetAdvisor()
+
 	/*
 		Advisor({ “action” : “start”,
 		  “profile”: ”john”,

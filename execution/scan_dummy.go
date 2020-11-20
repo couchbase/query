@@ -66,10 +66,6 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		if this.plan.IsAdvisor() {
-			context.AddPhaseOperator(ADVISOR)
-		}
-
 		av := value.EMPTY_ANNOTATED_OBJECT
 
 		if parent != nil {

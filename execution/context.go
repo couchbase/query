@@ -138,6 +138,11 @@ type Output interface {
 	TrackMemory(size uint64)
 }
 
+// context flags
+const (
+	CONTEXT_IS_ADVISOR = 1 << iota // Advisor() function
+)
+
 type Context struct {
 	inUseMemory         uint64
 	requestId           string
@@ -186,6 +191,7 @@ type Context struct {
 	atrCollection       string
 	numAtrs             int
 	kvTimeout           time.Duration
+	flags               uint32
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -265,6 +271,7 @@ func (this *Context) Copy() *Context {
 		kvTimeout:           this.kvTimeout,
 		atrCollection:       this.atrCollection,
 		numAtrs:             this.numAtrs,
+		flags:               this.flags,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -973,4 +980,12 @@ func (this *Context) RemoveInlistHash(in *expression.In) {
 		}
 	}
 	this.inlistHashLock.Unlock()
+}
+
+func (this *Context) SetAdvisor() {
+	this.flags |= CONTEXT_IS_ADVISOR
+}
+
+func (this *Context) IsAdvisor() bool {
+	return (this.flags & CONTEXT_IS_ADVISOR) != 0
 }

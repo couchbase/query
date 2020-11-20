@@ -67,7 +67,6 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 		if node.From() != nil {
 			return nil, errors.NewAdvisorNoFrom()
 		}
-		node.SetAdvisor()
 	}
 
 	return nil, nil
