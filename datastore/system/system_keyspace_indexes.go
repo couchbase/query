@@ -89,7 +89,7 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 			if excp != nil {
 				break loop
 			}
-			objects, excp = namespace.Objects()
+			objects, excp = namespace.Objects(true)
 			if excp != nil {
 				break loop
 			}
@@ -526,7 +526,7 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 			if err != nil {
 				continue
 			}
-			objects, err := namespace.Objects()
+			objects, err := namespace.Objects(true)
 			if err != nil {
 				continue
 			}

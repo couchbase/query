@@ -47,7 +47,7 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
 	rv := make([]datastore.Object, len(p.keyspaces))
 	i := 0
 	for k, _ := range p.keyspaces {

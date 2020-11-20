@@ -52,7 +52,7 @@ func (b *scopeKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)
 			if excp == nil {
-				objects, excp := namespace.Objects()
+				objects, excp := namespace.Objects(true)
 				if excp == nil {
 					for _, object := range objects {
 						excludeResult := !canAccessAll && !canRead(context, namespaceId, object.Id)
@@ -299,7 +299,7 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 			for _, namespaceId := range namespaceIds {
 				namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 				if err == nil {
-					objects, err = namespace.Objects()
+					objects, err = namespace.Objects(true)
 					if err == nil {
 						for _, object := range objects {
 
@@ -359,7 +359,7 @@ func (pi *scopeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 		for _, namespaceId := range namespaceIds {
 			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 			if err == nil {
-				objects, err = namespace.Objects()
+				objects, err = namespace.Objects(true)
 				if err == nil {
 					for _, object := range objects {
 

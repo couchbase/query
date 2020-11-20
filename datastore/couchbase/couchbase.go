@@ -729,6 +729,7 @@ type namespace struct {
 	store         *store
 	name          string
 	cbNamespace   *cb.Pool
+	last          util.Time // last time we refreshed the pool
 	keyspaceCache map[string]*keyspaceEntry
 	version       uint64
 	lock          sync.RWMutex // lock to guard the keyspaceCache
@@ -747,6 +748,7 @@ const (
 	_MIN_ERR_INTERVAL   time.Duration = 5 * time.Second
 	_THROTTLING_TIMEOUT time.Duration = 10 * time.Millisecond
 	_CLEANUP_INTERVAL   time.Duration = time.Hour
+	_REFRESH_THRESHOLD  time.Duration = 100 * time.Millisecond
 )
 
 func (p *namespace) DatastoreId() string {
@@ -778,22 +780,29 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
-	var defaultCollection datastore.Keyspace
+func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
 	p.refresh()
 	p.nslock.RLock()
 	rv := make([]datastore.Object, len(p.cbNamespace.BucketMap))
 	i := 0
 
 	for name, _ := range p.cbNamespace.BucketMap {
+		var defaultCollection datastore.Keyspace
+
 		o := datastore.Object{name, name, false, false}
-		defaultCollection = nil
 		p.lock.RLock()
 		entry := p.keyspaceCache[name]
 		if entry != nil && entry.cbKeyspace != nil {
 			defaultCollection = entry.cbKeyspace.defaultCollection
 		}
 		p.lock.RUnlock()
+
+		if preload && defaultCollection == nil {
+			ks, _ := p.KeyspaceByName(name)
+			if ks != nil {
+				defaultCollection = ks.(*keyspace).defaultCollection
+			}
+		}
 
 		// if we have loaded the bucket, check if the bucket has a default collection
 		// if we haven't loaded the bucket, see if you can get the default collection id
@@ -807,7 +816,7 @@ func (p *namespace) Objects() ([]datastore.Object, errors.Error) {
 				o.IsKeyspace = (k != nil)
 				o.IsBucket = false
 			}
-		} else {
+		} else if !preload {
 			bucket, _ := p.cbNamespace.GetBucket(name)
 			if bucket != nil {
 				_, _, err := bucket.GetCollectionCID("_default", "_default", time.Time{})
@@ -1032,6 +1041,10 @@ func (p *namespace) getPool() *cb.Pool {
 }
 
 func (p *namespace) refresh() {
+	if util.Since(p.last) < _REFRESH_THRESHOLD {
+		return
+	}
+
 	// trigger refresh of this pool
 	logging.Debugf("Refreshing pool %s", p.name)
 
@@ -1040,6 +1053,7 @@ func (p *namespace) refresh() {
 		newpool, err = p.reload1(err)
 		if err == nil {
 			p.reload2(&newpool)
+			p.last = util.Now()
 		}
 		return
 	}
@@ -1061,6 +1075,7 @@ func (p *namespace) refresh() {
 	p.nslock.RUnlock()
 	if changed {
 		p.reload2(&newpool)
+		p.last = util.Now()
 		return
 	}
 	newpool.Close()
@@ -1068,7 +1083,7 @@ func (p *namespace) refresh() {
 	p.lock.Lock()
 	for _, ks := range p.keyspaceCache {
 
-		// in case a change has kicked in in between checking bucketMaps and cquiring the lock
+		// in case a change has kicked in in between checking bucketMaps and acquiring the lock
 		if ks.cbKeyspace == nil {
 			continue
 		}
@@ -1084,6 +1099,7 @@ func (p *namespace) refresh() {
 		}
 	}
 	p.lock.Unlock()
+	p.last = util.Now()
 }
 
 func (p *namespace) reload() {
