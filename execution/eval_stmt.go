@@ -45,11 +45,15 @@ func (this *internalOutput) CloseResults() {
 }
 
 func (this *internalOutput) Abort(err errors.Error) {
-	// empty
+	if this.err == nil {
+		this.err = err
+	}
 }
 
 func (this *internalOutput) Fatal(err errors.Error) {
-	// empty
+	if this.err == nil {
+		this.err = err
+	}
 }
 
 func (this *internalOutput) Error(err errors.Error) {
