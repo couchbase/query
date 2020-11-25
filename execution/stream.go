@@ -33,7 +33,14 @@ func init() {
 func NewStream(plan *plan.Stream, context *Context) *Stream {
 	rv := _STREAM_OP_POOL.Get().(*Stream)
 	rv.plan = plan
-	newRedirectBase(&rv.base)
+
+	// Stream does not run inside a parallel group and is not
+	// guaranteed to have a single producer
+	if context.MaxParallelism() == 1 {
+		newSerializedBase(&rv.base, context)
+	} else {
+		newRedirectBase(&rv.base)
+	}
 	rv.output = rv
 	return rv
 }
@@ -55,7 +62,6 @@ func (this *Stream) PlanOp() plan.Operator {
 
 func (this *Stream) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
-	context.CloseResults()
 }
 
 func (this *Stream) beforeItems(context *Context, parent value.Value) bool {
@@ -75,6 +81,10 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 	item.Recycle()
 	return ok
+}
+
+func (this *Stream) afterItems(context *Context) {
+	context.CloseResults()
 }
 
 func (this *Stream) MarshalJSON() ([]byte, error) {
