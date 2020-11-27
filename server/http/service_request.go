@@ -134,13 +134,19 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		}
 	}
 
-	// handle parameters that can't be handled dynamically
 	if err == nil {
+		// handle parameters that can't be handled dynamically
+		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
+
 		var creds = &auth.Credentials{}
 		creds.Users = make(map[string]string, 0)
-
 		rv.SetNamedArgs(httpArgs.getNamedArgs())
+		// Creds check
 		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
+
+		if len(creds.Users) == 0 && !pwdlessbkts {
+			err = errors.NewAdminAuthError(err, "cause: No credentials provided")
+		}
 
 		if err == nil {
 			creds.HttpRequest = req
@@ -159,6 +165,19 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 				getEmptyScanConfiguration(&rv.consistency)
 				rv.SetScanConfiguration(&rv.consistency)
 			}
+
+			// This means we got creds. Now we need to see if they are authorized users.
+			if !pwdlessbkts {
+				ds := datastore.GetDatastore()
+				var authUsers auth.AuthenticatedUsers
+				authUsers, err = ds.Authorize(nil, creds)
+				if authUsers == nil {
+					// This means the users associated with the input credentials do not have authorization.
+					// Throw an error
+					err = errors.NewAdminAuthError(err, "cause: Failure to authenticate user")
+				}
+			}
+
 		}
 
 	}

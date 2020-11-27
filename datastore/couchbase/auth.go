@@ -259,97 +259,103 @@ func isClientCertPresent(req *http.Request) bool {
 
 func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
 
-	// Create credentials - list and authenticated users to use for auth calls
-	if credentials.Users == nil {
-		credentials.Users = make(map[string]string, 0)
-	}
-	authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials.Users))
-	credentialsList := make([]cbauth.Creds, 0, 2)
+	if credentials.AuthenticatedUsers == nil {
 
-	// Query allows 4 kinds of authorization methods -
-	// 		 1. Basic Auth
-	//		 2. Auth Header/Token
-	//		 3. Certificates
-	//		 4. Creds query parameter
+		authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials.Users))
+		credentialsList := make([]cbauth.Creds, 0, 2)
 
-	// The call to AuthWebCreds takes care of the first 3 checks.
-	// This needs to be performed first. The following is taken care of by authwebcreds -
-
-	// X509 - mandatory
-	// Only certs can be used to authorize. No other method.
-
-	// X509 - disable
-	// 		1. Certificates,Basic Auth or Auth header can be used to authorize
-
-	// X509 - enable
-	// 		1. Cert needs to be used to authorize if present
-	//		2. If cert not present then we need to use other methods
-	//		   (partially done by auth web creds)
-
-	req := credentials.HttpRequest
-	if req != nil {
-		creds, err := s.authWebCreds(req)
-		if err == nil {
-			credentialsList = append(credentialsList, creds)
-			authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
-		} else if err.Error() == "No web credentials found in request." {
-			// Do nothing.
-		} else {
-
-			clientAuthType, err1 := cbauth.GetClientCertAuthType()
-			if err1 != nil {
-				return nil, errors.NewDatastoreAuthorizationError(err1)
-			}
-
-			// If enable or mandatory and client cert is present, and you see an error
-			// Then return the error.
-			if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
-				return nil, errors.NewDatastoreAuthorizationError(err)
-			}
+		// Create credentials - list and authenticated users to use for auth calls
+		if credentials.Users == nil {
+			credentials.Users = make(map[string]string, 0)
 		}
-	}
+		// Query allows 4 kinds of authorization methods -
+		// 		 1. Basic Auth
+		//		 2. Auth Header/Token
+		//		 3. Certificates
+		//		 4. Creds query parameter
 
-	// Either error isn't nil and mode is disable and error is nil
+		// The call to AuthWebCreds takes care of the first 3 checks.
+		// This needs to be performed first. The following is taken care of by authwebcreds -
 
-	// If we could not successfully authorize above, and
-	//  - if x509 is disable or
-	//  - if x509 is enable and cert is not present
-	// we need to check if creds can be used to authorize
+		// X509 - mandatory
+		// Only certs can be used to authorize. No other method.
 
-	// request could be nil - in which case we handle credentials only
+		// X509 - disable
+		// 		1. Certificates,Basic Auth or Auth header can be used to authorize
 
-	if len(credentialsList) == 0 {
-		for username, password := range credentials.Users {
-			var un string
-			userCreds := strings.Split(username, ":")
-			if len(userCreds) == 1 {
-				un = userCreds[0]
-			} else {
-				un = userCreds[1]
-			}
+		// X509 - enable
+		// 		1. Cert needs to be used to authorize if present
+		//		2. If cert not present then we need to use other methods
+		//		   (partially done by auth web creds)
 
-			logging.Debugf(" Credentials for user <ud>%v</ud>", un)
-			creds, err := s.auth(un, password)
-			if err != nil {
-				logging.Debugf("Unable to authorize <ud>%s</ud>. Error - %v", username, err)
-				return nil, errors.NewDatastoreAuthorizationError(err)
-			} else {
+		req := credentials.HttpRequest
+		if req != nil {
+			creds, err := s.authWebCreds(req)
+			if err == nil {
 				credentialsList = append(credentialsList, creds)
-				if un != "" {
-					authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+				authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+			} else if err.Error() == "No web credentials found in request." {
+				// Do nothing.
+			} else {
+
+				clientAuthType, err1 := cbauth.GetClientCertAuthType()
+				if err1 != nil {
+					return nil, errors.NewDatastoreAuthorizationError(err1)
+				}
+
+				// If enable or mandatory and client cert is present, and you see an error
+				// Then return the error.
+				if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
+					return nil, errors.NewDatastoreAuthorizationError(err)
 				}
 			}
 		}
+
+		// Either error isn't nil and mode is disable and error is nil
+
+		// If we could not successfully authorize above, and
+		//  - if x509 is disable or
+		//  - if x509 is enable and cert is not present
+		// we need to check if creds can be used to authorize
+
+		// request could be nil - in which case we handle credentials only
+
+		if len(credentialsList) == 0 {
+			for username, password := range credentials.Users {
+				var un string
+				userCreds := strings.Split(username, ":")
+				if len(userCreds) == 1 {
+					un = userCreds[0]
+				} else {
+					un = userCreds[1]
+				}
+
+				logging.Debugf(" Credentials for user <ud>%v</ud>", un)
+				creds, err := s.auth(un, password)
+				if err != nil {
+					logging.Debugf("Unable to authorize <ud>%s</ud>. Error - %v", username, err)
+					return nil, errors.NewDatastoreAuthorizationError(err)
+				} else {
+					credentialsList = append(credentialsList, creds)
+					if un != "" {
+						authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+					}
+				}
+			}
+		}
+
+		credentials.AuthenticatedUsers = authenticatedUsers
+		credentials.CbauthCredentialsList = credentialsList
 	}
 
 	// No privileges to check? Done.
 	if privileges == nil || len(privileges.List) == 0 {
-		return authenticatedUsers, nil
+		return credentials.AuthenticatedUsers, nil
 	}
 
 	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
-	remainingPrivileges, err := authAgainstCreds(s, privileges.List, credentialsList)
+	remainingPrivileges, err := authAgainstCreds(s, privileges.List, credentials.CbauthCredentialsList)
 
 	if err != nil {
 		return nil, errors.NewDatastoreAuthorizationError(err)
@@ -357,12 +363,12 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	if len(remainingPrivileges) == 0 {
 		// Everything is authorized. Success!
-		return authenticatedUsers, nil
+		return credentials.AuthenticatedUsers, nil
 	}
 
 	// Derive possible default credentials from remaining privileges.
 	defaultCredentials, defaultUsers := deriveDefaultCredentials(s, remainingPrivileges)
-	authenticatedUsers = append(authenticatedUsers, defaultUsers...)
+	credentials.AuthenticatedUsers = append(credentials.AuthenticatedUsers, defaultUsers...)
 	deniedPrivileges, err := authAgainstCreds(s, remainingPrivileges, defaultCredentials)
 
 	if err != nil {
@@ -371,9 +377,8 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	if len(deniedPrivileges) == 0 {
 		// Authorized using defaults.
-		return authenticatedUsers, nil
+		return credentials.AuthenticatedUsers, nil
 	}
-
 	msg := messageForDeniedPrivilege(deniedPrivileges[0])
 	return nil, errors.NewDatastoreInsufficientCredentials(msg)
 }

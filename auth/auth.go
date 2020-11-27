@@ -9,7 +9,10 @@
 
 package auth
 
-import "net/http"
+import (
+	"github.com/couchbase/cbauth"
+	"net/http"
+)
 
 type Privilege int
 
@@ -119,8 +122,10 @@ Type Credentials maps users to passwords.
 type Users map[string]string
 
 type Credentials struct {
-	Users       Users
-	HttpRequest *http.Request
+	Users                 Users
+	HttpRequest           *http.Request
+	AuthenticatedUsers    AuthenticatedUsers
+	CbauthCredentialsList []cbauth.Creds
 }
 
 func NewCredentials() *Credentials {

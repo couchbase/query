@@ -330,7 +330,6 @@ func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credent
 		logging.Warnf("CbAuth not intialized")
 		return nil, nil
 	}
-
 	return cbAuthorize(s, privileges, credentials)
 }
 

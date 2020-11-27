@@ -227,7 +227,7 @@ var _ALL_USERS = auth.Credentials{
 		"purchaseowner":  "purchasepass",
 		"reviewowner":    "reviewpass",
 		"shellTestowner": "shellTestpass",
-	}, nil}
+	}, nil, nil, nil}
 
 /*
 This method is used to execute the N1QL query represented by
