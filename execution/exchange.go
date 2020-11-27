@@ -40,7 +40,10 @@ type valueQueue struct {
 	itemsTail    int
 	itemsCount   int
 	size         uint64
+	maxSize      uint64
+	memYields    int
 	heartbeat    int
+	beatYields   int
 	closed       bool
 	readWaiters  opQueue
 	writeWaiters opQueue
@@ -104,7 +107,11 @@ func newValueExchange(exchange *valueExchange, capacity int64) {
 	if exchange.items == nil || int64(cap(exchange.items)) != capacity {
 		exchange.items = make([]value.AnnotatedValue, capacity)
 	}
+	exchange.size = 0
+	exchange.maxSize = 0
 	exchange.heartbeat = 0
+	exchange.memYields = 0
+	exchange.beatYields = 0
 }
 
 func (this *valueExchange) cap() int {
@@ -146,6 +153,8 @@ func (this *valueExchange) reset() {
 	if this.children != nil {
 		this.children = this.children[0:0]
 	}
+	this.size = 0
+	// not maxSize, no yields
 	this.heartbeat = 0
 }
 
@@ -205,12 +214,14 @@ func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue
 		return false
 	}
 
-	var size uint64
-	if quota > 0 {
-		size = item.Size()
-	}
 	op.vLock.Lock()
 	this.oLock.Lock()
+	if quota > 0 {
+		op.size += item.Size()
+		if op.size > op.maxSize {
+			op.maxSize = op.size
+		}
+	}
 	for {
 
 		// stop takes precedence
@@ -247,18 +258,15 @@ func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue
 			// ideally we would want to yield to the first waiter, but
 			// golang does not allow that choice
 			if op.heartbeat > threshold {
+				this.beatYields++
 				this.enqueue(op, &op.writeWaiters)
 				continue
 			}
 		}
-		if quota != 0 {
-			newSize := op.size + size
-			if newSize < quota {
-				op.size = newSize
-			} else {
-				this.enqueue(op, &op.writeWaiters)
-				continue
-			}
+		if quota != 0 && op.size > quota {
+			this.memYields++
+			this.enqueue(op, &op.writeWaiters)
+			continue
 		}
 		break
 	}

@@ -929,6 +929,15 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	}
 
+	memoryQuota := request.MemoryQuota()
+
+	// never allow request side quota to be higher than
+	// server side quota
+	if this.memoryQuota > 0 && (this.memoryQuota < memoryQuota || memoryQuota == 0) {
+		memoryQuota = this.memoryQuota
+	}
+	context.SetMemoryQuota(memoryQuota)
+
 	context.SetIsPrepared(request.Prepared() != nil)
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
@@ -969,15 +978,6 @@ func (this *Server) serviceRequest(request Request) {
 	} else {
 		context.SetReqDeadline(time.Time{})
 	}
-
-	memoryQuota := request.MemoryQuota()
-
-	// never allow request side quota to be higher than
-	// server side quota
-	if this.memoryQuota > 0 && (this.memoryQuota < memoryQuota || memoryQuota == 0) {
-		memoryQuota = this.memoryQuota
-	}
-	context.SetMemoryQuota(memoryQuota)
 
 	request.NotifyStop(operator)
 	request.SetExecTime(time.Now())

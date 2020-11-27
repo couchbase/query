@@ -1368,6 +1368,16 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 		stats["servTime"] = servTime.String()
 	}
 
+	if this.valueExchange.beatYields > 0 {
+		stats["#heartbeatYields"] = this.valueExchange.beatYields
+	}
+	if this.valueExchange.maxSize > 0 {
+		stats["usedMemory"] = this.valueExchange.maxSize
+		if this.valueExchange.memYields > 0 {
+			stats["#memYields"] = this.valueExchange.memYields
+		}
+	}
+
 	// chosen to follow "#operator" in the subdocument
 	if len(stats) > 0 {
 		r["#stats"] = stats
