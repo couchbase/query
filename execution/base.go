@@ -146,6 +146,7 @@ type base struct {
 	activeCond     sync.Cond
 	activeLock     sync.Mutex
 	opState        opState
+	panicErr       interface{}
 }
 
 const _ITEM_CAP = 512
@@ -256,6 +257,14 @@ func (this *base) reopen(context *Context) bool {
 }
 
 func (this *base) close(context *Context) {
+	err := recover()
+	if err != nil {
+		this.panicErr = err
+		return
+	} else if this.panicErr != nil {
+		return
+	}
+
 	this.valueExchange.close()
 
 	if this.output != nil {
@@ -908,8 +917,15 @@ func (this *base) readonly() bool {
 
 // Unblock all dependencies.
 func (this *base) notify() {
-	this.notifyStop()
-	this.notifyParent()
+	err := recover()
+	if err != nil {
+		this.panicErr = err
+		return
+	}
+	if this.panicErr == nil {
+		this.notifyStop()
+		this.notifyParent()
+	}
 }
 
 // release parent resources, if necessary

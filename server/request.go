@@ -576,9 +576,10 @@ func (this *BaseRequest) SetState(state State) {
 	// Once we transition to TIMEOUT or CLOSE, we don't transition
 	// to STOPPED or COMPLETED to allow the request to close
 	// gracefully on timeout or network errors and report the
-	// right state
-	if (this.state == TIMEOUT || this.state == CLOSED || this.state == STOPPED) &&
-		(state == STOPPED || state == COMPLETED) {
+	// right state. Ditto for FATAL.
+	if this.state == FATAL ||
+		((this.state == TIMEOUT || this.state == CLOSED || this.state == STOPPED) &&
+			(state == STOPPED || state == COMPLETED)) {
 		return
 	}
 	this.state = state

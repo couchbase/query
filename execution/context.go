@@ -895,6 +895,9 @@ func (this *Context) assert(test bool, what string) bool {
 
 func (this *Context) Recover(base *base) {
 	err := recover()
+	if err == nil && base != nil {
+		err = base.panicErr
+	}
 	if err != nil {
 		buf := make([]byte, 1<<16)
 		n := runtime.Stack(buf, false)
