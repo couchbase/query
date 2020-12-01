@@ -123,7 +123,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 				// stop children, wait and clean up
 				if n > 0 {
 					sendChildren(this.plan, this.scans...)
-					this.childrenWaitNoStop(n)
+					this.childrenWaitNoStop(this.scans...)
 					this.channel.close(context)
 				}
 				break loop

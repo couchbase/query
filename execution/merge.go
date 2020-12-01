@@ -144,7 +144,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Wait for all children
-		this.childrenWaitNoStop(len(this.children))
+		this.childrenWaitNoStop(this.children...)
 	})
 }
 

@@ -152,7 +152,7 @@ loop:
 	if stopped || !ok {
 		if n > 0 {
 			this.child.SendAction(_ACTION_STOP)
-			this.childrenWaitNoStop(n)
+			this.childrenWaitNoStop(this.child)
 		}
 
 		return false

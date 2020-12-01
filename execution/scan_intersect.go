@@ -148,7 +148,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					sendChildren(this.plan, this.scans...)
 				}
 				if n > 0 {
-					this.childrenWaitNoStop(n)
+					this.childrenWaitNoStop(this.scans...)
 					this.channel.close(context)
 				}
 				break loop
