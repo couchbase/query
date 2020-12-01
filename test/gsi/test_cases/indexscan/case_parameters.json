@@ -4,6 +4,7 @@
         "ignore": "index_id",
         "explain": {
             "disabled": false,
+	    "use_args": true,
             "results": [
                 {
                     "present": true
@@ -24,6 +25,7 @@
         "ignore": "index_id",
         "explain": {
             "disabled": false,
+	    "use_args": true,
             "results": [
                 {
                     "present": true
@@ -44,6 +46,7 @@
         "ignore": "index_id",
         "explain": {
             "disabled": false,
+	    "use_args": true,
             "results": [
                 {
                     "present": true
@@ -64,6 +67,7 @@
         "ignore": "index_id",
         "explain": {
             "disabled": false,
+	    "use_args": true,
             "results": [
                 {
                     "present": true
@@ -84,6 +88,7 @@
         "ignore": "index_id",
         "explain": {
             "disabled": false,
+	    "use_args": true,
             "results": [
                 {
                     "present": true
@@ -119,6 +124,7 @@
         "ignore": "index_id",
         "explain": {
             "disabled": false,
+	    "use_args": true,
             "results": [
                 {
                     "present": true

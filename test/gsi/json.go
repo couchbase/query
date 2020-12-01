@@ -695,6 +695,7 @@ func checkExplain(qc *MockServer, gv int, namespace string, statement string, c 
 	ed, dok := ev["disabled"]
 	es, sok := ev["statement"]
 	er, rok := ev["results"]
+	ea, aok := ev["use_args"]
 
 	if dok {
 		if disabled := ed.(bool); disabled {
@@ -712,6 +713,18 @@ func checkExplain(qc *MockServer, gv int, namespace string, statement string, c 
 
 	if rok {
 		erExpected, rok = er.([]interface{})
+	}
+
+	useArgs := false
+	if aok {
+		var bv bool
+		if bv, aok = ea.(bool); aok {
+			useArgs = bv
+		}
+	}
+	if !useArgs {
+		namedArgs = nil
+		positionalArgs = nil
 	}
 
 	explainStmt := "EXPLAIN " + statement

@@ -36,6 +36,16 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 	var array expression.Expressions
 
+	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
+		replaced, err := base.ReplaceParameters(pred, this.context.NamedArgs(), this.context.PositionalArgs())
+		if err != nil {
+			return nil, err
+		}
+		if repIn, ok := replaced.(*expression.In); ok {
+			pred = repIn
+		}
+	}
+
 	aval := pred.Second().Value()
 	if aval != nil {
 		vals, ok := aval.Actual().([]interface{})
