@@ -142,7 +142,7 @@ loop:
 
 	if n > 0 {
 		notifyChildren(buildOp)
-		base.childrenWaitNoStop(n)
+		base.childrenWaitNoStop(buildOp)
 	}
 
 	if stopped {

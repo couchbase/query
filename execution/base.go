@@ -483,8 +483,17 @@ func (this *base) baseSendAction(action opAction) bool {
 	// PANICKED, COMPLETED and STOPPED have already sent a notifyStop
 	// DONE, ENDED and KILLED can no longer be operated upon
 	if this.stopped && !this.valueExchange.isWaiting() {
-		opState := this.opState
-		return opState == _RUNNING || opState == _STOPPING || opState == _PAUSED
+		switch this.opState {
+		case _PAUSED:
+			if action == _ACTION_PAUSE {
+				return true
+			}
+			// _ACTION_STOP has to take the slow route
+		case _RUNNING, _STOPPING:
+			return true
+		default:
+			return false
+		}
 	}
 
 	// STOPPED, COMPLETED, DONE, ENDED, KILLED have already sent signals or stopped operating
@@ -719,11 +728,24 @@ func (this *base) childrenWait(n int) bool {
 }
 
 // wait for at least n children to complete ignoring stop messages
-func (this *base) childrenWaitNoStop(n int) {
+func (this *base) childrenWaitNoStop(ops ...Operator) {
 	this.switchPhase(_CHANTIME)
-	for n > 0 {
-		this.ValueExchange().retrieveChildNoStop()
-		n--
+	for _, o := range ops {
+		b := o.getBase()
+		b.activeCond.L.Lock()
+		state := b.opState
+		stopped := b.stopped
+		b.activeCond.L.Unlock()
+		if stopped || state == _PAUSED || state == _KILLED || state == _PANICKED {
+			continue
+		} else {
+
+			// we are waiting after we've sent a stop but before we have terminated
+			// flag bad states
+			if assert(state != _CREATED && state != _DONE, "child has unexpected state") {
+				this.ValueExchange().retrieveChildNoStop()
+			}
+		}
 	}
 	this.switchPhase(_EXECTIME)
 }
