@@ -330,7 +330,7 @@ func TestCredsFromContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create http request: %v", err)
 	}
-	credentials := &auth.Credentials{map[string]string{"user1": "pw1", "user2": "pw2"}, httpRequest}
+	credentials := &auth.Credentials{map[string]string{"user1": "pw1", "user2": "pw2"}, httpRequest, nil, nil}
 	expectedCreds := distributed.Creds{"user1": "pw1", "user2": "pw2"}
 
 	// No auth token.

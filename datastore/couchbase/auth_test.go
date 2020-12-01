@@ -94,8 +94,8 @@ func TestGrantRole(t *testing.T) {
 	}
 
 	cases := []testCase{
-		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"nancy": "pwnancy"}, nil}},
-		testCase{purpose: "Works", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "pwbob"}, nil}, shouldSucceed: true},
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"nancy": "pwnancy"}, nil, nil, nil}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "pwbob"}, nil, nil, nil}, shouldSucceed: true},
 	}
 	runCases(t, cases)
 }
@@ -121,9 +121,9 @@ func TestSimpleSelect(t *testing.T) {
 
 	cases := []testCase{
 		testCase{purpose: "No Credentials", authSource: as, privs: privs, creds: &auth.Credentials{}},
-		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"nancy": "pwnancy"}, nil}},
-		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "badpassword"}, nil}},
-		testCase{purpose: "Works", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "pwbob"}, nil}, shouldSucceed: true},
+		testCase{purpose: "Insufficient Credentials", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"nancy": "pwnancy"}, nil, nil, nil}},
+		testCase{purpose: "Wrong password", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "badpassword"}, nil, nil, nil}},
+		testCase{purpose: "Works", authSource: as, privs: privs, creds: &auth.Credentials{map[string]string{"bob": "pwbob"}, nil, nil, nil}, shouldSucceed: true},
 	}
 	runCases(t, cases)
 }
@@ -189,7 +189,7 @@ func TestDefaultCredentials(t *testing.T) {
 		},
 	}
 
-	loginCreds := &auth.Credentials{map[string]string{"bob": "pwbob"}, nil}
+	loginCreds := &auth.Credentials{map[string]string{"bob": "pwbob"}, nil, nil, nil}
 
 	cases := []testCase{
 		testCase{purpose: "No Default User", authSource: asNoDefault, privs: privs, creds: loginCreds},
