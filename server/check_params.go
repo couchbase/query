@@ -29,6 +29,7 @@ const (
 	PIPELINECAP     = "pipeline-cap"
 	SCANCAP         = "scan-cap"
 	SERVICERS       = "servicers"
+	PLUSSERVICERS   = "plus-servicers"
 	TIMEOUTSETTING  = "timeout"
 	CMPOBJECT       = "completed"
 	CMPTHRESHOLD    = "completed-threshold"
@@ -64,7 +65,8 @@ var CHECKERS = map[string]Checker{
 	PIPELINEBATCH:   checkNumber,
 	PIPELINECAP:     checkNumber,
 	SCANCAP:         checkNumber,
-	SERVICERS:       checkNumber,
+	SERVICERS:       checkPositiveNumber,
+	PLUSSERVICERS:   checkPositiveNumber,
 	TIMEOUTSETTING:  checkNumber,
 	CMPOBJECT:       checkCompleted,
 	CMPTHRESHOLD:    checkNumber,
@@ -155,6 +157,16 @@ func checkPositiveInteger(val interface{}) (bool, errors.Error) {
 		return (val > 1), nil
 	case float64:
 		return (val > 1), nil
+	}
+	return false, nil
+}
+
+func checkPositiveNumber(val interface{}) (bool, errors.Error) {
+	switch val := val.(type) {
+	case int64:
+		return (val > 0), nil
+	case float64:
+		return (val > 0), nil
 	}
 	return false, nil
 }

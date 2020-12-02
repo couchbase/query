@@ -444,6 +444,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.CPUPROFILE] = srvr.CpuProfile()
 	settings[server.MEMPROFILE] = srvr.MemProfile()
 	settings[server.SERVICERS] = srvr.Servicers()
+	settings[server.PLUSSERVICERS] = srvr.PlusServicers()
 	settings[server.SCANCAP] = srvr.ScanCap()
 	settings[server.REQUESTSIZECAP] = srvr.RequestSizeCap()
 	settings[server.DEBUG] = srvr.Debug()
