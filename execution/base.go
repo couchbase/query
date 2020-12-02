@@ -347,7 +347,7 @@ func (this *base) baseReopen(context *Context) bool {
 
 	// the request terminated, a stop was sent, or something catastrophic happened
 	// cannot reopen, bail out
-	if this.opState == _DONE || this.opState == _ENDED || this.opState == _KILLED || this.opState == _PANICKED {
+	if this.opState == _STOPPED || this.opState == _DONE || this.opState == _ENDED || this.opState == _KILLED || this.opState == _PANICKED {
 		this.activeCond.L.Unlock()
 		return false
 	}
@@ -572,15 +572,15 @@ func (this *base) baseSendAction(action opAction) bool {
 		}
 		this.activeCond.L.Unlock()
 	case _RUNNING:
-		rv = true
 		this.opState = _STOPPING
 		this.activeCond.L.Unlock()
+		rv = true
 		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
 		this.switchPhase(_EXECTIME)
 	case _STOPPING:
-		rv = true
 		this.activeCond.L.Unlock()
+		rv = true
 	default:
 		this.activeCond.L.Unlock()
 	}
@@ -791,14 +791,16 @@ func (this *base) childrenWaitNoStop(ops ...Operator) {
 		state := b.opState
 		stopped := b.stopped
 		b.activeCond.L.Unlock()
-		if stopped || state == _PAUSED || state == _KILLED || state == _PANICKED {
-			continue
-		} else {
-
-			// we are waiting after we've sent a stop but before we have terminated
-			// flag bad states
-			if assert(state != _CREATED && state != _DONE, "child has unexpected state") {
+		if !stopped {
+			switch state {
+			case _RUNNING, _STOPPING:
 				this.ValueExchange().retrieveChildNoStop()
+			case _CREATED, _PAUSED, _KILLED, _PANICKED, _COMPLETED, _STOPPED:
+			default:
+
+				// we are waiting after we've sent a stop but before we have terminated
+				// flag bad states
+				assert(false, fmt.Sprintf("child has unexpected state %v", state))
 			}
 		}
 	}
