@@ -81,6 +81,11 @@ var _SETTERS = map[string]Setter{
 		s.SetServicers(int(value))
 		return nil
 	},
+	PLUSSERVICERS: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		s.SetPlusServicers(int(value))
+		return nil
+	},
 	TIMEOUTSETTING: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		s.SetTimeout(time.Duration(value))
