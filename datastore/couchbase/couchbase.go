@@ -1316,18 +1316,23 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	p.lock.Unlock()
 
 	if cbKeyspace != nil {
-		// dropDictCacheEntries() needs to be called outside p.lock
-		// since it'll need to lock it when trying to delete from
-		// N1QL_SYSTEM_BUCKET.N1QL_SYSTEM_SCOPE.N1QL_CBO_STATS
-		dropDictCacheEntries(cbKeyspace)
+		if isSysBucket(cbKeyspace.name) {
+			DropDictionaryCache()
+		} else {
+			// dropDictCacheEntries() needs to be called outside p.lock
+			// since it'll need to lock it when trying to delete from
+			// N1QL_SYSTEM_BUCKET.N1QL_SYSTEM_SCOPE.N1QL_CBO_STATS
+			dropDictCacheEntries(cbKeyspace)
+		}
 	}
 }
 
 // Called by go-couchbase if a configured keyspace is updated
 func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 
+	checkSysBucket := false
+
 	p.lock.Lock()
-	defer p.lock.Unlock()
 
 	ks, ok := p.keyspaceCache[bucket.Name]
 	if ok && ks.cbKeyspace != nil {
@@ -1336,10 +1341,19 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		if ks.cbKeyspace.collectionsManifestUid != uid {
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
+			if isSysBucket(ks.cbKeyspace.name) {
+				checkSysBucket = true
+			}
 		}
 		ks.cbKeyspace.Unlock()
 	} else {
 		logging.Warnf("Keyspace %v not configured on this server", bucket.Name)
+	}
+
+	p.lock.Unlock()
+
+	if checkSysBucket {
+		chkSysBucket()
 	}
 }
 

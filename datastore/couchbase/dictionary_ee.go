@@ -79,6 +79,28 @@ func DropDictEntryAndAllCache(keyspace string, context interface{}) {
 	dictionary.DropDictEntryAndAllCache(keyspace, context)
 }
 
+func DropDictionaryCache() {
+	dictionary.DropDictionaryCache()
+}
+
+func isSysBucket(name string) bool {
+	return name == N1QL_SYSTEM_BUCKET
+}
+
+func chkSysBucket() {
+	// Bucket updater could be triggered by creation of N1QL_SYSTEM_SCOPE/N1QL_CBO_STATS
+	// ignore these
+	if dictionary.IsCreatingSysCBOStats() {
+		return
+	}
+
+	hasSysCBOStats, err := dictionary.CheckSysCBOStats(false, "", true)
+	if err == nil && !hasSysCBOStats {
+		// N1QL_SYSTEM_SCOPE or N1QL_CBO_STATS is dropped
+		dictionary.DropDictionaryCache()
+	}
+}
+
 const _GRACE_PERIOD = time.Second
 
 type chkIndexDict struct {

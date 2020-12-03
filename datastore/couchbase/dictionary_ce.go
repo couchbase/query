@@ -72,6 +72,18 @@ func DropDictEntryAndAllCache(keyspace string, context interface{}) {
 	// no-op
 }
 
+func DropDictionaryCache() {
+	// no-op
+}
+
+func isSysBucket(name string) bool {
+	return false
+}
+
+func chkSysBucket() {
+	// no-op
+}
+
 type chkIndexDict struct {
 	// dummy struct
 }
