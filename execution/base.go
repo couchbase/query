@@ -734,19 +734,18 @@ func (this *base) childrenWaitNoStop(ops ...Operator) {
 		b := o.getBase()
 		b.activeCond.L.Lock()
 		state := b.opState
-		stopped := b.stopped
 		b.activeCond.L.Unlock()
-		if !stopped {
-			switch state {
-			case _RUNNING, _STOPPING:
-				this.ValueExchange().retrieveChildNoStop()
-			case _CREATED, _PAUSED, _KILLED, _PANICKED, _COMPLETED, _STOPPED:
-			default:
+		switch state {
+		case _RUNNING, _STOPPING, _COMPLETED, _STOPPED:
+			// signal reliably sent
+			this.ValueExchange().retrieveChildNoStop()
+		case _CREATED, _PAUSED, _KILLED, _PANICKED:
+			// signal reliably not sent
+		default:
 
-				// we are waiting after we've sent a stop but before we have terminated
-				// flag bad states
-				assert(false, fmt.Sprintf("child has unexpected state %v", state))
-			}
+			// we are waiting after we've sent a stop but before we have terminated
+			// flag bad states
+			assert(false, fmt.Sprintf("child has unexpected state %v", state))
 		}
 	}
 	this.switchPhase(_EXECTIME)
