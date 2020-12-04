@@ -95,6 +95,9 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 				return er
 			}
 		}
+		if sysScope == nil {
+			return errors.NewCbBucketCreateScopeError(N1QL_SYSTEM_BUCKET+"."+N1QL_SYSTEM_SCOPE, nil)
+		}
 	}
 
 	cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
@@ -136,20 +139,28 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 				return er
 			}
 		}
-
-		// create primary index
-		// make sure we have indexer3 first
-		indexer, er := cboStats.Indexer(datastore.GSI)
-		if er != nil {
-			return er
+		if cboStats == nil {
+			return errors.NewCbBucketCreateCollectionError(N1QL_SYSTEM_BUCKET+"."+N1QL_SYSTEM_SCOPE+"."+N1QL_CBO_STATS, nil)
 		}
+	}
 
-		indexer3, ok := indexer.(datastore.Indexer3)
-		if !ok {
-			cb.DropSystemBucket(&s.client, N1QL_SYSTEM_BUCKET)
-			return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
-		}
+	// create primary index
+	// make sure we have indexer3 first
+	indexer, er := cboStats.Indexer(datastore.GSI)
+	if er != nil {
+		return er
+	}
 
+	indexer3, ok := indexer.(datastore.Indexer3)
+	if !ok {
+		cb.DropSystemBucket(&s.client, N1QL_SYSTEM_BUCKET)
+		return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
+	}
+
+	_, er = indexer3.IndexByName(dictionary.CBO_STATS_PRIMARY_INDEX)
+	if er != nil {
+		// IndexByName currently returns a generic error code (5000), and only returns
+		// an error in case of "index not found"
 		_, er = indexer3.CreatePrimaryIndex3(requestId, dictionary.CBO_STATS_PRIMARY_INDEX, nil, nil)
 		if er != nil {
 			return er
