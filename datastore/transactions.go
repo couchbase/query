@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	DEF_TXTIMEOUT          = 2 * time.Minute
+	DEF_TXTIMEOUT          = 15 * time.Second
 	DEF_DURABILITY_TIMEOUT = 2500 * time.Millisecond
 	DEF_DURABILITY_LEVEL   = DL_MAJORITY
 )

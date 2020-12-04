@@ -15,9 +15,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/cbq/command"
 	"github.com/peterh/liner"
+)
+
+const (
+	_TXTIMEOUT = "2m"
 )
 
 /* The following values define the query prompt for cbq.
@@ -194,6 +199,7 @@ func HandleInteractiveMode(prompt string) {
 
 	// End handling the options
 
+	n1ql.SetQueryParams("txtimeout", _TXTIMEOUT)
 	isTrunc := false
 	for {
 		line, err := liner.Prompt(fullPrompt)
