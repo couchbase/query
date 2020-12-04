@@ -47,11 +47,15 @@ type TranContext struct {
 	expiryTime          time.Time
 	uses                int32
 	txMutations         interface{}
+	memoryQuota         uint64
 }
+
+const _TXCONTEXT_SIZE = 256
 
 func NewTxContext(txImplicit bool, txData []byte, txTimeout, txDurabilityTimeout, kvTimeout time.Duration,
 	txDurabilityLevel datastore.DurabilityLevel, txIsolationLevel datastore.IsolationLevel,
-	txScanConsistency datastore.ScanConsistency, atrCollection string, numAtrs int) *TranContext {
+	txScanConsistency datastore.ScanConsistency, atrCollection string, numAtrs int, memoryQuota uint64) *TranContext {
+
 	rv := &TranContext{txTimeout: txTimeout,
 		kvTimeout:           kvTimeout,
 		txDurabilityTimeout: txDurabilityTimeout,
@@ -62,6 +66,7 @@ func NewTxContext(txImplicit bool, txData []byte, txTimeout, txDurabilityTimeout
 		txData:              txData,
 		atrCollection:       atrCollection,
 		numAtrs:             numAtrs,
+		memoryQuota:         memoryQuota,
 	}
 
 	return rv
@@ -268,6 +273,10 @@ func (this *TranContext) SetTxMutations(txMutations interface{}) {
 	this.txMutations = txMutations
 }
 
+func (this *TranContext) MemoryQuota() uint64 {
+	return uint64(this.memoryQuota)
+}
+
 func (this *TranContext) Content(r map[string]interface{}) {
 	r["id"] = this.txId
 	r["timeout"] = this.txTimeout.String()
@@ -296,6 +305,21 @@ func (this *TranContext) Content(r map[string]interface{}) {
 	r["expiryTime"] = this.expiryTime.Format(_DEFAULT_DATE_FORMAT)
 	r["uses"] = this.uses
 	r["status"] = this.txStatus
+	if this.memoryQuota > 0 {
+		r["memoryQuota"] = this.memoryQuota
+	}
+
+	usedMemory := int64(_TXCONTEXT_SIZE + len(this.txData) + len(this.AtrCollection()))
+	if txMutations := this.TxMutations(); txMutations != nil {
+		if tranMemory, ok := txMutations.(datastore.TransactionMemory); ok {
+			usedMemory += tranMemory.TransactionUsedMemory()
+		}
+	}
+
+	if usedMemory > 0 {
+		r["usedMemory"] = usedMemory
+	}
+
 	if len(this.txData) > 0 {
 		var drv map[string]interface{}
 		if err := json.Unmarshal(this.txData, &drv); err != nil {

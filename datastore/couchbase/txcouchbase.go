@@ -62,7 +62,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 	} else {
 		// Actual start transaction
 		// Initalize new transaction mutations
-		txMutations, err = NewTransactionMutations(txContext.TxImplicit())
+		txMutations, err = NewTransactionMutations(txContext.TxImplicit(), txContext.MemoryQuota())
 		if err != nil {
 			return
 		}
@@ -116,6 +116,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		}
 
 		if resume {
+			var dataSize int64
 			for _, mutation := range transaction.GetMutations() {
 				var op MutateOp
 				switch mutation.OpType {
@@ -131,10 +132,11 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 				qualifiedName := "default:" + mutation.BucketName + "." +
 					mutation.ScopeName + "." + mutation.CollectionName
 
+				dataSize = int64(len(mutation.Staged))
 				_, err = txMutations.Add(op, qualifiedName, mutation.BucketName, mutation.ScopeName,
 					mutation.CollectionName, uint32(0),
 					string(mutation.Key), mutation.Staged, uint64(mutation.Cas), uint32(0), uint32(0),
-					nil, nil, nil)
+					nil, nil, nil, dataSize)
 				if err != nil {
 					return
 				}
@@ -212,7 +214,8 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	}
 
 	// Release transaction mutations
-	txMutations.DeleteAll(true)
+	var memSize int64
+	txMutations.DeleteAll(true, &memSize)
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
@@ -278,7 +281,8 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 		err = gcagent.ErrNoTransaction
 	}
 
-	txMutations.DeleteAll(true)
+	var memSize int64
+	txMutations.DeleteAll(true, &memSize)
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
@@ -479,6 +483,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 	for _, kv := range pairs {
 		var data interface{}
 		var exptime uint32
+		var dataSize int64
 
 		key := kv.Name
 		val := kv.Value
@@ -490,6 +495,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 
 		if op != MOP_DELETE {
 			data = val.ActualForIndex()
+			dataSize = int64(val.Size())
 			exptime = getExpiration(kv.Options)
 		}
 
@@ -526,7 +532,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 
 		// Add to mutations
 		retCas, err = txMutations.Add(nop, qualifiedName, ks.name, scopeName, collectionName, collId,
-			key, data, cas, MV_FLAGS_WRITE, exptime, txnMeta, nil, ks)
+			key, data, cas, MV_FLAGS_WRITE, exptime, txnMeta, nil, ks, dataSize)
 
 		if err != nil {
 			return nil, err

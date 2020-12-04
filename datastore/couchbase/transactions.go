@@ -14,6 +14,7 @@ package couchbase
 import (
 	"encoding/json"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
@@ -61,6 +62,7 @@ type MutationValue struct {
 	Flags      uint32
 	Val        interface{}
 	TxnMeta    interface{}
+	memSize    int64
 }
 
 type DeltaKeyspace struct {
@@ -82,6 +84,7 @@ type TransactionLogValue struct {
 	oldFlags      uint32
 	oldVal        interface{}
 	oldTxnMeta    interface{}
+	oldMemSize    int64
 }
 
 type TransactionLog struct {
@@ -102,38 +105,50 @@ type TransactionMutations struct {
 	curDeltaKeyspace DeltaKeyspace
 	curKeyspace      string
 	curLog           int
+	usedMemory       int64
+	memoryQuota      uint64
 }
 
 const (
-	_DK_DEF_SIZE       = 256
-	_TM_DEF_LOGSIZE    = 256 //fixed log size
-	_TM_DEF_SAVEPOINTS = 4
-	_TM_DEF_KEYSPACES  = 4
-	_WRITE_BATCH_SIZE  = 16
+	_DK_DEF_SIZE             = 128
+	_TM_DEF_LOGSIZE          = 128 //fixed log size
+	_TM_DEF_SAVEPOINTS       = 4
+	_TM_DEF_KEYSPACES        = 4
+	_WRITE_BATCH_SIZE        = 16
+	_SZ                      = int64(8)
+	_TRANSACTIONMUTATIONS_SZ = int64(128)
+	_DELTAKEYSPACE_SZ        = int64(64)
+	_TRANSACTIONLOGVALUE_SZ  = int64(64)
+	_MUTATIONVALUE_SZ        = int64(64)
 )
 
 /* New Mutations structure. One per transaction
  */
 
-func NewTransactionMutations(implicit bool) (*TransactionMutations, errors.Error) {
-	rv := &TransactionMutations{logSize: _TM_DEF_LOGSIZE,
-		tranImplicit: implicit}
+func NewTransactionMutations(implicit bool, memoryQuota uint64) (rv *TransactionMutations, err errors.Error) {
+	memSize := _TRANSACTIONMUTATIONS_SZ
+	rv = &TransactionMutations{logSize: _TM_DEF_LOGSIZE,
+		tranImplicit: implicit,
+		memoryQuota:  memoryQuota}
 
 	if rv != nil {
 		rv.curDeltaKeyspace.values = make(map[string]*MutationValue, _DK_DEF_SIZE)
 		if rv.curDeltaKeyspace.values == nil {
 			return nil, errors.NewMemoryAllocationError("TransactionMutations.DeltaKeyspaces()")
 		}
+		memSize += _DK_DEF_SIZE * _SZ
 		if !implicit {
 			rv.savepoints = make(map[string]uint64, _TM_DEF_SAVEPOINTS)
 			rv.keyspaces = make(map[string]*DeltaKeyspace, _TM_DEF_KEYSPACES)
 			if rv.savepoints == nil || rv.keyspaces == nil {
 				return nil, errors.NewMemoryAllocationError("TransactionMutations.DeltaKeyspaces()")
 			}
+			memSize += (_TM_DEF_SAVEPOINTS + _TM_DEF_KEYSPACES) * _SZ
 		}
+		err = rv.TrackMemoryQuota(memSize)
 	}
 
-	return rv, nil
+	return rv, err
 }
 
 func (this *TransactionMutations) LogSize() int {
@@ -216,9 +231,7 @@ func (this *TransactionMutations) SetSavepoint(sname string) (err errors.Error) 
 
 	// set log position and Add savepoint marker to transaction log
 	this.savepoints[sname] = this.TotalMutations()
-	err = this.AddMarker(sname, TL_SAVEPOINT)
-	return err
-
+	return this.AddMarker(sname, TL_SAVEPOINT)
 }
 
 /* Given savepoint, get transaction log number, and position in the log.
@@ -337,7 +350,7 @@ DELETE   INSERT   ---  UPDATE with cas  *      INSERT
 
 func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeName, collectionName string,
 	collId uint32, key string, val interface{}, cas uint64, flags, exptime uint32, txnMeta interface{},
-	paths []string, ks *keyspace) (retCas uint64, err errors.Error) {
+	paths []string, ks *keyspace, valSize int64) (retCas uint64, err errors.Error) {
 
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
@@ -345,6 +358,7 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 	var mv, mmv *MutationValue
 	var dk, mdk *DeltaKeyspace
 	var addMarker bool
+	var memSize int64
 
 	mdk, _ = this.keyspaces[keyspace]
 
@@ -365,6 +379,7 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 				return retCas, errors.NewMemoryAllocationError("TransactionMutations.AddToDeltaKeyspace()")
 			}
 			this.keyspaces[keyspace] = mdk
+			memSize += _DELTAKEYSPACE_SZ + _SZ*_DK_DEF_SIZE
 		}
 		dk = mdk
 	}
@@ -447,7 +462,8 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 		// Add document to transaction log
 		var tl *TransactionLog
 		if tl, err = this.SetCurLog(); err == nil && tl != nil {
-			err = tl.Add(key, mmv, TL_DOCUMENT)
+			err = tl.Add(key, mmv, TL_DOCUMENT, &memSize)
+
 		}
 	}
 
@@ -458,6 +474,26 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 		if mv == nil {
 			return retCas, errors.NewMemoryAllocationError("TransactionMutations.Add()")
 		}
+
+		if len(this.savepoints) == 0 && mmv != nil {
+			memSize -= mmv.memSize
+		} else {
+			memSize += _MUTATIONVALUE_SZ + int64(len(key))
+		}
+
+		var b []byte
+		if mv.TxnMeta != nil {
+			b, _ = mv.TxnMeta.([]byte)
+		}
+
+		// Even though key is not part of mv include so that map part is covered
+		mv.memSize = valSize + int64(len(b))
+		memSize += mv.memSize
+
+		if err = this.TrackMemoryQuota(memSize); err != nil {
+			return retCas, err
+		}
+
 		dk.Add(key, mv)
 	}
 
@@ -469,6 +505,7 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 */
 
 func (this *TransactionMutations) SetCurLog() (tl *TransactionLog, err errors.Error) {
+
 	if this.logs == nil || this.logs[this.curLog].Len() == this.logSize {
 		tl := &TransactionLog{logValues: make([]*TransactionLogValue, 0, this.logSize)}
 		if tl == nil || tl.logValues == nil {
@@ -488,7 +525,11 @@ func (this *TransactionMutations) SetCurLog() (tl *TransactionLog, err errors.Er
 func (this *TransactionMutations) AddMarker(keyspace string, logType int) (err errors.Error) {
 	var tl *TransactionLog
 	if tl, err = this.SetCurLog(); err == nil && tl != nil {
-		err = tl.Add(keyspace, nil, logType)
+		var memSize int64
+		err = tl.Add(keyspace, nil, logType, &memSize)
+		if err == nil {
+			err = this.TrackMemoryQuota(memSize)
+		}
 	}
 	return err
 }
@@ -497,50 +538,56 @@ func (this *TransactionMutations) AddMarker(keyspace string, logType int) (err e
  */
 func (this *TransactionMutations) Write(deadline time.Time) (err error) {
 	// Delete Transaction log. savepoints.
-	this.DeleteAll(false)
+	var memSize int64
+
+	this.DeleteAll(false, &memSize)
 
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.tranImplicit {
 		// write current delta keyspace
 		dk := &this.curDeltaKeyspace
-		return dk.Write(this.transaction, this.txnInternal, this.curKeyspace, deadline)
+		if err = dk.Write(this.transaction, this.txnInternal, this.curKeyspace, deadline, &memSize); err != nil {
+			return err
+		}
 	}
 
 	// write other keyspaces
 	for k, dk := range this.keyspaces {
-		if err = dk.Write(this.transaction, this.txnInternal, k, deadline); err != nil {
+		if err = dk.Write(this.transaction, this.txnInternal, k, deadline, &memSize); err != nil {
 			return err
 		}
 	}
-	return nil
+
+	return this.TrackMemoryQuota(-memSize)
 }
 
-func (this *TransactionMutations) DeleteAll(delta bool) {
+func (this *TransactionMutations) DeleteAll(delta bool, memSize *int64) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
 	// delete save points
 	for k, _ := range this.savepoints {
+		*memSize += int64(len(k))
 		delete(this.savepoints, k)
 	}
 
 	// delete trasaction logs
 	for _, tl := range this.logs {
 		if tl != nil {
-			tl.DeleteAll()
+			tl.DeleteAll(0, memSize)
 		}
 	}
 	this.logs = this.logs[0:0]
 
 	if delta {
 		// delete current delta keysapce entries
-		this.curDeltaKeyspace.DeleteAll()
+		this.curDeltaKeyspace.DeleteAll(memSize)
 
 		// delete all keyspace entries
 		for k, dk := range this.keyspaces {
 			if dk != nil {
-				dk.DeleteAll()
+				dk.DeleteAll(memSize)
 			}
 			this.keyspaces[k] = nil
 			delete(this.keyspaces, k)
@@ -550,12 +597,15 @@ func (this *TransactionMutations) DeleteAll(delta bool) {
 
 // Add entry to transaction log
 
-func (this *TransactionLog) Add(key string, mmv *MutationValue, logType int) (err errors.Error) {
+func (this *TransactionLog) Add(key string, mmv *MutationValue, logType int, memSize *int64) (err errors.Error) {
 	tlv := &TransactionLogValue{key: key, logType: logType}
 	if tlv == nil {
 		return errors.NewMemoryAllocationError("TransactionLog.Add()")
 	}
-	if err = tlv.Add(mmv); err == nil {
+
+	*memSize += _TRANSACTIONLOGVALUE_SZ + int64(len(key))
+
+	if err = tlv.Set(mmv); err == nil {
 		this.logValues = append(this.logValues, tlv)
 	}
 	return err
@@ -566,10 +616,11 @@ func (this *TransactionLog) Add(key string, mmv *MutationValue, logType int) (er
 func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors.Error) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
+	var memSize int64
 
 	// delete entries from current delta keyspace
 	dk := &this.curDeltaKeyspace
-	dk.DeleteAll()
+	dk.DeleteAll(&memSize)
 
 	// save points undo transaction log and replay delta keyspace in reverse order
 	if len(this.savepoints) > 0 && len(this.logs) > 0 {
@@ -591,9 +642,16 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 			cl = int(this.curStartLogIndex / uint64(this.logSize))
 			ci = int(this.curStartLogIndex % uint64(this.logSize))
 
-			this.logs = this.logs[:cl+1]
-			if tl = this.logs[cl]; tl != nil {
-				tl.logValues = tl.logValues[:ci]
+			for dcl := len(this.logs) - 1; dcl >= cl; dcl-- {
+				if tl = this.logs[dcl]; tl != nil {
+					pos := 0
+					if cl == dcl {
+						pos = ci
+					} else {
+						this.logs = this.logs[:dcl]
+					}
+					tl.DeleteAll(pos, &memSize)
+				}
 			}
 		}
 
@@ -607,6 +665,7 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 
 				for ci := len(tl.logValues) - 1; ci >= sci; ci-- {
 					if tlv = tl.logValues[ci]; tlv != nil {
+						memSize += _TRANSACTIONLOGVALUE_SZ + int64(len(tlv.key))
 						switch tlv.logType {
 						case TL_KEYSPACE:
 							cKeyspace = tlv.key
@@ -614,7 +673,7 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 						case TL_SAVEPOINT:
 							delete(this.savepoints, tlv.key)
 						case TL_DOCUMENT:
-							if err1 := tlv.Undo(dk); err1 == nil && err == nil {
+							if err1 := tlv.Undo(dk, &memSize); err1 == nil && err == nil {
 								err = err1
 							}
 						}
@@ -629,10 +688,15 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 		this.curStartLogIndex = this.TotalMutations()
 		for s, v := range this.savepoints {
 			if v > this.curStartLogIndex {
+				memSize += int64(len(s))
 				delete(this.savepoints, s)
 			}
 		}
 	}
+	if err == nil {
+		err = this.TrackMemoryQuota(-memSize)
+	}
+
 	return err
 }
 
@@ -650,6 +714,8 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 	dk := &this.curDeltaKeyspace
 	keyspace := this.curKeyspace
 
+	var memSize int64
+
 	mdk, ok := this.keyspaces[keyspace]
 	if !ok {
 		// if not already present create new delta keyspace
@@ -664,25 +730,31 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 			return errors.NewMemoryAllocationError("TransactionMutations.AddToDeltaKeyspace()")
 		}
 		this.keyspaces[keyspace] = mdk
+		memSize += _DELTAKEYSPACE_SZ + _SZ*_DK_DEF_SIZE
 	} else if mdk.ks == nil {
 		mdk.ks = dk.ks
 		mdk.collId = dk.collId
 	}
 
 	for key, mv := range dk.GetAll() {
-		if mv.Op == MOP_DELETE {
-			// current is DELETE and original one is INSERT remove from delta keyspace
-			if mmv, ok := mdk.values[key]; ok && mmv.Op == MOP_INSERT && (mmv.Flags&MV_FLAGS_WRITE) != 0 {
-				mdk.values[key] = nil
-				delete(mdk.values, key)
-				continue
-			}
+		mmv, ok := mdk.values[key]
+		// current is DELETE and original one is INSERT remove from delta keyspace
+		if ok && mv.Op == MOP_DELETE && mmv.Op == MOP_INSERT && (mmv.Flags&MV_FLAGS_WRITE) != 0 {
+			memSize -= _MUTATIONVALUE_SZ + int64(len(key))
+			mdk.values[key] = nil
+			delete(mdk.values, key)
+		} else {
+			mdk.values[key] = mv
 		}
-		mdk.values[key] = mv
+
+		if ok && len(this.savepoints) == 0 {
+			memSize -= mmv.memSize
+		}
 	}
 
-	// delete current delta keyspace entries
-	dk.DeleteAll()
+	// delete current delta keyspace entries, ignore size
+	var dkMemSize int64
+	dk.DeleteAll(&dkMemSize)
 
 	if len(this.savepoints) > 0 {
 		// savepoints present add end TL_KEYSPACE marker
@@ -692,7 +764,7 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 	// reset curKeyspace
 	this.curKeyspace = ""
 
-	return nil
+	return this.TrackMemoryQuota(memSize)
 }
 
 // Get keys in given delta keyspace
@@ -718,7 +790,7 @@ func (this *TransactionMutations) GetDeltaKeyspaceKeys(keysapce string) (keys ma
 // write mutations to gocbcore-transactions in batches
 
 func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gctx.TransactionsInternal,
-	keyspace string, deadline time.Time) (err error) {
+	keyspace string, deadline time.Time, memSize *int64) (err error) {
 	bSize := len(this.values)
 	if bSize == 0 {
 		return
@@ -731,7 +803,7 @@ func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gct
 	wops := make(gcagent.WriteOps, 0, bSize)
 	for key, mv := range this.values {
 		// delete from delta keyspace upfront so that memory will be released
-		this.Delete(key)
+		this.Delete(key, memSize)
 		if mv != nil && (mv.Flags&MV_FLAGS_WRITE) != 0 {
 			var data []byte
 			if mv.Op != MOP_DELETE {
@@ -791,27 +863,39 @@ func (this *DeltaKeyspace) GetAll() map[string]*MutationValue {
 	return this.values
 }
 
-func (this *DeltaKeyspace) DeleteAll() {
-	for k, _ := range this.values {
+func (this *DeltaKeyspace) DeleteAll(memSize *int64) {
+	for k, v := range this.values {
+		if v != nil {
+			*memSize += v.memSize + _MUTATIONVALUE_SZ + int64(len(k))
+		}
 		this.values[k] = nil
 		delete(this.values, k)
 	}
 }
 
-func (this *DeltaKeyspace) Delete(key string) {
-	this.values[key] = nil
-	delete(this.values, key)
+func (this *DeltaKeyspace) Delete(key string, memSize *int64) {
+	if v, ok := this.values[key]; ok {
+		*memSize += v.memSize + _MUTATIONVALUE_SZ + int64(len(key))
+		this.values[key] = nil
+		delete(this.values, key)
+	}
 }
 
 func (this *TransactionLog) Len() int {
 	return len(this.logValues)
 }
 
-func (this *TransactionLog) DeleteAll() {
-	this.logValues = this.logValues[0:0]
+func (this *TransactionLog) DeleteAll(pos int, memSize *int64) {
+	for i, tlv := range this.logValues {
+		if i >= pos && tlv != nil {
+			*memSize += tlv.oldMemSize
+		}
+	}
+	this.logValues = this.logValues[:pos]
+
 }
 
-func (this *TransactionLogValue) Add(mv *MutationValue) (err errors.Error) {
+func (this *TransactionLogValue) Set(mv *MutationValue) (err errors.Error) {
 	if mv != nil {
 		this.oldOp = mv.Op
 		this.oldCas = mv.Cas
@@ -820,6 +904,7 @@ func (this *TransactionLogValue) Add(mv *MutationValue) (err errors.Error) {
 		this.oldFlags = mv.Flags
 		this.oldVal = mv.Val
 		this.oldTxnMeta = mv.TxnMeta
+		this.oldMemSize = mv.memSize
 	} else {
 		this.oldOp = MOP_NONE
 	}
@@ -827,18 +912,24 @@ func (this *TransactionLogValue) Add(mv *MutationValue) (err errors.Error) {
 	return err
 }
 
-func (this *TransactionLogValue) Undo(dk *DeltaKeyspace) (err errors.Error) {
+func (this *TransactionLogValue) Undo(dk *DeltaKeyspace, memSize *int64) (err errors.Error) {
 	if dk == nil {
 		return errors.NewTransactionError(nil, "TransactionLogValue.Undo() deleta keyspace is nil")
 	}
-	mv, _ := dk.values[this.key]
+	mv, ok := dk.values[this.key]
 	switch this.oldOp {
 	case MOP_NONE:
 		dk.values[this.key] = nil
 		delete(dk.values, this.key)
+		if ok {
+			*memSize += _MUTATIONVALUE_SZ + mv.memSize + int64(len(this.key))
+		}
 	case MOP_INSERT, MOP_UPSERT, MOP_UPDATE, MOP_DELETE:
 		if mv == nil {
 			mv = &MutationValue{}
+			*memSize -= _MUTATIONVALUE_SZ + int64(len(this.key))
+		} else {
+			*memSize += mv.memSize
 		}
 		mv.Op = this.oldOp
 		mv.Cas = this.oldCas
@@ -847,7 +938,21 @@ func (this *TransactionLogValue) Undo(dk *DeltaKeyspace) (err errors.Error) {
 		mv.Flags = this.oldFlags
 		mv.Val = this.oldVal
 		mv.TxnMeta = this.oldTxnMeta
+		mv.memSize = this.oldMemSize
 		dk.values[this.key] = mv
 	}
 	return nil
+}
+
+func (this *TransactionMutations) TrackMemoryQuota(size int64) errors.Error {
+	sz := atomic.AddInt64(&this.usedMemory, size)
+	if this.memoryQuota > 0 && sz > int64(this.memoryQuota) {
+		return errors.NewTransactionMemoryQuotaExceededError(int64(this.memoryQuota), sz)
+	}
+
+	return nil
+}
+
+func (this *TransactionMutations) TransactionUsedMemory() int64 {
+	return this.usedMemory
 }

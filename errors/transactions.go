@@ -141,3 +141,9 @@ func NewCasMissmatch(op, key string, aCas, eCas uint64) Error {
 		InternalMsg:    fmt.Sprintf("%s cas (actual:%v, expected:%v) missmatch for key: %v", op, aCas, eCas, key),
 		InternalCaller: CallerN(1)}
 }
+
+func NewTransactionMemoryQuotaExceededError(memQuota, memUsed int64) Error {
+	return &err{level: EXCEPTION, ICode: 17016, IKey: "transaction.memory_quota.exceeded",
+		InternalMsg:    fmt.Sprintf("Transaction memory (%v) exceeded quota (%v)", memUsed, memQuota),
+		InternalCaller: CallerN(1)}
+}

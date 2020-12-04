@@ -65,3 +65,7 @@ func IsolationLevelToName(l IsolationLevel) string {
 	}
 	return "unknown"
 }
+
+type TransactionMemory interface {
+	TransactionUsedMemory() int64
+}

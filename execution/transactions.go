@@ -100,7 +100,7 @@ func (this *StartTransaction) RunOnce(context *Context, parent value.Value) {
 
 		context.txContext = transactions.NewTxContext(context.txImplicit, txData, context.txTimeout,
 			context.durabilityTimeout, context.kvTimeout, durabilityLevel, this.plan.IsolationLevel(),
-			consistency, context.atrCollection, context.numAtrs)
+			consistency, context.atrCollection, context.numAtrs, context.memoryQuota)
 
 		if context.txContext == nil {
 			err = errors.NewStartTransactionError(fmt.Errorf("txcontext allocation"), nil)
