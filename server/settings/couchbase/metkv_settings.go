@@ -35,7 +35,8 @@ var INDEXERPARAM = map[string]string{
 }
 
 var GLOBALPARAM = map[string]string{
-	"query.settings.curl_whitelist": "curl_whitelist",
+	"query.settings.curl_whitelist":   "curl_whitelist",
+	"query.settings.curl_allowedlist": "curl_allowedlist",
 }
 
 type Config value.Value

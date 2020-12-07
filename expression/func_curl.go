@@ -929,20 +929,20 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 
 	// Whitelist passed through ns server is empty then no access
 	if len(list) == 0 {
-		return fmt.Errorf("Whitelist for cluster is empty. CURL() end points should be whitelisted.")
+		return fmt.Errorf("Allowed list for cluster is empty. Allowedlist must be populated for all CURL() end points.")
 	}
 
 	// Whitelist passed through ns server doesnt contain all access field then no access
 	allaccess, ok := list["all_access"]
 	if !ok {
-		return fmt.Errorf("Boolean field all_access does not exist in whitelist. It is mandatory")
+		return fmt.Errorf("Boolean field all_access does not exist in allowedlist. It is mandatory")
 	}
 
 	_, isOk := allaccess.(bool)
 
 	if !isOk {
 		// Type check error
-		return fmt.Errorf(" all_access should be boolean value in the CURL whitelist.")
+		return fmt.Errorf(" all_access should be boolean value in the CURL allowedlist.")
 	}
 
 	if allaccess.(bool) {
@@ -962,7 +962,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 		if len(dURL) > 0 {
 			disallow, err := sliceContains(dURL, url)
 			if err == nil && disallow {
-				return fmt.Errorf("URL end point isnt whitelisted " + url + ".")
+				return fmt.Errorf("URL end point isnt present in curl allowedlist " + url + ".")
 			} else {
 				if err != nil {
 					return err
@@ -974,7 +974,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 	if allowedUrls, ok_all := list["allowed_urls"]; ok_all {
 		alURL, ok := allowedUrls.([]interface{})
 		if !ok {
-			return fmt.Errorf("allowed_urls should be list of urls that are white-listed.")
+			return fmt.Errorf("allowed_urls should be list of urls present in the allowedlists.")
 		}
 		if len(alURL) > 0 {
 			allow, err := sliceContains(alURL, url)
@@ -991,7 +991,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 	// URL is not present in disallowed url and is not in allowed_urls.
 	// If it reaches here, then the url isnt in the allowed_urls or the prefix_urls, and is also
 	// not in the disallowed urls.
-	return fmt.Errorf("URL end point isnt whitelisted " + url + ". Please make sure to whitelist the URL on the UI.")
+	return fmt.Errorf("URL end point isnt present in allowedlist " + url + ". Please make sure to add the URL to the curl allowedlist on the UI.")
 
 }
 
