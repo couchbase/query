@@ -188,13 +188,6 @@ func StrToVal(param string) (val value.Value) {
 		}
 	}
 
-	// Escape any \ so that we dont conver to value.BINARY
-	if strings.Contains(param, "\\") {
-		param = strings.Replace(param, "\\", "\\\\", -1)
-		bytes := []byte(param)
-		val = value.NewValue(bytes)
-	}
-
 	bytes := []byte(param)
 
 	val = value.NewValue(bytes)
