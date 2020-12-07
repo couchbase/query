@@ -199,7 +199,7 @@ func HandleInteractiveMode(prompt string) {
 
 	// End handling the options
 
-	n1ql.SetQueryParams("txtimeout", _TXTIMEOUT)
+	n1ql.SetTxTimeout(_TXTIMEOUT)
 	isTrunc := false
 	for {
 		line, err := liner.Prompt(fullPrompt)
