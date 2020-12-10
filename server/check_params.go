@@ -18,75 +18,83 @@ import (
 )
 
 const (
-	CPUPROFILE      = "cpuprofile"
-	DEBUG           = "debug"
-	KEEPALIVELENGTH = "keep-alive-length"
-	LOGLEVEL        = "loglevel"
-	MAXPARALLELISM  = "max-parallelism"
-	MEMPROFILE      = "memprofile"
-	REQUESTSIZECAP  = "request-size-cap"
-	PIPELINEBATCH   = "pipeline-batch"
-	PIPELINECAP     = "pipeline-cap"
-	SCANCAP         = "scan-cap"
-	SERVICERS       = "servicers"
-	PLUSSERVICERS   = "plus-servicers"
-	TIMEOUTSETTING  = "timeout"
-	CMPOBJECT       = "completed"
-	CMPTHRESHOLD    = "completed-threshold"
-	CMPLIMIT        = "completed-limit"
-	CMPPUSH         = "+completed-limit"
-	CMPPOP          = "-completed-limit"
-	PRPLIMIT        = "prepared-limit"
-	PRETTY          = "pretty"
-	MAXINDEXAPI     = "max-index-api"
-	PROFILE         = "profile"
-	CONTROLS        = "controls"
-	N1QLFEATCTRL    = "n1ql-feat-ctrl"
-	AUTOPREPARE     = "auto-prepare"
-	MUTEXPROFILE    = "mutexprofile"
-	FUNCLIMIT       = "functions-limit"
-	TASKLIMIT       = "tasks-limit"
-	MEMORYQUOTA     = "memory-quota"
-	USECBO          = "use-cbo"
-	TXTIMEOUT       = "txtimeout"
-	ATRCOLLECTION   = "atrcollection"
+	CPUPROFILE            = "cpuprofile"
+	DEBUG                 = "debug"
+	KEEPALIVELENGTH       = "keep-alive-length"
+	LOGLEVEL              = "loglevel"
+	MAXPARALLELISM        = "max-parallelism"
+	MEMPROFILE            = "memprofile"
+	REQUESTSIZECAP        = "request-size-cap"
+	PIPELINEBATCH         = "pipeline-batch"
+	PIPELINECAP           = "pipeline-cap"
+	SCANCAP               = "scan-cap"
+	SERVICERS             = "servicers"
+	PLUSSERVICERS         = "plus-servicers"
+	TIMEOUTSETTING        = "timeout"
+	CMPOBJECT             = "completed"
+	CMPTHRESHOLD          = "completed-threshold"
+	CMPLIMIT              = "completed-limit"
+	CMPPUSH               = "+completed-limit"
+	CMPPOP                = "-completed-limit"
+	PRPLIMIT              = "prepared-limit"
+	PRETTY                = "pretty"
+	MAXINDEXAPI           = "max-index-api"
+	PROFILE               = "profile"
+	CONTROLS              = "controls"
+	N1QLFEATCTRL          = "n1ql-feat-ctrl"
+	AUTOPREPARE           = "auto-prepare"
+	MUTEXPROFILE          = "mutexprofile"
+	FUNCLIMIT             = "functions-limit"
+	TASKLIMIT             = "tasks-limit"
+	MEMORYQUOTA           = "memory-quota"
+	USECBO                = "use-cbo"
+	TXTIMEOUT             = "txtimeout"
+	ATRCOLLECTION         = "atrcollection"
+	NUMATRS               = "numatrs"
+	CLEANUPWINDOW         = "cleanupwindow"
+	CLEANUPCLIENTATTEMPTS = "cleanupclientattempts"
+	CLEANUPLOSTATTEMPTS   = "cleanuplostattempts"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
 
 var CHECKERS = map[string]Checker{
-	CPUPROFILE:      checkString,
-	DEBUG:           checkBool,
-	KEEPALIVELENGTH: checkNumber,
-	LOGLEVEL:        checkLogLevel,
-	MAXPARALLELISM:  checkNumber,
-	MEMPROFILE:      checkString,
-	REQUESTSIZECAP:  checkNumber,
-	PIPELINEBATCH:   checkNumber,
-	PIPELINECAP:     checkNumber,
-	SCANCAP:         checkNumber,
-	SERVICERS:       checkPositiveNumber,
-	PLUSSERVICERS:   checkPositiveNumber,
-	TIMEOUTSETTING:  checkNumber,
-	CMPOBJECT:       checkCompleted,
-	CMPTHRESHOLD:    checkNumber,
-	CMPLIMIT:        checkNumber,
-	CMPPUSH:         checkPositiveInteger,
-	CMPPOP:          checkPositiveInteger,
-	PRPLIMIT:        checkPositiveInteger,
-	PRETTY:          checkBool,
-	MAXINDEXAPI:     checkNumber,
-	PROFILE:         checkProfileAdmin,
-	CONTROLS:        checkControlsAdmin,
-	N1QLFEATCTRL:    checkNumber,
-	AUTOPREPARE:     checkBool,
-	MUTEXPROFILE:    checkBool,
-	FUNCLIMIT:       checkPositiveInteger,
-	TASKLIMIT:       checkPositiveInteger,
-	MEMORYQUOTA:     checkNonNegativeInteger,
-	USECBO:          checkBool,
-	TXTIMEOUT:       checkDuration,
-	ATRCOLLECTION:   checkPath,
+	CPUPROFILE:            checkString,
+	DEBUG:                 checkBool,
+	KEEPALIVELENGTH:       checkNumber,
+	LOGLEVEL:              checkLogLevel,
+	MAXPARALLELISM:        checkNumber,
+	MEMPROFILE:            checkString,
+	REQUESTSIZECAP:        checkNumber,
+	PIPELINEBATCH:         checkNumber,
+	PIPELINECAP:           checkNumber,
+	SCANCAP:               checkNumber,
+	SERVICERS:             checkPositiveNumber,
+	PLUSSERVICERS:         checkPositiveNumber,
+	TIMEOUTSETTING:        checkNumber,
+	CMPOBJECT:             checkCompleted,
+	CMPTHRESHOLD:          checkNumber,
+	CMPLIMIT:              checkNumber,
+	CMPPUSH:               checkPositiveInteger,
+	CMPPOP:                checkPositiveInteger,
+	PRPLIMIT:              checkPositiveInteger,
+	PRETTY:                checkBool,
+	MAXINDEXAPI:           checkNumber,
+	PROFILE:               checkProfileAdmin,
+	CONTROLS:              checkControlsAdmin,
+	N1QLFEATCTRL:          checkNumber,
+	AUTOPREPARE:           checkBool,
+	MUTEXPROFILE:          checkBool,
+	FUNCLIMIT:             checkPositiveInteger,
+	TASKLIMIT:             checkPositiveInteger,
+	MEMORYQUOTA:           checkNonNegativeInteger,
+	USECBO:                checkBool,
+	TXTIMEOUT:             checkDuration,
+	ATRCOLLECTION:         checkPath,
+	NUMATRS:               checkPositiveInteger,
+	CLEANUPWINDOW:         checkDuration,
+	CLEANUPCLIENTATTEMPTS: checkBool,
+	CLEANUPLOSTATTEMPTS:   checkBool,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

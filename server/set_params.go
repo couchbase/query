@@ -10,10 +10,12 @@
 package server
 
 import (
+	"strings"
 	"time"
 
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -177,6 +179,26 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	NUMATRS: func(s *Server, o interface{}) errors.Error {
+		s.SetNumAtrs(int(getNumber(o)))
+		return nil
+	},
+	CLEANUPWINDOW: func(s *Server, o interface{}) errors.Error {
+		datastore.GetTransactionSettings().SetCleanupWindow(getDuration(o))
+		return nil
+	},
+	CLEANUPCLIENTATTEMPTS: func(s *Server, o interface{}) errors.Error {
+		if value, ok := o.(bool); ok {
+			datastore.GetTransactionSettings().SetCleanupClientAttempts(value)
+		}
+		return nil
+	},
+	CLEANUPLOSTATTEMPTS: func(s *Server, o interface{}) errors.Error {
+		if value, ok := o.(bool); ok {
+			datastore.GetTransactionSettings().SetCleanupLostAttempts(value)
+		}
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -243,30 +265,31 @@ func setCompleted(s *Server, o interface{}) errors.Error {
 
 func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.Error) {
 	for setting, value := range settings {
+		s := strings.ToLower(setting)
 		var cerr errors.Error
-		check_it, ok := CHECKERS[setting]
+		check_it, ok := CHECKERS[s]
 		if ok {
 			ok, cerr = check_it(value)
 		}
 
 		if !ok {
 			if cerr == nil {
-				cerr = errors.NewAdminSettingTypeError(setting, value)
+				cerr = errors.NewAdminSettingTypeError(s, value)
 				logging.Infof("Query Configuration %v", cerr.Error())
 			} else {
-				logging.Infof("Query Configuration incorrect value %v for setting: %s, error: %v ", value, setting, cerr)
+				logging.Infof("Query Configuration incorrect value %v for setting: %s, error: %v ", value, s, cerr)
 			}
 
 			if err == nil {
 				err = cerr
 			}
 		} else {
-			set_it := _SETTERS[setting]
+			set_it := _SETTERS[s]
 			serr := set_it(srvr, value)
 			if serr == nil {
-				logging.Infof("Query Configuration changed for %v. New value is %v", setting, value)
+				logging.Infof("Query Configuration changed for %v. New value is %v", s, value)
 			} else {
-				logging.Infof("Could not change query Configuration %v to %v: %v", setting, value, serr)
+				logging.Infof("Could not change query Configuration %v to %v: %v", s, value, serr)
 			}
 		}
 	}

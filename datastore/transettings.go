@@ -29,6 +29,7 @@ var transactionSettings *TransactionSettings
 func init() {
 	transactionSettings = &TransactionSettings{
 		txTimeout:             DEF_TXTIMEOUT,
+		numAtrs:               DEF_NUMATRS,
 		cleanupWindow:         time.Minute,
 		cleanupClientAttempts: true,
 		cleanupLostAttempts:   true,

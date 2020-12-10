@@ -137,6 +137,7 @@ type Server struct {
 	autoPrepare       bool
 	memoryQuota       uint64
 	atrCollection     string
+	numAtrs           int
 }
 
 // Default Keep Alive Length
@@ -171,6 +172,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	newTxRunQueues(&rv.transactionQueues, plusRequestsCap, _TX_QUEUE_SIZE)
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
+	rv.SetNumAtrs(datastore.DEF_NUMATRS)
 
 	// set default values
 	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
@@ -507,7 +509,15 @@ func (this *Server) AtrCollection() string {
 func (this *Server) SetAtrCollection(s string) {
 	this.atrCollection = s
 	datastore.GetTransactionSettings().SetAtrCollection(s)
+}
 
+func (this *Server) NumAtrs() int {
+	return this.numAtrs
+}
+
+func (this *Server) SetNumAtrs(i int) {
+	this.numAtrs = i
+	datastore.GetTransactionSettings().SetNumAtrs(i)
 }
 
 func (this *Server) Enterprise() bool {
@@ -884,8 +894,12 @@ func (this *Server) serviceRequest(request Request) {
 			if request.AtrCollection() != "" {
 				atrCollection = request.AtrCollection()
 			}
+			numAtrs := this.NumAtrs()
+			if request.NumAtrs() > 0 {
+				numAtrs = request.NumAtrs()
+			}
 			err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
-				request.TxTimeout(), this.TxTimeout(), atrCollection, request.NumAtrs(),
+				request.TxTimeout(), this.TxTimeout(), atrCollection, numAtrs,
 				request.TxData())
 		}
 
@@ -912,8 +926,12 @@ func (this *Server) serviceRequest(request Request) {
 			if request.AtrCollection() != "" {
 				atrCollection = request.AtrCollection()
 			}
+			numAtrs := this.NumAtrs()
+			if request.NumAtrs() > 0 {
+				numAtrs = request.NumAtrs()
+			}
 			if err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
-				request.TxTimeout(), this.TxTimeout(), atrCollection, request.NumAtrs(),
+				request.TxTimeout(), this.TxTimeout(), atrCollection, numAtrs,
 				request.TxData()); err != nil {
 				request.Fail(err)
 			}
