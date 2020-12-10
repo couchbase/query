@@ -68,6 +68,28 @@ func (this *keyspaceBase) IsBucket() bool {
 	return true
 }
 
+func (this *keyspaceBase) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
+	var err errors.Error
+
+	res := make([]int64, len(which))
+	ks := this.namespace.keyspaces[this.name]
+	for i, f := range which {
+		var val int64
+
+		switch f {
+		case datastore.KEYSPACE_COUNT:
+			val, err = ks.Count(context)
+		case datastore.KEYSPACE_SIZE:
+			val, err = ks.Size(context)
+		}
+		if err != nil {
+			return nil, err
+		}
+		res[i] = val
+	}
+	return res, err
+}
+
 func setKeyspaceBase(base *keyspaceBase, namespace *namespace, name string) {
 	base.namespace = namespace
 	base.name = name

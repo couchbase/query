@@ -212,6 +212,27 @@ func (this *virtualKeyspace) Scope() datastore.Scope {
 	return this.scope
 }
 
+func (this *virtualKeyspace) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
+	var err errors.Error
+
+	res := make([]int64, len(which))
+	for i, f := range which {
+		var val int64
+
+		switch f {
+		case datastore.KEYSPACE_COUNT:
+			val, err = this.Count(context)
+		case datastore.KEYSPACE_SIZE:
+			val, err = this.Size(context)
+		}
+		if err != nil {
+			return nil, err
+		}
+		res[i] = val
+	}
+	return res, err
+}
+
 func (this *virtualKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	return 0, nil
 }

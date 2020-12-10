@@ -126,17 +126,29 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[ask.Name()] = ask
 
-	kk, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES, true)
+	kk, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES, true, false)
 	if e != nil {
 		return e
 	}
 	p.keyspaces[kk.Name()] = kk
 
-	akk, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES, false)
+	akk, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES, false, false)
 	if e != nil {
 		return e
 	}
 	p.keyspaces[akk.Name()] = akk
+
+	kki, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES_INFO, true, true)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[kki.Name()] = kki
+
+	akki, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES_INFO, false, true)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[akki.Name()] = akki
 
 	db, e := newDualKeyspace(p)
 	if e != nil {

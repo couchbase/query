@@ -207,10 +207,11 @@ type Keyspace interface {
 	ScopeId() string      // Id of the scope that contains this keyspace
 	Scope() Scope         // Backpointer to scope
 
-	Count(context QueryContext) (int64, errors.Error) // count of all documents
-	Size(context QueryContext) (int64, errors.Error)  // size of all documents
-	Indexer(name IndexType) (Indexer, errors.Error)   // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
-	Indexers() ([]Indexer, errors.Error)              // List of index providers
+	Stats(context QueryContext, which []KeyspaceStats) ([]int64, errors.Error) // Collect multiple stats at once (eg Count, Size)
+	Count(context QueryContext) (int64, errors.Error)                          // count of all documents
+	Size(context QueryContext) (int64, errors.Error)                           // size of all documents
+	Indexer(name IndexType) (Indexer, errors.Error)                            // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
+	Indexers() ([]Indexer, errors.Error)                                       // List of index providers
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
@@ -227,6 +228,13 @@ type Keyspace interface {
 	IsBucket() bool
 	Release(close bool) // Release any resources held by this object
 }
+
+type KeyspaceStats int
+
+const (
+	KEYSPACE_COUNT = KeyspaceStats(iota)
+	KEYSPACE_SIZE
+)
 
 type KeyspaceMetadata interface {
 	MetadataVersion() uint64 // A counter that shows the current version of the list of objects contained within

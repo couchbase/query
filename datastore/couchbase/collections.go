@@ -192,6 +192,10 @@ func (coll *collection) Scope() datastore.Scope {
 	return coll.scope
 }
 
+func (coll *collection) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
+	return coll.bucket.stats(context, which, &memcached.ClientContext{CollId: coll.uid})
+}
+
 func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Error) {
 	return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid})
 }

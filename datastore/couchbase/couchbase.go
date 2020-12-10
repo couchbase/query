@@ -744,10 +744,11 @@ type keyspaceEntry struct {
 }
 
 const (
-	_MIN_ERR_INTERVAL   time.Duration = 5 * time.Second
-	_THROTTLING_TIMEOUT time.Duration = 10 * time.Millisecond
-	_CLEANUP_INTERVAL   time.Duration = time.Hour
-	_REFRESH_THRESHOLD  time.Duration = 100 * time.Millisecond
+	_MIN_ERR_INTERVAL            time.Duration = 5 * time.Second
+	_THROTTLING_TIMEOUT          time.Duration = 10 * time.Millisecond
+	_CLEANUP_INTERVAL            time.Duration = time.Hour
+	_NAMESPACE_REFRESH_THRESHOLD time.Duration = 100 * time.Millisecond
+	_STATS_REFRESH_THRESHOLD     time.Duration = 1 * time.Second
 )
 
 func (p *namespace) DatastoreId() string {
@@ -1040,7 +1041,7 @@ func (p *namespace) getPool() *cb.Pool {
 }
 
 func (p *namespace) refresh() {
-	if util.Since(p.last) < _REFRESH_THRESHOLD {
+	if util.Since(p.last) < _NAMESPACE_REFRESH_THRESHOLD {
 		return
 	}
 
@@ -1228,6 +1229,7 @@ type keyspace struct {
 	newCollectionsManifestUid uint64            // announced manifest id
 	scopes                    map[string]*scope // scopes by id
 	defaultCollection         datastore.Keyspace
+	last                      util.Time // last refresh
 }
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
@@ -1405,8 +1407,41 @@ func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	return b.count(context)
 }
 
+func (b *keyspace) needsTimeRefresh(threshold time.Duration) bool {
+	now := util.Now()
+	if now.Sub(b.last) < threshold {
+		return false
+	}
+	b.Lock()
+	b.last = now
+	b.Unlock()
+	return true
+}
+
+var ds2cb = []cb.BucketStats{
+	cb.StatCount,
+	cb.StatSize,
+}
+
+func (b *keyspace) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
+	return b.stats(context, which)
+}
+
+func (b *keyspace) stats(context datastore.QueryContext, which []datastore.KeyspaceStats, clientContext ...*memcached.ClientContext) ([]int64, errors.Error) {
+	cbWhich := make([]cb.BucketStats, len(which))
+	for i, f := range which {
+		cbWhich[i] = ds2cb[f]
+	}
+	res, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), cbWhich, clientContext...)
+	if err != nil {
+		b.checkRefresh(err)
+		return nil, errors.NewCbKeyspaceCountError(err, b.fullName)
+	}
+	return res, nil
+}
+
 func (b *keyspace) count(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
-	count, err := b.cbbucket.GetCount(true, clientContext...)
+	count, err := b.cbbucket.GetCount(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceCountError(err, b.fullName)
@@ -1419,7 +1454,7 @@ func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
 }
 
 func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
-	size, err := b.cbbucket.GetSize(true, clientContext...)
+	size, err := b.cbbucket.GetSize(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceSizeError(err, b.fullName)

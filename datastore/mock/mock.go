@@ -305,6 +305,27 @@ func (b *keyspace) MetadataVersion() uint64 {
 	return 0
 }
 
+func (this *keyspace) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
+	var err errors.Error
+
+	res := make([]int64, len(which))
+	for i, f := range which {
+		var val int64
+
+		switch f {
+		case datastore.KEYSPACE_COUNT:
+			val, err = this.Count(context)
+		case datastore.KEYSPACE_SIZE:
+			val, err = this.Size(context)
+		}
+		if err != nil {
+			return nil, err
+		}
+		res[i] = val
+	}
+	return res, err
+}
+
 func (b *keyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	return int64(b.nitems), nil
 }

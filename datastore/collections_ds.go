@@ -411,6 +411,27 @@ func (ks *CollectionsKeyspace) Scope() Scope {
 	return ks.scope
 }
 
+func (ks *CollectionsKeyspace) Stats(context QueryContext, which []KeyspaceStats) ([]int64, errors.Error) {
+	var err errors.Error
+
+	res := make([]int64, len(which))
+	for i, f := range which {
+		var val int64
+
+		switch f {
+		case KEYSPACE_COUNT:
+			val, err = ks.Count(context)
+		case KEYSPACE_SIZE:
+			val, err = ks.Size(context)
+		}
+		if err != nil {
+			return nil, err
+		}
+		res[i] = val
+	}
+	return res, err
+}
+
 func (ks *CollectionsKeyspace) Count(context QueryContext) (int64, errors.Error) {
 	return int64(len(ks.docs)), nil
 }
