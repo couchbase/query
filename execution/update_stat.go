@@ -77,7 +77,7 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 		} else {
 			var indexes []datastore.Index
 			var err1 errors.Error
-			if len(this.plan.Node().Indexes()) > 0 {
+			if this.plan.Node().IndexAll() || len(this.plan.Node().Indexes()) > 0 {
 				indexes, err1 = getIndexes(context, parent, this.plan.Keyspace(),
 					this.plan.Node().Indexes(), this.plan.Node().Using())
 				if err1 != nil {
@@ -108,12 +108,18 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 func getIndexes(context *Context, parent value.Value, keyspace datastore.Keyspace,
 	idxExprs expression.Expressions, using datastore.IndexType) ([]datastore.Index, errors.Error) {
 
-	idxNames, err := getIndexNames(context, parent, idxExprs, "update_statistics")
+	indexer, err := keyspace.Indexer(using)
 	if err != nil {
 		return nil, err
 	}
 
-	indexer, err := keyspace.Indexer(using)
+	var idxNames []string
+	if len(idxExprs) > 0 {
+		idxNames, err = getIndexNames(context, parent, idxExprs, "update_statistics")
+	} else {
+		// all indexes
+		idxNames, err = indexer.IndexNames()
+	}
 	if err != nil {
 		return nil, err
 	}

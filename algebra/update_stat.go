@@ -30,6 +30,7 @@ type UpdateStatistics struct {
 	with     value.Value            `json:"with"`
 	indexes  expression.Expressions `json:"indexes"`
 	using    datastore.IndexType    `json:"using"`
+	indexAll bool                   `json:"index_all"`
 	delete   bool                   `json:"delete"`
 }
 
@@ -52,6 +53,19 @@ func NewUpdateStatisticsIndex(keyspace *KeyspaceRef, indexes expression.Expressi
 		with:     with,
 		indexes:  indexes,
 		using:    using,
+	}
+
+	rv.stmt = rv
+	return rv
+}
+
+func NewUpdateStatisticsIndexAll(keyspace *KeyspaceRef,
+	using datastore.IndexType, with value.Value) *UpdateStatistics {
+	rv := &UpdateStatistics{
+		keyspace: keyspace,
+		with:     with,
+		using:    using,
+		indexAll: true,
 	}
 
 	rv.stmt = rv
@@ -157,6 +171,10 @@ func (this *UpdateStatistics) Delete() bool {
 	return this.delete
 }
 
+func (this *UpdateStatistics) IndexAll() bool {
+	return this.indexAll
+}
+
 func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "updateStatistics"}
 	r["keyspaceRef"] = this.keyspace
@@ -164,6 +182,7 @@ func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
 	r["with"] = this.with
 	r["indexes"] = this.indexes
 	r["using"] = this.using
+	r["index_all"] = this.indexAll
 	r["delete"] = this.delete
 
 	return json.Marshal(r)

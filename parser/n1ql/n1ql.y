@@ -2908,6 +2908,11 @@ UPDATE STATISTICS opt_for named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index
     $$ = algebra.NewUpdateStatisticsIndex($4, $7, $9, $10)
 }
 |
+UPDATE STATISTICS opt_for named_keyspace_ref INDEX ALL opt_index_using opt_infer_ustat_with
+{
+    $$ = algebra.NewUpdateStatisticsIndexAll($4, $7, $8)
+}
+|
 UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
 {
     $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($7)}, $8, $9)
@@ -2936,6 +2941,11 @@ ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS
 ANALYZE opt_keyspace_collection named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_infer_ustat_with
 {
     $$ = algebra.NewUpdateStatisticsIndex($3, $6, $8, $9)
+}
+|
+ANALYZE opt_keyspace_collection named_keyspace_ref INDEX ALL opt_index_using opt_infer_ustat_with
+{
+    $$ = algebra.NewUpdateStatisticsIndexAll($3, $6, $7)
 }
 |
 ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with

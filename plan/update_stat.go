@@ -73,6 +73,10 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 		r["indexes"] = indexes
 		r["using"] = this.node.Using()
 	}
+	if this.node.IndexAll() {
+		r["index_all"] = this.node.IndexAll()
+		r["using"] = this.node.Using()
+	}
 	if this.node.Delete() {
 		r["delete"] = this.node.Delete()
 	}
@@ -96,6 +100,7 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 		Terms     []string            `json:"terms"`
 		Indexes   []string            `json:"indexes"`
 		Using     datastore.IndexType `json:"using"`
+		IndexAll  bool                `json:"index_all"`
 		Delete    bool                `json:"delete"`
 		With      json.RawMessage     `json:"with"`
 	}
@@ -147,6 +152,8 @@ func (this *UpdateStatistics) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Delete {
 		this.node = algebra.NewUpdateStatisticsDelete(ksref, terms)
+	} else if _unmarshalled.IndexAll {
+		this.node = algebra.NewUpdateStatisticsIndexAll(ksref, _unmarshalled.Using, with)
 	} else if len(indexes) > 0 {
 		this.node = algebra.NewUpdateStatisticsIndex(ksref, indexes, _unmarshalled.Using, with)
 	} else {

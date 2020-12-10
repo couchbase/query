@@ -55,9 +55,12 @@ func (this *SemChecker) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (i
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Update Statistics", "semantics.visit_update_statistics")
 	}
-	if len(stmt.Indexes()) > 0 &&
+	if (stmt.IndexAll() || len(stmt.Indexes()) > 0) &&
 		(stmt.Using() != datastore.GSI && stmt.Using() != datastore.DEFAULT) {
 		return nil, errors.NewUpdateStatInvalidIndexTypeError()
+	}
+	if stmt.IndexAll() && !stmt.Keyspace().Path().IsCollection() {
+		return nil, errors.NewUpdateStatIndexAllCollectionOnly()
 	}
 	return nil, stmt.MapExpressions(this)
 }
