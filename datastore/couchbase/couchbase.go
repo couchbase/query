@@ -19,6 +19,7 @@ package couchbase
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -1941,6 +1942,26 @@ func (b *keyspace) Release(bclose bool) {
 	}
 	if agentProvider != nil {
 		agentProvider.Close()
+	}
+
+	// close an ftsIndexer that belongs to this keyspace
+	if ftsIndexerCloser, ok := b.ftsIndexer.(io.Closer); ok {
+		// FTSIndexer implements a Close() method
+		ftsIndexerCloser.Close()
+	}
+
+	// also iterate through scopes and collections within this keyspace
+	for _, scope := range b.scopes {
+		if scope != nil {
+			for _, coll := range scope.keyspaces {
+				if coll != nil {
+					if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
+						// FTSIndexer implements a Close() method
+						ftsIndexerCloser.Close()
+					}
+				}
+			}
+		}
 	}
 }
 

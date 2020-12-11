@@ -11,6 +11,7 @@ package couchbase
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"sync"
 
@@ -316,7 +317,11 @@ func (coll *collection) Delete(deletes []value.Pair, context datastore.QueryCont
 }
 
 func (coll *collection) Release(blcose bool) {
-	// do nothing
+	// close an ftsIndexer that belongs to this keyspace
+	if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
+		// FTSIndexer implements a Close() method
+		ftsIndexerCloser.Close()
+	}
 }
 
 func (coll *collection) Flush() errors.Error {
@@ -474,9 +479,16 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 		// clear collections that have disappeared
 		if oldScope != nil {
-			for n, _ := range oldScope.keyspaces {
+			for n, val := range oldScope.keyspaces {
 				if scope.keyspaces[n] == nil {
 					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
+				}
+				if val != nil {
+					// close an ftsIndexer that belongs to this keyspace
+					if ftsIndexerCloser, ok := val.ftsIndexer.(io.Closer); ok {
+						// FTSIndexer implements a Close() method
+						ftsIndexerCloser.Close()
+					}
 				}
 			}
 		}
@@ -506,6 +518,11 @@ func clearOldScope(bucket *keyspace, s *scope) {
 		if val != nil {
 			s.keyspaces[n] = nil
 			DropDictionaryEntry(val.QualifiedName())
+			// close an ftsIndexer that belongs to this keyspace
+			if ftsIndexerCloser, ok := val.ftsIndexer.(io.Closer); ok {
+				// FTSIndexer implements a Close() method
+				ftsIndexerCloser.Close()
+			}
 		}
 	}
 
