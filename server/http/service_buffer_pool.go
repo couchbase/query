@@ -19,6 +19,7 @@ import (
 type BufferPool interface {
 	GetBuffer() *bytes.Buffer
 	PutBuffer(*bytes.Buffer)
+	SetBufferCapacity(s int)
 	BufferCapacity() int
 }
 
@@ -56,6 +57,11 @@ func (bp *syncPoolBufPool) PutBuffer(b *bytes.Buffer) {
 		b.Reset()
 		bp.pool.Put(b)
 	}
+}
+
+func (bp *syncPoolBufPool) SetBufferCapacity(s int) {
+	bp.buf_size = s
+	bp.max_size = s * 2
 }
 
 func (bp *syncPoolBufPool) BufferCapacity() int {

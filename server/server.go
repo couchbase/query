@@ -138,11 +138,13 @@ type Server struct {
 	memoryQuota       uint64
 	atrCollection     string
 	numAtrs           int
+	settingsCallback  func(string, interface{})
 }
 
-// Default Keep Alive Length
+// Default and min Keep Alive Length
 
 const KEEP_ALIVE_DEFAULT = 1024 * 16
+const KEEP_ALIVE_MIN = 1024
 
 func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
@@ -150,19 +152,20 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	timeout time.Duration, signature, metrics, enterprise, pretty bool,
 	srvprofile Profile, srvcontrols bool) (*Server, errors.Error) {
 	rv := &Server{
-		datastore:   store,
-		systemstore: sys,
-		configstore: config,
-		acctstore:   acctng,
-		namespace:   namespace,
-		readonly:    readonly,
-		signature:   signature,
-		timeout:     timeout,
-		metrics:     metrics,
-		enterprise:  enterprise,
-		pretty:      pretty,
-		srvcontrols: srvcontrols,
-		srvprofile:  srvprofile,
+		datastore:        store,
+		systemstore:      sys,
+		configstore:      config,
+		acctstore:        acctng,
+		namespace:        namespace,
+		readonly:         readonly,
+		signature:        signature,
+		timeout:          timeout,
+		metrics:          metrics,
+		enterprise:       enterprise,
+		pretty:           pretty,
+		srvcontrols:      srvcontrols,
+		srvprofile:       srvprofile,
+		settingsCallback: func(s string, v interface{}) {},
 	}
 
 	rv.unboundQueue.servicers = servicers
@@ -213,6 +216,14 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 func MetakvSubscribe() {
 	// Subscribe FTS Client Metakv information
 	queryMetakv.Subscribe(N1ftyMetakvNotifier, queryMetakv.FTSMetaDir, make(chan struct{}))
+}
+
+func (this *Server) SetSettingsCallback(f func(string, interface{})) {
+	this.settingsCallback = f
+}
+
+func (this *Server) SettingsCallback() func(string, interface{}) {
+	return this.settingsCallback
 }
 
 func (this *Server) Datastore() datastore.Datastore {
@@ -280,9 +291,6 @@ func (this *Server) KeepAlive() int {
 }
 
 func (this *Server) SetKeepAlive(keepAlive int) {
-	if keepAlive <= 0 {
-		keepAlive = KEEP_ALIVE_DEFAULT
-	}
 	atomic.StoreInt64(&this.keepAlive, int64(keepAlive))
 }
 

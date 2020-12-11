@@ -61,7 +61,6 @@ type Checker func(interface{}) (bool, errors.Error)
 var CHECKERS = map[string]Checker{
 	CPUPROFILE:            checkString,
 	DEBUG:                 checkBool,
-	KEEPALIVELENGTH:       checkNumber,
 	LOGLEVEL:              checkLogLevel,
 	MAXPARALLELISM:        checkNumber,
 	MEMPROFILE:            checkString,
@@ -69,15 +68,10 @@ var CHECKERS = map[string]Checker{
 	PIPELINEBATCH:         checkNumber,
 	PIPELINECAP:           checkNumber,
 	SCANCAP:               checkNumber,
-	SERVICERS:             checkPositiveNumber,
-	PLUSSERVICERS:         checkPositiveNumber,
 	TIMEOUTSETTING:        checkNumber,
 	CMPOBJECT:             checkCompleted,
 	CMPTHRESHOLD:          checkNumber,
 	CMPLIMIT:              checkNumber,
-	CMPPUSH:               checkPositiveInteger,
-	CMPPOP:                checkPositiveInteger,
-	PRPLIMIT:              checkPositiveInteger,
 	PRETTY:                checkBool,
 	MAXINDEXAPI:           checkNumber,
 	PROFILE:               checkProfileAdmin,
@@ -85,16 +79,25 @@ var CHECKERS = map[string]Checker{
 	N1QLFEATCTRL:          checkNumber,
 	AUTOPREPARE:           checkBool,
 	MUTEXPROFILE:          checkBool,
-	FUNCLIMIT:             checkPositiveInteger,
-	TASKLIMIT:             checkPositiveInteger,
-	MEMORYQUOTA:           checkNonNegativeInteger,
 	USECBO:                checkBool,
 	TXTIMEOUT:             checkDuration,
 	ATRCOLLECTION:         checkPath,
-	NUMATRS:               checkPositiveInteger,
 	CLEANUPWINDOW:         checkDuration,
 	CLEANUPCLIENTATTEMPTS: checkBool,
 	CLEANUPLOSTATTEMPTS:   checkBool,
+}
+
+var CHECKERS_MIN = map[string]int{
+	KEEPALIVELENGTH: KEEP_ALIVE_MIN,
+	CMPPUSH:         2,
+	CMPPOP:          2,
+	SERVICERS:       1,
+	PLUSSERVICERS:   1,
+	PRPLIMIT:        2,
+	FUNCLIMIT:       2,
+	TASKLIMIT:       2,
+	MEMORYQUOTA:     0,
+	NUMATRS:         2,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {
@@ -108,6 +111,16 @@ func checkNumber(val interface{}) (bool, errors.Error) {
 		return true, nil
 	case float64:
 		return true, nil
+	}
+	return false, nil
+}
+
+func checkNumberMin(val interface{}, min int) (bool, errors.Error) {
+	switch val := val.(type) {
+	case int64:
+		return val >= int64(min), nil
+	case float64:
+		return val >= float64(min), nil
 	}
 	return false, nil
 }
@@ -157,36 +170,6 @@ func checkCompleted(val interface{}) (bool, errors.Error) {
 		}
 	}
 	return ok, nil
-}
-
-func checkPositiveInteger(val interface{}) (bool, errors.Error) {
-	switch val := val.(type) {
-	case int64:
-		return (val > 1), nil
-	case float64:
-		return (val > 1), nil
-	}
-	return false, nil
-}
-
-func checkPositiveNumber(val interface{}) (bool, errors.Error) {
-	switch val := val.(type) {
-	case int64:
-		return (val > 0), nil
-	case float64:
-		return (val > 0), nil
-	}
-	return false, nil
-}
-
-func checkNonNegativeInteger(val interface{}) (bool, errors.Error) {
-	switch val := val.(type) {
-	case int64:
-		return (val >= 0), nil
-	case float64:
-		return (val >= 0), nil
-	}
-	return false, nil
 }
 
 func checkString(val interface{}) (bool, errors.Error) {

@@ -314,6 +314,7 @@ func main() {
 		)
 		os.Exit(1)
 	}
+	server.SetSettingsCallback(endpoint.SettingsCallback)
 	constructor.Init(endpoint.Mux())
 
 	// Now that we are up and running, try to prime the prepareds cache

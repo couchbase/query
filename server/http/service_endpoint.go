@@ -96,6 +96,16 @@ func (this *HttpEndpoint) Mux() *mux.Router {
 	return this.mux
 }
 
+func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
+	switch f {
+	case server.KEEPALIVELENGTH:
+		val, ok := v.(int)
+		if ok {
+			this.bufpool.SetBufferCapacity(val)
+		}
+	}
+}
+
 func getNetwProtocol() []string {
 	if server.IsIPv6() {
 		return []string{"tcp6", "tcp4"}
