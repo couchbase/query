@@ -1949,20 +1949,6 @@ func (b *keyspace) Release(bclose bool) {
 		// FTSIndexer implements a Close() method
 		ftsIndexerCloser.Close()
 	}
-
-	// also iterate through scopes and collections within this keyspace
-	for _, scope := range b.scopes {
-		if scope != nil {
-			for _, coll := range scope.keyspaces {
-				if coll != nil {
-					if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
-						// FTSIndexer implements a Close() method
-						ftsIndexerCloser.Close()
-					}
-				}
-			}
-		}
-	}
 }
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {

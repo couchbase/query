@@ -316,7 +316,7 @@ func (coll *collection) Delete(deletes []value.Pair, context datastore.QueryCont
 		deletes, context, &memcached.ClientContext{CollId: coll.uid})
 }
 
-func (coll *collection) Release(blcose bool) {
+func (coll *collection) Release(bclose bool) {
 	// close an ftsIndexer that belongs to this keyspace
 	if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
 		// FTSIndexer implements a Close() method
@@ -484,11 +484,8 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
 				}
 				if val != nil {
-					// close an ftsIndexer that belongs to this keyspace
-					if ftsIndexerCloser, ok := val.ftsIndexer.(io.Closer); ok {
-						// FTSIndexer implements a Close() method
-						ftsIndexerCloser.Close()
-					}
+					// invoke Release(..) on collection for any cleanup
+					val.Release(false)
 				}
 			}
 		}
@@ -518,11 +515,8 @@ func clearOldScope(bucket *keyspace, s *scope) {
 		if val != nil {
 			s.keyspaces[n] = nil
 			DropDictionaryEntry(val.QualifiedName())
-			// close an ftsIndexer that belongs to this keyspace
-			if ftsIndexerCloser, ok := val.ftsIndexer.(io.Closer); ok {
-				// FTSIndexer implements a Close() method
-				ftsIndexerCloser.Close()
-			}
+			// invoke Release(..) on collection for any cleanup
+			val.Release(false)
 		}
 	}
 
