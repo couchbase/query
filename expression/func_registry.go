@@ -350,6 +350,9 @@ var _FUNCTIONS = map[string]Function{
 	"neginfif":      &NegInfIf{},
 	"posinfif":      &PosInfIf{},
 
+	// Flow Control
+	"abort": &Abort{},
+
 	// Meta
 	"meta":          &Meta{},
 	"min_version":   &MinVersion{},

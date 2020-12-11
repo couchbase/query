@@ -33,6 +33,11 @@ func NewExecutionParameterError(what string) Error {
 }
 
 func NewEvaluationError(e error, termType string) Error {
+	_, ok := e.(AbortError)
+	if ok {
+		return &err{level: EXCEPTION, ICode: 5011, IKey: "execution.abort_error", ICause: e,
+			InternalMsg: fmt.Sprintf("Abort: %s.", e), InternalCaller: CallerN(1)}
+	}
 	return &err{level: EXCEPTION, ICode: 5010, IKey: "execution.evaluation_error", ICause: e,
 		InternalMsg: fmt.Sprintf("Error evaluating %s.", termType), InternalCaller: CallerN(1)}
 }

@@ -52,6 +52,8 @@ type Error interface {
 	SetCause(cause interface{})
 }
 
+type AbortError error
+
 type ErrorChannel chan Error
 
 func NewError(e error, internalMsg string) Error {
