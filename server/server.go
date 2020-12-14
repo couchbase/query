@@ -885,10 +885,14 @@ func (this *Server) serviceRequest(request Request) {
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, false)
 			s := string(buf[0:n])
-			logging.Severep("", logging.Pair{"panic", err},
-				logging.Pair{"stack", s})
+			logging.Severef("panic: %v ", err)
+			logging.Severef("request text: <ud>%v</ud>", request.Statement())
+			logging.Severef("query context: <ud>%v</ud>", request.QueryContext())
+			logging.Severef("stack: %v", s)
 			os.Stderr.WriteString(s)
 			os.Stderr.Sync()
+			request.Fail(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
+			request.Failed(this)
 		}
 	}()
 
