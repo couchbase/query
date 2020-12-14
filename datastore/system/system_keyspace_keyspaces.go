@@ -100,7 +100,9 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 									if scope != nil {
 										keyspaceIds, _ := scope.KeyspaceIds()
 										for _, keyspaceId := range keyspaceIds {
-
+											if b.skipSystem && keyspaceId[0] == '_' {
+												continue
+											}
 											if !canAccessAll && !canRead(context, namespaceId, object.Id, scopeId, keyspaceId) {
 												context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 											} else {
