@@ -25,7 +25,7 @@ func Init() {
 }
 
 func NewGolangBody(library, object string) (functions.FunctionBody, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported()
+	return nil, errors.NewFunctionsNotSupported("golang")
 }
 
 func (this *golangBody) Lang() functions.Language {
@@ -47,5 +47,5 @@ func (this *golangBody) Indexable() value.Tristate {
 
 // ditto, for tests
 func MakeGolang(name functions.FunctionName, body []byte) (functions.FunctionBody, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported()
+	return nil, errors.NewFunctionsNotSupported("golang")
 }

@@ -26,7 +26,7 @@ func Init(mix *mux.Router) {
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported()
+	return nil, errors.NewFunctionsNotSupported("javascript")
 }
 
 func (this *javascriptBody) Lang() functions.Language {
@@ -48,5 +48,5 @@ func (this *javascriptBody) Indexable() value.Tristate {
 
 // ditto, for tests
 func MakeJavascript(name functions.FunctionName, body []byte) (functions.FunctionBody, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported()
+	return nil, errors.NewFunctionsNotSupported("javascript")
 }

@@ -38,9 +38,9 @@ func NewNodeServiceErr(e string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewFunctionsNotSupported() Error {
+func NewFunctionsNotSupported(what string) Error {
 	return &err{level: EXCEPTION, ICode: 10100, IKey: "function.CE.error",
-		InternalMsg:    fmt.Sprintf("Functions are only supported in Enterprise Edition"),
+		InternalMsg:    fmt.Sprintf("Functions of type %v are only supported in Enterprise Edition", what),
 		InternalCaller: CallerN(1)}
 }
 

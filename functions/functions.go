@@ -538,7 +538,7 @@ type empty struct {
 }
 
 func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported()
+	return nil, errors.NewFunctionsNotSupported("")
 }
 
 // dummy language throwing errors, for caching missing entries
