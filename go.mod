@@ -36,7 +36,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.0.0-20201026062457-7b3be89bbd89
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
-	github.com/couchbase/gocbcore/v9 v9.0.8-0.20201103094350-7937b1c7f791
+	github.com/couchbase/gocbcore/v9 v9.1.0
 	github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71
 	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
@@ -58,6 +58,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	gopkg.in/couchbase/gocb.v1 v1.6.7
+	gopkg.in/couchbase/gocbcore.v7 v7.1.18 // indirect
 	gopkg.in/couchbaselabs/gocbconnstr.v1 v1.0.4 // indirect
 	gopkg.in/couchbaselabs/gojcbmock.v1 v1.0.4 // indirect
 	gopkg.in/couchbaselabs/jsonx.v1 v1.0.0 // indirect
