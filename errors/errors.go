@@ -52,7 +52,22 @@ type Error interface {
 	SetCause(cause interface{})
 }
 
-type AbortError error
+type AbortError struct {
+	e string
+}
+
+// dummy method to make AbortError and error not equivalent
+func (e *AbortError) Error() string {
+	return e.e
+}
+
+// to make abort error non equivalent to any other error
+func (e *AbortError) dummyMethod() {
+}
+
+func NewAbortError(e string) *AbortError {
+	return &AbortError{e}
+}
 
 type ErrorChannel chan Error
 

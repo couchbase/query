@@ -55,7 +55,7 @@ func (this *Abort) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *Abort) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NULL_VALUE, errors.AbortError(fmt.Errorf("%v", arg))
+	return value.NULL_VALUE, errors.NewAbortError(fmt.Sprintf("%v", arg))
 }
 
 /*
