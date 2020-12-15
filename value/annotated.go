@@ -120,6 +120,7 @@ func (this *annotatedValue) Copy() Value {
 	rv.Value = this.Value.Copy()
 	rv.attachments = copyMap(this.attachments, self)
 	rv.bit = this.bit
+	rv.id = this.id
 	if this.covers != nil {
 		rv.covers = this.covers.Copy()
 	}
@@ -133,6 +134,7 @@ func (this *annotatedValue) CopyForUpdate() Value {
 	rv.attachments = copyMap(this.attachments, self)
 	rv.covers = this.covers
 	rv.bit = this.bit
+	rv.id = this.id
 	return rv
 }
 
