@@ -110,6 +110,13 @@ func (this *SelectTerm) IsCorrelated() bool {
 }
 
 /*
+Returns estimated result size
+*/
+func (this *SelectTerm) EstResultSize() int64 {
+	return this.query.EstResultSize()
+}
+
+/*
 Accessor.
 */
 func (this *SelectTerm) Select() *Select {

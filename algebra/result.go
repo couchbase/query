@@ -28,7 +28,8 @@ query. Terms represent the result expression.
 type Projection struct {
 	distinct bool        `json:"distinct"`
 	raw      bool        `json:"raw"`
-	terms    ResultTerms `json:terms`
+	terms    ResultTerms `json:"terms"`
+	estSize  int64       `json:"est_size"`
 }
 
 /*
@@ -214,6 +215,20 @@ Return the result expression terms.
 */
 func (this *Projection) Terms() ResultTerms {
 	return this.terms
+}
+
+/*
+Return the estimated result size.
+*/
+func (this *Projection) EstSize() int64 {
+	return this.estSize
+}
+
+/*
+Set the estimated result size.
+*/
+func (this *Projection) SetEstSize(estSize int64) {
+	this.estSize = estSize
 }
 
 /*

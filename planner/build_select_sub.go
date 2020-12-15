@@ -255,10 +255,11 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			cost = this.lastOp.Cost()
 			cardinality = this.lastOp.Cardinality()
 			if cost > 0.0 && cardinality > 0.0 {
-				ipcost, ipcard := getInitialProjectCost(this.baseKeyspaces, projection, cardinality)
-				if ipcost > 0.0 && ipcard > 0.0 {
+				ipcost, ipcard, ipsize := getInitialProjectCost(this.baseKeyspaces, projection, cardinality)
+				if ipcost > 0.0 && ipcard > 0.0 && ipsize > 0 {
 					cost += ipcost
 					cardinality = ipcard
+					projection.SetEstSize(ipsize)
 				}
 			}
 		}

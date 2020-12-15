@@ -41,6 +41,18 @@ func (this *setOp) IsCorrelated() bool {
 }
 
 /*
+Returns maximum of the result size
+*/
+func (this *setOp) EstResultSize() int64 {
+	first := this.first.EstResultSize()
+	second := this.second.EstResultSize()
+	if first >= second {
+		return first
+	}
+	return second
+}
+
+/*
 Applies mapper to the two subresults.
 */
 func (this *setOp) MapExpressions(mapper expression.Mapper) (err error) {

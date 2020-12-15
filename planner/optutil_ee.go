@@ -265,12 +265,12 @@ func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float
 	return optutil.CalcWithCost(lastOp, with)
 }
 
-func getOffsetCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, noffset int64) (float64, float64) {
-	return optutil.CalcOffsetCost(baseKeyspaces, lastOp, noffset)
+func getOffsetCost(totalSize int64, lastOp plan.Operator, noffset int64) (float64, float64) {
+	return optutil.CalcOffsetCost(totalSize, lastOp, noffset)
 }
 
-func getLimitCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, nlimit int64) (float64, float64) {
-	return optutil.CalcLimitCost(baseKeyspaces, lastOp, nlimit)
+func getLimitCost(totalSize int64, lastOp plan.Operator, nlimit int64) (float64, float64) {
+	return optutil.CalcLimitCost(totalSize, lastOp, nlimit)
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,
@@ -388,8 +388,12 @@ func getSortCost(baseKeyspaces map[string]*base.BaseKeyspace, nterms int, cardin
 	return optutil.CalcSortCost(baseKeyspaces, nterms, cardinality, limit, offset)
 }
 
+func getSortCostWithSize(totalSize int64, nterms int, cardinality float64, limit, offset int64) (float64, float64) {
+	return optutil.CalcSortCostWithSize(totalSize, nterms, cardinality, limit, offset)
+}
+
 func getInitialProjectCost(baseKeyspaces map[string]*base.BaseKeyspace,
-	projection *algebra.Projection, cardinality float64) (float64, float64) {
+	projection *algebra.Projection, cardinality float64) (float64, float64, int64) {
 	return optutil.CalcInitialProjectionCost(baseKeyspaces, projection, cardinality)
 }
 

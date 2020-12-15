@@ -85,6 +85,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	cardinality := lastOp.Cardinality()
 	nlimit := int64(0)
 	noffset := int64(0)
+	projSize := stmt.Subresult().EstResultSize()
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 		if stmtLimit != nil {
 			lv, static := base.GetStaticInt(stmtLimit)
@@ -112,7 +113,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 			}
 		}
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			scost, scardinality := getSortCost(this.baseKeyspaces, len(stmtOrder.Terms()),
+			scost, scardinality := getSortCostWithSize(projSize, len(stmtOrder.Terms()),
 				cardinality, nlimit, noffset)
 			if scost > 0.0 && scardinality > 0.0 {
 				cost += scost
@@ -129,7 +130,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	if stmtOffset != nil && this.offset == nil {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			cost, cardinality = getOffsetCost(this.baseKeyspaces, lastOp, noffset)
+			cost, cardinality = getOffsetCost(projSize, lastOp, noffset)
 		}
 		offset := plan.NewOffset(stmtOffset, cost, cardinality)
 		children = append(children, offset)
@@ -138,7 +139,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	if stmtLimit != nil {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			cost, cardinality = getLimitCost(this.baseKeyspaces, lastOp, nlimit)
+			cost, cardinality = getLimitCost(projSize, lastOp, nlimit)
 		}
 		limit := plan.NewLimit(stmtLimit, cost, cardinality)
 		children = append(children, limit)

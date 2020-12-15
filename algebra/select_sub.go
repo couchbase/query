@@ -322,6 +322,10 @@ func (this *Subselect) SetCorrelated() {
 	this.correlated = true
 }
 
+func (this *Subselect) EstResultSize() int64 {
+	return this.projection.EstSize()
+}
+
 /*
 Returns the let field that represents the With
 clause in the subselect statement.

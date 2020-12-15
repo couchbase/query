@@ -166,11 +166,11 @@ func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getOffsetCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, noffset int64) (float64, float64) {
+func getOffsetCost(totalSize int64, lastOp plan.Operator, noffset int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getLimitCost(baseKeyspaces map[string]*base.BaseKeyspace, lastOp plan.Operator, nlimit int64) (float64, float64) {
+func getLimitCost(totalSize int64, lastOp plan.Operator, nlimit int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
@@ -190,9 +190,13 @@ func getSortCost(baseKeyspaces map[string]*base.BaseKeyspace, nterms int, cardin
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 }
 
-func getInitialProjectCost(baseKeyspaces map[string]*base.BaseKeyspace,
-	projection *algebra.Projection, cardinality float64) (float64, float64) {
+func getSortCostWithSize(totalSize int64, nterms int, cardinality float64, limit, offset int64) (float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+}
+
+func getInitialProjectCost(baseKeyspaces map[string]*base.BaseKeyspace,
+	projection *algebra.Projection, cardinality float64) (float64, float64, int64) {
+	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, 0
 }
 
 func getGroupCosts(baseKeyspaces map[string]*base.BaseKeyspace, group *algebra.Group,
