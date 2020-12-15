@@ -38,7 +38,7 @@ require (
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
 	github.com/couchbase/gocbcore/v9 v9.0.8-0.20201103094350-7937b1c7f791
 	github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71
-	github.com/couchbase/gomemcached v0.0.0-00010101000000-00000000000
+	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
 	github.com/couchbase/goutils v0.0.0-20201030094643-5e82bb967e67
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
