@@ -616,6 +616,8 @@ func (this *Context) SetTransactionInfo(txId string, txStmtNum int64) (err error
 	this.txTimeout = txContext.TxTimeout()
 	if this.originalConsistency == datastore.NOT_SET {
 		this.consistency = txContext.TxScanConsistency()
+	} else if this.originalConsistency == datastore.AT_PLUS {
+		this.consistency = datastore.SCAN_PLUS
 	}
 	this.SetDurability(txContext.TxDurabilityLevel(), txContext.TxDurabilityTimeout())
 	this.atrCollection = txContext.AtrCollection()
