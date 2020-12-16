@@ -203,7 +203,16 @@ func (b *keyspaceKeyspace) fetchOne(ns string, ks string, context datastore.Quer
 				"path":         path(namespace.Name(), keyspace.Name()),
 			})
 			if b.info {
-				res, err2 := keyspace.Stats(context, []datastore.KeyspaceStats{datastore.KEYSPACE_COUNT, datastore.KEYSPACE_SIZE})
+				var d datastore.Keyspace
+
+				b, ok := keyspace.(datastore.Bucket)
+				if ok {
+					d, _ = b.DefaultKeyspace()
+				}
+				if d == nil {
+					d = keyspace
+				}
+				res, err2 := d.Stats(context, []datastore.KeyspaceStats{datastore.KEYSPACE_COUNT, datastore.KEYSPACE_SIZE})
 				if err2 == nil {
 					doc.SetField("count", res[0])
 					doc.SetField("size", res[1])
