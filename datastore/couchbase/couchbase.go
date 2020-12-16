@@ -1442,12 +1442,12 @@ func (b *keyspace) stats(context datastore.QueryContext, which []datastore.Keysp
 }
 
 func (b *keyspace) count(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
-	count, err := b.cbbucket.GetCount(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), clientContext...)
+	count, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), []cb.BucketStats{cb.StatCount}, clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceCountError(err, b.fullName)
 	}
-	return count, nil
+	return count[0], nil
 }
 
 func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
@@ -1455,12 +1455,12 @@ func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
 }
 
 func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
-	size, err := b.cbbucket.GetSize(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), clientContext...)
+	size, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), []cb.BucketStats{cb.StatSize}, clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceSizeError(err, b.fullName)
 	}
-	return size, nil
+	return size[0], nil
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
