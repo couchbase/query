@@ -181,7 +181,7 @@ func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, erro
 	}
 
 	if val == nil {
-		return value.NULL_VALUE, nil
+		return _NIL_VALUE, nil
 	}
 
 	if val.Type() == value.MISSING {
