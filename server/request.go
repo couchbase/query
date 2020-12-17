@@ -1110,6 +1110,9 @@ func (this *BaseRequest) EventType() string {
 // For audit.Auditable interface.
 func (this *BaseRequest) EventUsers() []string {
 	userToPassword := this.Credentials()
+	if userToPassword == nil {
+		return nil
+	}
 	ret := make([]string, len(userToPassword.Users))
 	index := 0
 	for user := range userToPassword.Users {

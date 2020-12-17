@@ -134,52 +134,53 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		}
 	}
 
-	if err == nil {
-		// handle parameters that can't be handled dynamically
-		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
+	// handle parameters that can't be handled dynamically
+	// get credentials even in case of error - for auditing and logging
+	pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
 
-		var creds = &auth.Credentials{}
-		creds.Users = make(map[string]string, 0)
-		rv.SetNamedArgs(httpArgs.getNamedArgs())
-		// Creds check
-		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
+	// Creds check
+	creds, err1 := getCredentials(httpArgs, req.Header["Authorization"])
 
+	if err1 == nil {
 		if len(creds.Users) == 0 && !pwdlessbkts {
-			err = errors.NewAdminAuthError(err, "cause: No credentials provided")
-		}
-
-		if err == nil {
+			err1 = errors.NewAdminAuthError(err, "cause: No credentials provided")
+		} else {
 			creds.HttpRequest = req
 			rv.SetCredentials(creds)
 
-			if rv.consCnt > 0 {
-				defaultNamespace := rv.Namespace()
-				if defaultNamespace == "" {
-					defaultNamespace = namespace
-				}
-				err = getScanConfiguration(rv.TxId(), &rv.consistency, httpArgs, defaultNamespace)
-				if err == nil {
-					rv.SetScanConfiguration(&rv.consistency)
-				}
-			} else {
-				getEmptyScanConfiguration(&rv.consistency)
-				rv.SetScanConfiguration(&rv.consistency)
-			}
-
 			// This means we got creds. Now we need to see if they are authorized users.
 			if !pwdlessbkts {
-				ds := datastore.GetDatastore()
 				var authUsers auth.AuthenticatedUsers
-				authUsers, err = ds.Authorize(nil, creds)
+
+				authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
 				if authUsers == nil {
+
 					// This means the users associated with the input credentials do not have authorization.
 					// Throw an error
-					err = errors.NewAdminAuthError(err, "cause: Failure to authenticate user")
+					err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
 				}
 			}
-
 		}
+	}
+	if err == nil {
+		err = err1
+	}
 
+	if err == nil {
+		rv.SetNamedArgs(httpArgs.getNamedArgs())
+		if rv.consCnt > 0 {
+			defaultNamespace := rv.Namespace()
+			if defaultNamespace == "" {
+				defaultNamespace = namespace
+			}
+			err = getScanConfiguration(rv.TxId(), &rv.consistency, httpArgs, defaultNamespace)
+			if err == nil {
+				rv.SetScanConfiguration(&rv.consistency)
+			}
+		} else {
+			getEmptyScanConfiguration(&rv.consistency)
+			rv.SetScanConfiguration(&rv.consistency)
+		}
 	}
 
 	NewBufferedWriter(&rv.writer, rv, bp)
