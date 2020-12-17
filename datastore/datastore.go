@@ -326,7 +326,7 @@ func GetKeyspace(parts ...string) (Keyspace, errors.Error) {
 		}
 		return scope.KeyspaceByName(parts[3])
 	default:
-		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
+		return nil, errors.NewDatastoreInvalidPathPartsError(parts...)
 	}
 
 }
@@ -344,7 +344,7 @@ func GetScope(parts ...string) (Scope, errors.Error) {
 		}
 		return b.ScopeByName(parts[2])
 	default:
-		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
+		return nil, errors.NewDatastoreInvalidPathPartsError(parts...)
 	}
 }
 
@@ -357,7 +357,7 @@ func GetBucket(parts ...string) (Bucket, errors.Error) {
 	case 2:
 		return ns.BucketByName(parts[1])
 	default:
-		return nil, errors.NewDatastoreInvalidPathError("path has wrong number of parts")
+		return nil, errors.NewDatastoreInvalidPathPartsError(parts...)
 	}
 }
 

@@ -18,6 +18,25 @@ func NewDatastoreInvalidPathError(w string) Error {
 		InternalMsg: "Invalid path specified: " + w, InternalCaller: CallerN(1)}
 }
 
+// same ICode as before
+func NewDatastoreInvalidPathPartsError(parts ...string) Error {
+	var path string
+
+	switch len(parts) {
+	case 0:
+		path = "path"
+	case 1:
+		path = parts[0]
+	default:
+		path = parts[0] + ":" + parts[1]
+		for i := 2; i < len(parts); i++ {
+			path = path + "." + parts[i]
+		}
+	}
+	return &err{level: EXCEPTION, ICode: DS_BAD_PATH, IKey: "datastore.generic.path_error",
+		InternalMsg: "Invalid path specified: " + path + " has invalid number of parts", InternalCaller: CallerN(1)}
+}
+
 const DS_BAD_CONTEXT = 10101
 
 func NewQueryContextError(w string) Error {
