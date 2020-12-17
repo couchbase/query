@@ -1,7 +1,7 @@
 [
 	{
 	"statements": "prepare test from select name, statement, uses from system:prepareds",
-	"ignore": [ "encoded_plan", "indexApiVersion", "featureControls", "queryContext" ],
+	"ignore": [ "encoded_plan", "indexApiVersion", "featureControls", "queryContext" , "reqType" ],
 	"results": [
         {
             "name": "test",

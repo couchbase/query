@@ -1133,6 +1133,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 				return nil, err
 			}
 
+			request.SetType(prepared.Type())
 			if ok, msg := IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), false); !ok {
 				return nil, errors.NewTranStatementNotSupportedError(request.Type(), msg)
 			}

@@ -79,6 +79,7 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	r["featureControls"] = this.featureControls
 	r["namespace"] = this.namespace
 	r["queryContext"] = this.queryContext
+	r["reqType"] = this.reqType
 	if this.useFts {
 		r["useFts"] = this.useFts
 	}
