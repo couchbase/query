@@ -206,17 +206,17 @@ type Expression interface {
 	/*
 	   Check expression flag
 	*/
-	HasExprFlag(flag uint32) bool
+	HasExprFlag(flag uint64) bool
 
 	/*
 	   Set expression flag
 	*/
-	SetExprFlag(flag uint32)
+	SetExprFlag(flag uint64)
 
 	/*
 	   Unset expression flag
 	*/
-	UnsetExprFlag(flag uint32)
+	UnsetExprFlag(flag uint64)
 
 	/*
 	   Enable in-list evaluation optimization (using hash table)

@@ -77,6 +77,9 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 			exact = true
 		}
 	} else {
+		if last < 0 {
+			range2.SetFlag(plan.RANGE_DEFAULT_LIKE)
+		}
 		range2.High = expression.EMPTY_ARRAY_EXPR
 	}
 
@@ -90,6 +93,7 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 
 func likeSpans(pred expression.LikeFunction, selec float64) SargSpans {
 	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW, selec, OPT_SELEC_NOT_AVAIL, 0)
+	range2.SetFlag(plan.RANGE_DEFAULT_LIKE)
 
 	switch pred := pred.(type) {
 	case *expression.Like:

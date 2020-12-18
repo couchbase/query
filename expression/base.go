@@ -27,9 +27,12 @@ const (
 	EXPR_CAN_FLATTEN
 	EXPR_OR_FROM_NE
 	EXPR_DERIVED_RANGE
+	EXPR_DERIVED_RANGE1
+	EXPR_DERIVED_RANGE2
 	EXPR_DERIVED_FROM_LIKE
 	EXPR_ANY_FOR_UNNEST
 	EXPR_UNNEST_NOT_MISSING
+	EXPR_DEFAULT_LIKE
 )
 
 /*
@@ -38,7 +41,7 @@ ExpressionBase is a base class for all expressions.
 type ExpressionBase struct {
 	expr      Expression
 	value     *value.Value
-	exprFlags uint32
+	exprFlags uint64
 }
 
 var _NIL_VALUE value.Value
@@ -80,23 +83,23 @@ func (this *ExpressionBase) IsArrayIndexKey() (bool, bool) {
 	return false, false
 }
 
-func (this *ExpressionBase) getExprFlags() uint32 {
+func (this *ExpressionBase) getExprFlags() uint64 {
 	return this.exprFlags
 }
 
-func (this *ExpressionBase) setExprFlags(flags uint32) {
+func (this *ExpressionBase) setExprFlags(flags uint64) {
 	this.exprFlags = flags
 }
 
-func (this *ExpressionBase) HasExprFlag(flag uint32) bool {
+func (this *ExpressionBase) HasExprFlag(flag uint64) bool {
 	return (this.exprFlags & flag) != 0
 }
 
-func (this *ExpressionBase) SetExprFlag(flag uint32) {
+func (this *ExpressionBase) SetExprFlag(flag uint64) {
 	this.exprFlags |= flag
 }
 
-func (this *ExpressionBase) UnsetExprFlag(flag uint32) {
+func (this *ExpressionBase) UnsetExprFlag(flag uint64) {
 	this.exprFlags &^= flag
 }
 

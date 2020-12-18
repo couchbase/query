@@ -889,12 +889,17 @@ func (this *builder) getFilter(alias string, onclause expression.Expression) (
 		}
 
 		fltr := fl.FltrExpr()
-		terms = append(terms, fltr.Copy())
-		if fl.OrigExpr() != nil && this.filter != nil {
-			this.filter, err = expression.RemoveExpr(this.filter, fl.OrigExpr())
-			if err != nil {
-				return nil, OPT_SELEC_NOT_AVAIL, err
+		origFltr := fl.OrigExpr()
+		if origFltr != nil {
+			terms = append(terms, origFltr.Copy())
+			if this.filter != nil {
+				this.filter, err = expression.RemoveExpr(this.filter, fl.OrigExpr())
+				if err != nil {
+					return nil, OPT_SELEC_NOT_AVAIL, err
+				}
 			}
+		} else if !fltr.HasExprFlag(expression.EXPR_DERIVED_FROM_LIKE | expression.EXPR_DERIVED_RANGE1 | expression.EXPR_DERIVED_RANGE2) {
+			terms = append(terms, fltr.Copy())
 		}
 
 		if doSelec && !fl.HasPlanFlags() {

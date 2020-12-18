@@ -43,7 +43,6 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 
 	exp := expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
 		expression.NewLE(expr.First(), expr.Third()))
-	exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	return exp, nil
 }
 
@@ -207,24 +206,32 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 	case *expression.IsBoolean:
 		exp = expression.NewLE(expr.Operand(), expression.TRUE_EXPR)
 	case *expression.IsNumber:
-		exp = expression.NewAnd(
-			expression.NewGT(expr.Operand(), expression.TRUE_EXPR),
-			expression.NewLT(expr.Operand(), expression.EMPTY_STRING_EXPR))
+		exp1 := expression.NewGT(expr.Operand(), expression.TRUE_EXPR)
+		exp2 := expression.NewLT(expr.Operand(), expression.EMPTY_STRING_EXPR)
+		exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
+		exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
+		exp = expression.NewAnd(exp1, exp2)
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsString:
-		exp = expression.NewAnd(
-			expression.NewGE(expr.Operand(), expression.EMPTY_STRING_EXPR),
-			expression.NewLT(expr.Operand(), expression.EMPTY_ARRAY_EXPR))
+		exp1 := expression.NewGE(expr.Operand(), expression.EMPTY_STRING_EXPR)
+		exp2 := expression.NewLT(expr.Operand(), expression.EMPTY_ARRAY_EXPR)
+		exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
+		exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
+		exp = expression.NewAnd(exp1, exp2)
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsArray:
-		exp = expression.NewAnd(
-			expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR),
-			expression.NewLT(expr.Operand(), expression.EMPTY_OBJECT_EXPR))
+		exp1 := expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR)
+		exp2 := expression.NewLT(expr.Operand(), expression.EMPTY_OBJECT_EXPR)
+		exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
+		exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
+		exp = expression.NewAnd(exp1, exp2)
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsObject:
-		exp = expression.NewAnd(
-			expression.NewGE(expr.Operand(), expression.EMPTY_OBJECT_EXPR),
-			expr)
+		exp1 := expression.NewGE(expr.Operand(), expression.EMPTY_OBJECT_EXPR)
+		exp2 := expr.Copy()
+		exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
+		exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
+		exp = expression.NewAnd(exp1, exp2)
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 		return exp, nil // Avoid infinite recursion
 	default:
@@ -356,6 +363,7 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	}
 
 	if prefix == "" {
+		expr.SetExprFlag(expression.EXPR_DEFAULT_LIKE)
 		return expr, nil
 	}
 
