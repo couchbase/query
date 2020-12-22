@@ -175,6 +175,13 @@ func (this *IndexNest) For() string {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *IndexNest) IsCorrelated() bool {
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
+}
+
+/*
 Marshals input NEST terms into byte array.
 */
 func (this *IndexNest) MarshalJSON() ([]byte, error) {

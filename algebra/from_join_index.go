@@ -172,6 +172,13 @@ func (this *IndexJoin) For() string {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *IndexJoin) IsCorrelated() bool {
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
+}
+
+/*
 Marshals input JOIN terms.
 */
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {

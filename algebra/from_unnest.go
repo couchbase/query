@@ -176,6 +176,13 @@ func (this *Unnest) Outer() bool {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *Unnest) IsCorrelated() bool {
+	return this.left.IsCorrelated()
+}
+
+/*
 Marshals input unnest terms into byte array.
 */
 func (this *Unnest) MarshalJSON() ([]byte, error) {

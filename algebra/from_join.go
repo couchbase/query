@@ -159,6 +159,13 @@ func (this *Join) Outer() bool {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *Join) IsCorrelated() bool {
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
+}
+
+/*
 Marshals input JOIN terms.
 */
 func (this *Join) MarshalJSON() ([]byte, error) {

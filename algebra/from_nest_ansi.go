@@ -218,6 +218,13 @@ func (this *AnsiNest) SetHintError(hintError string) {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *AnsiNest) IsCorrelated() bool {
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
+}
+
+/*
 Marshals input NEST terms into byte array.
 */
 func (this *AnsiNest) MarshalJSON() ([]byte, error) {

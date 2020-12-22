@@ -236,6 +236,13 @@ func (this *AnsiJoin) SetHintError(hintError string) {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *AnsiJoin) IsCorrelated() bool {
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
+}
+
+/*
 Marshals input JOIN terms.
 */
 func (this *AnsiJoin) MarshalJSON() ([]byte, error) {

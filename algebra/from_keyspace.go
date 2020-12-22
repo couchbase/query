@@ -488,6 +488,13 @@ func (this *KeyspaceTerm) SetIndexJoinNest() {
 }
 
 /*
+Return whether correlated
+*/
+func (this *KeyspaceTerm) IsCorrelated() bool {
+	return false
+}
+
+/*
 Marshals the input keyspace into a byte array.
 */
 func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {

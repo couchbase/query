@@ -142,6 +142,10 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 		}
 	}
 
+	if !this.correlated && this.from != nil && this.from.IsCorrelated() {
+		this.correlated = true
+	}
+
 	return f, nil
 }
 

@@ -188,3 +188,10 @@ Set ANSI NEST property
 func (this *SubqueryTerm) SetAnsiNest() {
 	this.property |= TERM_ANSI_NEST
 }
+
+/*
+Return whether correlated
+*/
+func (this *SubqueryTerm) IsCorrelated() bool {
+	return this.subquery.IsCorrelated()
+}

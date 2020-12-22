@@ -58,6 +58,11 @@ type FromTerm interface {
 	   Represents alias string.
 	*/
 	Alias() string
+
+	/*
+	   Contains correlation reference?
+	*/
+	IsCorrelated() bool
 }
 
 type SimpleFromTerm interface {

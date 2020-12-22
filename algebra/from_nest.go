@@ -163,6 +163,13 @@ func (this *Nest) Outer() bool {
 }
 
 /*
+Returns whether contains correlation reference
+*/
+func (this *Nest) IsCorrelated() bool {
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
+}
+
+/*
 Marshals input NEST terms into byte array.
 */
 func (this *Nest) MarshalJSON() ([]byte, error) {
