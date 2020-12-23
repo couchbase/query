@@ -159,8 +159,11 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 	_, er = indexer3.IndexByName(dictionary.CBO_STATS_PRIMARY_INDEX)
 	if er != nil {
-		// IndexByName currently returns a generic error code (5000), and only returns
-		// an error in case of "index not found"
+		if er.Code() != 12016 {
+			// only ignore index not found error
+			return er
+		}
+
 		_, er = indexer3.CreatePrimaryIndex3(requestId, dictionary.CBO_STATS_PRIMARY_INDEX, nil, nil)
 		if er != nil {
 			return er
