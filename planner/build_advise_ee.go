@@ -387,13 +387,6 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	return nil
 }
 
-func (this *builder) addVirtualIndexes(others []datastore.Index) []datastore.Index {
-	if len(this.idxCandidates) > 0 {
-		others = append(others, this.idxCandidates...)
-	}
-	return others
-}
-
 func (this *builder) collectPushdownProperty(index datastore.Index, alias string, property PushDownProperties) {
 	if this.advisePhase == _VALIDATE && index.Type() != datastore.VIRTUAL {
 		return

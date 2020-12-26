@@ -66,10 +66,6 @@ func (this *builder) storeCollectQueryInfo() *collectQueryInfo {
 func (this *builder) restoreCollectQueryInfo(info *collectQueryInfo) {
 }
 
-func (this *builder) addVirtualIndexes(others []datastore.Index) []datastore.Index {
-	return nil
-}
-
 func (this *builder) collectPushdownProperty(index datastore.Index, alias string, property PushDownProperties) {
 }
 

@@ -64,11 +64,15 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	join := node.IsAnsiJoinOp()
 	hash := node.IsUnderHash()
 
-	var hints []datastore.Index
+	var hints, virtualIndexes []datastore.Index
+	if this.indexAdvisor {
+		virtualIndexes = this.getIdxCandidates()
+	}
 	if len(node.Indexes()) > 0 || this.context.UseFts() {
 		hints = _HINT_POOL.Get()
 		defer _HINT_POOL.Put(hints)
-		hints, err = allHints(keyspace, node.Indexes(), hints, this.context.IndexApiVersion(), this.context.UseFts())
+		hints, err = allHints(keyspace, node.Indexes(), hints, virtualIndexes,
+			this.context.IndexApiVersion(), this.context.UseFts())
 		if err != nil {
 			return
 		}
@@ -109,7 +113,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
 				err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
-					this.context.IndexApiVersion(), this.getIdxCandidates(),
+					this.context.IndexApiVersion(), virtualIndexes,
 					this.advisorValidate(), this.context)
 				if err != nil {
 					return nil, nil, err
@@ -134,7 +138,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			if baseKeyspace.OrigPred() == nil {
 				return nil, nil, errors.NewPlanInternalError("buildScan: NULL origPred")
 			}
-			return this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints)
+			return this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints, virtualIndexes)
 		}
 	}
 
@@ -157,7 +161,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 }
 
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	baseKeyspace *base.BaseKeyspace, id expression.Expression, hints []datastore.Index) (
+	baseKeyspace *base.BaseKeyspace, id expression.Expression,
+	hints, virtualIndexes []datastore.Index) (
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	// Handle constant FALSE predicate
@@ -202,13 +207,10 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	others := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(others)
-	others, err = allIndexes(keyspace, hints, others, this.context.IndexApiVersion(), len(searchFns) > 0)
+	others, err = allIndexes(keyspace, hints, others, virtualIndexes,
+		this.context.IndexApiVersion(), len(searchFns) > 0)
 	if err != nil {
 		return
-	}
-
-	if this.indexAdvisor {
-		others = this.addVirtualIndexes(others)
 	}
 
 	secondary, primary, err = this.buildSubsetScan(keyspace, node,
@@ -570,7 +572,7 @@ func isValidIndex(idx datastore.Index, indexApiVersion int) bool {
 }
 
 // all HINT indexes
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index, indexApiVersion int, useFts bool) (
+func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes, virtualIndexes []datastore.Index, indexApiVersion int, useFts bool) (
 	[]datastore.Index, error) {
 
 	// check if HINT has FTS index refrence
@@ -627,6 +629,10 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 		}
 	}
 
+	if len(virtualIndexes) > 0 {
+		indexes = append(indexes, virtualIndexes...)
+	}
+
 	return indexes, nil
 }
 
@@ -637,7 +643,7 @@ inclFts indicates to include FTS index or not
         * false - right side of some JOINs, no SERACH() function
 */
 
-func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, indexApiVersion int, inclFts bool) (
+func allIndexes(keyspace datastore.Keyspace, skip, indexes, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool) (
 	[]datastore.Index, error) {
 
 	indexers, err := keyspace.Indexers()
@@ -676,6 +682,13 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index, in
 			}
 
 		}
+	}
+
+	for _, idx := range virtualIndexes {
+		if len(skipMap) > 0 && skipMap[idx] {
+			continue
+		}
+		indexes = append(indexes, idx)
 	}
 
 	return indexes, nil
