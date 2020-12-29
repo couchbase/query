@@ -20,24 +20,23 @@ import (
 
 type SendDelete struct {
 	dml
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceRef
-	alias       string
-	limit       expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceRef
+	alias    string
+	limit    expression.Expression
 }
 
 func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	limit expression.Expression, cost, cardinality float64) *SendDelete {
-	return &SendDelete{
-		keyspace:    keyspace,
-		term:        ksref,
-		alias:       ksref.Alias(),
-		limit:       limit,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &SendDelete{
+		keyspace: keyspace,
+		term:     ksref,
+		alias:    ksref.Alias(),
+		limit:    limit,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
@@ -64,14 +63,6 @@ func (this *SendDelete) Limit() expression.Expression {
 	return this.limit
 }
 
-func (this *SendDelete) Cost() float64 {
-	return this.cost
-}
-
-func (this *SendDelete) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -85,11 +76,8 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["limit"] = this.limit
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -100,17 +88,16 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Namespace   string  `json:"namespace"`
-		Bucket      string  `json:"bucket"`
-		Scope       string  `json:"scope"`
-		Keyspace    string  `json:"keyspace"`
-		Expr        string  `json:"expr"`
-		As          string  `json:"as"`
-		Alias       string  `json:"alias"`
-		Limit       string  `json:"limit"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Namespace   string             `json:"namespace"`
+		Bucket      string             `json:"bucket"`
+		Scope       string             `json:"scope"`
+		Keyspace    string             `json:"keyspace"`
+		Expr        string             `json:"expr"`
+		As          string             `json:"as"`
+		Alias       string             `json:"alias"`
+		Limit       string             `json:"limit"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -127,8 +114,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	if _unmarshalled.Expr != "" {
 		var expr expression.Expression

@@ -21,11 +21,10 @@ import (
 // UnionScan scans multiple indexes and unions the results.
 type UnionScan struct {
 	readonly
-	scans       []SecondaryScan
-	limit       expression.Expression
-	offset      expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	scans  []SecondaryScan
+	limit  expression.Expression
+	offset expression.Expression
 }
 
 func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64, scans ...SecondaryScan) *UnionScan {
@@ -37,13 +36,13 @@ func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64
 		}
 	}
 
-	return &UnionScan{
-		scans:       scans,
-		limit:       limit,
-		offset:      offset,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &UnionScan{
+		scans:  scans,
+		limit:  limit,
+		offset: offset,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
@@ -114,14 +113,6 @@ func (this *UnionScan) IsUnderNL() bool {
 	return this.scans[0].IsUnderNL()
 }
 
-func (this *UnionScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *UnionScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *UnionScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	for _, scan := range this.scans {
 		err := scan.CoverJoinSpanExpressions(coverer)
@@ -190,12 +181,8 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["offset"] = expression.NewStringer().Visit(this.offset)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -208,12 +195,11 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string            `json:"#operator"`
-		Scans       []json.RawMessage `json:"scans"`
-		Limit       string            `json:"limit"`
-		Offset      string            `json:"offset"`
-		Cost        float64           `json:"cost"`
-		Cardinality float64           `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Scans       []json.RawMessage  `json:"scans"`
+		Limit       string             `json:"limit"`
+		Offset      string             `json:"offset"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -255,8 +241,7 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

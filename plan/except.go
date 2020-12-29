@@ -15,21 +15,20 @@ import (
 
 type ExceptAll struct {
 	readonly
-	first       Operator
-	second      Operator
-	distinct    bool
-	cost        float64
-	cardinality float64
+	optEstimate
+	first    Operator
+	second   Operator
+	distinct bool
 }
 
 func NewExceptAll(first, second Operator, distinct bool, cost, cardinality float64) *ExceptAll {
-	return &ExceptAll{
-		first:       first,
-		second:      second,
-		distinct:    distinct,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &ExceptAll{
+		first:    first,
+		second:   second,
+		distinct: distinct,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
@@ -52,14 +51,6 @@ func (this *ExceptAll) Distinct() bool {
 	return this.distinct
 }
 
-func (this *ExceptAll) Cost() float64 {
-	return this.cost
-}
-
-func (this *ExceptAll) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -69,11 +60,8 @@ func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]in
 	if this.distinct {
 		r["distinct"] = this.distinct
 	}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -86,12 +74,11 @@ func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *ExceptAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string          `json:"#operator"`
-		First       json.RawMessage `json:"first"`
-		Second      json.RawMessage `json:"second"`
-		Distinct    bool            `json:"distinct"`
-		Cost        float64         `json:"cost"`
-		Cardinality float64         `json:"cardinality"`
+		_           string             `json:"#operator"`
+		First       json.RawMessage    `json:"first"`
+		Second      json.RawMessage    `json:"second"`
+		Distinct    bool               `json:"distinct"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -124,8 +111,7 @@ func (this *ExceptAll) UnmarshalJSON(body []byte) error {
 		this.distinct = true
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return err
 }

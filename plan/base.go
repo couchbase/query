@@ -31,6 +31,25 @@ func (this *readwrite) verify(prepared *Prepared) bool {
 	return true
 }
 
+// optimizer estimates
+type optEstimate struct {
+	cost        float64
+	cardinality float64
+}
+
+func (this *optEstimate) Cost() float64 {
+	return this.cost
+}
+
+func (this *optEstimate) Cardinality() float64 {
+	return this.cardinality
+}
+
+func setOptEstimate(oe *optEstimate, cost, cardinality float64) {
+	oe.cost = cost
+	oe.cardinality = cardinality
+}
+
 // represents DML statements, all are read-write
 type dml struct {
 	readwrite

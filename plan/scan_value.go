@@ -21,17 +21,16 @@ import (
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
 type ValueScan struct {
 	readonly
-	values      algebra.Pairs
-	cost        float64
-	cardinality float64
+	optEstimate
+	values algebra.Pairs
 }
 
 func NewValueScan(values algebra.Pairs, cost, cardinality float64) *ValueScan {
-	return &ValueScan{
-		values:      values,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &ValueScan{
+		values: values,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
@@ -46,14 +45,6 @@ func (this *ValueScan) Values() algebra.Pairs {
 	return this.values
 }
 
-func (this *ValueScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *ValueScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *ValueScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -61,12 +52,11 @@ func (this *ValueScan) MarshalJSON() ([]byte, error) {
 func (this *ValueScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ValueScan"}
 	r["values"] = this.values.Expression().String()
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
+
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
-	}
+
 	if f != nil {
 		f(r)
 	}
@@ -75,10 +65,9 @@ func (this *ValueScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *ValueScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Values      string  `json:"values"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Values      string             `json:"values"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -105,8 +94,7 @@ func (this *ValueScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

@@ -21,6 +21,7 @@ import (
 
 type IndexJoin struct {
 	readonly
+	optEstimate
 	keyspace     datastore.Keyspace
 	term         *algebra.KeyspaceTerm
 	outer        bool
@@ -30,8 +31,6 @@ type IndexJoin struct {
 	indexer      datastore.Indexer
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
-	cost         float64
-	cardinality  float64
 }
 
 func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
@@ -46,13 +45,12 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 		indexer:      index.Indexer(),
 		covers:       covers,
 		filterCovers: filterCovers,
-		cost:         cost,
-		cardinality:  cardinality,
 	}
 
 	rv.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(rv.keyFor)),
 		expression.NewFieldName("id", false))
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
 	return rv
 }
 
@@ -112,14 +110,6 @@ func (this *IndexJoin) SetCovers(covers expression.Covers) {
 	this.covers = covers
 }
 
-func (this *IndexJoin) Cost() float64 {
-	return this.cost
-}
-
-func (this *IndexJoin) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -159,11 +149,8 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 
 	r["scan"] = scan
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -190,8 +177,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			Covers       []string               `json:"covers"`
 			FilterCovers map[string]interface{} `json:"filter_covers"`
 		} `json:"scan"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -256,8 +242,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

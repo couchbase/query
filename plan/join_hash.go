@@ -19,6 +19,7 @@ import (
 
 type HashJoin struct {
 	readonly
+	optEstimate
 	outer        bool
 	onclause     expression.Expression
 	child        Operator
@@ -27,13 +28,11 @@ type HashJoin struct {
 	buildAliases []string
 	hintError    string
 	filter       expression.Expression
-	cost         float64
-	cardinality  float64
 }
 
 func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs expression.Expressions,
 	buildAliases []string, filter expression.Expression, cost, cardinality float64) *HashJoin {
-	return &HashJoin{
+	rv := &HashJoin{
 		outer:        join.Outer(),
 		onclause:     join.Onclause(),
 		child:        child,
@@ -42,9 +41,9 @@ func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs 
 		buildAliases: buildAliases,
 		hintError:    join.HintError(),
 		filter:       filter,
-		cost:         cost,
-		cardinality:  cardinality,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *HashJoin) Accept(visitor Visitor) (interface{}, error) {
@@ -87,14 +86,6 @@ func (this *HashJoin) Filter() expression.Expression {
 	return this.filter
 }
 
-func (this *HashJoin) Cost() float64 {
-	return this.cost
-}
-
-func (this *HashJoin) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *HashJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -129,12 +120,8 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -147,17 +134,16 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string          `json:"#operator"`
-		Onclause     string          `json:"on_clause"`
-		Outer        bool            `json:"outer"`
-		BuildExprs   []string        `json:"build_exprs"`
-		ProbeExprs   []string        `json:"probe_exprs"`
-		BuildAliases []string        `json:"build_aliases"`
-		HintError    string          `json:"hint_not_followed"`
-		Filter       string          `json:"filter"`
-		Cost         float64         `json:"cost"`
-		Cardinality  float64         `json:"cardinality"`
-		Child        json.RawMessage `json:"~child"`
+		_            string             `json:"#operator"`
+		Onclause     string             `json:"on_clause"`
+		Outer        bool               `json:"outer"`
+		BuildExprs   []string           `json:"build_exprs"`
+		ProbeExprs   []string           `json:"probe_exprs"`
+		BuildAliases []string           `json:"build_aliases"`
+		HintError    string             `json:"hint_not_followed"`
+		Filter       string             `json:"filter"`
+		OptEstimate  map[string]float64 `json:"optimizer_estimates"`
+		Child        json.RawMessage    `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -202,8 +188,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

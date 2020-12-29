@@ -15,16 +15,13 @@ import (
 
 type Discard struct {
 	readonly
-
-	cost        float64
-	cardinality float64
+	optEstimate
 }
 
 func NewDiscard(cost, cardinality float64) *Discard {
-	return &Discard{
-		cost:        cost,
-		cardinality: cardinality,
-	}
+	rv := &Discard{}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
@@ -35,25 +32,14 @@ func (this *Discard) New() Operator {
 	return &Discard{}
 }
 
-func (this *Discard) Cost() float64 {
-	return this.cost
-}
-
-func (this *Discard) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Discard) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *Discard) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Discard"}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -63,9 +49,8 @@ func (this *Discard) MarshalBase(f func(map[string]interface{})) map[string]inte
 
 func (this *Discard) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -73,8 +58,7 @@ func (this *Discard) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

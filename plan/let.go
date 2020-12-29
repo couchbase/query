@@ -18,17 +18,16 @@ import (
 
 type Let struct {
 	readonly
-	bindings    expression.Bindings
-	cost        float64
-	cardinality float64
+	optEstimate
+	bindings expression.Bindings
 }
 
 func NewLet(bindings expression.Bindings, cost, cardinality float64) *Let {
-	return &Let{
-		bindings:    bindings,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Let{
+		bindings: bindings,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Let) Accept(visitor Visitor) (interface{}, error) {
@@ -43,14 +42,6 @@ func (this *Let) Bindings() expression.Bindings {
 	return this.bindings
 }
 
-func (this *Let) Cost() float64 {
-	return this.cost
-}
-
-func (this *Let) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Let) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -58,11 +49,8 @@ func (this *Let) MarshalJSON() ([]byte, error) {
 func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Let"}
 	r["bindings"] = this.bindings
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -72,10 +60,9 @@ func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Let) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string          `json:"#operator"`
-		Bindings    json.RawMessage `json:"bindings"`
-		Cost        float64         `json:"cost"`
-		Cardinality float64         `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Bindings    json.RawMessage    `json:"bindings"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -88,8 +75,7 @@ func (this *Let) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

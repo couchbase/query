@@ -14,16 +14,30 @@ const (
 	PLAN_CARD_NOT_AVAIL = -1.0 // cardinality is not available
 )
 
-func getCost(cost float64) float64 {
-	if cost > 0.0 {
-		return cost
+func marshalOptEstimate(oe *optEstimate) map[string]float64 {
+	if oe.cost <= 0.0 && oe.cardinality <= 0.0 {
+		return nil
 	}
-	return PLAN_COST_NOT_AVAIL
+	r := make(map[string]float64, 2)
+	if oe.cost > 0.0 {
+		r["cost"] = oe.cost
+	}
+	if oe.cardinality > 0.0 {
+		r["cardinality"] = oe.cardinality
+	}
+
+	return r
 }
 
-func getCardinality(cardinality float64) float64 {
-	if cardinality > 0.0 {
-		return cardinality
+func unmarshalOptEstimate(oe *optEstimate, unmarshalled map[string]float64) {
+	if len(unmarshalled) > 0 && unmarshalled["cost"] > 0.0 {
+		oe.cost = unmarshalled["cost"]
+	} else {
+		oe.cost = PLAN_COST_NOT_AVAIL
 	}
-	return PLAN_CARD_NOT_AVAIL
+	if len(unmarshalled) > 0 && unmarshalled["cardinality"] > 0.0 {
+		oe.cardinality = unmarshalled["cardinality"]
+	} else {
+		oe.cardinality = PLAN_CARD_NOT_AVAIL
+	}
 }

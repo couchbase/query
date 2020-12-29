@@ -20,34 +20,33 @@ import (
 
 type Join struct {
 	readonly
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceTerm
-	outer       bool
-	onFilter    expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceTerm
+	outer    bool
+	onFilter expression.Expression
 }
 
 func NewJoin(keyspace datastore.Keyspace, join *algebra.Join, cost, cardinality float64) *Join {
-	return &Join{
-		keyspace:    keyspace,
-		term:        join.Right(),
-		outer:       join.Outer(),
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Join{
+		keyspace: keyspace,
+		term:     join.Right(),
+		outer:    join.Outer(),
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func NewJoinFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool,
 	onFilter expression.Expression, cost, cardinality float64) *Join {
-	return &Join{
-		keyspace:    keyspace,
-		term:        term,
-		outer:       outer,
-		onFilter:    onFilter,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Join{
+		keyspace: keyspace,
+		term:     term,
+		outer:    outer,
+		onFilter: onFilter,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
@@ -74,14 +73,6 @@ func (this *Join) OnFilter() expression.Expression {
 	return this.onFilter
 }
 
-func (this *Join) Cost() float64 {
-	return this.cost
-}
-
-func (this *Join) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -103,11 +94,8 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 		r["on_filter"] = expression.NewStringer().Visit(this.onFilter)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -118,17 +106,16 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Join) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Namespace   string  `json:"namespace"`
-		Bucket      string  `json:"bucket"`
-		Scope       string  `json:"scope"`
-		Keyspace    string  `json:"keyspace"`
-		On          string  `json:"on_keys"`
-		Outer       bool    `json:"outer"`
-		As          string  `json:"as"`
-		OnFilter    string  `json:"on_filter"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Namespace   string             `json:"namespace"`
+		Bucket      string             `json:"bucket"`
+		Scope       string             `json:"scope"`
+		Keyspace    string             `json:"keyspace"`
+		On          string             `json:"on_keys"`
+		Outer       bool               `json:"outer"`
+		As          string             `json:"as"`
+		OnFilter    string             `json:"on_filter"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -160,8 +147,7 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

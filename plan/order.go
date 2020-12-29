@@ -18,23 +18,22 @@ import (
 
 type Order struct {
 	readonly
-	terms       algebra.SortTerms
-	offset      *Offset
-	limit       *Limit
-	cost        float64
-	cardinality float64
+	optEstimate
+	terms  algebra.SortTerms
+	offset *Offset
+	limit  *Limit
 }
 
 const _FALLBACK_NUM = 64 * 1024
 
 func NewOrder(order *algebra.Order, offset *Offset, limit *Limit, cost, cardinality float64) *Order {
-	return &Order{
-		terms:       order.Terms(),
-		offset:      offset,
-		limit:       limit,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Order{
+		terms:  order.Terms(),
+		offset: offset,
+		limit:  limit,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Order) Accept(visitor Visitor) (interface{}, error) {
@@ -79,11 +78,8 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.limit != nil {
 		r["limit"] = this.limit.Expression().String()
 	}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -99,10 +95,9 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Desc     bool   `json:"desc"`
 			NullsPos bool   `json:"nulls_pos"`
 		} `json:"sort_terms"`
-		offsetExpr  string  `json:"offset"`
-		limitExpr   string  `json:"limit"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		offsetExpr  string             `json:"offset"`
+		limitExpr   string             `json:"limit"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -133,8 +128,7 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		this.limit = NewLimit(limitExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL)
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }
@@ -149,14 +143,6 @@ func (this *Order) Offset() *Offset {
 
 func (this *Order) Limit() *Limit {
 	return this.limit
-}
-
-func (this *Order) Cost() float64 {
-	return this.cost
-}
-
-func (this *Order) Cardinality() float64 {
-	return this.cardinality
 }
 
 func OrderFallbackNum() int {

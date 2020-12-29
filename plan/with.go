@@ -18,19 +18,18 @@ import (
 
 type With struct {
 	readonly
-	bindings    expression.Bindings
-	child       Operator
-	cost        float64
-	cardinality float64
+	optEstimate
+	bindings expression.Bindings
+	child    Operator
 }
 
 func NewWith(bindings expression.Bindings, child Operator, cost, cardinality float64) *With {
-	return &With{
-		bindings:    bindings,
-		child:       child,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &With{
+		bindings: bindings,
+		child:    child,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *With) Accept(visitor Visitor) (interface{}, error) {
@@ -53,14 +52,6 @@ func (this *With) Child() Operator {
 	return this.child
 }
 
-func (this *With) Cost() float64 {
-	return this.cost
-}
-
-func (this *With) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *With) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -68,11 +59,8 @@ func (this *With) MarshalJSON() ([]byte, error) {
 func (this *With) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "With"}
 	r["bindings"] = this.bindings
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -84,11 +72,10 @@ func (this *With) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *With) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string          `json:"#operator"`
-		Bindings    json.RawMessage `json:"bindings"`
-		Child       json.RawMessage `json:"~child"`
-		Cost        float64         `json:"cost"`
-		Cardinality float64         `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Bindings    json.RawMessage    `json:"bindings"`
+		Child       json.RawMessage    `json:"~child"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	var child_type struct {
@@ -111,7 +98,7 @@ func (this *With) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
 	return nil
 }

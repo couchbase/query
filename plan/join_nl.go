@@ -19,28 +19,27 @@ import (
 
 type NLJoin struct {
 	readonly
-	outer       bool
-	alias       string
-	onclause    expression.Expression
-	hintError   string
-	child       Operator
-	filter      expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	outer     bool
+	alias     string
+	onclause  expression.Expression
+	hintError string
+	child     Operator
+	filter    expression.Expression
 }
 
 func NewNLJoin(join *algebra.AnsiJoin, child Operator, filter expression.Expression,
 	cost, cardinality float64) *NLJoin {
-	return &NLJoin{
-		outer:       join.Outer(),
-		alias:       join.Alias(),
-		onclause:    join.Onclause(),
-		hintError:   join.HintError(),
-		child:       child,
-		filter:      filter,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &NLJoin{
+		outer:     join.Outer(),
+		alias:     join.Alias(),
+		onclause:  join.Onclause(),
+		hintError: join.HintError(),
+		child:     child,
+		filter:    filter,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
@@ -75,14 +74,6 @@ func (this *NLJoin) Filter() expression.Expression {
 	return this.filter
 }
 
-func (this *NLJoin) Cost() float64 {
-	return this.cost
-}
-
-func (this *NLJoin) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *NLJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -104,12 +95,8 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -122,15 +109,14 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *NLJoin) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string          `json:"#operator"`
-		Onclause    string          `json:"on_clause"`
-		Outer       bool            `json:"outer"`
-		Alias       string          `json:"alias"`
-		HintError   string          `json:"hint_not_followed"`
-		Filter      string          `json:"filter"`
-		Cost        float64         `json:"cost"`
-		Cardinality float64         `json:"cardinality"`
-		Child       json.RawMessage `json:"~child"`
+		_           string             `json:"#operator"`
+		Onclause    string             `json:"on_clause"`
+		Outer       bool               `json:"outer"`
+		Alias       string             `json:"alias"`
+		HintError   string             `json:"hint_not_followed"`
+		Filter      string             `json:"filter"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		Child       json.RawMessage    `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -156,8 +142,7 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

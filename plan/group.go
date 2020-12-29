@@ -20,20 +20,19 @@ import (
 // Grouping of input data. Parallelizable.
 type InitialGroup struct {
 	readonly
-	keys        expression.Expressions
-	aggregates  algebra.Aggregates
-	cost        float64
-	cardinality float64
+	optEstimate
+	keys       expression.Expressions
+	aggregates algebra.Aggregates
 }
 
 func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	cost, cardinality float64) *InitialGroup {
-	return &InitialGroup{
-		keys:        keys,
-		aggregates:  aggregates,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &InitialGroup{
+		keys:       keys,
+		aggregates: aggregates,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -52,14 +51,6 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
-func (this *InitialGroup) Cost() float64 {
-	return this.cost
-}
-
-func (this *InitialGroup) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -76,11 +67,8 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -90,11 +78,10 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string   `json:"#operator"`
-		Keys        []string `json:"group_keys"`
-		Aggs        []string `json:"aggregates"`
-		Cost        float64  `json:"cost"`
-		Cardinality float64  `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Keys        []string           `json:"group_keys"`
+		Aggs        []string           `json:"aggregates"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -120,8 +107,7 @@ func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }
@@ -129,20 +115,19 @@ func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
 	readonly
-	keys        expression.Expressions
-	aggregates  algebra.Aggregates
-	cost        float64
-	cardinality float64
+	optEstimate
+	keys       expression.Expressions
+	aggregates algebra.Aggregates
 }
 
 func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	cost, cardinality float64) *IntermediateGroup {
-	return &IntermediateGroup{
-		keys:        keys,
-		aggregates:  aggregates,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &IntermediateGroup{
+		keys:       keys,
+		aggregates: aggregates,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -161,14 +146,6 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
-func (this *IntermediateGroup) Cost() float64 {
-	return this.cost
-}
-
-func (this *IntermediateGroup) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -185,11 +162,8 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -199,11 +173,10 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 
 func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string   `json:"#operator"`
-		Keys        []string `json:"group_keys"`
-		Aggs        []string `json:"aggregates"`
-		Cost        float64  `json:"cost"`
-		Cardinality float64  `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Keys        []string           `json:"group_keys"`
+		Aggs        []string           `json:"aggregates"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -229,8 +202,7 @@ func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }
@@ -238,20 +210,19 @@ func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 // Final grouping and aggregation.
 type FinalGroup struct {
 	readonly
-	keys        expression.Expressions
-	aggregates  algebra.Aggregates
-	cost        float64
-	cardinality float64
+	optEstimate
+	keys       expression.Expressions
+	aggregates algebra.Aggregates
 }
 
 func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	cost, cardinality float64) *FinalGroup {
-	return &FinalGroup{
-		keys:        keys,
-		aggregates:  aggregates,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &FinalGroup{
+		keys:       keys,
+		aggregates: aggregates,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -270,14 +241,6 @@ func (this *FinalGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
-func (this *FinalGroup) Cost() float64 {
-	return this.cost
-}
-
-func (this *FinalGroup) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -294,11 +257,8 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -308,11 +268,10 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string   `json:"#operator"`
-		Keys        []string `json:"group_keys"`
-		Aggs        []string `json:"aggregates"`
-		Cost        float64  `json:"cost"`
-		Cardinality float64  `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Keys        []string           `json:"group_keys"`
+		Aggs        []string           `json:"aggregates"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -338,8 +297,7 @@ func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

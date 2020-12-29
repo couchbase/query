@@ -19,21 +19,20 @@ import (
 
 type Unnest struct {
 	readonly
-	term        *algebra.Unnest
-	alias       string
-	filter      expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	term   *algebra.Unnest
+	alias  string
+	filter expression.Expression
 }
 
 func NewUnnest(term *algebra.Unnest, filter expression.Expression, cost, cardinality float64) *Unnest {
-	return &Unnest{
-		term:        term,
-		alias:       term.Alias(),
-		filter:      filter,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Unnest{
+		term:   term,
+		alias:  term.Alias(),
+		filter: filter,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
@@ -56,14 +55,6 @@ func (this *Unnest) Filter() expression.Expression {
 	return this.filter
 }
 
-func (this *Unnest) Cost() float64 {
-	return this.cost
-}
-
-func (this *Unnest) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Unnest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -84,11 +75,8 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -99,13 +87,12 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Unnest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Outer       bool    `json:"outer"`
-		Expr        string  `json:"expr"`
-		As          string  `json:"as"`
-		Filter      string  `json:"filter"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Outer       bool               `json:"outer"`
+		Expr        string             `json:"expr"`
+		As          string             `json:"as"`
+		Filter      string             `json:"filter"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 	var expr expression.Expression
 
@@ -131,8 +118,7 @@ func (this *Unnest) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewUnnest(nil, _unmarshalled.Outer, expr, _unmarshalled.As)
 	this.alias = _unmarshalled.As
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

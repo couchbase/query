@@ -63,7 +63,7 @@
      ]
     },
     {
-      "ignore": ["cardinality", "cost"],
+      "ignore": ["cardinality","cost","optimizer_estimates"],
       "statements":"EXPLAIN select CLOCK_STR(\"2006-01-02\")",
       "results": [
         {

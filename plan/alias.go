@@ -15,17 +15,16 @@ import (
 
 type Alias struct {
 	readonly
-	alias       string
-	cost        float64
-	cardinality float64
+	optEstimate
+	alias string
 }
 
 func NewAlias(alias string, cost, cardinality float64) *Alias {
-	return &Alias{
-		alias:       alias,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Alias{
+		alias: alias,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
@@ -40,14 +39,6 @@ func (this *Alias) Alias() string {
 	return this.alias
 }
 
-func (this *Alias) Cost() float64 {
-	return this.cost
-}
-
-func (this *Alias) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Alias) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -55,11 +46,8 @@ func (this *Alias) MarshalJSON() ([]byte, error) {
 func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Alias"}
 	r["as"] = this.alias
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -69,14 +57,12 @@ func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Alias) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		As          string  `json:"as"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		As          string             `json:"as"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
 	this.alias = _unmarshalled.As
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 	return err
 }

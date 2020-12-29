@@ -16,16 +16,13 @@ import (
 // DummyScan is used for SELECTs with no FROM clause.
 type DummyScan struct {
 	readonly
-
-	cost        float64
-	cardinality float64
+	optEstimate
 }
 
 func NewDummyScan(cost, cardinality float64) *DummyScan {
-	return &DummyScan{
-		cost:        cost,
-		cardinality: cardinality,
-	}
+	rv := &DummyScan{}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
@@ -36,25 +33,14 @@ func (this *DummyScan) New() Operator {
 	return &DummyScan{}
 }
 
-func (this *DummyScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *DummyScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *DummyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *DummyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DummyScan"}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -64,9 +50,8 @@ func (this *DummyScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *DummyScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -74,8 +59,7 @@ func (this *DummyScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

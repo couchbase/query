@@ -20,22 +20,21 @@ import (
 
 type Fetch struct {
 	readonly
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceTerm
-	subPaths    []string
-	cost        float64
-	cardinality float64
+	optEstimate
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceTerm
+	subPaths []string
 }
 
 func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
 	cost, cardinality float64) *Fetch {
-	return &Fetch{
-		keyspace:    keyspace,
-		term:        term,
-		subPaths:    subPaths,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Fetch{
+		keyspace: keyspace,
+		term:     term,
+		subPaths: subPaths,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
@@ -58,14 +57,6 @@ func (this *Fetch) SubPaths() []string {
 	return this.subPaths
 }
 
-func (this *Fetch) Cost() float64 {
-	return this.cost
-}
-
-func (this *Fetch) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -84,12 +75,8 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 		r["nested_loop"] = this.term.IsUnderNL()
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -100,17 +87,16 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string   `json:"#operator"`
-		Namespace   string   `json:"namespace"`
-		Bucket      string   `json:"bucket"`
-		Scope       string   `json:"scope"`
-		Keyspace    string   `json:"keyspace"`
-		FromExpr    string   `json:"fromExpr"`
-		As          string   `json:"as"`
-		UnderNL     bool     `json:"nested_loop"`
-		Cost        float64  `json:"cost"`
-		Cardinality float64  `json:"cardinality"`
-		SubPaths    []string `json:"subpaths"`
+		_           string             `json:"#operator"`
+		Namespace   string             `json:"namespace"`
+		Bucket      string             `json:"bucket"`
+		Scope       string             `json:"scope"`
+		Keyspace    string             `json:"keyspace"`
+		FromExpr    string             `json:"fromExpr"`
+		As          string             `json:"as"`
+		UnderNL     bool               `json:"nested_loop"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		SubPaths    []string           `json:"subpaths"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -119,8 +105,9 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.subPaths = _unmarshalled.SubPaths
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
 	if _unmarshalled.FromExpr != "" {
 		var expr expression.Expression
 		expr, err = parser.Parse(_unmarshalled.FromExpr)
@@ -148,19 +135,18 @@ func (this *Fetch) verify(prepared *Prepared) bool {
 
 type DummyFetch struct {
 	readonly
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceTerm
-	cost        float64
-	cardinality float64
+	optEstimate
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceTerm
 }
 
 func NewDummyFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, cost, cardinality float64) *DummyFetch {
-	return &DummyFetch{
-		keyspace:    keyspace,
-		term:        term,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &DummyFetch{
+		keyspace: keyspace,
+		term:     term,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *DummyFetch) Accept(visitor Visitor) (interface{}, error) {
@@ -183,14 +169,6 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DummyFetch) Cost() float64 {
-	return this.cost
-}
-
-func (this *DummyFetch) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DummyFetch"}
 	this.term.MarshalKeyspace(r)
@@ -201,12 +179,8 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["nested_loop"] = this.term.IsUnderNL()
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -217,16 +191,15 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Namespace   string  `json:"namespace"`
-		Bucket      string  `json:"bucket"`
-		Scope       string  `json:"scope"`
-		Keyspace    string  `json:"keyspace"`
-		FromExpr    string  `json:"fromExpr"`
-		As          string  `json:"as"`
-		UnderNL     bool    `json:"nested_loop"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Namespace   string             `json:"namespace"`
+		Bucket      string             `json:"bucket"`
+		Scope       string             `json:"scope"`
+		Keyspace    string             `json:"keyspace"`
+		FromExpr    string             `json:"fromExpr"`
+		As          string             `json:"as"`
+		UnderNL     bool               `json:"nested_loop"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -234,8 +207,8 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
 	if _unmarshalled.FromExpr != "" {
 		expr, err1 := parser.Parse(_unmarshalled.FromExpr)
 		if err1 != nil {

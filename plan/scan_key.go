@@ -19,20 +19,19 @@ import (
 // KeyScan is used for USE KEYS clauses.
 type KeyScan struct {
 	readonly
-	keys        expression.Expression
-	distinct    bool
-	cost        float64
-	cardinality float64
+	optEstimate
+	keys     expression.Expression
+	distinct bool
 }
 
 func NewKeyScan(keys expression.Expression, distinct bool, cost, cardinality float64) *KeyScan {
 	keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
-	return &KeyScan{
-		keys:        keys,
-		distinct:    distinct,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &KeyScan{
+		keys:     keys,
+		distinct: distinct,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
@@ -51,14 +50,6 @@ func (this *KeyScan) Distinct() bool {
 	return this.distinct
 }
 
-func (this *KeyScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *KeyScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *KeyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -69,11 +60,8 @@ func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]inte
 	if this.distinct {
 		r["distinct"] = this.distinct
 	}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -83,11 +71,10 @@ func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]inte
 
 func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Keys        string  `json:"keys"`
-		Distinct    bool    `json:"distinct"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Keys        string             `json:"keys"`
+		Distinct    bool               `json:"distinct"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -106,8 +93,8 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.distinct = _unmarshalled.Distinct
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

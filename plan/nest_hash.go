@@ -19,32 +19,31 @@ import (
 
 type HashNest struct {
 	readonly
-	outer       bool
-	onclause    expression.Expression
-	child       Operator
-	buildExprs  expression.Expressions
-	probeExprs  expression.Expressions
-	buildAlias  string
-	hintError   string
-	filter      expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	outer      bool
+	onclause   expression.Expression
+	child      Operator
+	buildExprs expression.Expressions
+	probeExprs expression.Expressions
+	buildAlias string
+	hintError  string
+	filter     expression.Expression
 }
 
 func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs expression.Expressions,
 	buildAlias string, filter expression.Expression, cost, cardinality float64) *HashNest {
-	return &HashNest{
-		outer:       nest.Outer(),
-		onclause:    nest.Onclause(),
-		child:       child,
-		buildExprs:  buildExprs,
-		probeExprs:  probeExprs,
-		buildAlias:  buildAlias,
-		hintError:   nest.HintError(),
-		filter:      filter,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &HashNest{
+		outer:      nest.Outer(),
+		onclause:   nest.Onclause(),
+		child:      child,
+		buildExprs: buildExprs,
+		probeExprs: probeExprs,
+		buildAlias: buildAlias,
+		hintError:  nest.HintError(),
+		filter:     filter,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *HashNest) Accept(visitor Visitor) (interface{}, error) {
@@ -87,14 +86,6 @@ func (this *HashNest) Filter() expression.Expression {
 	return this.filter
 }
 
-func (this *HashNest) Cost() float64 {
-	return this.cost
-}
-
-func (this *HashNest) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *HashNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -129,12 +120,8 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -147,17 +134,16 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *HashNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string          `json:"#operator"`
-		Onclause    string          `json:"on_clause"`
-		Outer       bool            `json:"outer"`
-		BuildExprs  []string        `json:"build_exprs"`
-		ProbeExprs  []string        `json:"probe_exprs"`
-		BuildAlias  string          `json:"build_alias"`
-		HintError   string          `json:"hint_not_followed"`
-		Filter      string          `json:"filter"`
-		Cost        float64         `json:"cost"`
-		Cardinality float64         `json:"cardinality"`
-		Child       json.RawMessage `json:"~child"`
+		_           string             `json:"#operator"`
+		Onclause    string             `json:"on_clause"`
+		Outer       bool               `json:"outer"`
+		BuildExprs  []string           `json:"build_exprs"`
+		ProbeExprs  []string           `json:"probe_exprs"`
+		BuildAlias  string             `json:"build_alias"`
+		HintError   string             `json:"hint_not_followed"`
+		Filter      string             `json:"filter"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		Child       json.RawMessage    `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -202,8 +188,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	raw_child := _unmarshalled.Child
 	var child_type struct {

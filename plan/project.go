@@ -19,11 +19,10 @@ import (
 
 type InitialProject struct {
 	readonly
+	optEstimate
 	projection    *algebra.Projection
 	terms         ProjectTerms
 	starTermCount int
-	cost          float64
-	cardinality   float64
 }
 
 func NewInitialProject(projection *algebra.Projection, cost, cardinality float64) *InitialProject {
@@ -31,10 +30,8 @@ func NewInitialProject(projection *algebra.Projection, cost, cardinality float64
 	terms := make(ProjectTerms, len(results))
 
 	rv := &InitialProject{
-		projection:  projection,
-		terms:       terms,
-		cost:        cost,
-		cardinality: cardinality,
+		projection: projection,
+		terms:      terms,
 	}
 
 	for i, res := range results {
@@ -47,6 +44,7 @@ func NewInitialProject(projection *algebra.Projection, cost, cardinality float64
 		}
 	}
 
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
 	return rv
 }
 
@@ -70,14 +68,6 @@ func (this *InitialProject) StarTermCount() int {
 	return this.starTermCount
 }
 
-func (this *InitialProject) Cost() float64 {
-	return this.cost
-}
-
-func (this *InitialProject) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -93,12 +83,8 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 		r["raw"] = this.projection.Raw()
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	s := make([]interface{}, 0, len(this.terms))
@@ -135,10 +121,9 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 			As   string `json:"as"`
 			Star bool   `json:"star"`
 		} `json:"result_terms"`
-		Distinct    bool    `json:"distinct"`
-		Raw         bool    `json:"raw"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		Distinct    bool               `json:"distinct"`
+		Raw         bool               `json:"raw"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -171,8 +156,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	this.projection = projection
 	this.terms = project_terms
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

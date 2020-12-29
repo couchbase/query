@@ -18,24 +18,23 @@ import (
 
 type ExpressionScan struct {
 	readonly
-	fromExpr    expression.Expression
-	alias       string
-	correlated  bool
-	filter      expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	fromExpr   expression.Expression
+	alias      string
+	correlated bool
+	filter     expression.Expression
 }
 
 func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool,
 	filter expression.Expression, cost, cardinality float64) *ExpressionScan {
-	return &ExpressionScan{
-		fromExpr:    fromExpr,
-		alias:       alias,
-		correlated:  correlated,
-		filter:      filter,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &ExpressionScan{
+		fromExpr:   fromExpr,
+		alias:      alias,
+		correlated: correlated,
+		filter:     filter,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *ExpressionScan) Accept(visitor Visitor) (interface{}, error) {
@@ -62,14 +61,6 @@ func (this *ExpressionScan) Filter() expression.Expression {
 	return this.filter
 }
 
-func (this *ExpressionScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *ExpressionScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -84,11 +75,8 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -98,13 +86,12 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string  `json:"#operator"`
-		FromExpr     string  `json:"expr"`
-		Alias        string  `json:"alias"`
-		UnCorrelated bool    `json:"uncorrelated"`
-		Filter       string  `json:"filter"`
-		Cost         float64 `json:"cost"`
-		Cardinality  float64 `json:"cardinality"`
+		_            string             `json:"#operator"`
+		FromExpr     string             `json:"expr"`
+		Alias        string             `json:"alias"`
+		UnCorrelated bool               `json:"uncorrelated"`
+		Filter       string             `json:"filter"`
+		OptEstimate  map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -130,8 +117,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return err
 }

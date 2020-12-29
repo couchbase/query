@@ -20,28 +20,27 @@ import (
 
 type SendUpsert struct {
 	dml
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceRef
-	alias       string
-	key         expression.Expression
-	value       expression.Expression
-	options     expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceRef
+	alias    string
+	key      expression.Expression
+	value    expression.Expression
+	options  expression.Expression
 }
 
 func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	key, value, options expression.Expression, cost, cardinality float64) *SendUpsert {
-	return &SendUpsert{
-		keyspace:    keyspace,
-		term:        ksref,
-		alias:       ksref.Alias(),
-		key:         key,
-		value:       value,
-		options:     options,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &SendUpsert{
+		keyspace: keyspace,
+		term:     ksref,
+		alias:    ksref.Alias(),
+		key:      key,
+		value:    value,
+		options:  options,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
@@ -76,14 +75,6 @@ func (this *SendUpsert) Options() expression.Expression {
 	return this.options
 }
 
-func (this *SendUpsert) Cost() float64 {
-	return this.cost
-}
-
-func (this *SendUpsert) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -105,11 +96,8 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["options"] = this.options.String()
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -120,19 +108,18 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		KeyExpr     string  `json:"key"`
-		ValueExpr   string  `json:"value"`
-		OptionsExpr string  `json:"options"`
-		Namespace   string  `json:"namespace"`
-		Bucket      string  `json:"bucket"`
-		Scope       string  `json:"scope"`
-		Keyspace    string  `json:"keyspace"`
-		Expr        string  `json:"expr"`
-		As          string  `json:"as"`
-		Alias       string  `json:"alias"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		KeyExpr     string             `json:"key"`
+		ValueExpr   string             `json:"value"`
+		OptionsExpr string             `json:"options"`
+		Namespace   string             `json:"namespace"`
+		Bucket      string             `json:"bucket"`
+		Scope       string             `json:"scope"`
+		Keyspace    string             `json:"keyspace"`
+		Expr        string             `json:"expr"`
+		As          string             `json:"as"`
+		Alias       string             `json:"alias"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -162,8 +149,8 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 	}
 
 	this.alias = _unmarshalled.Alias
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	if _unmarshalled.Expr != "" {
 		var expr expression.Expression

@@ -20,21 +20,20 @@ import (
 // DistinctScan scans multiple indexes and distincts the results.
 type DistinctScan struct {
 	readonly
-	scan        SecondaryScan
-	limit       expression.Expression
-	offset      expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	scan   SecondaryScan
+	limit  expression.Expression
+	offset expression.Expression
 }
 
 func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan, cost, cardinality float64) *DistinctScan {
-	return &DistinctScan{
-		scan:        scan,
-		limit:       limit,
-		offset:      offset,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &DistinctScan{
+		scan:   scan,
+		limit:  limit,
+		offset: offset,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
@@ -87,14 +86,6 @@ func (this *DistinctScan) IsUnderNL() bool {
 	return this.scan.IsUnderNL()
 }
 
-func (this *DistinctScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *DistinctScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *DistinctScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	return this.scan.CoverJoinSpanExpressions(coverer)
 }
@@ -127,12 +118,8 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 		r["offset"] = expression.NewStringer().Visit(this.offset)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -145,12 +132,11 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string          `json:"#operator"`
-		Scan        json.RawMessage `json:"scan"`
-		Limit       string          `json:"limit"`
-		Offset      string          `json:"offset"`
-		Cost        float64         `json:"cost"`
-		Cardinality float64         `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Scan        json.RawMessage    `json:"scan"`
+		Limit       string             `json:"limit"`
+		Offset      string             `json:"offset"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -188,8 +174,7 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

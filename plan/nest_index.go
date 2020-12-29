@@ -20,33 +20,31 @@ import (
 
 type IndexNest struct {
 	readonly
-	keyspace    datastore.Keyspace
-	term        *algebra.KeyspaceTerm
-	outer       bool
-	keyFor      string
-	idExpr      expression.Expression
-	index       datastore.Index
-	indexer     datastore.Indexer
-	cost        float64
-	cardinality float64
+	optEstimate
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceTerm
+	outer    bool
+	keyFor   string
+	idExpr   expression.Expression
+	index    datastore.Index
+	indexer  datastore.Indexer
 }
 
 func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
 	index datastore.Index, cost, cardinality float64) *IndexNest {
 	rv := &IndexNest{
-		keyspace:    keyspace,
-		term:        nest.Right(),
-		outer:       nest.Outer(),
-		keyFor:      nest.For(),
-		index:       index,
-		indexer:     index.Indexer(),
-		cost:        cost,
-		cardinality: cardinality,
+		keyspace: keyspace,
+		term:     nest.Right(),
+		outer:    nest.Outer(),
+		keyFor:   nest.For(),
+		index:    index,
+		indexer:  index.Indexer(),
 	}
 
 	rv.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(rv.keyFor)),
 		expression.NewFieldName("id", false))
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
 	return rv
 }
 
@@ -82,14 +80,6 @@ func (this *IndexNest) Index() datastore.Index {
 	return this.index
 }
 
-func (this *IndexNest) Cost() float64 {
-	return this.cost
-}
-
-func (this *IndexNest) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -116,11 +106,8 @@ func (this *IndexNest) MarshalBase(f func(map[string]interface{})) map[string]in
 
 	r["scan"] = scan
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -145,8 +132,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 			IndexId string              `json:"index_id"`
 			Using   datastore.IndexType `json:"using"`
 		} `json:"scan"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -185,8 +171,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

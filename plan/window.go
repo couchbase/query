@@ -19,17 +19,16 @@ import (
 
 type WindowAggregate struct {
 	readonly
-	aggregates  algebra.Aggregates
-	cost        float64
-	cardinality float64
+	optEstimate
+	aggregates algebra.Aggregates
 }
 
 func NewWindowAggregate(aggregates algebra.Aggregates, cost, cardinality float64) *WindowAggregate {
-	return &WindowAggregate{
-		aggregates:  aggregates,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &WindowAggregate{
+		aggregates: aggregates,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *WindowAggregate) Accept(visitor Visitor) (interface{}, error) {
@@ -44,14 +43,6 @@ func (this *WindowAggregate) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
-func (this *WindowAggregate) Cost() float64 {
-	return this.cost
-}
-
-func (this *WindowAggregate) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *WindowAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -63,11 +54,8 @@ func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[str
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -77,10 +65,9 @@ func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[str
 
 func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string   `json:"#operator"`
-		Aggs        []string `json:"aggregates"`
-		Cost        float64  `json:"cost"`
-		Cardinality float64  `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Aggs        []string           `json:"aggregates"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -97,8 +84,7 @@ func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

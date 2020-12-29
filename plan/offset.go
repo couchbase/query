@@ -18,17 +18,16 @@ import (
 
 type Offset struct {
 	readonly
-	expr        expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	expr expression.Expression
 }
 
 func NewOffset(expr expression.Expression, cost, cardinality float64) *Offset {
-	return &Offset{
-		expr:        expr,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &Offset{
+		expr: expr,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
@@ -43,14 +42,6 @@ func (this *Offset) Expression() expression.Expression {
 	return this.expr
 }
 
-func (this *Offset) Cost() float64 {
-	return this.cost
-}
-
-func (this *Offset) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Offset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -58,11 +49,8 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Offset"}
 	r["expr"] = expression.NewStringer().Visit(this.expr)
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -72,10 +60,9 @@ func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Offset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Expr        string  `json:"expr"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Expr        string             `json:"expr"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -88,8 +75,7 @@ func (this *Offset) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

@@ -20,10 +20,9 @@ import (
 // IntersectScan that preserves index order of first scan.
 type OrderedIntersectScan struct {
 	readonly
-	scans       []SecondaryScan
-	limit       expression.Expression
-	cost        float64
-	cardinality float64
+	optEstimate
+	scans []SecondaryScan
+	limit expression.Expression
 }
 
 func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality float64, scans ...SecondaryScan) *OrderedIntersectScan {
@@ -48,12 +47,12 @@ func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality floa
 		)
 	}
 
-	return &OrderedIntersectScan{
-		scans:       scans,
-		limit:       limit,
-		cost:        cost,
-		cardinality: cardinality,
+	rv := &OrderedIntersectScan{
+		scans: scans,
+		limit: limit,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *OrderedIntersectScan) Accept(visitor Visitor) (interface{}, error) {
@@ -115,14 +114,6 @@ func (this *OrderedIntersectScan) IsUnderNL() bool {
 	return this.scans[0].IsUnderNL()
 }
 
-func (this *OrderedIntersectScan) Cost() float64 {
-	return this.cost
-}
-
-func (this *OrderedIntersectScan) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *OrderedIntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
 	for _, scan := range this.scans {
 		err := scan.CoverJoinSpanExpressions(coverer)
@@ -145,12 +136,8 @@ func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) ma
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if f != nil {
@@ -163,11 +150,10 @@ func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) ma
 
 func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string            `json:"#operator"`
-		Scans       []json.RawMessage `json:"scans"`
-		Limit       string            `json:"limit"`
-		Cost        float64           `json:"cost"`
-		Cardinality float64           `json:"cardinality"`
+		_           string             `json:"#operator"`
+		Scans       []json.RawMessage  `json:"scans"`
+		Limit       string             `json:"limit"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -202,8 +188,7 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

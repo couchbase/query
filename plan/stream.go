@@ -13,16 +13,13 @@ import "encoding/json"
 
 type Stream struct {
 	readonly
-
-	cost        float64
-	cardinality float64
+	optEstimate
 }
 
 func NewStream(cost, cardinality float64) *Stream {
-	return &Stream{
-		cost:        cost,
-		cardinality: cardinality,
-	}
+	rv := &Stream{}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
@@ -33,25 +30,14 @@ func (this *Stream) New() Operator {
 	return &Stream{}
 }
 
-func (this *Stream) Cost() float64 {
-	return this.cost
-}
-
-func (this *Stream) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *Stream) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Stream"}
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 	if f != nil {
 		f(r)
@@ -61,9 +47,8 @@ func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Stream) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string  `json:"#operator"`
-		Cost        float64 `json:"cost"`
-		Cardinality float64 `json:"cardinality"`
+		_           string             `json:"#operator"`
+		OptEstimate map[string]float64 `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -71,8 +56,7 @@ func (this *Stream) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
 }

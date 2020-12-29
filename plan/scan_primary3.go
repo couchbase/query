@@ -21,6 +21,7 @@ import (
 
 type PrimaryScan3 struct {
 	readonly
+	optEstimate
 	index            datastore.PrimaryIndex3
 	indexer          datastore.Indexer
 	keyspace         datastore.Keyspace
@@ -30,8 +31,6 @@ type PrimaryScan3 struct {
 	orderTerms       IndexKeyOrders
 	offset           expression.Expression
 	limit            expression.Expression
-	cost             float64
-	cardinality      float64
 	hasDeltaKeyspace bool
 }
 
@@ -40,7 +39,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, cost, cardinality float64,
 	hasDeltaKeyspace bool) *PrimaryScan3 {
-	return &PrimaryScan3{
+	rv := &PrimaryScan3{
 		index:            index,
 		indexer:          index.Indexer(),
 		keyspace:         keyspace,
@@ -50,10 +49,10 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 		orderTerms:       orderTerms,
 		offset:           offset,
 		limit:            limit,
-		cost:             cost,
-		cardinality:      cardinality,
 		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	return rv
 }
 
 func (this *PrimaryScan3) Accept(visitor Visitor) (interface{}, error) {
@@ -108,14 +107,6 @@ func (this *PrimaryScan3) SetOffset(offset expression.Expression) {
 	this.offset = offset
 }
 
-func (this *PrimaryScan3) Cost() float64 {
-	return this.cost
-}
-
-func (this *PrimaryScan3) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *PrimaryScan3) HasDeltaKeyspace() bool {
 	return this.hasDeltaKeyspace
 }
@@ -154,12 +145,8 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 		r["index_group_aggs"] = this.groupAggs
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if this.hasDeltaKeyspace {
@@ -187,8 +174,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		OrderTerms       IndexKeyOrders        `json:"index_order"`
 		Offset           string                `json:"offset"`
 		Limit            string                `json:"limit"`
-		Cost             float64               `json:"cost"`
-		Cardinality      float64               `json:"cardinality"`
+		OptEstimate      map[string]float64    `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                  `json:"has_delta_keyspace"`
 	}
 
@@ -216,8 +202,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)

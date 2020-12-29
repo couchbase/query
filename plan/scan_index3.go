@@ -28,6 +28,7 @@ const (
 
 type IndexScan3 struct {
 	readonly
+	optEstimate
 	index            datastore.Index3
 	indexer          datastore.Indexer
 	term             *algebra.KeyspaceTerm
@@ -42,8 +43,6 @@ type IndexScan3 struct {
 	covers           expression.Covers
 	filterCovers     map[*expression.Cover]value.Value
 	filter           expression.Expression
-	cost             float64
-	cardinality      float64
 	hasDeltaKeyspace bool
 }
 
@@ -77,12 +76,11 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		covers:           covers,
 		filterCovers:     filterCovers,
 		filter:           filter,
-		cost:             cost,
-		cardinality:      cardinality,
 		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
 
 	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
+	setOptEstimate(&rv.optEstimate, cost, cardinality)
 	return rv
 }
 
@@ -212,14 +210,6 @@ func (this *IndexScan3) IsUnderNL() bool {
 	return this.term.IsUnderNL()
 }
 
-func (this *IndexScan3) Cost() float64 {
-	return this.cost
-}
-
-func (this *IndexScan3) Cardinality() float64 {
-	return this.cardinality
-}
-
 func (this *IndexScan3) HasDeltaKeyspace() bool {
 	return this.hasDeltaKeyspace
 }
@@ -298,12 +288,8 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
-	if this.cost > 0.0 {
-		r["cost"] = this.cost
-	}
-
-	if this.cardinality > 0.0 {
-		r["cardinality"] = this.cardinality
+	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
+		r["optimizer_estimates"] = optEstimate
 	}
 
 	if this.hasDeltaKeyspace {
@@ -340,8 +326,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Covers           []string               `json:"covers"`
 		FilterCovers     map[string]interface{} `json:"filter_covers"`
 		Filter           string                 `json:"filter"`
-		Cost             float64                `json:"cost"`
-		Cardinality      float64                `json:"cardinality"`
+		OptEstimate      map[string]float64     `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
 	}
 
@@ -424,8 +409,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.cost = getCost(_unmarshalled.Cost)
-	this.cardinality = getCardinality(_unmarshalled.Cardinality)
+	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
