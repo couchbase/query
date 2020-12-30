@@ -326,7 +326,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Covers           []string               `json:"covers"`
 		FilterCovers     map[string]interface{} `json:"filter_covers"`
 		Filter           string                 `json:"filter"`
-		OptEstimate      map[string]float64     `json:"optimizer_estimates"`
+		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
 	}
 

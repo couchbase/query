@@ -106,16 +106,16 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Join) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Namespace   string             `json:"namespace"`
-		Bucket      string             `json:"bucket"`
-		Scope       string             `json:"scope"`
-		Keyspace    string             `json:"keyspace"`
-		On          string             `json:"on_keys"`
-		Outer       bool               `json:"outer"`
-		As          string             `json:"as"`
-		OnFilter    string             `json:"on_filter"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Namespace   string                 `json:"namespace"`
+		Bucket      string                 `json:"bucket"`
+		Scope       string                 `json:"scope"`
+		Keyspace    string                 `json:"keyspace"`
+		On          string                 `json:"on_keys"`
+		Outer       bool                   `json:"outer"`
+		As          string                 `json:"as"`
+		OnFilter    string                 `json:"on_filter"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

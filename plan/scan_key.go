@@ -71,10 +71,10 @@ func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]inte
 
 func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Keys        string             `json:"keys"`
-		Distinct    bool               `json:"distinct"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Keys        string                 `json:"keys"`
+		Distinct    bool                   `json:"distinct"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

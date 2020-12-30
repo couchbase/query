@@ -58,9 +58,9 @@ func (this *UnionAll) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *UnionAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Children    []json.RawMessage  `json:"~children"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Children    []json.RawMessage      `json:"~children"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

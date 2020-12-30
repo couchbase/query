@@ -62,9 +62,9 @@ func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Filter) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Condition   string             `json:"condition"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Condition   string                 `json:"condition"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

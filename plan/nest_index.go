@@ -132,7 +132,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 			IndexId string              `json:"index_id"`
 			Using   datastore.IndexType `json:"using"`
 		} `json:"scan"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

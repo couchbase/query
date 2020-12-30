@@ -72,10 +72,10 @@ func (this *With) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *With) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Bindings    json.RawMessage    `json:"bindings"`
-		Child       json.RawMessage    `json:"~child"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Bindings    json.RawMessage        `json:"bindings"`
+		Child       json.RawMessage        `json:"~child"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	var child_type struct {

@@ -161,21 +161,21 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                string                `json:"#operator"`
-		Index            string                `json:"index"`
-		Namespace        string                `json:"namespace"`
-		Bucket           string                `json:"bucket"`
-		Scope            string                `json:"scope"`
-		Keyspace         string                `json:"keyspace"`
-		As               string                `json:"as"`
-		Using            datastore.IndexType   `json:"using"`
-		GroupAggs        *IndexGroupAggregates `json:"index_group_aggs"`
-		Projection       *IndexProjection      `json:"index_projection"`
-		OrderTerms       IndexKeyOrders        `json:"index_order"`
-		Offset           string                `json:"offset"`
-		Limit            string                `json:"limit"`
-		OptEstimate      map[string]float64    `json:"optimizer_estimates"`
-		HasDeltaKeyspace bool                  `json:"has_delta_keyspace"`
+		_                string                 `json:"#operator"`
+		Index            string                 `json:"index"`
+		Namespace        string                 `json:"namespace"`
+		Bucket           string                 `json:"bucket"`
+		Scope            string                 `json:"scope"`
+		Keyspace         string                 `json:"keyspace"`
+		As               string                 `json:"as"`
+		Using            datastore.IndexType    `json:"using"`
+		GroupAggs        *IndexGroupAggregates  `json:"index_group_aggs"`
+		Projection       *IndexProjection       `json:"index_projection"`
+		OrderTerms       IndexKeyOrders         `json:"index_order"`
+		Offset           string                 `json:"offset"`
+		Limit            string                 `json:"limit"`
+		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
+		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

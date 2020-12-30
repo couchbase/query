@@ -121,9 +121,9 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 			As   string `json:"as"`
 			Star bool   `json:"star"`
 		} `json:"result_terms"`
-		Distinct    bool               `json:"distinct"`
-		Raw         bool               `json:"raw"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		Distinct    bool                   `json:"distinct"`
+		Raw         bool                   `json:"raw"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

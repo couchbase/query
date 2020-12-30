@@ -87,12 +87,12 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Unnest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Outer       bool               `json:"outer"`
-		Expr        string             `json:"expr"`
-		As          string             `json:"as"`
-		Filter      string             `json:"filter"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Outer       bool                   `json:"outer"`
+		Expr        string                 `json:"expr"`
+		As          string                 `json:"as"`
+		Filter      string                 `json:"filter"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 	var expr expression.Expression
 

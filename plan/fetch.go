@@ -87,16 +87,16 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Namespace   string             `json:"namespace"`
-		Bucket      string             `json:"bucket"`
-		Scope       string             `json:"scope"`
-		Keyspace    string             `json:"keyspace"`
-		FromExpr    string             `json:"fromExpr"`
-		As          string             `json:"as"`
-		UnderNL     bool               `json:"nested_loop"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
-		SubPaths    []string           `json:"subpaths"`
+		_           string                 `json:"#operator"`
+		Namespace   string                 `json:"namespace"`
+		Bucket      string                 `json:"bucket"`
+		Scope       string                 `json:"scope"`
+		Keyspace    string                 `json:"keyspace"`
+		FromExpr    string                 `json:"fromExpr"`
+		As          string                 `json:"as"`
+		UnderNL     bool                   `json:"nested_loop"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		SubPaths    []string               `json:"subpaths"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -191,15 +191,15 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Namespace   string             `json:"namespace"`
-		Bucket      string             `json:"bucket"`
-		Scope       string             `json:"scope"`
-		Keyspace    string             `json:"keyspace"`
-		FromExpr    string             `json:"fromExpr"`
-		As          string             `json:"as"`
-		UnderNL     bool               `json:"nested_loop"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Namespace   string                 `json:"namespace"`
+		Bucket      string                 `json:"bucket"`
+		Scope       string                 `json:"scope"`
+		Keyspace    string                 `json:"keyspace"`
+		FromExpr    string                 `json:"fromExpr"`
+		As          string                 `json:"as"`
+		UnderNL     bool                   `json:"nested_loop"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

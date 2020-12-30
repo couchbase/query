@@ -195,11 +195,11 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Scans       []json.RawMessage  `json:"scans"`
-		Limit       string             `json:"limit"`
-		Offset      string             `json:"offset"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Scans       []json.RawMessage      `json:"scans"`
+		Limit       string                 `json:"limit"`
+		Offset      string                 `json:"offset"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

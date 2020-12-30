@@ -134,16 +134,16 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *HashNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Onclause    string             `json:"on_clause"`
-		Outer       bool               `json:"outer"`
-		BuildExprs  []string           `json:"build_exprs"`
-		ProbeExprs  []string           `json:"probe_exprs"`
-		BuildAlias  string             `json:"build_alias"`
-		HintError   string             `json:"hint_not_followed"`
-		Filter      string             `json:"filter"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
-		Child       json.RawMessage    `json:"~child"`
+		_           string                 `json:"#operator"`
+		Onclause    string                 `json:"on_clause"`
+		Outer       bool                   `json:"outer"`
+		BuildExprs  []string               `json:"build_exprs"`
+		ProbeExprs  []string               `json:"probe_exprs"`
+		BuildAlias  string                 `json:"build_alias"`
+		HintError   string                 `json:"hint_not_followed"`
+		Filter      string                 `json:"filter"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		Child       json.RawMessage        `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

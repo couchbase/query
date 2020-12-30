@@ -14,11 +14,11 @@ const (
 	PLAN_CARD_NOT_AVAIL = -1.0 // cardinality is not available
 )
 
-func marshalOptEstimate(oe *optEstimate) map[string]float64 {
-	if oe.cost <= 0.0 && oe.cardinality <= 0.0 {
-		return nil
+func marshalOptEstimate(oe *optEstimate) map[string]interface{} {
+	var r map[string]interface{}
+	if oe.cost > 0.0 || oe.cardinality > 0.0 {
+		r = make(map[string]interface{}, 2)
 	}
-	r := make(map[string]float64, 2)
 	if oe.cost > 0.0 {
 		r["cost"] = oe.cost
 	}
@@ -29,15 +29,26 @@ func marshalOptEstimate(oe *optEstimate) map[string]float64 {
 	return r
 }
 
-func unmarshalOptEstimate(oe *optEstimate, unmarshalled map[string]float64) {
-	if len(unmarshalled) > 0 && unmarshalled["cost"] > 0.0 {
-		oe.cost = unmarshalled["cost"]
-	} else {
+func unmarshalOptEstimate(oe *optEstimate, unmarshalled map[string]interface{}) {
+	var hasCost, hasCard bool
+
+	if costv, ok := unmarshalled["cost"]; ok {
+		if cost, ok := costv.(float64); ok && cost > 0.0 {
+			oe.cost = cost
+			hasCost = true
+		}
+	}
+	if !hasCost {
 		oe.cost = PLAN_COST_NOT_AVAIL
 	}
-	if len(unmarshalled) > 0 && unmarshalled["cardinality"] > 0.0 {
-		oe.cardinality = unmarshalled["cardinality"]
-	} else {
+
+	if cardinalityv, ok := unmarshalled["cardinality"]; ok {
+		if cardinality, ok := cardinalityv.(float64); ok && cardinality > 0.0 {
+			oe.cardinality = cardinality
+			hasCard = true
+		}
+	}
+	if !hasCard {
 		oe.cardinality = PLAN_CARD_NOT_AVAIL
 	}
 }

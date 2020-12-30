@@ -78,10 +78,10 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Keys        []string           `json:"group_keys"`
-		Aggs        []string           `json:"aggregates"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Keys        []string               `json:"group_keys"`
+		Aggs        []string               `json:"aggregates"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -173,10 +173,10 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 
 func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Keys        []string           `json:"group_keys"`
-		Aggs        []string           `json:"aggregates"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Keys        []string               `json:"group_keys"`
+		Aggs        []string               `json:"aggregates"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -268,10 +268,10 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Keys        []string           `json:"group_keys"`
-		Aggs        []string           `json:"aggregates"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Keys        []string               `json:"group_keys"`
+		Aggs        []string               `json:"aggregates"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

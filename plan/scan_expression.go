@@ -86,12 +86,12 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string             `json:"#operator"`
-		FromExpr     string             `json:"expr"`
-		Alias        string             `json:"alias"`
-		UnCorrelated bool               `json:"uncorrelated"`
-		Filter       string             `json:"filter"`
-		OptEstimate  map[string]float64 `json:"optimizer_estimates"`
+		_            string                 `json:"#operator"`
+		FromExpr     string                 `json:"expr"`
+		Alias        string                 `json:"alias"`
+		UnCorrelated bool                   `json:"uncorrelated"`
+		Filter       string                 `json:"filter"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

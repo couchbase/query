@@ -132,11 +132,11 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Scan        json.RawMessage    `json:"scan"`
-		Limit       string             `json:"limit"`
-		Offset      string             `json:"offset"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Scan        json.RawMessage        `json:"scan"`
+		Limit       string                 `json:"limit"`
+		Offset      string                 `json:"offset"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

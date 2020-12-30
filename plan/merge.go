@@ -117,17 +117,17 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Merge) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Namespace   string             `json:"namespace"`
-		Bucket      string             `json:"bucket"`
-		Scope       string             `json:"scope"`
-		Keyspace    string             `json:"keyspace"`
-		As          string             `json:"as"`
-		Key         string             `json:"key"`
-		Update      json.RawMessage    `json:"update"`
-		Delete      json.RawMessage    `json:"delete"`
-		Insert      json.RawMessage    `json:"insert"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Namespace   string                 `json:"namespace"`
+		Bucket      string                 `json:"bucket"`
+		Scope       string                 `json:"scope"`
+		Keyspace    string                 `json:"keyspace"`
+		As          string                 `json:"as"`
+		Key         string                 `json:"key"`
+		Update      json.RawMessage        `json:"update"`
+		Delete      json.RawMessage        `json:"delete"`
+		Insert      json.RawMessage        `json:"insert"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

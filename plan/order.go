@@ -95,9 +95,9 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Desc     bool   `json:"desc"`
 			NullsPos bool   `json:"nulls_pos"`
 		} `json:"sort_terms"`
-		offsetExpr  string             `json:"offset"`
-		limitExpr   string             `json:"limit"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		offsetExpr  string                 `json:"offset"`
+		limitExpr   string                 `json:"limit"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

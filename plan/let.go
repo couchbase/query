@@ -60,9 +60,9 @@ func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Let) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Bindings    json.RawMessage    `json:"bindings"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Bindings    json.RawMessage        `json:"bindings"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

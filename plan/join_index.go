@@ -177,7 +177,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			Covers       []string               `json:"covers"`
 			FilterCovers map[string]interface{} `json:"filter_covers"`
 		} `json:"scan"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

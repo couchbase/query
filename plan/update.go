@@ -63,7 +63,7 @@ func (this *Clone) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Clone) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -121,9 +121,9 @@ func (this *Set) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Set) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		SetTerms    json.RawMessage    `json:"set_terms"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		SetTerms    json.RawMessage        `json:"set_terms"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -188,9 +188,9 @@ func (this *Unset) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Unset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		UnsetTerms  json.RawMessage    `json:"unset_terms"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		UnsetTerms  json.RawMessage        `json:"unset_terms"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -281,16 +281,16 @@ func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string             `json:"#operator"`
-		Namespace   string             `json:"namespace"`
-		Bucket      string             `json:"bucket"`
-		Scope       string             `json:"scope"`
-		Keyspace    string             `json:"keyspace"`
-		Expr        string             `json:"expr"`
-		As          string             `json:"as"`
-		Alias       string             `json:"alias"`
-		Limit       string             `json:"limit"`
-		OptEstimate map[string]float64 `json:"optimizer_estimates"`
+		_           string                 `json:"#operator"`
+		Namespace   string                 `json:"namespace"`
+		Bucket      string                 `json:"bucket"`
+		Scope       string                 `json:"scope"`
+		Keyspace    string                 `json:"keyspace"`
+		Expr        string                 `json:"expr"`
+		As          string                 `json:"as"`
+		Alias       string                 `json:"alias"`
+		Limit       string                 `json:"limit"`
+		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
