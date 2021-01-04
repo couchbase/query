@@ -79,7 +79,8 @@ var HTTP_ADDR = flag.String("http", _DEF_HTTP, "HTTP service address")
 var HTTPS_ADDR = flag.String("https", _DEF_HTTPS, "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
-var IPv6 = flag.Bool("ipv6", false, "Query is IPv6 compliant")
+var IPv6 = flag.String("ipv6", server_package.TCP_OPT, "Query is IPv6 compliant")
+var IPv4 = flag.String("ipv4", server_package.TCP_REQ, "Query uses IPv4 listeners only")
 
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
@@ -126,8 +127,42 @@ func main() {
 	defer HideConsole(false)
 	flag.Parse()
 
-	// Set Ipv6 or Ipv4
-	server_package.SetIP(*IPv6)
+	// Use the IPv4/IPv6 flags to setup listener bool value
+	// This is for external interfaces / listeners
+	// localhost represents IPv4. This is always true inless IPv6 is required.
+	listener := false
+
+	if *IPv6 == server_package.TCP_REQ {
+		listener = true
+	}
+
+	// Use the datastore/configstore and accountingstore values
+	// setup localhost bool value.
+	// This is for IPv6 support for internal interfaces
+	localhost6 := false // ipv4 endpoints
+
+	bval1, err := server_package.CheckURL(*HTTP_ADDR, "http addr")
+	if err != nil {
+		bval1, err = server_package.CheckURL(*DATASTORE, "datastore")
+		if err != nil {
+			bval1, err = server_package.CheckURL(*CONFIGSTORE, "configstore")
+			if err != nil {
+				bval1, err = server_package.CheckURL(*ACCTSTORE, "accounting store")
+				if err != nil {
+					fmt.Printf("ERROR: %s\n", err)
+					os.Exit(1)
+				}
+			}
+		}
+	}
+
+	localhost6 = bval1
+
+	err = server_package.SetIP(*IPv4, *IPv6, localhost6, listener)
+	if err != nil {
+		fmt.Printf("ERROR: %s\n", err)
+		os.Exit(1)
+	}
 
 	// useful for getting list of go-routines
 	// localhost needs to refer to either 127.0.0.1 or [::1]

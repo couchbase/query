@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net"
+	"net/url"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -66,7 +68,18 @@ var _PROFILE_NAMES = []string{
 	ProfBench:  "benchmark",
 }
 
+const (
+	TCP_OFF = "off"
+	TCP_REQ = "required"
+	TCP_OPT = "optional"
+)
+
+// This will be set based on the input datastore value as opposed to the flag values.
+// The flag values shall only be used for bringing up listeners.
 var _IPv6 = false
+
+var _IPv6val = TCP_OPT
+var _IPv4val = TCP_REQ
 
 func (profile Profile) String() string {
 	return _PROFILE_NAMES[profile]
@@ -1340,8 +1353,12 @@ func GetProfile() Profile {
 }
 
 // FIXME should the IPv6 / host name and port code be in util?
-func IsIPv6() bool {
-	return _IPv6
+func IsIPv6() string {
+	return _IPv6val
+}
+
+func IsIpv4() string {
+	return _IPv4val
 }
 
 // Return the correct address for localhost depending on if
@@ -1357,9 +1374,66 @@ func GetIP(is_url bool) string {
 	return "127.0.0.1"
 }
 
-func SetIP(val bool) {
-	_IPv6 = val
-	util.IPv6 = val
+func checkIPVals(val, vtype string) error {
+	if val != TCP_OFF && val != TCP_REQ && val != TCP_OPT {
+		return fmt.Errorf("%v flag values take required optional or off values. Current value %v is invalid.", vtype, val)
+	}
+	return nil
+}
+
+func SetIP(vIpv6, vIpv4 string, localhost6, listener bool) error {
+
+	err := checkIPVals(vIpv4, "IPv4")
+	if err != nil {
+		return err
+	}
+
+	err = checkIPVals(vIpv6, "IPv6")
+	if err != nil {
+		return err
+	}
+
+	// Set Ipv6 or Ipv4
+
+	//ns_server will pass both command line options always to the service. In case, through
+	// a bug in code, both options are "off"/"optional" the service should fail to start.
+	// We never expect both address families to be "off"/"optional",
+	// we expect at least one to be required.
+	if vIpv4 != TCP_REQ && vIpv6 != TCP_REQ {
+		return fmt.Errorf("Incorrect IPv4 and IPv6 flag value. Atleast one value must be required.")
+	}
+
+	_IPv6val = vIpv6
+	_IPv4val = vIpv4
+
+	if listener {
+		util.IPv6 = true
+	}
+
+	if localhost6 {
+		_IPv6 = true
+	}
+
+	return nil
+}
+
+// return true, nil for IPv6 address and false for IPv4.
+func CheckURL(store, urltype string) (bool, error) {
+	ipUrl, err := url.Parse(store)
+	if err != nil {
+		return false, fmt.Errorf("Incorrect input url format for %v.", urltype)
+	}
+
+	ip := net.ParseIP(ipUrl.Hostname())
+	if ip == nil {
+		return false, fmt.Errorf("Incorrect input url format for %v.", urltype)
+	}
+
+	if ip.To4() == nil {
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
 
 // This needs to support both IPv4 and IPv6

@@ -106,34 +106,40 @@ func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
 	}
 }
 
-func getNetwProtocol() []string {
-	if server.IsIPv6() {
-		return []string{"tcp6", "tcp4"}
+func getNetwProtocol() map[string]string {
+	protocol := make(map[string]string)
+
+	val := server.IsIPv6()
+	if val != server.TCP_OFF {
+		protocol["tcp6"] = val
 	}
-	return []string{"tcp4", "tcp6"}
+
+	val = server.IsIpv4()
+	if val != server.TCP_OFF {
+		protocol["tcp4"] = val
+	}
+	return protocol
 }
 
-/*
-1. If ns_server sends us ipv6=true, then we should
-      (1) start listening to ipv6 - fail service if listen fails
-      (2) try to listen to ipv4 - don't fail service even if listen fails.
-2. If ns_server sends us ipv6=false, then we should
-      (1) start listening to ipv4 - fail service if listen fails
-      (2) try to listen to ipv6 - don't fail service even if listen fails.
-*/
-
+// Ipv4 and IPv6 are tri value flags that take required optional or off as values.
+// Fail only in the case the listener doesnt come up when flag value is required
 func (this *HttpEndpoint) Listen() error {
+	netWs := getNetwProtocol()
+	if len(netWs) == 0 {
+		// Both values were set to off so we fail here.
+		return fmt.Errorf(" Failed to start service: Both IPv4 and IPv6 flags were not set.")
+	}
 
 	srv := &http.Server{
 		Handler:           this.mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	for i, netW := range getNetwProtocol() {
+	for netW, val := range netWs {
 		ln, err := net.Listen(netW, this.httpAddr)
 
 		if err != nil {
-			if i == 0 {
+			if val == server.TCP_REQ {
 				return fmt.Errorf("Failed to start service: %v", err.Error())
 			} else {
 				logging.Infof("Failed to start service: %v", err.Error())
@@ -149,6 +155,13 @@ func (this *HttpEndpoint) Listen() error {
 }
 
 func (this *HttpEndpoint) ListenTLS() error {
+
+	netWs := getNetwProtocol()
+	if len(netWs) == 0 {
+		// Both values were set to off so we fail here.
+		return fmt.Errorf(" Failed to start service: Both IPv4 and IPv6 flags were not set.")
+	}
+
 	// create tls configuration
 	if this.certFile == "" || this.keyFile == "" {
 		logging.Errorf("No certificate passed. Secure listener not brought up.")
@@ -201,20 +214,11 @@ func (this *HttpEndpoint) ListenTLS() error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	/*
-		1. If ns_server sends us ipv6=true, then we should
-		      (1) start listening to ipv6 - fail service if listen fails
-		      (2) try to listen to ipv4 - don't fail service even if listen fails.
-		2. If ns_server sends us ipv6=false, then we should
-		      (1) start listening to ipv4 - fail service if listen fails
-		      (2) try to listen to ipv6 - don't fail service even if listen fails.
-	*/
-
-	for i, netW := range getNetwProtocol() {
+	for netW, val := range netWs {
 		ln, err := net.Listen(netW, this.httpsAddr)
 
 		if err != nil {
-			if i == 0 {
+			if val == server.TCP_REQ {
 				return fmt.Errorf("Failed to start service: %v", err.Error())
 			} else {
 				logging.Infof("Failed to start service: %v", err.Error())
