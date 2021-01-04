@@ -293,56 +293,33 @@ func handleTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 }
 
 func handleMaxParallelism(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		max_parallelism, e := strconv.Atoi(param)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("max_parallelism is invalid"), "max parallelism")
-		} else {
-			rv.SetMaxParallelism(max_parallelism)
-		}
+	max_parallelism, err := httpArgs.getIntVal(parm, val)
+	if err == nil {
+		rv.SetMaxParallelism(max_parallelism)
 	}
 	return err
 }
 
 func handleScanCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		scan_cap, e := strconv.ParseInt(param, 10, 64)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("scan_cap is invalid"), "scan cap")
-		} else {
-			rv.SetScanCap(scan_cap)
-		}
+	scan_cap, err := httpArgs.getInt64Val(parm, val)
+	if err == nil {
+		rv.SetScanCap(scan_cap)
 	}
 	return err
 }
 
 func handlePipelineCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		var e error
-		var pipeline_cap int64
-
-		pipeline_cap, e = strconv.ParseInt(param, 10, 64)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_cap is invalid"), "pipeline cap")
-		} else {
-			rv.SetPipelineCap(pipeline_cap)
-		}
+	pipeline_cap, err := httpArgs.getInt64Val(parm, val)
+	if err == nil {
+		rv.SetPipelineCap(pipeline_cap)
 	}
 	return err
 }
 
 func handlePipelineBatch(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		pipeline_batch, e := strconv.Atoi(param)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("pipeline_batch is invalid"), "pipeline batch")
-		} else {
-			rv.SetPipelineBatch(pipeline_batch)
-		}
+	pipeline_batch, err := httpArgs.getIntVal(parm, val)
+	if err == nil {
+		rv.SetPipelineBatch(pipeline_batch)
 	}
 	return err
 }
@@ -500,27 +477,17 @@ func handleProfile(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 }
 
 func handleN1QLFeatCtrl(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		n1qlFeatureControl, e := strconv.ParseUint(param, 0, 64)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("n1ql_feat_ctrl is invalid"), N1QL_FEAT_CTRL)
-		} else {
-			rv.SetFeatureControls(n1qlFeatureControl)
-		}
+	n1qlFeatureControl, err := httpArgs.getUint64Val(parm, val)
+	if err == nil {
+		rv.SetFeatureControls(n1qlFeatureControl)
 	}
 	return err
 }
 
 func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		indexApiVer, e := strconv.Atoi(param)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("max_index_api is invalid"), MAX_INDEX_API)
-		} else {
-			rv.SetIndexApiVersion(indexApiVer)
-		}
+	indexApiVer, err := httpArgs.getIntVal(parm, val)
+	if err == nil {
+		rv.SetIndexApiVersion(indexApiVer)
 	}
 	return err
 }
@@ -545,14 +512,9 @@ func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 }
 
 func handleMemoryQuota(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		memoryQuota, e := strconv.ParseUint(param, 0, 64)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("memory quota is invalid"), MEMORY_QUOTA)
-		} else {
-			rv.SetMemoryQuota(memoryQuota)
-		}
+	memoryQuota, err := httpArgs.getUint64Val(parm, val)
+	if err == nil {
+		rv.SetMemoryQuota(memoryQuota)
 	}
 	return err
 }
@@ -583,14 +545,9 @@ func handleTxImplicit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 }
 
 func handleTxStmtNum(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		txstmtnum, e := strconv.ParseInt(param, 10, 64)
-		if e != nil || txstmtnum < 0 {
-			err = errors.NewServiceErrorBadValue(fmt.Errorf("%s is invalid", parm), parm)
-		} else {
-			rv.SetTxStmtNum(txstmtnum)
-		}
+	txstmtnum, err := httpArgs.getInt64Val(parm, val)
+	if err == nil {
+		rv.SetTxStmtNum(txstmtnum)
 	}
 	return err
 }
@@ -668,11 +625,10 @@ func handleAtrCollection(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 }
 
 func handleNumAtrs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
-	param, err := httpArgs.getStringVal(parm, val)
-	if err == nil && param != "" {
-		n, e := strconv.ParseUint(param, 0, 64)
-		if e != nil || n <= 0 || n >= (1<<16) {
-			err = errors.NewServiceErrorBadValue(go_errors.New("number of Atrs is invalid"), param)
+	n, err := httpArgs.getUint64Val(parm, val)
+	if err == nil {
+		if n <= 0 || n >= (1<<16) {
+			err = errors.NewServiceErrorBadValue(go_errors.New("number of Atrs is invalid"), parm)
 		} else {
 			rv.SetNumAtrs(int(n))
 		}
@@ -1099,6 +1055,9 @@ type httpRequestArgs interface {
 	processParameters(rv *httpRequest) errors.Error
 	storeDirect(int, string, interface{}) errors.Error
 	getString(int, string) (string, errors.Error)
+	getIntVal(field string, v interface{}) (int, errors.Error)
+	getInt64Val(field string, v interface{}) (int64, errors.Error)
+	getUint64Val(field string, v interface{}) (uint64, errors.Error)
 	getStringVal(field string, v interface{}) (string, errors.Error)
 	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
 	getPreparedName(field string, v interface{}) (string, errors.Error)
@@ -1351,6 +1310,42 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 	}
 
 	return getScanVectorsFromJSON(target)
+}
+
+func (this *urlArgs) getIntVal(field string, v interface{}) (int, errors.Error) {
+	val, err := this.getStringVal(field, v)
+	if err == nil {
+		res, e := strconv.Atoi(val)
+		if e == nil {
+			return res, nil
+		}
+		err = errors.NewServiceErrorBadValue(fmt.Errorf("%v is invalid", field), field)
+	}
+	return -1, err
+}
+
+func (this *urlArgs) getInt64Val(field string, v interface{}) (int64, errors.Error) {
+	val, err := this.getStringVal(field, v)
+	if err == nil {
+		res, e := strconv.ParseInt(val, 10, 64)
+		if e == nil {
+			return res, nil
+		}
+		err = errors.NewServiceErrorBadValue(fmt.Errorf("%v is invalid", field), field)
+	}
+	return -1, err
+}
+
+func (this *urlArgs) getUint64Val(field string, v interface{}) (uint64, errors.Error) {
+	val, err := this.getStringVal(field, v)
+	if err == nil {
+		res, e := strconv.ParseUint(val, 0, 64)
+		if e == nil {
+			return res, nil
+		}
+		err = errors.NewServiceErrorBadValue(fmt.Errorf("%v is invalid", field), field)
+	}
+	return 0, err
 }
 
 func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.Error) {
@@ -1664,6 +1659,68 @@ func (this *jsonArgs) getTristateVal(field string, v interface{}) (value.Tristat
 
 	value_tristate = value.ToTristate(b)
 	return value_tristate, nil
+}
+
+// helper function to get a int type argument
+func (this *jsonArgs) getIntVal(field string, v interface{}) (int, errors.Error) {
+	switch v := v.(type) {
+	case int:
+		return v, nil
+	case int64:
+		return int(v), nil
+	case float64:
+		return int(v), nil
+	case string:
+		res, e := strconv.Atoi(v)
+		if e == nil {
+			return res, nil
+		}
+	}
+	return -1, errors.NewServiceErrorBadValue(fmt.Errorf("%v is invalid", field), field)
+}
+
+// helper function to get a int64 type argument
+func (this *jsonArgs) getInt64Val(field string, v interface{}) (int64, errors.Error) {
+	switch v := v.(type) {
+	case int:
+		return int64(v), nil
+	case int64:
+		return v, nil
+	case float64:
+		return int64(v), nil
+	case string:
+		res, e := strconv.ParseInt(v, 10, 64)
+		if e == nil {
+			return res, nil
+		}
+	}
+	return -1, errors.NewServiceErrorBadValue(fmt.Errorf("%v is invalid", field), field)
+}
+
+// helper function to get a uint64 type argument
+func (this *jsonArgs) getUint64Val(field string, v interface{}) (uint64, errors.Error) {
+	switch v := v.(type) {
+	case int:
+		if v >= 0 {
+			return uint64(v), nil
+		}
+	case int64:
+		if v >= 0 {
+			return uint64(v), nil
+		}
+	case uint64:
+		return v, nil
+	case float64:
+		if v >= 0 {
+			return uint64(v), nil
+		}
+	case string:
+		res, e := strconv.ParseUint(v, 0, 64)
+		if e == nil {
+			return res, nil
+		}
+	}
+	return 0, errors.NewServiceErrorBadValue(fmt.Errorf("%v is invalid", field), field)
 }
 
 // helper function to get a string type argument
