@@ -210,6 +210,9 @@ func main() {
 	}
 	datastore_package.SetDatastore(datastore)
 
+	nullSecurityConfig := &datastore_package.ConnectionSecurityConfig{}
+	datastore.SetConnectionSecurityConfig(nullSecurityConfig)
+
 	// configstore should be set before the system datastore
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
