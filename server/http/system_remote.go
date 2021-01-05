@@ -391,7 +391,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 					continue
 				}
 				_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
-				if warnFn != nil {
+				if warnFn != nil && opErr != nil {
 					warnFn(opErr)
 				}
 
@@ -415,7 +415,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 			}
 
 			_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
-			if warnFn != nil {
+			if warnFn != nil && opErr != nil {
 				warnFn(opErr)
 			}
 		}
