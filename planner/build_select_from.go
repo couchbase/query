@@ -688,7 +688,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 
 	for _, term := range node.Projection().Terms() {
 		count, ok := term.Expression().(*algebra.Count)
-		if !ok || count.Distinct() || count.IsWindowAggregate() {
+		if !ok || count.Distinct() || count.IsWindowAggregate() || count.Filter() != nil {
 			return false, nil
 		}
 
