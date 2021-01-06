@@ -48,7 +48,7 @@ func newDynamic(variable *expression.Identifier, pairs *expression.Pairs) *dynam
 	rv.SetMapper(rv)
 	rv.SetMapFunc(
 		func(expr expression.Expression) (expression.Expression, error) {
-			alias := expr.Alias()
+			alias := fieldName(expr)
 			if alias == "" {
 				return expr, nil
 			}
@@ -103,7 +103,7 @@ func (this *dynamic) VisitAnyEvery(expr *expression.AnyEvery) (rv interface{}, e
 }
 
 func (this *dynamic) VisitExists(expr *expression.Exists) (interface{}, error) {
-	alias := expr.Operand().Alias()
+	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
 	}
@@ -123,7 +123,7 @@ func (this *dynamic) VisitExists(expr *expression.Exists) (interface{}, error) {
 }
 
 func (this *dynamic) VisitIn(expr *expression.In) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	cons, ok := expr.Second().(*expression.ArrayConstruct)
 
 	if alias == "" || !ok {
@@ -154,7 +154,7 @@ func (this *dynamic) VisitIn(expr *expression.In) (interface{}, error) {
 // Comparison
 
 func (this *dynamic) VisitBetween(expr *expression.Between) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	low := expr.Second().Static()
 	high := expr.Third().Static()
 
@@ -177,11 +177,11 @@ func (this *dynamic) VisitBetween(expr *expression.Between) (interface{}, error)
 }
 
 func (this *dynamic) VisitEq(expr *expression.Eq) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
 	if alias == "" || static == nil {
-		alias = expr.Second().Alias()
+		alias = fieldName(expr.Second())
 		static = expr.First().Static()
 	}
 
@@ -198,11 +198,11 @@ func (this *dynamic) VisitEq(expr *expression.Eq) (interface{}, error) {
 }
 
 func (this *dynamic) VisitLE(expr *expression.LE) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
 	if alias == "" || static == nil {
-		alias = expr.Second().Alias()
+		alias = fieldName(expr.Second())
 		static = expr.First().Static()
 		if alias != "" && static != nil {
 			return this.visitGE(expr, alias, static)
@@ -245,7 +245,7 @@ func (this *dynamic) visitGE(expr *expression.LE, alias string, static expressio
 }
 
 func (this *dynamic) VisitLike(expr *expression.Like) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
 	if alias == "" || static == nil {
@@ -267,11 +267,11 @@ func (this *dynamic) VisitLike(expr *expression.Like) (interface{}, error) {
 }
 
 func (this *dynamic) VisitLT(expr *expression.LT) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
 	if alias == "" || static == nil {
-		alias = expr.Second().Alias()
+		alias = fieldName(expr.Second())
 		static = expr.First().Static()
 		if alias != "" && static != nil {
 			return this.visitGT(expr, alias, static)
@@ -314,7 +314,7 @@ func (this *dynamic) visitGT(expr *expression.LT, alias string, static expressio
 }
 
 func (this *dynamic) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
-	alias := expr.Operand().Alias()
+	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
 	}
@@ -334,7 +334,7 @@ func (this *dynamic) VisitIsNotMissing(expr *expression.IsNotMissing) (interface
 }
 
 func (this *dynamic) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
-	alias := expr.Operand().Alias()
+	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
 	}
@@ -354,7 +354,7 @@ func (this *dynamic) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, er
 }
 
 func (this *dynamic) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
-	alias := expr.Operand().Alias()
+	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
 	}
@@ -374,7 +374,7 @@ func (this *dynamic) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 }
 
 func (this *dynamic) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
-	alias := expr.Operand().Alias()
+	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
 	}
@@ -400,7 +400,7 @@ func (this *dynamic) VisitAnd(expr *expression.And) (interface{}, error) {
 }
 
 func (this *dynamic) VisitNot(expr *expression.Not) (interface{}, error) {
-	alias := expr.Operand().Alias()
+	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
 	}
@@ -434,7 +434,7 @@ func (this *dynamic) VisitFunction(expr expression.Function) (interface{}, error
 }
 
 func (this *dynamic) visitRegexpLike(expr *expression.RegexpLike) (interface{}, error) {
-	alias := expr.First().Alias()
+	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
 	if alias == "" || static == nil {
@@ -481,4 +481,15 @@ func (this *dynamic) NewArray(items ...interface{}) expression.Expression {
 	}
 
 	return expression.NewArrayConstruct(exprs...)
+}
+
+func fieldName(expr expression.Expression) (fn string) {
+	if expr == nil {
+		return
+	}
+
+	if _, ok := expr.(*expression.Identifier); ok {
+		return
+	}
+	return expr.Alias()
 }
