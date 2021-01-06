@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	cb "github.com/couchbase/go-couchbase"
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
@@ -30,9 +31,10 @@ import (
 const _DEFAULT_SCOPE_COLLECTION_NAME = "._default._default"
 
 type scope struct {
-	id      string
-	authKey string
-	bucket  *keyspace
+	id       string
+	authKey  string
+	bucket   *keyspace
+	cleaning int32
 
 	keyspaces map[string]*collection // keyspaces by id
 }
@@ -479,6 +481,15 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 		// clear collections that have disappeared
 		if oldScope != nil {
+
+			// MB-43070 only have one stat cleaner
+			if atomic.AddInt32(&oldScope.cleaning, 1) == 1 {
+				for n, _ := range oldScope.keyspaces {
+					if scope.keyspaces[n] == nil {
+						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
+					}
+				}
+			}
 			for n, val := range oldScope.keyspaces {
 				if scope.keyspaces[n] == nil {
 					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
@@ -511,6 +522,11 @@ func dropDictCacheEntries(bucket *keyspace) {
 }
 
 func clearOldScope(bucket *keyspace, s *scope) {
+
+	// MB-43070 only have one stat cleaner
+	if atomic.AddInt32(&s.cleaning, 1) != 1 {
+		return
+	}
 	for n, val := range s.keyspaces {
 		if val != nil {
 			s.keyspaces[n] = nil
