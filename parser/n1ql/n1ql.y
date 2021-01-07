@@ -3656,7 +3656,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
            ($6 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
             yylex.Error(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", $1))
         } else if ($5 != nil && !algebra.AggregateHasProperty($1, algebra.AGGREGATE_ALLOWS_FILTER)) {
-            yylex.Error(fmt.Sprintf("FILTER caluse syntax is not valid for function %s.", $1))
+            yylex.Error(fmt.Sprintf("FILTER clause syntax is not valid for function %s.", $1))
         } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
              if f.MinArgs() == f.MaxArgs() {
                    yylex.Error(fmt.Sprintf("Number of arguments to function %s must be %d.", $1, f.MaxArgs()))
