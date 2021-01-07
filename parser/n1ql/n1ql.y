@@ -3680,12 +3680,17 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
 	         return yylex.(*lexer).FatalError(err.Error())
 	     }
 	     f = expression.GetUserDefinedFunction(name)
+	     if f != nil {
+		 $$ = f.Constructor()($3...)
+	     }
         }
 
-	if f != nil {
-		$$ = f.Constructor()($3...)
-	} else {
-		return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s (resolving to %s)", $1, name.Key()))
+	if f == nil {
+             var msg string
+             if name != nil {
+                 msg = fmt.Sprintf(" (resolving to %s)", name.Key())
+             }
+	     return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s", $1, msg))
 	}
     }
 }
