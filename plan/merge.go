@@ -30,7 +30,8 @@ type Merge struct {
 }
 
 func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
-	key expression.Expression, update, delete, insert Operator, cost, cardinality float64) *Merge {
+	key expression.Expression, update, delete, insert Operator, cost, cardinality float64,
+	size int64, frCost float64) *Merge {
 	rv := &Merge{
 		keyspace: keyspace,
 		ref:      ref,
@@ -39,7 +40,7 @@ func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 		delete:   delete,
 		insert:   insert,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

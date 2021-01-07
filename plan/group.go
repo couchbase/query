@@ -26,12 +26,12 @@ type InitialGroup struct {
 }
 
 func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
-	cost, cardinality float64) *InitialGroup {
+	cost, cardinality float64, size int64, frCost float64) *InitialGroup {
 	rv := &InitialGroup{
 		keys:       keys,
 		aggregates: aggregates,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -121,12 +121,12 @@ type IntermediateGroup struct {
 }
 
 func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates,
-	cost, cardinality float64) *IntermediateGroup {
+	cost, cardinality float64, size int64, frCost float64) *IntermediateGroup {
 	rv := &IntermediateGroup{
 		keys:       keys,
 		aggregates: aggregates,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -216,12 +216,12 @@ type FinalGroup struct {
 }
 
 func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
-	cost, cardinality float64) *FinalGroup {
+	cost, cardinality float64, size int64, frCost float64) *FinalGroup {
 	rv := &FinalGroup{
 		keys:       keys,
 		aggregates: aggregates,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

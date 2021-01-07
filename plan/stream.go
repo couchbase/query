@@ -16,9 +16,9 @@ type Stream struct {
 	optEstimate
 }
 
-func NewStream(cost, cardinality float64) *Stream {
+func NewStream(cost, cardinality float64, size int64, frCost float64) *Stream {
 	rv := &Stream{}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

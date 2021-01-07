@@ -22,11 +22,11 @@ type Limit struct {
 	expr expression.Expression
 }
 
-func NewLimit(expr expression.Expression, cost, cardinality float64) *Limit {
+func NewLimit(expr expression.Expression, cost, cardinality float64, size int64, frCost float64) *Limit {
 	rv := &Limit{
 		expr: expr,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

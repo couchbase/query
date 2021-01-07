@@ -19,9 +19,9 @@ type DummyScan struct {
 	optEstimate
 }
 
-func NewDummyScan(cost, cardinality float64) *DummyScan {
+func NewDummyScan(cost, cardinality float64, size int64, frCost float64) *DummyScan {
 	rv := &DummyScan{}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

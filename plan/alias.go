@@ -19,11 +19,11 @@ type Alias struct {
 	alias string
 }
 
-func NewAlias(alias string, cost, cardinality float64) *Alias {
+func NewAlias(alias string, cost, cardinality float64, size int64, frCost float64) *Alias {
 	rv := &Alias{
 		alias: alias,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

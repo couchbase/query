@@ -39,6 +39,8 @@ type Operator interface {
 
 	Cost() float64
 	Cardinality() float64
+	Size() int64
+	FrCost() float64
 }
 
 type CoveringOperator interface {

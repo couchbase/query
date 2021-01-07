@@ -75,6 +75,14 @@ func (this *Authorize) Cardinality() float64 {
 	return this.child.Cardinality()
 }
 
+func (this *Authorize) Size() int64 {
+	return this.child.Size()
+}
+
+func (this *Authorize) FrCost() float64 {
+	return this.child.FrCost()
+}
+
 func (this *Authorize) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

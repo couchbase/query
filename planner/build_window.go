@@ -28,9 +28,13 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO && this.lastOp != nil {
 		cost = this.lastOp.Cost()
 		cardinality = this.lastOp.Cardinality()
+		size = this.lastOp.Size()
+		frCost = this.lastOp.FrCost()
 	}
 
 	// build the Window groups as described above
@@ -39,27 +43,32 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 		// For each Sort required build Order operator
 		order := wOrderGroup.sortGroups.buildOrder()
 		if order != nil {
-			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-				scost, scardinality := getSortCost(this.baseKeyspaces,
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				scost, scardinality, ssize, sfrCost := getSortCost(size,
 					len(order.Terms()), cardinality, 0, 0)
-				if scost > 0.0 && scardinality > 0.0 {
+				if scost > 0.0 && scardinality > 0.0 && ssize > 0 && sfrCost > 0.0 {
 					cost += scost
 					cardinality = scardinality
+					size = ssize
+					frCost += sfrCost
 				} else {
 					cost = OPT_COST_NOT_AVAIL
 					cardinality = OPT_CARD_NOT_AVAIL
+					size = OPT_SIZE_NOT_AVAIL
+					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			this.addSubChildren(plan.NewOrder(order, nil, nil, cost, cardinality))
+			this.addSubChildren(plan.NewOrder(order, nil, nil, cost, cardinality, size, frCost))
 		}
 
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {
 			if wOrderGroup.pbys[i] != nil && len(wOrderGroup.pbys[i].aggs) > 0 {
-				if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-					cost, cardinality = getWindowAggCost(this.baseKeyspaces,
-						wOrderGroup.pbys[i].aggs, cost, cardinality)
+				if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+					cost, cardinality, size, frCost = getWindowAggCost(wOrderGroup.pbys[i].aggs,
+						cost, cardinality, size, frCost)
 				}
-				this.addSubChildren(plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs, cost, cardinality))
+				this.addSubChildren(plan.NewWindowAggregate(wOrderGroup.pbys[i].aggs,
+					cost, cardinality, size, frCost))
 			}
 		}
 	}

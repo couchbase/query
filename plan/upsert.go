@@ -30,7 +30,8 @@ type SendUpsert struct {
 }
 
 func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	key, value, options expression.Expression, cost, cardinality float64) *SendUpsert {
+	key, value, options expression.Expression, cost, cardinality float64,
+	size int64, frCost float64) *SendUpsert {
 	rv := &SendUpsert{
 		keyspace: keyspace,
 		term:     ksref,
@@ -39,7 +40,7 @@ func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 		value:    value,
 		options:  options,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -35,7 +35,8 @@ type IndexJoin struct {
 
 func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 	index datastore.Index, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64) *IndexJoin {
+	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64,
+	size int64, frCost float64) *IndexJoin {
 	rv := &IndexJoin{
 		keyspace:     keyspace,
 		term:         join.Right(),
@@ -50,7 +51,7 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 	rv.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(rv.keyFor)),
 		expression.NewFieldName("id", false))
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

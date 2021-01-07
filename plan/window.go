@@ -23,11 +23,12 @@ type WindowAggregate struct {
 	aggregates algebra.Aggregates
 }
 
-func NewWindowAggregate(aggregates algebra.Aggregates, cost, cardinality float64) *WindowAggregate {
+func NewWindowAggregate(aggregates algebra.Aggregates, cost, cardinality float64,
+	size int64, frCost float64) *WindowAggregate {
 	rv := &WindowAggregate{
 		aggregates: aggregates,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

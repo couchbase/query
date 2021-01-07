@@ -32,13 +32,15 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO {
-		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, node.Alias())
-		cost, cardinality = getIndexJoinCost(this.lastOp, node.Outer(), node.Right(),
-			leftKeyspaces, rightKeyspace, covers != nil, index,
+		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, node.Alias())
+		cost, cardinality, size, frCost = getIndexJoinCost(this.lastOp, node.Outer(), node.Right(),
+			rightKeyspace, covers != nil, index,
 			this.context.RequestId(), this.advisorValidate(), this.context)
 	}
-	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers, cost, cardinality)
+	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers, cost, cardinality, size, frCost)
 	if covers != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -58,16 +60,17 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO {
-		leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, node.Alias())
-		cost, cardinality = getIndexNestCost(this.lastOp, node.Outer(), node.Right(),
-			leftKeyspaces, rightKeyspace, index,
-			this.context.RequestId(), this.advisorValidate(), this.context)
+		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, node.Alias())
+		cost, cardinality, size, frCost = getIndexNestCost(this.lastOp, node.Outer(), node.Right(),
+			rightKeyspace, index, this.context.RequestId(), this.advisorValidate(), this.context)
 	}
 
 	this.extractIndexJoin(index, keyspace, node.Right(), false, cost, cardinality)
 
-	return plan.NewIndexNest(keyspace, node, index, cost, cardinality), nil
+	return plan.NewIndexNest(keyspace, node, index, cost, cardinality, size, frCost), nil
 }
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (

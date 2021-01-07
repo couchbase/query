@@ -21,13 +21,14 @@ type ExceptAll struct {
 	distinct bool
 }
 
-func NewExceptAll(first, second Operator, distinct bool, cost, cardinality float64) *ExceptAll {
+func NewExceptAll(first, second Operator, distinct bool, cost, cardinality float64,
+	size int64, frCost float64) *ExceptAll {
 	rv := &ExceptAll{
 		first:    first,
 		second:   second,
 		distinct: distinct,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

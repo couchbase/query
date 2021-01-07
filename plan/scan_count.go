@@ -24,12 +24,13 @@ type CountScan struct {
 	term     *algebra.KeyspaceTerm
 }
 
-func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, cost, cardinality float64) *CountScan {
+func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm,
+	cost, cardinality float64, size int64, frCost float64) *CountScan {
 	rv := &CountScan{
 		keyspace: keyspace,
 		term:     term,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

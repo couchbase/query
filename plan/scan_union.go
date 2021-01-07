@@ -27,7 +27,8 @@ type UnionScan struct {
 	offset expression.Expression
 }
 
-func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64, scans ...SecondaryScan) *UnionScan {
+func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64,
+	size int64, frCost float64, scans ...SecondaryScan) *UnionScan {
 	for _, scan := range scans {
 		if scan.Limit() == nil {
 			limit = nil
@@ -41,7 +42,7 @@ func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64
 		limit:  limit,
 		offset: offset,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -154,7 +155,7 @@ func (this *UnionScan) Streamline() SecondaryScan {
 	case len(this.scans):
 		return this
 	default:
-		scan := NewUnionScan(this.limit, this.offset, this.cost, this.cardinality, scans...)
+		scan := NewUnionScan(this.limit, this.offset, this.cost, this.cardinality, this.size, this.frCost, scans...)
 		this.limit = scan.Limit()
 		this.offset = scan.Offset()
 		return scan

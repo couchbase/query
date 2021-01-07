@@ -145,6 +145,14 @@ func (this *IndexFtsSearch) Cardinality() float64 {
 	return PLAN_CARD_NOT_AVAIL
 }
 
+func (this *IndexFtsSearch) Size() int64 {
+	return PLAN_SIZE_NOT_AVAIL
+}
+
+func (this *IndexFtsSearch) FrCost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
 func (this *IndexFtsSearch) HasDeltaKeyspace() bool {
 	return this.hasDeltaKeyspace
 }

@@ -103,6 +103,14 @@ func (this *Parallel) Cardinality() float64 {
 	return this.child.Cardinality()
 }
 
+func (this *Parallel) Size() int64 {
+	return this.child.Size()
+}
+
+func (this *Parallel) FrCost() float64 {
+	return this.child.FrCost()
+}
+
 func GetMaxParallelism() int {
 	return runtime.NumCPU()
 }

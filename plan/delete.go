@@ -27,15 +27,15 @@ type SendDelete struct {
 	limit    expression.Expression
 }
 
-func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	limit expression.Expression, cost, cardinality float64) *SendDelete {
+func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression,
+	cost, cardinality float64, size int64, frCost float64) *SendDelete {
 	rv := &SendDelete{
 		keyspace: keyspace,
 		term:     ksref,
 		alias:    ksref.Alias(),
 		limit:    limit,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

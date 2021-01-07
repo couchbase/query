@@ -27,21 +27,20 @@ func maybeFinalProject(children []plan.Operator) []plan.Operator {
 func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren []plan.Operator) []plan.Operator {
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	last := subChildren[len(subChildren)-1]
 	if this.useCBO && last != nil {
 		cost = last.Cost()
 		cardinality = last.Cardinality()
-		if cost > 0.0 && cardinality > 0.0 {
-			ipcost, ipcard, ipsize := getInitialProjectCost(this.baseKeyspaces, projection, cardinality)
-			if ipcost > 0.0 && ipcard > 0.0 && ipsize > 0 {
-				cost += ipcost
-				cardinality = ipcard
-				projection.SetEstSize(ipsize)
-			}
+		size = last.Size()
+		frCost = last.FrCost()
+		if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getInitialProjectCost(projection, cost, cardinality, size, frCost)
 		}
 	}
 
-	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality))
+	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality, size, frCost))
 
 	// TODO retire
 	subChildren = maybeFinalProject(subChildren)

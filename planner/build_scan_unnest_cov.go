@@ -251,18 +251,24 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
-	if this.useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 {
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
+	if this.useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
 		if indexGroupAggs != nil {
-			cost, cardinality = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
-			if cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality, size, frCost = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
+				entry.size += size
+				entry.frCost += frCost
 			}
 		} else {
-			cost, cardinality = getIndexProjectionCost(index, indexProjection, entry.cardinality)
-			if cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality, size, frCost = getIndexProjectionCost(index, indexProjection, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
+				entry.size += size
+				entry.frCost += frCost
 			}
 		}
 	}
@@ -270,20 +276,23 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	// generate filters for covering index scan
 	var filter expression.Expression
 	if indexGroupAggs == nil && !hasDeltaKeyspace {
-		filter, cost, cardinality, err = this.getIndexFilter(index, node.Alias(), entry.spans,
-			covers, filterCovers, entry.cost, entry.cardinality)
+		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
+			covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
 		if err != nil {
 			return nil, nil, err
 		}
 		if this.useCBO {
 			entry.cost = cost
 			entry.cardinality = cardinality
+			entry.size = size
+			entry.frCost = frCost
 		}
 	}
 
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
 		pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, indexKeyOrders,
-		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality, hasDeltaKeyspace)
+		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
+		entry.size, entry.frCost, hasDeltaKeyspace)
 	if scan != nil {
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)

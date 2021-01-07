@@ -94,6 +94,8 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	cardinality := float64(0.0)
 	selec := float64(1.0)
 	docCount := float64(0.0)
+	size := int64(0)
+	frCost := float64(0.0)
 	var err error
 	useCBO := this.useCBO
 	if useCBO {
@@ -162,7 +164,9 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 			scost := scan.Cost()
 			scardinality := scan.Cardinality()
-			if useCBO && ((scost <= 0.0) || (scardinality <= 0.0)) {
+			ssize := scan.Size()
+			sfrCost := scan.FrCost()
+			if useCBO && ((scost <= 0.0) || (scardinality <= 0.0) || (ssize <= 0) || (sfrCost <= 0.0)) {
 				useCBO = false
 			}
 			if useCBO {
@@ -173,8 +177,13 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 				}
 				if i == 0 {
 					selec = selec1
+					size = ssize
+					frCost = sfrCost
 				} else {
 					selec = selec + selec1 - (selec * selec1)
+					if ssize > size {
+						size = ssize
+					}
 				}
 			}
 		} else {
@@ -188,8 +197,10 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	} else {
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
+		size = OPT_SIZE_NOT_AVAIL
+		frCost = OPT_COST_NOT_AVAIL
 	}
 
-	rv := plan.NewUnionScan(limit, nil, cost, cardinality, scans...)
+	rv := plan.NewUnionScan(limit, nil, cost, cardinality, size, frCost, scans...)
 	return rv.Streamline(), minSargLength, nil
 }

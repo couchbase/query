@@ -46,6 +46,8 @@ type indexEntry struct {
 	cost             float64
 	cardinality      float64
 	selectivity      float64
+	size             int64
+	frCost           float64
 	searchOrders     []string
 	condFc           map[string]value.Value
 	nEqCond          int
@@ -71,6 +73,8 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		cost:             OPT_COST_NOT_AVAIL,
 		cardinality:      OPT_CARD_NOT_AVAIL,
 		selectivity:      OPT_SELEC_NOT_AVAIL,
+		size:             OPT_SIZE_NOT_AVAIL,
+		frCost:           OPT_COST_NOT_AVAIL,
 	}
 
 	for _, b := range skeys {
@@ -105,6 +109,8 @@ func (this *indexEntry) Copy() *indexEntry {
 		cost:             this.cost,
 		cardinality:      this.cardinality,
 		selectivity:      this.selectivity,
+		size:             this.size,
+		frCost:           this.frCost,
 		condFc:           this.condFc,
 		nEqCond:          this.nEqCond,
 	}

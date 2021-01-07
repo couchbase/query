@@ -96,8 +96,11 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	joinCost := OPT_COST_NOT_AVAIL
 	joinCard := OPT_CARD_NOT_AVAIL
+	joinFrCost := OPT_COST_NOT_AVAIL
 	leftCard := OPT_CARD_NOT_AVAIL
 
 	if this.useCBO && this.lastOp != nil {
@@ -108,9 +111,9 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if stmt.IsOnKey() {
 		if this.useCBO {
-			leftKeyspaces, _, rightKeyspace, _ := base.GetKeyspacesAliases(this.baseKeyspaces, ksAlias)
-			joinCost, joinCard = getLookupJoinCost(this.lastOp, outer, right,
-				leftKeyspaces, rightKeyspace)
+			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, ksAlias)
+			joinCost, joinCard, _, joinFrCost = getLookupJoinCost(this.lastOp, outer, right,
+				rightKeyspace)
 		}
 	} else {
 		// use ANSI JOIN to handle the ON-clause
@@ -137,6 +140,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			joinOp := join.(plan.Operator)
 			joinCost = joinOp.Cost()
 			joinCard = joinOp.Cardinality()
+			joinFrCost = joinOp.FrCost()
 		}
 	}
 
@@ -148,6 +152,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	matchCard := OPT_CARD_NOT_AVAIL
 	nonMatchCard := OPT_CARD_NOT_AVAIL
+	targetSize := OPT_SIZE_NOT_AVAIL
 	if this.useCBO && leftCard > 0.0 && joinCard > 0.0 {
 		matchCard = joinCard
 		nonMatchCard = leftCard - joinCard
@@ -156,57 +161,70 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			nonMatchCard = 1.0
 			matchCard = leftCard - nonMatchCard
 		}
+
+		targetSize = getKeyspaceSize(targetKeyspace.Keyspace())
 	}
 
 	actions := stmt.Actions()
 	var update, delete, insert plan.Operator
 	var updateCost, deleteCost, insertCost float64
 	var updateCard, deleteCard, insertCard float64
+	var updateFrCost, deleteFrCost, insertFrCost float64
 
 	if actions.Update() != nil {
 		act := actions.Update()
 		ops := make([]plan.Operator, 0, 5)
 
 		cost = OPT_COST_NOT_AVAIL
+		frCost = OPT_COST_NOT_AVAIL
+		size = OPT_SIZE_NOT_AVAIL
 		if this.useCBO && joinCost > 0.0 {
 			// do not use cumulative cost for embedded operators
 			cost = optMinCost()
+			frCost = optMinCost()
+			size = targetSize
 		}
 		cardinality = matchCard
 		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality)
+			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality, size, frCost)
 			ops = append(ops, filter)
 			cost = filter.Cost()
 			cardinality = filter.Cardinality()
+			size = filter.Size()
+			frCost = filter.FrCost()
 		}
 
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getCloneCost(keyspace, cost, cardinality)
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getCloneCost(cost, cardinality, size, frCost)
 		}
-		ops = append(ops, plan.NewClone(ksAlias, cost, cardinality))
+		ops = append(ops, plan.NewClone(ksAlias, cost, cardinality, size, frCost))
 
 		if act.Set() != nil {
-			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-				cost, cardinality = getUpdateSetCost(keyspace, act.Set(), cost, cardinality)
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				cost, cardinality, size, frCost = getUpdateSetCost(act.Set(),
+					cost, cardinality, size, frCost)
 			}
-			ops = append(ops, plan.NewSet(act.Set(), cost, cardinality))
+			ops = append(ops, plan.NewSet(act.Set(), cost, cardinality, size, frCost))
 		}
 
 		if act.Unset() != nil {
-			if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-				cost, cardinality = getUpdateUnsetCost(keyspace, act.Unset(), cost, cardinality)
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				cost, cardinality, size, frCost = getUpdateUnsetCost(act.Unset(),
+					cost, cardinality, size, frCost)
 			}
-			ops = append(ops, plan.NewUnset(act.Unset(), cost, cardinality))
+			ops = append(ops, plan.NewUnset(act.Unset(), cost, cardinality, size, frCost))
 		}
 
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getUpdateSendCost(keyspace, stmt.Limit(), cost, cardinality)
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getUpdateSendCost(stmt.Limit(),
+				cost, cardinality, size, frCost)
 		}
-		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality))
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost))
 		update = plan.NewSequence(ops...)
 		if this.useCBO && cost > 0.0 {
 			updateCost = cost
 			updateCard = cardinality
+			updateFrCost = frCost
 		}
 	}
 
@@ -215,27 +233,35 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		ops := make([]plan.Operator, 0, 4)
 
 		cost = OPT_COST_NOT_AVAIL
+		frCost = OPT_COST_NOT_AVAIL
+		size = OPT_SIZE_NOT_AVAIL
 		if this.useCBO && joinCost > 0.0 {
 			// do not use cumulative cost for embedded operators
 			cost = optMinCost()
+			frCost = optMinCost()
+			size = targetSize
 		}
 		cardinality = matchCard
 		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality)
+			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality, size, frCost)
 			ops = append(ops, filter)
 			cost = filter.Cost()
 			cardinality = filter.Cardinality()
+			size = filter.Size()
+			frCost = filter.FrCost()
 		}
 
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getDeleteCost(keyspace, stmt.Limit(), cost, cardinality)
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getDeleteCost(stmt.Limit(),
+				cost, cardinality, size, frCost)
 		}
 
-		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality))
+		ops = append(ops, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost))
 		delete = plan.NewSequence(ops...)
 		if this.useCBO && cost > 0.0 {
 			deleteCost = cost
 			deleteCard = cardinality
+			deleteFrCost = frCost
 		}
 	}
 
@@ -244,16 +270,22 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		ops := make([]plan.Operator, 0, 4)
 
 		cost = OPT_COST_NOT_AVAIL
+		frCost = OPT_COST_NOT_AVAIL
+		size = OPT_SIZE_NOT_AVAIL
 		if this.useCBO && joinCost > 0.0 {
 			// do not use cumulative cost for embedded operators
 			cost = optMinCost()
+			frCost = optMinCost()
+			size = targetSize
 		}
 		cardinality = nonMatchCard
 		if act.Where() != nil {
-			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality)
+			filter := this.addMergeFilter(act.Where(), ksAlias, cost, cardinality, size, frCost)
 			ops = append(ops, filter)
 			cost = filter.Cost()
 			cardinality = filter.Cardinality()
+			size = filter.Size()
+			frCost = filter.FrCost()
 		}
 
 		var keyExpr expression.Expression
@@ -263,34 +295,40 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			keyExpr = act.Key()
 		}
 
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getInsertCost(keyspace, keyExpr, act.Value(),
-				act.Options(), stmt.Limit(), cost, cardinality)
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getInsertCost(keyExpr, act.Value(),
+				act.Options(), stmt.Limit(), cost, cardinality, size, frCost)
 		}
 
 		ops = append(ops, plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(),
-			act.Options(), stmt.Limit(), cost, cardinality))
+			act.Options(), stmt.Limit(), cost, cardinality, size, frCost))
 		insert = plan.NewSequence(ops...)
 		if this.useCBO && cost > 0.0 {
 			insertCost = cost
 			insertCard = cardinality
+			insertFrCost = frCost
 		}
 	}
 
-	if this.useCBO && joinCost > 0.0 && joinCard > 0.0 {
+	if this.useCBO && joinCost > 0.0 && joinCard > 0.0 && targetSize > 0 && joinFrCost > 0.0 {
 		cost = joinCost
+		frCost = joinFrCost
 		cardinality = 0.0
+		size = targetSize
 		if actions.Update() != nil {
 			cost += updateCost
 			cardinality += updateCard
+			frCost += updateFrCost
 		}
 		if actions.Delete() != nil {
 			cost += deleteCost
 			cardinality += deleteCard
+			frCost += deleteFrCost
 		}
 		if actions.Insert() != nil {
 			cost += insertCost
 			cardinality += insertCard
+			frCost += insertFrCost
 		}
 	}
 
@@ -298,7 +336,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	if stmt.IsOnKey() {
 		mergeKey = stmt.On()
 	}
-	merge := plan.NewMerge(keyspace, ksref, mergeKey, update, delete, insert, cost, cardinality)
+	merge := plan.NewMerge(keyspace, ksref, mergeKey, update, delete, insert, cost, cardinality, size, frCost)
 	this.addSubChildren(merge)
 
 	if stmt.Returning() != nil {
@@ -308,22 +346,31 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.addChildren(this.addSubchildrenParallel())
 
 	if stmt.Limit() != nil {
-		this.addChildren(plan.NewLimit(stmt.Limit(), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			nlimit := int64(0)
+			lv, static := base.GetStaticInt(stmt.Limit())
+			if static {
+				nlimit = lv
+			}
+			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit)
+		}
+		this.addChildren(plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
 	}
 
 	if stmt.Returning() == nil {
-		this.addChildren(plan.NewDiscard(cost, cardinality))
+		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	return plan.NewSequence(this.children...), nil
 }
 
 func (this *builder) addMergeFilter(pred expression.Expression, alias string,
-	cost, cardinality float64) *plan.Filter {
+	cost, cardinality float64, size int64, frCost float64) *plan.Filter {
 	if this.useCBO {
-		cost, cardinality = getFilterCostWithInput(pred, this.baseKeyspaces,
-			this.keyspaceNames, alias, cost, cardinality, this.advisorValidate(), this.context)
+		cost, cardinality, size, frCost = getFilterCostWithInput(pred, this.baseKeyspaces,
+			this.keyspaceNames, alias, cost, cardinality, size, frCost,
+			this.advisorValidate(), this.context)
 	}
 
-	return plan.NewFilter(pred, cost, cardinality)
+	return plan.NewFilter(pred, cost, cardinality, size, frCost)
 }

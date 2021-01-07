@@ -25,7 +25,8 @@ type OrderedIntersectScan struct {
 	limit expression.Expression
 }
 
-func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality float64, scans ...SecondaryScan) *OrderedIntersectScan {
+func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality float64,
+	size int64, frCost float64, scans ...SecondaryScan) *OrderedIntersectScan {
 	for _, scan := range scans {
 		if scan.Limit() != nil {
 			scan.SetLimit(nil)
@@ -40,10 +41,10 @@ func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality floa
 	n := len(scans)
 	if n > 64 {
 		return NewOrderedIntersectScan(
-			limit, cost, cardinality,
+			limit, cost, cardinality, size, frCost,
 			scans[0],
-			NewIntersectScan(nil, cost/2.0, cardinality, scans[1:n/2]...),
-			NewIntersectScan(nil, cost/2.0, cardinality, scans[n/2:]...),
+			NewIntersectScan(nil, cost/2.0, cardinality, size, frCost, scans[1:n/2]...),
+			NewIntersectScan(nil, cost/2.0, cardinality, size, frCost, scans[n/2:]...),
 		)
 	}
 
@@ -51,7 +52,7 @@ func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality floa
 		scans: scans,
 		limit: limit,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

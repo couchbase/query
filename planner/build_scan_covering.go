@@ -143,13 +143,15 @@ outer:
 		for c, _ := range covering {
 			entry := indexes[c]
 			if entry.cost <= 0.0 {
-				cost, _, card, e := indexScanCost(entry.index, entry.sargKeys, this.context.RequestId(),
+				cost, _, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys, this.context.RequestId(),
 					entry.spans, node.Alias(), this.advisorValidate(), this.context)
-				if e != nil || (cost <= 0.0 || card <= 0.0) {
+				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
 					entry.cost = cost
 					entry.cardinality = card
+					entry.size = size
+					entry.frCost = frCost
 				}
 			}
 		}
@@ -275,18 +277,24 @@ outer:
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
-	if useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 {
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
+	if useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
 		if indexGroupAggs != nil {
-			cost, cardinality = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
-			if cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality, size, frCost = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
+				entry.size += size
+				entry.frCost += frCost
 			}
 		} else {
-			cost, cardinality = getIndexProjectionCost(index, indexProjection, entry.cardinality)
-			if cost > 0.0 && cardinality > 0.0 {
+			cost, cardinality, size, frCost = getIndexProjectionCost(index, indexProjection, entry.cardinality)
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
+				entry.size += size
+				entry.frCost += frCost
 			}
 		}
 	}
@@ -295,21 +303,24 @@ outer:
 	var filter expression.Expression
 	var err error
 	if indexGroupAggs == nil && !hasDeltaKeyspace {
-		filter, cost, cardinality, err = this.getIndexFilter(index, node.Alias(), entry.spans,
-			covers, filterCovers, entry.cost, entry.cardinality)
+		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
+			covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
 		if err != nil {
 			return nil, 0, err
 		}
 		if useCBO {
 			entry.cost = cost
 			entry.cardinality = cardinality
+			entry.size = size
+			entry.frCost = frCost
 		}
 	}
 
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
 		pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, indexKeyOrders,
-		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality, hasDeltaKeyspace)
+		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
+		entry.size, entry.frCost, hasDeltaKeyspace)
 	if scan != nil {
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
@@ -391,7 +402,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
-		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, false)
+		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, false)
 	if scan != nil {
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())

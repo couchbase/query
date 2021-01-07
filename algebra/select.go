@@ -312,10 +312,6 @@ func (this *Select) SetCorrelated() {
 	this.correlated = true
 }
 
-func (this *Select) EstResultSize() int64 {
-	return this.subresult.EstResultSize()
-}
-
 /*
 The Subresult interface represents the intermediate result of a
 select statement. It inherits from Node.
@@ -371,9 +367,4 @@ type Subresult interface {
 	   Checks if projection is raw
 	*/
 	Raw() bool
-
-	/*
-	   Estimated result size
-	*/
-	EstResultSize() int64
 }

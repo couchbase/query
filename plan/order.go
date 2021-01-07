@@ -26,13 +26,14 @@ type Order struct {
 
 const _FALLBACK_NUM = 64 * 1024
 
-func NewOrder(order *algebra.Order, offset *Offset, limit *Limit, cost, cardinality float64) *Order {
+func NewOrder(order *algebra.Order, offset *Offset, limit *Limit, cost, cardinality float64,
+	size int64, frCost float64) *Order {
 	rv := &Order{
 		terms:  order.Terms(),
 		offset: offset,
 		limit:  limit,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -118,14 +119,14 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
-		this.offset = NewOffset(offsetExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL)
+		this.offset = NewOffset(offsetExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL, PLAN_SIZE_NOT_AVAIL, PLAN_COST_NOT_AVAIL)
 	}
 	if limitExprStr := _unmarshalled.limitExpr; limitExprStr != "" {
 		limitExpr, err := parser.Parse(limitExprStr)
 		if err != nil {
 			return err
 		}
-		this.limit = NewLimit(limitExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL)
+		this.limit = NewLimit(limitExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL, PLAN_SIZE_NOT_AVAIL, PLAN_COST_NOT_AVAIL)
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)

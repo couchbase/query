@@ -27,25 +27,27 @@ type Nest struct {
 	onFilter expression.Expression
 }
 
-func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest, cost, cardinality float64) *Nest {
+func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest, cost, cardinality float64,
+	size int64, frCost float64) *Nest {
 	rv := &Nest{
 		keyspace: keyspace,
 		term:     nest.Right(),
 		outer:    nest.Outer(),
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
 func NewNestFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool,
-	onFilter expression.Expression, cost, cardinality float64) *Nest {
+	onFilter expression.Expression, cost, cardinality float64,
+	size int64, frCost float64) *Nest {
 	rv := &Nest{
 		keyspace: keyspace,
 		term:     term,
 		outer:    outer,
 		onFilter: onFilter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

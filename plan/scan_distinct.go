@@ -26,13 +26,14 @@ type DistinctScan struct {
 	offset expression.Expression
 }
 
-func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan, cost, cardinality float64) *DistinctScan {
+func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan, cost, cardinality float64,
+	size int64, frCost float64) *DistinctScan {
 	rv := &DistinctScan{
 		scan:   scan,
 		limit:  limit,
 		offset: offset,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -46,7 +46,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		}
 
 		if stream {
-			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality()))
+			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality(), op.Size(), op.FrCost()))
 		}
 
 		// Always insert an Authorize operator, even if no privileges need to
@@ -69,9 +69,10 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 var _MAP_KEYSPACE_CAP = 4
 
 const (
-	OPT_SELEC_NOT_AVAIL = -1.0 // selectivity is not available
-	OPT_COST_NOT_AVAIL  = -1.0 // cost is not available
-	OPT_CARD_NOT_AVAIL  = -1.0 // cardinality is not available
+	OPT_SELEC_NOT_AVAIL = float64(-1.0) // selectivity is not available
+	OPT_COST_NOT_AVAIL  = float64(-1.0) // cost is not available
+	OPT_CARD_NOT_AVAIL  = float64(-1.0) // cardinality is not available
+	OPT_SIZE_NOT_AVAIL  = int64(-1)     // document size is not available
 )
 
 const (

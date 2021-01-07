@@ -27,13 +27,13 @@ type Fetch struct {
 }
 
 func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
-	cost, cardinality float64) *Fetch {
+	cost, cardinality float64, size int64, frCost float64) *Fetch {
 	rv := &Fetch{
 		keyspace: keyspace,
 		term:     term,
 		subPaths: subPaths,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -140,12 +140,13 @@ type DummyFetch struct {
 	term     *algebra.KeyspaceTerm
 }
 
-func NewDummyFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, cost, cardinality float64) *DummyFetch {
+func NewDummyFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm,
+	cost, cardinality float64, size int64, frCost float64) *DummyFetch {
 	rv := &DummyFetch{
 		keyspace: keyspace,
 		term:     term,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

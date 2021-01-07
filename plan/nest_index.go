@@ -31,7 +31,7 @@ type IndexNest struct {
 }
 
 func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
-	index datastore.Index, cost, cardinality float64) *IndexNest {
+	index datastore.Index, cost, cardinality float64, size int64, frCost float64) *IndexNest {
 	rv := &IndexNest{
 		keyspace: keyspace,
 		term:     nest.Right(),
@@ -44,7 +44,7 @@ func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
 	rv.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(rv.keyFor)),
 		expression.NewFieldName("id", false))
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

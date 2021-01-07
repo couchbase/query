@@ -29,12 +29,14 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 
 	if stmt.Values() != nil {
 		if this.useCBO {
-			cost, cardinality = getValueScanCost(stmt.Values())
+			cost, cardinality, size, frCost = getValueScanCost(stmt.Values())
 		}
-		children = append(children, plan.NewValueScan(stmt.Values(), cost, cardinality))
+		children = append(children, plan.NewValueScan(stmt.Values(), cost, cardinality, size, frCost))
 		this.maxParallelism = (len(stmt.Values()) + 64) / 64
 	} else if stmt.Select() != nil {
 		sel, err := stmt.Select().Accept(this)
@@ -46,24 +48,28 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		if this.useCBO {
 			cost = selOp.Cost()
 			cardinality = selOp.Cardinality()
+			size = selOp.Size()
+			frCost = selOp.FrCost()
 		}
 		children = append(children, selOp)
 	} else {
 		return nil, fmt.Errorf("UPSERT missing both VALUES and SELECT.")
 	}
 
-	if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-		cost, cardinality = getUpsertCost(keyspace, stmt.Key(), stmt.Value(), stmt.Options(), cost, cardinality)
+	if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+		cost, cardinality, size, frCost = getUpsertCost(stmt.Key(), stmt.Value(),
+			stmt.Options(), cost, cardinality, size, frCost)
 	}
 
-	upsert := plan.NewSendUpsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(), cost, cardinality)
+	upsert := plan.NewSendUpsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(),
+		cost, cardinality, size, frCost)
 	subChildren := make([]plan.Operator, 0, 4)
 	subChildren = append(subChildren, upsert)
 
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
 	} else {
-		subChildren = append(subChildren, plan.NewDiscard(cost, cardinality))
+		subChildren = append(subChildren, plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	children = append(children, this.addParallel(subChildren...))

@@ -235,6 +235,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 
 	if this.countScan == nil {
 		// Add Let and Filter only when group/aggregates are not pushed
@@ -254,31 +256,31 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		if this.useCBO && this.lastOp != nil {
 			cost = this.lastOp.Cost()
 			cardinality = this.lastOp.Cardinality()
-			if cost > 0.0 && cardinality > 0.0 {
-				ipcost, ipcard, ipsize := getInitialProjectCost(this.baseKeyspaces, projection, cardinality)
-				if ipcost > 0.0 && ipcard > 0.0 && ipsize > 0 {
-					cost += ipcost
-					cardinality = ipcard
-					projection.SetEstSize(ipsize)
-				}
+			size = this.lastOp.Size()
+			frCost = this.lastOp.FrCost()
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				cost, cardinality, size, frCost = getInitialProjectCost(projection, cost, cardinality, size, frCost)
 			}
 		}
-		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality))
+		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost))
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {
 			if this.useCBO && this.lastOp != nil {
 				cost = this.lastOp.Cost()
 				cardinality = this.lastOp.Cardinality()
-				if cost > 0.0 && cardinality > 0.0 {
+				size = this.lastOp.Size()
+				frCost = this.lastOp.FrCost()
+				if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 					dcost, dcard := getDistinctCost(projection.Terms(), cardinality, this.keyspaceNames, this.advisorValidate())
 					if dcost > 0.0 && dcard > 0.0 {
 						cost += dcost
 						cardinality = dcard
+						frCost = cost
 					}
 				}
 			}
-			this.addSubChildren(plan.NewDistinct(cost, cardinality))
+			this.addSubChildren(plan.NewDistinct(cost, cardinality, size, frCost))
 		}
 
 		if this.order != nil {
@@ -298,7 +300,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		// Final DISTINCT (serial)
 		if projection.Distinct() || this.setOpDistinct {
 			// use the same cost/cardinality calculated above for DISTINCT
-			this.addChildren(plan.NewDistinct(cost, cardinality))
+			this.addChildren(plan.NewDistinct(cost, cardinality, size, frCost))
 		}
 	} else {
 		this.addChildren(plan.NewIndexCountProject(node.Projection()))
@@ -313,10 +315,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if node.With() != nil {
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
+		size := OPT_SIZE_NOT_AVAIL
+		frCost := OPT_COST_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality = getWithCost(rv, node.With())
+			cost, cardinality, size, frCost = getWithCost(rv, node.With())
 		}
-		rv = plan.NewWith(node.With(), rv, cost, cardinality)
+		rv = plan.NewWith(node.With(), rv, cost, cardinality, size, frCost)
 		this.children = make([]plan.Operator, 0, 1)
 		this.addChildren(rv)
 	}
@@ -324,8 +328,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 }
 
 func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {
-	cost := float64(OPT_COST_NOT_AVAIL)
-	cardinality := float64(OPT_CARD_NOT_AVAIL)
+	cost := OPT_COST_NOT_AVAIL
+	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	advisorValidate := this.advisorValidate()
 
 	if let != nil && pred != nil {
@@ -340,14 +346,14 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 
 			// Predicate does NOT depend on LET
 			if this.useCBO {
-				cost, cardinality = getFilterCost(this.lastOp, pred,
+				cost, cardinality, size, frCost = getFilterCost(this.lastOp, pred,
 					this.baseKeyspaces, this.keyspaceNames, "", advisorValidate, this.context)
 			}
-			filter := plan.NewFilter(pred, cost, cardinality)
+			filter := plan.NewFilter(pred, cost, cardinality, size, frCost)
 			if this.useCBO {
-				cost, cardinality = getLetCost(this.baseKeyspaces, this.lastOp)
+				cost, cardinality, size, frCost = getLetCost(this.lastOp)
 			}
-			letop := plan.NewLet(let, cost, cardinality)
+			letop := plan.NewLet(let, cost, cardinality, size, frCost)
 			this.addSubChildren(filter, letop)
 			return
 		}
@@ -355,17 +361,17 @@ func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression
 
 	if let != nil {
 		if this.useCBO {
-			cost, cardinality = getLetCost(this.baseKeyspaces, this.lastOp)
+			cost, cardinality, size, frCost = getLetCost(this.lastOp)
 		}
-		this.addSubChildren(plan.NewLet(let, cost, cardinality))
+		this.addSubChildren(plan.NewLet(let, cost, cardinality, size, frCost))
 	}
 
 	if pred != nil {
 		if this.useCBO {
-			cost, cardinality = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
+			cost, cardinality, size, frCost = getFilterCost(this.lastOp, pred, this.baseKeyspaces,
 				this.keyspaceNames, "", advisorValidate, this.context)
 		}
-		this.addSubChildren(plan.NewFilter(pred, cost, cardinality))
+		this.addSubChildren(plan.NewFilter(pred, cost, cardinality, size, frCost))
 	}
 }
 
@@ -387,22 +393,25 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 		cardinalityIntermediate := OPT_CARD_NOT_AVAIL
 		costFinal := OPT_COST_NOT_AVAIL
 		cardinalityFinal := OPT_CARD_NOT_AVAIL
+		size := OPT_SIZE_NOT_AVAIL
 		last := this.lastOp
 		if this.useCBO && last != nil {
 			cost = last.Cost()
 			cardinality = last.Cardinality()
-			if cost > 0.0 && cardinality > 0.0 {
+			size = last.Size()
+			if cost > 0.0 && cardinality > 0.0 && size > 0 {
 				costInitial, cardinalityInitial, costIntermediate, cardinalityIntermediate, costFinal, cardinalityFinal =
-					getGroupCosts(this.baseKeyspaces, group, aggs, cost, cardinality, this.keyspaceNames, this.maxParallelism)
+					getGroupCosts(group, aggs, cost, cardinality, size, this.keyspaceNames, this.maxParallelism)
 			}
 		}
 		aggv := sortAggregatesSlice(aggs)
 		this.addSubChildren(plan.NewInitialGroup(group.By(), aggv,
-			costInitial, cardinalityInitial))
+			costInitial, cardinalityInitial, size, costInitial))
 		this.addChildren(this.addSubchildrenParallel())
 		this.addChildren(plan.NewIntermediateGroup(group.By(), aggv,
-			costIntermediate, cardinalityIntermediate))
-		this.addChildren(plan.NewFinalGroup(group.By(), aggv, costFinal, cardinalityFinal))
+			costIntermediate, cardinalityIntermediate, size, costIntermediate))
+		this.addChildren(plan.NewFinalGroup(group.By(), aggv,
+			costFinal, cardinalityFinal, size, costFinal))
 	}
 
 	this.addLetAndPredicate(group.Letting(), group.Having())

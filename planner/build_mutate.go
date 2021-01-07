@@ -80,6 +80,8 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	cost := scan.Cost()
 	cardinality := scan.Cardinality()
+	size := scan.Size()
+	frCost := scan.FrCost()
 
 	if len(this.coveringScans) > 0 {
 		err = this.coverExpressions()
@@ -93,30 +95,34 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 			if err != nil {
 				return err
 			}
-			if this.useCBO && (cost > 0.0) {
-				fetchCost := getFetchCost(keyspace, cardinality)
-				if fetchCost > 0.0 {
+			if this.useCBO && (cost > 0.0) && (size > 0) && (frCost > 0.0) {
+				fetchCost, fsize, ffrCost := getFetchCost(keyspace, cardinality)
+				if fetchCost > 0.0 && fsize > 0 && ffrCost > 0.0 {
 					cost += fetchCost
+					frCost += ffrCost
+					size = fsize
 				} else {
 					cost = OPT_COST_NOT_AVAIL
 					cardinality = OPT_CARD_NOT_AVAIL
+					size = OPT_SIZE_NOT_AVAIL
+					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality)
+			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality, size, frCost)
 		} else {
-			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality)
+			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality, size, frCost)
 		}
 		this.addSubChildren(fetch)
 	}
 
 	if this.where != nil {
 		if this.useCBO {
-			cost, cardinality = getFilterCost(this.lastOp, this.where,
+			cost, cardinality, size, frCost = getFilterCost(this.lastOp, this.where,
 				this.baseKeyspaces, this.keyspaceNames, term.Alias(),
 				this.advisorValidate(), this.context)
 		}
 
-		filter := plan.NewFilter(this.where, cost, cardinality)
+		filter := plan.NewFilter(this.where, cost, cardinality, size, frCost)
 		this.addSubChildren(filter)
 	}
 

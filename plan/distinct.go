@@ -18,9 +18,9 @@ type Distinct struct {
 	optEstimate
 }
 
-func NewDistinct(cost, cardinality float64) *Distinct {
+func NewDistinct(cost, cardinality float64, size int64, frCost float64) *Distinct {
 	rv := &Distinct{}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -23,12 +23,13 @@ type With struct {
 	child    Operator
 }
 
-func NewWith(bindings expression.Bindings, child Operator, cost, cardinality float64) *With {
+func NewWith(bindings expression.Bindings, child Operator, cost, cardinality float64,
+	size int64, frCost float64) *With {
 	rv := &With{
 		bindings: bindings,
 		child:    child,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

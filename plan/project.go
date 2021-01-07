@@ -25,7 +25,9 @@ type InitialProject struct {
 	starTermCount int
 }
 
-func NewInitialProject(projection *algebra.Projection, cost, cardinality float64) *InitialProject {
+func NewInitialProject(projection *algebra.Projection, cost, cardinality float64,
+	size int64, frCost float64) *InitialProject {
+
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
@@ -44,7 +46,7 @@ func NewInitialProject(projection *algebra.Projection, cost, cardinality float64
 		}
 	}
 
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

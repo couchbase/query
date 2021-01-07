@@ -22,11 +22,11 @@ type Filter struct {
 	cond expression.Expression
 }
 
-func NewFilter(cond expression.Expression, cost, cardinality float64) *Filter {
+func NewFilter(cond expression.Expression, cost, cardinality float64, size int64, frCost float64) *Filter {
 	rv := &Filter{
 		cond: cond,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

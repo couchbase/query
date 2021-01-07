@@ -26,11 +26,11 @@ type Clone struct {
 	alias string
 }
 
-func NewClone(alias string, cost, cardinality float64) *Clone {
+func NewClone(alias string, cost, cardinality float64, size int64, frCost float64) *Clone {
 	rv := &Clone{
 		alias: alias,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -83,11 +83,11 @@ type Set struct {
 	node *algebra.Set
 }
 
-func NewSet(node *algebra.Set, cost, cardinality float64) *Set {
+func NewSet(node *algebra.Set, cost, cardinality float64, size int64, frCost float64) *Set {
 	rv := &Set{
 		node: node,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -150,11 +150,11 @@ type Unset struct {
 	node *algebra.Unset
 }
 
-func NewUnset(node *algebra.Unset, cost, cardinality float64) *Unset {
+func NewUnset(node *algebra.Unset, cost, cardinality float64, size int64, frCost float64) *Unset {
 	rv := &Unset{
 		node: node,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
@@ -221,14 +221,14 @@ type SendUpdate struct {
 }
 
 func NewSendUpdate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	limit expression.Expression, cost, cardinality float64) *SendUpdate {
+	limit expression.Expression, cost, cardinality float64, size int64, frCost float64) *SendUpdate {
 	rv := &SendUpdate{
 		keyspace: keyspace,
 		term:     ksref,
 		alias:    ksref.Alias(),
 		limit:    limit,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

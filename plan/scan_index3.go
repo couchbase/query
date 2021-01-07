@@ -51,7 +51,8 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
-	cost, cardinality float64, hasDeltaKeyspace bool) *IndexScan3 {
+	cost, cardinality float64, size int64, frCost float64,
+	hasDeltaKeyspace bool) *IndexScan3 {
 	flags := uint32(0)
 	if reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN
@@ -80,7 +81,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	}
 
 	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

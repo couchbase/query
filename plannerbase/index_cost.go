@@ -24,18 +24,22 @@ type IndexCost struct {
 	cost        float64
 	cardinality float64
 	selectivity float64
+	size        int64
+	frCost      float64
 	idxPushDown IdxPushDown
 	skipKeys    []bool
 }
 
 func NewIndexCost(index datastore.Index, cost, cardinality, selectivity float64,
-	skipKeys []bool) *IndexCost {
+	size int64, frCost float64, skipKeys []bool) *IndexCost {
 
 	return &IndexCost{
 		index:       index,
 		cost:        cost,
 		cardinality: cardinality,
 		selectivity: selectivity,
+		size:        size,
+		frCost:      frCost,
 		skipKeys:    skipKeys,
 	}
 }
@@ -46,6 +50,8 @@ func (this *IndexCost) Copy() *IndexCost {
 		cost:        this.cost,
 		cardinality: this.cardinality,
 		selectivity: this.selectivity,
+		size:        this.size,
+		frCost:      this.frCost,
 		idxPushDown: this.idxPushDown,
 	}
 	rv.skipKeys = make([]bool, len(this.skipKeys))
@@ -67,6 +73,14 @@ func (this *IndexCost) Cardinality() float64 {
 
 func (this *IndexCost) Selectivity() float64 {
 	return this.selectivity
+}
+
+func (this *IndexCost) Size() int64 {
+	return this.size
+}
+
+func (this *IndexCost) FrCost() float64 {
+	return this.frCost
 }
 
 func (this *IndexCost) SetCost(cost float64) {

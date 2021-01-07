@@ -30,7 +30,8 @@ type SargSpans interface {
 		projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 		indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 		filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
-		cost, cardinality float64, hasDeltaKeyspace bool) plan.SecondaryScan
+		cost, cardinality float64, size int64, frCost float64,
+		hasDeltaKeyspace bool) plan.SecondaryScan
 
 	Compose(prev SargSpans) SargSpans              // Apply to previous composite keys
 	ComposeTerm(next *TermSpans) SargSpans         // Apply next composite keys

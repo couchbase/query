@@ -21,13 +21,14 @@ type IntersectAll struct {
 	distinct bool
 }
 
-func NewIntersectAll(first, second Operator, distinct bool, cost, cardinality float64) *IntersectAll {
+func NewIntersectAll(first, second Operator, distinct bool, cost, cardinality float64,
+	size int64, frCost float64) *IntersectAll {
 	rv := &IntersectAll{
 		first:    first,
 		second:   second,
 		distinct: distinct,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -22,11 +22,11 @@ type Offset struct {
 	expr expression.Expression
 }
 
-func NewOffset(expr expression.Expression, cost, cardinality float64) *Offset {
+func NewOffset(expr expression.Expression, cost, cardinality float64, size int64, frCost float64) *Offset {
 	rv := &Offset{
 		expr: expr,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

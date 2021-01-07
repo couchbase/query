@@ -25,11 +25,11 @@ type ValueScan struct {
 	values algebra.Pairs
 }
 
-func NewValueScan(values algebra.Pairs, cost, cardinality float64) *ValueScan {
+func NewValueScan(values algebra.Pairs, cost, cardinality float64, size int64, frCost float64) *ValueScan {
 	rv := &ValueScan{
 		values: values,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

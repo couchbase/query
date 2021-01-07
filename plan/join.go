@@ -27,25 +27,27 @@ type Join struct {
 	onFilter expression.Expression
 }
 
-func NewJoin(keyspace datastore.Keyspace, join *algebra.Join, cost, cardinality float64) *Join {
+func NewJoin(keyspace datastore.Keyspace, join *algebra.Join, cost, cardinality float64,
+	size int64, frCost float64) *Join {
 	rv := &Join{
 		keyspace: keyspace,
 		term:     join.Right(),
 		outer:    join.Outer(),
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
 func NewJoinFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool,
-	onFilter expression.Expression, cost, cardinality float64) *Join {
+	onFilter expression.Expression, cost, cardinality float64,
+	size int64, frCost float64) *Join {
 	rv := &Join{
 		keyspace: keyspace,
 		term:     term,
 		outer:    outer,
 		onFilter: onFilter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

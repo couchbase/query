@@ -19,11 +19,11 @@ type UnionAll struct {
 	children []Operator
 }
 
-func NewUnionAll(cost, cardinality float64, children ...Operator) *UnionAll {
+func NewUnionAll(cost, cardinality float64, size int64, frCost float64, children ...Operator) *UnionAll {
 	rv := &UnionAll{
 		children: children,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

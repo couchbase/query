@@ -38,7 +38,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, cost, cardinality float64,
-	hasDeltaKeyspace bool) *PrimaryScan3 {
+	size int64, frCost float64, hasDeltaKeyspace bool) *PrimaryScan3 {
 	rv := &PrimaryScan3{
 		index:            index,
 		indexer:          index.Indexer(),
@@ -51,7 +51,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 		limit:            limit,
 		hasDeltaKeyspace: hasDeltaKeyspace,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

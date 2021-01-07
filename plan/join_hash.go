@@ -31,7 +31,8 @@ type HashJoin struct {
 }
 
 func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs expression.Expressions,
-	buildAliases []string, filter expression.Expression, cost, cardinality float64) *HashJoin {
+	buildAliases []string, filter expression.Expression, cost, cardinality float64,
+	size int64, frCost float64) *HashJoin {
 	rv := &HashJoin{
 		outer:        join.Outer(),
 		onclause:     join.Onclause(),
@@ -42,7 +43,7 @@ func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs 
 		hintError:    join.HintError(),
 		filter:       filter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

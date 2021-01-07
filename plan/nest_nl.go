@@ -28,7 +28,8 @@ type NLNest struct {
 	child     Operator
 }
 
-func NewNLNest(nest *algebra.AnsiNest, child Operator, filter expression.Expression, cost, cardinality float64) *NLNest {
+func NewNLNest(nest *algebra.AnsiNest, child Operator, filter expression.Expression,
+	cost, cardinality float64, size int64, frCost float64) *NLNest {
 	rv := &NLNest{
 		outer:     nest.Outer(),
 		alias:     nest.Alias(),
@@ -37,7 +38,7 @@ func NewNLNest(nest *algebra.AnsiNest, child Operator, filter expression.Express
 		child:     child,
 		filter:    filter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

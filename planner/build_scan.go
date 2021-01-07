@@ -38,10 +38,12 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
+		size := OPT_SIZE_NOT_AVAIL
+		frCost := OPT_COST_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality = getKeyScanCost(keys)
+			cost, cardinality, size, frCost = getKeyScanCost(keys)
 		}
-		return plan.NewKeyScan(keys, mutate, cost, cardinality), nil
+		return plan.NewKeyScan(keys, mutate, cost, cardinality, size, frCost), nil
 	}
 
 	secondary, primary, err := this.buildScan(keyspace, node)
@@ -473,16 +475,16 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 				}
 				secondary = scans[1]
 			} else {
-				cost, cardinality := this.intersectScanCost(node, scans[1:]...)
-				secondary = plan.NewIntersectScan(limit, cost, cardinality, scans[1:]...)
+				cost, cardinality, size, frCost := this.intersectScanCost(node, scans[1:]...)
+				secondary = plan.NewIntersectScan(limit, cost, cardinality, size, frCost, scans[1:]...)
 			}
 		} else {
 			if ordered, ok := scans[0].(*plan.OrderedIntersectScan); ok {
 				scans = append(ordered.Scans(), scans[1:]...)
 			}
 
-			cost, cardinality := this.intersectScanCost(node, scans...)
-			secondary = plan.NewOrderedIntersectScan(nil, cost, cardinality, scans...)
+			cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
+			secondary = plan.NewOrderedIntersectScan(nil, cost, cardinality, size, frCost, scans...)
 		}
 	}
 
@@ -515,34 +517,45 @@ func (this *builder) processWhere(where expression.Expression) (err error) {
 	return
 }
 
-func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan.SecondaryScan) (float64, float64) {
+func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan.SecondaryScan) (
+	float64, float64, int64, float64) {
 	docCount, err := this.getDocCount(node)
 	if err != nil {
-		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
 
 	useCBO := this.useCBO
 	if !useCBO {
-		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
+		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
 
 	cost := float64(0.0)
 	cardinality := float64(0.0)
 	selec := float64(1.0)
-	for _, scan := range scans {
+	size := int64(0)
+	frCost := float64(0.0)
+	for i, scan := range scans {
 		scost := scan.Cost()
 		scardinality := scan.Cardinality()
-		if (scost <= 0.0) || (scardinality <= 0.0) {
+		ssize := scan.Size()
+		sfrCost := scan.FrCost()
+		if (scost <= 0.0) || (scardinality <= 0.0) || (ssize <= 0) || (sfrCost <= 0.0) {
 			useCBO = false
 			break
 		}
 
 		cost += scost
+		frCost += sfrCost
 		selec1 := scardinality / docCount
 		if selec1 > 1.0 {
 			selec1 = 1.0
 		}
-		selec = selec * selec1
+		if i == 0 {
+			selec = selec1
+			size = ssize
+		} else {
+			selec = selec * selec1
+		}
 	}
 
 	if useCBO {
@@ -551,9 +564,11 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 	} else {
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
+		size = OPT_SIZE_NOT_AVAIL
+		frCost = OPT_COST_NOT_AVAIL
 	}
 
-	return cost, cardinality
+	return cost, cardinality, size, frCost
 }
 
 // helper function check online indexes
@@ -697,4 +712,4 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes, virtualIndexes []dat
 var _INDEX_POOL = datastore.NewIndexPool(256)
 var _HINT_POOL = datastore.NewIndexPool(32)
 var _SKIP_POOL = datastore.NewIndexBoolPool(32)
-var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{}, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{}, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)

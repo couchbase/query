@@ -25,13 +25,14 @@ type Unnest struct {
 	filter expression.Expression
 }
 
-func NewUnnest(term *algebra.Unnest, filter expression.Expression, cost, cardinality float64) *Unnest {
+func NewUnnest(term *algebra.Unnest, filter expression.Expression, cost, cardinality float64,
+	size int64, frCost float64) *Unnest {
 	rv := &Unnest{
 		term:   term,
 		alias:  term.Alias(),
 		filter: filter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

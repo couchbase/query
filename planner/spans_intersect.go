@@ -39,12 +39,14 @@ func (this *IntersectSpans) CreateScan(
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
-	cost, cardinality float64, hasDeltaKeyspace bool) plan.SecondaryScan {
+	cost, cardinality float64, size int64, frCost float64,
+	hasDeltaKeyspace bool) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
 		return this.spans[0].CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, offset, limit, projection, indexOrder, indexGroupAggs,
-			covers, filterCovers, filter, cost, cardinality, hasDeltaKeyspace)
+			covers, filterCovers, filter, cost, cardinality, size, frCost,
+			hasDeltaKeyspace)
 	}
 
 	scans := make([]plan.SecondaryScan, len(this.spans))
@@ -52,11 +54,12 @@ func (this *IntersectSpans) CreateScan(
 		// No LIMIT pushdown
 		scans[i] = s.CreateScan(index, term, indexApiVersion, reverse, distinct,
 			false, array, nil, nil, projection, nil, indexGroupAggs,
-			covers, filterCovers, filter, cost, cardinality, hasDeltaKeyspace)
+			covers, filterCovers, filter, cost, cardinality, size, frCost,
+			hasDeltaKeyspace)
 	}
 
 	limit = offsetPlusLimit(offset, limit)
-	return plan.NewIntersectScan(limit, cost, cardinality, scans...)
+	return plan.NewIntersectScan(limit, cost, cardinality, size, frCost, scans...)
 }
 
 func (this *IntersectSpans) Compose(prev SargSpans) SargSpans {

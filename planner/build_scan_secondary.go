@@ -114,7 +114,8 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		}
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection,
-			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality, hasDeltaKeyspace)
+			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality,
+			entry.size, entry.frCost, hasDeltaKeyspace)
 
 		if orderEntry != nil && index == orderEntry.index {
 			scans[0] = scan
@@ -176,11 +177,11 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 	} else if scans[0] == nil && len(scans) == 2 {
 		return scans[1], sargLength, nil
 	} else if scans[0] == nil {
-		cost, cardinality := this.intersectScanCost(node, scans[1:]...)
-		return plan.NewIntersectScan(limit, cost, cardinality, scans[1:]...), sargLength, nil
+		cost, cardinality, size, frCost := this.intersectScanCost(node, scans[1:]...)
+		return plan.NewIntersectScan(limit, cost, cardinality, size, frCost, scans[1:]...), sargLength, nil
 	} else {
-		cost, cardinality := this.intersectScanCost(node, scans...)
-		scan = plan.NewOrderedIntersectScan(nil, cost, cardinality, scans...)
+		cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
+		scan = plan.NewOrderedIntersectScan(nil, cost, cardinality, size, frCost, scans...)
 		this.orderScan = scan
 		return scan, sargLength, nil
 	}
@@ -435,15 +436,17 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		advisorValidate := this.advisorValidate()
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
-				cost, selec, card, e := indexScanCost(se.index, se.sargKeys,
+				cost, selec, card, size, frCost, e := indexScanCost(se.index, se.sargKeys,
 					this.context.RequestId(), se.spans, alias, advisorValidate,
 					this.context)
-				if e != nil || (cost <= 0.0 || card <= 0.0) {
+				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
 					se.cost = cost
 					se.cardinality = card
 					se.selectivity = selec
+					se.size = size
+					se.frCost = frCost
 				}
 			}
 		}
@@ -728,7 +731,7 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 	}
 
 	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
-		this.baseKeyspaces, this.advisorValidate(), this.context)
+		this.advisorValidate(), this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {

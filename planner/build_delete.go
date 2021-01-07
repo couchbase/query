@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
@@ -39,15 +40,20 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO && this.lastOp != nil {
 		cost = this.lastOp.Cost()
 		cardinality = this.lastOp.Cardinality()
-		if cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getDeleteCost(keyspace, stmt.Limit(), cost, cardinality)
+		size = this.lastOp.Size()
+		frCost = this.lastOp.FrCost()
+		if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getDeleteCost(stmt.Limit(),
+				cost, cardinality, size, frCost)
 		}
 	}
 
-	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality))
+	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost))
 
 	if stmt.Returning() != nil {
 		deleteSubChildren = this.buildDMLProject(stmt.Returning(), deleteSubChildren)
@@ -58,7 +64,15 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		if len(subChildren) > 0 {
 			seqChildren = append(seqChildren, this.addParallel(subChildren...))
 		}
-		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			nlimit := int64(0)
+			lv, static := base.GetStaticInt(stmt.Limit())
+			if static {
+				nlimit = lv
+			}
+			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit)
+		}
+		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
 		seqChildren = append(seqChildren, this.addParallel(deleteSubChildren...))
 		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {
@@ -71,14 +85,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	}
 
 	if stmt.Returning() == nil {
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
-		lastOp := this.lastOp
-		if lastOp != nil {
-			cost = lastOp.Cost()
-			cardinality = lastOp.Cardinality()
-		}
-		this.addChildren(plan.NewDiscard(cost, cardinality))
+		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	return plan.NewSequence(this.children...), nil

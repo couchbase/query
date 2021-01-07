@@ -31,7 +31,8 @@ type HashNest struct {
 }
 
 func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs expression.Expressions,
-	buildAlias string, filter expression.Expression, cost, cardinality float64) *HashNest {
+	buildAlias string, filter expression.Expression, cost, cardinality float64,
+	size int64, frCost float64) *HashNest {
 	rv := &HashNest{
 		outer:      nest.Outer(),
 		onclause:   nest.Onclause(),
@@ -42,7 +43,7 @@ func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs 
 		hintError:  nest.HintError(),
 		filter:     filter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -29,7 +29,7 @@ type NLJoin struct {
 }
 
 func NewNLJoin(join *algebra.AnsiJoin, child Operator, filter expression.Expression,
-	cost, cardinality float64) *NLJoin {
+	cost, cardinality float64, size int64, frCost float64) *NLJoin {
 	rv := &NLJoin{
 		outer:     join.Outer(),
 		alias:     join.Alias(),
@@ -38,7 +38,7 @@ func NewNLJoin(join *algebra.AnsiJoin, child Operator, filter expression.Express
 		child:     child,
 		filter:    filter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

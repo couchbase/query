@@ -22,11 +22,11 @@ type Let struct {
 	bindings expression.Bindings
 }
 
-func NewLet(bindings expression.Bindings, cost, cardinality float64) *Let {
+func NewLet(bindings expression.Bindings, cost, cardinality float64, size int64, frCost float64) *Let {
 	rv := &Let{
 		bindings: bindings,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -24,13 +24,14 @@ type KeyScan struct {
 	distinct bool
 }
 
-func NewKeyScan(keys expression.Expression, distinct bool, cost, cardinality float64) *KeyScan {
+func NewKeyScan(keys expression.Expression, distinct bool, cost, cardinality float64,
+	size int64, frCost float64) *KeyScan {
 	keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 	rv := &KeyScan{
 		keys:     keys,
 		distinct: distinct,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

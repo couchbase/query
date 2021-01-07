@@ -35,6 +35,8 @@ func (this *readwrite) verify(prepared *Prepared) bool {
 type optEstimate struct {
 	cost        float64
 	cardinality float64
+	size        int64   // cumulative document size
+	frCost      float64 // first-result cost
 }
 
 func (this *optEstimate) Cost() float64 {
@@ -45,9 +47,19 @@ func (this *optEstimate) Cardinality() float64 {
 	return this.cardinality
 }
 
-func setOptEstimate(oe *optEstimate, cost, cardinality float64) {
+func (this *optEstimate) Size() int64 {
+	return this.size
+}
+
+func (this *optEstimate) FrCost() float64 {
+	return this.frCost
+}
+
+func setOptEstimate(oe *optEstimate, cost, cardinality float64, size int64, frCost float64) {
 	oe.cost = cost
 	oe.cardinality = cardinality
+	oe.size = size
+	oe.frCost = frCost
 }
 
 // represents DML statements, all are read-write
@@ -68,6 +80,14 @@ func (this *ddl) Cardinality() float64 {
 	return PLAN_CARD_NOT_AVAIL
 }
 
+func (this *ddl) Size() int64 {
+	return PLAN_SIZE_NOT_AVAIL
+}
+
+func (this *ddl) FrCost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
 // represents legacy operators, all are read-only, and have no cost/cardinality
 type legacy struct {
 	readonly
@@ -81,6 +101,14 @@ func (this *legacy) Cardinality() float64 {
 	return PLAN_CARD_NOT_AVAIL
 }
 
+func (this *legacy) Size() int64 {
+	return PLAN_SIZE_NOT_AVAIL
+}
+
+func (this *legacy) FrCost() float64 {
+	return PLAN_COST_NOT_AVAIL
+}
+
 // represents operators used in execution only, all are read-only, and have no cost/cardinality
 type execution struct {
 	readonly
@@ -92,4 +120,12 @@ func (this *execution) Cost() float64 {
 
 func (this *execution) Cardinality() float64 {
 	return PLAN_CARD_NOT_AVAIL
+}
+
+func (this *execution) Size() int64 {
+	return PLAN_SIZE_NOT_AVAIL
+}
+
+func (this *execution) FrCost() float64 {
+	return PLAN_COST_NOT_AVAIL
 }

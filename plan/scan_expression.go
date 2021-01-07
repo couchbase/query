@@ -26,14 +26,14 @@ type ExpressionScan struct {
 }
 
 func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool,
-	filter expression.Expression, cost, cardinality float64) *ExpressionScan {
+	filter expression.Expression, cost, cardinality float64, size int64, frCost float64) *ExpressionScan {
 	rv := &ExpressionScan{
 		fromExpr:   fromExpr,
 		alias:      alias,
 		correlated: correlated,
 		filter:     filter,
 	}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

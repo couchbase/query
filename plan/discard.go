@@ -18,9 +18,9 @@ type Discard struct {
 	optEstimate
 }
 
-func NewDiscard(cost, cardinality float64) *Discard {
+func NewDiscard(cost, cardinality float64, size int64, frCost float64) *Discard {
 	rv := &Discard{}
-	setOptEstimate(&rv.optEstimate, cost, cardinality)
+	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 

@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
@@ -32,36 +33,47 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO && this.lastOp != nil {
 		cost = this.lastOp.Cost()
 		cardinality = this.lastOp.Cardinality()
-		if cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getCloneCost(keyspace, cost, cardinality)
+		size = this.lastOp.Size()
+		frCost = this.lastOp.FrCost()
+		if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getCloneCost(cost, cardinality, size, frCost)
 		}
 	}
 
 	subChildren := this.subChildren
 	updateSubChildren := make([]plan.Operator, 0, 8)
-	updateSubChildren = append(updateSubChildren, plan.NewClone(ksref.Alias(), cost, cardinality))
+	updateSubChildren = append(updateSubChildren, plan.NewClone(ksref.Alias(),
+		cost, cardinality, size, frCost))
 
 	if stmt.Set() != nil {
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getUpdateSetCost(keyspace, stmt.Set(), cost, cardinality)
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getUpdateSetCost(stmt.Set(),
+				cost, cardinality, size, frCost)
 		}
-		updateSubChildren = append(updateSubChildren, plan.NewSet(stmt.Set(), cost, cardinality))
+		updateSubChildren = append(updateSubChildren, plan.NewSet(stmt.Set(),
+			cost, cardinality, size, frCost))
 	}
 
 	if stmt.Unset() != nil {
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-			cost, cardinality = getUpdateUnsetCost(keyspace, stmt.Unset(), cost, cardinality)
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			cost, cardinality, size, frCost = getUpdateUnsetCost(stmt.Unset(),
+				cost, cardinality, size, frCost)
 		}
-		updateSubChildren = append(updateSubChildren, plan.NewUnset(stmt.Unset(), cost, cardinality))
+		updateSubChildren = append(updateSubChildren, plan.NewUnset(stmt.Unset(),
+			cost, cardinality, size, frCost))
 	}
 
-	if this.useCBO && cost > 0.0 && cardinality > 0.0 {
-		cost, cardinality = getUpdateSendCost(keyspace, stmt.Limit(), cost, cardinality)
+	if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+		cost, cardinality, size, frCost = getUpdateSendCost(stmt.Limit(),
+			cost, cardinality, size, frCost)
 	}
-	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality))
+	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(),
+		cost, cardinality, size, frCost))
 
 	if stmt.Returning() != nil {
 		updateSubChildren = this.buildDMLProject(stmt.Returning(), updateSubChildren)
@@ -70,7 +82,15 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	if stmt.Limit() != nil {
 		seqChildren := make([]plan.Operator, 0, 3)
 		seqChildren = append(seqChildren, this.addParallel(subChildren...))
-		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL))
+		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			nlimit := int64(0)
+			lv, static := base.GetStaticInt(stmt.Limit())
+			if static {
+				nlimit = lv
+			}
+			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit)
+		}
+		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
 		seqChildren = append(seqChildren, this.addParallel(updateSubChildren...))
 		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {
@@ -79,7 +99,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	if stmt.Returning() == nil {
-		this.addChildren(plan.NewDiscard(cost, cardinality))
+		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	return plan.NewSequence(this.children...), nil

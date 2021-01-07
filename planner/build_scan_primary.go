@@ -54,11 +54,14 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	if primary3, ok := primary.(datastore.PrimaryIndex3); ok && useIndex3API(primary, this.context.IndexApiVersion()) {
 		cost := OPT_COST_NOT_AVAIL
 		cardinality := OPT_CARD_NOT_AVAIL
+		size := OPT_SIZE_NOT_AVAIL
+		frCost := OPT_COST_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality = primaryIndexScanCost(primary, this.context.RequestId(), this.context)
+			cost, cardinality, size, frCost = primaryIndexScanCost(primary, this.context.RequestId(), this.context)
 		}
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
-			plan.NewIndexProjection(0, true), indexOrder, nil, cost, cardinality, hasDeltaKeyspace), nil
+			plan.NewIndexProjection(0, true), indexOrder, nil, cost, cardinality,
+			size, frCost, hasDeltaKeyspace), nil
 	}
 
 	var limit expression.Expression

@@ -107,3 +107,13 @@ func (this *Sequence) Cardinality() float64 {
 	last_child := len(this.children) - 1
 	return this.children[last_child].Cardinality()
 }
+
+func (this *Sequence) Size() int64 {
+	last_child := len(this.children) - 1
+	return this.children[last_child].Size()
+}
+
+func (this *Sequence) FrCost() float64 {
+	last_child := len(this.children) - 1
+	return this.children[last_child].FrCost()
+}

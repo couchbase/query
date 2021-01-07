@@ -83,9 +83,10 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	lastOp := sub.(plan.Operator)
 	cost := lastOp.Cost()
 	cardinality := lastOp.Cardinality()
+	size := lastOp.Size()
+	frCost := lastOp.FrCost()
 	nlimit := int64(0)
 	noffset := int64(0)
-	projSize := stmt.Subresult().EstResultSize()
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 		if stmtLimit != nil {
 			lv, static := base.GetStaticInt(stmtLimit)
@@ -107,41 +108,45 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		if stmtLimit != nil {
 			// the limit/offset operator that's embedded inside sort operator does not need cost
 			// since only the corresponding expression is saved in the plan
-			limit = plan.NewLimit(stmtLimit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+			limit = plan.NewLimit(stmtLimit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
 			if stmtOffset != nil && this.offset == nil {
-				offset = plan.NewOffset(stmtOffset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+				offset = plan.NewOffset(stmtOffset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
 			}
 		}
-		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			scost, scardinality := getSortCostWithSize(projSize, len(stmtOrder.Terms()),
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+			scost, scardinality, ssize, sfrCost := getSortCost(size, len(stmtOrder.Terms()),
 				cardinality, nlimit, noffset)
-			if scost > 0.0 && scardinality > 0.0 {
+			if scost > 0.0 && scardinality > 0.0 && ssize > 0 && sfrCost > 0.0 {
 				cost += scost
 				cardinality = scardinality
+				size = ssize
+				frCost += sfrCost
 			} else {
 				cost = OPT_COST_NOT_AVAIL
 				cardinality = OPT_CARD_NOT_AVAIL
+				size = OPT_SIZE_NOT_AVAIL
+				frCost = OPT_COST_NOT_AVAIL
 			}
 		}
-		order := plan.NewOrder(stmtOrder, offset, limit, cost, cardinality)
+		order := plan.NewOrder(stmtOrder, offset, limit, cost, cardinality, size, frCost)
 		children = append(children, order)
 		lastOp = order
 	}
 
 	if stmtOffset != nil && this.offset == nil {
-		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			cost, cardinality = getOffsetCost(projSize, lastOp, noffset)
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+			cost, cardinality, size, frCost = getOffsetCost(lastOp, noffset)
 		}
-		offset := plan.NewOffset(stmtOffset, cost, cardinality)
+		offset := plan.NewOffset(stmtOffset, cost, cardinality, size, frCost)
 		children = append(children, offset)
 		lastOp = offset
 	}
 
 	if stmtLimit != nil {
-		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
-			cost, cardinality = getLimitCost(projSize, lastOp, nlimit)
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+			cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit)
 		}
-		limit := plan.NewLimit(stmtLimit, cost, cardinality)
+		limit := plan.NewLimit(stmtLimit, cost, cardinality, size, frCost)
 		children = append(children, limit)
 		lastOp = limit
 	}

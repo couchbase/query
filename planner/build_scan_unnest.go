@@ -152,8 +152,8 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	if len(scans) == 1 {
 		return scans[0], 1, nil
 	} else {
-		cost, cardinality := this.intersectScanCost(node, scans...)
-		return plan.NewIntersectScan(nil, cost, cardinality, scans...), 1, nil
+		cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
+		return plan.NewIntersectScan(nil, cost, cardinality, size, frCost, scans...), 1, nil
 	}
 }
 
@@ -411,12 +411,16 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	selectivity := OPT_SELEC_NOT_AVAIL
+	size := OPT_SIZE_NOT_AVAIL
+	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO {
-		cost, selectivity, cardinality, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(),
+		cost, selectivity, cardinality, size, frCost, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(),
 			spans, node.Alias(), this.advisorValidate(), this.context)
 		if err != nil {
 			cost = OPT_COST_NOT_AVAIL
 			cardinality = OPT_CARD_NOT_AVAIL
+			size = OPT_SIZE_NOT_AVAIL
+			frCost = OPT_COST_NOT_AVAIL
 		}
 	}
 
@@ -426,10 +430,13 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry.cost = cost
 	entry.cardinality = cardinality
 	entry.selectivity = selectivity
+	entry.size = size
+	entry.frCost = frCost
 	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
 	this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
-	scan := entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(), false,
-		nil, nil, indexProjection, nil, nil, nil, nil, nil, cost, cardinality, hasDeltaKeyspace)
+	scan := entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
+		pred.MayOverlapSpans(), false, nil, nil, indexProjection, nil, nil, nil, nil, nil,
+		cost, cardinality, size, frCost, hasDeltaKeyspace)
 	return scan, unnest, newArrayKey, n, nil
 }
 
