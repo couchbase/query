@@ -757,7 +757,7 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 					return err1
 				}
 				if len(subqueries) > 0 {
-					return fmt.Errorf("subquries are not allowed in aggregate filter.")
+					return fmt.Errorf("Subqueries are not allowed in aggregate filter.")
 				}
 			}
 		} else if _, ok := expr.(*algebra.Subquery); !ok {
