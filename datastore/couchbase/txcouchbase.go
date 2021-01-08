@@ -111,7 +111,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 
 		// no detach for resume
 		if terr != nil {
-			e, c := errorType(terr)
+			e, c := errorType(terr, resume)
 			return nil, errors.NewStartTransactionError(e, c)
 		}
 
@@ -177,7 +177,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	logging.Tracef("=====%v=====Commit begin write========", txId)
 	// write all mutations to KV
 	if err = txMutations.Write(context.GetReqDeadline()); err != nil {
-		e, c := errorType(err)
+		e, c := errorType(err, false)
 		return errors.NewCommitTransactionError(e, c)
 	}
 	logging.Tracef("=====%v=====Commit end   write========", txId)
@@ -219,7 +219,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
-		e, c := errorType(err)
+		e, c := errorType(err, false)
 		return errors.NewCommitTransactionError(e, c)
 	}
 
@@ -286,7 +286,7 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
-		e, c := errorType(err)
+		e, c := errorType(err, false)
 		return errors.NewRollbackTransactionError(e, c)
 	}
 
@@ -428,13 +428,13 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
 		if len(errs) > 0 {
 			if notFoundErr && gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) {
-				_, c := errorType(errs[0])
+				_, c := errorType(errs[0], true)
 				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], c)}
 			}
 
 			var rerrs errors.Errors
 			for _, e := range errs {
-				e1, c := errorType(e)
+				e1, c := errorType(e, true)
 				rerr := errors.NewError(e1, "txFetch")
 				if c != nil {
 					rerr.SetCause(c)
@@ -641,7 +641,7 @@ func CollectionAgentProvider(bucketName, scpName, collName string) (agent *gocbc
 	return coll.bucket.agentProvider.Agent(), nil
 }
 
-func errorType(err error) (error, interface{}) {
+func errorType(err error, rollback bool) (error, interface{}) {
 	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
 		// TODO:: Until gocbcore-transactions provides API populate the info.
 		c := make(map[string]interface{}, 5)
@@ -650,7 +650,7 @@ func errorType(err error) (error, interface{}) {
 		}
 
 		if terr.Rollback() {
-			c["rollback"] = terr.Rollback()
+			c["rollback"] = rollback && terr.Rollback()
 		}
 
 		c["raise"] = terr.ToRaise()
