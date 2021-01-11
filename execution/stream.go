@@ -19,7 +19,8 @@ import (
 
 type Stream struct {
 	base
-	plan *plan.Stream
+	plan        *plan.Stream
+	stopContext *Context
 }
 
 var _STREAM_OP_POOL util.FastPool
@@ -41,6 +42,7 @@ func NewStream(plan *plan.Stream, context *Context) *Stream {
 	} else {
 		newRedirectBase(&rv.base)
 	}
+	rv.stopContext = context
 	rv.output = rv
 	return rv
 }
@@ -52,6 +54,7 @@ func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
 func (this *Stream) Copy() Operator {
 	rv := _STREAM_OP_POOL.Get().(*Stream)
 	rv.plan = this.plan
+	rv.stopContext = this.stopContext
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -92,6 +95,15 @@ func (this *Stream) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *Stream) SendAction(action opAction) {
+	this.baseSendAction(action)
+
+	// always close results on stop if the stream operator didn't get to start
+	if action == _ACTION_STOP && this.getBase().opState == _KILLED {
+		this.stopContext.CloseResults()
+	}
 }
 
 func (this *Stream) Done() {
