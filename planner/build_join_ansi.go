@@ -86,7 +86,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		nlCost := OPT_COST_NOT_AVAIL
 		useFr := false
 		if useCBO && this.hasBuilderFlag(BUILDER_HAS_LIMIT) &&
-			!this.hasBuilderFlag(BUILDER_HAS_GROUP|BUILDER_HAS_ORDER) {
+			!this.hasBuilderFlag(BUILDER_HAS_GROUP|BUILDER_HAS_ORDER|BUILDER_HAS_WINDOW_AGGS) {
 			useFr = true
 		}
 

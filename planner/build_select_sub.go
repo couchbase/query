@@ -119,6 +119,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if len(windowAggs) > 0 {
 		this.resetOrderOffsetLimit()
 		this.resetProjection()
+		this.setBuilderFlag(BUILDER_HAS_WINDOW_AGGS)
 	}
 
 	// Infer WHERE clause from aggregates
