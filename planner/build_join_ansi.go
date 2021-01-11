@@ -82,7 +82,13 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		var hjOnclause expression.Expression
 		jps = this.saveJoinPlannerState()
 		origOnclause := node.Onclause()
-		hjCost := float64(OPT_COST_NOT_AVAIL)
+		hjCost := OPT_COST_NOT_AVAIL
+		nlCost := OPT_COST_NOT_AVAIL
+		useFr := false
+		if useCBO && this.hasBuilderFlag(BUILDER_HAS_LIMIT) &&
+			!this.hasBuilderFlag(BUILDER_HAS_GROUP|BUILDER_HAS_ORDER) {
+			useFr = true
+		}
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			tryHash := false
@@ -101,7 +107,11 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				}
 				if hjoin != nil {
 					if useCBO && !right.PreferHash() {
-						hjCost = hjoin.Cost()
+						if useFr {
+							hjCost = hjoin.FrCost()
+						} else {
+							hjCost = hjoin.Cost()
+						}
 						hjps = this.saveJoinPlannerState()
 						hjOnclause = node.Onclause()
 					} else {
@@ -123,10 +133,17 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		if len(scans) > 0 {
-			if useCBO && !right.PreferNL() && (hjCost > 0.0) && (cost > hjCost) {
-				this.restoreJoinPlannerState(hjps)
-				node.SetOnclause(hjOnclause)
-				return hjoin, nil
+			if useCBO && !right.PreferNL() {
+				if useFr {
+					nlCost = frCost
+				} else {
+					nlCost = cost
+				}
+				if (hjCost > 0.0) && (nlCost > hjCost) {
+					this.restoreJoinPlannerState(hjps)
+					node.SetOnclause(hjOnclause)
+					return hjoin, nil
+				}
 			}
 
 			if right.PreferHash() {

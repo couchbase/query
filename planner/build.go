@@ -78,6 +78,10 @@ const (
 const (
 	BUILDER_WHERE_IS_TRUE  = 1 << iota // WHERE clause is TRUE
 	BUILDER_WHERE_IS_FALSE             // WHERE clause is FALSE
+	BUILDER_HAS_LIMIT
+	BUILDER_HAS_OFFSET
+	BUILDER_HAS_GROUP
+	BUILDER_HAS_ORDER
 )
 
 type builder struct {
@@ -234,6 +238,14 @@ func (this *builder) falseWhereClause() bool {
 
 func (this *builder) setFalseWhereClause() {
 	this.builderFlags |= BUILDER_WHERE_IS_FALSE
+}
+
+func (this *builder) hasBuilderFlag(flag uint32) bool {
+	return (this.builderFlags & flag) != 0
+}
+
+func (this *builder) setBuilderFlag(flag uint32) {
+	this.builderFlags |= flag
 }
 
 func (this *builder) collectKeyspaceNames() {

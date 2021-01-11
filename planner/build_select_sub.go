@@ -75,6 +75,16 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	this.node = node
 
+	if this.limit != nil {
+		this.setBuilderFlag(BUILDER_HAS_LIMIT)
+	}
+	if this.offset != nil {
+		this.setBuilderFlag(BUILDER_HAS_OFFSET)
+	}
+	if this.order != nil {
+		this.setBuilderFlag(BUILDER_HAS_ORDER)
+	}
+
 	// Inline LET expressions for index selection
 	if node.Let() != nil && node.Where() != nil {
 		var err error
@@ -120,6 +130,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// Constrain projection to GROUP keys and aggregates
 	if group != nil {
+		this.setBuilderFlag(BUILDER_HAS_GROUP)
 		proj := node.Projection().Terms()
 		allowed := value.NewScopeValue(make(map[string]interface{}, len(proj)), nil)
 
