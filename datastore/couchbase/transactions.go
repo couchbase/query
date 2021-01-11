@@ -238,7 +238,7 @@ func (this *TransactionMutations) SetSavepoint(sname string) (err errors.Error) 
  * If name == "" use as keyspace marker position
  */
 
-func (this *TransactionMutations) GetSavepointRange(sname string) (slog, sindex uint64, err errors.Error) {
+func (this *TransactionMutations) GetSavepointRange(sname string) (slog, sindex uint64, undo bool, err errors.Error) {
 	// lock is not required. Only set at start. No Savepoints for implicit transaction.
 	if this.tranImplicit {
 		return
@@ -252,15 +252,19 @@ func (this *TransactionMutations) GetSavepointRange(sname string) (slog, sindex 
 		sindex, ok = this.savepoints[sname]
 		if !ok {
 			// If Actual savepoint not present error
-			return slog, sindex, errors.NewNoSavepointError(sname)
+			return slog, sindex, false, errors.NewNoSavepointError(sname)
 		}
 	} else {
-		sindex = this.curStartLogIndex
+		if this.curKeyspace == "" {
+			return
+		} else {
+			sindex = this.curStartLogIndex
+		}
 	}
 
 	slog = sindex / uint64(this.logSize)
 	sindex %= uint64(this.logSize)
-	return
+	return slog, sindex, true, nil
 }
 
 /* Mutations Fetch
@@ -763,6 +767,7 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 
 	// reset curKeyspace
 	this.curKeyspace = ""
+	this.curStartLogIndex = this.TotalMutations()
 
 	return this.TrackMemoryQuota(memSize)
 }

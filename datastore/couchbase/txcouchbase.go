@@ -243,8 +243,8 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 
 	if !txMutations.TranImplicit() && (stmtAtomicity || sname != "") {
 		// Statement level atomicity or savepoint rollback
-		slog, sindex, err := txMutations.GetSavepointRange(sname)
-		if err == nil {
+		slog, sindex, undo, err := txMutations.GetSavepointRange(sname)
+		if err == nil && undo {
 			err = txMutations.UndoLog(slog, sindex)
 		}
 		return err
