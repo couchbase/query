@@ -220,7 +220,8 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 	for _, item := range items {
 		if item.Err == nil && item.Val != nil {
 			fetchMap[item.Key] = item.Val
-		} else if notFoundErr || !errors.Is(item.Err, gocbcore.ErrDocumentNotFound) {
+		} else if notFoundErr ||
+			!(errors.Is(item.Err, gocbcore.ErrDocumentNotFound) || errors.Is(item.Err, gctx.ErrDocumentNotFound)) {
 			// handle key not found error
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := item.Err.(*gctx.TransactionOperationFailedError); ok1 &&
@@ -254,7 +255,7 @@ type WriteOp struct {
 
 // bulk transactional write
 
-func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gctx.TransactionsInternal,
+func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal,
 	bucketName, scopeName, collectionName string,
 	collectionID uint32, reqDeadline time.Time, wops WriteOps) (errOut error) {
 

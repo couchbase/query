@@ -96,7 +96,7 @@ type TransactionMutations struct {
 	logSize          int
 	mutex            sync.RWMutex
 	transaction      *gctx.Transaction
-	txnInternal      *gctx.TransactionsInternal
+	txnInternal      *gctx.ManagerInternal
 	tranImplicit     bool
 	savepoints       map[string]uint64
 	keyspaces        map[string]*DeltaKeyspace
@@ -158,7 +158,7 @@ func (this *TransactionMutations) LogSize() int {
 /* gocbcore-transaction
  */
 
-func (this *TransactionMutations) SetTransaction(transaction *gctx.Transaction, txnInternal *gctx.TransactionsInternal) {
+func (this *TransactionMutations) SetTransaction(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.transaction = transaction
@@ -174,7 +174,7 @@ func (this *TransactionMutations) Transaction() *gctx.Transaction {
 	return this.transaction
 }
 
-func (this *TransactionMutations) TransactionsInternal() *gctx.TransactionsInternal {
+func (this *TransactionMutations) TransactionsInternal() *gctx.ManagerInternal {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.txnInternal
@@ -794,7 +794,7 @@ func (this *TransactionMutations) GetDeltaKeyspaceKeys(keysapce string) (keys ma
 
 // write mutations to gocbcore-transactions in batches
 
-func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gctx.TransactionsInternal,
+func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal,
 	keyspace string, deadline time.Time, memSize *int64) (err error) {
 	bSize := len(this.values)
 	if bSize == 0 {

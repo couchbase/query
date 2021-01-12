@@ -427,7 +427,8 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 		errs := ks.agentProvider.TxGet(transaction, fullName, ks.name, scopeName, collectionName,
 			collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
 		if len(errs) > 0 {
-			if notFoundErr && gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) {
+			if notFoundErr &&
+				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gctx.ErrDocumentNotFound)) {
 				_, c := errorType(errs[0], true)
 				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], c)}
 			}
@@ -643,21 +644,18 @@ func CollectionAgentProvider(bucketName, scpName, collName string) (agent *gocbc
 
 func errorType(err error, rollback bool) (error, interface{}) {
 	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
-		// TODO:: Until gocbcore-transactions provides API populate the info.
-		c := make(map[string]interface{}, 5)
-		if terr.Retry() {
-			c["retry"] = terr.Retry()
+		b, e := terr.MarshalJSON()
+		if e == nil {
+			var iv interface{}
+			if e = json.Unmarshal(b, &iv); e == nil {
+				if c, ok := iv.(map[string]interface{}); ok {
+					if !rollback {
+						c["rollback"] = rollback
+					}
+					return nil, c
+				}
+			}
 		}
-
-		if terr.Rollback() {
-			c["rollback"] = rollback && terr.Rollback()
-		}
-
-		c["raise"] = terr.ToRaise()
-		c["class"] = terr.ErrorClass()
-		c["msg"] = terr.Unwrap().Error()
-
-		return nil, c
 	}
 	return err, nil
 }

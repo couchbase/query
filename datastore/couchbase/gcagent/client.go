@@ -72,7 +72,7 @@ func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*t
 type Client struct {
 	config        *gocbcore.AgentConfig
 	sslConfig     *gocbcore.AgentConfig
-	transactions  *gctx.Transactions
+	transactions  *gctx.Manager
 	rootCAs       *x509.CertPool
 	agentProvider *AgentProvider
 	mutex         sync.RWMutex
@@ -190,6 +190,6 @@ func (c *Client) TLSRootCAs() *x509.CertPool {
 	return c.rootCAs
 }
 
-func (c *Client) Transactions() *gctx.Transactions {
+func (c *Client) Transactions() *gctx.Manager {
 	return c.transactions
 }
