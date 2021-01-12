@@ -275,8 +275,8 @@ func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64, int64
 	return optutil.CalcOffsetCost(lastOp, noffset)
 }
 
-func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64, int64, float64) {
-	return optutil.CalcLimitCost(lastOp, nlimit)
+func getLimitCost(lastOp plan.Operator, nlimit, noffset int64) (float64, float64, int64, float64) {
+	return optutil.CalcLimitCost(lastOp, nlimit, noffset)
 }
 
 func getUnnestPredSelec(pred expression.Expression, variable string, mapping expression.Expression,

@@ -352,7 +352,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			if static {
 				nlimit = lv
 			}
-			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit)
+			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit, -1)
 		}
 		this.addChildren(plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
 	}

@@ -88,7 +88,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 			if static {
 				nlimit = lv
 			}
-			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit)
+			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit, -1)
 		}
 		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
 		seqChildren = append(seqChildren, this.addParallel(updateSubChildren...))

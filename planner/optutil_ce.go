@@ -171,7 +171,7 @@ func getOffsetCost(lastOp plan.Operator, noffset int64) (float64, float64, int64
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }
 
-func getLimitCost(lastOp plan.Operator, nlimit int64) (float64, float64, int64, float64) {
+func getLimitCost(lastOp plan.Operator, nlimit, noffset int64) (float64, float64, int64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }
 

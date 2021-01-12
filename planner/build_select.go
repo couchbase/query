@@ -85,19 +85,23 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	cardinality := lastOp.Cardinality()
 	size := lastOp.Size()
 	frCost := lastOp.FrCost()
-	nlimit := int64(0)
-	noffset := int64(0)
+	nlimit := int64(-1)
+	noffset := int64(-1)
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) {
 		if stmtLimit != nil {
 			lv, static := base.GetStaticInt(stmtLimit)
 			if static {
 				nlimit = lv
+			} else {
+				nlimit = 0
 			}
 		}
 		if stmtOffset != nil {
 			ov, static := base.GetStaticInt(stmtOffset)
 			if static {
 				noffset = ov
+			} else {
+				noffset = 0
 			}
 		}
 	}
@@ -144,7 +148,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	if stmtLimit != nil {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
-			cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit)
+			cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, noffset)
 		}
 		limit := plan.NewLimit(stmtLimit, cost, cardinality, size, frCost)
 		children = append(children, limit)
