@@ -406,8 +406,9 @@ func getGroupCosts(group *algebra.Group, aggregates algebra.Aggregates, cost, ca
 	return optutil.CalcGroupCosts(group, aggregates, cost, cardinality, size, keyspaces, maxParallelism)
 }
 
-func getDistinctCost(terms algebra.ResultTerms, cardinality float64, keyspaces map[string]string, advisorValidate bool) (float64, float64) {
-	return optutil.CalcDistinctCost(terms, cardinality, keyspaces)
+func getDistinctCost(terms algebra.ResultTerms, cost, cardinality float64, size int64, frCost float64,
+	keyspaces map[string]string) (float64, float64, int64, float64) {
+	return optutil.CalcDistinctCost(terms, cost, cardinality, size, frCost, keyspaces)
 }
 
 func getUnionDistinctCost(cost, cardinality float64, first, second plan.Operator, compatible bool) (float64, float64) {
