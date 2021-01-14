@@ -118,7 +118,7 @@ func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnS
 	}
 
 	var connSpec connstr.ConnSpec
-	if connSpec, err = connstr.Parse(url); err == nil {
+	if connSpec, err = connstr.Parse(url + "?bootstrap_on=http"); err == nil {
 		err = config.FromConnStr(connSpec.String())
 	}
 
