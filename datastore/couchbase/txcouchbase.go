@@ -436,7 +436,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 			var rerrs errors.Errors
 			for _, e := range errs {
 				e1, c := errorType(e, true)
-				rerr := errors.NewError(e1, "txFetch")
+				rerr := errors.NewTransactionFetchError(e1)
 				if c != nil {
 					rerr.SetCause(c)
 				}

@@ -147,3 +147,9 @@ func NewTransactionMemoryQuotaExceededError(memQuota, memUsed int64) Error {
 		InternalMsg:    fmt.Sprintf("Transaction memory (%v) exceeded quota (%v)", memUsed, memQuota),
 		InternalCaller: CallerN(1)}
 }
+
+func NewTransactionFetchError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 17017, IKey: "transaction.fetch", ICause: e,
+		InternalMsg:    "Transaction fetch error",
+		InternalCaller: CallerN(1)}
+}
