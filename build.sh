@@ -42,6 +42,7 @@ DevStandaloneSetup() {
            (cd ../gocbcore; ln -s . v9)
        fi
     # zap versions
+       (cd ../../blevesearch/bleve; git checkout v1.0.13)
        if [[ ! -d ../../blevesearch/zap/v11 ]]; then
            (cd ../../blevesearch; git clone -b v11.0.13 http://github.com/blevesearch/zap.git zap/v11)
        fi
