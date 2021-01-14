@@ -53,11 +53,15 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 	if secondary != nil {
 		return secondary, nil
-	} else if primary != nil {
-		return primary, nil
-	} else {
-		return nil, nil
 	}
+	if node.IsInCorrSubq() {
+		return nil, errors.NewSubqueryMissingIndexError(node.Alias())
+	}
+	if primary != nil {
+		return primary, nil
+	}
+
+	return nil, nil
 }
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (

@@ -26,6 +26,7 @@ const (
 	TERM_UNDER_NL                    // inner side of nested-loop join
 	TERM_UNDER_HASH                  // right-hand side of Hash Join
 	TERM_INDEX_JOIN_NEST             // right-hand side of index join/nest
+	TERM_IN_CORR_SUBQ                // inside a correlated subquery
 )
 
 /*
@@ -409,6 +410,13 @@ func (this *KeyspaceTerm) IsIndexJoinNest() bool {
 }
 
 /*
+Returns whether it's inside correlated subquery
+*/
+func (this *KeyspaceTerm) IsInCorrSubq() bool {
+	return (this.property & TERM_IN_CORR_SUBQ) != 0
+}
+
+/*
 Set join keys
 */
 func (this *KeyspaceTerm) SetJoinKeys(keys expression.Expression) {
@@ -485,6 +493,13 @@ Set INDEX JOIN/NEST property
 */
 func (this *KeyspaceTerm) SetIndexJoinNest() {
 	this.property |= TERM_INDEX_JOIN_NEST
+}
+
+/*
+Set correlated subquery property
+*/
+func (this *KeyspaceTerm) SetInCorrSubq() {
+	this.property |= TERM_IN_CORR_SUBQ
 }
 
 /*

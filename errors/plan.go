@@ -38,6 +38,13 @@ func NewSubqueryMissingKeysError(keyspace string) Error {
 		InternalMsg: fmt.Sprintf("FROM in correlated subquery must have USE KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
 }
 
+const SUBQUERY_MISSING_INDEX = 4035
+
+func NewSubqueryMissingIndexError(keyspace string) Error {
+	return &err{level: EXCEPTION, ICode: SUBQUERY_MISSING_INDEX, IKey: "plan.build_select.subquery_missing_index",
+		InternalMsg: fmt.Sprintf("No secondary index available for keyspace %s in correlated subquery.", keyspace), InternalCaller: CallerN(1)}
+}
+
 const NO_SUCH_PREPARED = 4040
 
 func NewNoSuchPreparedError(name string) Error {
