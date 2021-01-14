@@ -41,22 +41,25 @@ DevStandaloneSetup() {
        if [[ ! -h ../gocbcore/v9 ]]; then
            (cd ../gocbcore; ln -s . v9)
        fi
-    # zap versions
-       (cd ../../blevesearch/bleve; git checkout v1.0.13)
-       if [[ ! -d ../../blevesearch/zap/v11 ]]; then
-           (cd ../../blevesearch; git clone -b v11.0.13 http://github.com/blevesearch/zap.git zap/v11)
+    # bleve version
+       if [[ ! -d ../../blevesearch/bleve/v2 ]]; then
+           (cd ../../blevesearch; git clone -b v2.0.1 http://github.com/blevesearch/bleve.git bleve/v2)
        fi
-       if [[ ! -d ../../blevesearch/zap/v12 ]]; then
-           (cd ../../blevesearch; git clone -b v12.0.13 http://github.com/blevesearch/zap.git zap/v12)
+    # zapx versions
+       if [[ ! -d ../../blevesearch/zapx/v11 ]]; then
+           (cd ../../blevesearch; git clone -b v11.1.10 http://github.com/blevesearch/zapx.git zapx/v11)
        fi
-       if [[ ! -d ../../blevesearch/zap/v13 ]]; then
-           (cd ../../blevesearch; git clone -b v13.0.5 http://github.com/blevesearch/zap.git zap/v13)
+       if [[ ! -d ../../blevesearch/zapx/v12 ]]; then
+           (cd ../../blevesearch; git clone -b v12.1.10 http://github.com/blevesearch/zapx.git zapx/v12)
        fi
-       if [[ ! -d ../../blevesearch/zap/v14 ]]; then
-           (cd ../../blevesearch; git clone -b v14.0.4 http://github.com/blevesearch/zap.git zap/v14)
+       if [[ ! -d ../../blevesearch/zapx/v13 ]]; then
+           (cd ../../blevesearch; git clone -b v13.1.10 http://github.com/blevesearch/zapx.git zapx/v13)
        fi
-       if [[ ! -d ../../blevesearch/zap/v15 ]]; then
-           (cd ../../blevesearch; git clone -b v15.0.2 http://github.com/blevesearch/zap.git zap/v15)
+       if [[ ! -d ../../blevesearch/zapx/v14 ]]; then
+           (cd ../../blevesearch; git clone -b v14.1.10 http://github.com/blevesearch/zapx.git zapx/v14)
+       fi
+       if [[ ! -d ../../blevesearch/zapx/v15 ]]; then
+           (cd ../../blevesearch; git clone -b v15.1.10 http://github.com/blevesearch/zapx.git zapx/v15)
        fi
 }
 
