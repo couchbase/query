@@ -137,8 +137,10 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 			return
 		}
 
-		logging.Errorp(emsg, logging.Pair{"chunkSize", nitems},
-			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
+		logging.Errora(func() string {
+			return fmt.Sprintf("%s chunkSize=%v startingEntry=%v", emsg, nitems,
+				stringifyIndexEntry(lastEntry))
+		})
 
 		// do chunked scans; lastEntry the starting point
 		// previous connection disposed of by the defer above

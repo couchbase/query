@@ -204,7 +204,7 @@ func main() {
 
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		logging.Errorf("Shutting down.")
 		os.Exit(1)
 	}
@@ -213,9 +213,7 @@ func main() {
 	// configstore should be set before the system datastore
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
-		logging.Errorp("Could not connect to configstore",
-			logging.Pair{"error", err},
-		)
+		logging.Errorf("Could not connect to configstore: %v", err)
 	}
 
 	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
@@ -224,16 +222,14 @@ func main() {
 	// also distributed is used by many init() functions and should be done as early as possible
 	prof, ctrl, err := monitoringInit(configstore)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		fmt.Printf("\n%v\n", err)
 		os.Exit(1)
 	}
 
 	acctstore, err := acct_resolver.NewAcctstore(*ACCTSTORE)
 	if err != nil {
-		logging.Errorp("Could not connect to acctstore",
-			logging.Pair{"error", err},
-		)
+		logging.Errorf("Could not connect to acctstore: %v", err)
 	} else {
 		// Create the metrics we are interested in
 		accounting.RegisterMetrics(acctstore)
@@ -260,8 +256,7 @@ func main() {
 
 	// Initialized the prepared statement cache
 	if *PREPARED_LIMIT <= 0 {
-		logging.Errorp("Ignoring invalid prepared statement cache size",
-			logging.Pair{"value", *PREPARED_LIMIT})
+		logging.Errorf("Ignoring invalid prepared statement cache size: %v", *PREPARED_LIMIT)
 		*PREPARED_LIMIT = _DEF_PREPARED_LIMIT
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
@@ -269,8 +264,7 @@ func main() {
 	scheduler.SchedulerSetLimit(*TASKS_LIMIT)
 
 	if *DICTIONARY_CACHE_LIMIT <= 0 {
-		logging.Errorp("Ignoring invalid dictionary cache size",
-			logging.Pair{"value", *DICTIONARY_CACHE_LIMIT})
+		logging.Errorf("Ignoring invalid dictionary cache size: %v", *DICTIONARY_CACHE_LIMIT)
 		*DICTIONARY_CACHE_LIMIT = _DEF_DICTIONARY_CACHE_LIMIT
 	}
 	// Initialize dictionary cache
@@ -280,7 +274,7 @@ func main() {
 
 	sys, err := system.NewDatastore(datastore)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 
@@ -289,7 +283,7 @@ func main() {
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
 		*PRETTY, prof, ctrl)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 
@@ -318,35 +312,52 @@ func main() {
 
 	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 
-	logging.Infop("cbq-engine started",
-		logging.Pair{"version", util.VERSION},
-		logging.Pair{"datastore", *DATASTORE},
-		logging.Pair{"max-concurrency", numProcs},
-		logging.Pair{"loglevel", logging.LogLevel().String()},
-		logging.Pair{"servicers", server.Servicers()},
-		logging.Pair{"plus-servicers", server.PlusServicers()},
-		logging.Pair{"scan-cap", server.ScanCap()},
-		logging.Pair{"pipeline-cap", server.PipelineCap()},
-		logging.Pair{"pipeline-batch", server.PipelineBatch()},
-		logging.Pair{"request-cap", *REQUEST_CAP},
-		logging.Pair{"request-size-cap", server.RequestSizeCap()},
-		logging.Pair{"max-index-api", server.MaxIndexAPI()},
-		logging.Pair{"max-parallelism", server.MaxParallelism()},
-		logging.Pair{"n1ql-feat-ctrl", util.GetN1qlFeatureControl()},
-		logging.Pair{"use-cbo", util.GetUseCBO()},
-		logging.Pair{"timeout", server.Timeout()},
-		logging.Pair{"txtimeout", server.TxTimeout()},
-	)
+	ll := logging.LogLevel().String() // extract first
+	logging.Infoa(func() string {
+		return fmt.Sprintf("cbq-engine started"+
+			" version=%v"+
+			" datastore=%v"+
+			" max-concurrency=%v"+
+			" loglevel=%v"+
+			" servicers=%v"+
+			" plus-servicers=%v"+
+			" scan-cap=%v"+
+			" pipeline-cap=%v"+
+			" pipeline-batch=%v"+
+			" request-cap=%v"+
+			" request-size-cap=%v"+
+			" max-index-api=%v"+
+			" max-parallelism=%v"+
+			" n1ql-feat-ctrl=%v"+
+			" use-cbo=%v"+
+			" timeout=%v"+
+			" txtimeout=%v",
+			util.VERSION,
+			*DATASTORE,
+			numProcs,
+			ll,
+			server.Servicers(),
+			server.PlusServicers(),
+			server.ScanCap(),
+			server.PipelineCap(),
+			server.PipelineBatch(),
+			*REQUEST_CAP,
+			server.RequestSizeCap(),
+			server.MaxIndexAPI(),
+			server.MaxParallelism(),
+			util.GetN1qlFeatureControl(),
+			util.GetUseCBO(),
+			server.Timeout(),
+			server.TxTimeout(),
+		)
+	})
 
 	// Create http endpoint
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
 	er := endpoint.Listen()
 	if er != nil {
-		logging.Errorp("cbq-engine exiting with error",
-			logging.Pair{"error", er},
-			logging.Pair{"HTTP_ADDR", *HTTP_ADDR},
-		)
+		logging.Errorf("cbq-engine (HTTP_ADDR %v) exiting with error: %v", *HTTP_ADDR, er)
 		os.Exit(1)
 	}
 	server.SetSettingsCallback(endpoint.SettingsCallback)
@@ -373,33 +384,33 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 	case s = <-sig_chan:
 	}
 	if server.CpuProfile() != "" {
-		logging.Infop("Stopping CPU profile")
+		logging.Infof("Stopping CPU profile")
 		pprof.StopCPUProfile()
 	}
 	if server.MemProfile() != "" {
 		f, err := os.Create(server.MemProfile())
 		if err != nil {
-			logging.Errorp("Cannot create memory profile file", logging.Pair{"error", err})
+			logging.Errorf("Cannot create memory profile file@ %v", err)
 		} else {
 
-			logging.Infop("Writing  Memory profile")
+			logging.Infof("Writing  Memory profile")
 			pprof.WriteHeapProfile(f)
 			f.Close()
 		}
 	}
 	if s == os.Interrupt {
 		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
-		logging.Infop("Shutting down immediately")
+		logging.Infof("Shutting down immediately")
 		os.Exit(0)
 	}
-	logging.Infop("Attempting graceful exit")
+	logging.Infof("Attempting graceful exit")
 	// Stop accepting new requests
 	err := endpoint.Close()
 	if err != nil {
-		logging.Errorp("error closing http listener", logging.Pair{"err", err})
+		logging.Errorf("error closing http listener: %v", err)
 	}
 	err = endpoint.CloseTLS()
 	if err != nil {
-		logging.Errorp("error closing https listener", logging.Pair{"err", err})
+		logging.Errorf("error closing https listener: %v", err)
 	}
 }

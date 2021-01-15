@@ -520,7 +520,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			e, err = json.Marshal(namedArgs)
 		}
 		if err != nil || !this.writer.printf("%s\"namedArgs\": %s", newPrefix, e) {
-			logging.Infop("Error writing namedArgs", logging.Pair{"error", err})
+			logging.Infof("Error writing namedArgs. Error: %v", err)
 		}
 		needComma = true
 	}
@@ -534,7 +534,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			e, err = json.Marshal(positionalArgs)
 		}
 		if err != nil || !this.writer.printf("%s\"positionalArgs\": %s", newPrefix, e) {
-			logging.Infop("Error writing positional args", logging.Pair{"error", err})
+			logging.Infof("Error writing positionalArgs. Error: %v", err)
 		}
 		needComma = true
 	}
@@ -543,7 +543,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		return false
 	}
 	if err != nil || !this.writer.printf("%s\"scan_consistency\": \"%s\"", newPrefix, string(this.ScanConsistency())) {
-		logging.Infop("Error writing scan_consistency", logging.Pair{"error", err})
+		logging.Infof("Error writing scan_consistency. Error: %v", err)
 	}
 	needComma = true
 
@@ -552,7 +552,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			return false
 		}
 		if err != nil || !this.writer.printf("%s\"queryContext\": \"%s\"", newPrefix, this.QueryContext()) {
-			logging.Infop("Error writing scan_consistency", logging.Pair{"error", err})
+			logging.Infof("Error writing queryContext. Error: %v", err)
 		}
 	}
 
@@ -561,7 +561,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			return false
 		}
 		if err != nil || !this.writer.printf("%s\"use_fts\": \"%v\"", newPrefix, this.UseFts()) {
-			logging.Infop("Error writing use_fts", logging.Pair{"error", err})
+			logging.Infof("Error writing use_fts. Error: %v", err)
 		}
 	}
 
@@ -570,7 +570,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			return false
 		}
 		if err != nil || !this.writer.printf("%s\"use_cbo\": \"%v\"", newPrefix, this.UseCBO()) {
-			logging.Infop("Error writing use_cbo", logging.Pair{"error", err})
+			logging.Infof("Error writing use_cbo. Error: %v", err)
 		}
 	}
 
@@ -580,12 +580,12 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 			return false
 		}
 		if err != nil || !this.writer.printf("%s\"memoryQuota\": \"%v\"", newPrefix, memoryQuota) {
-			logging.Infop("Error writing memoryQuota", logging.Pair{"error", err})
+			logging.Infof("Error writing memoryQuota. Error: %v", err)
 		}
 	}
 
 	if !this.writeString(",") || !this.writer.printf("%s\"stmtType\": \"%v\"", newPrefix, this.Type()) {
-		logging.Infop("Error writing Type")
+		logging.Infof("Error writing stmtType")
 	}
 
 	this.writeTransactionInfo(newPrefix, indent)
@@ -599,29 +599,29 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 func (this *httpRequest) writeTransactionInfo(prefix, indent string) bool {
 	if this.TxId() != "" {
 		if !this.writeString(",") || !this.writer.printf("%s\"txid\": \"%v\"", prefix, this.TxId()) {
-			logging.Infop("Error writing txid")
+			logging.Infof("Error writing txid")
 		}
 
 		if !this.writeString(",") || !this.writer.printf("%s\"tximplicit\": \"%v\"", prefix, this.TxImplicit()) {
-			logging.Infop("Error writing tximplicit")
+			logging.Infof("Error writing tximplicit")
 		}
 
 		if !this.writeString(",") || !this.writer.printf("%s\"txstmtnum\": \"%v\"", prefix, this.TxStmtNum()) {
-			logging.Infop("Error writing stmtnum")
+			logging.Infof("Error writing stmtnum")
 		}
 
 		if !this.writeString(",") || !this.writer.printf("%s\"txtimeout\": \"%v\"", prefix, this.TxTimeout()) {
-			logging.Infop("Error writing txtimeout")
+			logging.Infof("Error writing txtimeout")
 		}
 
 		if !this.writeString(",") || !this.writer.printf("%s\"durability_level\": \"%v\"",
 			prefix, datastore.DurabilityLevelToName(this.DurabilityLevel())) {
-			logging.Infop("Error writing durability_level")
+			logging.Infof("Error writing durability_level")
 		}
 
 		if !this.writeString(",") ||
 			!this.writer.printf("%s\"durability_timeout\": \"%v\"", prefix, this.DurabilityTimeout()) {
-			logging.Infop("Error writing durability_timeout")
+			logging.Infof("Error writing durability_timeout")
 		}
 	}
 
@@ -658,7 +658,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 				e, err = json.Marshal(phaseTimes)
 			}
 			if err != nil || !this.writer.printf("%s\"phaseTimes\": %s", newPrefix, e) {
-				logging.Infop("Error writing phase times", logging.Pair{"error", err})
+				logging.Infof("Error writing phaseTimes: %v", err)
 			}
 			needComma = true
 		}
@@ -673,7 +673,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 				e, err = json.Marshal(phaseCounts)
 			}
 			if err != nil || !this.writer.printf("%s\"phaseCounts\": %s", newPrefix, e) {
-				logging.Infop("Error writing phase counts", logging.Pair{"error", err})
+				logging.Infof("Error writing phaseCounts: %v", err)
 			}
 			needComma = true
 		}
@@ -688,7 +688,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 				e, err = json.Marshal(phaseOperators)
 			}
 			if err != nil || !this.writer.printf("%s\"phaseOperators\": %s", newPrefix, e) {
-				logging.Infop("Error writing phase operators", logging.Pair{"error", err})
+				logging.Infof("Error writing phaseOperators: %v", err)
 			}
 		}
 	}
@@ -701,7 +701,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 				e, err = json.Marshal(timings)
 			}
 			if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
-				logging.Infop("Error writing timings", logging.Pair{"error", err})
+				logging.Infof("Error writing executionTimings: %v", err)
 			}
 			optEstimates := this.FmtOptimizerEstimates(timings)
 			if optEstimates != nil {
@@ -711,7 +711,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 					e, err = json.Marshal(optEstimates)
 				}
 				if err != nil || !this.writer.printf(",%s\"optimizerEstimates\": %s", newPrefix, e) {
-					logging.Infop("Error writing optimizer estimates", logging.Pair{"error", err})
+					logging.Infof("Error writing optimizerEstimates: %v", err)
 				}
 			}
 		}

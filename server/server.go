@@ -352,7 +352,7 @@ func (this *Server) SetCpuProfile(cpuprofile string) {
 	}
 	f, err := os.Create(this.cpuprofile)
 	if err != nil {
-		logging.Errorp("Cannot start cpu profiler", logging.Pair{"error", err})
+		logging.Errorf("Cannot start cpu profiler - error: %v", err)
 		this.cpuprofile = ""
 	} else {
 		pprof.StartCPUProfile(f)
@@ -425,7 +425,7 @@ func (this *Server) LogLevel() string {
 func (this *Server) SetLogLevel(level string) {
 	lvl, ok := logging.ParseLevel(level)
 	if !ok {
-		logging.Errorp("SetLogLevel: unrecognized level", logging.Pair{"level", level})
+		logging.Errorf("SetLogLevel: unrecognized level %v", level)
 		return
 	}
 	if this.datastore != nil {
@@ -1325,11 +1325,11 @@ func logExplain(prepared *plan.Prepared) {
 	var pl plan.Operator = prepared
 	explain, err := json.MarshalIndent(pl, "", "    ")
 	if err != nil {
-		logging.Tracep("Error logging explain", logging.Pair{"error", err})
+		logging.Tracef("Error logging explain: %v", err)
 		return
 	}
 
-	logging.Tracep("Explain ", logging.Pair{"explain", fmt.Sprintf("<ud>%v</ud>", string(explain))})
+	logging.Tracea(func() string { return fmt.Sprintf("Explain <ud>%v</ud>", string(explain)) })
 }
 
 // API for tracking server options

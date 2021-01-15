@@ -906,20 +906,19 @@ func Enable_ns_server_shutdown() {
 
 func pollStdin() {
 	reader := bufio.NewReader(os.Stdin)
-	logging.Infop("pollEOF: About to start stdin polling")
+	logging.Infof("pollEOF: About to start stdin polling")
 	for {
 		ch, err := reader.ReadByte()
 		if err == io.EOF {
-			logging.Infop("Received EOF; Exiting...")
+			logging.Infof("Received EOF; Exiting...")
 			os.Exit(0)
 		}
 		if err != nil {
-			logging.Errorp("Unexpected error polling stdin",
-				logging.Pair{"error", err})
+			logging.Errorf("Unexpected error polling stdin: %v", err)
 			os.Exit(1)
 		}
 		if ch == '\n' || ch == '\r' {
-			logging.Infop("Received EOL; Exiting...")
+			logging.Infof("Received EOL; Exiting...")
 			// TODO: "graceful" shutdown should be placed here
 			os.Exit(0)
 		}

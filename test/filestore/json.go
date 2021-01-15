@@ -187,30 +187,26 @@ func Start(site, pool, namespace string) *MockServer {
 	mockServer := &MockServer{}
 	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 	datastore.SetDatastore(ds)
 
 	sys, err := system.NewDatastore(ds)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 	datastore.SetSystemstore(sys)
 
 	configstore, err := config_resolver.NewConfigstore("stub:")
 	if err != nil {
-		logging.Errorp("Could not connect to configstore",
-			logging.Pair{"error", err},
-		)
+		logging.Errorf("Could not connect to configstore: %v", err)
 	}
 
 	acctstore, err := acct_resolver.NewAcctstore("stub:")
 	if err != nil {
-		logging.Errorp("Could not connect to acctstore",
-			logging.Pair{"error", err},
-		)
+		logging.Errorf("Could not connect to acctstore: %v", err)
 	}
 
 	// Start the completed requests log - keep it small and busy
@@ -223,7 +219,7 @@ func Start(site, pool, namespace string) *MockServer {
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true,
 		server.ProfOff, false)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 	server.SetActives(http.NewActiveRequests(srv))

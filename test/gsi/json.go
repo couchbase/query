@@ -344,14 +344,14 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	mockServer.txgroups = make([]string, 16)
 	ds, err := resolver.NewDatastore(site + pool)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 	ds.SetConnectionSecurityConfig(nullSecurityConfig)
 
 	sys, err := system.NewDatastore(ds)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 	ds.SetConnectionSecurityConfig(nullSecurityConfig)
@@ -363,16 +363,12 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 
 	configstore, err := config_resolver.NewConfigstore("stub:")
 	if err != nil {
-		logging.Errorp("Could not connect to configstore",
-			logging.Pair{"error", err},
-		)
+		logging.Errorf("Could not connect to configstore: %v", err)
 	}
 
 	acctstore, err := acct_resolver.NewAcctstore("stub:")
 	if err != nil {
-		logging.Errorp("Could not connect to acctstore",
-			logging.Pair{"error", err},
-		)
+		logging.Errorf("Could not connect to acctstore: %v", err)
 	}
 
 	// Start the prepared statement cache
@@ -388,7 +384,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		false, 10, 10, 1, 1, 1, 0, false, false, true, true,
 		server.ProfOff, false)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf("%v", err.Error())
 		os.Exit(1)
 	}
 

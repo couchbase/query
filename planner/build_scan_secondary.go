@@ -685,9 +685,13 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 				advisorValidate, this.context)
 		}
 		if err != nil || spans.Size() == 0 {
-			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", fmt.Sprintf("<ud>%v</ud>", pred)},
-				logging.Pair{"sarg_keys",
-					fmt.Sprintf("<ud>%v</ud>", se.sargKeys)}, logging.Pair{"error", err})
+			logging.Errora(func() string {
+				return fmt.Sprintf("Sargable index not sarged: pred:%v sarg_keys:%v error:%v",
+					pred,
+					se.sargKeys,
+					err,
+				)
+			})
 
 			return errors.NewPlanError(nil,
 				fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",

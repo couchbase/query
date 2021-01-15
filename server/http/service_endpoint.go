@@ -147,7 +147,7 @@ func (this *HttpEndpoint) Listen() error {
 		} else {
 			this.listener = append(this.listener, ln)
 			go srv.Serve(ln)
-			logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
+			logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: Listen Address - %v", ln.Addr()) })
 		}
 	}
 
@@ -227,7 +227,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 			tls_ln := tls.NewListener(ln, cfg)
 			this.listenerTLS = append(this.listenerTLS, tls_ln)
 			go srv.Serve(tls_ln)
-			logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
+			logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: ListenTLS Address - %v", ln.Addr()) })
 		}
 	}
 
@@ -306,7 +306,9 @@ func (this *HttpEndpoint) closeListener(l net.Listener) error {
 	var err error
 	if l != nil {
 		err = l.Close()
-		logging.Infop("HttpEndpoint: close listener ", logging.Pair{"Address", l.Addr()}, logging.Pair{"err", err})
+		logging.Infoa(func() string {
+			return fmt.Sprintf("HttpEndpoint: close listener, Address - %v, Error - %v", l.Addr(), err)
+		})
 	}
 	return err
 }

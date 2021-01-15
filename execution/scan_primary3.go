@@ -11,6 +11,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 
 	"github.com/couchbase/query/datastore"
@@ -136,8 +137,10 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 			return
 		}
 
-		logging.Errorp(emsg, logging.Pair{"chunkSize", nitems},
-			logging.Pair{"startingEntry", stringifyIndexEntry(lastEntry)})
+		logging.Errora(func() string {
+			return fmt.Sprintf("%s chunkSize=%v startingEntry=%v", emsg, nitems,
+				stringifyIndexEntry(lastEntry))
+		})
 
 		// do chunked scans; lastEntry the starting point
 		// old connection will be disposed by the defer above

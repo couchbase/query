@@ -579,7 +579,7 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 func isValidIndex(idx datastore.Index, indexApiVersion int) bool {
 	state, _, err := idx.State()
 	if err != nil {
-		logging.Errorp("Index selection", logging.Pair{"error", err.Error()})
+		logging.Errorf("Index selection error: %v", err.Error())
 		return false
 	}
 

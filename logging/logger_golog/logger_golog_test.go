@@ -17,50 +17,58 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
+func logMessages(logger *goLogger) {
+	logger.Debugf("This is a message from %s", "Debugf")
+	logger.Tracef("This is a message from %s", "Tracef")
+	logger.Requestf(logging.WARN, "This is a message from %s", "Requestf")
+	logger.Infof("This is a message from %s", "Infof")
+	logger.Warnf("This is a message from %s", "Warnf")
+	logger.Errorf("This is a message from %s", "Errorf")
+	logger.Severef("This is a message from %s", "Severef")
+	logger.Fatalf("This is a message from %s", "Fatalf")
+
+	logging.Debugf("This is a message from %s", "Debugf")
+	logging.Tracef("This is a message from %s", "Tracef")
+	logging.Requestf(logging.WARN, "This is a message from %s", "Requestf")
+	logging.Infof("This is a message from %s", "Infof")
+	logging.Warnf("This is a message from %s", "Warnf")
+	logging.Errorf("This is a message from %s", "Errorf")
+	logging.Severef("This is a message from %s", "Severef")
+	logging.Fatalf("This is a message from %s", "Fatalf")
+
+	logger.Debuga(func() string { return "This is a message from Debuga" })
+	logger.Tracea(func() string { return "This is a message from Tracea" })
+	logger.Requesta(logging.WARN, func() string { return "This is a message from Requesta" })
+	logger.Infoa(func() string { return "This is a message from Infoa" })
+	logger.Warna(func() string { return "This is a message from Warna" })
+	logger.Errora(func() string { return "This is a message from Errora" })
+	logger.Severea(func() string { return "This is a message from Severea" })
+	logger.Fatala(func() string { return "This is a message from Fatala" })
+
+	logging.Debuga(func() string { return "This is a message from Debuga" })
+	logging.Tracea(func() string { return "This is a message from Tracea" })
+	logging.Requesta(logging.WARN, func() string { return "This is a message from Requesta" })
+	logging.Infoa(func() string { return "This is a message from Infoa" })
+	logging.Warna(func() string { return "This is a message from Warna" })
+	logging.Errora(func() string { return "This is a message from Errora" })
+	logging.Severea(func() string { return "This is a message from Severea" })
+	logging.Fatala(func() string { return "This is a message from Fatala" })
+}
+
 func TestStub(t *testing.T) {
 	logger := NewLogger(os.Stdout, logging.DEBUG, false)
 	logging.SetLogger(logger)
 
-	logger.Infof("This is a message from %s", "test")
-	logging.Infof("This is a message from %s", "test")
-	logger.Infop("This is a message from ", logging.Pair{"name", "test"}, logging.Pair{"Queue Size", 10}, logging.Pair{"Debug Mode", false})
-	logging.Infop("This is a message from ", logging.Pair{"name", "test"})
-
-	logger.Infom("This is a message from ", logging.Map{"name": "test", "Queue Size": 10, "Debug Mode": false})
-	logging.Infom("This is a message from ", logging.Map{"name": "test"})
-
-	logger.Requestf(logging.WARN, "This is a Request from %s", "test")
-	logging.Requestf(logging.INFO, "This is a Request from %s", "test")
-	logger.Requestp(logging.DEBUG, "This is a Request from ", logging.Pair{"name", "test"})
-	logging.Requestp(logging.ERROR, "This is a Request from ", logging.Pair{"name", "test"})
+	logMessages(logger)
 
 	logger.SetLevel(logging.WARN)
 	fmt.Printf("Log level is %s\n", logger.Level())
 
-	logger.Requestf(logging.WARN, "This is a Request from %s", "test")
-	logging.Requestf(logging.INFO, "This is a Request from %s", "test")
-	logger.Requestp(logging.DEBUG, "This is a Request from ", logging.Pair{"name", "test"})
-	logging.Requestp(logging.ERROR, "This is a Request from ", logging.Pair{"name", "test"})
-
-	logger.Warnf("This is a message from %s", "test")
-	logging.Infof("This is a message from %s", "test")
-	logger.Debugp("This is a message from ", logging.Pair{"name", "test"})
-	logging.Errorp("This is a message from ", logging.Pair{"name", "test"})
+	logMessages(logger)
 
 	fmt.Printf("Changing to json formatter\n")
 	logger.entryFormatter = &jsonFormatter{}
 	logger.SetLevel(logging.DEBUG)
 
-	logger.Infof("This is a message from %s", "test")
-	logging.Infof("This is a message from %s", "test")
-	logger.Infop("This is a message from ", logging.Pair{"name", "test"}, logging.Pair{"Queue Size", 10}, logging.Pair{"Debug Mode", false})
-	logging.Infop("This is a message from ", logging.Pair{"name", "test"})
-
-	logger.Infom("This is a message from ", logging.Map{"name": "test", "Queue Size": 10, "Debug Mode": false})
-	logging.Infom("This is a message from ", logging.Map{"name": "test"})
-
-	logger.Requestf(logging.WARN, "This is a Request from %s", "test")
-	logging.Requestf(logging.INFO, "This is a Request from %s", "test")
-	logger.Requestp(logging.DEBUG, "This is a Request from ", logging.Pair{"name", "test"})
-	logging.Requestp(logging.ERROR, "This is a Request from ", logging.Pair{"name", "test"})
+	logMessages(logger)
 }
