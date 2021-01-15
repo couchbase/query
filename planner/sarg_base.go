@@ -30,7 +30,7 @@ func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
 	}
 
 	cpred := pred.Static()
-	if cpred != nil || !this.isJoin {
+	if cpred != nil || (!this.isJoin && !this.baseKeyspace.IsInCorrSubq()) {
 		return cpred
 	}
 

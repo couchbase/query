@@ -19,6 +19,7 @@ const (
 	KS_PLAN_DONE      = 1 << iota // planning is done for this keyspace
 	KS_ONCLAUSE_ONLY              // use ON-clause only for planning
 	KS_PRIMARY_UNNEST             // primary unnest
+	KS_IN_CORR_SUBQ               // in correlated subquery
 )
 
 type BaseKeyspace struct {
@@ -85,6 +86,14 @@ func (this *BaseKeyspace) IsPrimaryUnnest() bool {
 
 func (this *BaseKeyspace) SetPrimaryUnnest() {
 	this.ksFlags |= KS_PRIMARY_UNNEST
+}
+
+func (this *BaseKeyspace) IsInCorrSubq() bool {
+	return (this.ksFlags & KS_IN_CORR_SUBQ) != 0
+}
+
+func (this *BaseKeyspace) SetInCorrSubq() {
+	this.ksFlags |= KS_IN_CORR_SUBQ
 }
 
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {

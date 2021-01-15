@@ -197,6 +197,9 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	if this.subquery && this.correlated {
 		node.SetInCorrSubq()
+		if baseKeyspace, ok := this.baseKeyspaces[node.Alias()]; ok {
+			baseKeyspace.SetInCorrSubq()
+		}
 	}
 
 	scan, err := this.selectScan(keyspace, node, false)
