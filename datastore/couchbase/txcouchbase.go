@@ -219,6 +219,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	// Release transaction mutations
 	var memSize int64
 	txMutations.DeleteAll(true, &memSize)
+	txMutations.Recycle()
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
@@ -286,6 +287,7 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 
 	var memSize int64
 	txMutations.DeleteAll(true, &memSize)
+	txMutations.Recycle()
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
@@ -387,11 +389,16 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 	sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
 	if txMutations, _ := txContext.TxMutations().(*TransactionMutations); txMutations != nil {
 		var err errors.Error
+		var flag bool
 		mvs := make(map[string]*MutationValue, len(keys))
 		transaction = txMutations.Transaction()
 
 		// Fetch the keys from delta  keyspace
-		fkeys, err = txMutations.Fetch(qualifiedName, keys, mvs)
+		fkeys, flag, err = txMutations.Fetch(qualifiedName, keys, mvs)
+		if flag {
+			defer _STRING_POOL.Put(fkeys)
+		}
+
 		if err != nil {
 			return errors.Errors{err}
 		}
@@ -471,12 +478,13 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		// UPSERT check keys and transform to INSERT or UPDATE
 
 		fetchMap = make(map[string]value.AnnotatedValue, len(pairs))
-		fkeys := make([]string, 0, len(pairs))
+		fkeys := _STRING_POOL.GetCapped(len(pairs))
 		for _, kv := range pairs {
 			fkeys = append(fkeys, kv.Name)
 		}
 		errs := ks.txFetch("", qualifiedName, scopeName, collectionName, collId,
 			fkeys, fetchMap, context, nil, sdkKvInsert, txContext)
+		_STRING_POOL.Put(fkeys)
 		if len(errs) > 0 {
 			return nil, errs[0]
 		}
