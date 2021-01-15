@@ -93,8 +93,10 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			expiryTime = time.Now().Add(txContext.TxTimeout())
 		} else {
 			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
-				KeyValueTimeout: txContext.KvTimeout(),
 				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
+			}
+			if txContext.KvTimeout() > 0 {
+				txConfig.KeyValueTimeout = txContext.KvTimeout()
 			}
 
 			txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
