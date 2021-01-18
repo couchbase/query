@@ -30,6 +30,10 @@ func (this sliceValue) String() string {
 	return marshalString(this)
 }
 
+func (this sliceValue) ToString() string {
+	return marshalString(this)
+}
+
 func (this sliceValue) MarshalJSON() ([]byte, error) {
 	return marshalArray(this)
 }
@@ -393,6 +397,10 @@ type listValue struct {
 }
 
 func (this *listValue) String() string {
+	return this.slice.String()
+}
+
+func (this *listValue) ToString() string {
 	return this.slice.String()
 }
 

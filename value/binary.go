@@ -27,6 +27,10 @@ func (this binaryValue) String() string {
 	return fmt.Sprintf("\"<binary (%d b)>\"", len(this))
 }
 
+func (this binaryValue) ToString() string {
+	return fmt.Sprintf("\"<binary (%d b)>\"", len(this))
+}
+
 func (this binaryValue) MarshalJSON() ([]byte, error) {
 	return []byte(this.String()), nil
 }

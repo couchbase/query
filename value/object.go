@@ -29,6 +29,10 @@ func (this objectValue) String() string {
 	return marshalString(this)
 }
 
+func (this objectValue) ToString() string {
+	return marshalString(this)
+}
+
 func (this objectValue) MarshalJSON() ([]byte, error) {
 	if this == nil {
 		return _NULL_BYTES, nil

@@ -28,6 +28,10 @@ func (this floatValue) String() string {
 	return string(bytes)
 }
 
+func (this floatValue) ToString() string {
+	return this.String()
+}
+
 func (this floatValue) MarshalJSON() ([]byte, error) {
 	f := float64(this)
 

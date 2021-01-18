@@ -45,6 +45,10 @@ func (this stringValue) String() string {
 	return string(bytes)
 }
 
+func (this stringValue) ToString() string {
+	return string(this)
+}
+
 /*
 Use built-in JSON string marshalling, which handles special
 characters.
@@ -77,14 +81,11 @@ If other is type stringValue and is the same as the receiver
 return true.
 */
 func (this stringValue) Equals(other Value) Value {
-	other = other.unwrap()
-	switch other := other.(type) {
-	case missingValue:
-		return other
-	case *nullValue:
-		return other
-	case stringValue:
-		if this == other {
+	switch other.Type() {
+	case MISSING, NULL:
+		return other.unwrap()
+	case STRING:
+		if string(this) == other.ToString() {
 			return TRUE_VALUE
 		}
 	}
@@ -93,10 +94,9 @@ func (this stringValue) Equals(other Value) Value {
 }
 
 func (this stringValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
-	switch other := other.(type) {
-	case stringValue:
-		return this == other
+	switch other.Type() {
+	case STRING:
+		return string(this) == other.ToString()
 	default:
 		return false
 	}
@@ -111,12 +111,13 @@ value. The default behavior is to return the position wrt
 others type.
 */
 func (this stringValue) Collate(other Value) int {
-	other = other.unwrap()
-	switch other := other.(type) {
-	case stringValue:
-		if this < other {
+	switch other.Type() {
+	case STRING:
+		ta := string(this)
+		oa := other.ToString()
+		if ta < oa {
 			return -1
-		} else if this > other {
+		} else if ta > oa {
 			return 1
 		} else {
 			return 0
@@ -127,12 +128,9 @@ func (this stringValue) Collate(other Value) int {
 }
 
 func (this stringValue) Compare(other Value) Value {
-	other = other.unwrap()
-	switch other := other.(type) {
-	case missingValue:
-		return other
-	case *nullValue:
-		return other
+	switch other.Type() {
+	case MISSING, NULL:
+		return other.unwrap()
 	default:
 		return intValue(this.Collate(other))
 	}
@@ -267,7 +265,7 @@ func (this stringValue) ContainsToken(token, options Value) bool {
 	tokens := _STRING_TOKENS_POOL.Get()
 	defer _STRING_TOKENS_POOL.Put(tokens)
 
-	str := token.Actual().(string)
+	str := token.ToString()
 	return this.tokens(tokens, options, str, nil)
 }
 
@@ -292,7 +290,7 @@ func (this stringValue) tokens(set map[string]bool, options Value,
 	// Set case folding function, if specified.
 	caseFunc := func(s string) string { return s }
 	if caseOption, ok := options.Field("case"); ok && caseOption.Type() == STRING {
-		caseStr := caseOption.Actual().(string)
+		caseStr := caseOption.ToString()
 		switch strings.ToLower(caseStr) {
 		case "lower":
 			caseFunc = strings.ToLower

@@ -69,7 +69,6 @@ func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 // shorthand for a scope value that is going to contain nested annotated values
 func NewNestedScopeValue(parent Value) *ScopeValue {
 	rv := newScopeValue(true)
-	rv.Value = objectValue(make(map[string]interface{}))
 	rv.parent = parent
 	if parent != nil {
 		parent.Track()
@@ -217,9 +216,17 @@ func (this *ScopeValue) Recycle() {
 				v.Recycle()
 			}
 		}
+
+		// pool the map
+		// this is optimized as a map clear by golang
+		for k := range fields {
+			delete(fields, k)
+		}
+		this.Value = fields
+		nestedPool.Put(unsafe.Pointer(this))
 	} else {
 		this.Value.Recycle()
 		this.Value = nil
+		scopePool.Put(unsafe.Pointer(this))
 	}
-	scopePool.Put(unsafe.Pointer(this))
 }

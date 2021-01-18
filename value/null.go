@@ -39,6 +39,10 @@ func (this *nullValue) String() string {
 	return "null"
 }
 
+func (this *nullValue) ToString() string {
+	return this.String()
+}
+
 func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }

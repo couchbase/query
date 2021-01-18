@@ -31,6 +31,10 @@ func (this intValue) String() string {
 	return strconv.FormatInt(int64(this), 10)
 }
 
+func (this intValue) ToString() string {
+	return this.String()
+}
+
 func (this intValue) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(int64(this), 10)
 	return []byte(s), nil

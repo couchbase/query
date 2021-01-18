@@ -40,6 +40,10 @@ func (this missingValue) String() string {
 	return "missing"
 }
 
+func (this missingValue) ToString() string {
+	return this.String()
+}
+
 /*
 MISSING is marshalled as NULL in JSON arrays.
 */

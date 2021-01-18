@@ -126,6 +126,10 @@ func (this *parsedValue) String() string {
 	return this.unwrap().String()
 }
 
+func (this *parsedValue) ToString() string {
+	return this.unwrap().String()
+}
+
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
 }

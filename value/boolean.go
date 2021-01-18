@@ -39,6 +39,10 @@ func (this boolValue) String() string {
 	}
 }
 
+func (this boolValue) ToString() string {
+	return this.String()
+}
+
 func (this boolValue) MarshalJSON() ([]byte, error) {
 	if this {
 		return _TRUE_BYTES, nil

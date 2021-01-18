@@ -227,6 +227,11 @@ type Value interface {
 	Truth() bool
 
 	/*
+	   Quick conversion to non marshalled string. Used to avoid heap escapes on value returns
+	*/
+	ToString() string
+
+	/*
 	   Returns a Value, which is a shallow copy of the input.
 	*/
 	Copy() Value
