@@ -686,7 +686,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errora(func() string {
-				return fmt.Sprintf("Sargable index not sarged: pred:%v sarg_keys:%v error:%v",
+				return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
 					pred,
 					se.sargKeys,
 					err,
