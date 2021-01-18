@@ -100,7 +100,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			selec, _ = optExprSelec(keyspaces, static)
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
-		span := plan.NewSpan2(nil, plan.Ranges2{range2}, (val != nil))
+		// set exact to true to allow query parameters, join fields, etc to be able
+		// to use covering index scan (static != nil, which is checked above)
+		span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 		spans = append(spans, span)
 	}
 
