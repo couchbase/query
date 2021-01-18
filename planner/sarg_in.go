@@ -95,7 +95,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 	spans := make(plan.Spans2, 0, len(array))
 	var keyspaces map[string]string
 	var err error
-	if !this.isJoin {
+	if this.doSelec && !this.isJoin {
 		keyspaces = make(map[string]string, 1)
 		keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
 	}
@@ -124,7 +124,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		}
 		range2 := plan.NewRange2(static, static, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 		range2.SetFlag(plan.RANGE_FROM_IN_EXPR)
-		span := plan.NewSpan2(nil, plan.Ranges2{range2}, (val != nil))
+		// set exact to true to allow query parameters, join fields, etc to be able
+		// to use covering index scan (static != nil, which is checked above)
+		span := plan.NewSpan2(nil, plan.Ranges2{range2}, true)
 		spans = append(spans, span)
 	}
 
