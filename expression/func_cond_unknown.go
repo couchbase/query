@@ -48,24 +48,27 @@ func (this *IfMissing) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IfMissing) Type() value.Type { return value.JSON }
 
-func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
 /*
 This method returns the first non missing value. Range over
 the input arguments and check for its type. For all values
 other than a missing, return the value itself. Otherwise
 return a Null.
 */
-func (this *IfMissing) Apply(context Context, args ...value.Value) (value.Value, error) {
-	for _, a := range args {
-		if a.Type() != value.MISSING {
-			return a, nil
+func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var rv value.Value
+	for _, op := range this.operands {
+		a, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if rv == nil && a.Type() != value.MISSING {
+			rv = a
 		}
 	}
 
-	return value.NULL_VALUE, nil
+	if rv == nil {
+		return value.NULL_VALUE, nil
+	}
+	return rv, nil
 }
 
 func (this *IfMissing) DependsOn(other Expression) bool {
@@ -122,21 +125,24 @@ func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IfMissingOrNull) Type() value.Type { return value.JSON }
 
-func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
 /*
 This method returns the first non-NULL, non-MISSING value, or null.
 */
-func (this *IfMissingOrNull) Apply(context Context, args ...value.Value) (value.Value, error) {
-	for _, a := range args {
-		if a.Type() > value.NULL {
-			return a, nil
+func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var rv value.Value
+	for _, op := range this.operands {
+		a, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if rv == nil && a.Type() > value.NULL {
+			rv = a
 		}
 	}
 
-	return value.NULL_VALUE, nil
+	if rv == nil {
+		return value.NULL_VALUE, nil
+	}
+	return rv, nil
 }
 
 func (this *IfMissingOrNull) DependsOn(other Expression) bool {
@@ -194,25 +200,28 @@ func (this *IfNull) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IfNull) Type() value.Type { return value.JSON }
 
+/*
+This method returns the first non null value, or null.
+*/
 func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
+	var rv value.Value
+	for _, op := range this.operands {
+		a, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if rv == nil && a.Type() != value.NULL {
+			rv = a
+		}
+	}
+
+	if rv == nil {
+		return value.NULL_VALUE, nil
+	}
+	return rv, nil
 }
 
 func (this *IfNull) DependsOn(other Expression) bool {
 	return this.dependsOn(other)
-}
-
-/*
-This method returns the first non null value, or null.
-*/
-func (this *IfNull) Apply(context Context, args ...value.Value) (value.Value, error) {
-	for _, a := range args {
-		if a.Type() != value.NULL {
-			return a, nil
-		}
-	}
-
-	return value.NULL_VALUE, nil
 }
 
 /*
@@ -516,21 +525,31 @@ func (this *Decode) Accept(visitor Visitor) (interface{}, error) {
 func (this *Decode) Type() value.Type { return value.JSON }
 
 func (this *Decode) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Decode) Apply(context Context, args ...value.Value) (value.Value, error) {
-	first := args[0]
-	length := len(args[1:])
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	length := len(this.operands) - 1
 
 	def := value.NULL_VALUE
 	if length%2 == 1 {
-		def = args[length]
+		def, err = this.operands[length].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	for i := 1; i+1 < len(args); i += 2 {
-		if first.EquivalentTo(args[i]) {
-			return args[i+1], nil
+	for i := 1; i+1 < len(this.operands); i += 2 {
+		arg, err := this.operands[i].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		if first.EquivalentTo(arg) {
+			arg, err = this.operands[i+1].Evaluate(item, context)
+			if err != nil {
+				return nil, err
+			}
+			return arg, nil
 		}
 	}
 

@@ -39,8 +39,38 @@ func (this *Or) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Or) Type() value.Type { return value.BOOLEAN }
 
+/*
+Return TRUE if any input has a truth value of TRUE, else return NULL,
+MISSING, or FALSE in that order.
+*/
 func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
+	missing := false
+	null := false
+
+	for _, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		switch arg.Type() {
+		case value.NULL:
+			null = true
+		case value.MISSING:
+			missing = true
+		default:
+			if arg.Truth() {
+				return value.TRUE_VALUE, nil
+			}
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	} else if missing {
+		return value.MISSING_VALUE, nil
+	} else {
+		return value.FALSE_VALUE, nil
+	}
 }
 
 func (this *Or) Value() value.Value {
@@ -165,36 +195,6 @@ Return TRUE for OR. This will include false positives.
 */
 func (this *Or) MayOverlapSpans() bool {
 	return true
-}
-
-/*
-Return TRUE if any input has a truth value of TRUE, else return NULL,
-MISSING, or FALSE in that order.
-*/
-func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error) {
-	missing := false
-	null := false
-
-	for _, arg := range args {
-		switch arg.Type() {
-		case value.NULL:
-			null = true
-		case value.MISSING:
-			missing = true
-		default:
-			if arg.Truth() {
-				return value.TRUE_VALUE, nil
-			}
-		}
-	}
-
-	if null {
-		return value.NULL_VALUE, nil
-	} else if missing {
-		return value.MISSING_VALUE, nil
-	} else {
-		return value.FALSE_VALUE, nil
-	}
 }
 
 /*

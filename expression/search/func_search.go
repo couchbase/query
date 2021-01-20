@@ -69,51 +69,52 @@ func (this *FTSQuery) Accept(visitor expression.Visitor) (interface{}, error) {
 func (this *FTSQuery) Type() value.Type { return value.ARRAY }
 
 func (this *FTSQuery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *FTSQuery) Privileges() *auth.Privileges {
-	unionPrivileges := auth.NewPrivileges()
-	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS, auth.PRIV_PROPS_NONE)
-
-	children := this.Children()
-	for _, child := range children {
-		unionPrivileges.AddAll(child.Privileges())
-	}
-
-	return unionPrivileges
-}
-
-func (this *FTSQuery) Apply(context expression.Context, args ...value.Value) (value.Value, error) {
 	var err, errC error
+	var search, idxName string
 	hostname := ""
+	hostnameProvided := false
 	user := ""
 	v1 := value.EMPTY_STRING_VALUE
 	v := value.EMPTY_ARRAY_VALUE
+	null := false
+	missing := false
 
-	for k, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-		if arg.Type() == value.NULL {
-			return value.NULL_VALUE, nil
-		}
-		if k == 1 {
-			if arg.Type() != value.OBJECT {
-				return value.NULL_VALUE, nil
-			}
-		} else {
-			if arg.Type() != value.STRING {
-				return value.NULL_VALUE, nil
-			}
-			if k == 2 {
-				hostname = arg.Actual().(string)
+	for k, op := range this.Children() {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if !null && !missing {
+			if k == 0 {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					idxName = arg.Actual().(string)
+				}
+			} else if k == 1 {
+				if arg.Type() != value.OBJECT {
+					null = true
+				} else {
+					search = arg.String()
+				}
+			} else if k == 2 {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					hostname = arg.Actual().(string)
+					hostnameProvided = true
+				}
 			}
 		}
 	}
-
-	search := args[1].String()
-	idxName := args[0].Actual().(string)
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
 
 	// If no host is given then get one
 	// If the cache contains a list of FTS nodes already
@@ -151,8 +152,8 @@ func (this *FTSQuery) Apply(context expression.Context, args ...value.Value) (va
 		v2 := value.NewValue(newM)
 
 		// Create the CURL request
-		v, errC = this.myCurl.Apply(context, v1, v2)
-		if errC != nil && len(args) == 3 {
+		v, errC = this.myCurl.DoEvaluate(context, v1, v2)
+		if errC != nil && hostnameProvided {
 			// Hostname was given. Directly throw err
 			break
 		}
@@ -166,6 +167,18 @@ func (this *FTSQuery) Apply(context expression.Context, args ...value.Value) (va
 		return value.NULL_VALUE, errC
 	}
 	return v, nil
+}
+
+func (this *FTSQuery) Privileges() *auth.Privileges {
+	unionPrivileges := auth.NewPrivileges()
+	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS, auth.PRIV_PROPS_NONE)
+
+	children := this.Children()
+	for _, child := range children {
+		unionPrivileges.AddAll(child.Privileges())
+	}
+
+	return unionPrivileges
 }
 
 /*
@@ -260,7 +273,7 @@ func (this *FTSQuery) PopulateFTSCache(context expression.Context, user string) 
 
 	// Request to get list of FTS nodes in the cluster
 	nv := localhost + _SERVICES_PATH
-	res, err := this.myCurl.Apply(context, value.NewValue(nv), value.NewValue(getMap(user, "", "", "")))
+	res, err := this.myCurl.DoEvaluate(context, value.NewValue(nv), value.NewValue(getMap(user, "", "", "")))
 	if err != nil {
 		return err
 	}

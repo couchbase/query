@@ -50,31 +50,34 @@ func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayAppend) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
+	var f []interface{}
+	null := false
+	missing := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if i == 0 && arg.Type() != value.ARRAY {
+			null = true
+		} else if i == 0 {
+			f = arg.Actual().([]interface{})
+		} else if !missing && !null {
+			f = append(f, arg)
+		}
+	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(f), nil
 }
 
 func (this *ArrayAppend) PropagatesNull() bool {
 	return false
-}
-
-func (this *ArrayAppend) Apply(context Context, args ...value.Value) (value.Value, error) {
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-	}
-
-	first := args[0]
-	if first.Type() != value.ARRAY {
-		return value.NULL_VALUE, nil
-	}
-
-	f := first.Actual().([]interface{})
-	for _, arg := range args[1:] {
-		f = append(f, arg)
-	}
-
-	return value.NewValue(f), nil
 }
 
 /*
@@ -206,27 +209,28 @@ func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayConcat) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayConcat) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var f []interface{}
 	null := false
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
 		} else if arg.Type() != value.ARRAY {
 			null = true
+		} else if i == 0 {
+			f = arg.Actual().([]interface{})
+		} else if !missing && !null {
+			f = append(f, arg.Actual().([]interface{})...)
 		}
 	}
-
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
-	}
-
-	f := args[0].Actual().([]interface{})
-	for _, arg := range args[1:] {
-		a := arg.Actual().([]interface{})
-		f = append(f, a...)
 	}
 
 	return value.NewValue(f), nil
@@ -663,67 +667,82 @@ func (this *ArrayInsert) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayInsert) Type() value.Type { return value.ARRAY }
 
-func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayInsert) PropagatesNull() bool {
-	return false
-}
-
 /*
 This method inserts the third and subsequent values into the first
 array at the second position.
 */
-func (this *ArrayInsert) Apply(context Context, args ...value.Value) (value.Value, error) {
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-	}
+func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var s []interface{}
+	var f float64
+	var n int
+	var ra []interface{}
+	null := false
+	missing := false
 
-	first := args[0]
-	second := args[1]
-	if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		switch {
+		case err != nil:
+			return nil, err
+		case arg.Type() == value.MISSING:
+			missing = true
+		case !missing && !null:
+			switch i {
+			case 0:
+				if arg.Type() != value.ARRAY {
+					null = true
+				} else {
+					s = arg.Actual().([]interface{})
+				}
+			case 1:
+				if arg.Type() != value.NUMBER {
+					null = true
+				} else {
+					/* the position needs to be an integer */
+					f = arg.Actual().(float64)
+					if math.Trunc(f) != f {
+						null = true
+					} else {
+						n = int(f)
+
+						/* count negative position from end of array */
+						if n < 0 {
+							n = len(s) + n
+						}
+
+						/* position goes from 0 to end of array */
+						if n < 0 || n > len(s) {
+							null = true
+						} else {
+							ra = make([]interface{}, 0, len(s)+len(this.operands)-2)
+							if n == len(s) {
+								ra = append(ra, s...)
+							} else {
+								ra = append(ra, s[:n]...)
+							}
+						}
+					}
+				}
+			default: // from index 2 onwards
+				ra = append(ra, arg)
+			} // switch i
+		} // switch
+	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	/* the position needs to be an integer */
-	f := second.Actual().(float64)
-	if math.Trunc(f) != f {
-		return value.NULL_VALUE, nil
-	}
-
-	s := first.Actual().([]interface{})
-	n := int(f)
-
-	/* count negative position from end of array */
-	if n < 0 {
-		n = len(s) + n
-	}
-
-	/* position goes from 0 to end of array */
-	if n < 0 || n > len(s) {
-		return value.NULL_VALUE, nil
-	}
-
-	ra := make([]interface{}, 0, len(s)+len(args)-2)
-
-	/* corner case: append to the end */
-	if n == len(s) {
-		ra = append(ra, s...)
-		for _, a := range args[2:] {
-			ra = append(ra, a)
-		}
-	} else {
-		ra = append(ra, s[:n]...)
-		for _, a := range args[2:] {
-			ra = append(ra, a)
-		}
+	if n != len(s) {
 		ra = append(ra, s[n:]...)
 	}
 
 	return value.NewValue(ra), nil
+}
+
+func (this *ArrayInsert) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -776,59 +795,73 @@ func (this *ArrayIntersect) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayIntersect) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayIntersect) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayIntersect) Apply(context Context, args ...value.Value) (value.Value, error) {
+	n := len(this.operands)
+	args := _ARGS_POOL.GetSized(n)
+	defer _ARGS_POOL.Put(args)
 	null := false
-	maxLength := 0
-	minLength := math.MaxInt32
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+	missing := false
+	max := 0
+	min := math.MaxInt32
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
 		} else if arg.Type() != value.ARRAY {
 			null = true
-		} else if !null {
-			a := arg.Actual().([]interface{})
-			n := len(a)
-			if n > maxLength {
-				maxLength = n
-			}
-			if n < minLength {
-				minLength = n
+		} else if !missing && !null {
+			args[i] = arg
+			l := len(arg.Actual().([]interface{}))
+			if l < min {
+				min = l
+			} else if l > max {
+				max = l
 			}
 		}
 	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
 
+	intersect := make(map[value.Value]int, max)
+	comp := 0
+	for _, arg := range args {
+		a := arg.Actual().([]interface{})
+		for _, elem := range a {
+			val := value.NewValue(elem)
+			v, ok := intersect[val]
+			if !ok {
+				v = 0
+			}
+			if v == comp {
+				intersect[val] = v + 1
+			}
+		}
+		comp++
+	}
 	if null {
 		return value.NULL_VALUE, nil
 	}
 
-	bag := value.NewBag(maxLength)
-	for _, arg := range args {
-		a := arg.Actual().([]interface{})
-		// De-dup each array
-		set := value.NewSet(len(a), true, false)
-		for _, elem := range a {
-			set.Add(value.NewValue(elem))
-		}
-
-		// Add to multi-set
-		for _, elem := range set.Values() {
-			if elem != nil && elem.Type() > value.NULL {
-				bag.Add(elem)
-			}
+	c := 0
+	for _, v := range intersect {
+		if v == n {
+			c++
 		}
 	}
 
-	ra := make([]interface{}, 0, minLength)
-	n := len(args)
-	for _, entry := range bag.Entries() {
-		if entry.Count == n {
-			ra = append(ra, entry.Value)
+	ra := make([]interface{}, c)
+	c = 0
+	for elem, v := range intersect {
+		if v == n {
+			ra[c] = elem
+			c++
 		}
 	}
-
 	return value.NewValue(ra), nil
 }
 
@@ -1156,27 +1189,27 @@ func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayPrepend) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
+	n := len(this.operands) - 1
+	args := _ARGS_POOL.GetSized(n + 1)
+	defer _ARGS_POOL.Put(args)
+	missing := false
 
-func (this *ArrayPrepend) PropagatesNull() bool {
-	return false
-}
-
-func (this *ArrayPrepend) Apply(context Context, args ...value.Value) (value.Value, error) {
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
 		}
+		args[i] = arg
 	}
-
-	n := len(args) - 1
-	last := args[n]
-	if last.Type() != value.ARRAY {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if args[n].Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	s := last.Actual().([]interface{})
+	s := args[n].Actual().([]interface{})
 	ra := make([]interface{}, 0, len(s)+n)
 	for _, arg := range args[:n] {
 		ra = append(ra, arg)
@@ -1184,6 +1217,10 @@ func (this *ArrayPrepend) Apply(context Context, args ...value.Value) (value.Val
 
 	ra = append(ra, s...)
 	return value.NewValue(ra), nil
+}
+
+func (this *ArrayPrepend) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -1237,27 +1274,33 @@ func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayPut) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayPut) Apply(context Context, args ...value.Value) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
 	null := false
-	for _, arg := range args {
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
 		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+			missing = true
 		} else if arg.Type() == value.NULL {
 			null = true
 		}
 	}
 
-	first := args[0]
-	if null || first.Type() != value.ARRAY {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null || args[0].Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	pa := args[1:]
-	fa := first.Actual().([]interface{})
+	fa := args[0].Actual().([]interface{})
 	ra := fa
+	pa := args[1:]
 ploop:
 	for _, p := range pa {
 		for _, f := range fa {
@@ -1326,15 +1369,22 @@ func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayRange) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value, error) {
-	startv := args[0]
-	endv := args[1]
+	var startv, endv value.Value
+	var err error
+	startv, err = this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	endv, err = this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	stepv := value.ONE_VALUE
-	if len(args) > 2 {
-		stepv = args[2]
+	if len(this.operands) > 2 {
+		stepv, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if startv.Type() == value.MISSING ||
@@ -1423,27 +1473,33 @@ func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayRemove) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayRemove) Apply(context Context, args ...value.Value) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
 	null := false
-	for _, arg := range args {
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
 		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+			missing = true
 		} else if arg.Type() == value.NULL {
 			null = true
 		}
 	}
 
-	first := args[0]
-	if null || first.Type() != value.ARRAY {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null || args[0].Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	fa := first.Actual().([]interface{})
+	fa := args[0].Actual().([]interface{})
 	if len(fa) == 0 {
-		return first, nil
+		return args[0], nil
 	}
 
 	aa := args[1:]
@@ -1589,17 +1645,20 @@ func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayReplace) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArrayReplace) PropagatesNull() bool {
-	return false
-}
-
-func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
-	av := args[0]
-	v1 := args[1]
-	v2 := args[2]
+	var av, v1, v2 value.Value
+	var err error
+	av, err = this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	v1, err = this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	v2, err = this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
 	if av.Type() == value.MISSING || v1.Type() == value.MISSING || v2.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1619,6 +1678,10 @@ func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Val
 	}
 
 	return value.NewValue(ra), nil
+}
+
+func (this *ArrayReplace) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -1976,20 +2039,27 @@ func (this *ArraySymdiff1) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArraySymdiff1) Type() value.Type { return value.ARRAY }
 
 func (this *ArraySymdiff1) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArraySymdiff1) Apply(context Context, args ...value.Value) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
 	null := false
-	for _, arg := range args {
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
 		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+			missing = true
 		} else if arg.Type() != value.ARRAY {
 			null = true
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -2066,20 +2136,27 @@ func (this *ArraySymdiffn) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArraySymdiffn) Type() value.Type { return value.ARRAY }
 
 func (this *ArraySymdiffn) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ArraySymdiffn) Apply(context Context, args ...value.Value) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
 	null := false
-	for _, arg := range args {
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
 		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+			missing = true
 		} else if arg.Type() != value.ARRAY {
 			null = true
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -2154,20 +2231,28 @@ func (this *ArrayUnion) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayUnion) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayUnion) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
 
-func (this *ArrayUnion) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
-	for _, arg := range args {
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = arg
 		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+			missing = true
 		} else if arg.Type() != value.ARRAY {
 			null = true
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 

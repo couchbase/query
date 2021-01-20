@@ -111,19 +111,13 @@ func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *ClockStr) Type() value.Type { return value.STRING }
 
 func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ClockStr) Value() value.Value {
-	return nil
-}
-
-func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := DEFAULT_FORMAT
 
-	if len(args) > 0 {
-		fv := args[0]
-		if fv.Type() == value.MISSING {
+	if len(this.operands) > 0 {
+		fv, err := this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
 			return value.NULL_VALUE, nil
@@ -133,6 +127,10 @@ func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, 
 	}
 
 	return value.NewValue(timeToStr(time.Now(), fmt)), nil
+}
+
+func (this *ClockStr) Value() value.Value {
+	return nil
 }
 
 /*
@@ -189,24 +187,38 @@ func (this *ClockTZ) Accept(visitor Visitor) (interface{}, error) {
 func (this *ClockTZ) Type() value.Type { return value.STRING }
 
 func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ClockTZ) Value() value.Value {
-	return nil
-}
-
-func (this *ClockTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	missing := false
 	fmt := DEFAULT_FORMAT
 
 	// Get current time
 	timeVal := time.Now()
 
-	tz := args[0]
-
-	if tz.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	tz, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if tz.Type() == value.MISSING {
+		missing = true
 	} else if tz.Type() != value.STRING {
+		null = true
+	}
+
+	// Check format
+	if len(this.operands) > 1 {
+		fv, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
+			missing = true
+		} else if fv.Type() != value.STRING {
+			null = true
+		}
+		fmt = fv.Actual().(string)
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -220,18 +232,11 @@ func (this *ClockTZ) Apply(context Context, args ...value.Value) (value.Value, e
 	// Use the timezone to get corresponding time component.
 	timeVal = timeVal.In(loc)
 
-	// Check format
-	if len(args) > 1 {
-		fv := args[1]
-		if fv.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if fv.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
-		fmt = fv.Actual().(string)
-	}
-
 	return value.NewValue(timeToStr(timeVal, fmt)), nil
+}
+
+func (this *ClockTZ) Value() value.Value {
+	return nil
 }
 
 /*
@@ -288,19 +293,13 @@ func (this *ClockUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *ClockUTC) Type() value.Type { return value.STRING }
 
 func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ClockUTC) Value() value.Value {
-	return nil
-}
-
-func (this *ClockUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := DEFAULT_FORMAT
 
-	if len(args) > 0 {
-		fv := args[0]
-		if fv.Type() == value.MISSING {
+	if len(this.operands) > 0 {
+		fv, err := this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
 			return value.NULL_VALUE, nil
@@ -313,6 +312,10 @@ func (this *ClockUTC) Apply(context Context, args ...value.Value) (value.Value, 
 	t := time.Now().UTC()
 
 	return value.NewValue(timeToStr(t, fmt)), nil
+}
+
+func (this *ClockUTC) Value() value.Value {
+	return nil
 }
 
 /*
@@ -845,25 +848,45 @@ func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
+	null := false
+	missing := false
 
-func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() != value.NUMBER {
+		null = true
+	}
 
-	first := args[0]
-	second := args[1]
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if second.Type() == value.MISSING {
+		missing = true
+	} else if second.Type() != value.STRING {
+		null = true
+	}
 
 	// Initialize timezone to nil to avoid processing if not specified.
 	timeZone := _NIL_VALUE
 
 	// Check if time zone is set
-	if len(args) > 2 {
-		timeZone = args[2]
+	if len(this.operands) > 2 {
+		timeZone, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if timeZone.Type() == value.MISSING {
+			missing = true
+		} else if timeZone.Type() != value.STRING {
+			null = true
+		}
 	}
 
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -875,12 +898,6 @@ func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.V
 
 	if timeZone != _NIL_VALUE {
 		// Process the timezone component as it isnt nil
-		if timeZone.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-		if timeZone.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
 
 		// Get the timezone and the *Location.
 		tz := timeZone.Actual().(string)
@@ -1019,30 +1036,51 @@ func (this *DateRangeStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateRangeStr) Type() value.Type { return value.ARRAY }
 
 func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Value, error) {
-
+	null := false
+	missing := false
 	// Populate the args
-	startDate := args[0]
-	endDate := args[1]
-	part := args[2]
-
-	// Default value for the increment is 1.
-	n := value.ONE_VALUE
-	if len(args) > 3 {
-		n = args[3]
-	}
-
 	// If input arguments are missing then return missing, and if they arent valid types,
 	// return null.
-	if startDate.Type() == value.MISSING || endDate.Type() == value.MISSING ||
-		n.Type() == value.MISSING || part.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	startDate, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if startDate.Type() == value.MISSING {
+		missing = true
+	} else if startDate.Type() != value.STRING {
+		null = true
+	}
+	endDate, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if endDate.Type() == value.MISSING {
+		missing = true
+	} else if endDate.Type() != value.STRING {
+		null = true
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		null = true
+	}
+	// Default value for the increment is 1.
+	n := value.ONE_VALUE
+	if len(this.operands) > 3 {
+		n, err = this.operands[3].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if n.Type() == value.MISSING {
+			missing = true
+		} else if n.Type() != value.NUMBER {
+			null = true
+		}
+	}
 
-	} else if startDate.Type() != value.STRING || endDate.Type() != value.STRING ||
-		n.Type() != value.NUMBER || part.Type() != value.STRING {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1181,30 +1219,51 @@ func (this *DateRangeMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateRangeMillis) Type() value.Type { return value.ARRAY }
 
 func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
-
+	null := false
+	missing := false
 	// Populate the args
-	startDate := args[0]
-	endDate := args[1]
-	part := args[2]
-
-	// Default value for the increment is 1.
-	n := value.ONE_VALUE
-	if len(args) > 3 {
-		n = args[3]
-	}
-
 	// If input arguments are missing then return missing, and if they arent valid types,
 	// return null.
-	if startDate.Type() == value.MISSING || endDate.Type() == value.MISSING ||
-		n.Type() == value.MISSING || part.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	startDate, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if startDate.Type() == value.MISSING {
+		missing = true
+	} else if startDate.Type() != value.NUMBER {
+		null = true
+	}
+	endDate, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if endDate.Type() == value.MISSING {
+		missing = true
+	} else if endDate.Type() != value.NUMBER {
+		null = true
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		null = true
+	}
+	// Default value for the increment is 1.
+	n := value.ONE_VALUE
+	if len(this.operands) > 3 {
+		n, err = this.operands[3].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if n.Type() == value.MISSING {
+			missing = true
+		} else if n.Type() != value.NUMBER {
+			null = true
+		}
+	}
 
-	} else if startDate.Type() != value.NUMBER || endDate.Type() != value.NUMBER ||
-		n.Type() != value.NUMBER || part.Type() != value.STRING {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1482,20 +1541,35 @@ func (this *MillisToStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *MillisToStr) Type() value.Type { return value.STRING }
 
 func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *MillisToStr) Apply(context Context, args ...value.Value) (value.Value, error) {
-	ev := args[0]
+	null := false
+	missing := false
+	// Populate the args
+	// If input arguments are missing then return missing, and if they arent valid types,
+	// return null.
+	ev, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if ev.Type() == value.MISSING {
+		missing = true
+	} else if ev.Type() != value.NUMBER {
+		null = true
+	}
+	// Default value for the increment is 1.
 	fv := _DEFAULT_FMT_VALUE
-
-	if len(args) > 1 {
-		fv = args[1]
+	if len(this.operands) > 1 {
+		fv, err = this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
+			missing = true
+		} else if fv.Type() != value.STRING {
+			null = true
+		}
 	}
 
-	if ev.Type() == value.MISSING || fv.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if ev.Type() != value.NUMBER || fv.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1557,20 +1631,32 @@ func (this *MillisToUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *MillisToUTC) Type() value.Type { return value.STRING }
 
 func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *MillisToUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
-	ev := args[0]
+	null := false
+	missing := false
+	ev, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if ev.Type() == value.MISSING {
+		missing = true
+	} else if ev.Type() != value.NUMBER {
+		null = true
+	}
 	fv := _DEFAULT_FMT_VALUE
 
-	if len(args) > 1 {
-		fv = args[1]
+	if len(this.operands) > 1 {
+		fv, err = this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
+			missing = true
+		} else if fv.Type() != value.STRING {
+			null = true
+		}
 	}
 
-	if ev.Type() == value.MISSING || fv.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if ev.Type() != value.NUMBER || fv.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1633,21 +1719,40 @@ func (this *MillisToZoneName) Accept(visitor Visitor) (interface{}, error) {
 func (this *MillisToZoneName) Type() value.Type { return value.STRING }
 
 func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *MillisToZoneName) Apply(context Context, args ...value.Value) (value.Value, error) {
-	ev := args[0]
-	zv := args[1]
+	null := false
+	missing := false
+	ev, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if ev.Type() == value.MISSING {
+		missing = true
+	} else if ev.Type() != value.NUMBER {
+		null = true
+	}
+	zv, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if zv.Type() == value.MISSING {
+		missing = true
+	} else if zv.Type() != value.STRING {
+		null = true
+	}
 	fv := _DEFAULT_FMT_VALUE
 
-	if len(args) > 2 {
-		fv = args[2]
+	if len(this.operands) > 2 {
+		fv, err := this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
+			missing = true
+		} else if fv.Type() != value.STRING {
+			null = true
+		}
 	}
 
-	if ev.Type() == value.MISSING || zv.Type() == value.MISSING || fv.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if ev.Type() != value.NUMBER || zv.Type() != value.STRING || fv.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1768,19 +1873,13 @@ func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowStr) Type() value.Type { return value.STRING }
 
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *NowStr) Value() value.Value {
-	return nil
-}
-
-func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := DEFAULT_FORMAT
 
-	if len(args) > 0 {
-		fv := args[0]
-		if fv.Type() == value.MISSING {
+	if len(this.operands) > 0 {
+		fv, err := this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
 			return value.NULL_VALUE, nil
@@ -1791,6 +1890,10 @@ func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, er
 
 	now := context.Now()
 	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+func (this *NowStr) Value() value.Value {
+	return nil
 }
 
 /*
@@ -1848,22 +1951,36 @@ func (this *NowTZ) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowTZ) Type() value.Type { return value.STRING }
 
 func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *NowTZ) Value() value.Value {
-	return nil
-}
-
-func (this *NowTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	missing := false
 	fmt := DEFAULT_FORMAT
 	now := context.Now()
 
-	tz := args[0]
-
-	if tz.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	tz, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if tz.Type() == value.MISSING {
+		missing = true
 	} else if tz.Type() != value.STRING {
+		null = true
+	}
+
+	// Check format
+	if len(this.operands) > 1 {
+		fv, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
+			missing = true
+		} else if fv.Type() != value.STRING {
+			null = true
+		}
+		fmt = fv.Actual().(string)
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1877,18 +1994,11 @@ func (this *NowTZ) Apply(context Context, args ...value.Value) (value.Value, err
 	// Use the timezone to get corresponding time component.
 	now = now.In(loc)
 
-	// Check format
-	if len(args) > 1 {
-		fv := args[1]
-		if fv.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if fv.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
-		fmt = fv.Actual().(string)
-	}
-
 	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+func (this *NowTZ) Value() value.Value {
+	return nil
 }
 
 /*
@@ -1945,29 +2055,26 @@ func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowUTC) Type() value.Type { return value.STRING }
 
 func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *NowUTC) Value() value.Value {
-	return nil
-}
-
-func (this *NowUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := DEFAULT_FORMAT
 
-	if len(args) > 0 {
-		fv := args[0]
-		if fv.Type() == value.MISSING {
+	if len(this.operands) > 0 {
+		fv, err := this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
 			return value.NULL_VALUE, nil
 		}
-
 		fmt = fv.Actual().(string)
 	}
 
 	now := context.Now().UTC()
 	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+func (this *NowUTC) Value() value.Value {
+	return nil
 }
 
 /*
@@ -2344,24 +2451,34 @@ func (this *WeekdayMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *WeekdayMillis) Type() value.Type { return value.STRING }
 
 func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *WeekdayMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
-
-	first := args[0]
+	missing := false
+	null := false
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() != value.NUMBER {
+		null = true
+	}
 
 	// Initialize timezone to nil to avoid processing if not specified.
 	timeZone := _NIL_VALUE
 
 	// Check if time zone is set
-	if len(args) > 1 {
-		timeZone = args[1]
+	if len(this.operands) > 1 {
+		timeZone, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if timeZone.Type() == value.MISSING {
+			missing = true
+		} else if timeZone.Type() != value.STRING {
+			null = true
+		}
 	}
-
-	if first.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.NUMBER {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -2372,13 +2489,6 @@ func (this *WeekdayMillis) Apply(context Context, args ...value.Value) (value.Va
 
 	if timeZone != _NIL_VALUE {
 		// Process the timezone component as it isnt nil
-		if timeZone.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-		if timeZone.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
-
 		// Get the timezone and the *Location.
 		tz := timeZone.Actual().(string)
 		loc, err := time.LoadLocation(tz)

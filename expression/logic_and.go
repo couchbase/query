@@ -39,33 +39,19 @@ func (this *And) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *And) Type() value.Type { return value.BOOLEAN }
 
-func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For AND, simply cumulate the implicit covers of each child operand.
-*/
-func (this *And) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	for _, op := range this.operands {
-		covers = op.FilterCovers(covers)
-	}
-
-	return covers
-}
-
 /*
 Return FALSE if any known input has a truth value of FALSE, else
 return MISSING, NULL, or TRUE in that order.
 */
-func (this *And) Apply(context Context, args ...value.Value) (value.Value, error) {
+func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
 
-	for _, arg := range args {
+	for _, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
 		switch arg.Type() {
 		case value.NULL:
 			null = true
@@ -85,6 +71,20 @@ func (this *And) Apply(context Context, args ...value.Value) (value.Value, error
 	} else {
 		return value.TRUE_VALUE, nil
 	}
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For AND, simply cumulate the implicit covers of each child operand.
+*/
+func (this *And) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	for _, op := range this.operands {
+		covers = op.FilterCovers(covers)
+	}
+
+	return covers
 }
 
 /*

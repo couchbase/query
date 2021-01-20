@@ -48,13 +48,12 @@ func (this *Greatest) Accept(visitor Visitor) (interface{}, error) {
 func (this *Greatest) Type() value.Type { return value.JSON }
 
 func (this *Greatest) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Greatest) Apply(context Context, args ...value.Value) (value.Value, error) {
 	rv := value.NULL_VALUE
-	for _, a := range args {
-		if a.Type() <= value.NULL {
+	for _, op := range this.operands {
+		a, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if a.Type() <= value.NULL {
 			continue
 		} else if rv == value.NULL_VALUE {
 			rv = a
@@ -118,14 +117,13 @@ func (this *Least) Accept(visitor Visitor) (interface{}, error) {
 func (this *Least) Type() value.Type { return value.JSON }
 
 func (this *Least) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Least) Apply(context Context, args ...value.Value) (value.Value, error) {
 	rv := value.NULL_VALUE
 
-	for _, a := range args {
-		if a.Type() <= value.NULL {
+	for _, op := range this.operands {
+		a, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if a.Type() <= value.NULL {
 			continue
 		} else if rv == value.NULL_VALUE {
 			rv = a

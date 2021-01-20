@@ -70,15 +70,17 @@ func (this *UserDefinedFunction) MinArgs() int { return 0 }
 func (this *UserDefinedFunction) MaxArgs() int { return math.MaxInt16 }
 
 func (this *UserDefinedFunction) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
 
-func (this *UserDefinedFunction) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
-	val, err := this.EvalForIndex(this, item, context)
-	return val, nil, err
-}
+	for i, op := range this.operands {
+		var err error
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-func (this *UserDefinedFunction) Apply(context Context, args ...value.Value) (value.Value, error) {
 	val, err := functions.ExecuteFunction(this.name, functions.READONLY, args, context)
 	if err == nil {
 		return val, nil
@@ -87,12 +89,23 @@ func (this *UserDefinedFunction) Apply(context Context, args ...value.Value) (va
 	}
 }
 
-func (this *UserDefinedFunction) IdxApply(context Context, args ...value.Value) (value.Value, error) {
+func (this *UserDefinedFunction) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
+
+	for i, op := range this.operands {
+		var err error
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	val, err := functions.ExecuteFunction(this.name, functions.READONLY+functions.INVARIANT, args, context)
 	if err == nil {
-		return val, nil
+		return val, nil, nil
 	} else {
-		return val, fmt.Errorf(err.Error())
+		return val, nil, fmt.Errorf(err.Error())
 	}
 }
 

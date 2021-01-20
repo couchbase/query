@@ -39,24 +39,23 @@ func (this *Mult) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Mult) Type() value.Type { return value.NUMBER }
 
-func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
 /*
 Range over input arguments, if the type is a number multiply it to
 the product. If the value is missing, return a missing value. For
 all other types return a null value. Return the final product.
 */
-func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, error) {
+func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	prod := value.ONE_NUMBER
 
-	for _, arg := range args {
-		if !null && arg.Type() == value.NUMBER {
-			prod = prod.Mult(value.AsNumberValue(arg))
+	for _, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
+		} else if !null && arg.Type() == value.NUMBER {
+			prod = prod.Mult(value.AsNumberValue(arg))
 		} else {
 			null = true
 		}

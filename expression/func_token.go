@@ -44,7 +44,45 @@ func (this *ContainsToken) Accept(visitor Visitor) (interface{}, error) {
 func (this *ContainsToken) Type() value.Type { return value.BOOLEAN }
 
 func (this *ContainsToken) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
+	null := false
+	missing := false
+	source, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if source.Type() == value.MISSING {
+		missing = true
+	} else if source.Type() == value.NULL {
+		null = true
+	}
+	token, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if token.Type() == value.MISSING {
+		missing = true
+	} else if token.Type() == value.NULL {
+		null = true
+	}
+
+	options := _EMPTY_OPTIONS
+	if len(this.operands) > 2 {
+		options, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			missing = true
+		} else if options.Type() != value.OBJECT {
+			null = true
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	contains := source.ContainsToken(token, options)
+	return value.NewValue(contains), nil
 }
 
 /*
@@ -56,32 +94,6 @@ For boolean functions, simply list this expression.
 func (this *ContainsToken) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *ContainsToken) Apply(context Context, args ...value.Value) (value.Value, error) {
-	source := args[0]
-	token := args[1]
-
-	if source.Type() == value.MISSING || token.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if source.Type() == value.NULL || token.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	options := _EMPTY_OPTIONS
-	if len(args) >= 3 {
-		switch args[2].Type() {
-		case value.OBJECT:
-			options = args[2]
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		default:
-			return value.NULL_VALUE, nil
-		}
-	}
-
-	contains := source.ContainsToken(token, options)
-	return value.NewValue(contains), nil
 }
 
 func (this *ContainsToken) MinArgs() int { return 2 }
@@ -129,40 +141,41 @@ func (this *ContainsTokenLike) Accept(visitor Visitor) (interface{}, error) {
 func (this *ContainsTokenLike) Type() value.Type { return value.BOOLEAN }
 
 func (this *ContainsTokenLike) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For boolean functions, simply list this expression.
-*/
-func (this *ContainsTokenLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *ContainsTokenLike) Apply(context Context, args ...value.Value) (value.Value, error) {
-	source := args[0]
-	pattern := args[1]
-
-	if source.Type() == value.MISSING || pattern.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if source.Type() == value.NULL || pattern.Type() != value.STRING {
-		return value.NULL_VALUE, nil
+	null := false
+	missing := false
+	source, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if source.Type() == value.MISSING {
+		missing = true
+	} else if source.Type() == value.NULL {
+		null = true
+	}
+	pattern, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if pattern.Type() == value.MISSING {
+		missing = true
+	} else if pattern.Type() != value.STRING {
+		null = true
 	}
 
 	options := _EMPTY_OPTIONS
-	if len(args) >= 3 {
-		switch args[2].Type() {
-		case value.OBJECT:
-			options = args[2]
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		default:
-			return value.NULL_VALUE, nil
+	if len(this.operands) > 2 {
+		options, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			missing = true
+		} else if options.Type() != value.OBJECT {
+			null = true
 		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
 	}
 
 	re := this.re
@@ -185,6 +198,17 @@ func (this *ContainsTokenLike) Apply(context Context, args ...value.Value) (valu
 
 	contains := source.ContainsMatchingToken(matcher, options)
 	return value.NewValue(contains), nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ContainsTokenLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 func (this *ContainsTokenLike) MinArgs() int { return 2 }
@@ -235,40 +259,41 @@ func (this *ContainsTokenRegexp) Accept(visitor Visitor) (interface{}, error) {
 func (this *ContainsTokenRegexp) Type() value.Type { return value.BOOLEAN }
 
 func (this *ContainsTokenRegexp) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For boolean functions, simply list this expression.
-*/
-func (this *ContainsTokenRegexp) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *ContainsTokenRegexp) Apply(context Context, args ...value.Value) (value.Value, error) {
-	source := args[0]
-	pattern := args[1]
-
-	if source.Type() == value.MISSING || pattern.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if source.Type() == value.NULL || pattern.Type() != value.STRING {
-		return value.NULL_VALUE, nil
+	null := false
+	missing := false
+	source, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if source.Type() == value.MISSING {
+		missing = true
+	} else if source.Type() == value.NULL {
+		null = true
+	}
+	pattern, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if pattern.Type() == value.MISSING {
+		missing = true
+	} else if pattern.Type() != value.STRING {
+		null = true
 	}
 
 	options := _EMPTY_OPTIONS
-	if len(args) >= 3 {
-		switch args[2].Type() {
-		case value.OBJECT:
-			options = args[2]
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		default:
-			return value.NULL_VALUE, nil
+	if len(this.operands) > 2 {
+		options, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			missing = true
+		} else if options.Type() != value.OBJECT {
+			null = true
 		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
 	}
 
 	/* MB-20677 make sure full regexp doesn't skew RegexpLike
@@ -307,6 +332,17 @@ func (this *ContainsTokenRegexp) Apply(context Context, args ...value.Value) (va
 
 	contains := source.ContainsMatchingToken(matcher, options)
 	return value.NewValue(contains), nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ContainsTokenRegexp) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 func (this *ContainsTokenRegexp) MinArgs() int { return 2 }
@@ -356,25 +392,31 @@ func (this *Tokens) Accept(visitor Visitor) (interface{}, error) {
 func (this *Tokens) Type() value.Type { return value.ARRAY }
 
 func (this *Tokens) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Tokens) Apply(context Context, args ...value.Value) (value.Value, error) {
-	arg := args[0]
-	if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	null := false
+	missing := false
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		missing = true
 	}
 
 	options := _EMPTY_OPTIONS
-	if len(args) >= 2 {
-		switch args[1].Type() {
-		case value.OBJECT:
-			options = args[1]
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		default:
-			return value.NULL_VALUE, nil
+	if len(this.operands) > 1 {
+		options, err = this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			missing = true
+		} else if options.Type() != value.OBJECT {
+			null = true
 		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
 	}
 
 	set := _SET_POOL.Get()

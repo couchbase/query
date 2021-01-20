@@ -140,29 +140,34 @@ func (this *ObjectConcat) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectConcat) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *ObjectConcat) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var rv value.Value
 	null := false
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+	missing := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
 		} else if arg.Type() != value.OBJECT {
 			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				rv = arg.CopyForUpdate()
+			} else {
+				fields := arg.Fields()
+				for n, v := range fields {
+					rv.SetField(n, v)
+				}
+			}
 		}
+
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
-	}
-
-	rv := args[0].CopyForUpdate()
-	for _, obj := range args[1:] {
-		fields := obj.Fields()
-		for n, v := range fields {
-			rv.SetField(n, v)
-		}
 	}
 
 	return rv, nil
@@ -695,37 +700,46 @@ func (this *ObjectRemove) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectRemove) Type() value.Type { return value.OBJECT }
 
-func (this *ObjectRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
 /*
 This method takes in an object and names and returns
 an object with the name / attribute pairs removed.
 If the type of input is missing then return a missing value, and
 if not an object return a null value.
 */
-func (this *ObjectRemove) Apply(context Context, args ...value.Value) (value.Value, error) {
+func (this *ObjectRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var rv value.Value
 	null := false
-	for i, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+	missing := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
 		} else if arg.Type() == value.NULL {
 			null = true
-		} else if i > 0 && arg.Type() != value.STRING {
-			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				if arg.Type() != value.OBJECT {
+					null = true
+				} else {
+					rv = arg.CopyForUpdate()
+				}
+			} else {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					n := arg.Actual().(string)
+					rv.UnsetField(n)
+				}
+			}
 		}
 	}
 
-	first := args[0]
-	if null || first.Type() != value.OBJECT {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
-	}
-
-	rv := first.CopyForUpdate()
-	for _, name := range args[1:] {
-		n := name.Actual().(string)
-		rv.UnsetField(n)
 	}
 
 	return rv, nil

@@ -50,14 +50,14 @@ func (this *Concat) Accept(visitor Visitor) (interface{}, error) {
 func (this *Concat) Type() value.Type { return value.STRING }
 
 func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Concat) Apply(context Context, args ...value.Value) (value.Value, error) {
 	var buf bytes.Buffer
 	null := false
 
-	for _, arg := range args {
+	for _, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
 		switch arg.Type() {
 		case value.STRING:
 			if !null {
@@ -133,44 +133,45 @@ func (this *Concat2) Accept(visitor Visitor) (interface{}, error) {
 func (this *Concat2) Type() value.Type { return value.STRING }
 
 func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Concat2) Apply(context Context, args ...value.Value) (value.Value, error) {
 	var buf bytes.Buffer
 	var sp string
 	null := false
 	addSp := false
 
-	for i, arg := range args {
-		if arg.Type() == value.MISSING {
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
-		} else if (arg.Type() != value.ARRAY && arg.Type() != value.STRING) ||
-			(i == 0 && arg.Type() == value.ARRAY) {
-			null = true
-		} else if arg.Type() == value.STRING {
-			if i == 0 {
-				sp = arg.Actual().(string)
-			} else if !null {
-				if addSp && sp != "" {
-					buf.WriteString(sp)
-				}
-				buf.WriteString(arg.Actual().(string))
-				addSp = true
-			}
-		} else if arg.Type() == value.ARRAY {
-			for _, ae := range arg.Actual().([]interface{}) {
-				ael := value.NewValue(ae)
-				if ael.Type() == value.MISSING {
-					return value.MISSING_VALUE, nil
-				} else if ael.Type() != value.STRING {
-					null = true
+		} else if !null {
+			if (arg.Type() != value.ARRAY && arg.Type() != value.STRING) ||
+				(i == 0 && arg.Type() == value.ARRAY) {
+				null = true
+			} else if arg.Type() == value.STRING {
+				if i == 0 {
+					sp = arg.Actual().(string)
 				} else if !null {
 					if addSp && sp != "" {
 						buf.WriteString(sp)
 					}
-					buf.WriteString(ael.Actual().(string))
+					buf.WriteString(arg.Actual().(string))
 					addSp = true
+				}
+			} else if arg.Type() == value.ARRAY {
+				for _, ae := range arg.Actual().([]interface{}) {
+					ael := value.NewValue(ae)
+					if ael.Type() == value.MISSING {
+						return value.MISSING_VALUE, nil
+					} else if ael.Type() != value.STRING {
+						null = true
+					} else if !null {
+						if addSp && sp != "" {
+							buf.WriteString(sp)
+						}
+						buf.WriteString(ael.Actual().(string))
+						addSp = true
+					}
 				}
 			}
 		}

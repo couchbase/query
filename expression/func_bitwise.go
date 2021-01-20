@@ -55,35 +55,35 @@ func (this *BitAnd) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitAnd) Type() value.Type { return value.NUMBER }
 
 func (this *BitAnd) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *BitAnd) Apply(context Context, args ...value.Value) (value.Value, error) {
-
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-
-		// If not a numeric value return NULL.
-		if arg.Type() != value.NUMBER {
-			return value.NULL_VALUE, nil
+	var result int64
+	missing := false
+	null := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.NUMBER {
+			null = true
+		} else if !missing && !null {
+			var val int64
+			var ok bool
+			if val, ok = isInt(arg); !ok {
+				null = true
+			} else if i == 0 {
+				result = val
+			} else {
+				result = result & val
+			}
 		}
 	}
-
-	var result, val int64
-	var ok bool
-
-	if result, ok = isInt(args[0]); !ok {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	for _, arg := range args[1:] {
-		if val, ok = isInt(arg); !ok {
-			return value.NULL_VALUE, nil
-		}
-		result = result & val
-	}
 	return value.NewValue(result), nil
 }
 
@@ -138,35 +138,35 @@ func (this *BitOr) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitOr) Type() value.Type { return value.NUMBER }
 
 func (this *BitOr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *BitOr) Apply(context Context, args ...value.Value) (value.Value, error) {
-
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-
-		// If not a numeric value return NULL.
-		if arg.Type() != value.NUMBER {
-			return value.NULL_VALUE, nil
+	var result int64
+	null := false
+	missing := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.NUMBER {
+			null = true
+		} else if !missing && !null {
+			var val int64
+			var ok bool
+			if val, ok = isInt(arg); !ok {
+				null = true
+			} else if i == 0 {
+				result = val
+			} else {
+				result = result | val
+			}
 		}
 	}
-
-	var result, val int64
-	var ok bool
-
-	if result, ok = isInt(args[0]); !ok {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	for _, arg := range args[1:] {
-		if val, ok = isInt(arg); !ok {
-			return value.NULL_VALUE, nil
-		}
-		result = result | val
-	}
 	return value.NewValue(result), nil
 }
 
@@ -221,37 +221,36 @@ func (this *BitXor) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitXor) Type() value.Type { return value.NUMBER }
 
 func (this *BitXor) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *BitXor) Apply(context Context, args ...value.Value) (value.Value, error) {
-
-	for _, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-
-		// If not a numeric value return NULL.
-		if arg.Type() != value.NUMBER {
-			return value.NULL_VALUE, nil
+	var result int64
+	null := false
+	missing := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.NUMBER {
+			null = true
+		} else if !missing && !null {
+			var val int64
+			var ok bool
+			if val, ok = isInt(arg); !ok {
+				null = true
+			} else if i == 0 {
+				result = val
+			} else {
+				result = result ^ val
+			}
 		}
 	}
-
-	var result, val int64
-	var ok bool
-
-	if result, ok = isInt(args[0]); !ok {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	for _, arg := range args[1:] {
-		if val, ok = isInt(arg); !ok {
-			return value.NULL_VALUE, nil
-		}
-		result = result ^ val
-	}
 	return value.NewValue(result), nil
-
 }
 
 /*
@@ -379,42 +378,52 @@ func (this *BitShift) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitShift) Type() value.Type { return value.NUMBER }
 
 func (this *BitShift) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *BitShift) Apply(context Context, args ...value.Value) (value.Value, error) {
-	isRotate := false
-	for k, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-
-		if arg.Type() == value.NULL {
-			return value.NULL_VALUE, nil
-		}
-
-		if k == 2 {
-			if arg.Type() != value.BOOLEAN {
-				return value.NULL_VALUE, nil
-			}
-			isRotate = args[2].Actual().(bool)
-		} else {
-			// If not a numeric value return NULL.
-			if arg.Type() != value.NUMBER {
-				return value.NULL_VALUE, nil
-			}
-		}
-
+	if len(this.operands) < 2 {
+		return value.MISSING_VALUE, nil
 	}
-
 	var num1, shift int64
 	var ok bool
-
-	if num1, ok = isInt(args[0]); !ok {
-		return value.NULL_VALUE, nil
+	isRotate := false
+	null := false
+	missing := false
+	for k, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if !missing && !null && k < 3 {
+			if k == 0 {
+				if arg.Type() != value.NUMBER {
+					null = true
+				} else if num1, ok = isInt(arg); !ok {
+					null = true
+				}
+			} else if k == 1 {
+				if arg.Type() != value.NUMBER {
+					null = true
+				} else if shift, ok = isInt(arg); !ok {
+					null = true
+				}
+			} else if k == 2 {
+				if arg.Type() != value.BOOLEAN {
+					null = true
+				} else {
+					isRotate = arg.Actual().(bool)
+				}
+			}
+		} else {
+			// shouldn't ever exist, but if it does it must be a number
+			if arg.Type() != value.NUMBER {
+				null = true
+			}
+		}
 	}
-
-	if shift, ok = isInt(args[1]); !ok {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
@@ -575,55 +584,65 @@ func (this *BitTest) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitTest) Type() value.Type { return value.BOOLEAN }
 
 func (this *BitTest) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *BitTest) Apply(context Context, args ...value.Value) (value.Value, error) {
-	isAll := false
-	for k, arg := range args {
-		if arg.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		}
-
-		if arg.Type() == value.NULL {
-			return value.NULL_VALUE, nil
-		}
-
-		// For 2nd arg - num or array ok
-		if k == 1 {
-			if arg.Type() != value.NUMBER && arg.Type() != value.ARRAY {
-				return value.NULL_VALUE, nil
-			}
-		} else if k == 2 {
-			if arg.Type() != value.BOOLEAN {
-				return value.NULL_VALUE, nil
-			}
-			isAll = args[2].Actual().(bool)
-		} else {
-			if arg.Type() != value.NUMBER {
-				return value.NULL_VALUE, nil
-			}
-		}
-	}
-
 	var num1 int64
 	var bitP uint64
 	var ok bool
 
-	if num1, ok = isInt(args[0]); !ok {
-		return value.NULL_VALUE, nil
+	if len(this.operands) < 2 {
+		return value.MISSING_VALUE, nil
 	}
-
-	bitP, ok = bitPositions(args[1])
-
-	if !ok {
-		return value.NULL_VALUE, nil
-	} else {
-		if isAll {
-			return value.NewValue((uint64(num1) & bitP) == bitP), nil
+	isAll := false
+	null := false
+	missing := false
+	for k, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if !missing && !null && k < 3 {
+			if k == 0 {
+				if arg.Type() != value.NUMBER {
+					null = true
+				} else if num1, ok = isInt(arg); !ok {
+					null = true
+				}
+			} else if k == 1 {
+				// For 2nd arg - num or array ok
+				if arg.Type() != value.NUMBER && arg.Type() != value.ARRAY {
+					null = true
+				} else {
+					bitP, ok = bitPositions(arg)
+					if !ok {
+						null = true
+					}
+				}
+			} else if k == 2 {
+				if arg.Type() != value.BOOLEAN {
+					null = true
+				} else {
+					isAll = arg.Actual().(bool)
+				}
+			}
+		} else {
+			// shouldn't ever exist, but if it does it must be a number
+			if arg.Type() != value.NUMBER {
+				null = true
+			}
 		}
-		return value.NewValue((uint64(num1) & bitP) != 0), nil
 	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	if isAll {
+		return value.NewValue((uint64(num1) & bitP) == bitP), nil
+	}
+	return value.NewValue((uint64(num1) & bitP) != 0), nil
 }
 
 /*

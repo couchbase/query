@@ -98,23 +98,25 @@ func (this *Curl) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Curl) Type() value.Type { return value.OBJECT }
 
+/*
+Uses a separate function for the body as external users make use of the computation portion.
+*/
 func (this *Curl) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Curl) Privileges() *auth.Privileges {
-	unionPrivileges := auth.NewPrivileges()
-	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS, auth.PRIV_PROPS_NONE)
-
-	children := this.Children()
-	for _, child := range children {
-		unionPrivileges.AddAll(child.Privileges())
+	var arg2 value.Value = nil
+	arg1, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
 	}
-
-	return unionPrivileges
+	if len(this.operands) > 1 {
+		arg2, err = this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return this.DoEvaluate(context, arg1, arg2)
 }
 
-func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, error) {
+func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Value, error) {
 
 	// In order to have restricted access, the administrator will have to create
 	// curl_whitelist on the UI with the all_access field set to false.
@@ -141,7 +143,7 @@ func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, erro
 	}()
 
 	// URL
-	first := args[0]
+	first := arg1
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING {
@@ -155,8 +157,8 @@ func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, erro
 	options := map[string]interface{}{}
 
 	// If we have options then process them.
-	if len(args) == 2 {
-		second := args[1]
+	if arg2 != nil {
+		second := arg2
 
 		if second.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
@@ -199,6 +201,18 @@ func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, erro
 	}
 
 	return value.NewValue(result), nil
+}
+
+func (this *Curl) Privileges() *auth.Privileges {
+	unionPrivileges := auth.NewPrivileges()
+	unionPrivileges.Add("", auth.PRIV_QUERY_EXTERNAL_ACCESS, auth.PRIV_PROPS_NONE)
+
+	children := this.Children()
+	for _, child := range children {
+		unionPrivileges.AddAll(child.Privileges())
+	}
+
+	return unionPrivileges
 }
 
 func (this *Curl) Indexable() bool {

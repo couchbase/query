@@ -361,31 +361,54 @@ func (this *RegexpReplace) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpReplace) Type() value.Type { return value.STRING }
 
 func (this *RegexpReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *RegexpReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var arg3 value.Value
 	null := false
+	missing := false
 
-	for i := 0; i < 3; i++ {
-		if args[i].Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if args[i].Type() != value.STRING {
+	arg0, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg0.Type() == value.MISSING {
+		missing = true
+	} else if arg0.Type() != value.STRING {
+		null = true
+	}
+	arg1, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg1.Type() == value.MISSING {
+		missing = true
+	} else if arg1.Type() != value.STRING {
+		null = true
+	}
+	arg2, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg2.Type() == value.MISSING {
+		missing = true
+	} else if arg2.Type() != value.STRING {
+		null = true
+	}
+	if len(this.operands) == 4 {
+		arg3, err = this.operands[3].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg3.Type() == value.MISSING {
+			missing = true
+		} else if arg3.Type() != value.NUMBER {
 			null = true
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	if len(args) == 4 && args[3].Type() != value.NUMBER {
-		return value.NULL_VALUE, nil
-	}
-
-	f := args[0].Actual().(string)
-	s := args[1].Actual().(string)
-	r := args[2].Actual().(string)
+	f := arg0.Actual().(string)
+	s := arg1.Actual().(string)
+	r := arg2.Actual().(string)
 
 	re := this.re
 	if re == nil {
@@ -396,11 +419,11 @@ func (this *RegexpReplace) Apply(context Context, args ...value.Value) (value.Va
 		}
 	}
 
-	if len(args) == 3 {
+	if len(this.operands) == 3 {
 		return value.NewValue(re.ReplaceAllLiteralString(f, r)), nil
 	}
 
-	nf := args[3].Actual().(float64)
+	nf := arg3.Actual().(float64)
 	if nf != math.Trunc(nf) {
 		return value.NULL_VALUE, nil
 	}

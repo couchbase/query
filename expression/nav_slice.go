@@ -40,43 +40,49 @@ func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Slice) Type() value.Type { return value.ARRAY }
 
-func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, re error) {
-	return this.Eval(this, item, context)
-}
-
 /*
-This method Evaluates the slive using the input args depending on the
+This method Evaluates the slice using the input args depending on the
 number of args. The form source-expr [ start : end ] is called array
 slicing. It returns a new array containing a subset of the source,
 containing the elements from position start to end-1. The element at
 start is included, while the element at end is not. If end is omitted,
 all elements from start to the end of the source array are included.
 */
-func (this *Slice) Apply(context Context, args ...value.Value) (rv value.Value, re error) {
-	source := args[0]
-	if source.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	source, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if source.Type() == value.MISSING {
+		missing = true
 	}
 
-	start := args[1]
-	if start.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	start, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if start.Type() == value.MISSING {
+		missing = true
 	}
 
 	ev := -1
 	var end value.Value
-	if len(args) >= 3 {
-		end = args[2]
-		if end.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
+	if len(this.operands) > 2 {
+		end, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if end.Type() == value.MISSING {
+			missing = true
+		} else if !missing {
+			ea, ok := end.Actual().(float64)
+			if !ok || ea != math.Trunc(ea) {
+				return value.NULL_VALUE, nil
+			}
+			ev = int(ea)
 		}
+	}
 
-		ea, ok := end.Actual().(float64)
-		if !ok || ea != math.Trunc(ea) {
-			return value.NULL_VALUE, nil
-		}
-
-		ev = int(ea)
+	if missing {
+		return value.MISSING_VALUE, nil
 	}
 
 	sa, ok := start.Actual().(float64)
@@ -88,13 +94,14 @@ func (this *Slice) Apply(context Context, args ...value.Value) (rv value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
+	var rv value.Value
 	if end != nil {
 		rv, _ = source.Slice(int(sa), ev)
 	} else {
 		rv, _ = source.SliceTail(int(sa))
 	}
 
-	return
+	return rv, nil
 }
 
 /*

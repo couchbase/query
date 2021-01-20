@@ -132,31 +132,6 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	}
 }
 
-func (this *FunctionBase) Eval(applied Applied, item value.Value, context Context) (
-	result value.Value, err error) {
-	if len(this.operands) == 1 {
-		var arg value.Value
-
-		arg, err = this.operands[0].Evaluate(item, context)
-		if err != nil {
-			return
-		}
-		return applied.Apply(context, arg)
-	} else {
-		args := _ARGS_POOL.GetSized(len(this.operands))
-		defer _ARGS_POOL.Put(args)
-
-		for i, op := range this.operands {
-			args[i], err = op.Evaluate(item, context)
-			if err != nil {
-				return
-			}
-		}
-
-		return applied.Apply(context, args...)
-	}
-}
-
 func (this *FunctionBase) Indexable() bool {
 	if this.volatile() {
 		return false
@@ -628,41 +603,7 @@ func NewUserDefinedFunctionBase(name string, operands ...Expression) *UserDefine
 	}
 }
 
-func (this *UserDefinedFunctionBase) EvalForIndex(applied UdfApplied, item value.Value, context Context) (
-	result value.Value, err error) {
-	if len(this.operands) == 1 {
-		var arg value.Value
-
-		arg, err = this.operands[0].Evaluate(item, context)
-		if err != nil {
-			return
-		}
-		return applied.Apply(context, arg)
-	} else {
-		args := _ARGS_POOL.GetSized(len(this.operands))
-		defer _ARGS_POOL.Put(args)
-
-		for i, op := range this.operands {
-			args[i], err = op.Evaluate(item, context)
-			if err != nil {
-				return
-			}
-		}
-
-		return applied.IdxApply(context, args...)
-	}
-}
-
 var _FOUND_POOL = util.NewBoolPool(64)
-
-/*
-Used to define Apply methods for general functions. The
-Apply method is used to evaluate the functions, based on
-its type and rules.
-*/
-type Applied interface {
-	Apply(context Context, args ...value.Value) (value.Value, error)
-}
 
 /*
 Define Apply methods to evaluate Unary functions.
@@ -683,12 +624,4 @@ Define Apply methods to evaluate Ternary functions.
 */
 type TernaryApplied interface {
 	Apply(context Context, first, second, third value.Value) (value.Value, error)
-}
-
-/*
-Define Apply methods to evaluate user defined functions
-*/
-type UdfApplied interface {
-	Apply(context Context, args ...value.Value) (value.Value, error)
-	IdxApply(context Context, args ...value.Value) (value.Value, error)
 }

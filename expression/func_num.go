@@ -1209,29 +1209,18 @@ func (this *Random) Accept(visitor Visitor) (interface{}, error) {
 func (this *Random) Type() value.Type { return value.NUMBER }
 
 func (this *Random) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Random) Value() value.Value {
-	return nil
-}
-
-func (this *Random) Static() Expression {
-	return nil
-}
-
-func (this *Random) Apply(context Context, args ...value.Value) (value.Value, error) {
 	if this.gen != nil {
 		return value.NewValue(this.gen.Float64()), nil
 	}
 
-	if len(args) == 0 {
+	if len(this.operands) == 0 {
 		return value.NewValue(rand.Float64()), nil
 	}
 
-	arg := args[0]
-
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -1244,6 +1233,14 @@ func (this *Random) Apply(context Context, args ...value.Value) (value.Value, er
 
 	gen := rand.New(rand.NewSource(int64(v)))
 	return value.NewValue(gen.Float64()), nil
+}
+
+func (this *Random) Value() value.Value {
+	return nil
+}
+
+func (this *Random) Static() Expression {
+	return nil
 }
 
 /*
@@ -1298,36 +1295,43 @@ func (this *Round) Accept(visitor Visitor) (interface{}, error) {
 func (this *Round) Type() value.Type { return value.NUMBER }
 
 func (this *Round) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Round) Apply(context Context, args ...value.Value) (value.Value, error) {
-	arg := args[0]
-	if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+	missing := false
+	null := false
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		missing = true
 	} else if arg.Type() != value.NUMBER {
+		null = true
+	}
+
+	p := 0
+	if len(this.operands) > 1 {
+		prec, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if prec.Type() == value.MISSING {
+			missing = true
+		} else if prec.Type() != value.NUMBER {
+			null = true
+		} else if !null && !missing {
+			pf := prec.Actual().(float64)
+			if pf != math.Trunc(pf) {
+				null = true
+			} else {
+				p = int(pf)
+			}
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
 	v := arg.Actual().(float64)
-
-	if len(this.operands) == 1 {
-		return value.NewValue(roundFloat(v, 0)), nil
-	}
-
-	p := 0
-	prec := args[1]
-	if prec.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if prec.Type() != value.NUMBER {
-		return value.NULL_VALUE, nil
-	} else {
-		pf := prec.Actual().(float64)
-		if pf != math.Trunc(pf) {
-			return value.NULL_VALUE, nil
-		}
-		p = int(pf)
-	}
 
 	return value.NewValue(roundFloat(v, p)), nil
 }
@@ -1634,43 +1638,50 @@ func (this *Trunc) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Trunc) Type() value.Type { return value.NUMBER }
 
-func (this *Trunc) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
 /*
 This method evaluates the trunc function to truncate the given
 number of integer digits to the right or left of the decimal.
 If the input args (precision if given) is missing or not a
 number, return a missing value or a null value respectively.
 */
-func (this *Trunc) Apply(context Context, args ...value.Value) (value.Value, error) {
-	arg := args[0]
-	if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+func (this *Trunc) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		missing = true
 	} else if arg.Type() != value.NUMBER {
+		null = true
+	}
+
+	p := 0
+	if len(this.operands) > 1 {
+		prec, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if prec.Type() == value.MISSING {
+			missing = true
+		} else if prec.Type() != value.NUMBER {
+			null = true
+		} else if !null && !missing {
+			pf := prec.Actual().(float64)
+			if pf != math.Trunc(pf) {
+				null = true
+			} else {
+				p = int(pf)
+			}
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
 	v := arg.Actual().(float64)
-
-	if len(this.operands) == 1 {
-		return value.NewValue(truncateFloat(v, 0)), nil
-	}
-
-	p := 0
-	prec := args[1]
-	if prec.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if prec.Type() != value.NUMBER {
-		return value.NULL_VALUE, nil
-	} else {
-		pf := prec.Actual().(float64)
-		if pf != math.Trunc(pf) {
-			return value.NULL_VALUE, nil
-		}
-		p = int(pf)
-	}
 
 	return value.NewValue(truncateFloat(v, p)), nil
 }

@@ -248,30 +248,35 @@ func (this *LTrim) Accept(visitor Visitor) (interface{}, error) {
 func (this *LTrim) Type() value.Type { return value.STRING }
 
 func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *LTrim) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var s string
 	null := false
+	missing := false
+	chars := _WHITESPACE
 
-	for _, a := range args {
-		if a.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if a.Type() != value.STRING {
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.STRING {
 			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				s = arg.Actual().(string)
+			} else if i == 1 {
+				chars = arg
+			}
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	chars := _WHITESPACE
-	if len(args) > 1 {
-		chars = args[1]
-	}
-
-	rv := strings.TrimLeft(args[0].Actual().(string), chars.Actual().(string))
+	rv := strings.TrimLeft(s, chars.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -500,40 +505,45 @@ func (this *Replace) Accept(visitor Visitor) (interface{}, error) {
 func (this *Replace) Type() value.Type { return value.STRING }
 
 func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Replace) Apply(context Context, args ...value.Value) (value.Value, error) {
-	null := false
-
-	for i := 0; i < 3; i++ {
-		if args[i].Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if args[i].Type() != value.STRING {
-			null = true
-		}
-	}
-
-	if null {
-		return value.NULL_VALUE, nil
-	}
-
-	if len(args) == 4 && args[3].Type() != value.NUMBER {
-		return value.NULL_VALUE, nil
-	}
-
-	f := args[0].Actual().(string)
-	s := args[1].Actual().(string)
-	r := args[2].Actual().(string)
+	var f, s, r string
 	n := -1
+	null := false
+	missing := false
 
-	if len(args) == 4 {
-		nf := args[3].Actual().(float64)
-		if nf != math.Trunc(nf) {
-			return value.NULL_VALUE, nil
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if i < 4 && arg.Type() != value.STRING {
+			null = true
+		} else if i == 4 && arg.Type() != value.NUMBER {
+			null = true
+		} else if !null && !missing {
+			switch i {
+			case 0:
+				f = arg.Actual().(string)
+			case 1:
+				s = arg.Actual().(string)
+			case 2:
+				r = arg.Actual().(string)
+			case 3:
+				nf := arg.Actual().(float64)
+				if nf != math.Trunc(nf) {
+					null = true
+				} else {
+					n = int(nf)
+				}
+			}
+
 		}
+	}
 
-		n = int(nf)
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
 	}
 
 	rv := strings.Replace(f, s, r, n)
@@ -650,30 +660,35 @@ func (this *RTrim) Accept(visitor Visitor) (interface{}, error) {
 func (this *RTrim) Type() value.Type { return value.STRING }
 
 func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *RTrim) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var s string
+	chars := _WHITESPACE
 	null := false
+	missing := false
 
-	for _, a := range args {
-		if a.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if a.Type() != value.STRING {
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.STRING {
 			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				s = arg.Actual().(string)
+			} else if i == 1 {
+				chars = arg
+			}
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	chars := _WHITESPACE
-	if len(args) > 1 {
-		chars = args[1]
-	}
-
-	rv := strings.TrimRight(args[0].Actual().(string), chars.Actual().(string))
+	rv := strings.TrimRight(s, chars.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -731,31 +746,37 @@ func (this *Split) Accept(visitor Visitor) (interface{}, error) {
 func (this *Split) Type() value.Type { return value.ARRAY }
 
 func (this *Split) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Split) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var s, sep value.Value
 	null := false
+	missing := false
 
-	for _, a := range args {
-		if a.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if a.Type() != value.STRING {
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.STRING {
 			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				s = arg
+			} else if i == 1 {
+				sep = arg
+			}
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null || s == nil {
 		return value.NULL_VALUE, nil
 	}
-
 	var sa []string
-	if len(args) > 1 {
-		sep := args[1]
-		sa = strings.Split(args[0].Actual().(string),
-			sep.Actual().(string))
+	if sep == nil {
+		sa = strings.Fields(s.Actual().(string))
 	} else {
-		sa = strings.Fields(args[0].Actual().(string))
+		sa = strings.Split(s.Actual().(string), sep.Actual().(string))
 	}
 
 	rv := make([]interface{}, len(sa))
@@ -821,10 +842,15 @@ func (this *Substr0) Accept(visitor Visitor) (interface{}, error) {
 func (this *Substr0) Type() value.Type { return value.STRING }
 
 func (this *Substr0) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Substr0) Apply(context Context, args ...value.Value) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
+	for i, op := range this.operands {
+		var err error
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return strSubstrApply(args, 0)
 }
 
@@ -883,10 +909,15 @@ func (this *Substr1) Accept(visitor Visitor) (interface{}, error) {
 func (this *Substr1) Type() value.Type { return value.STRING }
 
 func (this *Substr1) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Substr1) Apply(context Context, args ...value.Value) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
+	for i, op := range this.operands {
+		var err error
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return strSubstrApply(args, 1)
 }
 
@@ -1063,30 +1094,35 @@ func (this *Trim) Accept(visitor Visitor) (interface{}, error) {
 func (this *Trim) Type() value.Type { return value.STRING }
 
 func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.Eval(this, item, context)
-}
-
-func (this *Trim) Apply(context Context, args ...value.Value) (value.Value, error) {
+	var s string
 	null := false
+	missing := false
+	chars := _WHITESPACE
 
-	for _, a := range args {
-		if a.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if a.Type() != value.STRING {
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.STRING {
 			null = true
+		} else if !null {
+			if i == 0 {
+				s = arg.Actual().(string)
+			} else if i == 1 {
+				chars = arg
+			}
 		}
 	}
 
-	if null {
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
-	chars := _WHITESPACE
-	if len(args) > 1 {
-		chars = args[1]
-	}
-
-	rv := strings.Trim(args[0].Actual().(string), chars.Actual().(string))
+	rv := strings.Trim(s, chars.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
