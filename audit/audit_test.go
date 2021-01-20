@@ -139,6 +139,9 @@ func (sa *simpleAuditable) ElapsedTime() time.Duration {
 func (sa *simpleAuditable) TransactionElapsedTime() time.Duration {
 	return sa.transactionElapsedTime
 }
+func (sa *simpleAuditable) TransactionRemainingTime() string {
+	return ""
+}
 
 func (sa *simpleAuditable) ExecutionTime() time.Duration {
 	return sa.executionTime
