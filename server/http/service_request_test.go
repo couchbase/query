@@ -228,7 +228,7 @@ func TestSparseScanVector(t *testing.T) {
 
 func TestRequestDefaults(t *testing.T) {
 	statement := "select 1"
-	logging.Infop("message", logging.Pair{"statement", statement})
+	logging.Infof("statement : %v", statement)
 	doUrlRequest(t, map[string]string{
 		"statement": statement,
 	})
@@ -406,7 +406,7 @@ func doUrlRequest(t *testing.T, params map[string]string) {
 func makeMockServer() *server.Server {
 	store, err := resolver.NewDatastore("mock:")
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf(err.Error())
 		os.Exit(1)
 	}
 
@@ -415,7 +415,7 @@ func makeMockServer() *server.Server {
 	server, err := server.NewServer(store, sys, nil, nil, "default",
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false)
 	if err != nil {
-		logging.Errorp(err.Error())
+		logging.Errorf(err.Error())
 		os.Exit(1)
 	}
 	server.SetKeepAlive(1 << 10)

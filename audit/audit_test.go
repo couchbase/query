@@ -36,31 +36,32 @@ func (ma *mockAuditor) metricRegistry() accounting.MetricRegistry {
 
 // A fixed structure that implements the Auditable interface
 type simpleAuditable struct {
-	genericFields       adt.GenericFields
-	remote              string
-	local               string
-	status              string
-	statement           string
-	queryContext        string
-	eventId             string
-	eventType           string
-	eventUsers          []string
-	userAgent           string
-	eventNodeName       string
-	eventNamedArgs      map[string]interface{}
-	clientContextId     string
-	eventPositionalArgs []interface{}
-	isAdHoc             bool
-	preparedId          string
-	elapsedTime         time.Duration
-	executionTime       time.Duration
-	eventResultCount    int
-	eventResultSize     int
-	mutationCount       uint64
-	sortCount           uint64
-	eventErrorCount     int
-	eventWarningCount   int
-	txId                string
+	genericFields          adt.GenericFields
+	remote                 string
+	local                  string
+	status                 string
+	statement              string
+	queryContext           string
+	eventId                string
+	eventType              string
+	eventUsers             []string
+	userAgent              string
+	eventNodeName          string
+	eventNamedArgs         map[string]interface{}
+	clientContextId        string
+	eventPositionalArgs    []interface{}
+	isAdHoc                bool
+	preparedId             string
+	elapsedTime            time.Duration
+	executionTime          time.Duration
+	transactionElapsedTime time.Duration
+	eventResultCount       int
+	eventResultSize        int
+	mutationCount          uint64
+	sortCount              uint64
+	eventErrorCount        int
+	eventWarningCount      int
+	txId                   string
 }
 
 func (sa *simpleAuditable) EventGenericFields() adt.GenericFields {
@@ -133,6 +134,10 @@ func (sa *simpleAuditable) PreparedId() string {
 
 func (sa *simpleAuditable) ElapsedTime() time.Duration {
 	return sa.elapsedTime
+}
+
+func (sa *simpleAuditable) TransactionElapsedTime() time.Duration {
+	return sa.transactionElapsedTime
 }
 
 func (sa *simpleAuditable) ExecutionTime() time.Duration {

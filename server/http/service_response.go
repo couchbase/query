@@ -127,6 +127,9 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 func (this *httpRequest) markTimeOfCompletion(now time.Time) {
 	this.executionTime = now.Sub(this.ServiceTime())
 	this.elapsedTime = now.Sub(this.RequestTime())
+	if !this.TransactionStartTime().IsZero() {
+		this.transactionElapsedTime = now.Sub(this.TransactionStartTime())
+	}
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
@@ -156,6 +159,9 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 	success := this.State() == server.COMPLETED && len(this.Errors()) == 0
 	if err := context.DoStatementComplete(reqType, success); err != nil {
 		this.Error(err)
+	} else if reqType == "START_TRANSACTION" {
+		this.SetTransactionStartTime(context.TxContext().TxStartTime())
+		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}
 
 	now := time.Now()
@@ -471,6 +477,14 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 
 	if this.MutationCount() > 0 {
 		fmt.Fprintf(buf, ",%s\"mutationCount\": %d", newPrefix, this.MutationCount())
+	}
+
+	if this.transactionElapsedTime > 0 {
+		fmt.Fprintf(buf, ",%s\"transactionElapsedTime\": \"%s\"", newPrefix, this.transactionElapsedTime.String())
+	}
+
+	if transactionRemainingTime := this.TransactionRemainingTime(); transactionRemainingTime != "" {
+		fmt.Fprintf(buf, ",%s\"transactionRemainingTime\": \"%s\"", newPrefix, transactionRemainingTime)
 	}
 
 	if this.SortCount() > 0 {

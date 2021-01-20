@@ -138,6 +138,13 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.TxId() != "" {
 					item.SetField("txid", request.TxId())
 				}
+				if !request.TransactionStartTime().IsZero() {
+					item.SetField("transactionElapsedTime", time.Since(request.TransactionStartTime()).String())
+					remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
+					if remTime > 0 {
+						item.SetField("transactionRemainingTime", remTime.String())
+					}
+				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)

@@ -56,8 +56,9 @@ type httpRequest struct {
 	prefix string
 	indent string
 
-	elapsedTime   time.Duration
-	executionTime time.Duration
+	elapsedTime            time.Duration
+	executionTime          time.Duration
+	transactionElapsedTime time.Duration
 
 	stmtCnt  int
 	consCnt  int
@@ -647,6 +648,11 @@ func (this *httpRequest) ExecutionTime() time.Duration {
 }
 
 // For audit.Auditable interface.
+func (this *httpRequest) TransactionElapsedTime() time.Duration {
+	return this.transactionElapsedTime
+}
+
+// For audit.Auditable interface.
 func (this *httpRequest) EventResultCount() int {
 	return this.resultCount
 }
@@ -697,6 +703,17 @@ func (this *httpRequest) EventLocalAddress() string {
 		addr, ok := ctx.Value(http.LocalAddrContextKey).(net.Addr)
 		if ok && addr != nil {
 			return addr.String()
+		}
+	}
+	return ""
+}
+
+// for audit.Auditable interface.
+func (this *httpRequest) TransactionRemainingTime() string {
+	if !this.TransactionStartTime().IsZero() && this.Type() != "COMMIT" && this.Type() != "ROLLBACK" {
+		remTime := this.TxTimeout() - time.Since(this.TransactionStartTime())
+		if remTime > 0 {
+			return remTime.String()
 		}
 	}
 	return ""

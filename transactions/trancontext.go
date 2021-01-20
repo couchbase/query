@@ -48,6 +48,7 @@ type TranContext struct {
 	txLastStmtNum       int64
 	mutex               sync.RWMutex
 	lastUse             time.Time
+	startTime           time.Time
 	expiryTime          time.Time
 	uses                int32
 	txMutations         interface{}
@@ -78,11 +79,12 @@ func (this *TranContext) TxId() string {
 	return this.txId
 }
 
-func (this *TranContext) SetTxId(txId string, expiryTime time.Time) {
+func (this *TranContext) SetTxId(txId string, txTimeout time.Duration) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.txId = txId
-	this.expiryTime = expiryTime
+	this.startTime = time.Now()
+	this.expiryTime = this.startTime.Add(txTimeout)
 }
 
 func IsBitOn(txStatus, bit TxStatus) bool {
@@ -93,6 +95,12 @@ func (this *TranContext) TxTimeout() time.Duration {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.txTimeout
+}
+
+func (this *TranContext) TxStartTime() time.Time {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.startTime
 }
 
 func (this *TranContext) TxValid() errors.Error {
@@ -128,8 +136,7 @@ func (this *TranContext) txExpired() bool {
 func (this *TranContext) TxTimeRemaining() time.Duration {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
-	timeoutMS := this.expiryTime.Sub(time.Now()) * time.Millisecond
-	return timeoutMS
+	return this.expiryTime.Sub(time.Now())
 }
 
 func (this *TranContext) SetTxExpiry() {

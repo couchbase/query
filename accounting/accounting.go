@@ -157,6 +157,8 @@ const (
 	INSERTS
 	DELETES
 
+	TRANSACTIONS
+
 	INDEX_SCANS
 	PRIMARY_SCANS
 
@@ -166,6 +168,7 @@ const (
 
 	REQUEST_TIME
 	SERVICE_TIME
+	TRANSACTION_TIME
 
 	RESULT_COUNT
 	RESULT_SIZE
@@ -203,6 +206,8 @@ const (
 	_INSERTS = "inserts"
 	_DELETES = "deletes"
 
+	_TRANSACTIONS = "transactions"
+
 	_INDEX_SCANS   = "index_scans"
 	_PRIMARY_SCANS = "primary_scans"
 
@@ -210,8 +215,9 @@ const (
 	_QUEUED_REQUESTS  = "queued_requests"
 	_INVALID_REQUESTS = "invalid_requests"
 
-	_REQUEST_TIME = "request_time"
-	_SERVICE_TIME = "service_time"
+	_REQUEST_TIME     = "request_time"
+	_SERVICE_TIME     = "service_time"
+	_TRANSACTION_TIME = "transaction_time"
 
 	_RESULT_COUNT = "result_count"
 	_RESULT_SIZE  = "result_size"
@@ -249,6 +255,8 @@ var metricNames = []string{
 	_INSERTS,
 	_DELETES,
 
+	_TRANSACTIONS,
+
 	_INDEX_SCANS,
 	_PRIMARY_SCANS,
 
@@ -258,6 +266,7 @@ var metricNames = []string{
 
 	_REQUEST_TIME,
 	_SERVICE_TIME,
+	_TRANSACTION_TIME,
 
 	_RESULT_COUNT,
 	_RESULT_SIZE,
@@ -313,7 +322,7 @@ func RegisterMetrics(acctStore AccountingStore) {
 }
 
 // Record request metrics
-func RecordMetrics(request_time time.Duration, service_time time.Duration,
+func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 	result_count int, result_size int,
 	error_count int, warn_count int, stmt string, prepared bool,
 	cancelled bool, index_scans int, primary_scans int, scanConsistency string) {
@@ -334,10 +343,12 @@ func RecordMetrics(request_time time.Duration, service_time time.Duration,
 	case "at_plus":
 		counters[AT_PLUS].Inc(1)
 	}
+
 	counters[INDEX_SCANS].Inc(int64(index_scans))
 	counters[PRIMARY_SCANS].Inc(int64(primary_scans))
 	counters[REQUEST_TIME].Inc(int64(request_time))
 	counters[SERVICE_TIME].Inc(int64(service_time))
+	counters[TRANSACTION_TIME].Inc(int64(transaction_time))
 	counters[RESULT_COUNT].Inc(int64(result_count))
 	counters[RESULT_SIZE].Inc(int64(result_size))
 	counters[ERRORS].Inc(int64(error_count))
@@ -387,6 +398,8 @@ func requestType(stmt string) CounterId {
 		return INSERTS
 	case "DELETE":
 		return DELETES
+	case "START_TRANSACTION":
+		return TRANSACTIONS
 	}
 	return UNKNOWN
 }

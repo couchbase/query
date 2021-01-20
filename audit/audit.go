@@ -90,6 +90,8 @@ type Auditable interface {
 	// Metrics
 	ElapsedTime() time.Duration
 	ExecutionTime() time.Duration
+	TransactionElapsedTime() time.Duration
+	TransactionRemainingTime() string
 	EventResultCount() int
 	EventResultSize() int
 	MutationCount() uint64
@@ -560,6 +562,13 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 		ErrorCount:    event.EventErrorCount(),
 		WarningCount:  event.EventWarningCount(),
 	}
+	if event.TransactionElapsedTime() > 0 {
+		metrics.TransactionElapsedTime = fmt.Sprintf("%v", event.TransactionElapsedTime())
+	}
+	remTime := event.TransactionRemainingTime()
+	if remTime != "" {
+		metrics.TransactionRemainingTime = remTime
+	}
 
 	// No credentials at all? Generate one record.
 	usernames := event.EventUsers()
@@ -749,14 +758,16 @@ type addressFields struct {
 }
 
 type n1qlMetrics struct {
-	ElapsedTime   string `json:"elapsedTime"`
-	ExecutionTime string `json:"executionTime"`
-	ResultCount   int    `json:"resultCount"`
-	ResultSize    int    `json:"resultSize"`
-	MutationCount uint64 `json:"mutationCount,omitempty"`
-	SortCount     uint64 `json:"sortCount,omitempty"`
-	ErrorCount    int    `json:"errorCount,omitempty"`
-	WarningCount  int    `json:"warningCount,omitempty"`
+	ElapsedTime              string `json:"elapsedTime"`
+	ExecutionTime            string `json:"executionTime"`
+	TransactionElapsedTime   string `json:"transactionElapsedTime,omitempty"`
+	TransactionRemainingTime string `json:"transactionRemainingTime,omitempty"`
+	ResultCount              int    `json:"resultCount"`
+	ResultSize               int    `json:"resultSize"`
+	MutationCount            uint64 `json:"mutationCount,omitempty"`
+	SortCount                uint64 `json:"sortCount,omitempty"`
+	ErrorCount               int    `json:"errorCount,omitempty"`
+	WarningCount             int    `json:"warningCount,omitempty"`
 }
 
 type n1qlAuditApiRequestEvent struct {

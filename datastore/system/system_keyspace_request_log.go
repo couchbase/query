@@ -135,6 +135,12 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.TxId != "" {
 					item.SetField("txid", entry.TxId)
 				}
+				if entry.TransactionElapsedTime > 0 {
+					item.SetField("transactionElapsedTime", entry.TransactionElapsedTime.String())
+				}
+				if entry.TransactionRemainingTime > 0 {
+					item.SetField("transactionRemainingTime", entry.TransactionRemainingTime.String())
+				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)
 					item.SetField("preparedText", entry.PreparedText)

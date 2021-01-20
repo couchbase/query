@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/query/algebra"
@@ -81,7 +80,6 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 
 		txnData := txContext.TxData()
 		var transaction *gctx.Transaction
-		var expiryTime time.Time
 
 		resume, terr := isResumeTransaction(txnData)
 		if terr != nil {
@@ -90,7 +88,6 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 
 		if resume {
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
-			expiryTime = time.Now().Add(txContext.TxTimeout())
 		} else {
 			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
 				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
@@ -108,7 +105,6 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
 			if terr == nil {
 				terr = transaction.NewAttempt()
-				expiryTime = time.Now().Add(txContext.TxTimeout())
 			}
 		}
 
@@ -147,7 +143,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		}
 		txMutations.SetTransaction(transaction, gcAgentTxs.Internal())
 		txContext.SetTxMutations(txMutations)
-		txContext.SetTxId(transaction.Attempt().ID, expiryTime)
+		txContext.SetTxId(transaction.Attempt().ID, txContext.TxTimeout())
 	}
 
 	return

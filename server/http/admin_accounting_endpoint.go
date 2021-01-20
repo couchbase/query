@@ -914,6 +914,13 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+		if !request.TransactionStartTime().IsZero() {
+			reqMap["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
+			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
+			if remTime > 0 {
+				reqMap["transactionRemainingTime"] = remTime.String()
+			}
+		}
 		reqMap["state"] = request.State().StateName()
 		reqMap["scanConsistency"] = request.ScanConsistency()
 		if request.UseFts() {
@@ -1039,6 +1046,13 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
+		if !request.TransactionStartTime().IsZero() {
+			requests[i]["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
+			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
+			if remTime > 0 {
+				requests[i]["transactionRemainingTime"] = remTime.String()
+			}
+		}
 		requests[i]["state"] = request.State().StateName()
 		requests[i]["scanConsistency"] = request.ScanConsistency()
 
@@ -1133,6 +1147,12 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = request.ElapsedTime.String()
 		reqMap["serviceTime"] = request.ServiceTime.String()
+		if request.TransactionElapsedTime > 0 {
+			reqMap["transactionElapsedTime"] = request.TransactionElapsedTime.String()
+		}
+		if request.TransactionRemainingTime > 0 {
+			reqMap["transactionRemainingTime"] = request.TransactionRemainingTime.String()
+		}
 		reqMap["resultCount"] = request.ResultCount
 		reqMap["resultSize"] = request.ResultSize
 		reqMap["errorCount"] = request.ErrorCount
@@ -1232,6 +1252,12 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		requests[i]["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = request.ElapsedTime.String()
 		requests[i]["serviceTime"] = request.ServiceTime.String()
+		if request.TransactionElapsedTime > 0 {
+			requests[i]["transactionElapsedTime"] = request.TransactionElapsedTime.String()
+		}
+		if request.TransactionRemainingTime > 0 {
+			requests[i]["transactionRemainingTime"] = request.TransactionRemainingTime.String()
+		}
 		requests[i]["resultCount"] = request.ResultCount
 		requests[i]["resultSize"] = request.ResultSize
 		requests[i]["errorCount"] = request.ErrorCount

@@ -142,6 +142,8 @@ type Request interface {
 	SetExecTime(time time.Time)
 	RequestTime() time.Time
 	ServiceTime() time.Time
+	TransactionStartTime() time.Time
+	SetTransactionStartTime(t time.Time)
 	Output() execution.Output
 	Servicing()
 	Fail(err errors.Error)
@@ -255,63 +257,64 @@ type BaseRequest struct {
 	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
-	id                requestIDImpl
-	client_id         clientContextIDImpl
-	statement         string
-	prepared          *plan.Prepared
-	reqType           string
-	isPrepare         bool
-	namedArgs         map[string]value.Value
-	positionalArgs    value.Values
-	namespace         string
-	timeout           time.Duration
-	timer             *time.Timer
-	maxParallelism    int
-	scanCap           int64
-	pipelineCap       int64
-	pipelineBatch     int
-	readonly          value.Tristate
-	signature         value.Tristate
-	metrics           value.Tristate
-	pretty            value.Tristate
-	consistency       ScanConfiguration
-	credentials       *auth.Credentials
-	remoteAddr        string
-	userAgent         string
-	requestTime       time.Time
-	serviceTime       time.Time
-	execTime          time.Time
-	state             State
-	aborted           bool
-	errors            []errors.Error
-	warnings          []errors.Error
-	stopGate          sync.WaitGroup
-	servicerGate      sync.WaitGroup
-	stopResult        chan bool          // stop consuming results
-	stopExecute       chan bool          // stop executing request
-	stopOperator      execution.Operator // notified when request execution stops
-	timings           execution.Operator
-	controls          value.Tristate
-	profile           Profile
-	indexApiVersion   int    // Index API version
-	featureControls   uint64 // feature bit controls
-	autoPrepare       value.Tristate
-	autoExecute       value.Tristate
-	useFts            bool
-	useCBO            bool
-	queryContext      string
-	memoryQuota       uint64
-	txId              string
-	txImplicit        bool
-	txStmtNum         int64
-	txTimeout         time.Duration
-	txData            []byte
-	durabilityTimeout time.Duration
-	durabilityLevel   datastore.DurabilityLevel
-	kvTimeout         time.Duration
-	atrCollection     string
-	numAtrs           int
-	executionContext  *execution.Context
+	id                   requestIDImpl
+	client_id            clientContextIDImpl
+	statement            string
+	prepared             *plan.Prepared
+	reqType              string
+	isPrepare            bool
+	namedArgs            map[string]value.Value
+	positionalArgs       value.Values
+	namespace            string
+	timeout              time.Duration
+	timer                *time.Timer
+	maxParallelism       int
+	scanCap              int64
+	pipelineCap          int64
+	pipelineBatch        int
+	readonly             value.Tristate
+	signature            value.Tristate
+	metrics              value.Tristate
+	pretty               value.Tristate
+	consistency          ScanConfiguration
+	credentials          *auth.Credentials
+	remoteAddr           string
+	userAgent            string
+	requestTime          time.Time
+	serviceTime          time.Time
+	execTime             time.Time
+	transactionStartTime time.Time
+	state                State
+	aborted              bool
+	errors               []errors.Error
+	warnings             []errors.Error
+	stopGate             sync.WaitGroup
+	servicerGate         sync.WaitGroup
+	stopResult           chan bool          // stop consuming results
+	stopExecute          chan bool          // stop executing request
+	stopOperator         execution.Operator // notified when request execution stops
+	timings              execution.Operator
+	controls             value.Tristate
+	profile              Profile
+	indexApiVersion      int    // Index API version
+	featureControls      uint64 // feature bit controls
+	autoPrepare          value.Tristate
+	autoExecute          value.Tristate
+	useFts               bool
+	useCBO               bool
+	queryContext         string
+	memoryQuota          uint64
+	txId                 string
+	txImplicit           bool
+	txStmtNum            int64
+	txTimeout            time.Duration
+	txData               []byte
+	durabilityTimeout    time.Duration
+	durabilityLevel      datastore.DurabilityLevel
+	kvTimeout            time.Duration
+	atrCollection        string
+	numAtrs              int
+	executionContext     *execution.Context
 }
 
 type requestIDImpl struct {
@@ -549,6 +552,14 @@ func (this *BaseRequest) ServiceTime() time.Time {
 
 func (this *BaseRequest) ExecTime() time.Time {
 	return this.execTime
+}
+
+func (this *BaseRequest) TransactionStartTime() time.Time {
+	return this.transactionStartTime
+}
+
+func (this *BaseRequest) SetTransactionStartTime(t time.Time) {
+	this.transactionStartTime = t
 }
 
 func (this *BaseRequest) SetPrepared(prepared *plan.Prepared) {
@@ -1035,14 +1046,14 @@ func (this *BaseRequest) release() {
 
 // this logs the request if needed and takes any other action required to
 // put this request to rest
-func (this *BaseRequest) CompleteRequest(requestTime time.Duration, serviceTime time.Duration,
+func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_time time.Duration,
 	resultCount int, resultSize int, errorCount int, req *http.Request, server *Server) {
 
 	if this.timer != nil {
 		this.timer.Stop()
 		this.timer = nil
 	}
-	LogRequest(requestTime, serviceTime, resultCount,
+	LogRequest(requestTime, serviceTime, transaction_time, resultCount,
 		resultSize, errorCount, req, this, server)
 
 	// Request Profiling - signal that request has completed and

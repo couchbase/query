@@ -608,6 +608,8 @@ func (this *Server) setupRequestContext(request Request) bool {
 		}
 		request.SetDurabilityLevel(context.TxContext().TxDurabilityLevel())
 		request.SetDurabilityTimeout(context.TxContext().TxDurabilityTimeout())
+		request.SetTransactionStartTime(context.TxContext().TxStartTime())
+		request.SetTxTimeout(context.TxContext().TxTimeout())
 	}
 	request.SetExecutionContext(context)
 	return true

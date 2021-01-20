@@ -40,39 +40,41 @@ const (
 )
 
 type RequestLogEntry struct {
-	RequestId       string
-	ClientId        string
-	ElapsedTime     time.Duration
-	ServiceTime     time.Duration
-	QueryContext    string
-	Statement       string
-	Plan            *plan.Prepared
-	State           string
-	ScanConsistency string
-	TxId            string
-	UseFts          bool
-	UseCBO          bool
-	ResultCount     int
-	ResultSize      int
-	ErrorCount      int
-	Errors          []errors.Error
-	Mutations       uint64
-	PreparedName    string
-	PreparedText    string
-	Time            time.Time
-	PhaseTimes      map[string]interface{}
-	PhaseCounts     map[string]interface{}
-	PhaseOperators  map[string]interface{}
-	Timings         execution.Operator
-	OptEstimates    map[string]interface{}
-	NamedArgs       map[string]value.Value
-	PositionalArgs  value.Values
-	MemoryQuota     uint64
-	UsedMemory      uint64
-	Users           string
-	RemoteAddr      string
-	UserAgent       string
-	Tag             string
+	RequestId                string
+	ClientId                 string
+	ElapsedTime              time.Duration
+	ServiceTime              time.Duration
+	TransactionElapsedTime   time.Duration
+	TransactionRemainingTime time.Duration
+	QueryContext             string
+	Statement                string
+	Plan                     *plan.Prepared
+	State                    string
+	ScanConsistency          string
+	TxId                     string
+	UseFts                   bool
+	UseCBO                   bool
+	ResultCount              int
+	ResultSize               int
+	ErrorCount               int
+	Errors                   []errors.Error
+	Mutations                uint64
+	PreparedName             string
+	PreparedText             string
+	Time                     time.Time
+	PhaseTimes               map[string]interface{}
+	PhaseCounts              map[string]interface{}
+	PhaseOperators           map[string]interface{}
+	Timings                  execution.Operator
+	OptEstimates             map[string]interface{}
+	NamedArgs                map[string]value.Value
+	PositionalArgs           value.Values
+	MemoryQuota              uint64
+	UsedMemory               uint64
+	Users                    string
+	RemoteAddr               string
+	UserAgent                string
+	Tag                      string
 }
 
 type qualifier interface {
@@ -472,7 +474,7 @@ func RequestsForeach(nonBlocking func(string, *RequestLogEntry) bool, blocking f
 	requestLog.cache.ForEach(dummyF, blocking)
 }
 
-func LogRequest(request_time time.Duration, service_time time.Duration,
+func LogRequest(request_time, service_time, transactionElapsedTime time.Duration,
 	result_count int, result_size int, error_count int, req *http.Request,
 	request *BaseRequest, server *Server) {
 
@@ -537,6 +539,15 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 		Mutations:       request.MutationCount(),
 		QueryContext:    request.QueryContext(),
 		TxId:            request.TxId(),
+	}
+	if !request.TransactionStartTime().IsZero() {
+		re.TransactionElapsedTime = transactionElapsedTime
+		if request.Type() != "COMMIT" && request.Type() != "ROLLBACK" {
+			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
+			if remTime > 0 {
+				re.TransactionRemainingTime = remTime
+			}
+		}
 	}
 	stmt := request.Statement()
 	if stmt != "" {

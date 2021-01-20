@@ -26,6 +26,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -66,6 +68,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -106,6 +110,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -185,6 +191,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -225,6 +233,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -265,6 +275,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -305,6 +317,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -345,6 +359,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "mutationCount" : 0,
@@ -1538,6 +1554,7 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "errorCount" : 0,
@@ -1573,6 +1590,7 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "errorCount" : 0,
@@ -1608,6 +1626,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "errorCount" : 0,
@@ -1643,6 +1663,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "errorCount" : 0,
@@ -1678,6 +1700,8 @@
         "metrics" : {
           "elapsedTime" : "1.0s",
           "executionTime" : "0.75s",
+          "transactionElapsedTime" : "0.75s",
+          "transactionRemainingTime" : "0.75s",
           "resultCount" : 1,
           "resultSize" : 18,
           "errorCount" : 0,

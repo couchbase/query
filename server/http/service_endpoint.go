@@ -414,17 +414,18 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	// Update metrics:
 	service_time := request.executionTime
 	request_time := request.elapsedTime
+	transaction_time := request.transactionElapsedTime
 	prepared := request.Prepared() != nil
 
 	prepareds.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
-	accounting.RecordMetrics(request_time, service_time, request.resultCount,
+	accounting.RecordMetrics(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Type(),
 		prepared, (request.State() != server.COMPLETED),
 		int(request.PhaseOperator(execution.INDEX_SCAN)),
 		int(request.PhaseOperator(execution.PRIMARY_SCAN)),
 		string(request.ScanConsistency()))
 
-	request.CompleteRequest(request_time, service_time, request.resultCount,
+	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.errorCount, request.req, srvr)
 
 	audit.Submit(request)

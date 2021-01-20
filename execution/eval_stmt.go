@@ -337,7 +337,7 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 
 func (this *Context) DoStatementComplete(stmtType string, success bool) (err errors.Error) {
 	if this.txContext == nil {
-		return nil
+		return
 	}
 
 	switch stmtType {
@@ -370,5 +370,5 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 		}
 	}
 
-	return err
+	return
 }
