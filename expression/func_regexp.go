@@ -53,21 +53,15 @@ func (this *RegexpContains) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpContains) Type() value.Type { return value.BOOLEAN }
 
 func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For boolean functions, simply list this expression.
-*/
-func (this *RegexpContains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *RegexpContains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -87,6 +81,17 @@ func (this *RegexpContains) Apply(context Context, first, second value.Value) (v
 	}
 
 	return value.NewValue(re.FindStringIndex(f) != nil), nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *RegexpContains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*
@@ -140,21 +145,15 @@ func (this *RegexpLike) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpLike) Type() value.Type { return value.BOOLEAN }
 
 func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For boolean functions, simply list this expression.
-*/
-func (this *RegexpLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *RegexpLike) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -189,6 +188,17 @@ func (this *RegexpLike) Apply(context Context, first, second value.Value) (value
 	}
 
 	return value.NewValue(fullRe.MatchString(f)), nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *RegexpLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*
@@ -252,10 +262,15 @@ func (this *RegexpPosition0) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpPosition0) Type() value.Type { return value.NUMBER }
 
 func (this *RegexpPosition0) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *RegexpPosition0) Apply(context Context, first, second value.Value) (value.Value, error) {
 	re := this.re
 	return regexpPositionApply(first, second, re, 0)
 }
@@ -306,10 +321,15 @@ func (this *RegexpPosition1) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpPosition1) Type() value.Type { return value.NUMBER }
 
 func (this *RegexpPosition1) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *RegexpPosition1) Apply(context Context, first, second value.Value) (value.Value, error) {
 	re := this.re
 	return regexpPositionApply(first, second, re, 1)
 }
@@ -546,10 +566,15 @@ func (this *RegexpMatches) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpMatches) Type() value.Type { return value.ARRAY }
 
 func (this *RegexpMatches) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *RegexpMatches) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -619,10 +644,15 @@ func (this *RegexpSplit) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpSplit) Type() value.Type { return value.ARRAY }
 
 func (this *RegexpSplit) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *RegexpSplit) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {

@@ -361,26 +361,6 @@ func NewBinaryFunctionBase(name string, first, second Expression) *BinaryFunctio
 }
 
 /*
-This method Evaluates the binary function. It evaluates both
-the operands using the input item and context, and Evaluates
-this using the Apply method (by passing both arguments )
-defined for BinaryApplied interfaces for each defined Binary
-function. Return Apply's return value.
-*/
-func (this *BinaryFunctionBase) BinaryEval(applied BinaryApplied, item value.Value, context Context) (
-	result value.Value, err error) {
-	var args [2]value.Value
-	for i, op := range this.operands {
-		args[i], err = op.Evaluate(item, context)
-		if err != nil {
-			return
-		}
-	}
-
-	return applied.Apply(context, args[0], args[1])
-}
-
-/*
 Minimum input arguments required is 2.
 */
 func (this *BinaryFunctionBase) MinArgs() int { return 2 }
@@ -610,13 +590,6 @@ Define Apply methods to evaluate Unary functions.
 */
 type UnaryApplied interface {
 	Apply(context Context, arg value.Value) (value.Value, error)
-}
-
-/*
-Define Apply methods to evaluate Binary functions.
-*/
-type BinaryApplied interface {
-	Apply(context Context, first, second value.Value) (value.Value, error)
 }
 
 /*

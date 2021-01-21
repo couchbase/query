@@ -50,8 +50,30 @@ func (this *Contains) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Contains) Type() value.Type { return value.BOOLEAN }
 
+/*
+This method takes in two values and returns new value that returns a boolean
+value that depicts if the second value is contained within the first. If
+either of the input values are missing, return a missing value, and if they
+arent strings then return a null value.
+*/
 func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	rv := strings.Contains(first.Actual().(string), second.Actual().(string))
+	return value.NewValue(rv), nil
 }
 
 /*
@@ -63,23 +85,6 @@ For boolean functions, simply list this expression.
 func (this *Contains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-/*
-This method takes in two values and returns new value that returns a boolean
-value that depicts if the second value is contained within the first. If
-either of the input values are missing, return a missing value, and if they
-arent strings then return a null value.
-*/
-func (this *Contains) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
-	rv := strings.Contains(first.Actual().(string), second.Actual().(string))
-	return value.NewValue(rv), nil
 }
 
 /*
@@ -339,10 +344,14 @@ func (this *Position0) Accept(visitor Visitor) (interface{}, error) {
 func (this *Position0) Type() value.Type { return value.NUMBER }
 
 func (this *Position0) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *Position0) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	return strPositionApply(first, second, 0)
 }
 
@@ -389,10 +398,14 @@ func (this *Position1) Accept(visitor Visitor) (interface{}, error) {
 func (this *Position1) Type() value.Type { return value.NUMBER }
 
 func (this *Position1) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *Position1) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	return strPositionApply(first, second, 1)
 }
 
@@ -438,10 +451,15 @@ func (this *Repeat) Accept(visitor Visitor) (interface{}, error) {
 func (this *Repeat) Type() value.Type { return value.STRING }
 
 func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *Repeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.NUMBER {

@@ -51,21 +51,15 @@ func (this *Like) Accept(visitor Visitor) (interface{}, error) {
 func (this *Like) Type() value.Type { return value.BOOLEAN }
 
 func (this *Like) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For LIKE, simply list this expression.
-*/
-func (this *Like) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *Like) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -88,6 +82,17 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 	}
 
 	return value.NewValue(re.MatchString(f)), nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For LIKE, simply list this expression.
+*/
+func (this *Like) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*

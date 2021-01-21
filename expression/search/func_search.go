@@ -756,7 +756,7 @@ func (this *SearchMeta) Evaluate(item value.Value, context expression.Context) (
 	}
 
 	if this.field != nil {
-		return this.field.Apply(context, val, this.second)
+		return this.field.DoEvaluate(context, val, this.second)
 	} else {
 		return val, err
 	}

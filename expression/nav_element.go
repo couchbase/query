@@ -43,10 +43,14 @@ func (this *Element) Accept(visitor Visitor) (interface{}, error) {
 func (this *Element) Type() value.Type { return value.JSON }
 
 func (this *Element) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *Element) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	switch second.Type() {
 	case value.NUMBER:
 		s := second.Actual().(float64)

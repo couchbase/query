@@ -40,7 +40,22 @@ func (this *LE) Accept(visitor Visitor) (interface{}, error) {
 func (this *LE) Type() value.Type { return value.BOOLEAN }
 
 func (this *LE) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	cmp := first.Compare(second)
+	switch actual := cmp.Actual().(type) {
+	case float64:
+		return value.NewValue(actual <= 0), nil
+	}
+
+	return cmp, nil
 }
 
 /*
@@ -52,16 +67,6 @@ For LE, simply list this expression.
 func (this *LE) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *LE) Apply(context Context, first, second value.Value) (value.Value, error) {
-	cmp := first.Compare(second)
-	switch actual := cmp.Actual().(type) {
-	case float64:
-		return value.NewValue(actual <= 0), nil
-	}
-
-	return cmp, nil
 }
 
 /*

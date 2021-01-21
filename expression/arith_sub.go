@@ -39,10 +39,6 @@ func (this *Sub) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Sub) Type() value.Type { return value.NUMBER }
 
-func (this *Sub) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 Evaluate the difference for the first and second input
 values to return a value. If both values are numbers, calculate
@@ -50,7 +46,16 @@ the difference and return it. If either of the expressions is
 missing then return a missing value. For all other cases return
 a null value.
 */
-func (this *Sub) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *Sub) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
 		return value.AsNumberValue(first).Sub(value.AsNumberValue(second)), nil
 	} else if first.Type() == value.MISSING || second.Type() == value.MISSING {

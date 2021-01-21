@@ -291,16 +291,20 @@ func (this *Atan2) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Atan2) Type() value.Type { return value.NUMBER }
 
-func (this *Atan2) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method evaluates the atan2 value of the input expressions. If either
 of the input argument types are missing, or not a number return a missing
 and null value respectively.
 */
-func (this *Atan2) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *Atan2) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.NUMBER {
@@ -1082,10 +1086,14 @@ func (this *Power) Accept(visitor Visitor) (interface{}, error) {
 func (this *Power) Type() value.Type { return value.NUMBER }
 
 func (this *Power) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *Power) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.NUMBER {

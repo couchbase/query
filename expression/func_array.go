@@ -285,21 +285,6 @@ func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayContains) Type() value.Type { return value.BOOLEAN }
 
-func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For boolean functions, simply list this expression.
-*/
-func (this *ArrayContains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
 /*
 This method checks if the first array value contains the second
 value and returns true; else false. If either of the input
@@ -308,7 +293,16 @@ first value is not an array return Null value. Range over the array
 and call equals to check if the second value exists and retunr true
 if it does.
 */
-func (this *ArrayContains) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
@@ -324,6 +318,17 @@ func (this *ArrayContains) Apply(context Context, first, second value.Value) (va
 	}
 
 	return value.FALSE_VALUE, nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ArrayContains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*
@@ -512,10 +517,15 @@ func (this *ArrayFlatten) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayFlatten) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayFlatten) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *ArrayFlatten) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
@@ -1119,17 +1129,22 @@ func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayPosition) Type() value.Type { return value.NUMBER }
 
-func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method ranges through the array and returns the position
 of the second value in the array (first value). If either input
 values is of type missing return a missing value, and for all
 non array values return null. If not found then return -1.
 */
-func (this *ArrayPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
@@ -1569,14 +1584,15 @@ func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayRepeat) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *ArrayRepeat) PropagatesNull() bool {
-	return false
-}
-
-func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.NUMBER {
@@ -1599,6 +1615,10 @@ func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (valu
 	}
 
 	return value.NewValue(ra), nil
+}
+
+func (this *ArrayRepeat) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -2504,14 +2524,15 @@ func (this *ArrayExcept) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayExcept) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayExcept) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *ArrayExcept) PropagatesNull() bool {
-	return false
-}
-
-func (this *ArrayExcept) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
@@ -2547,6 +2568,10 @@ func (this *ArrayExcept) Apply(context Context, first, second value.Value) (valu
 	}
 
 	return res, nil
+}
+
+func (this *ArrayExcept) PropagatesNull() bool {
+	return false
 }
 
 func (this *ArrayExcept) Constructor() FunctionConstructor {
@@ -2588,10 +2613,15 @@ func (this *ArrayBinarySearch) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayBinarySearch) Type() value.Type { return value.NUMBER }
 
 func (this *ArrayBinarySearch) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *ArrayBinarySearch) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}

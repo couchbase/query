@@ -781,10 +781,14 @@ func (this *DateFormatStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateFormatStr) Type() value.Type { return value.STRING }
 
 func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *DateFormatStr) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -968,10 +972,15 @@ func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DatePartStr) Type() value.Type { return value.NUMBER }
 
 func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *DatePartStr) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -1395,10 +1404,15 @@ func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateTruncMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -1409,7 +1423,6 @@ func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (
 	part := second.Actual().(string)
 	t := millisToTime(millis)
 
-	var err error
 	t, err = dateTrunc(t, part)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -1461,10 +1474,15 @@ func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateTruncStr) Type() value.Type { return value.STRING }
 
 func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *DateTruncStr) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -2253,10 +2271,15 @@ func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
 func (this *StrToZoneName) Type() value.Type { return value.STRING }
 
 func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
-func (this *StrToZoneName) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {

@@ -490,10 +490,14 @@ func (this *BitSet) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitSet) Type() value.Type { return value.NUMBER }
 
 func (this *BitSet) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *BitSet) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	return bitSetNClear(true, context, first, second)
 }
 
@@ -537,10 +541,14 @@ func (this *BitClear) Accept(visitor Visitor) (interface{}, error) {
 func (this *BitClear) Type() value.Type { return value.NUMBER }
 
 func (this *BitClear) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-func (this *BitClear) Apply(context Context, first, second value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	return bitSetNClear(false, context, first, second)
 }
 

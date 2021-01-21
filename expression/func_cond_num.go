@@ -299,17 +299,22 @@ func (this *NaNIf) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *NaNIf) Type() value.Type { return value.JSON }
 
-func (this *NaNIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method checks to see if the values of the two input expressions
 are equal, and if true then returns a NaN. If not it returns the first
 input value. Use the Equals method for the two values to determine
 equality.
 */
-func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *NaNIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	eq := first.Equals(second)
 	switch eq.Type() {
 	case value.MISSING, value.NULL:
@@ -364,17 +369,22 @@ func (this *NegInfIf) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *NegInfIf) Type() value.Type { return value.JSON }
 
-func (this *NegInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method checks to see if the values of the two input expressions
 are equal, and if true then returns a negative infinity.. If not it
 returns the first input value. Use the Equals method for the two
 values to determine equality.
 */
-func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *NegInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	eq := first.Equals(second)
 	switch eq.Type() {
 	case value.MISSING, value.NULL:
@@ -431,17 +441,22 @@ func (this *PosInfIf) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *PosInfIf) Type() value.Type { return value.JSON }
 
-func (this *PosInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method checks to see if the values of the two input expressions
 are equal, and if true then returns a positive infinity. If not it
 returns the first input value. Use the Equals method for the two
 values to determine equality.
 */
-func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *PosInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	eq := first.Equals(second)
 	switch eq.Type() {
 	case value.MISSING, value.NULL:

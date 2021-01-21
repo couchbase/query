@@ -40,30 +40,20 @@ func (this *In) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *In) Type() value.Type { return value.BOOLEAN }
 
-func (this *In) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For IN, simply list this expression.
-*/
-func (this *In) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *In) MayOverlapSpans() bool {
-	return this.Second().Value() == nil
-}
-
 /*
 IN evaluates to TRUE if the right-hand-side first value is an array
 and directly contains the left-hand-side second value.
 */
-func (this *In) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *In) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY {
@@ -153,6 +143,21 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 	} else {
 		return value.FALSE_VALUE, nil
 	}
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IN, simply list this expression.
+*/
+func (this *In) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *In) MayOverlapSpans() bool {
+	return this.Second().Value() == nil
 }
 
 /*

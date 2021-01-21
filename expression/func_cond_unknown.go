@@ -273,17 +273,22 @@ func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *MissingIf) Type() value.Type { return value.JSON }
 
-func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method checks to see if the values of the two input expressions
 are equal, and if true then returns a missing value. If not it returns
 the first input value. Use the Equals method for the two values to
 determine equality.
 */
-func (this *MissingIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	eq := first.Equals(second)
 	switch eq.Type() {
 	case value.MISSING, value.NULL:
@@ -342,17 +347,22 @@ func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *NullIf) Type() value.Type { return value.JSON }
 
-func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 This method checks to see if the values of the two input expressions
 are equal, and if true then returns a null value. If not it returns
 the first input value. Use the Equals method for the two values to
 determine equality.
 */
-func (this *NullIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	eq := first.Equals(second)
 	switch eq.Type() {
 	case value.MISSING, value.NULL:
@@ -411,17 +421,22 @@ func (this *NVL) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *NVL) Type() value.Type { return value.JSON }
 
-func (this *NVL) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
 /*
 Cases:
 Expr1 is Null: return expr2;
 Expr1 is Missing: return expr2;
 For all other values of Expr1: return Expr1.
 */
-func (this *NVL) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *NVL) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	if first.Type() > value.NULL {
 		return first, nil
 	}

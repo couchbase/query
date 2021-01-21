@@ -35,31 +35,21 @@ func (this *Within) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Within) Type() value.Type { return value.BOOLEAN }
 
-func (this *Within) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For WITHIN, simply list this expression.
-*/
-func (this *Within) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *Within) MayOverlapSpans() bool {
-	return this.Second().Value() == nil
-}
-
 /*
 WITHIN evaluates to TRUE if the right-hand-side first value contains
 the left-hand-side second value (or name and value) as a child or
 descendant (i.e. directly or indirectly).
 */
-func (this *Within) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *Within) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY && second.Type() != value.OBJECT {
@@ -91,6 +81,21 @@ func (this *Within) Apply(context Context, first, second value.Value) (value.Val
 	} else {
 		return value.FALSE_VALUE, nil
 	}
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For WITHIN, simply list this expression.
+*/
+func (this *Within) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *Within) MayOverlapSpans() bool {
+	return this.Second().Value() == nil
 }
 
 /*

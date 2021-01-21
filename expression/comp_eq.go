@@ -45,7 +45,16 @@ It returns a value type BOOLEAN.
 func (this *Eq) Type() value.Type { return value.BOOLEAN }
 
 func (this *Eq) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return first.Equals(second), nil
 }
 
 /*
@@ -71,10 +80,6 @@ func (this *Eq) FilterCovers(covers map[string]value.Value) map[string]value.Val
 
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *Eq) Apply(context Context, first, second value.Value) (value.Value, error) {
-	return first.Equals(second), nil
 }
 
 /*

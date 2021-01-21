@@ -49,8 +49,48 @@ func (this *Field) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Field) Type() value.Type { return value.JSON }
 
+/*
+Perform either case-sensitive or case-insensitive field lookup.
+*/
 func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	return this.DoEvaluate(context, first, second)
+}
+
+// needed as logic externally accessed directly
+func (this *Field) DoEvaluate(context Context, first, second value.Value) (value.Value, error) {
+	switch second.Type() {
+	case value.STRING:
+		s := second.Actual().(string)
+		v, ok := first.Field(s)
+
+		if !ok && this.caseInsensitive {
+			s = strings.ToLower(s)
+			fields := first.Fields()
+			for f, val := range fields {
+				if s == strings.ToLower(f) {
+					return value.NewValue(val), nil
+				}
+			}
+		}
+
+		return v, nil
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	default:
+		if first.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else {
+			return value.NULL_VALUE, nil
+		}
+	}
 }
 
 func (this *Field) Alias() string {
@@ -149,37 +189,6 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options Covered
 	}
 
 	return rv
-}
-
-/*
-Perform either case-sensitive or case-insensitive field lookup.
-*/
-func (this *Field) Apply(context Context, first, second value.Value) (value.Value, error) {
-	switch second.Type() {
-	case value.STRING:
-		s := second.Actual().(string)
-		v, ok := first.Field(s)
-
-		if !ok && this.caseInsensitive {
-			s = strings.ToLower(s)
-			fields := first.Fields()
-			for f, val := range fields {
-				if s == strings.ToLower(f) {
-					return value.NewValue(val), nil
-				}
-			}
-		}
-
-		return v, nil
-	case value.MISSING:
-		return value.MISSING_VALUE, nil
-	default:
-		if first.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else {
-			return value.NULL_VALUE, nil
-		}
-	}
 }
 
 /*
