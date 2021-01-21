@@ -160,6 +160,7 @@ func (this *TransactionMutations) Recycle() {
 	_SAVEPOINTS_MAPPOOL.Put(this.savepoints)
 	_DELTAKEYSPACE_MAPPOOL.Put(this.keyspaces)
 	_MUTATIONVALUE_MAPPOOL.Put(this.curDeltaKeyspace.values)
+	*this = TransactionMutations{}
 	_TRANSACTIONMUTATIONS_POOL.Put(this)
 }
 
@@ -616,6 +617,7 @@ func (this *TransactionMutations) DeleteAll(delta bool, memSize *int64) {
 			if dk != nil {
 				dk.DeleteAll(memSize)
 				_MUTATIONVALUE_MAPPOOL.Put(dk.values)
+				dk.values = nil
 				_DELTAKEYSPACE_POOL.Put(dk)
 
 			}

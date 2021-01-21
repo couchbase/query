@@ -92,6 +92,7 @@ func (this *DeltaKeyspaceMapPool) Put(s map[string]*DeltaKeyspace) {
 		delete(s, k)
 		if v != nil {
 			_MUTATIONVALUE_MAPPOOL.Put(v.values)
+			v.values = nil
 			_DELTAKEYSPACE_POOL.Put(v)
 		}
 	}
