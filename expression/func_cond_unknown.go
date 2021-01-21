@@ -488,10 +488,18 @@ func (this *NVL2) Accept(visitor Visitor) (interface{}, error) {
 func (this *NVL2) Type() value.Type { return value.JSON }
 
 func (this *NVL2) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *NVL2) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	third, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if first.Type() > value.NULL {
 		return second, nil
 	}

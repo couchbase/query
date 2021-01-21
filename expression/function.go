@@ -428,19 +428,6 @@ func NewTernaryFunctionBase(name string, first, second, third Expression) *Terna
 	}
 }
 
-func (this *TernaryFunctionBase) TernaryEval(applied TernaryApplied, item value.Value, context Context) (
-	result value.Value, err error) {
-	var args [3]value.Value
-	for i, op := range this.operands {
-		args[i], err = op.Evaluate(item, context)
-		if err != nil {
-			return
-		}
-	}
-
-	return applied.Apply(context, args[0], args[1], args[2])
-}
-
 /*
 Minimum input arguments required is 3.
 */
@@ -567,10 +554,3 @@ func NewUserDefinedFunctionBase(name string, operands ...Expression) *UserDefine
 }
 
 var _FOUND_POOL = util.NewBoolPool(64)
-
-/*
-Define Apply methods to evaluate Ternary functions.
-*/
-type TernaryApplied interface {
-	Apply(context Context, first, second, third value.Value) (value.Value, error)
-}

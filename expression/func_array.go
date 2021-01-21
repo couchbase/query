@@ -2321,14 +2321,18 @@ func (this *ArraySwap) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArraySwap) Type() value.Type { return value.ARRAY }
 
 func (this *ArraySwap) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *ArraySwap) PropagatesNull() bool {
-	return false
-}
-
-func (this *ArraySwap) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	third, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
@@ -2366,6 +2370,10 @@ func (this *ArraySwap) Apply(context Context, first, second, third value.Value) 
 
 	a[op], a[np] = a[np], a[op]
 	return value.NewValue(a), nil
+}
+
+func (this *ArraySwap) PropagatesNull() bool {
+	return false
 }
 
 func (this *ArraySwap) MinArgs() int { return 3 }
@@ -2409,14 +2417,18 @@ func (this *ArrayMove) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayMove) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayMove) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *ArrayMove) PropagatesNull() bool {
-	return false
-}
-
-func (this *ArrayMove) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	third, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
@@ -2468,6 +2480,10 @@ func (this *ArrayMove) Apply(context Context, first, second, third value.Value) 
 	a[np] = v
 
 	return value.NewValue(a), nil
+}
+
+func (this *ArrayMove) PropagatesNull() bool {
+	return false
 }
 
 func (this *ArrayMove) MinArgs() int { return 3 }

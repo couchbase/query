@@ -372,10 +372,18 @@ func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateAddMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (value.Value, error) {
+	date, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	n, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if date.Type() != value.NUMBER || n.Type() != value.NUMBER || part.Type() != value.STRING {
@@ -441,10 +449,18 @@ func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateAddStr) Type() value.Type { return value.STRING }
 
 func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value.Value, error) {
+	date, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	n, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if date.Type() != value.STRING || n.Type() != value.NUMBER || part.Type() != value.STRING {
@@ -514,10 +530,18 @@ func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	date1, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	date2, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if date1.Type() != value.NUMBER || date2.Type() != value.NUMBER || part.Type() != value.STRING {
@@ -579,10 +603,18 @@ func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffStr) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	date1, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	date2, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if date1.Type() != value.STRING || date2.Type() != value.STRING || part.Type() != value.STRING {
@@ -651,10 +683,18 @@ func (this *DateDiffAbsMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffAbsMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffAbsMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *DateDiffAbsMillis) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	date1, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	date2, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if date1.Type() != value.NUMBER || date2.Type() != value.NUMBER || part.Type() != value.STRING {
@@ -711,10 +751,18 @@ func (this *DateDiffAbsStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffAbsStr) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *DateDiffAbsStr) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	date1, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	date2, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	part, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if date1.Type() != value.STRING || date2.Type() != value.STRING || part.Type() != value.STRING {

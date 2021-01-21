@@ -52,25 +52,25 @@ func (this *ObjectAdd) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectAdd) Type() value.Type { return value.OBJECT }
 
-func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *ObjectAdd) PropagatesMissing() bool {
-	return false
-}
-
-func (this *ObjectAdd) PropagatesNull() bool {
-	return false
-}
-
 /*
 This method takes in an object, a name and a value and returns a new
 object that contains the name / attribute pair. If the first input is
 missing then return a missing value, and if not an object return a
 null value.
 */
-func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	third, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check for type mismatches
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
@@ -95,6 +95,14 @@ func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) 
 		return rv, nil
 	}
 	return first, nil
+}
+
+func (this *ObjectAdd) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectAdd) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -615,18 +623,6 @@ func (this *ObjectPut) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectPut) Type() value.Type { return value.OBJECT }
 
-func (this *ObjectPut) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *ObjectPut) PropagatesMissing() bool {
-	return false
-}
-
-func (this *ObjectPut) PropagatesNull() bool {
-	return false
-}
-
 /*
 This method takes in an object, a name and a value
 and returns a new object that contains the name /
@@ -637,7 +633,19 @@ If the key passed already exists, then the attribute
 replaces the old attribute. If the attribute is missing
 this function behaves like OBJECT_REMOVE.
 */
-func (this *ObjectPut) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+func (this *ObjectPut) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	third, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check for type mismatches
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
@@ -651,6 +659,14 @@ func (this *ObjectPut) Apply(context Context, first, second, third value.Value) 
 	rv := first.CopyForUpdate()
 	rv.SetField(field, third)
 	return rv, nil
+}
+
+func (this *ObjectPut) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectPut) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -790,11 +806,18 @@ func (this *ObjectRename) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectRename) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectRename) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *ObjectRename) Apply(context Context, obj, old_name, new_name value.Value) (
-	value.Value, error) {
+	obj, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	old_name, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	new_name, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check for type mismatches
 	if obj.Type() == value.MISSING || old_name.Type() == value.MISSING || new_name.Type() == value.MISSING {
@@ -858,19 +881,18 @@ func (this *ObjectReplace) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectReplace) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-func (this *ObjectReplace) PropagatesMissing() bool {
-	return false
-}
-
-func (this *ObjectReplace) PropagatesNull() bool {
-	return false
-}
-
-func (this *ObjectReplace) Apply(context Context, obj, old_val, new_val value.Value) (
-	value.Value, error) {
+	obj, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	old_val, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	new_val, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check for type mismatches
 	if obj.Type() == value.MISSING || old_val.Type() == value.MISSING {
@@ -888,6 +910,14 @@ func (this *ObjectReplace) Apply(context Context, obj, old_val, new_val value.Va
 	}
 
 	return dup, nil
+}
+
+func (this *ObjectReplace) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectReplace) PropagatesNull() bool {
+	return false
 }
 
 /*

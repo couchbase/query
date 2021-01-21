@@ -41,21 +41,18 @@ func (this *Between) Accept(visitor Visitor) (interface{}, error) {
 func (this *Between) Type() value.Type { return value.BOOLEAN }
 
 func (this *Between) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For Between, simply list this expression.
-*/
-func (this *Between) FilterCovers(covers map[string]value.Value) map[string]value.Value {
-	covers[this.String()] = value.TRUE_VALUE
-	return covers
-}
-
-func (this *Between) Apply(context Context, item, low, high value.Value) (value.Value, error) {
+	item, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	low, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	high, err := this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	lowCmp := item.Compare(low)
 	if lowCmp.Type() == value.MISSING {
 		return lowCmp, nil
@@ -75,6 +72,17 @@ func (this *Between) Apply(context Context, item, low, high value.Value) (value.
 	}
 
 	return value.NULL_VALUE, nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For Between, simply list this expression.
+*/
+func (this *Between) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*
