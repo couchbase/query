@@ -2147,11 +2147,10 @@ func (this *StrToMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *StrToMillis) Type() value.Type { return value.NUMBER }
 
 func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *StrToMillis) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -2209,11 +2208,10 @@ func (this *StrToUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *StrToUTC) Type() value.Type { return value.STRING }
 
 func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *StrToUTC) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -2342,17 +2340,16 @@ func (this *DurationToStr) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *DurationToStr) Type() value.Type { return value.STRING }
 
-func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes a duration and converts it to a string representation.
 If the argument is missing, it returns missing.
 If it's not a string or the conversion fails, it returns null.
 */
-func (this *DurationToStr) Apply(context Context, first value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING {
+func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -2405,18 +2402,17 @@ func (this *StrToDuration) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *StrToDuration) Type() value.Type { return value.NUMBER }
 
-func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes a string representation of a duration and converts it to a
 duration.
 If the argument is missing, it returns missing.
 If it's not a string or the conversion fails, it returns null.
 */
-func (this *StrToDuration) Apply(context Context, first value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING {
+func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -2582,11 +2578,10 @@ func (this *WeekdayStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *WeekdayStr) Type() value.Type { return value.STRING }
 
 func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *WeekdayStr) Apply(context Context, first value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING {
 		return value.NULL_VALUE, nil

@@ -303,18 +303,16 @@ func (this *BitNot) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *BitNot) Type() value.Type { return value.NUMBER }
 
-func (this *BitNot) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method reverses the input array value and returns it.
 If the input value is of type missing return a missing
 value, and for all non array values return null.
 */
-func (this *BitNot) Apply(context Context, arg value.Value) (value.Value, error) {
-
-	if arg.Type() == value.MISSING {
+func (this *BitNot) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 

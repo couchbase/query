@@ -36,7 +36,16 @@ func (this *IsValued) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsValued) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsValued) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.NULL, value.MISSING:
+		return value.FALSE_VALUE, nil
+	default:
+		return value.TRUE_VALUE, nil
+	}
 }
 
 func (this *IsValued) PropagatesMissing() bool {
@@ -56,15 +65,6 @@ For IsValued, simply list this expression.
 func (this *IsValued) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsValued) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.NULL, value.MISSING:
-		return value.FALSE_VALUE, nil
-	default:
-		return value.TRUE_VALUE, nil
-	}
 }
 
 /*
@@ -99,7 +99,16 @@ func (this *IsNotValued) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsNotValued) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNotValued) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.NULL, value.MISSING:
+		return value.TRUE_VALUE, nil
+	default:
+		return value.FALSE_VALUE, nil
+	}
 }
 
 func (this *IsNotValued) PropagatesMissing() bool {
@@ -119,15 +128,6 @@ For IsNotValued, simply list this expression.
 func (this *IsNotValued) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsNotValued) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.NULL, value.MISSING:
-		return value.TRUE_VALUE, nil
-	default:
-		return value.FALSE_VALUE, nil
-	}
 }
 
 /*

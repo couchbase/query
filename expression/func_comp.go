@@ -189,10 +189,10 @@ func (this *Successor) Type() value.Type {
 }
 
 func (this *Successor) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Successor) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	return arg.Successor(), nil
 }
 

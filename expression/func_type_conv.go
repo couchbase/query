@@ -51,10 +51,10 @@ func (this *ToArray) Accept(visitor Visitor) (interface{}, error) {
 func (this *ToArray) Type() value.Type { return value.ARRAY }
 
 func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-func (this *ToArray) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() <= value.NULL {
 		return arg, nil
 	} else if arg.Type() == value.ARRAY {
 		return arg, nil
@@ -118,22 +118,27 @@ func (this *ToAtom) Type() value.Type {
 }
 
 func (this *ToAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	return this.DoEvaluate(context, arg)
 }
 
-func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error) {
+// needed for recursion
+func (this *ToAtom) DoEvaluate(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() < value.ARRAY || arg.Type() == value.BINARY {
 		return arg, nil
 	} else {
 		switch a := arg.Actual().(type) {
 		case []interface{}:
 			if len(a) == 1 {
-				return this.Apply(context, value.NewValue(a[0]))
+				return this.DoEvaluate(context, value.NewValue(a[0]))
 			}
 		case map[string]interface{}:
 			if len(a) == 1 {
 				for _, v := range a {
-					return this.Apply(context, value.NewValue(v))
+					return this.DoEvaluate(context, value.NewValue(v))
 				}
 			}
 		}
@@ -187,10 +192,10 @@ func (this *ToBoolean) Accept(visitor Visitor) (interface{}, error) {
 func (this *ToBoolean) Type() value.Type { return value.BOOLEAN }
 
 func (this *ToBoolean) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ToBoolean) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.BOOLEAN:
 		return arg, nil
@@ -257,10 +262,10 @@ func (this *ToNumber) Accept(visitor Visitor) (interface{}, error) {
 func (this *ToNumber) Type() value.Type { return value.NUMBER }
 
 func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ToNumber) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
 		return arg, nil
@@ -325,13 +330,13 @@ func (this *ToObject) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ToObject) Type() value.Type { return value.OBJECT }
 
-func (this *ToObject) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 var _EMPTY_OBJECT = value.NewValue(map[string]interface{}{})
 
-func (this *ToObject) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *ToObject) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.OBJECT:
 		return arg, nil
@@ -385,10 +390,10 @@ func (this *ToString) Accept(visitor Visitor) (interface{}, error) {
 func (this *ToString) Type() value.Type { return value.STRING }
 
 func (this *ToString) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ToString) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.STRING:
 		return arg, nil

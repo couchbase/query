@@ -40,7 +40,20 @@ func (this *Not) Accept(visitor Visitor) (interface{}, error) {
 func (this *Not) Type() value.Type { return value.BOOLEAN }
 
 func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.MISSING, value.NULL:
+		return arg, nil
+	default:
+		if arg.Truth() {
+			return value.FALSE_VALUE, nil
+		} else {
+			return value.TRUE_VALUE, nil
+		}
+	}
 }
 
 /*
@@ -52,19 +65,6 @@ For NOT, simply list this expression.
 func (this *Not) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.MISSING, value.NULL:
-		return arg, nil
-	default:
-		if arg.Truth() {
-			return value.FALSE_VALUE, nil
-		} else {
-			return value.TRUE_VALUE, nil
-		}
-	}
 }
 
 /*

@@ -51,17 +51,16 @@ It returns a Number value.
 */
 func (this *Abs) Type() value.Type { return value.NUMBER }
 
-func (this *Abs) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns an absolute
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Abs) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Abs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -111,17 +110,16 @@ func (this *Acos) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Acos) Type() value.Type { return value.NUMBER }
 
-func (this *Acos) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns its acos
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Acos) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Acos) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -171,17 +169,16 @@ func (this *Asin) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Asin) Type() value.Type { return value.NUMBER }
 
-func (this *Asin) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns the Asin
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Asin) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Asin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -231,17 +228,16 @@ func (this *Atan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Atan) Type() value.Type { return value.NUMBER }
 
-func (this *Atan) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns its arctangent
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Atan) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Atan) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -358,18 +354,17 @@ func (this *Ceil) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Ceil) Type() value.Type { return value.NUMBER }
 
-func (this *Ceil) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns the int
 value not less than the input. If the type of operand is missing then
 return it. For values that are not of type Number, return a null
 value.
 */
-func (this *Ceil) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Ceil) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -419,17 +414,16 @@ func (this *Cos) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Cos) Type() value.Type { return value.NUMBER }
 
-func (this *Cos) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns its cos
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Cos) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Cos) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -479,17 +473,16 @@ func (this *Degrees) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Degrees) Type() value.Type { return value.NUMBER }
 
-func (this *Degrees) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and converts it from
 radians to degrees. If the type of operand is missing then return it.
 For values that are not of type Number, return a null value.
 */
-func (this *Degrees) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Degrees) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -606,11 +599,10 @@ func (this *Exp) Accept(visitor Visitor) (interface{}, error) {
 func (this *Exp) Type() value.Type { return value.NUMBER }
 
 func (this *Exp) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Exp) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -661,11 +653,10 @@ func (this *Ln) Accept(visitor Visitor) (interface{}, error) {
 func (this *Ln) Type() value.Type { return value.NUMBER }
 
 func (this *Ln) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Ln) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -716,11 +707,10 @@ func (this *Log) Accept(visitor Visitor) (interface{}, error) {
 func (this *Log) Type() value.Type { return value.NUMBER }
 
 func (this *Log) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Log) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -772,11 +762,10 @@ func (this *Floor) Accept(visitor Visitor) (interface{}, error) {
 func (this *Floor) Type() value.Type { return value.NUMBER }
 
 func (this *Floor) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Floor) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -1147,11 +1136,10 @@ func (this *Radians) Accept(visitor Visitor) (interface{}, error) {
 func (this *Radians) Type() value.Type { return value.NUMBER }
 
 func (this *Radians) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Radians) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -1394,10 +1382,6 @@ func (this *Sign) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Sign) Type() value.Type { return value.NUMBER }
 
-func (this *Sign) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns the
 sign of the value. If the type of operand is missing then return
@@ -1405,8 +1389,11 @@ missing. For values that are not of type Number, return a null
 value. For numbers, compare to 0.0; if smaller return -1, equal
 return 0 and greater return 1.
 */
-func (this *Sign) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Sign) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -1464,17 +1451,16 @@ func (this *Sin) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Sin) Type() value.Type { return value.NUMBER }
 
-func (this *Sin) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns its sin
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Sin) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Sin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -1524,17 +1510,16 @@ func (this *Sqrt) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Sqrt) Type() value.Type { return value.NUMBER }
 
-func (this *Sqrt) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns its sqrt
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Sqrt) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Sqrt) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
@@ -1584,17 +1569,16 @@ func (this *Tan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Tan) Type() value.Type { return value.NUMBER }
 
-func (this *Tan) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an operand value and context and returns its Tan
 value. If the type of operand is missing then return it. For values that
 are not of type Number, return a null value.
 */
-func (this *Tan) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Tan) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil

@@ -130,10 +130,6 @@ func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayAvg) Type() value.Type { return value.NUMBER }
 
-func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method evaluates the avg value for the array. If the input
 value is of type missing return a missing value, and for all
@@ -141,8 +137,11 @@ non array values return null. Calculate the average of the
 values in the slice and return that value. If the array size
 is 0 return a null value.
 */
-func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -372,18 +371,17 @@ func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayCount) Type() value.Type { return value.NUMBER }
 
-func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method calculates the number of non-NULL elements in the
 array. If the input argument is missing return missing value, and if
 it is not an array then return a null value.  Range through the array
 and count the values that are not null and missing. Return this value.
 */
-func (this *ArrayCount) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -443,18 +441,17 @@ func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayDistinct) Type() value.Type { return value.ARRAY }
 
-func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns the input array with distinct elements.
 If the input value is of type missing return a missing
 value, and for all non array values return null. Create
 a new set and add all distinct values to the set. Return it.
 */
-func (this *ArrayDistinct) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -609,17 +606,16 @@ func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayIfNull) Type() value.Type { return value.JSON }
 
-func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method ranges through the array and returns the first
 non null value in the array. It returns missing if input
 type is missing and null for non array values.
 */
-func (this *ArrayIfNull) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -924,17 +920,16 @@ func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayLength) Type() value.Type { return value.NUMBER }
 
-func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns the length of the input array. If the input value
 is of type missing return a missing value, and for all non array
 values return null.
 */
-func (this *ArrayLength) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -986,18 +981,17 @@ func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayMax) Type() value.Type { return value.JSON }
 
-func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns the largest value in the array based
 on N1QL's collation order. If the input value is of type
 missing return a missing value, and for all non array
 values return null.
 */
-func (this *ArrayMax) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -1057,18 +1051,17 @@ func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayMin) Type() value.Type { return value.JSON }
 
-func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns the smallest value in the array based
 on N1QL's collation order. If the input value is of type
 missing return a missing value, and for all non array
 values return null.
 */
-func (this *ArrayMin) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -1753,17 +1746,16 @@ func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArrayReverse) Type() value.Type { return value.ARRAY }
 
-func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method reverses the input array value and returns it.
 If the input value is of type missing return a missing
 value, and for all non array values return null.
 */
-func (this *ArrayReverse) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -1823,20 +1815,15 @@ func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArraySort) Type() value.Type { return value.ARRAY }
 
 /*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
-func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-/*
 This method sorts the input array value, in N1QL collation order. If
 the input value is of type missing return a missing value, and for all
 non array values return null.
 */
-func (this *ArraySort) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -1890,11 +1877,10 @@ func (this *ArrayStar) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayStar) Type() value.Type { return value.OBJECT }
 
 func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ArrayStar) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
@@ -1985,10 +1971,6 @@ func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ArraySum) Type() value.Type { return value.NUMBER }
 
-func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns the sum of all the elements in the array.
 Range through the array and if the type of element is a number
@@ -1996,8 +1978,11 @@ then add it to the sum. Return 0 if no number value exists.
 If the input value is of type missing return a missing value,
 and for all non array values return null.
 */
-func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil

@@ -46,7 +46,14 @@ func (this *IsArray) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsArray) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsArray) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.ARRAY), nil
 }
 
 /*
@@ -58,14 +65,6 @@ For boolean functions, simply list this expression.
 func (this *IsArray) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsArray) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	return value.NewValue(arg.Type() == value.ARRAY), nil
 }
 
 /*
@@ -110,8 +109,24 @@ func (this *IsAtom) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IsAtom) Type() value.Type { return value.BOOLEAN }
 
+/*
+Checks the type of input argument and returns true for boolean,
+number and string and false for all other values.
+*/
 func (this *IsAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	switch arg.Type() {
+	case value.BOOLEAN, value.NUMBER, value.STRING:
+		return value.TRUE_VALUE, nil
+	default:
+		return value.FALSE_VALUE, nil
+	}
 }
 
 /*
@@ -123,23 +138,6 @@ For boolean functions, simply list this expression.
 func (this *IsAtom) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-/*
-Checks the type of input argument and returns true for boolean,
-number and string and false for all other values.
-*/
-func (this *IsAtom) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	switch arg.Type() {
-	case value.BOOLEAN, value.NUMBER, value.STRING:
-		return value.TRUE_VALUE, nil
-	default:
-		return value.FALSE_VALUE, nil
-	}
 }
 
 /*
@@ -184,7 +182,14 @@ func (this *IsBinary) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsBinary) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsBinary) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.BINARY), nil
 }
 
 /*
@@ -196,14 +201,6 @@ For boolean functions, simply list this expression.
 func (this *IsBinary) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsBinary) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	return value.NewValue(arg.Type() == value.BINARY), nil
 }
 
 /*
@@ -248,7 +245,14 @@ func (this *IsBoolean) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsBoolean) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsBoolean) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.BOOLEAN), nil
 }
 
 /*
@@ -260,14 +264,6 @@ For boolean functions, simply list this expression.
 func (this *IsBoolean) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsBoolean) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	return value.NewValue(arg.Type() == value.BOOLEAN), nil
 }
 
 /*
@@ -312,7 +308,14 @@ func (this *IsNumber) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsNumber) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNumber) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.NUMBER), nil
 }
 
 /*
@@ -324,14 +327,6 @@ For boolean functions, simply list this expression.
 func (this *IsNumber) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsNumber) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	return value.NewValue(arg.Type() == value.NUMBER), nil
 }
 
 /*
@@ -376,7 +371,14 @@ func (this *IsObject) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsObject) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsObject) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.OBJECT), nil
 }
 
 /*
@@ -388,14 +390,6 @@ For boolean functions, simply list this expression.
 func (this *IsObject) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsObject) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	return value.NewValue(arg.Type() == value.OBJECT), nil
 }
 
 /*
@@ -440,7 +434,14 @@ func (this *IsString) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsString) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsString) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.STRING), nil
 }
 
 /*
@@ -452,14 +453,6 @@ For boolean functions, simply list this expression.
 func (this *IsString) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsString) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
-		return arg, nil
-	}
-
-	return value.NewValue(arg.Type() == value.STRING), nil
 }
 
 /*
@@ -504,7 +497,11 @@ func (this *Type) Accept(visitor Visitor) (interface{}, error) {
 func (this *Type) Type() value.Type { return value.STRING }
 
 func (this *Type) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	return value.NewValue(arg.Type().String()), nil
 }
 
 func (this *Type) PropagatesMissing() bool {
@@ -513,10 +510,6 @@ func (this *Type) PropagatesMissing() bool {
 
 func (this *Type) PropagatesNull() bool {
 	return false
-}
-
-func (this *Type) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(arg.Type().String()), nil
 }
 
 /*

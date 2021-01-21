@@ -53,11 +53,10 @@ func (this *LikePrefix) Accept(visitor Visitor) (interface{}, error) {
 func (this *LikePrefix) Type() value.Type { return value.STRING }
 
 func (this *LikePrefix) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *LikePrefix) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -114,11 +113,10 @@ func (this *LikeStop) Accept(visitor Visitor) (interface{}, error) {
 func (this *LikeStop) Type() value.Type { return value.JSON }
 
 func (this *LikeStop) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *LikeStop) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -186,11 +184,10 @@ func (this *LikeSuffix) Accept(visitor Visitor) (interface{}, error) {
 func (this *LikeSuffix) Type() value.Type { return value.STRING }
 
 func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *LikeSuffix) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -252,11 +249,10 @@ func (this *RegexpPrefix) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpPrefix) Type() value.Type { return value.STRING }
 
 func (this *RegexpPrefix) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *RegexpPrefix) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -312,11 +308,10 @@ func (this *RegexpStop) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpStop) Type() value.Type { return value.JSON }
 
 func (this *RegexpStop) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *RegexpStop) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -383,11 +378,10 @@ func (this *RegexpSuffix) Accept(visitor Visitor) (interface{}, error) {
 func (this *RegexpSuffix) Type() value.Type { return value.STRING }
 
 func (this *RegexpSuffix) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *RegexpSuffix) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil

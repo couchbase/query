@@ -51,10 +51,10 @@ func (this *Abort) Type() value.Type {
 }
 
 func (this *Abort) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Abort) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	return value.NULL_VALUE, errors.NewAbortError(fmt.Sprintf("%v", arg))
 }
 

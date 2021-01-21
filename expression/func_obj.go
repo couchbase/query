@@ -224,10 +224,6 @@ func (this *ObjectInnerPairs) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectInnerPairs) Type() value.Type { return value.ARRAY }
 
-func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an object and returns a map of name
 value pairs. If the type of input is missing then return
@@ -237,8 +233,11 @@ string to interface. Range over this map and save the keys.
 Sort the keys and range over the keys to create name and value
 pairs. Return this object.
 */
-func (this *ObjectInnerPairs) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
@@ -310,10 +309,6 @@ func (this *ObjectInnerValues) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectInnerValues) Type() value.Type { return value.ARRAY }
 
-func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an object and returns a slice of values
 that contains the attribute names. If the type of input is
@@ -324,8 +319,11 @@ map and retrieve the keys. Sort it and then use it to save
 the corresponding values into a slice of interfaces. Return
 the slice.
 */
-func (this *ObjectInnerValues) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
@@ -397,11 +395,10 @@ func (this *ObjectLength) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectLength) Type() value.Type { return value.NUMBER }
 
 func (this *ObjectLength) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ObjectLength) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
@@ -454,11 +451,10 @@ func (this *ObjectNames) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectNames) Type() value.Type { return value.ARRAY }
 
 func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ObjectNames) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
@@ -531,10 +527,6 @@ func (this *ObjectPairs) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectPairs) Type() value.Type { return value.ARRAY }
 
-func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an object and returns a map of name
 value pairs. If the type of input is missing then return
@@ -544,8 +536,11 @@ string to interface. Range over this map and save the keys.
 Sort the keys and range over the keys to create name and value
 pairs. Return this object.
 */
-func (this *ObjectPairs) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
@@ -937,18 +932,17 @@ func (this *ObjectUnwrap) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectUnwrap) Type() value.Type { return value.JSON }
 
-func (this *ObjectUnwrap) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an object and returns the
 attribute value. If the type of input is missing
 then return a missing value, and if not an object
 return a null value.
 */
-func (this *ObjectUnwrap) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ObjectUnwrap) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
@@ -1007,18 +1001,17 @@ func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ObjectValues) Type() value.Type { return value.ARRAY }
 
-func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an object and returns a slice
 that contains the attribute values. If the type of
 input is missing then return a missing value, and
 if not an object return a null value.
 */
-func (this *ObjectValues) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil

@@ -50,10 +50,6 @@ func (this *JSONDecode) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *JSONDecode) Type() value.Type { return value.JSON }
 
-func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns a valid N1QL value from a JSON encoded
 string. If the input type is missing return missing, and if
@@ -63,8 +59,11 @@ string return missing value. If not then call the Unmarshal
 method defined in the json package, by casting the strings
 to a bytes slice and return the json value.
 */
-func (this *JSONDecode) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -77,7 +76,7 @@ func (this *JSONDecode) Apply(context Context, arg value.Value) (value.Value, er
 	}
 
 	var p interface{}
-	err := json.Unmarshal([]byte(s), &p)
+	err = json.Unmarshal([]byte(s), &p)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -127,15 +126,15 @@ func (this *JSONEncode) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *JSONEncode) Type() value.Type { return value.STRING }
 
-func (this *JSONEncode) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method returns a Json encoded string by sing the MarshalJSON
 method. The return bytes value is cast to a string and returned.
 */
-func (this *JSONEncode) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *JSONEncode) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	bytes, _ := arg.MarshalJSON()
 	return value.NewValue(string(bytes)), nil
 }
@@ -185,10 +184,10 @@ func (this *EncodedSize) Accept(visitor Visitor) (interface{}, error) {
 func (this *EncodedSize) Type() value.Type { return value.NUMBER }
 
 func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *EncodedSize) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	bytes, _ := arg.MarshalJSON()
 	return value.NewValue(len(bytes)), nil
 }
@@ -234,10 +233,10 @@ func (this *Pairs) Accept(visitor Visitor) (interface{}, error) {
 func (this *Pairs) Type() value.Type { return value.ARRAY }
 
 func (this *Pairs) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Pairs) Apply(context Context, arg value.Value) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
 	var bufcap int
 
 	actual := arg.Actual()
@@ -302,11 +301,10 @@ func (this *PolyLength) Accept(visitor Visitor) (interface{}, error) {
 func (this *PolyLength) Type() value.Type { return value.NUMBER }
 
 func (this *PolyLength) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *PolyLength) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 

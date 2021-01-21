@@ -36,7 +36,18 @@ func (this *IsNull) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsNull) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.NULL:
+		return value.TRUE_VALUE, nil
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	default:
+		return value.FALSE_VALUE, nil
+	}
 }
 
 func (this *IsNull) PropagatesNull() bool {
@@ -53,17 +64,6 @@ func (this *IsNull) FilterCovers(covers map[string]value.Value) map[string]value
 	covers[this.Operand().String()] = value.NULL_VALUE
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsNull) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.NULL:
-		return value.TRUE_VALUE, nil
-	case value.MISSING:
-		return value.MISSING_VALUE, nil
-	default:
-		return value.FALSE_VALUE, nil
-	}
 }
 
 /*
@@ -95,7 +95,18 @@ func (this *IsNotNull) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsNotNull) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNotNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.NULL:
+		return value.FALSE_VALUE, nil
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	default:
+		return value.TRUE_VALUE, nil
+	}
 }
 
 func (this *IsNotNull) PropagatesNull() bool {
@@ -111,17 +122,6 @@ For IsNotNull, simply list this expression.
 func (this *IsNotNull) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsNotNull) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.NULL:
-		return value.FALSE_VALUE, nil
-	case value.MISSING:
-		return value.MISSING_VALUE, nil
-	default:
-		return value.TRUE_VALUE, nil
-	}
 }
 
 /*

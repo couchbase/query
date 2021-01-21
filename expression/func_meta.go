@@ -49,11 +49,10 @@ func (this *Base64Encode) Accept(visitor Visitor) (interface{}, error) {
 func (this *Base64Encode) Type() value.Type { return value.STRING }
 
 func (this *Base64Encode) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Base64Encode) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
@@ -104,11 +103,10 @@ func (this *Base64Decode) Accept(visitor Visitor) (interface{}, error) {
 func (this *Base64Decode) Type() value.Type { return value.STRING }
 
 func (this *Base64Decode) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Base64Decode) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil

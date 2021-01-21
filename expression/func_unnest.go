@@ -46,11 +46,10 @@ func (this *UnnestPosition) Accept(visitor Visitor) (interface{}, error) {
 func (this *UnnestPosition) Type() value.Type { return value.NUMBER }
 
 func (this *UnnestPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *UnnestPosition) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 

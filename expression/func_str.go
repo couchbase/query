@@ -128,17 +128,16 @@ func (this *Length) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Length) Type() value.Type { return value.NUMBER }
 
-func (this *Length) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an argument value and returns its length
 as value. If the input type is missing return missing, and if
 it is not string then return null value.
 */
-func (this *Length) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Length) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -189,18 +188,17 @@ func (this *Lower) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Lower) Type() value.Type { return value.STRING }
 
-func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 This method takes in an argument value and returns a
 lowercase string as value. If the input type is
 missing return missing, and if it is not string then
 return null value.
 */
-func (this *Lower) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -620,11 +618,10 @@ func (this *Reverse) Accept(visitor Visitor) (interface{}, error) {
 func (this *Reverse) Type() value.Type { return value.STRING }
 
 func (this *Reverse) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Reverse) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -991,11 +988,10 @@ func (this *Suffixes) Accept(visitor Visitor) (interface{}, error) {
 func (this *Suffixes) Type() value.Type { return value.ARRAY }
 
 func (this *Suffixes) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Suffixes) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -1054,11 +1050,10 @@ func (this *Title) Accept(visitor Visitor) (interface{}, error) {
 func (this *Title) Type() value.Type { return value.STRING }
 
 func (this *Title) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Title) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
@@ -1196,11 +1191,10 @@ func (this *Upper) Accept(visitor Visitor) (interface{}, error) {
 func (this *Upper) Type() value.Type { return value.STRING }
 
 func (this *Upper) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Upper) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil

@@ -39,17 +39,16 @@ func (this *Neg) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Neg) Type() value.Type { return value.NUMBER }
 
-func (this *Neg) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
 /*
 Return the neagation of the input value, if the type of input is a number.
 For missing return a missing value, and for all other input types return a
 null.
 */
-func (this *Neg) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.NUMBER {
+func (this *Neg) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.NUMBER {
 		return value.AsNumberValue(arg).Neg(), nil
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil

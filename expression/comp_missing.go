@@ -36,7 +36,16 @@ func (this *IsMissing) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsMissing) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.MISSING:
+		return value.TRUE_VALUE, nil
+	default:
+		return value.FALSE_VALUE, nil
+	}
 }
 
 func (this *IsMissing) PropagatesMissing() bool {
@@ -57,15 +66,6 @@ func (this *IsMissing) FilterCovers(covers map[string]value.Value) map[string]va
 	covers[this.Operand().String()] = value.MISSING_VALUE
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsMissing) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.MISSING:
-		return value.TRUE_VALUE, nil
-	default:
-		return value.FALSE_VALUE, nil
-	}
 }
 
 /*
@@ -100,7 +100,16 @@ func (this *IsNotMissing) Accept(visitor Visitor) (interface{}, error) {
 func (this *IsNotMissing) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNotMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	switch arg.Type() {
+	case value.MISSING:
+		return value.FALSE_VALUE, nil
+	default:
+		return value.TRUE_VALUE, nil
+	}
 }
 
 func (this *IsNotMissing) PropagatesMissing() bool {
@@ -120,15 +129,6 @@ For IsNotMissing, simply list this expression.
 func (this *IsNotMissing) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-func (this *IsNotMissing) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.MISSING:
-		return value.FALSE_VALUE, nil
-	default:
-		return value.TRUE_VALUE, nil
-	}
 }
 
 /*

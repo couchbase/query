@@ -70,38 +70,10 @@ func (this *Advisor) Type() value.Type {
 }
 
 func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *Advisor) Indexable() bool {
-	return false
-}
-
-func (this *Advisor) Privileges() *auth.Privileges {
-	// For session management user must have priviledge to
-	// access system keyspaces.
-	// Priledges for underlying statements are checked at
-	// the time of the ADVISE statement
-	privs := auth.NewPrivileges()
-	if this.isSession() {
-		privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
-	}
-	return privs
-}
-
-func (this *Advisor) isSession() bool {
-	arg := this.operands[0].Value()
-	if arg != nil && arg.Type() == value.OBJECT {
-		actual := arg.Actual().(map[string]interface{})
-		if _, ok := actual["action"]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
@@ -219,6 +191,33 @@ func (this *Advisor) Apply(context Context, arg value.Value) (value.Value, error
 	}
 
 	return value.NewValue(bytes), nil
+}
+
+func (this *Advisor) Indexable() bool {
+	return false
+}
+
+func (this *Advisor) Privileges() *auth.Privileges {
+	// For session management user must have priviledge to
+	// access system keyspaces.
+	// Priledges for underlying statements are checked at
+	// the time of the ADVISE statement
+	privs := auth.NewPrivileges()
+	if this.isSession() {
+		privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+	}
+	return privs
+}
+
+func (this *Advisor) isSession() bool {
+	arg := this.operands[0].Value()
+	if arg != nil && arg.Type() == value.OBJECT {
+		actual := arg.Actual().(map[string]interface{})
+		if _, ok := actual["action"]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{}, query string) error {

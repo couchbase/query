@@ -35,8 +35,22 @@ func (this *Exists) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Exists) Type() value.Type { return value.BOOLEAN }
 
+/*
+Returns true if the value is an array and contains at least one
+element.
+*/
 func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.ARRAY {
+		a := arg.Actual().([]interface{})
+		return value.NewValue(len(a) > 0), nil
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else {
+		return value.NULL_VALUE, nil
+	}
 }
 
 /*
@@ -48,21 +62,6 @@ For EXISTS, simply list this expression.
 func (this *Exists) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
-}
-
-/*
-Returns true if the value is an array and contains at least one
-element.
-*/
-func (this *Exists) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.ARRAY {
-		a := arg.Actual().([]interface{})
-		return value.NewValue(len(a) > 0), nil
-	} else if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else {
-		return value.NULL_VALUE, nil
-	}
 }
 
 /*

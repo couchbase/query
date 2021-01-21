@@ -305,23 +305,6 @@ func NewUnaryFunctionBase(name string, operand Expression) *UnaryFunctionBase {
 }
 
 /*
-This method Evaluates the unary function. It evaluates the
-operand using the input item and context, and Evaluates
-this using the Apply method defined for UnaryApplied interfaces
-for each defined Unary function. Return Apply's return value.
-*/
-func (this *UnaryFunctionBase) UnaryEval(applied UnaryApplied, item value.Value, context Context) (
-	value.Value, error) {
-	op := this.operands[0]
-	arg, err := op.Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	}
-
-	return applied.Apply(context, arg)
-}
-
-/*
 Minimum input arguments required is 1.
 */
 func (this *UnaryFunctionBase) MinArgs() int { return 1 }
@@ -584,13 +567,6 @@ func NewUserDefinedFunctionBase(name string, operands ...Expression) *UserDefine
 }
 
 var _FOUND_POOL = util.NewBoolPool(64)
-
-/*
-Define Apply methods to evaluate Unary functions.
-*/
-type UnaryApplied interface {
-	Apply(context Context, arg value.Value) (value.Value, error)
-}
 
 /*
 Define Apply methods to evaluate Ternary functions.
