@@ -108,7 +108,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	if handleQuota {
 		context.ReleaseValueSize(item.Size())
 	}
-	item.Recycle()
+	// TODO Recycle
 
 	return true
 }
