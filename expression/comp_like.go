@@ -66,8 +66,8 @@ func (this *Like) Evaluate(item value.Value, context Context) (value.Value, erro
 		return value.NULL_VALUE, nil
 	}
 
-	f := first.Actual().(string)
-	s := second.Actual().(string)
+	f := first.ToString()
+	s := second.ToString()
 
 	re := this.re
 	if re == nil {
@@ -119,7 +119,7 @@ func precompileLike(sv value.Value) (re, part *regexp.Regexp, err error) {
 		return
 	}
 
-	s := sv.Actual().(string)
+	s := sv.ToString()
 	return likeCompile(s)
 }
 

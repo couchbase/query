@@ -61,7 +61,7 @@ func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, er
 		switch arg.Type() {
 		case value.STRING:
 			if !null {
-				buf.WriteString(arg.Actual().(string))
+				buf.WriteString(arg.ToString())
 			}
 		case value.MISSING:
 			return value.MISSING_VALUE, nil
@@ -150,12 +150,12 @@ func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, e
 				null = true
 			} else if arg.Type() == value.STRING {
 				if i == 0 {
-					sp = arg.Actual().(string)
+					sp = arg.ToString()
 				} else if !null {
 					if addSp && sp != "" {
 						buf.WriteString(sp)
 					}
-					buf.WriteString(arg.Actual().(string))
+					buf.WriteString(arg.ToString())
 					addSp = true
 				}
 			} else if arg.Type() == value.ARRAY {
@@ -169,7 +169,7 @@ func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, e
 						if addSp && sp != "" {
 							buf.WriteString(sp)
 						}
-						buf.WriteString(ael.Actual().(string))
+						buf.WriteString(ael.ToString())
 						addSp = true
 					}
 				}

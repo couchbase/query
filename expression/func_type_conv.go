@@ -277,7 +277,7 @@ func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, 
 			return value.ZERO_VALUE, nil
 		}
 	case value.STRING:
-		s := arg.Actual().(string)
+		s := arg.ToString()
 		f, err := strconv.ParseFloat(s, 64)
 		if err == nil {
 			return value.NewValue(f), nil

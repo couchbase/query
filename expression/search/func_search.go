@@ -92,7 +92,7 @@ func (this *FTSQuery) Evaluate(item value.Value, context expression.Context) (va
 				if arg.Type() != value.STRING {
 					null = true
 				} else {
-					idxName = arg.Actual().(string)
+					idxName = arg.ToString()
 				}
 			} else if k == 1 {
 				if arg.Type() != value.OBJECT {
@@ -104,7 +104,7 @@ func (this *FTSQuery) Evaluate(item value.Value, context expression.Context) (va
 				if arg.Type() != value.STRING {
 					null = true
 				} else {
-					hostname = arg.Actual().(string)
+					hostname = arg.ToString()
 					hostnameProvided = true
 				}
 			}
@@ -352,7 +352,7 @@ func (this *FTSQuery) PopulateFTSCache(context expression.Context, user string) 
 
 		// This is an FTS node. Get Hostname and Port num
 		//this.ftsLock.Lock()
-		this.FtsCache = append(this.FtsCache, &FTSNode{host.Actual().(string), fts.ActualForIndex().(int64)})
+		this.FtsCache = append(this.FtsCache, &FTSNode{host.ToString(), fts.ActualForIndex().(int64)})
 		//this.ftsLock.Unlock()
 	}
 
@@ -608,7 +608,7 @@ func (this *Search) getIndexNameAndOutName(arg expression.Expression) (index, ou
 					continue
 				}
 
-				if n.Actual().(string) == "index" {
+				if n.ToString() == "index" {
 					v := val.Value()
 					if v == nil || (v.Type() != value.STRING && v.Type() != value.OBJECT) {
 						err = fmt.Errorf("%s() not valid third argument: %v", this.Name(),
@@ -616,17 +616,17 @@ func (this *Search) getIndexNameAndOutName(arg expression.Expression) (index, ou
 						return
 
 					}
-					index, _ = v.Actual().(string)
+					index = v.ToString()
 				}
 
-				if n.Actual().(string) == "out" {
+				if n.ToString() == "out" {
 					v := val.Value()
 					if v == nil || v.Type() != value.STRING {
 						err = fmt.Errorf("%s() not valid third argument: %v", this.Name(),
 							arg.String())
 						return
 					}
-					outName, _ = v.Actual().(string)
+					outName = v.ToString()
 				}
 			}
 		}
@@ -636,7 +636,7 @@ func (this *Search) getIndexNameAndOutName(arg expression.Expression) (index, ou
 				err = fmt.Errorf("%s() not valid third argument: %v", this.Name(), arg.String())
 				return
 			}
-			index, _ = val.Actual().(string)
+			index = val.ToString()
 		}
 
 		if val, ok := options.Field("out"); ok {
@@ -644,7 +644,7 @@ func (this *Search) getIndexNameAndOutName(arg expression.Expression) (index, ou
 				err = fmt.Errorf("%s() not valid third argument: %v", this.Name(), arg.String())
 				return
 			}
-			outName, _ = val.Actual().(string)
+			outName = val.ToString()
 		}
 	}
 

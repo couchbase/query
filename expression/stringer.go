@@ -726,7 +726,7 @@ func NewPathToString() *PathToString {
 			var sv string
 			second := expr2.Second().Value()
 			if second != nil {
-				sv, _ = second.Actual().(string)
+				sv = second.ToString()
 			}
 			if sv != "" {
 				_, err := rv.Map(expr2.First())

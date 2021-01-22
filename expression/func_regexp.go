@@ -68,8 +68,8 @@ func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.V
 		return value.NULL_VALUE, nil
 	}
 
-	f := first.Actual().(string)
-	s := second.Actual().(string)
+	f := first.ToString()
+	s := second.ToString()
 
 	re := this.re
 	if re == nil {
@@ -167,8 +167,8 @@ func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value
 		return nil, this.err
 	}
 
-	f := first.Actual().(string)
-	s := second.Actual().(string)
+	f := first.ToString()
+	s := second.ToString()
 
 	fullRe := this.re
 	partRe := this.part
@@ -426,9 +426,9 @@ func (this *RegexpReplace) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	f := arg0.Actual().(string)
-	s := arg1.Actual().(string)
-	r := arg2.Actual().(string)
+	f := arg0.ToString()
+	s := arg1.ToString()
+	r := arg2.ToString()
 
 	re := this.re
 	if re == nil {
@@ -494,7 +494,7 @@ func precompileRegexp(rexpr value.Value, full bool) (re *regexp.Regexp, err erro
 		return
 	}
 
-	s := rexpr.Actual().(string)
+	s := rexpr.ToString()
 	if full {
 		s = "^" + s + "$"
 	}
@@ -510,8 +510,8 @@ func regexpPositionApply(first, second value.Value, re *regexp.Regexp, startPos 
 		return value.NULL_VALUE, nil
 	}
 
-	f := first.Actual().(string)
-	s := second.Actual().(string)
+	f := first.ToString()
+	s := second.ToString()
 
 	if re == nil {
 		var err error
@@ -584,14 +584,14 @@ func (this *RegexpMatches) Evaluate(item value.Value, context Context) (value.Va
 	re := this.re
 	if re == nil {
 		var err error
-		re, err = regexp.Compile(second.Actual().(string))
+		re, err = regexp.Compile(second.ToString())
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	var res []interface{}
-	matches := re.FindAll([]byte(first.Actual().(string)), -1)
+	matches := re.FindAll([]byte(first.ToString()), -1)
 	for _, v := range matches {
 		res = append(res, string(v))
 	}
@@ -662,14 +662,14 @@ func (this *RegexpSplit) Evaluate(item value.Value, context Context) (value.Valu
 	re := this.re
 	if re == nil {
 		var err error
-		re, err = regexp.Compile(second.Actual().(string))
+		re, err = regexp.Compile(second.ToString())
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	var res []interface{}
-	f := []byte(first.Actual().(string))
+	f := []byte(first.ToString())
 	matches := re.FindAllIndex(f, -1)
 	start := 0
 	for _, v := range matches {

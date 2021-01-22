@@ -151,7 +151,7 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 	}
 
 	// CURL URL
-	curl_url := first.Actual().(string)
+	curl_url := first.ToString()
 
 	// Empty options to pass into curl.
 	options := map[string]interface{}{}
@@ -586,7 +586,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			if value.NewValue(val).Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for user-agent option in CURL. user-agent should be a string. ")
 			}
-			userAgent := value.NewValue(val).Actual().(string)
+			userAgent := value.NewValue(val).ToString()
 			this.curlUserAgent(userAgent)
 
 		case "cacert":
@@ -619,7 +619,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			if value.NewValue(val).Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for cacert option in CURL. It should be a string. ")
 			}
-			certName := value.NewValue(val).Actual().(string)
+			certName := value.NewValue(val).ToString()
 
 			// Make sure this file is not a path.
 			// use path.Split and check 1st and 2nd args
@@ -1050,7 +1050,7 @@ func (this *Curl) handleData(encodedData bool, val interface{}, show_error bool)
 			}
 		}
 
-		dataT := newDval.Actual().(string)
+		dataT := newDval.ToString()
 
 		// If the option is data-urlencode then encode the data first.
 		if encodedData {

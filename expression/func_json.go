@@ -69,7 +69,7 @@ func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.Actual().(string)
+	s := arg.ToString()
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return value.NULL_VALUE, nil

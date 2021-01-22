@@ -105,7 +105,7 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 		}
 
 		if vv.Type() != value.MISSING {
-			rv[nv.Actual().(string)] = vv
+			rv[nv.ToString()] = vv
 		}
 	}
 

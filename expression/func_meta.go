@@ -112,7 +112,7 @@ func (this *Base64Decode) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	str, err := base64.StdEncoding.DecodeString(arg.Actual().(string))
+	str, err := base64.StdEncoding.DecodeString(arg.ToString())
 	if err != nil {
 		return value.NULL_VALUE, nil
 	} else {

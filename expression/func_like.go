@@ -62,7 +62,7 @@ func (this *LikePrefix) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.Actual().(string)
+	s := arg.ToString()
 	_, part, err := likeCompile(s)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -122,7 +122,7 @@ func (this *LikeStop) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.Actual().(string)
+	s := arg.ToString()
 	_, part, err := likeCompile(s)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -193,7 +193,7 @@ func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	for s := arg.Actual().(string); s != ""; s = s[1:] {
+	for s := arg.ToString(); s != ""; s = s[1:] {
 		_, part, err := likeCompile(s)
 		if err != nil {
 			return value.NULL_VALUE, err
@@ -387,7 +387,7 @@ func (this *RegexpSuffix) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	for s := arg.Actual().(string); s != ""; s = s[1:] {
+	for s := arg.ToString(); s != ""; s = s[1:] {
 		part, err := regexp.Compile(s)
 		if err != nil {
 			return value.NULL_VALUE, err

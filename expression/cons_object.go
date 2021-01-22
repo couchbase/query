@@ -71,7 +71,7 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 		}
 
 		if v.Type() != value.MISSING {
-			m[n.Actual().(string)] = v
+			m[n.ToString()] = v
 		}
 	}
 

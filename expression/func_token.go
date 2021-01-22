@@ -181,7 +181,7 @@ func (this *ContainsTokenLike) Evaluate(item value.Value, context Context) (valu
 	re := this.re
 	if re == nil {
 		var err error
-		re, _, err = likeCompile(pattern.Actual().(string))
+		re, _, err = likeCompile(pattern.ToString())
 		if err != nil {
 			return nil, err
 		}
@@ -308,7 +308,7 @@ func (this *ContainsTokenRegexp) Evaluate(item value.Value, context Context) (va
 
 	if partRe == nil {
 		var err error
-		s := pattern.Actual().(string)
+		s := pattern.ToString()
 
 		/* MB-20677 ditto */
 		partRe, err = regexp.Compile(s)

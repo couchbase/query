@@ -72,7 +72,7 @@ func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.Contains(first.Actual().(string), second.Actual().(string))
+	rv := strings.Contains(first.ToString(), second.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -143,7 +143,7 @@ func (this *Length) Evaluate(item value.Value, context Context) (value.Value, er
 		return value.NULL_VALUE, nil
 	}
 
-	rv := len(arg.Actual().(string))
+	rv := len(arg.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -204,7 +204,7 @@ func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.ToLower(arg.Actual().(string))
+	rv := strings.ToLower(arg.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -266,7 +266,7 @@ func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, err
 			null = true
 		} else if !null && !missing {
 			if i == 0 {
-				s = arg.Actual().(string)
+				s = arg.ToString()
 			} else if i == 1 {
 				chars = arg
 			}
@@ -279,7 +279,7 @@ func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.TrimLeft(s, chars.Actual().(string))
+	rv := strings.TrimLeft(s, chars.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -474,7 +474,7 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 		return nil, errors.NewRangeError("REPEAT()")
 	}
 
-	rv := strings.Repeat(first.Actual().(string), ni)
+	rv := strings.Repeat(first.ToString(), ni)
 	return value.NewValue(rv), nil
 }
 
@@ -539,11 +539,11 @@ func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, e
 		} else if !null && !missing {
 			switch i {
 			case 0:
-				f = arg.Actual().(string)
+				f = arg.ToString()
 			case 1:
-				s = arg.Actual().(string)
+				s = arg.ToString()
 			case 2:
-				r = arg.Actual().(string)
+				r = arg.ToString()
 			case 3:
 				nf := arg.Actual().(float64)
 				if nf != math.Trunc(nf) {
@@ -627,7 +627,7 @@ func (this *Reverse) Evaluate(item value.Value, context Context) (value.Value, e
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.Actual().(string)
+	s := arg.ToString()
 	r := util.ReversePreservingCombiningCharacters(s)
 	return value.NewValue(r), nil
 }
@@ -690,7 +690,7 @@ func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, err
 			null = true
 		} else if !null && !missing {
 			if i == 0 {
-				s = arg.Actual().(string)
+				s = arg.ToString()
 			} else if i == 1 {
 				chars = arg
 			}
@@ -703,7 +703,7 @@ func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.TrimRight(s, chars.Actual().(string))
+	rv := strings.TrimRight(s, chars.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -789,9 +789,9 @@ func (this *Split) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 	var sa []string
 	if sep == nil {
-		sa = strings.Fields(s.Actual().(string))
+		sa = strings.Fields(s.ToString())
 	} else {
-		sa = strings.Split(s.Actual().(string), sep.Actual().(string))
+		sa = strings.Split(s.ToString(), sep.ToString())
 	}
 
 	rv := make([]interface{}, len(sa))
@@ -997,7 +997,7 @@ func (this *Suffixes) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.Actual().(string)
+	s := arg.ToString()
 	rv := make([]interface{}, 0, len(s))
 	// Range over Unicode code points, not bytes
 	for i, _ := range s {
@@ -1059,7 +1059,7 @@ func (this *Title) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	av := arg.Actual().(string)
+	av := arg.ToString()
 	rv := strings.Title(strings.ToLower(av))
 	return value.NewValue(rv), nil
 }
@@ -1122,7 +1122,7 @@ func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, erro
 			null = true
 		} else if !null {
 			if i == 0 {
-				s = arg.Actual().(string)
+				s = arg.ToString()
 			} else if i == 1 {
 				chars = arg
 			}
@@ -1135,7 +1135,7 @@ func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, erro
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.Trim(s, chars.Actual().(string))
+	rv := strings.Trim(s, chars.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -1200,7 +1200,7 @@ func (this *Upper) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.ToUpper(arg.Actual().(string))
+	rv := strings.ToUpper(arg.ToString())
 	return value.NewValue(rv), nil
 }
 
@@ -1220,7 +1220,7 @@ func strPositionApply(first, second value.Value, startPos int) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.Index(first.Actual().(string), second.Actual().(string))
+	rv := strings.Index(first.ToString(), second.ToString())
 	return value.NewValue(rv + startPos), nil
 }
 
@@ -1251,7 +1251,7 @@ func strSubstrApply(args []value.Value, startPos int) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	str := args[0].Actual().(string)
+	str := args[0].ToString()
 	pos := int(args[1].Actual().(float64))
 
 	if pos < 0 {

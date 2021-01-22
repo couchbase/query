@@ -123,7 +123,7 @@ func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, 
 			return value.NULL_VALUE, nil
 		}
 
-		fmt = fv.Actual().(string)
+		fmt = fv.ToString()
 	}
 
 	return value.NewValue(timeToStr(time.Now(), fmt)), nil
@@ -213,7 +213,7 @@ func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, e
 		} else if fv.Type() != value.STRING {
 			null = true
 		}
-		fmt = fv.Actual().(string)
+		fmt = fv.ToString()
 	}
 
 	if missing {
@@ -223,7 +223,7 @@ func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, e
 	}
 
 	// Get the timezone and the *Location.
-	timeZone := tz.Actual().(string)
+	timeZone := tz.ToString()
 	loc, err := time.LoadLocation(timeZone)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -305,7 +305,7 @@ func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, 
 			return value.NULL_VALUE, nil
 		}
 
-		fmt = fv.Actual().(string)
+		fmt = fv.ToString()
 	}
 
 	// Get current time in UTC
@@ -396,7 +396,7 @@ func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	pa := part.Actual().(string)
+	pa := part.ToString()
 	t, err := dateAdd(millisToTime(da), int(na), pa)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -467,7 +467,7 @@ func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	da := date.Actual().(string)
+	da := date.ToString()
 	t, fmt, err := StrToTimeFormat(da)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -478,7 +478,7 @@ func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	pa := part.Actual().(string)
+	pa := part.ToString()
 	t, err = dateAdd(t, int(na), pa)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -550,7 +550,7 @@ func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.V
 
 	da1 := date1.Actual().(float64)
 	da2 := date2.Actual().(float64)
-	pa := part.Actual().(string)
+	pa := part.ToString()
 	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -621,19 +621,19 @@ func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	da1 := date1.Actual().(string)
+	da1 := date1.ToString()
 	t1, err := strToTime(da1)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	da2 := date2.Actual().(string)
+	da2 := date2.ToString()
 	t2, err := strToTime(da2)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	pa := part.Actual().(string)
+	pa := part.ToString()
 	diff, err := dateDiff(t1, t2, pa)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -703,7 +703,7 @@ func (this *DateDiffAbsMillis) Evaluate(item value.Value, context Context) (valu
 
 	da1 := date1.Actual().(float64)
 	da2 := date2.Actual().(float64)
-	pa := part.Actual().(string)
+	pa := part.ToString()
 	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -769,19 +769,19 @@ func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.V
 		return value.NULL_VALUE, nil
 	}
 
-	da1 := date1.Actual().(string)
+	da1 := date1.ToString()
 	t1, err := strToTime(da1)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	da2 := date2.Actual().(string)
+	da2 := date2.ToString()
 	t2, err := strToTime(da2)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	pa := part.Actual().(string)
+	pa := part.ToString()
 	diff, err := dateDiff(t1, t2, pa)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -844,13 +844,13 @@ func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	str := first.Actual().(string)
+	str := first.ToString()
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	format := second.Actual().(string)
+	format := second.ToString()
 
 	return value.NewValue(timeToStr(t, format)), nil
 
@@ -943,7 +943,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 	}
 
 	millis := first.Actual().(float64)
-	part := second.Actual().(string)
+	part := second.ToString()
 
 	// Convert the input millis to *Time
 	timeVal := millisToTime(millis)
@@ -952,7 +952,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 		// Process the timezone component as it isnt nil
 
 		// Get the timezone and the *Location.
-		tz := timeZone.Actual().(string)
+		tz := timeZone.ToString()
 		loc, err := time.LoadLocation(tz)
 		if err != nil {
 			return value.NULL_VALUE, nil
@@ -1035,13 +1035,13 @@ func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	str := first.Actual().(string)
+	str := first.ToString()
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	part := second.Actual().(string)
+	part := second.ToString()
 	rv, err := datePart(t, part)
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -1142,14 +1142,14 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	// Convert start date to time format.
-	da1 := startDate.Actual().(string)
+	da1 := startDate.ToString()
 	t1, fmt1, err := StrToTimeFormat(da1)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	// Convert end date to time format.
-	da2 := endDate.Actual().(string)
+	da2 := endDate.ToString()
 	t2, _, err := StrToTimeFormat(da2)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -1185,7 +1185,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	// Date Part
-	partStr := part.Actual().(string)
+	partStr := part.ToString()
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
@@ -1362,7 +1362,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 	}
 
 	// Date Part
-	partStr := part.Actual().(string)
+	partStr := part.ToString()
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
@@ -1468,7 +1468,7 @@ func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.
 	}
 
 	millis := first.Actual().(float64)
-	part := second.Actual().(string)
+	part := second.ToString()
 	t := millisToTime(millis)
 
 	t, err = dateTrunc(t, part)
@@ -1537,8 +1537,8 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	str := first.Actual().(string)
-	part := second.Actual().(string)
+	str := first.ToString()
+	part := second.ToString()
 
 	// For date trunc we do not consider the timezone.
 	// This messes up the result of the golang time functions.
@@ -1640,7 +1640,7 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	millis := ev.Actual().(float64)
-	fmt := fv.Actual().(string)
+	fmt := fv.ToString()
 	t := millisToTime(millis)
 	return value.NewValue(timeToStr(t, fmt)), nil
 }
@@ -1727,7 +1727,7 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	millis := ev.Actual().(float64)
-	fmt := fv.Actual().(string)
+	fmt := fv.ToString()
 	t := millisToTime(millis).UTC()
 	return value.NewValue(timeToStr(t, fmt)), nil
 }
@@ -1823,13 +1823,13 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 	}
 
 	millis := ev.Actual().(float64)
-	tz := zv.Actual().(string)
+	tz := zv.ToString()
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	fmt := fv.Actual().(string)
+	fmt := fv.ToString()
 	t := millisToTime(millis).In(loc)
 	return value.NewValue(timeToStr(t, fmt)), nil
 }
@@ -1951,7 +1951,7 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 			return value.NULL_VALUE, nil
 		}
 
-		fmt = fv.Actual().(string)
+		fmt = fv.ToString()
 	}
 
 	now := context.Now()
@@ -2041,7 +2041,7 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 		} else if fv.Type() != value.STRING {
 			null = true
 		}
-		fmt = fv.Actual().(string)
+		fmt = fv.ToString()
 	}
 
 	if missing {
@@ -2051,7 +2051,7 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 
 	// Get the timezone and the *Location.
-	timeZone := tz.Actual().(string)
+	timeZone := tz.ToString()
 	loc, err := time.LoadLocation(timeZone)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -2132,7 +2132,7 @@ func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, er
 		} else if fv.Type() != value.STRING {
 			return value.NULL_VALUE, nil
 		}
-		fmt = fv.Actual().(string)
+		fmt = fv.ToString()
 	}
 
 	now := context.Now().UTC()
@@ -2204,7 +2204,7 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	str := arg.Actual().(string)
+	str := arg.ToString()
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -2265,7 +2265,7 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	str := arg.Actual().(string)
+	str := arg.ToString()
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -2332,13 +2332,13 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	str := first.Actual().(string)
+	str := first.ToString()
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	tz := second.Actual().(string)
+	tz := second.ToString()
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -2466,7 +2466,7 @@ func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	str := first.Actual().(string)
+	str := first.ToString()
 	d, err := time.ParseDuration(str)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -2557,7 +2557,7 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 	if timeZone != _NIL_VALUE {
 		// Process the timezone component as it isnt nil
 		// Get the timezone and the *Location.
-		tz := timeZone.Actual().(string)
+		tz := timeZone.ToString()
 		loc, err := time.LoadLocation(tz)
 		if err != nil {
 			return value.NULL_VALUE, nil
@@ -2635,7 +2635,7 @@ func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	str := first.Actual().(string)
+	str := first.ToString()
 	t, err := strToTime(str)
 	if err != nil {
 		return value.NULL_VALUE, nil

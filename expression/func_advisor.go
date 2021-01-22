@@ -94,7 +94,7 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 		actual := arg.Actual().(map[string]interface{})
 		val, ok := actual["action"]
 		if ok {
-			val = strings.ToLower(value.NewValue(val).Actual().(string))
+			val = strings.ToLower(value.NewValue(val).ToString())
 			if val == "start" {
 				sessionName, err := util.UUIDV3()
 				if err != nil {
@@ -366,7 +366,7 @@ func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response
 			err = fmt.Errorf("%s() not valid argument for 'profile'", this.Name())
 			return
 		} else {
-			profile = val1.(value.Value).Actual().(string)
+			profile = val1.(value.Value).ToString()
 		}
 	}
 
@@ -377,7 +377,7 @@ func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response
 		return
 	}
 
-	duration, err = time.ParseDuration(val2.(value.Value).Actual().(string))
+	duration, err = time.ParseDuration(val2.(value.Value).ToString())
 	if err != nil {
 		return
 	}
@@ -389,7 +389,7 @@ func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response
 			return
 		} else {
 			var r time.Duration
-			r, err = time.ParseDuration(val3.(value.Value).Actual().(string))
+			r, err = time.ParseDuration(val3.(value.Value).ToString())
 			if err != nil {
 				return
 			}
@@ -419,7 +419,7 @@ func (this *Advisor) getSession(m map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("%s() not valid argument for 'session'", this.Name())
 	}
 
-	return strings.ToLower(val.(value.Value).Actual().(string)), nil
+	return strings.ToLower(val.(value.Value).ToString()), nil
 }
 
 func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
@@ -428,7 +428,7 @@ func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
 		return _ALL, nil
 	}
 	if ok && val.(value.Value).Type() == value.STRING {
-		status := strings.ToLower(val.(value.Value).Actual().(string))
+		status := strings.ToLower(val.(value.Value).ToString())
 		if status == _ACTIVE || status == _COMPLETED || status == _ALL {
 			return status, nil
 		}
@@ -527,18 +527,18 @@ func (this *Advisor) extractStrs(arg value.Value) (map[string]*queryObject, erro
 				}
 			} else if m, ok := k.(map[string]interface{}); ok {
 				if stmt, ok := m["statement"]; ok {
-					str := stmt.(value.Value).Actual().(string)
+					str := stmt.(value.Value).ToString()
 					if validateStmt(str) {
 						key := str
 						qc := ""
 						if s, ok := m["query_context"]; ok {
-							qc = s.(value.Value).Actual().(string)
+							qc = s.(value.Value).ToString()
 							if qc != "" {
 								key += "_" + qc
 							}
 						}
 						if s, ok := m["queryContext"]; ok {
-							qc2 := s.(value.Value).Actual().(string)
+							qc2 := s.(value.Value).ToString()
 							if qc != "" && qc2 != "" && qc != qc2 {
 								return nil, fmt.Errorf("Two different query_context have been set: %s and %s.", qc, qc2)
 							}

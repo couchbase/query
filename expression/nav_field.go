@@ -68,7 +68,7 @@ func (this *Field) Evaluate(item value.Value, context Context) (value.Value, err
 func (this *Field) DoEvaluate(context Context, first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.STRING:
-		s := second.Actual().(string)
+		s := second.ToString()
 		v, ok := first.Field(s)
 
 		if !ok && this.caseInsensitive {
@@ -213,7 +213,7 @@ func (this *Field) Set(item, val value.Value, context Context) bool {
 
 	switch second.Type() {
 	case value.STRING:
-		er := first.SetField(second.Actual().(string), val)
+		er := first.SetField(second.ToString(), val)
 		return er == nil
 	default:
 		return false
@@ -233,7 +233,7 @@ func (this *Field) Unset(item value.Value, context Context) bool {
 
 	switch second.Type() {
 	case value.STRING:
-		er := first.UnsetField(second.Actual().(string))
+		er := first.UnsetField(second.ToString())
 		return er == nil
 	default:
 		return false

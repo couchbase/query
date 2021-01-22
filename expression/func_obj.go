@@ -79,7 +79,7 @@ func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value,
 		return value.NULL_VALUE, nil
 	}
 
-	field := second.Actual().(string)
+	field := second.ToString()
 
 	// we don't overwrite
 	_, exists := first.Field(field)
@@ -654,7 +654,7 @@ func (this *ObjectPut) Evaluate(item value.Value, context Context) (value.Value,
 		return value.NULL_VALUE, nil
 	}
 
-	field := second.Actual().(string)
+	field := second.ToString()
 
 	rv := first.CopyForUpdate()
 	rv.SetField(field, third)
@@ -740,7 +740,7 @@ func (this *ObjectRemove) Evaluate(item value.Value, context Context) (value.Val
 				if arg.Type() != value.STRING {
 					null = true
 				} else {
-					n := arg.Actual().(string)
+					n := arg.ToString()
 					rv.UnsetField(n)
 				}
 			}
@@ -826,7 +826,7 @@ func (this *ObjectRename) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	old := old_name.Actual().(string)
+	old := old_name.ToString()
 	val, ok := obj.Field(old)
 	if !ok {
 		return obj, nil
@@ -834,7 +834,7 @@ func (this *ObjectRename) Evaluate(item value.Value, context Context) (value.Val
 
 	rv := obj.CopyForUpdate()
 	rv.UnsetField(old)
-	rv.SetField(new_name.Actual().(string), val)
+	rv.SetField(new_name.ToString(), val)
 	return rv, nil
 }
 
