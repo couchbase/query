@@ -261,6 +261,9 @@ func NewUpdateStatisticsError(msg string) Error {
 const SUBQUERY_BUILD = 5370
 
 func NewSubqueryBuildError(e error) Error {
+	if er, ok := e.(Error); ok && er.Code() == SUBQUERY_BUILD {
+		return er
+	}
 	return &err{level: EXCEPTION, ICode: SUBQUERY_BUILD, IKey: "execution.subquery.build", ICause: e,
 		InternalMsg:    "Unable to run subquery",
 		InternalCaller: CallerN(1)}

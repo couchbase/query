@@ -732,8 +732,9 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 					this.prepared.Unlock()
 
 					// Generate our own error for this subquery, in addition to whatever the query above is doing.
-					this.Error(errors.NewSubqueryBuildError(err))
-					return nil, err
+					err1 := errors.NewSubqueryBuildError(err)
+					this.Error(err1)
+					return nil, err1
 				}
 
 				// Cache plan
@@ -763,8 +764,9 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 		if err != nil {
 			// Generate our own error for this subquery, in addition to whatever the query above is doing.
-			this.Error(errors.NewSubqueryBuildError(err))
-			return nil, err
+			err1 := errors.NewSubqueryBuildError(err)
+			this.Error(err1)
+			return nil, err1
 		}
 
 		// Cache plan
@@ -774,8 +776,9 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	pipeline, err := Build(subplan.(plan.Operator), this)
 	if err != nil {
 		// Generate our own error for this subquery, in addition to whatever the query above is doing.
-		this.Error(errors.NewSubqueryBuildError(err))
-		return nil, err
+		err1 := errors.NewSubqueryBuildError(err)
+		this.Error(err1)
+		return nil, err1
 	}
 
 	// Collect subquery results
