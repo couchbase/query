@@ -619,7 +619,6 @@ func (this *TransactionMutations) DeleteAll(delta bool, memSize *int64) {
 				_MUTATIONVALUE_MAPPOOL.Put(dk.values)
 				dk.values = nil
 				_DELTAKEYSPACE_POOL.Put(dk)
-
 			}
 		}
 	}
@@ -711,6 +710,7 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 								err = err1
 							}
 						}
+						*tlv = TransactionLogValue{}
 						_TRANSACTIONLOGVALUE_POOL.Put(tlv)
 					}
 				}
@@ -784,6 +784,7 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 			mdk.values[key] = nil
 			delete(mdk.values, key)
 			if mv != nil {
+				*mv = MutationValue{}
 				_MUTATIONVALUE_POOL.Put(mv)
 			}
 		} else {
@@ -794,6 +795,7 @@ func (this *TransactionMutations) MergeDeltaKeyspace() (err errors.Error) {
 			if len(this.savepoints) == 0 {
 				memSize -= mmv.memSize
 			}
+			*mmv = MutationValue{}
 			_MUTATIONVALUE_POOL.Put(mmv)
 		}
 
@@ -920,6 +922,7 @@ func (this *DeltaKeyspace) Delete(key string, memSize *int64) {
 		this.values[key] = nil
 		delete(this.values, key)
 		if v != nil {
+			*v = MutationValue{}
 			_MUTATIONVALUE_POOL.Put(v)
 		}
 	}
@@ -934,6 +937,7 @@ func (this *TransactionLog) DeleteAll(pos int, memSize *int64) {
 		if i >= pos && tlv != nil {
 			*memSize += tlv.oldMemSize
 			this.logValues[i] = nil
+			*tlv = TransactionLogValue{}
 			_TRANSACTIONLOGVALUE_POOL.Put(tlv)
 		}
 	}
@@ -969,6 +973,7 @@ func (this *TransactionLogValue) Undo(dk *DeltaKeyspace, memSize *int64) (err er
 		delete(dk.values, this.key)
 		if ok {
 			*memSize += _MUTATIONVALUE_SZ + mv.memSize + int64(len(this.key))
+			*mv = MutationValue{}
 			_MUTATIONVALUE_POOL.Put(mv)
 		}
 	case MOP_INSERT, MOP_UPSERT, MOP_UPDATE, MOP_DELETE:

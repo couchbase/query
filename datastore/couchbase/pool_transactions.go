@@ -128,6 +128,7 @@ func (this *MutationValueMapPool) Put(s map[string]*MutationValue) {
 		s[k] = nil
 		delete(s, k)
 		if v != nil {
+			*v = MutationValue{}
 			_MUTATIONVALUE_POOL.Put(v)
 		}
 	}
@@ -192,6 +193,7 @@ func (this *TransactionLogValuesPool) Put(s TransactionLogValues) {
 
 	for _, v := range s {
 		if v != nil {
+			*v = TransactionLogValue{}
 			_TRANSACTIONLOGVALUE_POOL.Put(v)
 		}
 	}
