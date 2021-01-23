@@ -1896,7 +1896,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications. Error - %v", key, err)
 			} else {
 				logging.Errorf("Failed to perform <ud>%s</ud> on key <ud>%s</ud> for Keyspace %s. Error - %v",
-					MutateOpToName(op), key, b.Name(), err)
+					MutateOpToName(op), key, qualifiedName, err)
 			}
 		} else {
 			mPairs = append(mPairs, kv)
