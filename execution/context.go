@@ -385,8 +385,9 @@ func (this *Context) AdjustTimeout(timeout time.Duration, stmtType string, isPre
 
 	if this.txContext != nil {
 		timeout = this.txContext.TxTimeRemaining()
-		if timeout <= 0 {
-			timeout = time.Millisecond
+		// At least keep 10ms so that executor can lanunch before timer kicks in.
+		if timeout <= 10*time.Millisecond {
+			timeout = 10 * time.Millisecond
 		}
 	}
 
