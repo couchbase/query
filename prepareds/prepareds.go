@@ -136,7 +136,7 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err := DecodePrepared(name, encoded_plan)
+							_, err := DecodePrepared(name, encoded_plan, true)
 							if err == nil {
 								count++
 							}
@@ -511,7 +511,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			func(doc map[string]interface{}) {
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
-					prepared, err = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime)
+					prepared, err = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime, true)
 				}
 			},
 			func(warn errors.Error) {
@@ -601,11 +601,11 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 	})
 }
 
-func DecodePrepared(prepared_name string, prepared_stmt string) (*plan.Prepared, errors.Error) {
-	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil)
+func DecodePrepared(prepared_name string, prepared_stmt string, reprep bool) (*plan.Prepared, errors.Error) {
+	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep)
 }
 
-func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool, phaseTime *time.Duration, reprep bool) (*plan.Prepared, errors.Error) {
 	added := true
 
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
@@ -622,7 +622,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
-	prepared, err := unmarshalPrepared(prepared_bytes, phaseTime)
+	prepared, err := unmarshalPrepared(prepared_bytes, phaseTime, reprep)
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
@@ -687,23 +687,24 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 }
 
-func unmarshalPrepared(bytes []byte, phaseTime *time.Duration) (*plan.Prepared, errors.Error) {
+func unmarshalPrepared(bytes []byte, phaseTime *time.Duration, reprep bool) (*plan.Prepared, errors.Error) {
 	prepared := plan.NewPrepared(nil, nil, nil)
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
+		if reprep {
+			// if we failed to unmarshall, we find  the statement
+			// and try preparing from scratch
+			text, err1 := json.FindKey(bytes, "text")
+			if text != nil && err1 == nil {
+				var stmt string
 
-		// if we failed to unmarshall, we find  the statement
-		// and try preparing from scratch
-		text, err1 := json.FindKey(bytes, "text")
-		if text != nil && err1 == nil {
-			var stmt string
-
-			err1 = json.Unmarshal(text, &stmt)
-			if err1 == nil {
-				prepared.SetText(stmt)
-				pl, _ := reprepare(prepared, nil, phaseTime)
-				if pl != nil {
-					return pl, nil
+				err1 = json.Unmarshal(text, &stmt)
+				if err1 == nil {
+					prepared.SetText(stmt)
+					pl, _ := reprepare(prepared, nil, phaseTime)
+					if pl != nil {
+						return pl, nil
+					}
 				}
 			}
 		}

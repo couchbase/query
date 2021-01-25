@@ -396,7 +396,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err = prepareds.DecodePrepared(name, string(body))
+		_, err = prepareds.DecodePrepared(name, string(body), true)
 		if err != nil {
 			return nil, err
 		}

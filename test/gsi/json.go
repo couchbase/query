@@ -763,7 +763,7 @@ func PrepareStmt(qc *MockServer, gv int, namespace, statement string) (*plan.Pre
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
-	rv, err := prepareds.DecodePrepared(ra["name"].(string), ra["encoded_plan"].(string))
+	rv, err := prepareds.DecodePrepared(ra["name"].(string), ra["encoded_plan"].(string), false)
 	if err != nil {
 		return rv, err
 	}
