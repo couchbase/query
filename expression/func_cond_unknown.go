@@ -562,21 +562,26 @@ func (this *Decode) Evaluate(item value.Value, context Context) (value.Value, er
 		}
 	}
 
+	var rv value.Value
 	for i := 1; i+1 < len(this.operands); i += 2 {
 		arg, err := this.operands[i].Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		}
-		if first.EquivalentTo(arg) {
-			arg, err = this.operands[i+1].Evaluate(item, context)
-			if err != nil {
-				return nil, err
-			}
-			return arg, nil
+		res, err := this.operands[i+1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		if rv == nil && first.EquivalentTo(arg) {
+			rv = res
 		}
 	}
 
-	return def, nil
+	if rv == nil {
+		return def, nil
+	}
+
+	return rv, nil
 }
 
 func (this *Decode) MinArgs() int { return 3 }
