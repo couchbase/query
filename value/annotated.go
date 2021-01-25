@@ -61,6 +61,8 @@ from covering indexes.
 */
 type AnnotatedValue interface {
 	Value
+	Stash() int32
+	Restore(lvl int32)
 	GetValue() Value
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
@@ -410,15 +412,27 @@ func (this *annotatedValue) Original() AnnotatedValue {
 	return av
 }
 
+func (this *annotatedValue) Stash() int32 {
+	return atomic.AddInt32(&this.refCnt, 1) - 1
+}
+
+func (this *annotatedValue) Restore(lvl int32) {
+	atomic.StoreInt32(&this.refCnt, lvl)
+}
+
 func (this *annotatedValue) Track() {
 	atomic.AddInt32(&this.refCnt, 1)
 }
 
 func (this *annotatedValue) Recycle() {
+	this.recycle(-1)
+}
+
+func (this *annotatedValue) recycle(lvl int32) {
 
 	// do no recycle if other scope values are using this value
 	// or if this is an original document hanging off a projecton
-	refcnt := atomic.AddInt32(&this.refCnt, -1)
+	refcnt := atomic.AddInt32(&this.refCnt, lvl)
 	if refcnt > 0 || this.noRecycle {
 		return
 	}

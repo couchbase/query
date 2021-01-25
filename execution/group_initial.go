@@ -74,6 +74,9 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	gv := this.groups[gk]
 	handleQuota := false
 	if gv == nil {
+
+		// avoid recycling of seeding values
+		item.Track()
 		gv = item
 		this.groups[gk] = gv
 
@@ -108,7 +111,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	if handleQuota {
 		context.ReleaseValueSize(item.Size())
 	}
-	// TODO Recycle
+	item.Recycle()
 
 	return true
 }

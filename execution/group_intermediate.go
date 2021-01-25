@@ -73,6 +73,8 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	// Get or seed the group value
 	gv := this.groups[gk]
 	if gv == nil {
+
+		// avoid recycling of seeding values
 		gv = item
 		this.groups[gk] = gv
 		return true
@@ -90,7 +92,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	if context.UseRequestQuota() {
 		context.ReleaseValueSize(item.Size())
 	}
-	// TODO Recycle
+	item.Recycle()
 
 	cumulative := gv.GetAttachment("aggregates").(map[string]value.Value)
 	if !ok {

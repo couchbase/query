@@ -196,9 +196,13 @@ func (this *ScopeValue) Track() {
 }
 
 func (this *ScopeValue) Recycle() {
+	this.recycle(-1)
+}
+
+func (this *ScopeValue) recycle(lvl int32) {
 
 	// do no recycle if other scope values are using this value
-	refcnt := atomic.AddInt32(&this.refCnt, -1)
+	refcnt := atomic.AddInt32(&this.refCnt, lvl)
 	if refcnt > 0 {
 		return
 	}
@@ -211,9 +215,9 @@ func (this *ScopeValue) Recycle() {
 		for _, v := range fields {
 			switch v := v.(type) {
 			case *ScopeValue:
-				v.Recycle()
+				v.recycle(-2)
 			case *annotatedValue:
-				v.Recycle()
+				v.recycle(-2)
 			}
 		}
 

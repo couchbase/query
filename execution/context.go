@@ -786,7 +786,14 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	// FIXME: this should handled by the planner
 	collect := NewCollect(plan.NewCollect(), this)
 	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
-	sequence.RunOnce(this, parent)
+	av, ok := parent.(value.AnnotatedValue)
+	if ok {
+		track := av.Stash()
+		sequence.RunOnce(this, parent)
+		av.Restore(track)
+	} else {
+		sequence.RunOnce(this, parent)
+	}
 
 	// Await completion
 	collect.waitComplete()
