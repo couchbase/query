@@ -14,8 +14,10 @@ package util
 // Our implementation tends to be leaner too.
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
+	"time"
 	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -73,6 +75,10 @@ type FastPool struct {
 	f         func() interface{}
 	pool      []poolList
 	free      []poolList
+	interval  time.Duration
+	low       int32
+	high      int32
+	bailOut   chan bool
 }
 
 type poolList struct {
@@ -132,6 +138,81 @@ func (p *FastPool) Put(s interface{}) {
 	e.entry = s
 	p.pool[l].Put(e)
 	atomic.AddInt32(&p.useCount, 1)
+}
+
+// a drainer can only be started once
+// close the pool and start a new one
+func (p *FastPool) Drain(low, high int, interval time.Duration) error {
+	if p.bailOut != nil {
+		return fmt.Errorf("Draining already set up")
+	}
+	if interval < time.Second {
+		return fmt.Errorf("Invalid interval")
+	}
+	if low < 0 || high > 100 || low >= high {
+		return fmt.Errorf("Invalid watermarks")
+	}
+	p.low = int32(low * _POOL_SIZE / 100)
+	p.high = int32(high * _POOL_SIZE / 100)
+	p.bailOut = make(chan bool)
+	go p.drainer()
+	return nil
+}
+
+// a closed pool is not supposed to be reopened
+// initialize a new pool
+func (p *FastPool) Close() {
+	if p.bailOut != nil {
+
+		// defensively, we won't wait if the channel is full
+		select {
+		case p.bailOut <- false:
+		default:
+		}
+	}
+}
+
+// asynchronous connection closer
+func (p *FastPool) drainer() {
+	t := time.NewTimer(p.interval)
+	defer t.Stop()
+
+	for {
+		getNext := p.getNext
+
+		// we don't exist anymore! bail out!
+		select {
+		case <-p.bailOut:
+			return
+		case <-t.C:
+		}
+		t.Reset(p.interval)
+
+		// demand for entries is there
+		if p.getNext != getNext || p.useCount <= p.high {
+			continue
+		}
+
+		// remove excess free entries
+		for p.useCount > p.low {
+			select {
+			case <-p.bailOut:
+				return
+			default:
+			}
+
+			l := atomic.AddUint32(&p.getNext, 1) % p.buckets
+			e := p.pool[l].Get()
+			if e != nil {
+				atomic.AddInt32(&p.useCount, -1)
+				e.entry = nil
+				if atomic.LoadInt32(&p.freeCount) < _POOL_SIZE {
+					atomic.AddInt32(&p.freeCount, 1)
+					p.free[l].Put(e)
+				}
+			}
+		}
+	}
 }
 
 func (l *poolList) Get() *poolEntry {
