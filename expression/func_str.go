@@ -532,9 +532,9 @@ func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, e
 			return nil, err
 		} else if arg.Type() == value.MISSING {
 			missing = true
-		} else if i < 4 && arg.Type() != value.STRING {
+		} else if i < 3 && arg.Type() != value.STRING {
 			null = true
-		} else if i == 4 && arg.Type() != value.NUMBER {
+		} else if i == 3 && arg.Type() != value.NUMBER {
 			null = true
 		} else if !null && !missing {
 			switch i {

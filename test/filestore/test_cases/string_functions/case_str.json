@@ -572,5 +572,15 @@
                 "c3": "b"
             }
       ]
+    },
+    {
+      "statements":"SELECT REPLACE('SQL SQL SQL', 'S', 'N1', -1) as negative_n, REPLACE('SQL SQL SQL', 'S', 'N1', 2) as replace_2, REPLACE('SQL SQL SQL', 'S', 'N1') as replace_all",
+      "results": [
+        {
+          "negative_n": "N1QL N1QL N1QL",
+          "replace_2": "N1QL N1QL SQL",
+          "replace_all": "N1QL N1QL N1QL"
+        }
+      ]
     }
 ]
