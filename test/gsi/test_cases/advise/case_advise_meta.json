@@ -76,5 +76,106 @@
         "query": "select * from shellTest where id is not null and length(meta().cas) = 10"
       }
     ]
+  },
+  {
+    "statements": "advise select meta().expiration, name from shellTest where id is not null and length(meta().cas) = 10 and meta().expiration < 100 order by id",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "ORDER pushdown",
+                  "index_statement": "CREATE INDEX adv_length_meta_self_cas_id_meta_self_expiration_name ON `shellTest`(length((meta(self).`cas`)),`id`,meta(self).`expiration`,`name`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_length_meta_self_cas_meta_self_expiration_id ON `shellTest`(length((meta(self).`cas`)),meta(self).`expiration`,`id`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select meta().expiration, name from shellTest where id is not null and length(meta().cas) = 10 and meta().expiration < 100 order by id"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where class = 'myclass' and meta().id > 'abcd' order by meta().id",
+    "advise": true,
+    "results": [
+      {
+          "#operator": "Advise",
+          "advice": {
+              "#operator": "IndexAdvice",
+              "adviseinfo": {
+                  "recommended_indexes": {
+                      "indexes": [
+                          {
+                              "index_statement": "CREATE INDEX adv_class_meta_self_id ON `shellTest`(`class`,meta(self).`id`)",
+                              "keyspace_alias": "shellTest",
+                              "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                          }
+                      ]
+                  }
+              }
+          },
+          "query": "select * from shellTest where class = 'myclass' and meta().id > 'abcd' order by meta().id;"
+      }
+    ]
+  },
+  {
+    "statements": "advise select meta().id, class from shellTest where class = 'myclass' order by meta().id",
+    "advise": true,
+    "results": [
+      {
+          "#operator": "Advise",
+          "advice": {
+              "#operator": "IndexAdvice",
+              "adviseinfo": {
+                  "recommended_indexes": {
+                      "covering_indexes": [
+                          {
+                              "index_statement": "CREATE INDEX adv_class ON `shellTest`(`class`)",
+                              "keyspace_alias": "shellTest"
+                          }
+                      ],
+                      "indexes": [
+                          {
+                              "index_statement": "CREATE INDEX adv_class ON `shellTest`(`class`)",
+                              "keyspace_alias": "shellTest",
+                              "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                          }
+                      ]
+                  }
+              }
+          },
+          "query": "select meta().id, class from shellTest where class = 'myclass' order by meta().id;"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where meta().id > 'abcd' order by meta().id",
+    "advise": true,
+    "results": [
+      {
+          "#operator": "Advise",
+          "advice": {
+              "#operator": "IndexAdvice",
+              "adviseinfo": {
+                  "recommended_indexes": "No secondary index recommendation at this time, primary index may apply."
+              }
+          },
+          "query": "select * from shellTest where meta().id > 'abcd' order by meta().id;"
+      }
+    ]
   }
 ]
