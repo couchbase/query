@@ -140,15 +140,10 @@ func (this *Parallel) accrueTimes(o Operator) {
 }
 
 func (this *Parallel) SendAction(action opAction) {
-	if this.baseSendAction(action) {
-		children := this.children
-		for _, child := range children {
-			if child != nil {
-				child.SendAction(action)
-			}
-			if this.children == nil {
-				break
-			}
+	this.baseSendAction(action)
+	for _, child := range this.children {
+		if child != nil {
+			child.SendAction(action)
 		}
 	}
 }

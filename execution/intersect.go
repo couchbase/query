@@ -117,13 +117,13 @@ func (this *Intersect) accrueTimes(o Operator) {
 }
 
 func (this *Intersect) SendAction(action opAction) {
-	rv := this.baseSendAction(action)
+	this.baseSendAction(action)
 	first := this.first
 	second := this.second
-	if rv && first != nil {
+	if first != nil {
 		first.SendAction(action)
 	}
-	if rv && second != nil {
+	if second != nil {
 		second.SendAction(action)
 	}
 }
@@ -255,13 +255,13 @@ func (this *IntersectAll) accrueTimes(o Operator) {
 }
 
 func (this *IntersectAll) SendAction(action opAction) {
-	rv := this.baseSendAction(action)
+	this.baseSendAction(action)
 	first := this.first
 	second := this.second
-	if rv && first != nil {
+	if first != nil {
 		first.SendAction(action)
 	}
-	if rv && second != nil {
+	if second != nil {
 		second.SendAction(action)
 	}
 }

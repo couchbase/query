@@ -63,11 +63,15 @@ type annotatedChannel chan value.AnnotatedValue
 // _KILLED operators will have to clean up after themselves and remove any residual
 // references to other objects so as to help the GC.
 // This also means that it is not safe to pool _KILLED operators, as they may later
-// come to life
+// come to life.
 // The Done() method should only be called when it is known that no further actions
 // are going to be sent, and the request as completed, either naturally, or via an
 // OpStop(), as, as much as we try, it's difficult to control race conditions when
 // SendAction() should take decisions based on structures that are being torn down.
+// This means that sending further actions should be prevented before Done() is called,
+// and after.
+// Also, since we can't guarantee that operators will come to stop naturally, it's
+// probably safer to send a stop before calling Done() even on a successful execution.
 
 // Conversely, dormant operators should never change state during request execution,
 // because marking them as inactive will terminate early a result stream.

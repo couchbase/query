@@ -163,9 +163,9 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 
 // send a stop
 func (this *IndexNest) SendAction(action opAction) {
-	rv := this.baseSendAction(action)
+	this.baseSendAction(action)
 	this.Lock()
-	if rv && this.conn != nil {
+	if this.conn != nil {
 		this.conn.SendStop()
 	}
 	this.Unlock()

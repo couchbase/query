@@ -239,9 +239,9 @@ func (this *HashJoin) MarshalJSON() ([]byte, error) {
 }
 
 func (this *HashJoin) SendAction(action opAction) {
-	rv := this.baseSendAction(action)
+	this.baseSendAction(action)
 	child := this.child
-	if rv && child != nil {
+	if child != nil {
 		child.SendAction(action)
 	}
 }

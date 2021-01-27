@@ -827,6 +827,9 @@ func (this *BaseRequest) CompleteRequest(requestTime time.Duration, serviceTime 
 		this.stopGate.Wait()
 		this.stopGate.Add(1)
 		this.timings.Done()
+
+		// sending a stop is illegal after this point
+		this.stopOperator = nil
 		this.stopGate.Done()
 		this.timings = nil
 	}
