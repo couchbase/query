@@ -1047,7 +1047,7 @@ func (p *namespace) refresh() {
 	}
 
 	// trigger refresh of this pool
-	logging.Debugf("Refreshing pool %s", p.name)
+	logging.Debuga(func() string { return fmt.Sprintf("Refreshing pool %s", p.name) })
 
 	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
@@ -1104,7 +1104,7 @@ func (p *namespace) refresh() {
 }
 
 func (p *namespace) reload() {
-	logging.Debugf("Reload %s", p.name)
+	logging.Debuga(func() string { return fmt.Sprintf("Reload %s", p.name) })
 
 	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
@@ -1155,7 +1155,7 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 func (p *namespace) reload2(newpool *cb.Pool) {
 	p.lock.Lock()
 	for name, ks := range p.keyspaceCache {
-		logging.Debugf(" Checking keyspace %s", name)
+		logging.Debuga(func() string { return fmt.Sprintf(" Checking keyspace %s", name) })
 		if ks.cbKeyspace == nil {
 			if util.Since(ks.lastUse) > _CLEANUP_INTERVAL {
 				delete(p.keyspaceCache, name)
@@ -1169,7 +1169,9 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 			delete(p.keyspaceCache, name)
 
 		} else if ks.cbKeyspace.cbbucket.UUID != newbucket.UUID {
-			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
+			logging.Debuga(func() string {
+				return fmt.Sprintf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
+			})
 			// UUID has changed. Update the keyspace struct with the newbucket
 			// and release old one
 			ks.cbKeyspace.cbbucket.Close()
@@ -1616,7 +1618,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 				fetchMap[k] = doFetch(k, fullName, v)
 				i++
 			}
-			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
+			logging.Debuga(func() string { return fmt.Sprintf("Requested keys %d Fetched %d keys ", l, i) })
 		}
 	}
 
@@ -1650,7 +1652,7 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse) value.Annotat
 	val.SetId(k)
 
 	// Uncomment when needed
-	//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
+	//logging.Debuga(func() string{ return fmt.Sprintf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)})
 
 	return val
 }
@@ -1830,6 +1832,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	for _, kv := range pairs {
 		var val interface{}
 		var exptime int
+		var cas uint64
 
 		key := kv.Name
 		if op != MOP_DELETE {
@@ -1850,7 +1853,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			var added bool
 
 			// add the key to the backend
-			added, err = b.cbbucket.Add(key, exptime, val, clientContext...)
+			added, cas, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
 			b.checkRefresh(err)
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
@@ -1859,11 +1862,14 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				} else {
 					err = errors.NewError(nil, "Duplicate Key "+key)
 				}
+			} else if err == nil {
+				// refresh local meta CAS value
+				logging.Debuga(func() string { return fmt.Sprintf("After insert: key {<ud>%v</ud>} CAS %v", key, cas) })
+				SetMetaCas(kv.Value, cas)
 			}
 		case MOP_UPDATE:
 			// check if the key exists and if so then use the cas value
 			// to update the key
-			var cas uint64
 			var flags uint32
 
 			cas, flags, _, err = getMeta(key, kv.Value, true)
@@ -1872,15 +1878,26 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
 			} else {
 
-				logging.Debugf("CAS Value (Update) for key <ud>%v</ud> is %v flags <ud>%v</ud> value <ud>%v</ud>",
-					key, uint64(cas), flags, val)
-				_, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, uint64(cas), val, clientContext...)
+				logging.Debuga(func() string {
+					return fmt.Sprintf("Before update: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud>",
+						key, cas, flags, val)
+				})
+				cas, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
+				if err == nil {
+					// refresh local meta CAS value
+					logging.Debuga(func() string { return fmt.Sprintf("After update: Key - <ud>%v</ud> CAS - %v", key, cas) })
+					SetMetaCas(kv.Value, cas)
+				}
 				b.checkRefresh(err)
 			}
 
 		case MOP_UPSERT:
-			err = b.cbbucket.Set(key, exptime, val, clientContext...)
+			cas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
 			b.checkRefresh(err)
+			if err == nil {
+				logging.Debuga(func() string { return fmt.Sprintf("After upsert: key {<ud>%v</ud>} CAS %v", key, cas) })
+				SetMetaCas(kv.Value, cas)
+			}
 		case MOP_DELETE:
 			err = b.cbbucket.Delete(key, clientContext...)
 			b.checkRefresh(err)
