@@ -154,6 +154,7 @@ func (p *FastPool) Drain(low, high int, interval time.Duration) error {
 	}
 	p.low = int32(low * _POOL_SIZE / 100)
 	p.high = int32(high * _POOL_SIZE / 100)
+	p.interval = interval
 	p.bailOut = make(chan bool)
 	go p.drainer()
 	return nil
