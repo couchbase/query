@@ -115,13 +115,13 @@ func (this *Except) accrueTimes(o Operator) {
 }
 
 func (this *Except) SendAction(action opAction) {
-	rv := this.baseSendAction(action)
+	this.baseSendAction(action)
 	first := this.first
 	second := this.second
-	if rv && first != nil {
+	if first != nil {
 		first.SendAction(action)
 	}
-	if rv && second != nil {
+	if second != nil {
 		second.SendAction(action)
 	}
 }
@@ -251,13 +251,13 @@ func (this *ExceptAll) accrueTimes(o Operator) {
 }
 
 func (this *ExceptAll) SendAction(action opAction) {
-	rv := this.baseSendAction(action)
+	this.baseSendAction(action)
 	first := this.first
 	second := this.second
-	if rv && first != nil {
+	if first != nil {
 		first.SendAction(action)
 	}
-	if rv && second != nil {
+	if second != nil {
 		second.SendAction(action)
 	}
 }
