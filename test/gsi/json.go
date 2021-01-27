@@ -261,11 +261,14 @@ func Run(mockServer *MockServer, gv int, q, namespace string, namedArgs map[stri
 	if userArgs == nil {
 		query.SetCredentials(&_ALL_USERS)
 	} else {
-		users := _ALL_USERS
+		users := auth.NewCredentials()
+		for k, v := range _ALL_USERS.Users {
+			users.Users[k] = v
+		}
 		for k, v := range userArgs {
 			users.Users[k] = v
 		}
-		query.SetCredentials(&users)
+		query.SetCredentials(users)
 	}
 	//	query.BaseRequest.SetIndexApiVersion(datastore.INDEX_API_3)
 	//	query.BaseRequest.SetFeatureControls(util.N1QL_GROUPAGG_PUSHDOWN)
