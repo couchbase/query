@@ -12,8 +12,6 @@
 package couchbase
 
 import (
-	"time"
-
 	"github.com/couchbase/query/util"
 )
 
@@ -28,13 +26,6 @@ var _SAVEPOINTS_MAPPOOL *SavepointsMapPool
 
 var _TRANSACTIONLOGVALUES_POOL *TransactionLogValuesPool
 var _STRING_POOL = util.NewStringPool(_DK_DEF_SIZE)
-
-const (
-	_FASTPOOL_DRAIN_LOW      = 20              // low water mark of free entries to drian
-	_FASTPOOL_DRAIN_HIGH     = 40              // high water mark of free entries to drain
-	_FASTPOOL_DRAIN_HIGH2    = 60              // high water mark2 of free entries to drain
-	_FASTPOOL_DRAIN_INTERVAL = 5 * time.Minute //  drian interval check
-)
 
 type DeltaKeyspaceMapPool struct {
 	pool util.FastPool
@@ -60,22 +51,15 @@ func init() {
 	util.NewFastPool(&_TRANSACTIONMUTATIONS_POOL, func() interface{} {
 		return &TransactionMutations{}
 	})
-	_TRANSACTIONMUTATIONS_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
-
 	util.NewFastPool(&_DELTAKEYSPACE_POOL, func() interface{} {
 		return &DeltaKeyspace{}
 	})
-	_DELTAKEYSPACE_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
-
 	util.NewFastPool(&_MUTATIONVALUE_POOL, func() interface{} {
 		return &MutationValue{}
 	})
-	_MUTATIONVALUE_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH2, _FASTPOOL_DRAIN_INTERVAL)
-
 	util.NewFastPool(&_TRANSACTIONLOGVALUE_POOL, func() interface{} {
 		return &TransactionLogValue{}
 	})
-	_TRANSACTIONLOGVALUE_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH2, _FASTPOOL_DRAIN_INTERVAL)
 
 	_DELTAKEYSPACE_MAPPOOL = NewDeltaKeyspaceMapPool(_TM_DEF_KEYSPACES)
 	_MUTATIONVALUE_MAPPOOL = NewMutationValueMapPool(_DK_DEF_SIZE)
@@ -90,7 +74,6 @@ func NewDeltaKeyspaceMapPool(size int) *DeltaKeyspaceMapPool {
 	util.NewFastPool(&rv.pool, func() interface{} {
 		return make(map[string]*DeltaKeyspace, rv.size)
 	})
-	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
 
 	return rv
 }
@@ -128,7 +111,6 @@ func NewMutationValueMapPool(size int) *MutationValueMapPool {
 	util.NewFastPool(&rv.pool, func() interface{} {
 		return make(map[string]*MutationValue, rv.size)
 	})
-	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
 
 	return rv
 }
@@ -165,7 +147,6 @@ func NewSavepointsMapPool(size int) *SavepointsMapPool {
 	util.NewFastPool(&rv.pool, func() interface{} {
 		return make(map[string]uint64, rv.size)
 	})
-	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
 
 	return rv
 }
@@ -197,7 +178,6 @@ func NewTransactionLogValuesPool(size int) *TransactionLogValuesPool {
 	util.NewFastPool(&rv.pool, func() interface{} {
 		return make(TransactionLogValues, 0, rv.size)
 	})
-	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
 
 	return rv
 }
