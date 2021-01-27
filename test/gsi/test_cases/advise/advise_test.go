@@ -16,9 +16,9 @@ func TestAdvise(t *testing.T) {
 	qc := start_cs()
 
 	fmt.Println("\n\nInserting values into Bucket \n\n ")
-	//runMatch("insert.json", false, false, qc, t)
+	runMatch("insert.json", false, false, qc, t)
 
-	runMatch("case_virtual.json", false, false, qc, t)
+	//runMatch("case_virtual.json", false, false, qc, t)
 	runMatch("case_advise_select.json", false, false, qc, t)
 	runMatch("case_advise_others.json", false, false, qc, t)
 	runMatch("case_advise_edgecase.json", false, false, qc, t)

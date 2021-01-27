@@ -35,15 +35,15 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select * from shellTest where test_id = \"advise\" and c11 < 2;"
+        "query": "select * from shellTest where test_id = \"advise\" and c11 < 2"
       }
     ]
   },
@@ -59,15 +59,15 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 4. not less than/between/not greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select * from shellTest where c12 between 10 and 40 and test_id = \"advise\";"
+        "query": "select * from shellTest where c12 between 10 and 40 and test_id = \"advise\""
       }
     ]
   },
@@ -113,20 +113,20 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a1",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a2",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 9. non-static join predicate."
+                  "recommending_rule": "Index keys follow order of predicate types: 9. non-static join predicate, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select * from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40;"
+        "query": "select * from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40"
       }
     ]
   },
@@ -142,30 +142,30 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_c11 ON `shellTest`(`test_id`,`c12`,`c11`)",
+                  "index_statement": "CREATE INDEX adv_c12_test_id_c11 ON `shellTest`(`c12`,`c11`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a1"
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21_c22 ON `shellTest`(`test_id`,`c21`,`c22`)",
+                  "index_statement": "CREATE INDEX adv_c21_test_id_c22 ON `shellTest`(`c21`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a2"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12 ON `shellTest`(`test_id`,`c12`)",
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a1",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a2",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 9. non-static join predicate."
+                  "recommending_rule": "Index keys follow order of predicate types: 9. non-static join predicate, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select a1.c12, a2.c22 from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40;"
+        "query": "select a1.c12, a2.c22 from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40"
       }
     ]
   },
@@ -181,7 +181,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_length_a22_c22 ON `shellTest`(`test_id`,length(`a22`),`c22`)",
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id_c22 ON `shellTest`(length(`a22`),`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_s2"
                 }
               ],
@@ -192,15 +192,15 @@
                   "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
                 },
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_length_a22 ON `shellTest`(`test_id`,length(`a22`))",
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id ON `shellTest`(length(`a22`)) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_s2",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select s1.*, s2.c22 from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" and s1.id is not null;"
+        "query": "select s1.*, s2.c22 from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" and s1.id is not null"
       }
     ]
   },
@@ -216,15 +216,15 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_DISTINCT_a21_a22 ON `shellTest`(`test_id`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select * from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END;"
+        "query": "select * from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END"
       }
     ]
   },
@@ -285,7 +285,7 @@
             }
           }
         },
-        "query": "select c12 from shellTest where c11 = 4 and c12 between 10 and 40;"
+        "query": "select c12 from shellTest where c11 = 4 and c12 between 10 and 40"
       }
     ]
   },
@@ -301,21 +301,21 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21_c11_add_c12 ON `shellTest`(`test_id`,`c21`,`c11`+`c12`)",
+                  "index_statement": "CREATE INDEX adv_c21_test_id_c11_add_c12 ON `shellTest`(`c21`,`c11`+`c12`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c21 ON `shellTest`(`test_id`,`c21`)",
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select c11 + c12 from shellTest where test_id = \"advise\" and c21 > 1;"
+        "query": "select c11 + c12 from shellTest where test_id = \"advise\" and c21 > 1"
       }
     ]
   },
@@ -331,21 +331,21 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c11_length_c22 ON `shellTest`(`test_id`,`c11`,length(`c22`))",
+                  "index_statement": "CREATE INDEX adv_c11_test_id_length_c22 ON `shellTest`(`c11`,length(`c22`)) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 5. less than/greater than)."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/greater than), 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select test_id, length(c22) from shellTest where (c11 > 10 or c11 < 5) and test_id = \"advise\";"
+        "query": "select test_id, length(c22) from shellTest where (c11 > 10 or c11 < 5) and test_id = \"advise\""
       }
     ]
   },
@@ -361,21 +361,21 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifm2888102778 ON `shellTest`(`test_id`,ifmissing((`c11`.`rob`), 0)+ifmissing((`c12`.`matt`), 0)+ifmissing(((`p`.`c21`).`emma`), 0)+ifmissing(((`p`.`c22`).`ali`), 0),`a11`)",
+                  "index_statement": "CREATE INDEX adv_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifmissing_p1688208138 ON `shellTest`(ifmissing((`c11`.`rob`), 0)+ifmissing((`c12`.`matt`), 0)+ifmissing(((`p`.`c21`).`emma`), 0)+ifmissing(((`p`.`c22`).`ali`), 0),`a11`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_st"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifm1473151068 ON `shellTest`(`test_id`,ifmissing((`c11`.`rob`), 0)+ifmissing((`c12`.`matt`), 0)+ifmissing(((`p`.`c21`).`emma`), 0)+ifmissing(((`p`.`c22`).`ali`), 0))",
+                  "index_statement": "CREATE INDEX adv_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifmissing_p123484991 ON `shellTest`(ifmissing((`c11`.`rob`), 0)+ifmissing((`c12`.`matt`), 0)+ifmissing(((`p`.`c21`).`emma`), 0)+ifmissing(((`p`.`c22`).`ali`), 0)) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_st",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select st.a11, score from shellTest st let score = IFMISSING(st.c11.rob,0) + IFMISSING(st.c12.matt,0) + IFMISSING(p.c21.emma,0) + IFMISSING(p.c22.ali,0) where score > 0 and test_id = \"advise\" order by score asc LIMIT 50;"
+        "query": "select st.a11, score from shellTest st let score = IFMISSING(st.c11.rob,0) + IFMISSING(st.c12.matt,0) + IFMISSING(p.c21.emma,0) + IFMISSING(p.c22.ali,0) where score > 0 and test_id = \"advise\" order by score asc LIMIT 50"
       }
     ]
   },
@@ -405,7 +405,7 @@
             }
           }
         },
-        "query": "select type from shellTest where any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20;"
+        "query": "select type from shellTest where any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20"
       }
     ]
   },
@@ -421,21 +421,21 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\";"
+        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\""
       }
     ]
   },
@@ -574,21 +574,21 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id_c12_a11_c11_c22 ON `shellTest`(`test_id`,`c12`,`a11`,`c11`,`c22`)",
+                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
           }
         },
-        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\";"
+        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\""
       }
     ]
   },

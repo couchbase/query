@@ -88,7 +88,7 @@
             }
           }
         },
-        "query": "select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c;"
+        "query": "select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c"
       }
     ]
   },
@@ -124,7 +124,7 @@
     ]
   },
   {
-    "statements": "advise select name, pro_account from default where country=$1 and name is not null order by country desc",
+    "statements": "advise select name, pro_account from shellTest where country=$1 and name is not null order by country desc",
     "advise": true,
     "results": [
       {
@@ -136,21 +136,21 @@
               "covering_indexes": [
                 {
                   "index_property": "ORDER pushdown",
-                  "index_statement": "CREATE INDEX adv_countryDESC_name_pro_account ON `default`(`country` DESC,`name`,`pro_account`)",
-                  "keyspace_alias": "default"
+                  "index_statement": "CREATE INDEX adv_countryDESC_name_pro_account ON `shellTest`(`country` DESC,`name`,`pro_account`)",
+                  "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_country_name ON `default`(`country`,`name`)",
-                  "keyspace_alias": "default",
+                  "index_statement": "CREATE INDEX adv_country_name ON `shellTest`(`country`,`name`)",
+                  "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 7. not null/not missing/valued."
                 }
               ]
             }
           }
         },
-        "query": "select name, pro_account from default where country=$1 and name is not null order by country desc"
+        "query": "select name, pro_account from shellTest where country=$1 and name is not null order by country desc"
       }
     ]
   }
