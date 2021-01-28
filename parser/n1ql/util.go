@@ -10,59 +10,100 @@
 package n1ql
 
 import (
-	"encoding/json"
-	"strings"
+	"errors"
+	"unicode/utf8"
+	"unsafe"
 )
 
-// Unmarshal a double quoted string. s must begin and end with double
-// quotes.
-func UnmarshalDoubleQuoted(s string) (t string, e error) {
-	if !strings.ContainsRune(s, '\\') {
-		return s[1 : len(s)-1], nil
+// Handle permitted JSON escape sequences along with appropriate quotation mark escaping
+// Ref: https://www.json.org/json-en.html
+func ProcessEscapeSequences(s string) (t string, e error) {
+	b := make([]byte, len(s)-2)
+	w := 0
+	bq := false
+	for r := 1; r < len(s)-1; r++ {
+		c := s[r]
+		if bq {
+			switch c {
+			case 'b':
+				b[w] = '\b'
+				w++
+			case 'f':
+				b[w] = '\f'
+				w++
+			case 'n':
+				b[w] = '\n'
+				w++
+			case 'r':
+				b[w] = '\r'
+				w++
+			case 't':
+				b[w] = '\t'
+				w++
+			case '/':
+				b[w] = c
+				w++
+			case '\\':
+				b[w] = c
+				w++
+			case '"':
+				b[w] = c
+				w++
+			case '\'':
+				b[w] = c
+				w++
+			case 'u':
+				// next 4 chars are hex digits which we build a UTF-8 encoded rune from
+				r++
+				if r+4 > len(s)-1 {
+					return t, errors.New("invalid unicode escape sequence")
+				}
+				var rn rune = rune(0x0)
+				for end := r + 4; r < end; r++ {
+					b := byte(s[r]) - '0'
+					if b > 9 {
+						b = b - 7
+						if b > 15 {
+							b = b - 32
+						}
+						if b < 10 {
+							return t, errors.New("invalid unicode escape sequence")
+						}
+					}
+					if b < 0 || b > 15 {
+						return t, errors.New("invalid unicode escape sequence")
+					}
+					rn = rn << 4
+					rn = rn | rune(b)
+				}
+				buf := make([]byte, utf8.UTFMax)
+				n := utf8.EncodeRune(buf, rn)
+				for i := 0; i < n; i++ {
+					b[w] = buf[i]
+					w++
+				}
+			default:
+				return t, errors.New("invalid escape sequence")
+			}
+			bq = false
+		} else if c == '\\' {
+			bq = true
+		} else {
+			b[w] = c
+			w++
+			// if single quoted, allow '' as an escaped single quote
+			if s[0] == '\'' && c == '\'' {
+				r++
+				if r >= len(s)-1 || s[r] != '\'' {
+					return t, errors.New("unescaped embedded quote")
+				}
+			} else if s[0] == c {
+				return t, errors.New("unescaped embedded quote")
+			}
+		}
 	}
-
-	var rv string
-	e = json.Unmarshal([]byte(s), &rv)
-	if e == nil {
-		t = rv
-	}
-
-	return t, e
-}
-
-// Unmarshal a single-quoted string. s must begin and end with single
-// quotes.
-func UnmarshalSingleQuoted(s string) (t string, e error) {
-	s = s[1 : len(s)-1]
-	s = strings.Replace(s, "''", "'", -1) // '' escapes '
-	return UnmarshalUnquoted(s)
-}
-
-// Unmarshal a back-quoted string. s must begin and end with back
-// quotes.
-func UnmarshalBackQuoted(s string) (t string, e error) {
-	s = s[1 : len(s)-1]
-	s = strings.Replace(s, "``", "`", -1) // `` escapes `
-	return UnmarshalUnquoted(s)
-}
-
-// Unmarshal an unquoted string.
-func UnmarshalUnquoted(s string) (t string, e error) {
-	if !strings.ContainsRune(s, '\\') {
-		return s, nil
-	}
-
-	buf := make([]byte, len(s)+2)
-	buf[0], buf[len(buf)-1] = byte('"'), byte('"')
-	for i := 0; i < len(s); i++ {
-		buf[i+1] = s[i]
-	}
-
-	var rv string
-	e = json.Unmarshal(buf, &rv)
-	if e == nil {
-		t = rv
-	}
-
-	return t, e
+	b = b[:w]
+	// this is what strings.Builder.String() does... https://golang.org/src/strings/builder.go?s=1395:1428#L37
+	t = *(*string)(unsafe.Pointer(&b))
+	return t, nil
 }
