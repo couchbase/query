@@ -582,5 +582,27 @@
           "replace_all": "N1QL N1QL N1QL"
         }
       ]
+    },
+    {
+      "statements":"select like_prefix(\"abc%123\"),like_suffix(\"___123\"),like_stop(\"abc\\u0000\"),like_stop(\"abc%\")",
+      "results": [
+        {
+            "$1": "abc",
+            "$2": "123",
+            "$3": "abc\u0000\u0000",
+            "$4": "abd"
+        }
+      ]
+    },
+    {
+      "statements":"select regexp_prefix(\"abc.*123\"),regexp_suffix(\"...123\"),regexp_stop(\"abc\\u0000\"),regexp_stop(\"abc.*\")",
+      "results": [
+        {
+            "$1": "abc",
+            "$2": "123",
+            "$3": "abc\u0000\u0000",
+            "$4": "abd"
+        }
+      ]
     }
 ]

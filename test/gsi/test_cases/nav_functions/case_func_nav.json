@@ -1,0 +1,32 @@
+[
+    {
+        "description": "Navigation functions",
+        "statements": "select slice([1,2,3,4],2,4)",
+        "results": [
+            {
+              "$1": [
+                  3,
+                  4
+              ]
+            }
+        ]
+    },
+    {
+        "description": "Navigation functions",
+        "statements": "select field({\"a\":\"a field\",\"b\":2},\"b\")",
+        "results": [
+            {
+              "$1": 2
+            }
+        ]
+    },
+    {
+        "description": "Navigation functions",
+        "statements": "select `element`(['a','b','c','d','e'],2)",
+        "results": [
+            {
+              "$1": "c"
+            }
+        ]
+    }
+ ]

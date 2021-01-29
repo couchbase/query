@@ -898,5 +898,16 @@
         "test1": 1
       }
     ]
+  },
+  {
+    "statements":"SELECT DATE_ADD_MILLIS(1463284740000, 3, 'day') as add_3_days,DATE_ADD_MILLIS(1463284740000, 3, 'year') as add_3_years,DATE_ADD_MILLIS(1463284740000, -3, 'day') as sub_3_days,DATE_ADD_MILLIS(1463284740000, -3, 'year') as sub_3_years",
+    "results": [
+      {
+        "add_3_days": 1463543940000,
+        "add_3_years": 1557892740000,
+        "sub_3_days": 1463025540000,
+        "sub_3_years": 1368590340000
+      }
+    ]
   }
 ]
