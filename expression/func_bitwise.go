@@ -69,7 +69,7 @@ func (this *BitAnd) Evaluate(item value.Value, context Context) (value.Value, er
 		} else if !missing && !null {
 			var val int64
 			var ok bool
-			if val, ok = isInt(arg); !ok {
+			if val, ok = value.IsIntValue(arg); !ok {
 				null = true
 			} else if i == 0 {
 				result = val
@@ -152,7 +152,7 @@ func (this *BitOr) Evaluate(item value.Value, context Context) (value.Value, err
 		} else if !missing && !null {
 			var val int64
 			var ok bool
-			if val, ok = isInt(arg); !ok {
+			if val, ok = value.IsIntValue(arg); !ok {
 				null = true
 			} else if i == 0 {
 				result = val
@@ -235,7 +235,7 @@ func (this *BitXor) Evaluate(item value.Value, context Context) (value.Value, er
 		} else if !missing && !null {
 			var val int64
 			var ok bool
-			if val, ok = isInt(arg); !ok {
+			if val, ok = value.IsIntValue(arg); !ok {
 				null = true
 			} else if i == 0 {
 				result = val
@@ -324,7 +324,7 @@ func (this *BitNot) Evaluate(item value.Value, context Context) (value.Value, er
 	var result int64
 	var ok bool
 
-	if result, ok = isInt(arg); !ok {
+	if result, ok = value.IsIntValue(arg); !ok {
 		return value.NULL_VALUE, nil
 	}
 
@@ -396,13 +396,13 @@ func (this *BitShift) Evaluate(item value.Value, context Context) (value.Value, 
 			if k == 0 {
 				if arg.Type() != value.NUMBER {
 					null = true
-				} else if num1, ok = isInt(arg); !ok {
+				} else if num1, ok = value.IsIntValue(arg); !ok {
 					null = true
 				}
 			} else if k == 1 {
 				if arg.Type() != value.NUMBER {
 					null = true
-				} else if shift, ok = isInt(arg); !ok {
+				} else if shift, ok = value.IsIntValue(arg); !ok {
 					null = true
 				}
 			} else if k == 2 {
@@ -612,7 +612,7 @@ func (this *BitTest) Evaluate(item value.Value, context Context) (value.Value, e
 			if k == 0 {
 				if arg.Type() != value.NUMBER {
 					null = true
-				} else if num1, ok = isInt(arg); !ok {
+				} else if num1, ok = value.IsIntValue(arg); !ok {
 					null = true
 				}
 			} else if k == 1 {
@@ -682,7 +682,7 @@ func bitSetNClear(bitset bool, context Context, first, second value.Value) (valu
 	var bitP, result uint64
 	var ok bool
 
-	if num1, ok = isInt(first); !ok {
+	if num1, ok = value.IsIntValue(first); !ok {
 		return value.NULL_VALUE, nil
 	}
 
@@ -709,7 +709,7 @@ func bitPositions(arg value.Value) (uint64, bool) {
 	num1 := uint64(0)
 
 	if arg.Type() == value.NUMBER {
-		if pp, ok = isInt(arg); !ok {
+		if pp, ok = value.IsIntValue(arg); !ok {
 			return num1, false
 		}
 		pos = []interface{}{pp}
@@ -721,7 +721,7 @@ func bitPositions(arg value.Value) (uint64, bool) {
 	// range through
 
 	for _, p := range pos {
-		if ppos, ok = isInt(value.NewValue(p)); !ok || ppos < _BITSTART || ppos > _BITEND {
+		if ppos, ok = value.IsIntValue(value.NewValue(p)); !ok || ppos < _BITSTART || ppos > _BITEND {
 			return num1, false
 		}
 		num1 = num1 | _BITONE<<uint64(ppos-_BITSTART)
@@ -747,17 +747,4 @@ func shiftLeft(x uint64, k int) uint64 {
 		return x >> uint64(-k)
 	}
 	return x << uint64(k)
-}
-
-func isInt(val value.Value) (int64, bool) {
-	actual := val.ActualForIndex()
-	switch actual := actual.(type) {
-	case float64:
-		if value.IsInt(actual) {
-			return int64(actual), true
-		}
-	case int64:
-		return int64(actual), true
-	}
-	return 0, false
 }

@@ -369,3 +369,16 @@ func (this intValue) Float64() float64 {
 func IsInt(x float64) bool {
 	return x == float64(int64(x))
 }
+
+func IsIntValue(val Value) (int64, bool) {
+	actual := val.ActualForIndex()
+	switch actual := actual.(type) {
+	case float64:
+		if IsInt(actual) {
+			return int64(actual), true
+		}
+	case int64:
+		return int64(actual), true
+	}
+	return 0, false
+}
