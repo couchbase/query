@@ -76,6 +76,7 @@ func ProcessEscapeSequences(s string) (t string, e error) {
 					rn = rn << 4
 					rn = rn | rune(b)
 				}
+				r-- // loop will increment too
 				buf := make([]byte, utf8.UTFMax)
 				n := utf8.EncodeRune(buf, rn)
 				for i := 0; i < n; i++ {
