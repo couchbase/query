@@ -7,6 +7,8 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
+// +build enterprise
+
 package gcagent
 
 import (
@@ -14,6 +16,7 @@ import (
 
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/query/logging"
+	gctx "github.com/couchbaselabs/gocbcore-transactions"
 )
 
 type GocbcoreLogger struct {
@@ -46,6 +49,33 @@ func (l GocbcoreLogger) Log(level gocbcore.LogLevel, offset int, format string,
 	return nil
 }
 
+type GctxLogger struct {
+}
+
+var gctxLogger GctxLogger
+
+func (l GctxLogger) Log(level gctx.LogLevel, offset int, format string,
+	args ...interface{}) error {
+	prefixedFormat := "(GOCBTX) " + format
+	switch level {
+	case gctx.LogError:
+		logging.Errorf(prefixedFormat, args...)
+	case gctx.LogWarn:
+		logging.Warnf(prefixedFormat, args...)
+	case gctx.LogInfo:
+		logging.Infof(prefixedFormat, args...)
+	case gctx.LogDebug:
+		logging.Debugf(prefixedFormat, args...)
+	default:
+		logging.Tracef(prefixedFormat, args...)
+	}
+
+	return nil
+}
+
 func init() {
 	gocbcore.SetLogger(gocbcoreLogger)
+	gocbcore.SetLogRedactionLevel(gocbcore.RedactFull)
+	gctx.SetLogger(gctxLogger)
+	gctx.SetLogRedactionLevel(gctx.RedactFull)
 }
