@@ -10,7 +10,14 @@ do
   curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=sasl -d saslPassword=donotuse -d bucketType=couchbase $Site > /dev/null
 done
 
-cd filestore 
+collections=('orders,_default,transactions')
+for coll in "${collections[@]}"
+do
+    collpath=(${coll//,/ })
+    curl --silent -X POST -u $Auth -d name=${collpath[2]} $Site/${collpath[0]}/scopes/${collpath[1]}/collections > /dev/null
+done
+
+cd filestore
 
 mkdir -p data/dimestore/product
 mkdir data/dimestore/customer

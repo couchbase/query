@@ -1,0 +1,335 @@
+[
+    {
+        "statements": "INSERT INTO orders._default.transactions VALUES ('tran000',{'a':0, 'total':0})",
+        "results": []
+    },
+    {
+        "statements": "INSERT INTO orders._default.transactions VALUES ('tran001',{'a':1, 'total':0})",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1, "durability_level":"none"},
+        "statements": "START WORK"
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "statements": "INSERT INTO orders._default.transactions VALUES ('tran002',{'a':2, 'total':0})",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING END"
+        },
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a >= 0",
+        "results": [
+            {
+                "a": 0,
+                "id": "tran000",
+                "total": 0
+            },
+            {
+                "a": 1,
+                "id": "tran001",
+                "total": 0
+            },
+            {
+                "a": 2,
+                "id": "tran002",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "statements": "SAVEPOINT s1",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING"
+        },
+        "statements": "UPDATE orders._default.transactions AS d SET d.b = 10 WHERE d.a > 1;",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING"
+        },
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a >= 0",
+        "results": [
+            {
+                "a": 0,
+                "id": "tran000",
+                "total": 0
+            },
+            {
+                "a": 1,
+                "id": "tran001",
+                "total": 0
+            },
+            {
+                "a": 2,
+                "b": 10,
+                "id": "tran002",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "statements": "ROLLBACK TRAN TO SAVEPOINT s1",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING"
+        },
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a >= 0",
+        "results": [
+            {
+                "a": 0,
+                "id": "tran000",
+                "total": 0
+            },
+            {
+                "a": 1,
+                "id": "tran001",
+                "total": 0
+            },
+            {
+                "a": 2,
+                "id": "tran002",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "statements": "ROLLBACK TRAN",
+        "results": []
+    },
+    {
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS MISSING"
+        },
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a >= 0",
+        "results": [
+            {
+                "a": 0,
+                "id": "tran000",
+                "total": 0
+            },
+            {
+                "a": 1,
+                "id": "tran001",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 1, "durability_level":"none"},
+        "statements": "START WORK"
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "statements": "INSERT INTO orders._default.transactions VALUES ('tran003',{'a':3, 'total':0})",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING"
+        },
+        "statements": "UPDATE orders._default.transactions AS d SET d.b = 20, d.c = 'xyz' WHERE d.a > 0",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING"
+        },
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a > 0",
+        "results": [
+            {
+                "a": 1,
+                "b": 20,
+                "c": "xyz",
+                "id": "tran001",
+                "total": 0
+            },
+            {
+                "a": 3,
+                "b": 20,
+                "c": "xyz",
+                "id": "tran003",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 2, "durability_level":"none"},
+        "statements": "START WORK"
+    },
+    {
+        "queryParams": {"txgroup": 2},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS MISSING"
+        },
+        "statements": "UPDATE orders._default.transactions AS d SET d.b = 30 WHERE d.a > 0",
+        "results": []
+    },
+    {
+        "queryParams": {"txgroup": 2},
+        "ignore": "index_id",
+        "ordered": false,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.has_delta_keyspace IS NOT MISSING"
+        },
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a > 0",
+        "results": [
+            {
+                "a": 1,
+                "b": 30,
+                "id": "tran001",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 2},
+        "statements": "COMMIT",
+        "results": [
+        ]
+    },
+    {
+        "queryParams": {"txgroup": 1},
+        "statements": "COMMIT WORK",
+        "errorCode": 17007
+    },
+    {
+        "queryParams": {"tximplicit": true, "durability_level":"none"},
+        "ignore": "index_id",
+        "ordered": false,
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a >= 0",
+        "results": [
+            {
+                "a": 0,
+                "id": "tran000",
+                "total": 0
+            },
+            {
+                "a": 1,
+                "b": 30,
+                "id": "tran001",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"tximplicit": true, "durability_level":"none"},
+        "statements": "INSERT INTO orders._default.transactions VALUES ('tran004',{'a':4, 'total':0}), VALUES ('tran004',{'a':4, 'total':0})",
+        "errorCode": 17012
+    },
+    {
+        "queryParams": {"tximplicit": true, "durability_level":"none"},
+        "statements": "INSERT INTO orders._default.transactions VALUES ('tran004',{'a':4, 'total':0}), VALUES ('tran005',{'a':5, 'total':0})",
+        "results": []
+    },
+    {
+        "queryParams": {"tximplicit": true, "durability_level":"none"},
+        "ignore": "index_id",
+        "ordered": false,
+        "statements": "SELECT d.*, META(d).id FROM orders._default.transactions AS d WHERE d.a >= 4",
+        "results": [
+            {
+                "a": 4,
+                "id": "tran004",
+                "total": 0
+            },
+            {
+                "a": 5,
+                "id": "tran005",
+                "total": 0
+            }
+        ]
+    },
+    {
+        "queryParams": {"tximplicit": true, "durability_level":"none"},
+        "statements": "DELETE FROM orders._default.transactions AS d WHERE d.a >= 0",
+        "results": []
+    }
+]
