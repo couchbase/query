@@ -47,7 +47,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-var REQUIRE_CBAUTH bool // Connection to authorization system must succeed.
+var REQUIRE_CBAUTH bool           // Connection to authorization system must succeed.
+var _SKIP_IMPERSONATE bool = true //  don't send actual user names
 
 // cbPoolMap and cbPoolServices implement a local cache of the datastore's topology
 type cbPoolMap struct {
@@ -421,6 +422,10 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 		return errors.NewAuditStreamHandlerFailed(err)
 	}
 	return nil
+}
+
+func (s *store) EnableStorageAudit(val bool) {
+	_SKIP_IMPERSONATE = !val
 }
 
 type DefaultObject struct {
@@ -1522,7 +1527,7 @@ func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
 // the KV store.
 //
 
-func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
+func (k *keyspace) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
 	return k.getRandomEntry("", "")
 }
 

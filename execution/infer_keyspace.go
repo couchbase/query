@@ -70,7 +70,7 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 			context.Error(errors.NewInferencerNotFoundError(err, string(using)))
 			return
 		}
-		go infer.InferKeyspace(this.plan.Keyspace(), this.plan.Node().With(), conn)
+		go infer.InferKeyspace(context, this.plan.Keyspace(), this.plan.Node().With(), conn)
 
 		var val value.Value
 

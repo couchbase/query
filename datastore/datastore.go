@@ -56,6 +56,7 @@ type Datastore interface {
 
 	AuditInfo() (*AuditInfo, errors.Error)
 	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error
+	EnableStorageAudit(val bool)
 
 	SetConnectionSecurityConfig(conSecConfig *ConnectionSecurityConfig) // Update TLS or node-to-node encryption settings.
 	CreateSystemCBOStats(requestId string) errors.Error

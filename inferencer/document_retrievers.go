@@ -18,7 +18,7 @@ import (
 const _EMPTY_KEY = ""
 
 type DocumentRetriever interface {
-	GetNextDoc() (string, value.Value, *string) // returns nil for value when done
+	GetNextDoc(context datastore.QueryContext) (string, value.Value, *string) // returns nil for value when done
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ type PrimaryIndexDocumentRetriever struct {
 	sampleSize   int
 }
 
-func (pidr *PrimaryIndexDocumentRetriever) GetNextDoc() (string, value.Value, *string) {
+func (pidr *PrimaryIndexDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, *string) {
 	// have we reached the end of the set of primary keys?
 	if pidr.nextToReturn >= len(pidr.docIds) {
 		return _EMPTY_KEY, nil, nil
@@ -157,7 +157,7 @@ type KeyspaceRandomDocumentRetriever struct {
 	sampleSize int
 }
 
-func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (string, value.Value, *string) {
+func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, *string) {
 	// have we returned as many documents as were requested?
 	if len(krdr.docIdsSeen) >= krdr.sampleSize {
 		return _EMPTY_KEY, nil, nil
@@ -166,8 +166,8 @@ func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc() (string, value.Value, 
 	// try to retrieve the next document
 	duplicatesSeen := 0
 	for duplicatesSeen < 100 {
-		key, value, err := krdr.rdr.GetRandomEntry() // get the doc
-		if err != nil {                              // check for errors
+		key, value, err := krdr.rdr.GetRandomEntry(context) // get the doc
+		if err != nil {                                     // check for errors
 			error_msg := err.Error()
 			return _EMPTY_KEY, nil, &error_msg
 		}
@@ -225,7 +225,7 @@ type KVRandomDocumentRetriever struct {
 	bucket     *couchbase.Bucket
 }
 
-func (kvrdr *KVRandomDocumentRetriever) GetNextDoc() (string, value.Value, *string) {
+func (kvrdr *KVRandomDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, *string) {
 	// have we returned as many documents as were requested?
 	if len(kvrdr.docIdsSeen) >= kvrdr.sampleSize {
 		return _EMPTY_KEY, nil, nil

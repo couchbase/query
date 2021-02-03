@@ -139,7 +139,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
 		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
-		this.deltaKeyspaces)
+		this.deltaKeyspaces, this)
 
 	if autoPrepare {
 		name = prepareds.GetAutoPrepareName(statement, &prepContext)

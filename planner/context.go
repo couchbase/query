@@ -10,6 +10,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,12 +25,13 @@ type PrepareContext struct {
 	useCBO          bool
 	optimizer       Optimizer
 	deltaKeyspaces  map[string]bool
+	dsContext       datastore.QueryContext
 }
 
 func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	namedArgs map[string]value.Value, positionalArgs value.Values,
 	indexApiVersion int, featureControls uint64, useFts, useCBO bool, optimizer Optimizer,
-	deltaKeyspaces map[string]bool) {
+	deltaKeyspaces map[string]bool, dsContext datastore.QueryContext) {
 	rv.requestId = requestId
 	rv.queryContext = queryContext
 	rv.namedArgs = namedArgs
@@ -40,6 +42,7 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	rv.useCBO = useCBO
 	rv.optimizer = optimizer
 	rv.deltaKeyspaces = deltaKeyspaces
+	rv.dsContext = dsContext
 	return
 }
 

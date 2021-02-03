@@ -21,7 +21,7 @@ import (
 
 var desc_debug = false
 
-func DescribeKeyspace(conn *datastore.ValueConnection, retriever DocumentRetriever,
+func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConnection, retriever DocumentRetriever,
 	similarityMetric float32, numSampleValues, dictionary_threshold, infer_timeout, max_schema_MB int32) (result value.Value, error_msg *string, warning_msg *string) {
 
 	result = nil
@@ -53,7 +53,7 @@ func DescribeKeyspace(conn *datastore.ValueConnection, retriever DocumentRetriev
 		}
 
 		// Get the document
-		_, doc, err := retriever.GetNextDoc()
+		_, doc, err := retriever.GetNextDoc(context)
 		if err != nil {
 			message := fmt.Sprintf("Error getting documents for infer.\n%s", *err)
 			error := map[string]interface{}{"error": message}
@@ -180,7 +180,7 @@ func (di *DefaultInferencer) Name() datastore.InferenceType {
 // here
 //
 
-func (di *DefaultInferencer) InferKeyspace(ks datastore.Keyspace, with value.Value, conn *datastore.ValueConnection) {
+func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks datastore.Keyspace, with value.Value, conn *datastore.ValueConnection) {
 
 	var ok bool
 
@@ -388,7 +388,7 @@ func (di *DefaultInferencer) InferKeyspace(ks datastore.Keyspace, with value.Val
 	//
 	// get the
 
-	schema, error_msg, warning_msg := DescribeKeyspace(conn, retriever, float32(similarity_metric), num_sample_values, dictionary_threshold, infer_timeout, max_schema_MB)
+	schema, error_msg, warning_msg := DescribeKeyspace(context, conn, retriever, float32(similarity_metric), num_sample_values, dictionary_threshold, infer_timeout, max_schema_MB)
 
 	if error_msg != nil {
 		conn.Error(errors.NewWarning(*error_msg))

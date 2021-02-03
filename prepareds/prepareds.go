@@ -751,10 +751,11 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 		optimizer = getNewOptimizer()
 	}
 	// building prepared statements should not depend on args
+	// don't pass datastore context for prepared statements
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, prepared.QueryContext(), nil, nil,
 		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), prepared.UseCBO(),
-		optimizer, deltaKeyspaces)
+		optimizer, deltaKeyspaces, nil)
 
 	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
 		false, true, &prepContext)
@@ -796,9 +797,10 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string)
 		return nil, errors.NewPlanError(nil, "request id is nil")
 	}
 
+	// don't pass datastore context for prepared statements
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, queryContext, nil, nil,
-		util.GetMaxIndexAPI(), util.GetN1qlFeatureControl(), false, useCBO, optimizer, nil)
+		util.GetMaxIndexAPI(), util.GetN1qlFeatureControl(), false, useCBO, optimizer, nil, nil)
 
 	stmt, err := n1ql.ParseStatement2(statement, namespace, queryContext)
 	if err != nil {

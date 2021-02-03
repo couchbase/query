@@ -210,6 +210,7 @@ func StartAuditService(server string, numServicers int) {
 		return
 	}
 	auditor.info = auditInfo
+	ds.EnableStorageAudit(auditInfo.AuditEnabled)
 
 	// The queue should be of finite length, but ample,
 	// to smooth out any bumps in service. The servicers
@@ -269,6 +270,7 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 
 				curUid = auditInfo.Uid
 				auditor.setAuditInfo(auditInfo)
+				ds.EnableStorageAudit(auditInfo.AuditEnabled)
 			}
 			return nil
 		}

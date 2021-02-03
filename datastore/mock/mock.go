@@ -120,6 +120,9 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 	return errors.NewOtherNotImplementedError(nil, "ProcessAuditUpdateStream")
 }
 
+func (s *store) EnableStorageAudit(val bool) {
+}
+
 func (s *store) UserInfo() (value.Value, errors.Error) {
 	// Stub implementation with fixed content.
 	content := `[{"name":"Ivan Ivanov","id":"ivanivanov","domain":"local","roles":[{"role":"cluster_admin"},

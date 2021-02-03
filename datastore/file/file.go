@@ -134,6 +134,9 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 	return errors.NewOtherNotImplementedError(nil, "ProcessAuditUpdateStream")
 }
 
+func (s *store) EnableStorageAudit(val bool) {
+}
+
 func (s *store) UserInfo() (value.Value, errors.Error) {
 	// Return an array of no users.
 	jsonData := make([]interface{}, 0)

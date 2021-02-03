@@ -150,6 +150,26 @@ type collection struct {
 	isBucket   bool
 }
 
+func getUser(context datastore.QueryContext) string {
+	if _SKIP_IMPERSONATE {
+		return ""
+	}
+	creds := context.Credentials()
+	if creds == nil {
+		return ""
+	}
+	userList := creds.CbauthCredentialsList
+	if userList == nil {
+		return ""
+	}
+	if userList[0].Domain() == "local" {
+		return userList[0].Name()
+	}
+
+	// KV format for LDAP users is "^user"
+	return "^" + userList[0].Name()
+}
+
 func (coll *collection) Id() string {
 	return coll.id
 }
@@ -196,15 +216,15 @@ func (coll *collection) Scope() datastore.Scope {
 }
 
 func (coll *collection) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
-	return coll.bucket.stats(context, which, &memcached.ClientContext{CollId: coll.uid})
+	return coll.bucket.stats(context, which, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Count(context datastore.QueryContext) (int64, errors.Error) {
-	return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid})
+	return coll.bucket.count(context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Error) {
-	return coll.bucket.size(context, &memcached.ClientContext{CollId: coll.uid})
+	return coll.bucket.size(context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -288,34 +308,34 @@ func (coll *collection) loadIndexes() {
 	coll.checked = true
 }
 
-func (coll *collection) GetRandomEntry() (string, value.Value, errors.Error) {
-	return coll.bucket.getRandomEntry(coll.scope.id, coll.id, &memcached.ClientContext{CollId: coll.uid})
+func (coll *collection) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
+	return coll.bucket.getRandomEntry(coll.scope.id, coll.id, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string) []errors.Error {
 
 	return coll.bucket.fetch(coll.fullName, coll.QualifiedName(), coll.scope.id, coll.id,
-		keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid})
+		keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return coll.bucket.performOp(MOP_INSERT, coll.QualifiedName(), coll.scope.id, coll.id,
-		inserts, context, &memcached.ClientContext{CollId: coll.uid})
+		inserts, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return coll.bucket.performOp(MOP_UPDATE, coll.QualifiedName(), coll.scope.id, coll.id,
-		updates, context, &memcached.ClientContext{CollId: coll.uid})
+		updates, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return coll.bucket.performOp(MOP_UPSERT, coll.QualifiedName(), coll.scope.id, coll.id,
-		upserts, context, &memcached.ClientContext{CollId: coll.uid})
+		upserts, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
 	return coll.bucket.performOp(MOP_DELETE, coll.QualifiedName(), coll.scope.id, coll.id,
-		deletes, context, &memcached.ClientContext{CollId: coll.uid})
+		deletes, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Release(bclose bool) {

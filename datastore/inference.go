@@ -21,10 +21,10 @@ const (
 )
 
 type RandomEntryProvider interface {
-	GetRandomEntry() (string, value.Value, errors.Error)
+	GetRandomEntry(context QueryContext) (string, value.Value, errors.Error)
 }
 
 type Inferencer interface {
 	Name() InferenceType
-	InferKeyspace(ks Keyspace, with value.Value, conn *ValueConnection) // The Inferencer should populate the connection.
+	InferKeyspace(context QueryContext, ks Keyspace, with value.Value, conn *ValueConnection) // The Inferencer should populate the connection.
 }

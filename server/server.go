@@ -1051,16 +1051,19 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 	namedArgs := request.NamedArgs()
 	positionalArgs := request.PositionalArgs()
+	dsContext := context
 	autoExecute := request.AutoExecute() == value.TRUE
 	if len(namedArgs) > 0 || len(positionalArgs) > 0 || autoExecute {
 		autoPrepare = false
 	}
 
 	if prepared == nil && autoPrepare {
+
+		// no datastore context for autoprepare
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
 			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces())
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), nil)
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
@@ -1119,15 +1122,17 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		prep := time.Now()
 
 		// MB-24871: do not replace named/positional parameters with value for prepare statement
+		// no credentials for prepared statements
 		if isPrepare {
 			namedArgs = nil
 			positionalArgs = nil
+			dsContext = nil
 		}
 
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces())
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext)
 		if stmt, ok := stmt.(*algebra.Advise); ok {
 			stmt.SetContext(context)
 		}

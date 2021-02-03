@@ -109,7 +109,7 @@ func main() {
 
 	start := time.Now() // remember when we started
 
-	result, errr, warn := inferencer.DescribeKeyspace(nil, kvRetriever, 0.6, 5, 10, 60, 10)
+	result, errr, warn := inferencer.DescribeKeyspace(nil, nil, kvRetriever, 0.6, 5, 10, 60, 10)
 
 	if errr != nil {
 		fmt.Printf("Error result: %v err: %v warn %v\n", result, errr, warn)
