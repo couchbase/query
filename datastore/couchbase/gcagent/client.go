@@ -76,6 +76,7 @@ type Client struct {
 	rootCAs       *x509.CertPool
 	agentProvider *AgentProvider
 	mutex         sync.RWMutex
+	atrLocations  map[string]gctx.LostATRLocation
 }
 
 func NewClient(url, certFile string) (rv *Client, err error) {
@@ -102,6 +103,7 @@ func NewClient(url, certFile string) (rv *Client, err error) {
 
 	// generic provider
 	rv.agentProvider, err = rv.CreateAgentProvider("")
+	rv.atrLocations = make(map[string]gctx.LostATRLocation, 32)
 
 	return rv, err
 }
@@ -126,8 +128,51 @@ func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnS
 }
 
 func (c *Client) InitTransactions(txConfig *gctx.Config) (err error) {
+	txConfig.LostCleanupATRLocationProvider = func() (lostAtrLocations []gctx.LostATRLocation, cerr error) {
+		c.mutex.RLock()
+		defer c.mutex.RUnlock()
+		lostAtrLocations = make([]gctx.LostATRLocation, 0, len(c.atrLocations))
+		for _, atrl := range c.atrLocations {
+			lostAtrLocations = append(lostAtrLocations, atrl)
+		}
+		return
+	}
+
 	c.transactions, err = gctx.Init(txConfig)
 	return err
+}
+
+func (c *Client) AddAtrLocation(atrLocation *gctx.ATRLocation) (err error) {
+	if atrLocation != nil && atrLocation.Agent != nil && atrLocation.Agent.BucketName() != "" {
+		lostAtr := gctx.LostATRLocation{BucketName: atrLocation.Agent.BucketName(),
+			ScopeName:      "_default",
+			CollectionName: "_default"}
+
+		if atrLocation.ScopeName != "" {
+			lostAtr.ScopeName = atrLocation.ScopeName
+		}
+		if atrLocation.CollectionName != "" {
+			lostAtr.CollectionName = atrLocation.CollectionName
+		}
+		s := lostAtr.BucketName + "." + lostAtr.ScopeName + "." + lostAtr.CollectionName
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+		if _, ok := c.atrLocations[s]; !ok {
+			c.atrLocations[s] = lostAtr
+		}
+	}
+	return
+}
+
+func (c *Client) RemoveAtrLocation(bucketName string) (err error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for s, atrl := range c.atrLocations {
+		if atrl.BucketName == bucketName {
+			delete(c.atrLocations, s)
+		}
+	}
+	return
 }
 
 func (c *Client) CreateAgentProvider(bucketName string) (*AgentProvider, error) {

@@ -121,6 +121,9 @@ func (ap *AgentProvider) Agent() *gocbcore.Agent {
 }
 
 func (ap *AgentProvider) Close() error {
+	if ap.client != nil && ap.Agent().BucketName() != "" {
+		ap.client.RemoveAtrLocation(ap.Agent().BucketName())
+	}
 	return ap.Agent().Close()
 }
 
@@ -268,8 +271,8 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 
 	wg := &sync.WaitGroup{}
 	txId := transaction.Attempt().ID
-	defer logging.Tracef("=====%v=====end   TxWrite(%v)========", txId, len(wops))
-	logging.Tracef("=====%v=====begin TxWrite(%v)========", txId, len(wops))
+	defer logging.Tracea(func() string { return fmt.Sprintf("=====%v=====end   TxWrite(%v)========", txId, len(wops)) })
+	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====begin   TxWrite(%v)========", txId, len(wops)) })
 
 	// insert request and get results in call back
 	sendInsertOne := func(wop *WriteOp) error {
@@ -326,6 +329,10 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 
 	var prevErr error
 	for _, op := range wops {
+		logging.Debuga(func() string {
+			return fmt.Sprintf("TxWrite txid=%s, op=%s, collection=%s.%s.%s, key=%s", txId,
+				_MutateOpNames[op.Op], ap.Agent().BucketName(), scopeName, collectionName, op.Key)
+		})
 		switch op.Op {
 		case MOP_INSERT:
 			errOut = sendInsertOne(op)

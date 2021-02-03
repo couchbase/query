@@ -173,13 +173,19 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 
 	transaction := txMutations.Transaction()
 	txId := transaction.Attempt().ID
-	logging.Tracef("=====%v=====Commit begin write========", txId)
+	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit begin write========", txId) })
+
 	// write all mutations to KV
-	if err = txMutations.Write(context.GetReqDeadline()); err != nil {
+	err = txMutations.Write(context.GetReqDeadline())
+	if s.gcClient != nil {
+		atrl := transaction.GetATRLocation()
+		s.gcClient.AddAtrLocation(&atrl)
+	}
+	if err != nil {
 		e, c := errorType(err, false)
 		return errors.NewCommitTransactionError(e, c)
 	}
-	logging.Tracef("=====%v=====Commit end   write========", txId)
+	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write========", txId) })
 
 	if transaction != nil {
 		var wg sync.WaitGroup
@@ -191,7 +197,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 			}
 		}()
 
-		logging.Tracef("=====%v=====Actual Commit begin========", txId)
+		logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Actual Commit begin========", txId) })
 		wg.Add(1)
 		err = transaction.Commit(func(resErr error) {
 			defer wg.Done()
@@ -205,7 +211,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 			}
 		}
 
-		logging.Tracef("=====%v=====Actual Commit end==========", txId)
+		logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Actual Commit end========", txId) })
 
 		txMutations.SetTransaction(nil, nil)
 	} else {
@@ -254,6 +260,11 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 
 	transaction := txMutations.Transaction()
 	if transaction != nil {
+		if s.gcClient != nil {
+			atrl := transaction.GetATRLocation()
+			s.gcClient.AddAtrLocation(&atrl)
+		}
+
 		var wg sync.WaitGroup
 
 		defer func() {
@@ -708,7 +719,7 @@ func initGocb(s *store) (err errors.Error) {
 	//	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
 	//		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
 
-	logging.Infof("Transaction Initalization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
+	logging.Infof("Transaction Initialization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
 		txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts, txConfig.CleanupLostAttempts)
 
 	cerr = client.InitTransactions(txConfig)
