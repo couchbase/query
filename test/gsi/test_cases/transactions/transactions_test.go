@@ -35,6 +35,7 @@ func TestTransactions(t *testing.T) {
 	runMatch("case_tx.json", false, false, qc, t) // non-prepared, no-explain
 	time.Sleep(1 * time.Second)
 	runMatch("case_tx.json", true, false, qc, t) // prepared, no-explain
+	runStmt(qc, "DROP INDEX ix1 ON orders._default.transactions")
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
 	runStmt(qc, "DELETE FROM orders AS d WHERE IS_BINARY(d)")
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")
