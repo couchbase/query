@@ -714,10 +714,10 @@ func initGocb(s *store) (err errors.Error) {
 
 	s.gcClient = client
 
-	// don't raise error not able to setup ATR Collection. Disable time being
+	// don't raise error not able to setup ATR Collection.
 
-	//	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
-	//		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
+	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
+		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
 
 	logging.Infof("Transaction Initialization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
 		txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts, txConfig.CleanupLostAttempts)

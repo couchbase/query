@@ -128,6 +128,7 @@ func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnS
 }
 
 func (c *Client) InitTransactions(txConfig *gctx.Config) (err error) {
+	c.AddAtrLocation(&txConfig.CustomATRLocation)
 	txConfig.LostCleanupATRLocationProvider = func() (lostAtrLocations []gctx.LostATRLocation, cerr error) {
 		c.mutex.RLock()
 		defer c.mutex.RUnlock()
