@@ -58,7 +58,7 @@ func (this stringValue) MarshalJSON() ([]byte, error) {
 }
 
 func (this stringValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
-	return json.MarshalNoEscapeToBuffer(string(this), w.(*bytes.Buffer))
+	return json.MarshalStringNoEscapeToBuffer(string(this), w.(*bytes.Buffer))
 }
 
 /*

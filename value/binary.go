@@ -36,7 +36,7 @@ func (this binaryValue) MarshalJSON() ([]byte, error) {
 }
 
 func (this binaryValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
-	_, err := w.Write([]byte(this.String()))
+	_, err := w.(*bytes.Buffer).WriteString(this.String())
 	return err
 }
 

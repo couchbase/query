@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2021 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -16,94 +16,94 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
-type StringPool struct {
-	pool StringSliceFastPool
+type BytePool struct {
+	pool ByteSliceFastPool
 	size int
 }
 
-func NewStringPool(size int) *StringPool {
-	rv := &StringPool{
+func NewBytePool(size int) *BytePool {
+	rv := &BytePool{
 		size: size,
 	}
-	NewStringSliceFastPool(&rv.pool, func() []string {
-		return make([]string, 0, rv.size)
+	NewByteSliceFastPool(&rv.pool, func() []byte {
+		return make([]byte, 0, rv.size)
 	})
 
 	return rv
 }
 
-func (this *StringPool) Get() []string {
+func (this *BytePool) Get() []byte {
 	return this.pool.Get()
 }
 
-func (this *StringPool) GetCapped(capacity int) []string {
+func (this *BytePool) GetCapped(capacity int) []byte {
 	if capacity > this.size {
-		return make([]string, 0, capacity)
+		return make([]byte, 0, capacity)
 	} else {
 		return this.Get()
 	}
 }
 
-func (this *StringPool) GetSized(length int) []string {
+func (this *BytePool) GetSized(length int) []byte {
 	if length > this.size {
-		return make([]string, length)
+		return make([]byte, length)
 	}
 
 	rv := this.Get()
 	rv = rv[0:length]
 	for i := 0; i < length; i++ {
-		rv[i] = ""
+		rv[i] = byte(0)
 	}
 
 	return rv
 }
 
-func (this *StringPool) Put(s []string) {
-	if cap(s) != this.size {
+func (this *BytePool) Put(b []byte) {
+	if cap(b) != this.size {
 		return
 	}
 
-	this.pool.Put(s[0:0])
+	this.pool.Put(b[0:0])
 }
 
 // this is a type-specific implementation of FastPool to avoid implicit memory allocation for conversion from slice to interface{}
 
-type StringSliceFastPool struct {
+type ByteSliceFastPool struct {
 	getNext   uint32
 	putNext   uint32
 	useCount  int32
 	freeCount int32
 	buckets   uint32
-	f         func() []string
-	pool      []stringSlicePoolList
-	free      []stringSlicePoolList
+	f         func() []byte
+	pool      []byteSlicePoolList
+	free      []byteSlicePoolList
 }
 
-type stringSlicePoolList struct {
-	head *stringSlicePoolEntry
-	tail *stringSlicePoolEntry
+type byteSlicePoolList struct {
+	head *byteSlicePoolEntry
+	tail *byteSlicePoolEntry
 	sync.Mutex
 }
 
-type stringSlicePoolEntry struct {
-	entry []string
-	next  *stringSlicePoolEntry
+type byteSlicePoolEntry struct {
+	entry []byte
+	next  *byteSlicePoolEntry
 }
 
-func NewStringSliceFastPool(p *StringSliceFastPool, f func() []string) {
-	*p = StringSliceFastPool{}
+func NewByteSliceFastPool(p *ByteSliceFastPool, f func() []byte) {
+	*p = ByteSliceFastPool{}
 	p.buckets = uint32(runtime.NumCPU())
 	if p.buckets > _MAX_BUCKETS {
 		p.buckets = _MAX_BUCKETS
 	} else if p.buckets < _MIN_BUCKETS {
 		p.buckets = _MIN_BUCKETS
 	}
-	p.pool = make([]stringSlicePoolList, p.buckets)
-	p.free = make([]stringSlicePoolList, p.buckets)
+	p.pool = make([]byteSlicePoolList, p.buckets)
+	p.free = make([]byteSlicePoolList, p.buckets)
 	p.f = f
 }
 
-func (p *StringSliceFastPool) Get() []string {
+func (p *ByteSliceFastPool) Get() []byte {
 	if atomic.LoadInt32(&p.useCount) == 0 {
 		return p.f()
 	}
@@ -122,14 +122,14 @@ func (p *StringSliceFastPool) Get() []string {
 	return rv
 }
 
-func (p *StringSliceFastPool) Put(s []string) {
+func (p *ByteSliceFastPool) Put(s []byte) {
 	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
 		return
 	}
 	l := atomic.AddUint32(&p.putNext, 1) % p.buckets
 	e := p.free[l].Get()
 	if e == nil {
-		e = &stringSlicePoolEntry{}
+		e = &byteSlicePoolEntry{}
 	} else {
 		atomic.AddInt32(&p.freeCount, -1)
 	}
@@ -138,7 +138,7 @@ func (p *StringSliceFastPool) Put(s []string) {
 	atomic.AddInt32(&p.useCount, 1)
 }
 
-func (l *stringSlicePoolList) Get() *stringSlicePoolEntry {
+func (l *byteSlicePoolList) Get() *byteSlicePoolEntry {
 	if l.head == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (l *stringSlicePoolList) Get() *stringSlicePoolEntry {
 	return rv
 }
 
-func (l *stringSlicePoolList) Put(e *stringSlicePoolEntry) {
+func (l *byteSlicePoolList) Put(e *byteSlicePoolEntry) {
 	l.Lock()
 	if l.head == nil {
 		l.head = e

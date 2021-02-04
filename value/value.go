@@ -487,3 +487,28 @@ func marshalString(v Value) string {
 	}
 	return string(bytes)
 }
+
+// Used in WriteJSON functions to avoid heap contention
+var _JSON_WRITE_BYTE_POOL = util.NewBytePool(128)
+
+// Portions of this constant are clipped for the indent which saves heap allocation
+// If indentation is longer than this constant (1000 characters) then heap allocations occur
+const _INDENT_CHARS = "\n" +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    " +
+	"                                                                                                    "
+
+func getFullPrefix(prefix, indent string) string {
+	l := len(prefix) + len(indent) + 1
+	if l <= len(_INDENT_CHARS) {
+		return _INDENT_CHARS[0:l]
+	}
+	return "\n" + prefix + indent
+}

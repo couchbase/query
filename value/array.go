@@ -51,7 +51,11 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 		return
 	}
 
-	newPrefix := prefix + indent
+	var fullPrefix string
+	writePrefix := (prefix != "" && indent != "")
+	if writePrefix {
+		fullPrefix = getFullPrefix(prefix, indent)
+	}
 
 	for i, e := range this {
 		if i > 0 {
@@ -59,18 +63,23 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 				return
 			}
 		}
-		if err = writeJsonNewline(stringWriter, newPrefix); err != nil {
-			return
-		}
-
 		v := NewValue(e)
-		if err = v.WriteJSON(w, newPrefix, indent, fast); err != nil {
-			return
+		if writePrefix {
+			if _, err = stringWriter.WriteString(fullPrefix); err != nil {
+				return
+			}
+			if err = v.WriteJSON(w, fullPrefix[1:], indent, fast); err != nil {
+				return
+			}
+		} else {
+			if err = v.WriteJSON(w, "", "", fast); err != nil {
+				return
+			}
 		}
 	}
 
-	if len(this) > 0 {
-		if err = writeJsonNewline(stringWriter, prefix); err != nil {
+	if len(this) > 0 && prefix != "" {
+		if _, err = stringWriter.WriteString(fullPrefix[:len(prefix)+1]); err != nil {
 			return
 		}
 	}

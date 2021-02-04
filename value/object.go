@@ -96,7 +96,11 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 		return
 	}
 
-	newPrefix := prefix + indent
+	var fullPrefix string
+	writePrefix := (prefix != "" && indent != "")
+	if writePrefix {
+		fullPrefix = getFullPrefix(prefix, indent)
+	}
 
 	l := len(this)
 	written := 0
@@ -112,8 +116,10 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 				continue
 			}
 			written++
-			if err = writeJsonNewline(stringWriter, newPrefix); err != nil {
-				return
+			if writePrefix {
+				if _, err = stringWriter.WriteString(fullPrefix); err != nil {
+					return
+				}
 			}
 			if _, err = stringWriter.WriteString("\""); err != nil {
 				return
@@ -124,14 +130,17 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 			if _, err = stringWriter.WriteString("\":"); err != nil {
 				return
 			}
-			if newPrefix != "" {
+			if writePrefix {
 				if _, err = stringWriter.WriteString(" "); err != nil {
 					return err
 				}
-			}
-
-			if err = v.WriteJSON(w, newPrefix, indent, fast); err != nil {
-				return
+				if err = v.WriteJSON(w, fullPrefix[1:], indent, fast); err != nil {
+					return
+				}
+			} else {
+				if err = v.WriteJSON(w, "", "", fast); err != nil {
+					return
+				}
 			}
 		}
 	} else if l > 0 {
@@ -161,8 +170,10 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 			}
 			written++
 
-			if err = writeJsonNewline(stringWriter, newPrefix); err != nil {
-				return
+			if writePrefix {
+				if _, err = stringWriter.WriteString(fullPrefix); err != nil {
+					return
+				}
 			}
 
 			b, err := json.Marshal(n)
@@ -182,14 +193,20 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 				}
 			}
 
-			if err = v.WriteJSON(w, newPrefix, indent, false); err != nil {
-				return err
+			if writePrefix {
+				if err = v.WriteJSON(w, fullPrefix[1:], indent, false); err != nil {
+					return err
+				}
+			} else {
+				if err = v.WriteJSON(w, "", "", fast); err != nil {
+					return err
+				}
 			}
 		}
 	}
-	if written > 0 {
-		if err = writeJsonNewline(stringWriter, prefix); err != nil {
-			return
+	if written > 0 && prefix != "" {
+		if _, err = stringWriter.WriteString(fullPrefix[:len(prefix)+1]); err != nil {
+			return err
 		}
 	}
 	_, err = stringWriter.WriteString("}")
@@ -696,18 +713,6 @@ func combineNames(objs ...map[string]interface{}) map[string]interface{} {
 	}
 
 	return all
-}
-
-func writeJsonNewline(stringWriter *bytes.Buffer, prefix string) (err error) {
-	if prefix != "" {
-		if _, err = stringWriter.WriteString("\n"); err != nil {
-			return
-		}
-
-		_, err = stringWriter.WriteString(prefix)
-	}
-
-	return
 }
 
 const _NAME_CAP = 16
