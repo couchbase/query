@@ -9,24 +9,18 @@
 
 package util
 
-import (
-	"sync"
-)
-
 type InterfacePool struct {
-	pool *sync.Pool
+	pool FastPool
 	size int
 }
 
 func NewInterfacePool(size int) *InterfacePool {
 	rv := &InterfacePool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]interface{}, 0, size)
-			},
-		},
 		size: size,
 	}
+	NewFastPool(&rv.pool, func() interface{} {
+		return make([]interface{}, 0, size)
+	})
 
 	return rv
 }

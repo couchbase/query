@@ -10,24 +10,21 @@
 package value
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type StringValuePool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewStringValuePool(size int) *StringValuePool {
 	rv := &StringValuePool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make(map[string]Value, size)
-			},
-		},
 		size: size,
 	}
-
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make(map[string]Value, size)
+	})
 	return rv
 }
 

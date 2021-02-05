@@ -10,24 +10,21 @@
 package value
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type BagPool struct {
-	pool      *sync.Pool
+	pool      util.FastPool
 	objectCap int
 }
 
 func NewBagPool(objectCap int) *BagPool {
 	rv := &BagPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return NewBag(objectCap)
-			},
-		},
 		objectCap: objectCap,
 	}
-
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return NewBag(objectCap)
+	})
 	return rv
 }
 

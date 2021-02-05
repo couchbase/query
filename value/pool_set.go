@@ -10,11 +10,11 @@
 package value
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type SetPool struct {
-	pool      *sync.Pool
+	pool      util.FastPool
 	objectCap int
 	collect   bool
 }
@@ -22,15 +22,12 @@ type SetPool struct {
 // numeric is a flag to restrict the Set to only contain numeric values(float64 and int64).
 func NewSetPool(objectCap int, collect, numeric bool) *SetPool {
 	rv := &SetPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return NewSet(objectCap, collect, numeric)
-			},
-		},
 		objectCap: objectCap,
 		collect:   collect,
 	}
-
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return NewSet(objectCap, collect, numeric)
+	})
 	return rv
 }
 

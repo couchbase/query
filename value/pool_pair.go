@@ -10,23 +10,21 @@
 package value
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type PairPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewPairPool(size int) *PairPool {
 	rv := &PairPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]Pair, 0, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make([]Pair, 0, size)
+	})
 
 	return rv
 }

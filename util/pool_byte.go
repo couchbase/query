@@ -17,7 +17,7 @@ import (
 )
 
 type BytePool struct {
-	pool ByteSliceFastPool
+	pool byteSliceFastPool
 	size int
 }
 
@@ -25,7 +25,7 @@ func NewBytePool(size int) *BytePool {
 	rv := &BytePool{
 		size: size,
 	}
-	NewByteSliceFastPool(&rv.pool, func() []byte {
+	newByteSliceFastPool(&rv.pool, func() []byte {
 		return make([]byte, 0, rv.size)
 	})
 
@@ -33,7 +33,7 @@ func NewBytePool(size int) *BytePool {
 }
 
 func (this *BytePool) Get() []byte {
-	return this.pool.Get()
+	return this.pool.get()
 }
 
 func (this *BytePool) GetCapped(capacity int) []byte {
@@ -63,12 +63,12 @@ func (this *BytePool) Put(b []byte) {
 		return
 	}
 
-	this.pool.Put(b[0:0])
+	this.pool.put(b[0:0])
 }
 
 // this is a type-specific implementation of FastPool to avoid implicit memory allocation for conversion from slice to interface{}
 
-type ByteSliceFastPool struct {
+type byteSliceFastPool struct {
 	getNext   uint32
 	putNext   uint32
 	useCount  int32
@@ -90,8 +90,8 @@ type byteSlicePoolEntry struct {
 	next  *byteSlicePoolEntry
 }
 
-func NewByteSliceFastPool(p *ByteSliceFastPool, f func() []byte) {
-	*p = ByteSliceFastPool{}
+func newByteSliceFastPool(p *byteSliceFastPool, f func() []byte) {
+	*p = byteSliceFastPool{}
 	p.buckets = uint32(runtime.NumCPU())
 	if p.buckets > _MAX_BUCKETS {
 		p.buckets = _MAX_BUCKETS
@@ -103,12 +103,12 @@ func NewByteSliceFastPool(p *ByteSliceFastPool, f func() []byte) {
 	p.f = f
 }
 
-func (p *ByteSliceFastPool) Get() []byte {
+func (p *byteSliceFastPool) get() []byte {
 	if atomic.LoadInt32(&p.useCount) == 0 {
 		return p.f()
 	}
 	l := atomic.AddUint32(&p.getNext, 1) % p.buckets
-	e := p.pool[l].Get()
+	e := p.pool[l].get()
 	if e == nil {
 		return p.f()
 	}
@@ -117,28 +117,28 @@ func (p *ByteSliceFastPool) Get() []byte {
 	e.entry = nil
 	if atomic.LoadInt32(&p.freeCount) < _POOL_SIZE {
 		atomic.AddInt32(&p.freeCount, 1)
-		p.free[l].Put(e)
+		p.free[l].put(e)
 	}
 	return rv
 }
 
-func (p *ByteSliceFastPool) Put(s []byte) {
+func (p *byteSliceFastPool) put(s []byte) {
 	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
 		return
 	}
 	l := atomic.AddUint32(&p.putNext, 1) % p.buckets
-	e := p.free[l].Get()
+	e := p.free[l].get()
 	if e == nil {
 		e = &byteSlicePoolEntry{}
 	} else {
 		atomic.AddInt32(&p.freeCount, -1)
 	}
 	e.entry = s
-	p.pool[l].Put(e)
+	p.pool[l].put(e)
 	atomic.AddInt32(&p.useCount, 1)
 }
 
-func (l *byteSlicePoolList) Get() *byteSlicePoolEntry {
+func (l *byteSlicePoolList) get() *byteSlicePoolEntry {
 	if l.head == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (l *byteSlicePoolList) Get() *byteSlicePoolEntry {
 	return rv
 }
 
-func (l *byteSlicePoolList) Put(e *byteSlicePoolEntry) {
+func (l *byteSlicePoolList) put(e *byteSlicePoolEntry) {
 	l.Lock()
 	if l.head == nil {
 		l.head = e

@@ -9,24 +9,18 @@
 
 package util
 
-import (
-	"sync"
-)
-
 type QueuePool struct {
-	pool *sync.Pool
+	pool FastPool
 	size int
 }
 
 func NewQueuePool(size int) *QueuePool {
 	rv := &QueuePool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return NewQueue(size)
-			},
-		},
 		size: size,
 	}
+	NewFastPool(&rv.pool, func() interface{} {
+		return NewQueue(size)
+	})
 
 	return rv
 }

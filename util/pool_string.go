@@ -17,7 +17,7 @@ import (
 )
 
 type StringPool struct {
-	pool StringSliceFastPool
+	pool stringSliceFastPool
 	size int
 }
 
@@ -25,7 +25,7 @@ func NewStringPool(size int) *StringPool {
 	rv := &StringPool{
 		size: size,
 	}
-	NewStringSliceFastPool(&rv.pool, func() []string {
+	NewstringSliceFastPool(&rv.pool, func() []string {
 		return make([]string, 0, rv.size)
 	})
 
@@ -33,7 +33,7 @@ func NewStringPool(size int) *StringPool {
 }
 
 func (this *StringPool) Get() []string {
-	return this.pool.Get()
+	return this.pool.get()
 }
 
 func (this *StringPool) GetCapped(capacity int) []string {
@@ -63,12 +63,12 @@ func (this *StringPool) Put(s []string) {
 		return
 	}
 
-	this.pool.Put(s[0:0])
+	this.pool.put(s[0:0])
 }
 
 // this is a type-specific implementation of FastPool to avoid implicit memory allocation for conversion from slice to interface{}
 
-type StringSliceFastPool struct {
+type stringSliceFastPool struct {
 	getNext   uint32
 	putNext   uint32
 	useCount  int32
@@ -90,8 +90,8 @@ type stringSlicePoolEntry struct {
 	next  *stringSlicePoolEntry
 }
 
-func NewStringSliceFastPool(p *StringSliceFastPool, f func() []string) {
-	*p = StringSliceFastPool{}
+func NewstringSliceFastPool(p *stringSliceFastPool, f func() []string) {
+	*p = stringSliceFastPool{}
 	p.buckets = uint32(runtime.NumCPU())
 	if p.buckets > _MAX_BUCKETS {
 		p.buckets = _MAX_BUCKETS
@@ -103,12 +103,12 @@ func NewStringSliceFastPool(p *StringSliceFastPool, f func() []string) {
 	p.f = f
 }
 
-func (p *StringSliceFastPool) Get() []string {
+func (p *stringSliceFastPool) get() []string {
 	if atomic.LoadInt32(&p.useCount) == 0 {
 		return p.f()
 	}
 	l := atomic.AddUint32(&p.getNext, 1) % p.buckets
-	e := p.pool[l].Get()
+	e := p.pool[l].get()
 	if e == nil {
 		return p.f()
 	}
@@ -117,28 +117,28 @@ func (p *StringSliceFastPool) Get() []string {
 	e.entry = nil
 	if atomic.LoadInt32(&p.freeCount) < _POOL_SIZE {
 		atomic.AddInt32(&p.freeCount, 1)
-		p.free[l].Put(e)
+		p.free[l].put(e)
 	}
 	return rv
 }
 
-func (p *StringSliceFastPool) Put(s []string) {
+func (p *stringSliceFastPool) put(s []string) {
 	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
 		return
 	}
 	l := atomic.AddUint32(&p.putNext, 1) % p.buckets
-	e := p.free[l].Get()
+	e := p.free[l].get()
 	if e == nil {
 		e = &stringSlicePoolEntry{}
 	} else {
 		atomic.AddInt32(&p.freeCount, -1)
 	}
 	e.entry = s
-	p.pool[l].Put(e)
+	p.pool[l].put(e)
 	atomic.AddInt32(&p.useCount, 1)
 }
 
-func (l *stringSlicePoolList) Get() *stringSlicePoolEntry {
+func (l *stringSlicePoolList) get() *stringSlicePoolEntry {
 	if l.head == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (l *stringSlicePoolList) Get() *stringSlicePoolEntry {
 	return rv
 }
 
-func (l *stringSlicePoolList) Put(e *stringSlicePoolEntry) {
+func (l *stringSlicePoolList) put(e *stringSlicePoolEntry) {
 	l.Lock()
 	if l.head == nil {
 		l.head = e
