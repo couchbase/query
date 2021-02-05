@@ -425,7 +425,7 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 }
 
 func (s *store) EnableStorageAudit(val bool) {
-	_SKIP_IMPERSONATE = !val
+	//	_SKIP_IMPERSONATE = !val
 }
 
 type DefaultObject struct {
