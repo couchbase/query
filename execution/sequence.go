@@ -19,8 +19,9 @@ import (
 
 type Sequence struct {
 	base
-	plan     *plan.Sequence
-	children []Operator
+	isParallel bool
+	plan       *plan.Sequence
+	children   []Operator
 }
 
 var _SEQUENCE_OP_POOL util.FastPool
@@ -32,8 +33,13 @@ func init() {
 }
 
 func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *Sequence {
+	return NewParallelSequence(plan, false, context, children...)
+}
+
+func NewParallelSequence(plan *plan.Sequence, isParallel bool, context *Context, children ...Operator) *Sequence {
 	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
 	rv.plan = plan
+	rv.isParallel = isParallel
 	rv.children = children
 
 	// allocate value exchanges for serialized children if required
@@ -42,7 +48,7 @@ func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *S
 	prevBase := children[0].getBase()
 	for i := 1; i < len(children); i++ {
 		thisBase := children[i].getBase()
-		if thisBase.IsSerializable() {
+		if thisBase.IsSerializable() && !prevBase.IsParallel() {
 			prevBase.exchangeMove(thisBase)
 		}
 		prevBase = thisBase
@@ -55,6 +61,10 @@ func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *S
 	prevBase.exchangeMove(&rv.base)
 	rv.output = rv
 	return rv
+}
+
+func (this *Sequence) SetParallel() {
+	this.isParallel = true
 }
 
 func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
@@ -70,6 +80,7 @@ func (this *Sequence) Copy() Operator {
 	}
 
 	rv.plan = this.plan
+	rv.isParallel = this.isParallel
 	rv.children = children
 	this.base.copy(&rv.base)
 	return rv
@@ -77,6 +88,10 @@ func (this *Sequence) Copy() Operator {
 
 func (this *Sequence) PlanOp() plan.Operator {
 	return this.plan
+}
+
+func (this *Sequence) IsParallel() bool {
+	return this.isParallel
 }
 
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
@@ -104,7 +119,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 			next = this.children[i]
 
 			// run the consumer inline, if feasible
-			if next.IsSerializable() {
+			if next.IsSerializable() && !curr.IsParallel() {
 				next.SetInput(curr)
 				curr.SerializeOutput(next, context)
 			} else {

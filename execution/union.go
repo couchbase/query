@@ -58,6 +58,10 @@ func (this *UnionAll) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *UnionAll) IsParallel() bool {
+	return true
+}
+
 func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

@@ -462,6 +462,10 @@ func (this *base) IsSerializable() bool {
 	return this.serializable
 }
 
+func (this *base) IsParallel() bool {
+	return this.serializable
+}
+
 func (this *base) SerializeOutput(op Operator, context *Context) {
 	this.output = op
 	this.doSend = serializedSend

@@ -70,6 +70,10 @@ func (this *Parallel) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *Parallel) IsParallel() bool {
+	return true
+}
+
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

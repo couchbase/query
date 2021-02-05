@@ -550,6 +550,7 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 	}
 
 	execChildren := _SEQUENCE_POOL.Get()
+	isParallel := false
 
 	for _, pchild := range children {
 		child, err := pchild.Accept(this)
@@ -568,7 +569,11 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 			continue
 		}
 
-		execChildren = append(execChildren, child.(Operator))
+		op := child.(Operator)
+		if op.IsParallel() {
+			isParallel = true
+		}
+		execChildren = append(execChildren, op)
 	}
 
 	if len(execChildren) == 1 {
@@ -582,11 +587,14 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 	// this way we generate one less Sequence operator.
 	if seq, ok := execChildren[0].(*Sequence); ok {
 		seq.children = append(seq.children, execChildren[1:]...)
+		if isParallel {
+			seq.SetParallel()
+		}
 		child := execChildren[0]
 		_SEQUENCE_POOL.Put(execChildren)
 		return child.(Operator), nil
 	}
-	return checkOp(NewSequence(plan, this.context, execChildren...), this.context)
+	return checkOp(NewParallelSequence(plan, isParallel, this.context, execChildren...), this.context)
 }
 
 // Discard

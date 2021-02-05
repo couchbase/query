@@ -30,20 +30,21 @@ type Operator interface {
 	consumer
 
 	Accept(visitor Visitor) (interface{}, error)
-	ValueExchange() *valueExchange               // Closed by this operator
-	Input() Operator                             // Read by this operator
-	SetInput(op Operator)                        // Can be set
-	Output() Operator                            // Written by this operator
-	SetOutput(op Operator)                       // Can be set
-	Stop() Operator                              // Notified when this operator stops
-	SetStop(op Operator)                         // Can be set
-	Parent() Operator                            // Notified when this operator stops
-	SetParent(parent Operator)                   // Can be set
-	Bit() uint8                                  // Child bit
-	SetBit(b uint8)                              // Child bit
-	SetRoot()                                    // Let the root operator know that it is, in fact, root
-	SetKeepAlive(children int, context *Context) // Sets keep alive
-	IsSerializable() bool
+	ValueExchange() *valueExchange                 // Closed by this operator
+	Input() Operator                               // Read by this operator
+	SetInput(op Operator)                          // Can be set
+	Output() Operator                              // Written by this operator
+	SetOutput(op Operator)                         // Can be set
+	Stop() Operator                                // Notified when this operator stops
+	SetStop(op Operator)                           // Can be set
+	Parent() Operator                              // Notified when this operator stops
+	SetParent(parent Operator)                     // Can be set
+	Bit() uint8                                    // Child bit
+	SetBit(b uint8)                                // Child bit
+	SetRoot()                                      // Let the root operator know that it is, in fact, root
+	SetKeepAlive(children int, context *Context)   // Sets keep alive
+	IsSerializable() bool                          // The operator supports being serialized
+	IsParallel() bool                              // The operator has more than one producer
 	SerializeOutput(op Operator, context *Context) // Has the producer run the consumer inline
 	Copy() Operator                                // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value)  // Uses Once.Do() to run exactly once; never panics
