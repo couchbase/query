@@ -10,23 +10,21 @@
 package plan
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type StringSpanPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewStringSpanPool(size int) *StringSpanPool {
 	rv := &StringSpanPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make(map[string]*Span2, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make(map[string]*Span2, size)
+	})
 
 	return rv
 }

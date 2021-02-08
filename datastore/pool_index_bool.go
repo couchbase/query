@@ -10,23 +10,21 @@
 package datastore
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type IndexBoolPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewIndexBoolPool(size int) *IndexBoolPool {
 	rv := &IndexBoolPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make(map[Index]bool, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make(map[Index]bool, size)
+	})
 
 	return rv
 }

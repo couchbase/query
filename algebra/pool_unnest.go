@@ -10,23 +10,21 @@
 package algebra
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type UnnestPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewUnnestPool(size int) *UnnestPool {
 	rv := &UnnestPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]*Unnest, 0, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make([]*Unnest, 0, size)
+	})
 
 	return rv
 }

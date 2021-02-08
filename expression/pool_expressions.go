@@ -10,23 +10,21 @@
 package expression
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type ExpressionsPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewExpressionsPool(size int) *ExpressionsPool {
 	rv := &ExpressionsPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]Expressions, 0, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make([]Expressions, 0, size)
+	})
 
 	return rv
 }

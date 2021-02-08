@@ -10,23 +10,21 @@
 package planner
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type SargSpansPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewSargSpansPool(size int) *SargSpansPool {
 	rv := &SargSpansPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]SargSpans, 0, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make([]SargSpans, 0, size)
+	})
 
 	return rv
 }
