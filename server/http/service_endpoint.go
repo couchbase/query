@@ -245,11 +245,17 @@ func (this *HttpEndpoint) setupSSL() {
 
 			tlsErr := this.ListenTLS()
 			if tlsErr != nil {
-				if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address & already in use") {
+				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
+				if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address already in use") {
+					logging.Infof("ERROR: Retrying listen on TLS Endpoint after sleep")
+					// Wait a little and then retry as maybe closing the listener is taking time.
+					time.Sleep(100 * time.Millisecond)
+					tlsErr = this.ListenTLS()
 					time.Sleep(100 * time.Millisecond)
 				}
-				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
-				return errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
+				if tlsErr != nil {
+					return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
+				}
 			}
 			settingsUpdated = true
 		}
