@@ -162,7 +162,8 @@ func getUser(context datastore.QueryContext) string {
 	if userList == nil {
 		return ""
 	}
-	if userList[0].Domain() == "local" {
+	d := userList[0].Domain()
+	if d == "local" || d == "builtin" {
 		return userList[0].Name()
 	}
 
