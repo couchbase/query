@@ -31,6 +31,12 @@ type jsonSerializedMutation struct {
 }
 
 type jsonSerializedAttempt struct {
+	ATR struct {
+		Bucket     string `json:"bkt"`
+		Scope      string `json:"scp"`
+		Collection string `json:"coll"`
+		ID         string `json:"id"`
+	} `json:"atr"`
 	Mutations []jsonSerializedMutation `json:"mutations"`
 }
 
@@ -54,6 +60,11 @@ func (this *Authorize) getTxPrivileges(privs *auth.Privileges, checkAtrPrivs boo
 		// SDK resumed transactions (BEGIN WORK).
 		if err = json.Unmarshal(context.txData, &txData); err != nil {
 			return
+		}
+
+		if checkAtrPrivs && txData.ATR.Bucket != "" && txData.ATR.Scope != "" && txData.ATR.Collection != "" {
+			atrPath = algebra.NewPathLong(context.namespace, txData.ATR.Bucket, txData.ATR.Scope, txData.ATR.Collection)
+
 		}
 
 		var priv auth.Privilege
@@ -92,7 +103,7 @@ func (this *Authorize) getTxPrivileges(privs *auth.Privileges, checkAtrPrivs boo
 			privs.ForEach(func(pp auth.PrivilegePair) {
 				var ferr error
 				switch pp.Priv {
-				case auth.PRIV_QUERY_SELECT, auth.PRIV_QUERY_UPDATE, auth.PRIV_QUERY_INSERT, auth.PRIV_QUERY_DELETE:
+				case /* auth.PRIV_QUERY_SELECT, */ auth.PRIV_QUERY_UPDATE, auth.PRIV_QUERY_INSERT, auth.PRIV_QUERY_DELETE:
 					if kPath, ferr = algebra.NewVariablePathWithContext(pp.Target, context.namespace, ""); ferr == nil {
 						kPath = algebra.NewPathLong(kPath.Namespace(), kPath.Bucket(), _DEFAULT, _DEFAULT)
 						if pp.Priv != auth.PRIV_QUERY_SELECT {
@@ -124,8 +135,7 @@ func (this *Authorize) addTxPrivileges(privs *auth.Privileges, context *Context)
 
 		if addTxPrivileges {
 			nprivs := auth.NewPrivileges()
-			// Atr collection check is disabled (MB-42217). By turning true those are enabled.
-			checkAtrPrivs := false
+			checkAtrPrivs := true
 			atrPrivs, keyspacePrivs, err := this.getTxPrivileges(privs, checkAtrPrivs, context)
 			if err != nil {
 				return nil, err
