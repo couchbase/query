@@ -1258,7 +1258,7 @@ func (this *Random) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// Round
+// Round - round towards even
 //
 ///////////////////////////////////////////////////
 
@@ -1329,7 +1329,7 @@ func (this *Round) Evaluate(item value.Value, context Context) (value.Value, err
 
 	v := arg.Actual().(float64)
 
-	return value.NewValue(roundFloat(v, p)), nil
+	return value.NewValue(roundFloat(v, p, true)), nil
 }
 
 /*
@@ -1347,6 +1347,93 @@ Factory method pattern.
 */
 func (this *Round) Constructor() FunctionConstructor {
 	return NewRound
+}
+
+///////////////////////////////////////////////////
+//
+// RoundNearest
+//
+///////////////////////////////////////////////////
+
+/*
+Same as Round() but rounds to nearest value not to just even value.
+*/
+type RoundNearest struct {
+	FunctionBase
+}
+
+func NewRoundNearest(operands ...Expression) Function {
+	rv := &RoundNearest{
+		*NewFunctionBase("round_nearest", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *RoundNearest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RoundNearest) Type() value.Type { return value.NUMBER }
+
+func (this *RoundNearest) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		missing = true
+	} else if arg.Type() != value.NUMBER {
+		null = true
+	}
+
+	p := 0
+	if len(this.operands) > 1 {
+		prec, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if prec.Type() == value.MISSING {
+			missing = true
+		} else if prec.Type() != value.NUMBER {
+			null = true
+		} else if !null && !missing {
+			pf := prec.Actual().(float64)
+			if pf != math.Trunc(pf) {
+				null = true
+			} else {
+				p = int(pf)
+			}
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	v := arg.Actual().(float64)
+
+	return value.NewValue(roundFloat(v, p, false)), nil
+}
+
+/*
+Minimum input arguments required is 1.
+*/
+func (this *RoundNearest) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed is 2.
+*/
+func (this *RoundNearest) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *RoundNearest) Constructor() FunctionConstructor {
+	return NewRoundNearest
 }
 
 ///////////////////////////////////////////////////
@@ -1713,9 +1800,9 @@ This method is used to round the input number to the
 given number of precision digits to the right or left
 of the decimal point depending on whether it is
 positive or negative. For the fraction 0.5
-round towards the even value.
+round towards the even value if "to_even" is true.
 */
-func roundFloat(x float64, prec int) float64 {
+func roundFloat(x float64, prec int, to_even bool) float64 {
 	if math.IsNaN(x) || math.IsInf(x, 0) {
 		return x
 	}
@@ -1730,8 +1817,7 @@ func roundFloat(x float64, prec int) float64 {
 	intermed := (x * pow) + 0.5
 	rounder := math.Floor(intermed)
 
-	// For frac 0.5, round towards even
-	if rounder == intermed && math.Mod(rounder, 2) != 0 {
+	if to_even && rounder == intermed && math.Mod(rounder, 2) != 0 {
 		rounder--
 	}
 
