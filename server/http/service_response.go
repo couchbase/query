@@ -149,7 +149,7 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 
 		// wait for operator before continuing
 		<-this.Results()
-	case <-this.httpCloseNotify:
+	case <-this.req.Context().Done():
 		this.Stop(server.CLOSED)
 
 		// wait for operator before continuing

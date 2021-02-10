@@ -44,13 +44,12 @@ type httpRequest struct {
 	req         *http.Request
 	consistency scanConfigImpl
 
-	httpCloseNotify <-chan bool
-	writer          bufferedWriter
-	httpRespCode    int
-	resultCount     int
-	resultSize      int
-	errorCount      int
-	warningCount    int
+	writer       bufferedWriter
+	httpRespCode int
+	resultCount  int
+	resultSize   int
+	errorCount   int
+	warningCount int
 
 	sync.WaitGroup
 	prefix string
@@ -185,9 +184,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	NewBufferedWriter(&rv.writer, rv, bp)
-
-	// Abort if client closes connection; alternatively, return when request completes.
-	rv.httpCloseNotify = resp.(http.CloseNotifier).CloseNotify()
 
 	// Prevent operator to send results until the prefix is done
 	rv.Add(1)
