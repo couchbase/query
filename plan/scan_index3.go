@@ -297,6 +297,12 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["has_delta_keyspace"] = this.hasDeltaKeyspace
 	}
 
+	// index partition info is for information only (in explain), no need to unmarshal
+	partition, _ := this.index.PartitionKeys()
+	if partition != nil {
+		r["index_partition_by"] = partition.Exprs.String()
+	}
+
 	if f != nil {
 		f(r)
 	}
