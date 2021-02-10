@@ -1,4 +1,4 @@
-//  Copieright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2014 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -497,19 +497,19 @@ func (this *parsedValue) unwrap() Value {
 		this.raw = nil
 		this.keyState.Release()
 		this.indexState.Release()
-		if this.fields != nil {
+		if this.fields != nil || this.elements != nil {
+			this.Lock()
 			for i, field := range this.fields {
 				this.fields[i] = nil
 				field.Recycle()
 			}
 			this.fields = nil
-		}
-		if this.elements != nil {
 			for i, element := range this.elements {
 				this.elements[i] = nil
 				element.Recycle()
 			}
 			this.elements = nil
+			this.Unlock()
 		}
 	}
 
