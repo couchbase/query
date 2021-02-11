@@ -335,6 +335,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Filter           string                 `json:"filter"`
 		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
+		_                string                 `json:"index_partition_by"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
