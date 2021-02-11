@@ -89,11 +89,15 @@ const (
 	// operating
 	_RUNNING
 	_STOPPING
+	_HALTING
 
-	// terminated
+	// terminated - terminally!
 	_PANICKED
-	_COMPLETED
+	_HALTED
+
+	// terminated - possibly temporarily
 	_STOPPED
+	_COMPLETED
 
 	// paused - ready to reopen
 	_PAUSED
@@ -293,15 +297,15 @@ func (this *base) baseDone() {
 		this.opState = _DONE
 
 	// otherwise wait
-	case _RUNNING, _STOPPING:
+	case _RUNNING, _HALTING, _STOPPING:
 		this.activeCond.Wait()
 	}
 
 	// from now on, this operator can't be touched
 	switch this.opState {
-	case _COMPLETED:
+	case _COMPLETED, _STOPPED:
 		this.opState = _DONE
-	case _STOPPED:
+	case _HALTED:
 		this.opState = _ENDED
 	}
 
@@ -322,13 +326,15 @@ func (this *base) baseReopen(context *Context) bool {
 	this.activeCond.L.Lock()
 
 	// still running, just wait
-	if this.opState == _CREATED || this.opState == _RUNNING || this.opState == _STOPPING {
+	if this.opState == _CREATED || this.opState == _RUNNING ||
+		this.opState == _STOPPING || this.opState == _HALTING {
 		this.activeCond.Wait()
 	}
 
 	// the request terminated, a stop was sent, or something catastrophic happened
 	// cannot reopen, bail out
-	if this.opState == _STOPPED || this.opState == _DONE || this.opState == _ENDED || this.opState == _KILLED || this.opState == _PANICKED {
+	if this.opState == _HALTED || this.opState == _DONE || this.opState == _ENDED ||
+		this.opState == _KILLED || this.opState == _PANICKED {
 		this.activeCond.L.Unlock()
 		return false
 	}
@@ -480,7 +486,7 @@ func (this *base) SendAction(action opAction) {
 func (this *base) baseSendAction(action opAction) bool {
 
 	// CREATED and DORMANT cannot apply, as they have neither sent or received
-	// PANICKED, COMPLETED and STOPPED have already sent a notifyStop
+	// PANICKED, COMPLETED, STOPPED and HALTED have already sent a notifyStop
 	// DONE, ENDED and KILLED can no longer be operated upon
 	if this.stopped && !this.valueExchange.isWaiting() {
 		switch this.opState {
@@ -489,14 +495,14 @@ func (this *base) baseSendAction(action opAction) bool {
 				return true
 			}
 			// _ACTION_STOP has to take the slow route
-		case _RUNNING, _STOPPING:
+		case _RUNNING, _STOPPING, _HALTING:
 			return true
 		default:
 			return false
 		}
 	}
 
-	// STOPPED, COMPLETED, DONE, ENDED, KILLED have already sent signals or stopped operating
+	// STOPPED, COMPLETED, HALTED, DONE, ENDED, KILLED have already sent signals or stopped operating
 	rv := false
 	this.activeCond.L.Lock()
 	switch this.opState {
@@ -517,13 +523,23 @@ func (this *base) baseSendAction(action opAction) bool {
 		}
 		this.activeCond.L.Unlock()
 	case _RUNNING:
-		this.opState = _STOPPING
+		if action == _ACTION_STOP {
+			this.opState = _HALTING
+		} else {
+			this.opState = _STOPPING
+		}
 		this.activeCond.L.Unlock()
 		rv = true
 		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
 		this.switchPhase(_EXECTIME)
 	case _STOPPING:
+		if action == _ACTION_STOP {
+			this.opState = _HALTING
+		}
+		this.activeCond.L.Unlock()
+		rv = true
+	case _HALTING:
 		this.activeCond.L.Unlock()
 		rv = true
 	default:
@@ -547,7 +563,11 @@ func (this *base) chanSendAction(action opAction) {
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
-		this.opState = _STOPPING
+		if action == _ACTION_STOP {
+			this.opState = _HALTING
+		} else {
+			this.opState = _STOPPING
+		}
 		this.activeCond.L.Unlock()
 		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
@@ -576,7 +596,11 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
-		this.opState = _STOPPING
+		if action == _ACTION_STOP {
+			this.opState = _HALTING
+		} else {
+			this.opState = _STOPPING
+		}
 		this.activeCond.L.Unlock()
 		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
@@ -736,7 +760,7 @@ func (this *base) childrenWaitNoStop(ops ...Operator) {
 		state := b.opState
 		b.activeCond.L.Unlock()
 		switch state {
-		case _RUNNING, _STOPPING, _COMPLETED, _STOPPED:
+		case _RUNNING, _STOPPING, _HALTING, _COMPLETED, _STOPPED, _HALTED:
 			// signal reliably sent
 			this.ValueExchange().retrieveChildNoStop()
 		case _CREATED, _PAUSED, _KILLED, _PANICKED:
@@ -1128,6 +1152,8 @@ func (this *base) inactive() {
 		this.opState = _COMPLETED
 	case _STOPPING, _PAUSED:
 		this.opState = _STOPPED
+	case _HALTING:
+		this.opState = _HALTED
 	}
 	this.activeCond.L.Unlock()
 
@@ -1165,14 +1191,15 @@ func (this *base) waitComplete() {
 	this.activeCond.L.Lock()
 
 	// still running, just wait
-	if this.opState == _CREATED || this.opState == _PAUSED || this.opState == _RUNNING || this.opState == _STOPPING {
+	if this.opState == _CREATED || this.opState == _PAUSED ||
+		this.opState == _RUNNING || this.opState == _STOPPING || this.opState == _HALTING {
 		this.activeCond.Wait()
 
 		// signal that no go routine should touch this operator
 		switch this.opState {
-		case _COMPLETED:
+		case _COMPLETED, _STOPPED:
 			this.opState = _DONE
-		case _STOPPED:
+		case _HALTED:
 			this.opState = _ENDED
 		}
 	}
