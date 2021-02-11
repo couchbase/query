@@ -282,6 +282,12 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["cardinality"] = this.cardinality
 	}
 
+	// index partition info is for information only (in explain), no need to unmarshal
+	partition, _ := this.index.PartitionKeys()
+	if partition != nil {
+		r["index_partition_by"] = partition.Exprs.String()
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -311,6 +317,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		FilterCovers map[string]interface{} `json:"filter_covers"`
 		Cost         float64                `json:"cost"`
 		Cardinality  float64                `json:"cardinality"`
+		_            string                 `json:"index_partition_by"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
