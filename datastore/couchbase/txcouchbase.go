@@ -696,7 +696,6 @@ func initGocb(s *store) (err errors.Error) {
 	}
 
 	txConfig.Internal.EnableNonFatalGets = true
-	txConfig.Internal.EnableCompoundOps = true
 	txConfig.Internal.EnableParallelUnstaging = true
 
 	client, cerr := gcagent.NewClient(s.URL(), certFile)
