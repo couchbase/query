@@ -16,8 +16,6 @@ replace github.com/couchbase/go-couchbase => ../go-couchbase
 
 replace github.com/couchbase/go_json => ../go_json
 
-replace github.com/couchbaselabs/gocbcore-transactions => ../../couchbaselabs/gocbcore-transactions
-
 replace github.com/couchbase/gomemcached => ../gomemcached
 
 replace github.com/couchbase/indexing => ../indexing
@@ -36,6 +34,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.0.0-20201026062457-7b3be89bbd89
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
+	github.com/couchbase/gocbcore-transactions v0.0.0-20210211210306-2d317f470356
 	github.com/couchbase/gocbcore/v9 v9.1.2-0.20210209094434-1b2ac8939b69
 	github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71
 	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
@@ -46,7 +45,6 @@ require (
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3
 	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
-	github.com/couchbaselabs/gocbcore-transactions v0.0.0-00010101000000-000000000000
 	github.com/gorilla/mux v1.7.4
 	github.com/natefinch/npipe v0.0.0-20160621034901-c1b8fa8bdcce // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect

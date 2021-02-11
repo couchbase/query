@@ -7,8 +7,6 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build enterprise
-
 package couchbase
 
 import (
@@ -18,6 +16,7 @@ import (
 	"strconv"
 	"sync"
 
+	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -26,7 +25,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
-	gctx "github.com/couchbaselabs/gocbcore-transactions"
 )
 
 func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (dks map[string]bool, err errors.Error) {

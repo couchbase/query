@@ -7,8 +7,6 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build enterprise
-
 package gcagent
 
 import (
@@ -20,9 +18,9 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/gocbcore/v9/connstr"
-	gctx "github.com/couchbaselabs/gocbcore-transactions"
 )
 
 const (

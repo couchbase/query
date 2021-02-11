@@ -7,8 +7,6 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build enterprise
-
 package couchbase
 
 import (
@@ -17,9 +15,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/errors"
-	gctx "github.com/couchbaselabs/gocbcore-transactions"
 )
 
 type MutateOp int

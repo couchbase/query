@@ -31,8 +31,6 @@ SET (GOVERSION 1.13.7)
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
-GoPrivateMod (MODULE gocbcore-transactions
-  PATH ../../couchbaselabs/gocbcore-transactions)
 
 SET (LDFLAGS)
 IF (APPLE)

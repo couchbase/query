@@ -7,16 +7,14 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build enterprise
-
 package gcagent
 
 import (
 	"strings"
 
+	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/query/logging"
-	gctx "github.com/couchbaselabs/gocbcore-transactions"
 )
 
 type GocbcoreLogger struct {
