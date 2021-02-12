@@ -192,6 +192,7 @@ type Context struct {
 	numAtrs             int
 	kvTimeout           time.Duration
 	flags               uint32
+	result              func(context *Context, item value.AnnotatedValue) bool
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -230,6 +231,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		optimizer:        optimizer,
 		inlistHashMap:    nil,
 		kvTimeout:        kvTimeout,
+		result:           setup,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -531,12 +533,18 @@ func (this *Context) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
 }
 
-func (this *Context) SetUp() {
-	this.output.SetUp()
+func setup(context *Context, item value.AnnotatedValue) bool {
+	context.output.SetUp()
+	context.result = result
+	return context.output.Result(item)
+}
+
+func result(context *Context, item value.AnnotatedValue) bool {
+	return context.output.Result(item)
 }
 
 func (this *Context) Result(item value.AnnotatedValue) bool {
-	return this.output.Result(item)
+	return this.result(this, item)
 }
 
 func (this *Context) CloseResults() {

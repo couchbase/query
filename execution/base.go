@@ -219,6 +219,7 @@ func newRedirectBase(dest *base) {
 // A few ground rules for serializable operators:
 // - must always be called in a sequence
 // - must follow a producer in a sequence
+// - beforeItems() must not yield, to avoid stalls
 func newSerializedBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
@@ -507,7 +508,8 @@ func execOp(op Operator, context *Context, parent value.Value) {
 
 // fork operator
 func (this *base) fork(op Operator, context *Context, parent value.Value) {
-	if op.getBase().inline {
+	base := op.getBase()
+	if base.inline || base.serialized {
 		this.switchPhase(_NOTIME)
 		op.RunOnce(context, parent)
 		this.switchPhase(_EXECTIME)

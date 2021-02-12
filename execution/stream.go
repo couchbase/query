@@ -67,11 +67,6 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Stream) beforeItems(context *Context, parent value.Value) bool {
-	context.SetUp()
-	return true
-}
-
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
 	ok := context.Result(item)
 	if ok {
