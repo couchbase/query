@@ -772,5 +772,35 @@
        "statements":"select cos(unitPrice) as sc from product where sc > 1 limit 1",
        "results": [
        ]
+    },
+    {
+      "statements":"select round_even(1.5),round_even(1.5,0),round_nearest(1.5,0),round_nearest(1.5),round_even(2.5),round_even(2.5,0),round_nearest(2.5,0),round_nearest(2.5)",
+      "results":[
+      {
+        "$1": 2,
+        "$2": 2,
+        "$3": 2,
+        "$4": 2,
+        "$5": 2,
+        "$6": 2,
+        "$7": 3,
+        "$8": 3
+      }
+    ]
+    },
+    {
+      "statements":"select round(1.5),round(1.5,0),round_even(1.5,0),round_even(1.5),round(2.5),round(2.5,0),round_even(2.5,0),round_even(2.5)",
+      "results":[
+      {
+        "$1": 2,
+        "$2": 2,
+        "$3": 2,
+        "$4": 2,
+        "$5": 2,
+        "$6": 2,
+        "$7": 2,
+        "$8": 2
+      }
+    ]
     }
  ]
