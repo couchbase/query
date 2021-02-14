@@ -164,7 +164,7 @@ func (this *WindowAggregate) hasFlags(flags uint32) bool {
 /*
   Window operator initial setup information
 */
-func (this *WindowAggregate) setupTerms(context *Context) bool {
+func (this *WindowAggregate) setupTerms(context *Context, parent value.Value) bool {
 	this.context = context
 	largestOrderAgg := this.plan.Aggregates()[0]
 	this.aggs = make([]*AggregateInfo, 0, len(this.plan.Aggregates()))
@@ -186,7 +186,7 @@ func (this *WindowAggregate) setupTerms(context *Context) bool {
 
 		// setup aggregate information.
 		aInfo := &AggregateInfo{agg: agg, id: agg.String(), wTerm: wTerm, flags: flags}
-		err := aInfo.setOnce(context)
+		err := aInfo.setOnce(context, parent)
 		if err != nil {
 			context.Fatal(errors.NewWindowEvaluationError(err, "Error inital setup"))
 			return false
@@ -234,7 +234,7 @@ func (this *AggregateInfo) hasFlags(flags uint32) bool {
  Setup aggregate specific information
 */
 
-func (this *AggregateInfo) setOnce(context *Context) (err error) {
+func (this *AggregateInfo) setOnce(context *Context, parent value.Value) (err error) {
 
 	// No ORDER BY all rows in parttition has same aggregate value. Evaluate once.
 	this.once = this.wTerm.OrderBy() == nil && !this.hasFlags(_WINDOW_ROW_NUMBER)
@@ -293,7 +293,7 @@ func (this *AggregateInfo) setOnce(context *Context) (err error) {
 
 		// Validate semantics of start frame VALUE expression
 		if wfes[0].HasModifier(algebra.WINDOW_FRAME_VALUE_PRECEDING | algebra.WINDOW_FRAME_VALUE_FOLLOWING) {
-			this.sWindowVal, err = this.windowValidateValExpr(wfes[0].ValueExpression(), rangeWindow, context)
+			this.sWindowVal, err = this.windowValidateValExpr(wfes[0].ValueExpression(), rangeWindow, context, parent)
 			if err != nil {
 				return
 			}
@@ -307,7 +307,7 @@ func (this *AggregateInfo) setOnce(context *Context) (err error) {
 
 			// Validate semantics of end frame VALUE expression
 			if wfes[1].HasModifier(algebra.WINDOW_FRAME_VALUE_PRECEDING | algebra.WINDOW_FRAME_VALUE_FOLLOWING) {
-				this.eWindowVal, err = this.windowValidateValExpr(wfes[1].ValueExpression(), rangeWindow, context)
+				this.eWindowVal, err = this.windowValidateValExpr(wfes[1].ValueExpression(), rangeWindow, context, parent)
 				if err != nil {
 					return
 				}
@@ -863,9 +863,9 @@ func (this *AggregateInfo) windowValueRangePeerPos(op *WindowAggregate, rangeVal
 
 // value_expr must be a constant or expression and must evaluate to a positive numeric value.
 func (this *AggregateInfo) windowValidateValExpr(valExpr expression.Expression,
-	rangeWindow bool, context *Context) (value.Value, error) {
+	rangeWindow bool, context *Context, parent value.Value) (value.Value, error) {
 
-	val, err := valExpr.Evaluate(nil, context)
+	val, err := valExpr.Evaluate(parent, context)
 	if err != nil {
 		return val, err
 	}
@@ -967,7 +967,7 @@ func (this *WindowAggregate) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *WindowAggregate) beforeItems(context *Context, parent value.Value) bool {
-	return this.setupTerms(context)
+	return this.setupTerms(context, parent)
 }
 
 func (this *WindowAggregate) processItem(item value.AnnotatedValue, context *Context) bool {
