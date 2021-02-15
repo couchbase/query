@@ -15,10 +15,9 @@ import (
 	goerrors "errors"
 	"fmt"
 
-	"github.com/couchbase/eventing-ee/js-evaluator/defs"
-	"github.com/couchbase/eventing-ee/js-evaluator/n1ql-client"
+	"github.com/couchbase/eventing-ee/evaluator/defs"
+	"github.com/couchbase/eventing-ee/evaluator/n1ql_client"
 	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -48,15 +47,13 @@ func Init(mux *mux.Router) {
 
 	engine := n1ql_client.SingleInstance
 	config := make(map[defs.Config]interface{})
-	config[defs.WorkersPerNode] = 2
-	config[defs.ThreadsPerWorker] = 3
-	config[defs.NsServerURL] = "http://" + distributed.RemoteAccess().WhoAmI()
+	config[defs.Threads] = 6
 
 	err := engine.Configure(config)
 	if err.Err == nil {
 		if mux != nil {
 			handle := engine.UIHandler()
-			mux.NewRoute().PathPrefix(handle.Path()).Methods("GET", "POST", "PUT", "DELETE").HandlerFunc(handle.Handler())
+			mux.NewRoute().PathPrefix(handle.Path()).Methods("GET", "POST", "DELETE").HandlerFunc(handle.Handler())
 		}
 		if err.Err == nil {
 			err = engine.Start()
@@ -98,8 +95,8 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 	// FIXME credentials
 	// FIXME queryContext
-	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0}
-
+	//opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0}
+	opts := map[defs.Option]interface{}{defs.Timeout: 10000}
 	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
 	if err.Err != nil {
 		return nil, funcBody.execError(err.Err, err.Details, funcName)

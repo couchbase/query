@@ -22,6 +22,8 @@ INCLUDE (FindCouchbaseGo)
 IF (BUILD_ENTERPRISE)
     SET (_gotags "enterprise")
     SET (_extra_deps "evaluator-generated")
+    SET (NEWEVAL_DIR ../eventing-ee/evaluator)
+    SET(_eval_no_default_path NO_DEFAULT_PATH)
 ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
     SET (_extra_deps)
@@ -44,22 +46,37 @@ IF (APPLE)
   # binary itself.
   SET (LDFLAGS " ${LDFLAGS} -extldflags '-Wl,-rpath,@executable_path/../lib'")
 ENDIF ()
+IF(WIN32)
+    IF("${MSVC_VERSION}" LESS 1910)
+        SET (LDFLAGS "${LDFLAGS} -linkmode internal")
+    ENDIF()
+ENDIF()
 
 IF (NOT CBQ_ONLY)
   GoYacc (GOVERSION 1.13.7 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
 
+  SET(CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR}")
+  SET(CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR}")
+
+  IF (BUILD_ENTERPRISE)
+    find_path(NEWEVAL_INCLUDE_DIR worker.h
+        HINTS ${NEWEVAL_DIR}/worker/include)
+    LIST(APPEND CGO_LIBRARY_DIRS "${evaluator_BINARY_DIR}")
+    LIST(APPEND CGO_INCLUDE_DIRS "${NEWEVAL_INCLUDE_DIR}")
+  ENDIF (BUILD_ENTERPRISE)
+
   GoModBuild (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
     DEPENDS n1ql-yacc proto-generated ${_extra_deps} INSTALL_PATH bin
-    CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR}"
-    CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR}"
+    CGO_INCLUDE_DIRS "${CGO_INCLUDE_DIRS}"
+    CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}"
     LDFLAGS "${LDFLAGS}"
     GOVERSION ${GOVERSION}
     GOTAGS ${_gotags})
 
   IF (BUILD_ENTERPRISE)
-    ADD_DEPENDENCIES (cbq-engine js-evaluator)
+    ADD_DEPENDENCIES (cbq-engine js-evaluator jseval)
   ENDIF ()
 
   GoModBuild (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
