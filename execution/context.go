@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -193,6 +194,7 @@ type Context struct {
 	kvTimeout           time.Duration
 	flags               uint32
 	result              func(context *Context, item value.AnnotatedValue) bool
+	likeRegexMap        map[*expression.Like]*expression.LikeRegex
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -232,6 +234,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		inlistHashMap:    nil,
 		kvTimeout:        kvTimeout,
 		result:           setup,
+		likeRegexMap:     nil,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -1009,4 +1012,33 @@ func (this *Context) SetAdvisor() {
 
 func (this *Context) IsAdvisor() bool {
 	return (this.flags & CONTEXT_IS_ADVISOR) != 0
+}
+
+// Return the cached regex for the input operator only if the like pattern is unchanged
+func (this *Context) GetLikeRegex(in *expression.Like, s string) *regexp.Regexp {
+	this.mutex.RLock()
+	if this.likeRegexMap == nil {
+		this.mutex.RUnlock()
+		return nil
+	}
+	e, ok := this.likeRegexMap[in]
+	this.mutex.RUnlock()
+
+	if ok && e.Orig == s {
+		return e.Re
+	}
+	return nil
+}
+
+func (this *Context) CacheLikeRegex(in *expression.Like, s string, re *regexp.Regexp) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.likeRegexMap == nil {
+		this.likeRegexMap = make(map[*expression.Like]*expression.LikeRegex, 4)
+	}
+	if _, ok := this.likeRegexMap[in]; !ok {
+		this.likeRegexMap[in] = new(expression.LikeRegex)
+	}
+	this.likeRegexMap[in].Orig = s
+	this.likeRegexMap[in].Re = re
 }

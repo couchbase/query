@@ -25,8 +25,15 @@ and '_' wildcard characters.
 */
 type Like struct {
 	BinaryFunctionBase
-	re   *regexp.Regexp
-	part *regexp.Regexp
+	re            *regexp.Regexp
+	part          *regexp.Regexp
+	canCacheRegex bool
+}
+
+// This is cached in the context for each operator instance
+type LikeRegex struct {
+	Orig string
+	Re   *regexp.Regexp
 }
 
 func NewLike(first, second Expression) Function {
@@ -34,6 +41,7 @@ func NewLike(first, second Expression) Function {
 		*NewBinaryFunctionBase("like", first, second),
 		nil,
 		nil,
+		(second.Static() != nil),
 	}
 
 	rv.re, rv.part, _ = precompileLike(second.Value())
@@ -71,13 +79,23 @@ func (this *Like) Evaluate(item value.Value, context Context) (value.Value, erro
 
 	re := this.re
 	if re == nil {
-		var err error
-		re, _, err = likeCompile(s)
-		if err != nil {
-			return nil, err
+		var likeContext LikeContext
+		ok := false
+		if this.canCacheRegex {
+			likeContext, ok = context.(LikeContext)
+			if ok {
+				re = likeContext.GetLikeRegex(this, s)
+			}
 		}
-		if this.operands[1].Static() != nil {
-			this.re = re
+		if re == nil {
+			var err error
+			re, _, err = likeCompile(s)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				likeContext.CacheLikeRegex(this, s, re)
+			}
 		}
 	}
 

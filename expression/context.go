@@ -10,6 +10,7 @@
 package expression
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/couchbase/query/auth"
@@ -45,4 +46,10 @@ type InlistContext interface {
 	GetInlistHash(in *In) *InlistHash
 	EnableInlistHash(in *In)
 	RemoveInlistHash(in *In)
+}
+
+type LikeContext interface {
+	Context
+	GetLikeRegex(in *Like, s string) *regexp.Regexp
+	CacheLikeRegex(in *Like, s string, re *regexp.Regexp)
 }
