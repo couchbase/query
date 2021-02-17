@@ -69,6 +69,11 @@ func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.V
 	return value.NewValue(aa), nil
 }
 
+func (this *ArrayConstruct) ResetValue() {
+	this.ExprBase().ResetValue()
+	this.Value() // need to initialize value
+}
+
 /*
 Minimum input arguments required for the defined ArrayConstruct
 function. It is 0.

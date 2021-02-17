@@ -544,7 +544,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	sequence.Done()
 
 	// Cache results
-	if !planFound && !query.IsCorrelated() {
+	if !query.IsCorrelated() {
 		subresults.set(query, results)
 	}
 
