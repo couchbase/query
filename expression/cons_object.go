@@ -86,6 +86,11 @@ func (this *ObjectConstruct) PropagatesNull() bool {
 	return this.value != nil && *this.value != nil
 }
 
+func (this *ObjectConstruct) ResetValue() {
+	this.ExprBase().ResetValue()
+	this.Value() // need to initialize value
+}
+
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	if this.valueEquivalentTo(other) {
 		return true

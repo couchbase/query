@@ -69,6 +69,11 @@ func (this *ArrayConstruct) PropagatesNull() bool {
 	return this.value != nil && *this.value != nil
 }
 
+func (this *ArrayConstruct) ResetValue() {
+	this.ExprBase().ResetValue()
+	this.Value() // need to initialize value
+}
+
 /*
 Minimum input arguments required for the defined ArrayConstruct
 function. It is 0.
