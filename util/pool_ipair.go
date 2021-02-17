@@ -34,5 +34,8 @@ func (this *IPairPool) Put(s []IPair) {
 		return
 	}
 
+	for i := range s {
+		s[i] = IPair{}
+	}
 	this.pool.Put(s[0:0])
 }

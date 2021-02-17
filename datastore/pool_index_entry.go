@@ -40,5 +40,8 @@ func (this *IndexEntryPool) Put(s []*IndexEntry) {
 		return
 	}
 
+	for i := range s {
+		s[i] = nil
+	}
 	this.pool.Put(s[0:0])
 }

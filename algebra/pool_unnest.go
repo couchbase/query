@@ -38,5 +38,8 @@ func (this *UnnestPool) Put(buf []*Unnest) {
 		return
 	}
 
+	for i := range buf {
+		buf[i] = nil
+	}
 	this.pool.Put(buf[0:0])
 }

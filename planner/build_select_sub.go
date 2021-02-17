@@ -563,12 +563,13 @@ func (this *builder) coverIndexGroupAggsMap(mapper expression.Mapper) error {
 
 func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	// Enumerate INNER UNNESTs
-	unnests := _UNNEST_POOL.Get()
-	defer _UNNEST_POOL.Put(unnests)
-	unnests = collectInnerUnnests(from, unnests)
-	if len(unnests) == 0 {
+	joinTerm, ok := from.(algebra.JoinTerm)
+	if !ok {
 		return
 	}
+	unnests := _UNNEST_POOL.Get()
+	defer _UNNEST_POOL.Put(unnests)
+	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
 
 	// Enumerate primary UNNESTs
 	primaryUnnests := _UNNEST_POOL.Get()

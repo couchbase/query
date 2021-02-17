@@ -51,16 +51,16 @@ func (this *StringPool) GetSized(length int) []string {
 
 	rv := this.Get()
 	rv = rv[0:length]
-	for i := 0; i < length; i++ {
-		rv[i] = ""
-	}
-
 	return rv
 }
 
 func (this *StringPool) Put(s []string) {
 	if cap(s) != this.size {
 		return
+	}
+
+	for i := range s {
+		s[i] = ""
 	}
 
 	this.pool.put(s[0:0])

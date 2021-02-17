@@ -65,12 +65,14 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	}
 
 	// Enumerate INNER UNNESTs
-	unnests := _UNNEST_POOL.Get()
-	defer _UNNEST_POOL.Put(unnests)
-	unnests = collectInnerUnnests(from, unnests)
-	if len(unnests) == 0 {
+	joinTerm, ok := from.(algebra.JoinTerm)
+	if !ok {
 		return nil, 0, nil
 	}
+
+	unnests := _UNNEST_POOL.Get()
+	defer _UNNEST_POOL.Put(unnests)
+	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
 
 	// Enumerate primary UNNESTs
 	primaryUnnests := _UNNEST_POOL.Get()
@@ -214,7 +216,10 @@ func collectInnerUnnests(from algebra.FromTerm, buf []*algebra.Unnest) []*algebr
 	if !ok {
 		return buf
 	}
+	return collectInnerUnnestsFromJoinTerm(joinTerm, buf)
+}
 
+func collectInnerUnnestsFromJoinTerm(joinTerm algebra.JoinTerm, buf []*algebra.Unnest) []*algebra.Unnest {
 	buf = collectInnerUnnests(joinTerm.Left(), buf)
 
 	unnest, ok := joinTerm.(*algebra.Unnest)

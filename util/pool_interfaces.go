@@ -36,10 +36,6 @@ func (this *InterfacesPool) GetSized(length int) [][]interface{} {
 
 	rv := this.Get()
 	rv = rv[0:length]
-	for i := 0; i < length; i++ {
-		rv[i] = nil
-	}
-
 	return rv
 }
 
@@ -48,5 +44,8 @@ func (this *InterfacesPool) Put(s [][]interface{}) {
 		return
 	}
 
+	for i := range s {
+		s[i] = nil
+	}
 	this.pool.Put(s[0:0])
 }
