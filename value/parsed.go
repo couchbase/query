@@ -113,7 +113,7 @@ func identifyType(bytes []byte) Type {
 			return BOOLEAN
 		case 'n':
 			return NULL
-		case ' ', '\t', '\n':
+		case ' ', '\t', '\n', '\r':
 			continue
 		default:
 			return BINARY
