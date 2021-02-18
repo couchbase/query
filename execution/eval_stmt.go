@@ -125,7 +125,8 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 		return nil, 0, err
 	}
 
-	return this.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	newContext := this.Copy()
+	return newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
 }
 
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -238,15 +239,14 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	var outputBuf internalOutput
 	output := &outputBuf
 
-	newContext := this.Copy()
-	newContext.output = output
-	newContext.SetIsPrepared(isPrepared)
-	newContext.SetPrepared(prepared)
-	newContext.namedArgs = namedArgs
-	newContext.positionalArgs = positionalArgs
+	this.output = output
+	this.SetIsPrepared(isPrepared)
+	this.SetPrepared(prepared)
+	this.namedArgs = namedArgs
+	this.positionalArgs = positionalArgs
 
 	build := util.Now()
-	pipeline, err := Build(prepared, newContext)
+	pipeline, err := Build(prepared, this)
 	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
@@ -255,11 +255,11 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 	// Collect statements results
 	// FIXME: this should handled by the planner
-	collect := NewCollect(plan.NewCollect(), newContext)
-	sequence := NewSequence(plan.NewSequence(), newContext, pipeline, collect)
+	collect := NewCollect(plan.NewCollect(), this)
+	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
 
 	exec := util.Now()
-	sequence.RunOnce(newContext, nil)
+	sequence.RunOnce(this, nil)
 
 	// Await completion
 	collect.waitComplete()
@@ -309,9 +309,19 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 		return txId, nil, errors.NewTransactionError(fmt.Errorf("Implicit Transaction: %s unknown statement", stmtType), "")
 	}
 
-	prepared, isPrepared, err := this.PrepareStatement(stmt, nil, nil, false, false, true)
+	newContext := this.Copy()
+	newContext.queryContext = ""
+	newContext.indexApiVersion = 0
+	newContext.featureControls = 0
+	newContext.useFts = false
+	newContext.useCBO = false
+	newContext.deltaKeyspaces = nil
+	newContext.namedArgs = nil
+	newContext.positionalArgs = nil
+
+	prepared, isPrepared, err := newContext.PrepareStatement(stmt, nil, nil, false, false, true)
 	if err == nil {
-		res, _, err = this.ExecutePrepared(prepared, isPrepared, nil, nil)
+		res, _, err = newContext.ExecutePrepared(prepared, isPrepared, nil, nil)
 	}
 	if err != nil {
 		error, ok := err.(errors.Error)
