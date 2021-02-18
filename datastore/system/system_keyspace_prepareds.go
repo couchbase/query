@@ -118,9 +118,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					itemMap["indexScanKeyspaces"] = isks
 				}
 
-				txPrepards, txPlans := entry.Prepared.TxPrepared()
-				if len(txPrepards) > 0 {
-					itemMap["txPrepards"] = txPrepards
+				txPrepareds, txPlans := entry.Prepared.TxPrepared()
+				if len(txPrepareds) > 0 {
+					itemMap["txPrepareds"] = txPrepareds
 				}
 
 				if node != "" {
@@ -142,7 +142,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				item := value.NewAnnotatedValue(itemMap)
 				m := item.NewMeta()
 				m["keyspace"] = b.fullName
-				if len(txPrepards) > 0 {
+				if len(txPrepareds) > 0 {
 					m["txPlans"] = txPlans
 				}
 				m["plan"], _ = json.Marshal(entry.Prepared.Operator)

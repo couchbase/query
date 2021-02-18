@@ -433,9 +433,9 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			if len(isks) > 0 {
 				itemMap["indexScanKeyspaces"] = isks
 			}
-			txPrepards, txPlans := entry.Prepared.TxPrepared()
-			if len(txPrepards) > 0 {
-				itemMap["txPrepards"] = txPrepards
+			txPrepareds, txPlans := entry.Prepared.TxPrepared()
+			if len(txPrepareds) > 0 {
+				itemMap["txPrepareds"] = txPrepareds
 			}
 			if req.Method == "POST" {
 				itemMap["plan"] = entry.Prepared.Operator
@@ -494,9 +494,9 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			if len(isks) > 0 {
 				data[i]["indexScanKeyspaces"] = isks
 			}
-			txPrepards, _ := d.Prepared.TxPrepared()
-			if len(txPrepards) > 0 {
-				data[i]["txPrepards"] = txPrepards
+			txPrepareds, _ := d.Prepared.TxPrepared()
+			if len(txPrepareds) > 0 {
+				data[i]["txPrepareds"] = txPrepareds
 			}
 			data[i]["statement"] = d.Prepared.Text()
 			data[i]["uses"] = d.Uses
