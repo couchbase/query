@@ -38,7 +38,11 @@ func (this IndexPool) Put(s []Index) {
 		return
 	}
 
+	s = s[:cap(s)]
 	for i := range s {
+		if s[i] == nil {
+			break
+		}
 		s[i] = nil
 	}
 	this.pool.Put(s[0:0])

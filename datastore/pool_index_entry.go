@@ -10,23 +10,21 @@
 package datastore
 
 import (
-	"sync"
+	"github.com/couchbase/query/util"
 )
 
 type IndexEntryPool struct {
-	pool *sync.Pool
+	pool util.FastPool
 	size int
 }
 
 func NewIndexEntryPool(size int) *IndexEntryPool {
 	rv := &IndexEntryPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]*IndexEntry, 0, size)
-			},
-		},
 		size: size,
 	}
+	util.NewFastPool(&rv.pool, func() interface{} {
+		return make([]*IndexEntry, 0, size)
+	})
 
 	return rv
 }
@@ -40,7 +38,11 @@ func (this *IndexEntryPool) Put(s []*IndexEntry) {
 		return
 	}
 
+	s = s[:cap(s)]
 	for i := range s {
+		if s[i] == nil {
+			break
+		}
 		s[i] = nil
 	}
 	this.pool.Put(s[0:0])
