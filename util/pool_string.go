@@ -25,7 +25,7 @@ func NewStringPool(size int) *StringPool {
 	rv := &StringPool{
 		size: size,
 	}
-	NewstringSliceFastPool(&rv.pool, func() []string {
+	NewStringSliceFastPool(&rv.pool, func() []string {
 		return make([]string, 0, rv.size)
 	})
 
@@ -90,7 +90,7 @@ type stringSlicePoolEntry struct {
 	next  *stringSlicePoolEntry
 }
 
-func NewstringSliceFastPool(p *stringSliceFastPool, f func() []string) {
+func NewStringSliceFastPool(p *stringSliceFastPool, f func() []string) {
 	*p = stringSliceFastPool{}
 	p.buckets = uint32(runtime.NumCPU())
 	if p.buckets > _MAX_BUCKETS {

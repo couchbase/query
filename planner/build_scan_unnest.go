@@ -75,17 +75,19 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
 
 	// Enumerate primary UNNESTs
-	primaryUnnests := _UNNEST_POOL.Get()
-	defer _UNNEST_POOL.Put(primaryUnnests)
-	primaryUnnests = collectPrimaryUnnests(from, unnests, primaryUnnests)
+	primaryUnnests := collectPrimaryUnnests(from, unnests)
+	if nil != primaryUnnests {
+		defer _UNNEST_POOL.Put(primaryUnnests)
+	}
 	if len(primaryUnnests) == 0 {
 		return nil, 0, nil
 	}
 
 	// Enumerate candidate array indexes
-	unnestIndexes := _INDEX_POOL.Get()
-	defer _INDEX_POOL.Put(unnestIndexes)
-	unnestIndexes, arrayKeys := collectUnnestIndexes(pred, indexes, unnestIndexes)
+	unnestIndexes, arrayKeys := collectUnnestIndexes(pred, indexes)
+	if nil != unnestIndexes {
+		defer _INDEX_POOL.Put(unnestIndexes)
+	}
 	if len(unnestIndexes) == 0 {
 		return nil, 0, nil
 	}
@@ -234,11 +236,15 @@ func collectInnerUnnestsFromJoinTerm(joinTerm algebra.JoinTerm, buf []*algebra.U
 Enumerate primary UNNESTs.
 False positives are ok.
 */
-func collectPrimaryUnnests(from algebra.FromTerm, unnests, buf []*algebra.Unnest) []*algebra.Unnest {
+func collectPrimaryUnnests(from algebra.FromTerm, unnests []*algebra.Unnest) []*algebra.Unnest {
+	var buf []*algebra.Unnest
 	primaryAlias := expression.NewIdentifier(from.PrimaryTerm().Alias())
 	for _, u := range unnests {
 		// This test allows false positives, but that's ok
 		if u.Expression().DependsOn(primaryAlias) {
+			if nil == buf {
+				buf = _UNNEST_POOL.Get()
+			}
 			buf = append(buf, u)
 		}
 	}
@@ -249,9 +255,9 @@ func collectPrimaryUnnests(from algebra.FromTerm, unnests, buf []*algebra.Unnest
 /*
 Enumerate array indexes for UNNEST.
 */
-func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Index]*indexEntry,
-	unnestIndexes []datastore.Index) (
+func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
 	[]datastore.Index, map[datastore.Index]*expression.All) {
+	var unnestIndexes []datastore.Index
 
 	arrayKeys := make(map[datastore.Index]*expression.All, len(indexes))
 
@@ -271,7 +277,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 			continue
 		}
 
-		unnestIndexes = append(unnestIndexes, index)
+		unnestIndexes = append(poolAllocIndexSlice(unnestIndexes), index)
 		arrayKeys[index] = all
 	}
 

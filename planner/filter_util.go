@@ -106,9 +106,10 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	context *PrepareContext) error {
 
 	// first gather leading index key from all indexes for this keyspace
-	indexes := _INDEX_POOL.Get()
-	defer _INDEX_POOL.Put(indexes)
-	indexes, err := allIndexes(keyspace, nil, indexes, virtualIndexes, indexApiVersion, false)
+	indexes, err := allIndexes(keyspace, nil, virtualIndexes, indexApiVersion, false)
+	if nil != indexes {
+		defer _INDEX_POOL.Put(indexes)
+	}
 	if err != nil {
 		return err
 	}

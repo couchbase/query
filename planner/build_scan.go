@@ -75,10 +75,10 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		virtualIndexes = this.getIdxCandidates()
 	}
 	if len(node.Indexes()) > 0 || this.context.UseFts() {
-		hints = _HINT_POOL.Get()
-		defer _HINT_POOL.Put(hints)
-		hints, err = allHints(keyspace, node.Indexes(), hints, virtualIndexes,
-			this.context.IndexApiVersion(), this.context.UseFts())
+		hints, err = allHints(keyspace, node.Indexes(), virtualIndexes, this.context.IndexApiVersion(), this.context.UseFts())
+		if nil != hints {
+			defer _INDEX_POOL.Put(hints)
+		}
 		if err != nil {
 			return
 		}
@@ -211,10 +211,10 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		}
 	}
 
-	others := _INDEX_POOL.Get()
-	defer _INDEX_POOL.Put(others)
-	others, err = allIndexes(keyspace, hints, others, virtualIndexes,
-		this.context.IndexApiVersion(), len(searchFns) > 0)
+	others, err := allIndexes(keyspace, hints, virtualIndexes, this.context.IndexApiVersion(), len(searchFns) > 0)
+	if nil != others {
+		defer _INDEX_POOL.Put(others)
+	}
 	if err != nil {
 		return
 	}
@@ -590,10 +590,18 @@ func isValidIndex(idx datastore.Index, indexApiVersion int) bool {
 	return (state == datastore.ONLINE) && (useIndex2API(idx, indexApiVersion) || !indexHasDesc(idx))
 }
 
+func poolAllocIndexSlice(indexes []datastore.Index) []datastore.Index {
+	if nil == indexes {
+		indexes = _INDEX_POOL.Get()
+	}
+	return indexes
+}
+
 // all HINT indexes
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes, virtualIndexes []datastore.Index, indexApiVersion int, useFts bool) (
+func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, virtualIndexes []datastore.Index, indexApiVersion int, useFts bool) (
 	[]datastore.Index, error) {
 
+	var indexes []datastore.Index
 	// check if HINT has FTS index refrence
 	var hintFts bool
 
@@ -617,7 +625,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes, vir
 
 		idxes, err := indexer.Indexes()
 		if err != nil {
-			return nil, err
+			return indexes, err
 		}
 
 		// all HINT indexes. If name is "", consider all indexes on the indexer
@@ -628,7 +636,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes, vir
 			   USE INDEX hint (or no hint specified), USE_FTS query parameter takes effect.
 			*/
 			if !hintFts && useFts && indexer.Name() == datastore.FTS && isValidIndex(idx, indexApiVersion) {
-				indexes = append(indexes, idx)
+				indexes = append(poolAllocIndexSlice(indexes), idx)
 				continue
 			}
 
@@ -640,7 +648,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes, vir
 				if indexer.Name() == using &&
 					(hint.Name() == "" || hint.Name() == idx.Name()) {
 					if isValidIndex(idx, indexApiVersion) {
-						indexes = append(indexes, idx)
+						indexes = append(poolAllocIndexSlice(indexes), idx)
 					}
 					break
 				}
@@ -649,7 +657,7 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes, vir
 	}
 
 	if len(virtualIndexes) > 0 {
-		indexes = append(indexes, virtualIndexes...)
+		indexes = append(poolAllocIndexSlice(indexes), virtualIndexes...)
 	}
 
 	return indexes, nil
@@ -662,8 +670,10 @@ inclFts indicates to include FTS index or not
         * false - right side of some JOINs, no SERACH() function
 */
 
-func allIndexes(keyspace datastore.Keyspace, skip, indexes, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool) (
+func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool) (
 	[]datastore.Index, error) {
+
+	var indexes []datastore.Index
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
@@ -687,7 +697,7 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes, virtualIndexes []dat
 
 		idxes, err := indexer.Indexes()
 		if err != nil {
-			return nil, err
+			return indexes, err
 		}
 
 		for _, idx := range idxes {
@@ -697,7 +707,7 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes, virtualIndexes []dat
 			}
 
 			if isValidIndex(idx, indexApiVersion) {
-				indexes = append(indexes, idx)
+				indexes = append(poolAllocIndexSlice(indexes), idx)
 			}
 
 		}
@@ -707,13 +717,12 @@ func allIndexes(keyspace datastore.Keyspace, skip, indexes, virtualIndexes []dat
 		if len(skipMap) > 0 && skipMap[idx] {
 			continue
 		}
-		indexes = append(indexes, idx)
+		indexes = append(poolAllocIndexSlice(indexes), idx)
 	}
 
 	return indexes, nil
 }
 
 var _INDEX_POOL = datastore.NewIndexPool(256)
-var _HINT_POOL = datastore.NewIndexPool(32)
 var _SKIP_POOL = datastore.NewIndexBoolPool(32)
 var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{}, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
