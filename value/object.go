@@ -121,13 +121,10 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 					return
 				}
 			}
-			if _, err = stringWriter.WriteString("\""); err != nil {
+			if err = json.MarshalStringNoEscapeToBuffer(string(n), w.(*bytes.Buffer)); err != nil {
 				return
 			}
-			if _, err = stringWriter.WriteString(n); err != nil {
-				return
-			}
-			if _, err = stringWriter.WriteString("\":"); err != nil {
+			if _, err = stringWriter.WriteString(":"); err != nil {
 				return
 			}
 			if writePrefix {
