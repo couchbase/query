@@ -147,6 +147,7 @@ type Request interface {
 	Output() execution.Output
 	Servicing()
 	Fail(err errors.Error)
+	Error(err errors.Error)
 	Execute(server *Server, context *execution.Context, reqType string, signature value.Value)
 	NotifyStop(stop execution.Operator)
 	Failed(server *Server)
