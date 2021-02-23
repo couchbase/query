@@ -65,8 +65,8 @@ github.com/couchbase/gocbcore-transactions v0.0.0-20210218224332-b291632b0e3a/go
 github.com/couchbase/gocbcore/v9 v9.0.4-0.20200713153257-a1928000ac32/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/gocbcore/v9 v9.1.2-0.20210121173748-9dee6deec0a9 h1:KHVVtoHzf2ym2zVDycggUgJNMBLy89I/G43mE0xxFGg=
 github.com/couchbase/gocbcore/v9 v9.1.2-0.20210121173748-9dee6deec0a9/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
-github.com/couchbase/gocbcore/v9 v9.1.2-0.20210209094434-1b2ac8939b69 h1:pwU1O/vY3cYsq0YjFQTE29tVxpX3jj2vmXAfrfJiovI=
-github.com/couchbase/gocbcore/v9 v9.1.2-0.20210209094434-1b2ac8939b69/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
+github.com/couchbase/gocbcore/v9 v9.1.2 h1:EOG4D862VLPguoAY8IKbvhd98aroaaKxvaxGfr+v9Rc=
+github.com/couchbase/gocbcore/v9 v9.1.2/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71 h1:FEuF/9AltK/iGUS47FprP1LYjJAoHfWvf/RWu6x8Zlc=
 github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71/go.mod h1:kxcbSjRRwXYcmaOaA5oHOtwHfZq7NUyKFtcyC4NbjQU=
 github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 h1:lAvXevmaBKNOjCsYjE1vJhhAF2+4J1gJNYLW2VgA/jY=
