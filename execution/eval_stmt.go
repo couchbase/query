@@ -239,6 +239,8 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	var outputBuf internalOutput
 	output := &outputBuf
 
+	keep := this.output
+
 	this.output = output
 	this.SetIsPrepared(isPrepared)
 	this.SetPrepared(prepared)
@@ -247,9 +249,10 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 	build := util.Now()
 	pipeline, err := Build(prepared, this)
-	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
+	keep.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
+		this.output = keep
 		return nil, 0, err
 	}
 
@@ -267,6 +270,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	results := collect.ValuesOnce()
 
 	sequence.Done()
+	this.output = keep
 	this.output.AddPhaseTime(RUN, util.Since(exec))
 
 	return results, output.mutationCount, output.err
