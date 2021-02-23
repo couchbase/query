@@ -1296,6 +1296,7 @@ opt_index_name opt_index_using
 {
     $$ = algebra.NewIndexRef($1, $2)
 }
+;
 
 use_hash_option:
 BUILD
@@ -2342,6 +2343,7 @@ IDENT COLON IDENT
 {
 	$$ = $1 + ":" + $3
 }
+;
 
 /*************************************************
  *
@@ -2586,6 +2588,7 @@ index_term_expr opt_ikattr
 {
    $$ = algebra.NewIndexKeyTerm($1, $2)
 }
+;
 
 index_term_expr:
 index_expr
@@ -2616,6 +2619,7 @@ expr
 
     $$ = exp
 }
+;
 
 all:
 ALL
@@ -4216,6 +4220,7 @@ IDENT
 {
     $$ = $1
 }
+;
 
 opt_isolation_level:
 /* empty */
