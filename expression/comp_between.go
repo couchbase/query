@@ -41,7 +41,7 @@ func (this *Between) Accept(visitor Visitor) (interface{}, error) {
 func (this *Between) Type() value.Type { return value.BOOLEAN }
 
 func (this *Between) Evaluate(item value.Value, context Context) (value.Value, error) {
-	item, err := this.operands[0].Evaluate(item, context)
+	op, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +53,12 @@ func (this *Between) Evaluate(item value.Value, context Context) (value.Value, e
 	if err != nil {
 		return nil, err
 	}
-	lowCmp := item.Compare(low)
+	lowCmp := op.Compare(low)
 	if lowCmp.Type() == value.MISSING {
 		return lowCmp, nil
 	}
 
-	highCmp := item.Compare(high)
+	highCmp := op.Compare(high)
 	if highCmp.Type() == value.MISSING {
 		return highCmp, nil
 	}
