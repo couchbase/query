@@ -29,11 +29,11 @@ func NewIndexPool(size int) *IndexPool {
 	return rv
 }
 
-func (this IndexPool) Get() []Index {
+func (this *IndexPool) Get() []Index {
 	return this.pool.Get().([]Index)
 }
 
-func (this IndexPool) Put(s []Index) {
+func (this *IndexPool) Put(s []Index) {
 	if cap(s) != this.size {
 		return
 	}
