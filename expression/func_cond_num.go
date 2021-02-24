@@ -54,35 +54,33 @@ First non missing, non infinity number in the input argument values,
 or null.
 */
 func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	null := false
 	missing := false
 	var rv value.Value
 	for _, op := range this.operands {
 		a, err := op.Evaluate(item, context)
 		if err != nil {
 			return nil, err
-		} else if a.Type() == value.MISSING {
-			// only set missing if we've not already encountered a null
-			if !null {
+		} else if rv == nil {
+			if a.Type() == value.MISSING {
 				missing = true
-			}
-		} else if a.Type() != value.NUMBER {
-			null = true
-		} else if !null && rv == nil {
-			f := a.Actual().(float64)
-			if !math.IsInf(f, 0) {
-				rv = value.NewValue(f)
+			} else if a.Type() != value.NUMBER && rv == nil {
+				rv = value.NULL_VALUE
+			} else {
+				f := a.Actual().(float64)
+				if !math.IsInf(f, 0) {
+					rv = value.NewValue(f)
+				}
 			}
 		}
 	}
-
-	if rv != nil {
-		return rv, nil
+	if rv == nil {
+		if missing {
+			rv = value.MISSING_VALUE
+		} else {
+			rv = value.NULL_VALUE
+		}
 	}
-	if missing {
-		return value.MISSING_VALUE, nil
-	}
-	return value.NULL_VALUE, nil
+	return rv, nil
 }
 
 func (this *IfInf) DependsOn(other Expression) bool {
@@ -141,28 +139,33 @@ func (this *IfNaN) Accept(visitor Visitor) (interface{}, error) {
 func (this *IfNaN) Type() value.Type { return value.NUMBER }
 
 func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, error) {
-	null := false
+	missing := false
 	var rv value.Value
 	for _, op := range this.operands {
 		a, err := op.Evaluate(item, context)
 		if err != nil {
 			return nil, err
-		} else if a.Type() == value.MISSING {
-			continue
-		} else if a.Type() != value.NUMBER {
-			null = true
-		} else if !null && rv == nil {
-			f := a.Actual().(float64)
-			if !math.IsNaN(f) {
-				rv = value.NewValue(f)
+		} else if rv == nil {
+			if a.Type() == value.MISSING {
+				missing = true
+			} else if a.Type() != value.NUMBER {
+				rv = value.NULL_VALUE
+			} else {
+				f := a.Actual().(float64)
+				if !math.IsNaN(f) {
+					rv = value.NewValue(f)
+				}
 			}
 		}
 	}
-
-	if rv != nil {
-		return rv, nil
+	if rv == nil {
+		if missing {
+			rv = value.MISSING_VALUE
+		} else {
+			rv = value.NULL_VALUE
+		}
 	}
-	return value.NULL_VALUE, nil
+	return rv, nil
 }
 
 func (this *IfNaN) DependsOn(other Expression) bool {
@@ -221,28 +224,33 @@ func (this *IfNaNOrInf) Accept(visitor Visitor) (interface{}, error) {
 func (this *IfNaNOrInf) Type() value.Type { return value.NUMBER }
 
 func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	null := false
+	missing := false
 	var rv value.Value
 	for _, op := range this.operands {
 		a, err := op.Evaluate(item, context)
 		if err != nil {
 			return nil, err
-		} else if a.Type() == value.MISSING {
-			continue
-		} else if a.Type() != value.NUMBER {
-			null = true
-		} else if !null && rv == nil {
-			f := a.Actual().(float64)
-			if !math.IsInf(f, 0) && !math.IsNaN(f) {
-				rv = value.NewValue(f)
+		} else if rv == nil {
+			if a.Type() == value.MISSING {
+				missing = true
+			} else if a.Type() != value.NUMBER {
+				rv = value.NULL_VALUE
+			} else {
+				f := a.Actual().(float64)
+				if !math.IsInf(f, 0) && !math.IsNaN(f) {
+					rv = value.NewValue(f)
+				}
 			}
 		}
 	}
-
-	if rv != nil {
-		return rv, nil
+	if rv == nil {
+		if missing {
+			rv = value.MISSING_VALUE
+		} else {
+			rv = value.NULL_VALUE
+		}
 	}
-	return value.NULL_VALUE, nil
+	return rv, nil
 }
 
 func (this *IfNaNOrInf) DependsOn(other Expression) bool {
