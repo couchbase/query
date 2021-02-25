@@ -100,10 +100,10 @@ func NewNoSavepointError(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewTransactionExpired() Error {
+func NewTransactionExpired(c interface{}) Error {
 	return &err{level: EXCEPTION, ICode: 17010, IKey: "transaction.expired",
 		InternalMsg:    "Transaction timeout",
-		InternalCaller: CallerN(1)}
+		InternalCaller: CallerN(1), cause: c}
 }
 
 func NewTransactionReleased() Error {
@@ -152,4 +152,22 @@ func NewTransactionFetchError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 17017, IKey: "transaction.fetch", ICause: e,
 		InternalMsg:    "Transaction fetch error",
 		InternalCaller: CallerN(1)}
+}
+
+func NewPostCommitTransactionError(e error, c interface{}) Error {
+	msg := "Failed post commit"
+	if e != nil {
+		msg = fmt.Sprintf("%s: %v", msg, e)
+	}
+	return &err{level: EXCEPTION, ICode: 17018, IKey: "transaction.statement.postcommit",
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
+}
+
+func NewAmbiguousCommitTransactionError(e error, c interface{}) Error {
+	msg := "Commit was ambiguous"
+	if e != nil {
+		msg = fmt.Sprintf("%s: %v", msg, e)
+	}
+	return &err{level: EXCEPTION, ICode: 17019, IKey: "transaction.statement.ambiguouscommit",
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }

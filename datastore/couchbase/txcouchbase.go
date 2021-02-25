@@ -34,7 +34,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 	}
 
 	if txContext.TxExpired() {
-		return nil, errors.NewTransactionExpired()
+		return nil, errors.NewTransactionExpired(nil)
 	}
 
 	// Initalize  gocbcore-transactions first time
@@ -154,7 +154,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	}
 
 	if txContext.TxExpired() {
-		return errors.NewTransactionExpired()
+		return errors.NewTransactionExpired(nil)
 	}
 
 	txMutations, _ := txContext.TxMutations().(*TransactionMutations)
@@ -224,6 +224,16 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 
 	if err != nil {
 		e, c := errorType(err, false)
+		if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+			switch terr.ToRaise() {
+			case gctx.ErrorReasonTransactionExpired:
+				return errors.NewTransactionExpired(c)
+			case gctx.ErrorReasonTransactionCommitAmbiguous:
+				return errors.NewAmbiguousCommitTransactionError(e, c)
+			case gctx.ErrorReasonTransactionFailedPostCommit:
+				return errors.NewPostCommitTransactionError(e, c)
+			}
+		}
 		return errors.NewCommitTransactionError(e, c)
 	}
 
@@ -237,7 +247,7 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 	}
 
 	if txContext.TxExpired() {
-		return errors.NewTransactionExpired()
+		return errors.NewTransactionExpired(nil)
 	}
 
 	txMutations, _ := txContext.TxMutations().(*TransactionMutations)
@@ -343,7 +353,7 @@ func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext,
 	}
 
 	if txContext.TxExpired() {
-		return errors.NewTransactionExpired()
+		return errors.NewTransactionExpired(nil)
 	}
 
 	txMutations, _ := txContext.TxMutations().(*TransactionMutations)
@@ -356,7 +366,7 @@ func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext,
 
 func (ks *keyspace) txReady(txContext *transactions.TranContext) errors.Error {
 	if txContext != nil && txContext.TxExpired() {
-		return errors.NewTransactionExpired()
+		return errors.NewTransactionExpired(nil)
 	}
 
 	// gocbcore agent is present

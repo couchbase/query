@@ -109,7 +109,7 @@ func (this *TranContext) TxValid() errors.Error {
 	if this.txStatus&TX_RELEASED != 0 {
 		return errors.NewTransactionReleased()
 	} else if this.txExpired() {
-		return errors.NewTransactionExpired()
+		return errors.NewTransactionExpired(nil)
 	}
 	return nil
 }
@@ -245,7 +245,7 @@ func (this *TranContext) SetTxInUse(inuse bool) errors.Error {
 			this.txStatus &^= TX_INUSE
 		}
 	} else if this.txStatus&TX_EXPIRED != 0 || time.Now().After(this.expiryTime) {
-		return errors.NewTransactionExpired()
+		return errors.NewTransactionExpired(nil)
 	} else if this.txStatus&TX_INUSE != 0 {
 		return errors.NewTransactionInuse()
 	} else {
