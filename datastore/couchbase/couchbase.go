@@ -886,7 +886,8 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 						}
 
 						// do not update if somebody has already done it
-						if mani.Uid > keyspace.collectionsManifestUid {
+						if mani.Uid > keyspace.collectionsManifestUid ||
+							keyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
 							keyspace.collectionsManifestUid = mani.Uid
 							keyspace.scopes = scopes
 
@@ -1219,6 +1220,8 @@ const (
 	_NEEDS_MANIFEST             // scopes or collections changed
 )
 
+const _INVALID_MANIFEST_UID = math.MaxUint64
+
 type keyspace struct {
 	sync.RWMutex   // to change flags and manifests in flight
 	namespace      *namespace
@@ -1288,6 +1291,10 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
 	} else {
 		logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
+		// set collectionsManifestUid to _INVALID_MANIFEST_UID such that if collection becomes
+		// available (e.g. after legacy node is removed from cluster during rolling upgrade)
+		// it'll trigger a refresh of collection manifest
+		rv.collectionsManifestUid = _INVALID_MANIFEST_UID
 	}
 
 	// if we don't have any scope (not even default) revert to old style keyspace
