@@ -60,8 +60,8 @@ github.com/couchbase/ghistogram v0.1.0 h1:b95QcQTCzjTUocDXp/uMgSNQi8oj1tGwnJ4bOD
 github.com/couchbase/ghistogram v0.1.0/go.mod h1:s1Jhy76zqfEecpNWJfWUiKZookAFaiGOEoyzgHt9i7k=
 github.com/couchbase/gocb/v2 v2.1.4-0.20200720200147-96c39282132f h1:x0dM24/Une+uKlyJnrYS3NYs5QsrihP+yHlLE3IuKDI=
 github.com/couchbase/gocb/v2 v2.1.4-0.20200720200147-96c39282132f/go.mod h1:6LdON4a5XcLKypZ4p6MG2nKPa6m8mnW9ZiUnzOIiwFE=
-github.com/couchbase/gocbcore-transactions v0.0.0-20210218224332-b291632b0e3a h1:kZrHlNEW7cj6P/Ulzb7sz92wlaTS0Ypc6L8Rd8xJUuU=
-github.com/couchbase/gocbcore-transactions v0.0.0-20210218224332-b291632b0e3a/go.mod h1:QC1PRQO1FIT7rfXE270Uvryz+rpUTCnU8zvE/tqexT8=
+github.com/couchbase/gocbcore-transactions v0.0.0-20210225200641-16042430f936 h1:fBnqp8QGpF4p3XR/KA9LtA5pUJn+f+FK+RyowpDwIBY=
+github.com/couchbase/gocbcore-transactions v0.0.0-20210225200641-16042430f936/go.mod h1:QC1PRQO1FIT7rfXE270Uvryz+rpUTCnU8zvE/tqexT8=
 github.com/couchbase/gocbcore/v9 v9.0.4-0.20200713153257-a1928000ac32/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/gocbcore/v9 v9.1.2-0.20210121173748-9dee6deec0a9 h1:KHVVtoHzf2ym2zVDycggUgJNMBLy89I/G43mE0xxFGg=
 github.com/couchbase/gocbcore/v9 v9.1.2-0.20210121173748-9dee6deec0a9/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
