@@ -240,7 +240,6 @@
 /[mM][aA][tT][cC][hH][eE][dD]/			 { yylex.logToken(yylex.Text(), "MATCHED"); return MATCHED }
 /[mM][aA][tT][eE][rR][iI][aA][lL][iI][zZ][eE][dD]/ { yylex.logToken(yylex.Text(), "MATERIALIZED"); return MATERIALIZED }
 /[mM][eE][rR][gG][eE]/				 { yylex.logToken(yylex.Text(), "MERGE"); return MERGE }
-/[mM][iI][nN][uU][sS]/				 { yylex.logToken(yylex.Text(), "MINUS"); return MINUS }
 /[mM][iI][sS][sS][iI][nN][gG]/			 { yylex.logToken(yylex.Text(), "MISSING"); return MISSING }
 /[nN][aA][mM][eE][sS][pP][aA][cC][eE]/		 { yylex.logToken(yylex.Text(), "NAMESPACE"); return NAMESPACE }
 /[nN][eE][sS][tT]/				 { yylex.logToken(yylex.Text(), "NEST"); return NEST }
