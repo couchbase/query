@@ -295,8 +295,7 @@ func AddDerivedFilter(term expression.Expression, keyspaceNames, origKeyspaceNam
 	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, origKeyspaceNames, isOnclause, false)
 	newFilter.SetDerived()
 	if useCBO {
-		selec, _ := optExprSelec(origKeyspaceNames, newExpr, advisorValidate, context)
-		newFilter.SetSelec(selec)
+		optFilterSelectivity(newFilter, advisorValidate, context)
 	}
 	newFilters = append(newFilters, newFilter)
 

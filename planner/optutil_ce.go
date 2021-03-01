@@ -28,6 +28,9 @@ func optDocCount(keyspace datastore.Keyspace) float64 {
 	return OPT_CARD_NOT_AVAIL
 }
 
+func optFilterSelectivity(filter *base.Filter, advisorValidate bool, context *PrepareContext) {
+	return
+}
 func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool,
 	context *PrepareContext) (float64, float64) {
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL

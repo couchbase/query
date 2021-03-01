@@ -36,12 +36,14 @@ func optDocCount(keyspace datastore.Keyspace) float64 {
 	return float64(docCount)
 }
 
+func optFilterSelectivity(filter *base.Filter, advisorValidate bool, context *PrepareContext) {
+	optutil.FilterSelectivity(filter, advisorValidate, context)
+	return
+}
+
 func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool,
 	context *PrepareContext) (float64, float64) {
-	sel, arrSel, def := optutil.ExprSelec(keyspaces, pred, advisorValidate, context)
-	if def {
-		return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
-	}
+	sel, arrSel, _ := optutil.ExprSelec(keyspaces, pred, advisorValidate, context)
 	return sel, arrSel
 }
 
