@@ -204,6 +204,9 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		for name, metric := range reg.Histograms() {
 			addMetricData(name, stats, getMetricData(metric))
 		}
+		for name := range localData {
+			addMetricData(name, stats, getLocalData(endpoint.server, name))
+		}
 		return stats, nil
 	default:
 		af.EventTypeId = audit.API_ADMIN_STATS
@@ -231,11 +234,15 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	switch req.Method {
 	case "GET":
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
-		metric := reg.Get(name)
-		if metric != nil {
-			return getMetricData(metric), nil
+		if isLocal(name) {
+			return getLocalData(endpoint.server, name), nil
 		} else {
-			return nil, nil
+			metric := reg.Get(name)
+			if metric != nil {
+				return getMetricData(metric), nil
+			} else {
+				return nil, nil
+			}
 		}
 	case "DELETE":
 		return nil, reg.Unregister(name)
@@ -263,6 +270,11 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		w.Write([]byte("# TYPE n1ql_" + name + " gauge\n"))
 		w.Write([]byte("n1ql_" + name + " "))
 		w.Write([]byte(fmt.Sprintf("%v\n", metric.Value())))
+	}
+	for name, metric := range localData {
+		w.Write([]byte("# TYPE n1ql_" + name + " " + metric + "\n"))
+		w.Write([]byte("n1ql_" + name + " "))
+		w.Write([]byte(fmt.Sprintf("%v\n", localValue(endpoint.server, name))))
 	}
 
 	return textPlain(""), nil
@@ -1351,6 +1363,29 @@ func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	return transactions.NameTransactions(), nil
+}
+
+var localData = map[string]string{"load": "gauge"}
+
+func isLocal(metric string) bool {
+	return localData[metric] != ""
+}
+
+func getLocalData(serv *server.Server, metric string) map[string]interface{} {
+	values := make(map[string]interface{})
+	switch metric {
+	case "load":
+		values["value"] = serv.Load()
+	}
+	return values
+}
+
+func localValue(serv *server.Server, metric string) interface{} {
+	switch metric {
+	case "load":
+		return serv.Load()
+	}
+	return nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {
