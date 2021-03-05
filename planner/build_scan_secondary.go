@@ -539,9 +539,9 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 				// with more consecutive leading sargKeys
 				// e.g (c1, c4) vs (c1, c2, c4) with predicates on c1 and c4
 				return se.minKeys > te.minKeys
-			} else {
+			} else if se.maxKeys != te.maxKeys {
 				// favor the one with shorter sargKeys
-				return se.maxKeys <= te.maxKeys
+				return se.maxKeys < te.maxKeys
 			}
 		}
 	}
@@ -554,11 +554,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return se.PushDownProperty() > te.PushDownProperty()
 	}
 
-	if len(se.keys) != len(te.keys) {
-		return len(se.keys) < len(te.keys)
-	}
-
-	return se.cond != nil
+	return se.cond != nil || len(se.keys) <= len(te.keys)
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
