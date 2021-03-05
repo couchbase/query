@@ -34,6 +34,10 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 		return nil, err
 	}
 
+	if doSelec {
+		optCheckRangeExprs(baseKeyspaces, advisorValidate, context)
+	}
+
 	var constant value.Value
 	if classifier.constant != nil {
 		if classifier.constant.Truth() {

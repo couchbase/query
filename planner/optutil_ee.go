@@ -64,6 +64,11 @@ func optMinCost() float64 {
 	return optutil.MinCost()
 }
 
+func optCheckRangeExprs(baseKeyspaces map[string]*base.BaseKeyspace, advisorValidate bool,
+	context *PrepareContext) {
+	optutil.CheckRangeExprs(baseKeyspaces, advisorValidate, context)
+}
+
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, context *PrepareContext) (
 	float64, float64, int64, float64) {
 	return optutil.CalcPrimaryIndexScanCost(primary, requestId, context)
