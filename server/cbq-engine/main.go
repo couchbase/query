@@ -141,6 +141,8 @@ func main() {
 	// This is for IPv6 support for internal interfaces
 	localhost6 := false // ipv4 endpoints
 
+	// Check if file path.
+
 	bval1, err := server_package.CheckURL(*HTTP_ADDR, "http addr")
 	if err != nil {
 		bval1, err = server_package.CheckURL(*DATASTORE, "datastore")
@@ -149,8 +151,14 @@ func main() {
 			if err != nil {
 				bval1, err = server_package.CheckURL(*ACCTSTORE, "accounting store")
 				if err != nil {
-					fmt.Printf("ERROR: %s\n", err)
-					os.Exit(1)
+					// Its not a valid url but it could be a filepath for filestore access
+					if _, err1 := os.Stat(*DATASTORE); os.IsNotExist(err1) {
+						fmt.Printf("ERROR: %s\n", err)
+						os.Exit(1)
+					} else {
+						// Set IPV6 as false
+						bval1 = false
+					}
 				}
 			}
 		}
