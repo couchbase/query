@@ -16,7 +16,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/cbq/command"
-	"github.com/peterh/liner"
+	"github.com/couchbase/query/shell/liner"
 )
 
 func LoadHistory(liner *liner.State, dir string) (int, string) {

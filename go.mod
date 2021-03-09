@@ -46,6 +46,7 @@ require (
 	github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3
 	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
 	github.com/gorilla/mux v1.7.4
+	github.com/mattn/go-runewidth v0.0.3
 	github.com/natefinch/npipe v0.0.0-20160621034901-c1b8fa8bdcce // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/peterh/liner v1.2.0

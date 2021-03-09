@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/cbq/command"
-	"github.com/peterh/liner"
+	"github.com/couchbase/query/shell/liner"
 )
 
 const (
@@ -175,8 +175,8 @@ func HandleInteractiveMode(prompt string) {
 	}
 
 	/* Create a new liner */
-	var liner = liner.NewLiner()
-	liner.SetMultiLineMode(true)
+	var liner = liner.NewLiner(viModeSingleLineFlag || viModeMultiLineFlag)
+	liner.SetMultiLineMode(!viModeSingleLineFlag)
 	defer liner.Close()
 
 	/* Load history from Home directory

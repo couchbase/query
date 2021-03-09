@@ -28,6 +28,8 @@ const (
 	UPWD        = " Password \n\t For example : -p password"
 	UCREDS      = " A list of credentials, in the form user:password. \n\t For example : -c beer-sample:pass"
 	UVERSION    = " Shell Version \n\t Usage: -version"
+	UVIMODESL   = " Single-line vi style input mode \n\t Usage: -vi"
+	UVIMODEML   = " Multi-line vi style input mode \n\t Usage: -vim"
 	USCRIPT     = " Single command mode. Execute input command and exit shell. \n\t For example : -script \"select * from system:keyspaces\""
 	UPRETTY     = " Pretty print the output."
 	UEXIT       = " Exit shell after first error encountered."

@@ -370,6 +370,34 @@ func init() {
 	flag.StringVar(&networkconfigFlag, "ncfg", defaultval, command.NewShorthandMsg("-networkconfig"))
 }
 
+/*
+   Option        : -vi
+   single-line vi style input mode
+*/
+
+var viModeSingleLineFlag bool
+
+func init() {
+	const (
+		usage = command.UVIMODESL
+	)
+	flag.BoolVar(&viModeSingleLineFlag, "vi", false, usage)
+}
+
+/*
+   Option        : -vim
+   multi-line vi style input mode
+*/
+
+var viModeMultiLineFlag bool
+
+func init() {
+	const (
+		usage = command.UVIMODEML
+	)
+	flag.BoolVar(&viModeMultiLineFlag, "vim", false, usage)
+}
+
 var (
 	SERVICE_URL  string
 	DISCONNECT   bool
