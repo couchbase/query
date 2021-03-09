@@ -181,6 +181,7 @@ type Context struct {
 	inlistHashMap       map[*expression.In]*expression.InlistHash
 	inlistHashLock      sync.RWMutex
 	memoryQuota         uint64
+	reqTimeout          time.Duration
 	deltaKeyspaces      map[string]bool
 	durabilityLevel     datastore.DurabilityLevel
 	durabilityTimeout   time.Duration
@@ -203,7 +204,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 	credentials *auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output,
 	prepared *plan.Prepared, indexApiVersion int, featureControls uint64, queryContext string,
-	useFts, useCBO bool, optimizer planner.Optimizer, kvTimeout time.Duration) *Context {
+	useFts, useCBO bool, optimizer planner.Optimizer, kvTimeout, reqTimeout time.Duration) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -235,6 +236,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		kvTimeout:        kvTimeout,
 		result:           setup,
 		likeRegexMap:     nil,
+		reqTimeout:       reqTimeout,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -277,6 +279,7 @@ func (this *Context) Copy() *Context {
 		atrCollection:       this.atrCollection,
 		numAtrs:             this.numAtrs,
 		flags:               this.flags,
+		reqTimeout:          this.reqTimeout,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -368,6 +371,10 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 	} else {
 		return nil, false
 	}
+}
+
+func (this *Context) GetTimeout() time.Duration {
+	return this.reqTimeout
 }
 
 func (this *Context) GetTxContext() interface{} {

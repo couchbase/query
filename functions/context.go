@@ -24,6 +24,7 @@ import (
 
 type Context interface {
 	Now() time.Time
+	GetTimeout() time.Duration
 	AuthenticatedUsers() []string
 	Credentials() *auth.Credentials
 	DatastoreVersion() string

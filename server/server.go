@@ -587,7 +587,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), nil, request.IndexApiVersion(), request.FeatureControls(),
-		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout())
+		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout(), request.Timeout())
 	context.SetWhitelist(this.whitelist)
 	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())

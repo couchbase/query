@@ -34,8 +34,9 @@ DevStandaloneSetup() {
            cp ~/devbld/query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
        fi
     # eventing-ee generated files
-       if [[ ( ! -d ../eventing-ee/gen/nftp ) && ( -d ~/devbld/nftp ) ]]; then
-           cp -rp ~/devbld/nftp ../eventing-ee/gen/nftp
+       if [[ ( ! -d $GOPATH/lib ) ]]; then
+	   mkdir $GOPATH/lib
+           cp -rp ~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.* $GOPATH/lib
        fi
     # gocbcore v9 version point to master
        if [[ ! -h ../gocbcore/v9 ]]; then
@@ -66,6 +67,8 @@ DevStandaloneSetup() {
 # turn off go module for non repo sync build or standalone build
 if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag == 1) ]]; then
      export GO111MODULE=off
+     export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
+     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDLAGS"
      echo go get $* $uflag -d -v ./...
      go get $* $uflag -d -v ./...
      if [[ $sflag == 1 ]]; then

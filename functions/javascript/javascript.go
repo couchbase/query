@@ -25,6 +25,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// we won't let a javascript function execute more than 2 minutes
+const _MAX_TIMEOUT = 120000
+
 type javascript struct {
 }
 
@@ -95,8 +98,13 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 	// FIXME credentials
 	// FIXME queryContext
-	//opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0}
-	opts := map[defs.Option]interface{}{defs.Timeout: 10000}
+	// the runners take timeouts in milliseconds
+	timeout := int(context.GetTimeout()) * 10000
+	if timeout == 0 || timeout > _MAX_TIMEOUT {
+		timeout = _MAX_TIMEOUT
+	}
+	//	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
+	opts := map[defs.Option]interface{}{defs.Timeout: timeout}
 	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
 	if err.Err != nil {
 		return nil, funcBody.execError(err.Err, err.Details, funcName)

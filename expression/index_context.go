@@ -46,7 +46,11 @@ func (this *IndexContext) Now() time.Time {
 	return this.now
 }
 
-// 5 next methods are unused and only for expression Context compatibility
+// 6 next methods are unused and only for expression Context compatibility
+func (this *IndexContext) GetTimeout() time.Duration {
+	return time.Duration(0)
+}
+
 func (this *IndexContext) AuthenticatedUsers() []string {
 	return []string{"NEVER_USED"}
 }
