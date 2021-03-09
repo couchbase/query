@@ -328,7 +328,7 @@ func (this *TranContext) Content(r map[string]interface{}) {
 
 	if len(this.txData) > 0 {
 		var drv map[string]interface{}
-		if err := json.Unmarshal(this.txData, &drv); err != nil {
+		if err := json.Unmarshal(this.txData, &drv); err == nil {
 			r["data"] = drv
 		}
 	}
