@@ -103,8 +103,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if timeout == 0 || timeout > _MAX_TIMEOUT {
 		timeout = _MAX_TIMEOUT
 	}
-	//	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
-	opts := map[defs.Option]interface{}{defs.Timeout: timeout}
+	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
 	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
 	if err.Err != nil {
 		return nil, funcBody.execError(err.Err, err.Details, funcName)
