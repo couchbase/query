@@ -99,7 +99,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	// FIXME credentials
 	// FIXME queryContext
 	// the runners take timeouts in milliseconds
-	timeout := int(context.GetTimeout()) / 1000000
+	timeout := int(context.GetTimeout().Milliseconds())
 	if timeout == 0 || timeout > _MAX_TIMEOUT {
 		timeout = _MAX_TIMEOUT
 	}
