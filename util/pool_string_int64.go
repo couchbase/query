@@ -35,7 +35,6 @@ func (this *StringInt64Pool) Put(s map[string]int64) {
 	}
 
 	for k, _ := range s {
-		s[k] = 0
 		delete(s, k)
 	}
 

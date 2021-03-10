@@ -35,7 +35,6 @@ func (this *StringBoolPool) Put(s map[string]bool) {
 	}
 
 	for k, _ := range s {
-		s[k] = false
 		delete(s, k)
 	}
 

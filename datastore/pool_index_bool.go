@@ -39,7 +39,6 @@ func (this *IndexBoolPool) Put(s map[Index]bool) {
 	}
 
 	for k, _ := range s {
-		s[k] = false
 		delete(s, k)
 	}
 
