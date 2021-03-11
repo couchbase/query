@@ -41,12 +41,9 @@ func (this intValue) MarshalJSON() ([]byte, error) {
 }
 
 func (this intValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
-	// have to make sure this is large enough that it isn't implicitly reallocated
-	// 20 is the maximum number of decimal digits a signed 64-bit int along with a sign character
-	b := _JSON_WRITE_BYTE_POOL.GetCapped(20)
-	b = strconv.AppendInt(b, int64(this), 10)
+	s := strconv.FormatInt(int64(this), 10)
+	b := []byte(s)
 	_, err := w.Write(b)
-	_JSON_WRITE_BYTE_POOL.Put(b)
 	return err
 }
 

@@ -51,28 +51,12 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// Do not call MarshalJSON in order to avoid heap allocation
 func (this floatValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
-	var err error
-	f := float64(this)
-
-	if math.IsNaN(f) {
-		_, err = w.Write(_NAN_BYTES)
-	} else if math.IsInf(f, 1) {
-		_, err = w.Write(_POS_INF_BYTES)
-	} else if math.IsInf(f, -1) {
-		_, err = w.Write(_NEG_INF_BYTES)
-	} else {
-		if f == -0 {
-			f = 0
-		}
-		// must be large enough to not be implicitly reallocated
-		// the figure 24 comes from the strconv package as the the buffer size allocated for FormatFloat
-		b := _JSON_WRITE_BYTE_POOL.GetCapped(24)
-		b = strconv.AppendFloat(b, f, 'f', -1, 64)
-		_, err = w.Write(b)
-		_JSON_WRITE_BYTE_POOL.Put(b)
+	b, err := this.MarshalJSON()
+	if err != nil {
+		return err
 	}
+	_, err = w.Write(b)
 	return err
 }
 
