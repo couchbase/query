@@ -35,8 +35,19 @@ DevStandaloneSetup() {
        fi
     # eventing-ee generated files
        if [[ ( ! -d $GOPATH/lib ) ]]; then
-	   mkdir $GOPATH/lib
-           cp -rp ~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.* $GOPATH/lib
+           if [[ "Linux" = `uname` ]]
+           then
+             JSEVAL=~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.so
+             [[ ! -f $JSEVAL ]] && JSEVAL=/opt/couchbase/lib/libjseval.so
+           else #macos
+             JSEVAL=~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.dylib
+             [[ ! -f $JSEVAL ]] && JSEVAL=/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib/libjseval.dylib
+           fi
+           if [[ "X" != "X$JSEVAL"  &&  -f $JSEVAL ]]
+           then
+             mkdir $GOPATH/lib
+             cp -rp $JSEVAL $GOPATH/lib
+           fi
        fi
     # gocbcore v9 version point to master
        if [[ ! -h ../gocbcore/v9 ]]; then
