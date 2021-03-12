@@ -97,6 +97,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			actv := value.NewScopeValue(make(map[string]interface{}), parent)
 			actv.SetField(this.plan.Alias(), act)
 			av := value.NewAnnotatedValue(actv)
+			av.SetId("")
 
 			if this.plan.Filter() != nil {
 				result, err := this.plan.Filter().Evaluate(av, context)
