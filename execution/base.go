@@ -680,7 +680,12 @@ func (this *base) kill() {
 	// This operator is being killed before it started as part of a request wide OpStop() or Done()
 	// it doesn't need to warn anyone else anymore
 	this.stop = nil
-	this.parent = nil
+
+	// keepAlive parents still need to be notified
+	// TODO devise a mechanism where keepAlive parents can be freed without waiting for children
+	if this.parent != nil && this.parent.getBase().childrenLeft == 0 {
+		this.parent = nil
+	}
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
