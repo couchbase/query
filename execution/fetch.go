@@ -41,6 +41,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv := _FETCH_OP_POOL.Get().(*Fetch)
 	rv.plan = plan
 	rv.batchSize = context.GetPipelineBatch()
+	rv.fetchCount = 0
 	newBase(&rv.base, context)
 	op := context.Type()
 	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
@@ -57,6 +58,7 @@ func (this *Fetch) Copy() Operator {
 	rv := _FETCH_OP_POOL.Get().(*Fetch)
 	rv.plan = this.plan
 	rv.batchSize = this.batchSize
+	rv.fetchCount = 0
 	rv.deepCopy = this.deepCopy
 	this.base.copy(&rv.base)
 	return rv
@@ -82,6 +84,7 @@ func (this *Fetch) afterItems(context *Context) {
 	this.flushBatch(context)
 	context.SetSortCount(0)
 	context.AddPhaseCount(FETCH, this.fetchCount)
+	this.fetchCount = 0
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
