@@ -29,7 +29,7 @@ ELSE (BUILD_ENTERPRISE)
     SET (_extra_deps)
 ENDIF(BUILD_ENTERPRISE)
 
-SET (GOVERSION 1.15.8)
+SET (GOVERSION 1.13.7)
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
