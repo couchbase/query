@@ -19,6 +19,40 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type nameList []interface{}
+
+func (s nameList) Len() int {
+	return len(s)
+}
+
+func (s nameList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s nameList) Less(i, j int) bool {
+	a, _ := s[i].(string)
+	b, _ := s[j].(string)
+	return a < b
+}
+
+type mapList []interface{}
+
+func (s mapList) Len() int {
+	return len(s)
+}
+
+func (s mapList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s mapList) Less(i, j int) bool {
+	a, _ := s[i].(map[string]interface{})
+	b, _ := s[j].(map[string]interface{})
+	an, _ := a["name"].(string)
+	bn, _ := b["name"].(string)
+	return an < bn
+}
+
 ///////////////////////////////////////////////////
 //
 // ObjectAdd
@@ -255,26 +289,22 @@ func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value
 
 	oa := removeMissing(arg)
 
-	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(oa) <= len(nameBuf) {
-		names = nameBuf[0:0]
+	var localBuf [_FIELD_CAP]interface{}
+	var fields []interface{}
+	if len(oa) <= len(localBuf) {
+		fields = localBuf[0:0]
 	} else {
-		names = _NAME_POOL.GetCapped(len(oa))
-		defer _NAME_POOL.Put(names)
+		fields = _FIELD_POOL.GetCapped(len(oa))
+		defer _FIELD_POOL.Put(fields)
 	}
 
-	for name, _ := range oa {
-		names = append(names, name)
+	for n, v := range oa {
+		fields = append(fields, map[string]interface{}{"name": n, "val": v})
 	}
 
-	sort.Strings(names)
-	ra := make([]interface{}, len(names))
-	for i, n := range names {
-		ra[i] = map[string]interface{}{"name": n, "val": oa[n]}
-	}
+	sort.Sort(mapList(fields))
 
-	return value.NewValue(ra), nil
+	return value.NewValue(fields), nil
 }
 
 /*
@@ -341,26 +371,26 @@ func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (valu
 
 	oa := removeMissing(arg)
 
-	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(oa) <= len(nameBuf) {
-		names = nameBuf[0:0]
+	var localBuf [_FIELD_CAP]interface{}
+	var values []interface{}
+	if len(oa) <= len(localBuf) {
+		values = localBuf[0:0]
 	} else {
-		names = _NAME_POOL.GetCapped(len(oa))
-		defer _NAME_POOL.Put(names)
+		values = _FIELD_POOL.GetCapped(len(oa))
+		defer _FIELD_POOL.Put(values)
 	}
 
 	for name, _ := range oa {
-		names = append(names, name)
+		values = append(values, name)
 	}
 
-	sort.Strings(names)
-	ra := make([]interface{}, len(names))
-	for i, n := range names {
-		ra[i] = oa[n]
+	sort.Sort(nameList(values))
+	for i, n := range values {
+		ns, _ := n.(string)
+		values[i] = oa[ns]
 	}
 
-	return value.NewValue(ra), nil
+	return value.NewValue(values), nil
 }
 
 /*
@@ -472,26 +502,22 @@ func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Valu
 
 	oa := arg.Actual().(map[string]interface{})
 
-	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(oa) <= len(nameBuf) {
-		names = nameBuf[0:0]
+	var localBuf [_FIELD_CAP]interface{}
+	var names []interface{}
+	if len(oa) <= len(localBuf) {
+		names = localBuf[0:0]
 	} else {
-		names = _NAME_POOL.GetCapped(len(oa))
-		defer _NAME_POOL.Put(names)
+		names = _FIELD_POOL.GetCapped(len(oa))
+		defer _FIELD_POOL.Put(names)
 	}
 
 	for name, _ := range oa {
 		names = append(names, name)
 	}
 
-	sort.Strings(names)
-	ra := make([]interface{}, len(names))
-	for i, n := range names {
-		ra[i] = n
-	}
+	sort.Sort(nameList(names))
 
-	return value.NewValue(ra), nil
+	return value.NewValue(names), nil
 }
 
 /*
@@ -763,26 +789,22 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 
 	oa := arg.Actual().(map[string]interface{})
 
-	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(oa) <= len(nameBuf) {
-		names = nameBuf[0:0]
+	var localBuf [_FIELD_CAP]interface{}
+	var fields []interface{}
+	if len(oa) <= len(localBuf) {
+		fields = localBuf[0:0]
 	} else {
-		names = _NAME_POOL.GetCapped(len(oa))
-		defer _NAME_POOL.Put(names)
+		fields = _FIELD_POOL.GetCapped(len(oa))
+		defer _FIELD_POOL.Put(fields)
 	}
 
-	for name, _ := range oa {
-		names = append(names, name)
+	for n, v := range oa {
+		fields = append(fields, map[string]interface{}{"name": n, "val": v})
 	}
 
-	sort.Strings(names)
-	ra := make([]interface{}, len(names))
-	for i, n := range names {
-		ra[i] = map[string]interface{}{"name": n, "val": oa[n]}
-	}
+	sort.Sort(mapList(fields))
 
-	return value.NewValue(ra), nil
+	return value.NewValue(fields), nil
 }
 
 /*
@@ -1428,26 +1450,26 @@ func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Val
 
 	oa := arg.Actual().(map[string]interface{})
 
-	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(oa) <= len(nameBuf) {
-		names = nameBuf[0:0]
+	var localBuf [_FIELD_CAP]interface{}
+	var values []interface{}
+	if len(oa) <= len(localBuf) {
+		values = localBuf[0:0]
 	} else {
-		names = _NAME_POOL.GetCapped(len(oa))
-		defer _NAME_POOL.Put(names)
+		values = _FIELD_POOL.GetCapped(len(oa))
+		defer _FIELD_POOL.Put(values)
 	}
 
 	for name, _ := range oa {
-		names = append(names, name)
+		values = append(values, name)
 	}
 
-	sort.Strings(names)
-	ra := make([]interface{}, len(names))
-	for i, n := range names {
-		ra[i] = oa[n]
+	sort.Sort(nameList(values))
+	for i, n := range values {
+		ns, _ := n.(string)
+		values[i] = oa[ns]
 	}
 
-	return value.NewValue(ra), nil
+	return value.NewValue(values), nil
 }
 
 /*
@@ -1489,6 +1511,167 @@ func removeMissing(arg value.Value) map[string]interface{} {
 	return oa
 }
 
-const _NAME_CAP = 16
+///////////////////////////////////////////////////
+//
+// ObjectExtract
+//
+///////////////////////////////////////////////////
 
-var _NAME_POOL = util.NewStringPool(256)
+/*
+This represents the object function OBJECT_EXTRACT(expr...).
+It returns an array containing the attribute name and
+value pairs of the object, in N1QL collation order of
+the names.
+*/
+type ObjectExtract struct {
+	FunctionBase
+	re *regexp.Regexp
+}
+
+func NewObjectExtract(operands ...Expression) Function {
+	rv := &ObjectExtract{
+		*NewFunctionBase("object_extract", operands...),
+		nil,
+	}
+
+	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
+		if p, ok := operands[1].Value().Field("pattern"); ok {
+			rv.re, _ = precompileRegexp(value.NewValue(p), false)
+		}
+	}
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ObjectExtract) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectExtract) Type() value.Type { return value.ARRAY }
+
+/*
+Filtered ObjectExtract
+*/
+func (this *ObjectExtract) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var min, max, pattern string
+	var fields []interface{}
+
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	if len(this.operands) > 1 {
+		options, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if options.Type() != value.OBJECT {
+			return value.NULL_VALUE, nil
+		}
+
+		if c, ok := options.Field("min"); ok && c.Type() == value.STRING {
+			min = c.ToString()
+			if c, ok := options.Field("max"); ok && c.Type() == value.STRING {
+				max = c.ToString()
+			}
+		} else if c, ok := options.Field("max"); ok && c.Type() == value.STRING {
+			max = c.ToString()
+		} else if p, ok := options.Field("pattern"); ok {
+			pattern = p.ToString()
+		}
+	}
+
+	pfArg, ok := arg.(interface {
+		ParsedFields(min, max string, re interface{}) []interface{}
+	})
+	if ok {
+		if len(pattern) != 0 {
+			re := this.re
+			if re == nil {
+				var err error
+				re, err = regexp.Compile(pattern)
+				if err != nil {
+					return nil, err
+				}
+			}
+			fields = pfArg.ParsedFields("", "", re)
+		} else {
+			fields = pfArg.ParsedFields(min, max, nil)
+		}
+	} else {
+		// fall-back if we don't have the parsed-only interface
+		oa := arg.Actual().(map[string]interface{})
+
+		var localBuf [_FIELD_CAP]interface{}
+		if len(oa) <= len(localBuf) {
+			fields = localBuf[0:0]
+		} else {
+			fields = _FIELD_POOL.GetCapped(len(oa))
+			defer _FIELD_POOL.Put(fields)
+		}
+
+		if len(pattern) != 0 {
+			re := this.re
+			if re == nil {
+				var err error
+				re, err = regexp.Compile(pattern)
+				if err != nil {
+					return nil, err
+				}
+			}
+			for n, v := range oa {
+				if re.FindStringSubmatchIndex(n) != nil {
+					fields = append(fields, map[string]interface{}{"name": n, "val": v})
+				}
+			}
+		} else {
+			if len(min) != 0 || len(max) != 0 {
+				for n, v := range oa {
+					if (len(min) == 0 || strings.Compare(min, n) <= 0) && (len(max) == 0 || strings.Compare(max, n) == 1) {
+						fields = append(fields, map[string]interface{}{"name": n, "val": v})
+					}
+				}
+			} else {
+				for n, v := range oa {
+					fields = append(fields, map[string]interface{}{"name": n, "val": v})
+				}
+			}
+		}
+	}
+	if nil == fields {
+		return value.NULL_VALUE, nil
+	}
+	return value.NewValue(fields), nil
+}
+
+/*
+Minimum input arguments required.
+*/
+func (this *ObjectExtract) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ObjectExtract) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *ObjectExtract) Constructor() FunctionConstructor {
+	return NewObjectExtract
+}
+
+const _FIELD_CAP = 16
+
+var _FIELD_POOL = util.NewInterfacePool(256)

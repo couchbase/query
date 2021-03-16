@@ -10,6 +10,8 @@ package value
 
 import (
 	"io"
+	"regexp"
+	"strings"
 	"sync"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -22,6 +24,7 @@ import (
 // and the cost of using it: for documents shorter than this, not
 // worth it!
 const _THRESHOLD = 2560
+const _NUM_PARSED_FIELDS = 32
 
 // A Value with delayed parsing.
 type parsedValue struct {
@@ -403,6 +406,101 @@ func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 	}
 
 	return this.unwrap().Descendants(buffer)
+}
+
+func (this *parsedValue) pfSize() int {
+	if this.fields != nil && len(this.fields) > _NUM_PARSED_FIELDS {
+		return len(this.fields)
+	}
+	return _NUM_PARSED_FIELDS
+}
+
+func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interface{} {
+	raw := this.raw
+	var rex *regexp.Regexp
+
+	if re != nil {
+		rex, _ = re.(*regexp.Regexp)
+	}
+
+	rv := make([]interface{}, 0, this.pfSize())
+	if raw != nil {
+		var ss json.ScanState
+		json.SetScanState(&ss, raw)
+		defer ss.Release()
+		if re != nil {
+			for {
+				key, err := ss.ScanKeys()
+				if err != nil {
+					return nil
+				}
+				if key == nil {
+					break
+				}
+				if rex.FindStringSubmatchIndex(string(key)) != nil {
+					val, err := ss.NextValue()
+					if err != nil {
+						return nil
+					}
+					rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
+				}
+			}
+		} else if len(min) != 0 || len(max) != 0 {
+			for {
+				key, err := ss.ScanKeys()
+				if err != nil {
+					return nil
+				}
+				if key == nil {
+					break
+				}
+				if (len(min) == 0 || strings.Compare(min, string(key)) <= 0) &&
+					(len(max) == 0 || strings.Compare(max, string(key)) == 1) {
+
+					val, err := ss.NextValue()
+					if err != nil {
+						return nil
+					}
+					rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
+				}
+			}
+		} else {
+			for {
+				key, err := ss.ScanKeys()
+				if err != nil {
+					return nil
+				}
+				if key == nil {
+					break
+				}
+				val, err := ss.NextValue()
+				if err != nil {
+					return nil
+				}
+				rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
+			}
+		}
+	} else if this.parsed != nil && this.parsed.Type() == OBJECT {
+		if re != nil {
+			for key, val := range this.parsed.Fields() {
+				if rex.FindStringSubmatchIndex(string(key)) != nil {
+					rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
+				}
+			}
+		} else if len(min) != 0 || len(max) != 0 {
+			for key, val := range this.parsed.Fields() {
+				if (len(min) == 0 || strings.Compare(min, string(key)) <= 0) &&
+					(len(max) == 0 || strings.Compare(max, string(key)) == 1) {
+					rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
+				}
+			}
+		} else {
+			for key, val := range this.parsed.Fields() {
+				rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
+			}
+		}
+	}
+	return rv
 }
 
 func (this *parsedValue) Fields() map[string]interface{} {

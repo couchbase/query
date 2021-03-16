@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -764,3 +765,7 @@ func PathString(expr Expression) (alias, path string, err error) {
 
 	return rv.alias, rv.path, err
 }
+
+const _NAME_CAP = 16
+
+var _NAME_POOL = util.NewStringPool(256)
