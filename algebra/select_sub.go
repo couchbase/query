@@ -257,6 +257,10 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
 		exprs = append(exprs, this.let.Expressions()...)
 	}
 
+	if this.with != nil {
+		exprs = append(exprs, this.with.Expressions()...)
+	}
+
 	if this.where != nil {
 		exprs = append(exprs, this.where)
 	}
