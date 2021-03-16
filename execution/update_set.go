@@ -91,6 +91,10 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 
 func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (
 	value.AnnotatedValue, error) {
+
+	// make sure we don't used a possibly stale cached value
+	t.Value().ResetValue()
+
 	if t.UpdateFor() != nil {
 		return setFor(t, clone, item, context)
 	}
