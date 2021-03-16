@@ -41,7 +41,7 @@ DevStandaloneSetup() {
              [[ ! -f $JSEVAL ]] && JSEVAL=/opt/couchbase/lib/libjseval.so
            else #macos
              JSEVAL=~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.dylib
-             [[ ! -f $JSEVAL ]] && JSEVAL=/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib/libjseval.dylib
+             [[ ! -f $JSEVAL ]] && JSEVAL="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib/libjseval.dylib"
            fi
            if [[ "X" != "X$JSEVAL"  &&  -f $JSEVAL ]]
            then
