@@ -1390,7 +1390,7 @@ func checkIPVals(val, vtype string) error {
 	return nil
 }
 
-func SetIP(vIpv6, vIpv4 string, localhost6, listener bool) error {
+func SetIP(vIpv4, vIpv6 string, localhost6, listener bool) error {
 
 	err := checkIPVals(vIpv4, "IPv4")
 	if err != nil {
