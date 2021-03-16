@@ -499,13 +499,13 @@ func (this *builder) processWhere(where expression.Expression) (err error) {
 }
 
 func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan.SecondaryScan) (float64, float64) {
-	docCount, err := this.getDocCount(node)
-	if err != nil {
+	useCBO := this.useCBO
+	if !useCBO {
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
-	useCBO := this.useCBO
-	if !useCBO {
+	docCount, err := this.getDocCount(node)
+	if err != nil {
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL
 	}
 
