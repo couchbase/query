@@ -1827,6 +1827,7 @@ func getExpiration(options value.Value) (exptime uint32) {
 
 func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs []value.Pair,
 	context datastore.QueryContext, clientContext ...*memcached.ClientContext) ([]value.Pair, errors.Error) {
+	casMismatch := 0
 
 	if len(pairs) == 0 {
 		return nil, nil
@@ -1844,7 +1845,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	for _, kv := range pairs {
 		var val interface{}
 		var exptime int
-		var cas uint64
+		var cas, newCas uint64
 
 		key := kv.Name
 		if op != MOP_DELETE {
@@ -1894,21 +1895,21 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					return fmt.Sprintf("Before update: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud>",
 						key, cas, flags, val)
 				})
-				cas, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
+				newCas, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
 				if err == nil {
 					// refresh local meta CAS value
 					logging.Debuga(func() string { return fmt.Sprintf("After update: Key - <ud>%v</ud> CAS - %v", key, cas) })
-					SetMetaCas(kv.Value, cas)
+					SetMetaCas(kv.Value, newCas)
 				}
 				b.checkRefresh(err)
 			}
 
 		case MOP_UPSERT:
-			cas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
+			newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
 			b.checkRefresh(err)
 			if err == nil {
 				logging.Debuga(func() string { return fmt.Sprintf("After upsert: key {<ud>%v</ud>} CAS %v", key, cas) })
-				SetMetaCas(kv.Value, cas)
+				SetMetaCas(kv.Value, newCas)
 			}
 		case MOP_DELETE:
 			err = b.cbbucket.Delete(key, clientContext...)
@@ -1923,8 +1924,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				}
 			} else if isEExistError(err) {
 				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications. Error - %v", key, err)
+				if op != MOP_INSERT {
+					casMismatch++
+				}
 			} else {
-				// err contians key redract
+				// err contains key, redact
 				logging.Errorf("Failed to perform %s on key <ud>%s</ud> for Keyspace %s. Error - <ud>%v</ud>",
 					MutateOpToName(op), key, qualifiedName, err)
 			}
@@ -1938,7 +1942,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			return mPairs, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 		}
 	} else if len(mPairs) == 0 {
-		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op))
+		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op), casMismatch)
 	}
 
 	return mPairs, nil

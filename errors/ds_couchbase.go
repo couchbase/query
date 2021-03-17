@@ -52,9 +52,14 @@ func NewCbBulkGetError(e error, msg string) Error {
 		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: true}
 }
 
-func NewCbDMLError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
-		InternalMsg: "DML Error, possible causes include CAS mismatch or concurrent modification" + msg, InternalCaller: CallerN(1)}
+func NewCbDMLError(e error, msg string, casMismatch int) Error {
+	if casMismatch != 0 {
+		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
+			InternalMsg: "DML Error, possible causes include CAS mismatch" + msg, InternalCaller: CallerN(1)}
+	} else {
+		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
+			InternalMsg: "DML Error, possible causes include concurrent modification" + msg, InternalCaller: CallerN(1)}
+	}
 }
 
 // Error code 12010 is retired. Do not reuse.
