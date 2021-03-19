@@ -24,8 +24,8 @@ func checkCostModel(featureControls uint64) {
 	// no-op
 }
 
-func optDocCount(keyspace datastore.Keyspace) float64 {
-	return OPT_CARD_NOT_AVAIL
+func optDocCount(keyspace string) int64 {
+	return -1
 }
 
 func optFilterSelectivity(filter *base.Filter, advisorValidate bool, context *PrepareContext) {

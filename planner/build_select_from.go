@@ -225,9 +225,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	}
 	this.addChildren(scan)
 
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+
 	// for inner side of ANSI JOIN/NEST, scans will be considered multiple times for different
 	// join methods, wait till join is finalized before marking index filters
-	if this.useCBO && !node.IsAnsiJoinOp() {
+	if useCBO && !node.IsAnsiJoinOp() {
 		err = this.markPlanFlags(scan, node)
 		if err != nil {
 			return nil, err
@@ -244,7 +246,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		cardinality := scan.Cardinality()
 		size := scan.Size()
 		frCost := scan.FrCost()
-		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
 			fetchCost, fsize, ffrCost := getFetchCost(keyspace, cardinality)
 			if fetchCost > 0.0 && fsize > 0 && ffrCost > 0.0 {
 				cost += fetchCost
@@ -266,7 +268,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 		if filter != nil {
 			baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-			if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+			if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
 				// temporarily mark index filters for selectivity calculation
 				// if this keyspace is not under a join, this step is already done above
 				err = this.markPlanFlags(scan, node)
@@ -275,7 +277,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				}
 			}
 
-			if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+			if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
 				cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
 					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
 					this.advisorValidate(), this.context)
@@ -286,7 +288,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			// separate go thread and can be potentially parallelized
 			this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
 
-			if this.useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+			if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
 				// clear temporary index flags
 				baseKeyspace.Filters().ClearIndexFlag()
 			}
@@ -412,7 +414,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
 		cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, node.Outer(), right,
 			rightKeyspace)
@@ -540,7 +542,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
 		cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, node.Outer(), right,
 			rightKeyspace)
@@ -732,7 +734,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(from.Alias()) {
 		cost, cardinality, size, frCost = getCountScanCost()
 	}
 	this.addChildren(plan.NewCountScan(keyspace, from, cost, cardinality, size, frCost))
@@ -893,7 +895,7 @@ func (this *builder) getFilter(alias string, onclause expression.Expression) (
 	terms := make(expression.Expressions, 0, len(filters))
 	selec := OPT_SELEC_NOT_AVAIL
 	doSelec := false
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(alias) {
 		doSelec = true
 		selec = float64(1.0)
 	}

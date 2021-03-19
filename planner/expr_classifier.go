@@ -27,6 +27,15 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
+	// make sure document count is available
+	for _, baseKeyspace := range baseKeyspaces {
+		keyspace := baseKeyspace.Keyspace()
+		if keyspace != "" && !baseKeyspace.HasDocCount() {
+			baseKeyspace.SetDocCount(optDocCount(keyspace))
+			baseKeyspace.SetHasDocCount()
+		}
+	}
+
 	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec,
 		advisorValidate, context)
 	_, err := expr.Accept(classifier)
@@ -460,7 +469,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
 			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
 				this.isOnclause, len(origKeyspaces) > 1)
-			if this.doSelec && !baseKspace.IsPrimaryUnnest() {
+			if this.doSelec && !baseKspace.IsPrimaryUnnest() && baseKspace.DocCount() >= 0 {
 				optFilterSelectivity(filter, this.advisorValidate, this.context)
 			}
 			if len(subqueries) > 0 {

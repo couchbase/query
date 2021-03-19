@@ -20,6 +20,7 @@ const (
 	KS_ONCLAUSE_ONLY              // use ON-clause only for planning
 	KS_PRIMARY_UNNEST             // primary unnest
 	KS_IN_CORR_SUBQ               // in correlated subquery
+	KS_HAS_DOC_COUNT              // docCount retrieved for keyspace
 )
 
 type BaseKeyspace struct {
@@ -32,6 +33,7 @@ type BaseKeyspace struct {
 	onclause    expression.Expression
 	outerlevel  int32
 	ksFlags     uint32
+	docCount    int64
 	unnests     map[string]string
 }
 
@@ -94,6 +96,14 @@ func (this *BaseKeyspace) IsInCorrSubq() bool {
 
 func (this *BaseKeyspace) SetInCorrSubq() {
 	this.ksFlags |= KS_IN_CORR_SUBQ
+}
+
+func (this *BaseKeyspace) HasDocCount() bool {
+	return (this.ksFlags & KS_HAS_DOC_COUNT) != 0
+}
+
+func (this *BaseKeyspace) SetHasDocCount() {
+	this.ksFlags |= KS_HAS_DOC_COUNT
 }
 
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
@@ -194,6 +204,15 @@ func (this *BaseKeyspace) Outerlevel() int32 {
 
 func (this *BaseKeyspace) SetOuterlevel(outerlevel int32) {
 	this.outerlevel = outerlevel
+}
+
+// document count for keyspaces, 0 for others (ExpressionTerm, SubqueryTerm)
+func (this *BaseKeyspace) DocCount() int64 {
+	return this.docCount
+}
+
+func (this *BaseKeyspace) SetDocCount(docCount int64) {
+	this.docCount = docCount
 }
 
 // unnests is only populated for the primary keyspace term

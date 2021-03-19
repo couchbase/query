@@ -31,9 +31,9 @@ func checkCostModel(featureControls uint64) {
 	}
 }
 
-func optDocCount(keyspace datastore.Keyspace) float64 {
-	docCount, _, _ := dictionary.GetKeyspaceInfo(keyspace.QualifiedName())
-	return float64(docCount)
+func optDocCount(keyspace string) int64 {
+	docCount, _, _ := dictionary.GetKeyspaceInfo(keyspace)
+	return docCount
 }
 
 func optFilterSelectivity(filter *base.Filter, advisorValidate bool, context *PrepareContext) {

@@ -297,15 +297,29 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 	return keyspace, err
 }
 
-func (this *builder) getDocCount(node *algebra.KeyspaceTerm) (float64, error) {
-	keyspace, err := this.getTermKeyspace(node)
-	if err != nil {
-		return 0.0, err
+func (this *builder) getDocCount(alias string) (docCount int64) {
+	baseKeyspace, ok := this.baseKeyspaces[alias]
+	if !ok {
+		return
+	}
+	keyspace := baseKeyspace.Keyspace()
+	if keyspace == "" {
+		// not a keyspace
+		return
 	}
 
-	docCount := optDocCount(keyspace)
+	if !baseKeyspace.HasDocCount() {
+		baseKeyspace.SetDocCount(optDocCount(keyspace))
+		baseKeyspace.SetHasDocCount()
+	}
 
-	return float64(docCount), nil
+	docCount = baseKeyspace.DocCount()
+	return
+}
+
+func (this *builder) keyspaceUseCBO(alias string) bool {
+	docCount := this.getDocCount(alias)
+	return docCount >= 0
 }
 
 func (this *builder) addSubChildren(ops ...plan.Operator) {

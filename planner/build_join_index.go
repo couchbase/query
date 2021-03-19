@@ -34,7 +34,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, node.Alias())
 		cost, cardinality, size, frCost = getIndexJoinCost(this.lastOp, node.Outer(), node.Right(),
 			rightKeyspace, covers != nil, index,
@@ -62,7 +62,7 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, node.Alias())
 		cost, cardinality, size, frCost = getIndexNestCost(this.lastOp, node.Outer(), node.Right(),
 			rightKeyspace, index, this.context.RequestId(), this.advisorValidate(), this.context)
@@ -208,7 +208,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 
 	secondaries = this.minimalIndexes(secondaries, true, pred, node)
 
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		var bestIndex datastore.Index
 		for index, _ := range secondaries {
 			if bestIndex == nil || (secondaries[index].cost < secondaries[bestIndex].cost) {

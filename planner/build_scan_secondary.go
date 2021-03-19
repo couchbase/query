@@ -423,7 +423,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	pred expression.Expression, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
 
 	alias := node.Alias()
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 
 	var predFc map[string]value.Value
 	if pred != nil {
@@ -653,6 +653,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 	}
 
+	useCBO := this.useCBO && (baseKeyspace.DocCount() > 0)
 	advisorValidate := this.advisorValidate()
 	for _, se := range sargables {
 		var spans SargSpans
@@ -673,11 +674,11 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 
 		if useFilters {
 			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
-				se.maxKeys, underHash, this.useCBO, baseKeyspace, this.keyspaceNames,
+				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.context)
 		} else {
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
-				se.maxKeys, orIsJoin, this.useCBO, baseKeyspace, this.keyspaceNames,
+				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.context)
 		}
 		if err != nil || spans.Size() == 0 {

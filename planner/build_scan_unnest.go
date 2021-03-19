@@ -372,9 +372,10 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		sargKey = unnestIdent
 	}
 
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	advisorValidate := this.advisorValidate()
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-	if this.useCBO {
+	if useCBO {
 		keyspaces := make(map[string]string, 1)
 		keyspaces[node.Alias()] = node.Keyspace()
 		for _, fl := range baseKeyspace.Filters() {
@@ -413,7 +414,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		n = max
 	}
 
-	spans, exactSpans, err := SargFor(pred, entry, sargKeys, n, false, this.useCBO,
+	spans, exactSpans, err := SargFor(pred, entry, sargKeys, n, false, useCBO,
 		baseKeyspace, this.keyspaceNames, advisorValidate, this.context)
 	if err != nil {
 		return nil, nil, nil, 0, err
@@ -424,7 +425,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	selectivity := OPT_SELEC_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
+	if useCBO {
 		cost, selectivity, cardinality, size, frCost, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(),
 			spans, node.Alias(), this.advisorValidate(), this.context)
 		if err != nil {
@@ -453,7 +454,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 
 func (this *builder) minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
 	ops map[datastore.Index]*opEntry, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	for s, se := range indexes {
 		if useCBO && (se.cost <= 0.0 || se.cardinality <= 0.0) {
 			useCBO = false

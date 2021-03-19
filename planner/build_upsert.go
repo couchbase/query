@@ -33,7 +33,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	frCost := OPT_COST_NOT_AVAIL
 
 	if stmt.Values() != nil {
-		if this.useCBO {
+		if this.useCBO && this.keyspaceUseCBO(ksref.Alias()) {
 			cost, cardinality, size, frCost = getValueScanCost(stmt.Values())
 		}
 		children = append(children, plan.NewValueScan(stmt.Values(), cost, cardinality, size, frCost))

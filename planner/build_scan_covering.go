@@ -138,7 +138,7 @@ outer:
 		return nil, 0, nil
 	}
 
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 	if useCBO {
 		for c, _ := range covering {
 			entry := indexes[c]

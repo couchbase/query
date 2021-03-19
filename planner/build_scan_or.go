@@ -99,8 +99,10 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	var err error
 	useCBO := this.useCBO
 	if useCBO {
-		docCount, err = this.getDocCount(node)
-		if err != nil || (docCount <= 0.0) {
+		cnt := this.getDocCount(node.Alias())
+		if cnt > 0 {
+			docCount = float64(cnt)
+		} else {
 			useCBO = false
 		}
 	}

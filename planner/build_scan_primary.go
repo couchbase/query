@@ -56,7 +56,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 		cardinality := OPT_CARD_NOT_AVAIL
 		size := OPT_SIZE_NOT_AVAIL
 		frCost := OPT_COST_NOT_AVAIL
-		if this.useCBO {
+		if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 			cost, cardinality, size, frCost = primaryIndexScanCost(primary, this.context.RequestId(), this.context)
 		}
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
@@ -99,7 +99,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	origKeyspaces := make(map[string]string, 1)
 	origKeyspaces[node.Alias()] = node.Keyspace()
 	newfilter := base.NewFilter(pred, pred, keyspaces, origKeyspaces, false, false)
-	if this.useCBO {
+	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		newfilter.SetSelec(1.0)
 		newfilter.SetSelecDone()
 	}

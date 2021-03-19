@@ -42,7 +42,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO && this.lastOp != nil {
+	if this.useCBO && this.keyspaceUseCBO(ksref.Alias()) && this.lastOp != nil {
 		cost = this.lastOp.Cost()
 		cardinality = this.lastOp.Cardinality()
 		size = this.lastOp.Size()

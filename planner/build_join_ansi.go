@@ -27,7 +27,7 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		return nil, err
 	}
 
-	if this.useCBO {
+	if this.useCBO && op.Cost() > 0.0 && op.Cardinality() > 0.0 {
 		// once the join is finalized, properly mark plan flags on the right-hand side
 		err = this.markPlanFlags(op, node.Right())
 	}
@@ -41,7 +41,7 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		return nil, err
 	}
 
-	if this.useCBO {
+	if this.useCBO && op.Cost() > 0.0 && op.Cardinality() > 0.0 {
 		// once the join is finalized, properly mark plan flags on the right-hand side
 		err = this.markPlanFlags(op, node.Right())
 	}
@@ -56,7 +56,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		right = ksterm
 	}
 
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
@@ -206,7 +206,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		cardinality = OPT_CARD_NOT_AVAIL
 		size = OPT_SIZE_NOT_AVAIL
 		frCost = OPT_COST_NOT_AVAIL
-		if this.useCBO {
+		if this.useCBO && this.keyspaceUseCBO(newKeyspaceTerm.Alias()) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
 			cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, rightKeyspace)
@@ -262,7 +262,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		right = ksterm
 	}
 
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
@@ -395,7 +395,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		cardinality = OPT_CARD_NOT_AVAIL
 		size = OPT_SIZE_NOT_AVAIL
 		frCost = OPT_COST_NOT_AVAIL
-		if this.useCBO {
+		if this.useCBO && this.keyspaceUseCBO(newKeyspaceTerm.Alias()) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
 			cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, rightKeyspace)
@@ -659,7 +659,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	if useCBO && len(this.children) > 0 {
 		cost, cardinality, size, frCost = getNLJoinCost(lastOp, this.lastOp,
 			baseKeyspace.Filters(), outer, op)
@@ -747,7 +747,7 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinScan: unexpected right-hand side node type"))
 	}
 
-	useCBO := this.useCBO
+	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
 	buildRight := false
 	force := true
 	joinHint := right.JoinHint()

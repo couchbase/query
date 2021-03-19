@@ -118,6 +118,10 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 		return nil
 	}
 
+	if useCBO && baseKeyspace.DocCount() < 0 {
+		useCBO = false
+	}
+
 	formalizer := expression.NewSelfFormalizer(baseKeyspace.Name(), nil)
 	keyMap := make(map[string]*idxKeyDerive, len(indexes))
 

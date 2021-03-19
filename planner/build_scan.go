@@ -40,7 +40,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		cardinality := OPT_CARD_NOT_AVAIL
 		size := OPT_SIZE_NOT_AVAIL
 		frCost := OPT_COST_NOT_AVAIL
-		if this.useCBO {
+		if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 			cost, cardinality, size, frCost = getKeyScanCost(keys)
 		}
 		return plan.NewKeyScan(keys, mutate, cost, cardinality, size, frCost), nil
@@ -528,10 +528,11 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
 
-	docCount, err := this.getDocCount(node)
-	if err != nil {
+	cnt := this.getDocCount(node.Alias())
+	if cnt <= 0 {
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
+	docCount := float64(cnt)
 
 	cost := float64(0.0)
 	cardinality := float64(0.0)

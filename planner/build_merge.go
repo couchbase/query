@@ -110,7 +110,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 
 	if stmt.IsOnKey() {
-		if this.useCBO {
+		if this.useCBO && this.keyspaceUseCBO(ksAlias) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, ksAlias)
 			joinCost, joinCard, _, joinFrCost = getLookupJoinCost(this.lastOp, outer, right,
 				rightKeyspace)
