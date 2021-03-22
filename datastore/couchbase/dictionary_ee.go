@@ -72,11 +72,19 @@ func Foreach(f func(string) error) error {
 }
 
 func DropDictionaryEntry(keyspace string) {
-	dictionary.DropDictionaryEntry(keyspace)
+	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
+		dictionary.DropDictionaryCache()
+	} else {
+		dictionary.DropDictionaryEntry(keyspace)
+	}
 }
 
 func DropDictEntryAndAllCache(keyspace string, context interface{}) {
-	dictionary.DropDictEntryAndAllCache(keyspace, context)
+	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
+		dictionary.DropDictionaryCache()
+	} else {
+		dictionary.DropDictEntryAndAllCache(keyspace, context)
+	}
 }
 
 func DropDictionaryCache() {
@@ -84,7 +92,7 @@ func DropDictionaryCache() {
 }
 
 func isSysBucket(name string) bool {
-	return name == N1QL_SYSTEM_BUCKET
+	return name == _N1QL_SYSTEM_BUCKET
 }
 
 func chkSysBucket() {

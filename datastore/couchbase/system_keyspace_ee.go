@@ -27,9 +27,10 @@ import (
 )
 
 const (
-	N1QL_SYSTEM_BUCKET = "N1QL_SYSTEM_BUCKET"
-	N1QL_SYSTEM_SCOPE  = "N1QL_SYSTEM_SCOPE"
-	N1QL_CBO_STATS     = "N1QL_CBO_STATS"
+	_N1QL_SYSTEM_BUCKET      = dictionary.N1QL_SYSTEM_BUCKET
+	_N1QL_SYSTEM_SCOPE       = dictionary.N1QL_SYSTEM_SCOPE
+	_N1QL_CBO_STATS          = dictionary.N1QL_CBO_STATS
+	_CBO_STATS_PRIMARY_INDEX = dictionary.CBO_STATS_PRIMARY_INDEX
 )
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
@@ -39,7 +40,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	}
 
 	// create/get system bucket/scope/collection
-	sysBucket, er := defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
+	sysBucket, er := defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
 	if er != nil {
 		// only ignore bucket/keyspace not found error
 		if er.Code() != 12003 && er.Code() != 12020 {
@@ -47,21 +48,21 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// create bucket
-		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, N1QL_SYSTEM_BUCKET)
+		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, _N1QL_SYSTEM_BUCKET)
 		if err != nil {
-			return errors.NewCbCreateSystemBucketError(N1QL_SYSTEM_BUCKET, err)
+			return errors.NewCbCreateSystemBucketError(_N1QL_SYSTEM_BUCKET, err)
 		}
 
 		// no need for a retry loop, cb.GetSystemBucket() call above should
 		// have made sure that BucketMap is updated already
 		defaultPool.refresh()
-		sysBucket, er = defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
+		sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
 		if er != nil {
 			return er
 		}
 	}
 
-	sysScope, er := sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
+	sysScope, er := sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
 	if er != nil {
 		if er.Code() != 12021 {
 			// only ignore scope not found error
@@ -69,7 +70,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// allow "already exists" error in case of duplicated Create call
-		er = sysBucket.CreateScope(N1QL_SYSTEM_SCOPE)
+		er = sysBucket.CreateScope(_N1QL_SYSTEM_SCOPE)
 		if er != nil && !cb.AlreadyExistsError(er) {
 			return er
 		}
@@ -83,12 +84,12 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 			// reload sysBucket
 			sysBucket.setNeedsManifest()
-			sysBucket, er = defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
+			sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
 			if er != nil {
 				return er
 			}
 
-			sysScope, er = sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
+			sysScope, er = sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
 			if sysScope != nil {
 				break
 			} else if er != nil && er.Code() != 12021 {
@@ -96,11 +97,11 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 			}
 		}
 		if sysScope == nil {
-			return errors.NewCbBucketCreateScopeError(N1QL_SYSTEM_BUCKET+"."+N1QL_SYSTEM_SCOPE, nil)
+			return errors.NewCbBucketCreateScopeError(_N1QL_SYSTEM_BUCKET+"."+_N1QL_SYSTEM_SCOPE, nil)
 		}
 	}
 
-	cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
+	cboStats, er := sysScope.KeyspaceByName(_N1QL_CBO_STATS)
 	if er != nil {
 		if er.Code() != 12003 {
 			// only ignore keyspace not found error
@@ -108,7 +109,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// allow "already exists" error in case of duplicated Create call
-		er = sysScope.CreateCollection(N1QL_CBO_STATS)
+		er = sysScope.CreateCollection(_N1QL_CBO_STATS)
 		if er != nil && !cb.AlreadyExistsError(er) {
 			return er
 		}
@@ -122,17 +123,17 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 			// reload sysBucket
 			sysBucket.setNeedsManifest()
-			sysBucket, er = defaultPool.keyspaceByName(N1QL_SYSTEM_BUCKET)
+			sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
 			if er != nil {
 				return er
 			}
 
-			sysScope, er = sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
+			sysScope, er = sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
 			if er != nil {
 				return er
 			}
 
-			cboStats, er = sysScope.KeyspaceByName(N1QL_CBO_STATS)
+			cboStats, er = sysScope.KeyspaceByName(_N1QL_CBO_STATS)
 			if cboStats != nil {
 				break
 			} else if er != nil && er.Code() != 12003 {
@@ -140,7 +141,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 			}
 		}
 		if cboStats == nil {
-			return errors.NewCbBucketCreateCollectionError(N1QL_SYSTEM_BUCKET+"."+N1QL_SYSTEM_SCOPE+"."+N1QL_CBO_STATS, nil)
+			return errors.NewCbBucketCreateCollectionError(_N1QL_SYSTEM_BUCKET+"."+_N1QL_SYSTEM_SCOPE+"."+_N1QL_CBO_STATS, nil)
 		}
 	}
 
@@ -153,18 +154,18 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 	indexer3, ok := indexer.(datastore.Indexer3)
 	if !ok {
-		cb.DropSystemBucket(&s.client, N1QL_SYSTEM_BUCKET)
+		cb.DropSystemBucket(&s.client, _N1QL_SYSTEM_BUCKET)
 		return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
 	}
 
-	_, er = indexer3.IndexByName(dictionary.CBO_STATS_PRIMARY_INDEX)
+	_, er = indexer3.IndexByName(_CBO_STATS_PRIMARY_INDEX)
 	if er != nil {
 		if er.Code() != 12016 {
 			// only ignore index not found error
 			return er
 		}
 
-		_, er = indexer3.CreatePrimaryIndex3(requestId, dictionary.CBO_STATS_PRIMARY_INDEX, nil, nil)
+		_, er = indexer3.CreatePrimaryIndex3(requestId, _CBO_STATS_PRIMARY_INDEX, nil, nil)
 		if er != nil {
 			return er
 		}
@@ -179,17 +180,17 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 		return false, er
 	}
 
-	sysBucket, er := defaultPool.BucketByName(N1QL_SYSTEM_BUCKET)
+	sysBucket, er := defaultPool.BucketByName(_N1QL_SYSTEM_BUCKET)
 	if er != nil {
 		return false, er
 	}
 
-	sysScope, er := sysBucket.ScopeByName(N1QL_SYSTEM_SCOPE)
+	sysScope, er := sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
 	if er != nil {
 		return false, er
 	}
 
-	cboStats, er := sysScope.KeyspaceByName(N1QL_CBO_STATS)
+	cboStats, er := sysScope.KeyspaceByName(_N1QL_CBO_STATS)
 	if er != nil {
 		return false, er
 	}
@@ -198,5 +199,5 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 }
 
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
-	return datastore.GetKeyspace("default", N1QL_SYSTEM_BUCKET, N1QL_SYSTEM_SCOPE, N1QL_CBO_STATS)
+	return datastore.GetKeyspace("default", _N1QL_SYSTEM_BUCKET, _N1QL_SYSTEM_SCOPE, _N1QL_CBO_STATS)
 }
