@@ -35,7 +35,7 @@ require (
 	github.com/couchbase/go-couchbase v0.0.0-20201026062457-7b3be89bbd89
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
 	github.com/couchbase/gocbcore-transactions v0.0.0-20210225200641-16042430f936
-	github.com/couchbase/gocbcore/v9 v9.1.2
+	github.com/couchbase/gocbcore/v9 v9.1.4-0.20210322184016-341fc70dc8ba
 	github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71
 	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
