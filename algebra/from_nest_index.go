@@ -118,7 +118,11 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	_, ok = f.Allowed().Field(alias)
 	if ok {
-		err = errors.NewDuplicateAliasError("NEST", alias, "semantics.nest.duplicate_alias")
+		if len(this.left.Expressions()) > 0 {
+			err = errors.NewDuplicateAliasError("NEST", alias+this.left.Expressions()[0].ErrorContext(), "semantics.nest.duplicate_alias")
+		} else {
+			err = errors.NewDuplicateAliasError("NEST", alias, "semantics.nest.duplicate_alias")
+		}
 		return nil, err
 	}
 

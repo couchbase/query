@@ -173,13 +173,58 @@ func (this *lexer) Error(s string) {
 		s = s + ": " + this.lastScannerError
 		this.lastScannerError = ""
 	}
-	if len(this.nex.stack) > 0 {
-		s = s + " - at " + this.nex.Text()
-	} else {
-		s = s + " - at end of input"
+	if strings.HasPrefix(s, "syntax error") {
+		s = s + this.ErrorContext()
 	}
-
 	this.errs = append(this.errs, s)
+}
+
+func (this *lexer) ErrorContext() string {
+	s := ""
+	if len(this.nex.stack) > 0 {
+		ctx := this.getContextFor(this.nex.Line(), this.nex.Column())
+		if len(ctx) > 0 {
+			s = fmt.Sprintf(" - line %d, column %d, near '%s', at: ", this.nex.Line()+1, this.nex.Column()+1, ctx) +
+				this.nex.Text()
+		} else {
+			s = fmt.Sprintf(" - line %d, column %d, at: ", this.nex.Line()+1, this.nex.Column()+1) + this.nex.Text()
+		}
+	} else {
+		s = " - at end of input"
+	}
+	return s
+}
+
+func (this *lexer) getContextFor(contextLine, contextColumn int) string {
+	line := 0
+	eoff := 0
+	for eoff = 0; eoff < len(this.text); eoff++ {
+		if line >= contextLine {
+			break
+		}
+		if this.text[eoff] == '\n' {
+			line++
+		}
+	}
+	line = eoff
+	eoff += contextColumn - 1
+	if eoff > len(this.text) {
+		eoff = len(this.text) - 1
+	}
+	for ; eoff > line; eoff-- {
+		if this.text[eoff] != ' ' && this.text[eoff] != '\t' {
+			break
+		}
+	}
+	eoff++
+	soff := eoff - 20
+	if line > soff {
+		soff = line
+	}
+	if soff < eoff {
+		return this.text[soff:eoff]
+	}
+	return ""
 }
 
 func (this *lexer) FatalError(s string) int {

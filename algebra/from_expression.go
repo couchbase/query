@@ -131,7 +131,11 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 	_, ok := parent.Allowed().Field(alias)
 	if ok && !parent.WithAlias(alias) {
-		err = errors.NewDuplicateAliasError("FROM expression", alias, "semantics.fromExpr.duplicate_alias")
+		if this.fromExpr != nil && this.fromExpr.ExprBase() != nil {
+			err = errors.NewDuplicateAliasError("FROM expression", alias+this.fromExpr.ErrorContext(), "semantics.fromExpr.duplicate_alias")
+		} else {
+			err = errors.NewDuplicateAliasError("FROM expression", alias, "semantics.fromExpr.duplicate_alias")
+		}
 		return nil, err
 	}
 

@@ -687,7 +687,7 @@ WITH expr
 {
     $$ = $2.Value()
     if $$ == nil {
-        yylex.Error("WITH value must be static.")
+        yylex.Error("WITH value must be static"+yylex.(*lexer).ErrorContext())
     }
 }
 ;
@@ -961,9 +961,9 @@ expr DOT STAR
     switch e := $1.(type) {
       case *expression.All:
         if e.Distinct() {
-          return yylex.(*lexer).FatalError("Syntax error - DISTINCT out of place")
+          return yylex.(*lexer).FatalError("syntax error - DISTINCT out of place")
         } else {
-          return yylex.(*lexer).FatalError("Syntax error - ALL out of place")
+          return yylex.(*lexer).FatalError("syntax error - ALL out of place")
         }
     }
     $$ = algebra.NewResultTerm($1, true, "")
@@ -977,9 +977,9 @@ expr opt_as_alias
     switch e := $1.(type) {
       case *expression.All:
         if e.Distinct() {
-          return yylex.(*lexer).FatalError("Syntax error - DISTINCT out of place")
+          return yylex.(*lexer).FatalError("syntax error - DISTINCT out of place")
         } else {
-          return yylex.(*lexer).FatalError("Syntax error - ALL out of place")
+          return yylex.(*lexer).FatalError("syntax error - ALL out of place")
         }
     }
     $$ = algebra.NewResultTerm($1, false, $2)
@@ -1038,7 +1038,8 @@ from_term:
 simple_from_term
 {
     if $1 != nil && $1.JoinHint() != algebra.JOIN_HINT_NONE {
-        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s", $1.Alias()))
+        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s%s", $1.Alias(),
+          yylex.(*lexer).ErrorContext()))
     }
     $$ = $1
 }
@@ -1047,7 +1048,7 @@ from_term opt_join_type JOIN simple_from_term on_keys
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("JOIN must be done on a keyspace.")
+        yylex.Error("JOIN must be done on a keyspace"+yylex.(*lexer).ErrorContext())
     } else {
         ksterm.SetJoinKeys($5)
     }
@@ -1058,7 +1059,7 @@ from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("JOIN must be done on a keyspace.")
+        yylex.Error("JOIN must be done on a keyspace"+yylex.(*lexer).ErrorContext())
     } else {
         ksterm.SetIndexJoinNest()
         ksterm.SetJoinKeys($5)
@@ -1070,7 +1071,7 @@ from_term opt_join_type NEST simple_from_term on_keys
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("NEST must be done on a keyspace.")
+        yylex.Error("NEST must be done on a keyspace"+yylex.(*lexer).ErrorContext())
     } else {
         ksterm.SetJoinKeys($5)
     }
@@ -1081,7 +1082,7 @@ from_term opt_join_type NEST simple_from_term on_key FOR IDENT
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("NEST must be done on a keyspace.")
+        yylex.Error("NEST must be done on a keyspace"+yylex.(*lexer).ErrorContext())
     } else {
         ksterm.SetIndexJoinNest()
         ksterm.SetJoinKeys($5)
@@ -1344,7 +1345,8 @@ opt_use_del_upd:
 opt_use
 {
     if $1.JoinHint() != algebra.JOIN_HINT_NONE {
-        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL) in DELETE or UPDATE statement")
+        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL) in DELETE or UPDATE statement" +
+            yylex.(*lexer).ErrorContext())
     }
     $$ = $1
 }
@@ -2123,7 +2125,7 @@ MERGE INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key e
               source := algebra.NewMergeSourceFrom(other)
               $$ = algebra.NewMerge($3, $4.Indexes(), source, $8, $9, $10, $11, $12)
          default:
-              yylex.Error("MERGE source term is UNKNOWN.")
+              yylex.Error("MERGE source term is UNKNOWN"+yylex.(*lexer).ErrorContext())
      }
 }
 ;
@@ -2132,9 +2134,9 @@ opt_use_merge:
 opt_use
 {
     if $1.Keys() != nil {
-        yylex.Error("Keyspace reference cannot have USE KEYS hint in MERGE statement.")
+        yylex.Error("Keyspace reference cannot have USE KEYS hint in MERGE statement"+yylex.(*lexer).ErrorContext())
     } else if $1.JoinHint() != algebra.JOIN_HINT_NONE {
-        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL)in MERGE statement.")
+        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL) in MERGE statement"+yylex.(*lexer).ErrorContext())
     }
     $$ = $1
 }
@@ -2600,7 +2602,7 @@ WITH expr
 {
     $$ = $2.Value()
     if $$ == nil {
-        yylex.Error("WITH value must be static.")
+        yylex.Error("WITH value must be static"+yylex.(*lexer).ErrorContext())
     }
 }
 ;
@@ -2648,7 +2650,7 @@ expr
 {
     exp := $1
     if exp != nil && (!exp.Indexable() || exp.Value() != nil) {
-        yylex.Error(fmt.Sprintf("Expression not indexable: %s", exp.String()))
+        yylex.Error(fmt.Sprintf("Expression not indexable: %s%s", exp.String(), yylex.(*lexer).ErrorContext()))
     }
 
     $$ = exp
@@ -2684,7 +2686,7 @@ ikattr ikattr
 {
    attr, valid := algebra.NewIndexKeyTermAttributes($1,$2)
    if !valid {
-       yylex.Error("Duplicate or Invalid index key attribute")
+       yylex.Error("Duplicate or Invalid index key attribute"+yylex.(*lexer).ErrorContext())
    }
    $$ = attr
 }
@@ -2774,9 +2776,9 @@ LPAREN parm_list RPAREN func_body
 {
     yylex.(*lexer).PopQueryContext()
     if $9 != nil {
-    err := $9.SetVarNames($7)
-    if err != nil {
-        yylex.Error(err.Error())
+        err := $9.SetVarNames($7)
+        if err != nil {
+            yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
         }
     }
     $$ = algebra.NewCreateFunction($4, $9, $2)
@@ -2806,7 +2808,7 @@ keyspace_name
 {
     name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
     $$ = name
 }
@@ -2817,7 +2819,7 @@ namespace_term keyspace_name
 {
     name, err := functions.Constructor([]string{$1, $2}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
     $$ = name
 }
@@ -2826,7 +2828,7 @@ namespace_term bucket_name DOT scope_name DOT keyspace_name
 {
     name, err := functions.Constructor([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
     $$ = name
 }
@@ -2863,7 +2865,7 @@ LBRACE expr RBRACE
 {
     body, err := inline.NewInlineBody($2)
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
         $$ = body
     }
@@ -2873,7 +2875,7 @@ LANGUAGE INLINE AS expr
 {
     body, err := inline.NewInlineBody($4)
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
         $$ = body
     }
@@ -2883,7 +2885,7 @@ LANGUAGE GOLANG AS STR AT STR
 {
     body, err := golang.NewGolangBody($6, $4)
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
         $$ = body
     }
@@ -2893,7 +2895,7 @@ LANGUAGE JAVASCRIPT AS STR AT STR
 {
     body, err := javascript.NewJavascriptBody($6, $4)
     if err != nil {
-        yylex.Error(err.Error())
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
         $$ = body
     }
@@ -3612,7 +3614,7 @@ expr
 {
     name := $1.Alias()
     if name == "" {
-        yylex.Error(fmt.Sprintf("Object member missing name or value: %s", $1.String()))
+        yylex.Error(fmt.Sprintf("Object member missing name or value: %s%s", $1.String(), yylex.(*lexer).ErrorContext()))
     }
 
     $$ = algebra.NewPair(expression.NewConstant(name), $1, nil)
@@ -3829,7 +3831,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
         if $5 == nil && $6 == uint32(0) && $7 == nil {
             name, err = functions.Constructor([]string{fname}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
             if err != nil {
-                return yylex.(*lexer).FatalError(err.Error())
+                return yylex.(*lexer).FatalError(err.Error()+yylex.(*lexer).ErrorContext())
             }
             f = expression.GetUserDefinedFunction(name)
             if f != nil {
