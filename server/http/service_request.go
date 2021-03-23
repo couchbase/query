@@ -10,7 +10,6 @@
 package http
 
 import (
-	"encoding/base64"
 	go_errors "errors"
 	"fmt"
 	"io"
@@ -139,7 +138,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
 
 	// Creds check
-	creds, err1 := getCredentials(httpArgs, req.Header["Authorization"])
+	creds, err1 := getCredentials(httpArgs)
 
 	if err1 == nil {
 		if len(creds.Users) == 0 && !pwdlessbkts {
@@ -950,7 +949,7 @@ func getScanConfiguration(txId string, rv *scanConfigImpl, a httpRequestArgs, na
 	return nil
 }
 
-func getCredentials(a httpRequestArgs, auths []string) (*auth.Credentials, errors.Error) {
+func getCredentials(a httpRequestArgs) (*auth.Credentials, errors.Error) {
 	// Cred_data retrieves credentials from either the URL parameters or from the body of the JSON request.
 	cred_data, err := a.getCredentials()
 	if err != nil {
@@ -976,36 +975,6 @@ func getCredentials(a httpRequestArgs, auths []string) (*auth.Credentials, error
 		}
 	}
 
-	if len(auths) > 0 {
-		// Credentials are in http header:
-		curAuth := auths[0]
-		if strings.HasPrefix(curAuth, "Basic ") {
-			encoded_creds := strings.Split(curAuth, " ")[1]
-			decoded_creds, err := base64.StdEncoding.DecodeString(encoded_creds)
-			if err != nil {
-				return nil, errors.NewServiceErrorBadValue(go_errors.New("credentials not base64-encoded"), CREDS)
-			}
-			// Authorization header is in format "user:pass"
-			// per http://tools.ietf.org/html/rfc1945#section-10.2
-			u_details := strings.Split(string(decoded_creds), ":")
-			if creds.Users == nil {
-				creds = &auth.Credentials{}
-				creds.Users = make(map[string]string, 0)
-			}
-			switch len(u_details) {
-			case 0, 1:
-				// Authorization header format is incorrect
-				return nil, errors.NewServiceErrorBadValue(nil, CREDS)
-			case 2:
-				creds.Users[u_details[0]] = u_details[1]
-			default:
-				// Support passwords like "local:xxx" or "admin:xxx"
-				creds.Users[u_details[0]] = strings.Join(u_details[1:], ":")
-			}
-		}
-	}
-
-	// If we have credentials from neither source, creds will be uninitialized, i.e. nil.
 	return creds, nil
 }
 

@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/auth"
 )
 
-func CredsString(creds *auth.Credentials) string {
+func CredsArray(creds *auth.Credentials) []string {
 	credsLen := 1
 	if creds != nil {
 		credsLen += len(creds.Users)
@@ -44,5 +44,9 @@ func CredsString(creds *auth.Credentials) string {
 			}
 		}
 	}
-	return strings.Join(credsList, ",")
+	return credsList
+}
+
+func CredsString(creds *auth.Credentials) string {
+	return strings.Join(CredsArray(creds), ",")
 }
