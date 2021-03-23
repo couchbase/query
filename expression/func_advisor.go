@@ -256,7 +256,12 @@ func analyzeWorkload(profile, response_limit string, delta, query_count float64)
 		workload += "str_to_duration(elapsedTime)/1000000 > " + response_limit + " and "
 	}
 
+	// exclude SELECT ADVISOR(...) statements
 	workload += "phaseOperators.advisor is missing and "
+
+	// exclude internal statements from UI
+	workload += "(clientContextID is missing OR clientContextID not like \"INTERNAL%\") and "
+
 	workload += "requestTime between \"" + start_time + "\" and DATE_ADD_STR(\"" + start_time + "\", " + strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") "
 	workload += "order by requestTime limit " + strconv.FormatFloat(query_count, 'f', 0, 64)
 	return "SELECT RAW Advisor((" + workload + "))"
