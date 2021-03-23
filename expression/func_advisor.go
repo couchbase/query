@@ -501,7 +501,11 @@ func addPrefix(s, prefix string) string {
 
 func validateStmt(s string) bool {
 	s = strings.ToLower(strings.TrimSpace(s))
+	// Consistent with parser
 	if strings.HasPrefix(s, "advise") ||
+		strings.HasPrefix(s, "explain") ||
+		strings.HasPrefix(s, "prepare") ||
+		strings.HasPrefix(s, "execute") ||
 		strings.Contains(s, "system:") {
 		return false
 	}
