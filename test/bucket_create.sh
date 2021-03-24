@@ -7,7 +7,7 @@ q=${1:-250}
 
 for i in "${bucket[@]}"
 do
-  curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=sasl -d saslPassword=donotuse -d bucketType=couchbase $Site > /dev/null
+  curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase $Site > /dev/null
 done
 
 collections=('orders,_default,transactions')
