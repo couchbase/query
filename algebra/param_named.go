@@ -66,7 +66,7 @@ func (this *NamedParameter) Evaluate(item value.Value, context expression.Contex
 	if ok {
 		return val, nil
 	} else {
-		return nil, fmt.Errorf("No value for named parameter $%s.", this.name)
+		return nil, fmt.Errorf("No value for named parameter $%s%v.", this.name, this.ErrorContext())
 	}
 }
 

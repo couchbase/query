@@ -13,6 +13,7 @@ import (
 	"reflect"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -38,12 +39,29 @@ const (
 ExpressionBase is a base class for all expressions.
 */
 type ExpressionBase struct {
-	expr      Expression
-	value     *value.Value
-	exprFlags uint64
+	expr         Expression
+	value        *value.Value
+	exprFlags    uint64
+	line, column int
 }
 
 var _NIL_VALUE value.Value
+
+func (this *ExpressionBase) SetErrorContext(line, column int) {
+	this.line = line
+	this.column = column
+}
+
+func (this *ExpressionBase) GetErrorContext() (int, int) {
+	return this.line, this.column
+}
+
+func (this *ExpressionBase) ErrorContext() string {
+	if this.line > 0 {
+		return errors.NewErrorContext(this.line, this.column).Error()
+	}
+	return ""
+}
 
 func (this *ExpressionBase) String() string {
 	return NewStringer().Visit(this.expr)
@@ -59,6 +77,8 @@ Make sure expression flags are copied when copying expression
 */
 func (this *ExpressionBase) BaseCopy(oldExpr Expression) {
 	this.setExprFlags(oldExpr.ExprBase().getExprFlags())
+	this.line = oldExpr.ExprBase().line
+	this.column = oldExpr.ExprBase().column
 }
 
 /*

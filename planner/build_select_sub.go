@@ -10,6 +10,7 @@ package planner
 
 import (
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/couchbase/query/algebra"
@@ -164,7 +165,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		for _, p := range proj {
 			expr := p.Expression()
 			if expr == nil {
-				return nil, errors.NewNotGroupKeyOrAggError(p.String())
+				return nil, errors.NewNotGroupKeyOrAggError(p.String() + expr.ErrorContext())
 			}
 
 			err = constrainGroupTerm(expr, groupKeys, allowed)
@@ -615,11 +616,19 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(aggs) > 0 {
-			return nil, nil, fmt.Errorf("Aggregates not allowed in LET.")
+			ec := getFirstErrorContext(&aggs)
+			if len(ec) == 0 {
+				ec = node.Let()[0].Expression().ErrorContext()
+			}
+			return nil, nil, fmt.Errorf("Aggregates not allowed in LET%v.", ec)
 		}
 
 		if len(windowAggs) > 0 {
-			return nil, nil, fmt.Errorf("Window Aggregates not allowed in LET.")
+			ec := getFirstErrorContext(&windowAggs)
+			if len(ec) == 0 {
+				ec = node.Let()[0].Expression().ErrorContext()
+			}
+			return nil, nil, fmt.Errorf("Window Aggregates not allowed in LET%v.", ec)
 		}
 	}
 
@@ -629,11 +638,19 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(aggs) > 0 {
-			return nil, nil, fmt.Errorf("Aggregates not allowed in WHERE.")
+			ec := getFirstErrorContext(&aggs)
+			if len(ec) == 0 {
+				ec = node.Where().ErrorContext()
+			}
+			return nil, nil, fmt.Errorf("Aggregates not allowed in WHERE%v.", ec)
 		}
 
 		if len(windowAggs) > 0 {
-			return nil, nil, fmt.Errorf("Window Aggregates not allowed in WHERE.")
+			ec := getFirstErrorContext(&windowAggs)
+			if len(ec) == 0 {
+				ec = node.Where().ErrorContext()
+			}
+			return nil, nil, fmt.Errorf("Window Aggregates not allowed in WHERE%v.", ec)
 		}
 	}
 
@@ -644,11 +661,19 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(aggs) > 0 {
-			return nil, nil, fmt.Errorf("Aggregates not allowed in GROUP BY.")
+			ec := getFirstErrorContext(&aggs)
+			if len(ec) == 0 {
+				ec = group.By()[0].ErrorContext()
+			}
+			return nil, nil, fmt.Errorf("Aggregates not allowed in GROUP BY%v.", ec)
 		}
 
 		if len(windowAggs) > 0 {
-			return nil, nil, fmt.Errorf("Window Aggregates not allowed in GROUP BY.")
+			ec := getFirstErrorContext(&windowAggs)
+			if len(ec) == 0 {
+				ec = group.By()[0].ErrorContext()
+			}
+			return nil, nil, fmt.Errorf("Window Aggregates not allowed in GROUP BY%v.", ec)
 		}
 
 		if group.Letting() != nil {
@@ -657,7 +682,11 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 			}
 
 			if len(windowAggs) > 0 {
-				return nil, nil, fmt.Errorf("Window Aggregates not allowed in LETTING.")
+				ec := getFirstErrorContext(&windowAggs)
+				if len(ec) == 0 {
+					ec = group.Letting()[0].Expression().ErrorContext()
+				}
+				return nil, nil, fmt.Errorf("Window Aggregates not allowed in LETTING%v.", ec)
 			}
 		}
 
@@ -667,7 +696,11 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 			}
 
 			if len(windowAggs) > 0 {
-				return nil, nil, fmt.Errorf("Window Aggregates not allowed in HAVING.")
+				ec := getFirstErrorContext(&windowAggs)
+				if len(ec) == 0 {
+					ec = group.Having().ErrorContext()
+				}
+				return nil, nil, fmt.Errorf("Window Aggregates not allowed in HAVING%v.", ec)
 			}
 		}
 	}
@@ -686,7 +719,8 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if !allow && group == nil && len(aggs) > 0 {
-			return nil, nil, fmt.Errorf("Aggregates not available for this ORDER BY.")
+			ec := getFirstErrorContext(&aggs)
+			return nil, nil, fmt.Errorf("Aggregates not available for this ORDER BY%v.", ec)
 		}
 	}
 
@@ -694,7 +728,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		for _, agg := range aggs {
 			for _, op := range agg.Operands() {
 				if op != nil && dependsOnLet(op, group.Letting()) {
-					return nil, nil, fmt.Errorf("Aggregate can't depend on GROUP alias or LETTING variable.")
+					return nil, nil, fmt.Errorf("Aggregate can't depend on GROUP alias or LETTING variable%v.", agg.ErrorContext())
 				}
 			}
 		}
@@ -745,16 +779,16 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 
 			if wTerm == nil {
 				if nAggs != len(aggs) {
-					return fmt.Errorf("Nested aggregates are not allowed.")
+					return fmt.Errorf("Nested aggregates are not allowed%v.", expr.ErrorContext())
 				}
 
 				if nWindowAggs != len(windowAggs) {
-					return fmt.Errorf("Window aggregates are not allowed inside Aggregates.")
+					return fmt.Errorf("Window aggregates are not allowed inside Aggregates%v.", expr.ErrorContext())
 				}
 				aggs[str] = agg
 			} else {
 				if nWindowAggs != len(windowAggs) {
-					return fmt.Errorf("Window aggregates are not allowed inside Window Aggregates.")
+					return fmt.Errorf("Window aggregates are not allowed inside Window Aggregates%v.", expr.ErrorContext())
 				}
 				windowAggs[str] = agg
 			}
@@ -765,7 +799,7 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 					return err1
 				}
 				if len(subqueries) > 0 {
-					return fmt.Errorf("Subqueries are not allowed in aggregate filter.")
+					return fmt.Errorf("Subqueries are not allowed in aggregate filter%v.", agg.Filter().ErrorContext())
 				}
 			}
 		} else if _, ok := expr.(*algebra.Subquery); !ok {
@@ -776,6 +810,19 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 	}
 
 	return
+}
+
+func getFirstErrorContext(m *map[string]algebra.Aggregate) string {
+	ec := ""
+	ml, mc := math.MaxInt32, math.MaxInt32
+	for _, v := range *m {
+		l, c := v.GetErrorContext()
+		if l < ml || (l == ml && c < mc) {
+			ml, mc = l, c
+			ec = v.ErrorContext()
+		}
+	}
+	return ec
 }
 
 /*
@@ -837,7 +884,7 @@ func constrainGroupTerm(expr expression.Expression, groupKeys expression.Express
 		if rexpr == nil {
 			rexpr = expr
 		}
-		return errors.NewNotGroupKeyOrAggError(rexpr.String())
+		return errors.NewNotGroupKeyOrAggError(rexpr.String() + expr.ErrorContext())
 	}
 	return nil
 }

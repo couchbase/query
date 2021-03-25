@@ -8,7 +8,9 @@
 
 package errors
 
-import ()
+import (
+	"fmt"
+)
 
 // Parse errors - errors that are created in the parse package
 func NewParseSyntaxError(e error, msg string) Error {
@@ -19,4 +21,10 @@ func NewParseSyntaxError(e error, msg string) Error {
 		return &err{level: EXCEPTION, ICode: 3000, IKey: "parse.syntax_error", ICause: e,
 			InternalMsg: msg, InternalCaller: CallerN(1)}
 	}
+}
+
+// An error (albeit always text in another error) so that we can make use of translation
+func NewErrorContext(line, column int) Error {
+	return &err{level: EXCEPTION, ICode: 3005, IKey: "expression.error.context", ICause: nil,
+		InternalMsg: fmt.Sprintf(" (near line %d, column %d)", line, column), InternalCaller: CallerN(1)}
 }

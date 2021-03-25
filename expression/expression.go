@@ -236,6 +236,10 @@ type Expression interface {
 	   ExpressionBase
 	*/
 	ExprBase() *ExpressionBase
+
+	ErrorContext() string
+
+	GetErrorContext() (int, int)
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

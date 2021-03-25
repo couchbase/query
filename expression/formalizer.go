@@ -258,7 +258,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	}
 
 	if this.keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field %v.", identifier)
+		return nil, fmt.Errorf("Ambiguous reference to field %v%v.", identifier, expr.ErrorContext())
 	}
 
 	if this.mapKeyspace() {
@@ -306,7 +306,7 @@ func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 					}
 					return expr.Constructor()(op), nil
 				} else {
-					return nil, errors.NewAmbiguousMetaError(fnName)
+					return nil, errors.NewAmbiguousMetaError(fnName, expr.ErrorContext())
 				}
 			} else if len(expr.Operands()) == 1 && (fnName == "search_meta" || fnName == "search_score") {
 				op := expr.Operands()[0]
@@ -366,7 +366,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 			// when sarging index keys, allow variables used in index definition
 			// to be the same as a keyspace alias
 			if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
-				err = fmt.Errorf("Duplicate variable %v already in scope.", b.Variable())
+				err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.Variable(), b.Expression().ErrorContext())
 				return
 			}
 		} else {
@@ -387,7 +387,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
 				tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
 				if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
-					err = fmt.Errorf("Duplicate variable %v already in scope.", b.NameVariable())
+					err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.NameVariable(), b.Expression().ErrorContext())
 					return
 				}
 			} else {

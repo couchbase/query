@@ -121,7 +121,11 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("FROM expression", "semantics.fromExpr.requires_name_or_alias")
+		if this.fromExpr != nil && this.fromExpr.ExprBase() != nil {
+			err = errors.NewNoTermNameError("FROM expression"+this.fromExpr.ErrorContext(), "semantics.fromExpr.requires_name_or_alias")
+		} else {
+			err = errors.NewNoTermNameError("FROM expression", "semantics.fromExpr.requires_name_or_alias")
+		}
 		return nil, err
 	}
 

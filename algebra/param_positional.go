@@ -64,7 +64,7 @@ func (this *PositionalParameter) Evaluate(item value.Value, context expression.C
 	if ok {
 		return val, nil
 	} else {
-		return nil, fmt.Errorf("No value for positional parameter $%d.", this.position)
+		return nil, fmt.Errorf("No value for positional parameter $%d%v.", this.position, this.ErrorContext())
 	}
 }
 
