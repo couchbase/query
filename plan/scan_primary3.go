@@ -113,6 +113,10 @@ func (this *PrimaryScan3) Cardinality() float64 {
 	return this.cardinality
 }
 
+func (this *PrimaryScan3) GetIndex() datastore.Index {
+	return this.index
+}
+
 func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

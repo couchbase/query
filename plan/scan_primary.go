@@ -63,6 +63,10 @@ func (this *PrimaryScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *PrimaryScan) GetIndex() datastore.Index {
+	return this.index
+}
+
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

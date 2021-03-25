@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/util"
@@ -168,6 +169,22 @@ func (this *UnionScan) Streamline() SecondaryScan {
 		this.offset = scan.Offset()
 		return scan
 	}
+}
+
+func (this *UnionScan) GetIndex() datastore.Index {
+	var index datastore.Index
+	for _, child := range this.scans {
+		idx := child.GetIndex()
+		if idx == nil {
+			return nil
+		}
+		if index == nil {
+			index = idx
+		} else if idx != index {
+			return nil
+		}
+	}
+	return index
 }
 
 func (this *UnionScan) String() string {

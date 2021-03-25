@@ -46,8 +46,18 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 	   ix1 ON default (c1,c2,c3)  ===> WHERE c1 = 10 AND (c2 = 20 OR (c2 = 30 AND c3 = 40))
 	        Instead of 2 index scans on ix1 do 1 indexscan with 2 spans of different composite ranges
 	*/
-	if err == nil && scan != nil && sargLength >= orSargLength {
-		return scan, sargLength, nil
+	if err == nil && scan != nil {
+		if orErr != nil || orScan == nil || sargLength > orSargLength {
+			return scan, sargLength, nil
+		} else if sargLength == orSargLength {
+			idx := scan.GetIndex()
+			orIdx := orScan.GetIndex()
+			if idx != nil && !idx.IsPrimary() && orIdx != nil {
+				// if the UNION SCAN uses the same index underneath, just
+				// do the regular index scan
+				return scan, sargLength, nil
+			}
+		}
 	}
 
 	return orScan, orSargLength, orErr

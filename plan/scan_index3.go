@@ -203,6 +203,10 @@ func (this *IndexScan3) Cardinality() float64 {
 	return this.cardinality
 }
 
+func (this *IndexScan3) GetIndex() datastore.Index {
+	return this.index
+}
+
 func (this *IndexScan3) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

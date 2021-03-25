@@ -127,6 +127,10 @@ func (this *IndexFtsSearch) String() string {
 	return string(bytes)
 }
 
+func (this *IndexFtsSearch) GetIndex() datastore.Index {
+	return this.index
+}
+
 func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

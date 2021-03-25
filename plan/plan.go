@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -72,4 +73,7 @@ type SecondaryScan interface {
 	IsUnderNL() bool
 
 	OrderTerms() IndexKeyOrders
+
+	// get index pointer if single index used, nil if multiple indexes used
+	GetIndex() datastore.Index
 }
