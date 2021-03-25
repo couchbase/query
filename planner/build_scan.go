@@ -529,8 +529,11 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 	}
 
 	cnt := this.getDocCount(node.Alias())
-	if cnt <= 0 {
+	if cnt < 0 {
 		return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
+	} else if cnt == 0 {
+		// empty keyspace, use 1 instead to avoid divide by 0
+		cnt = 1
 	}
 	docCount := float64(cnt)
 

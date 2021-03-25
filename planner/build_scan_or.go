@@ -102,6 +102,9 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		cnt := this.getDocCount(node.Alias())
 		if cnt > 0 {
 			docCount = float64(cnt)
+		} else if cnt == 0 {
+			// empty keyspace, use 1 instead to avoid divide by 0
+			docCount = float64(1.0)
 		} else {
 			useCBO = false
 		}

@@ -653,7 +653,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 	}
 
-	useCBO := this.useCBO && (baseKeyspace.DocCount() > 0)
+	useCBO := this.useCBO && (baseKeyspace.DocCount() >= 0)
 	advisorValidate := this.advisorValidate()
 	for _, se := range sargables {
 		var spans SargSpans
