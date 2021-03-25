@@ -184,6 +184,10 @@ func (this *IndexScan2) HasDeltaKeyspace() bool {
 	return this.hasDeltaKeyspace
 }
 
+func (this *IndexScan2) GetIndex() datastore.Index {
+	return this.index
+}
+
 func (this *IndexScan2) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -123,6 +124,10 @@ func (this *OrderedIntersectScan) CoverJoinSpanExpressions(coverer *expression.C
 		}
 	}
 
+	return nil
+}
+
+func (this *OrderedIntersectScan) GetIndex() datastore.Index {
 	return nil
 }
 

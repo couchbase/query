@@ -111,6 +111,10 @@ func (this *PrimaryScan3) HasDeltaKeyspace() bool {
 	return this.hasDeltaKeyspace
 }
 
+func (this *PrimaryScan3) GetIndex() datastore.Index {
+	return this.index
+}
+
 func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

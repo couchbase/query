@@ -108,6 +108,10 @@ func (this *IndexCountScan) SetCovers(covers expression.Covers) {
 	this.covers = covers
 }
 
+func (this *IndexCountScan) GetIndex() datastore.Index {
+	return nil
+}
+
 func (this *IndexCountScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)

@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -97,6 +98,10 @@ func (this *DistinctScan) GroupAggs() *IndexGroupAggregates {
 
 func (this *DistinctScan) OrderTerms() IndexKeyOrders {
 	return nil
+}
+
+func (this *DistinctScan) GetIndex() datastore.Index {
+	return this.scan.GetIndex()
 }
 
 func (this *DistinctScan) String() string {
