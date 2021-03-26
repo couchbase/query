@@ -55,7 +55,7 @@ DevStandaloneSetup() {
        fi
     # bleve version
        if [[ ! -d ../../blevesearch/bleve/v2 ]]; then
-           (cd ../../blevesearch; git clone -b v2.0.2 http://github.com/blevesearch/bleve.git bleve/v2)
+           (cd ../../blevesearch; git clone -b v2.0.3 http://github.com/blevesearch/bleve.git bleve/v2)
        fi
     # zapx versions
        if [[ ! -d ../../blevesearch/zapx/v11 ]]; then
