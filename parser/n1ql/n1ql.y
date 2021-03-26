@@ -2730,15 +2730,22 @@ BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
  *************************************************/
 
 create_function:
-CREATE opt_replace FUNCTION func_name LPAREN parm_list RPAREN func_body
+CREATE opt_replace FUNCTION func_name
 {
-    if $8 != nil {
-	err := $8.SetVarNames($6)
+
+    // push function query context
+    yylex.(*lexer).PushQueryContext($4.QueryContext())
+}
+LPAREN parm_list RPAREN func_body
+{
+    yylex.(*lexer).PopQueryContext()
+    if $9 != nil {
+	err := $9.SetVarNames($7)
 	if err != nil {
 		yylex.Error(err.Error())
     	}
     }
-    $$ = algebra.NewCreateFunction($4, $8, $2)
+    $$ = algebra.NewCreateFunction($4, $9, $2)
 }
 ;
 

@@ -93,22 +93,23 @@ func doParse(lex *lexer) {
 }
 
 type lexer struct {
-	nex              *Lexer
-	posParam         int
-	paramCount       int
-	errs             []string
-	stmt             algebra.Statement
-	expr             expression.Expression
-	parsingStmt      bool
-	lastScannerError string
-	text             string
-	offset           int
-	namespace        string
-	queryContext     string
-	hasSaved         bool
-	saved            int
-	lval             yySymType
-	stop             bool
+	nex                    *Lexer
+	posParam               int
+	paramCount             int
+	errs                   []string
+	stmt                   algebra.Statement
+	expr                   expression.Expression
+	parsingStmt            bool
+	lastScannerError       string
+	text                   string
+	offset                 int
+	namespace              string
+	createFuncQueryContext string
+	queryContext           string
+	hasSaved               bool
+	saved                  int
+	lval                   yySymType
+	stop                   bool
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -227,6 +228,17 @@ func (this *lexer) Namespace() string {
 	return this.namespace
 }
 
+func (this *lexer) PushQueryContext(queryContext string) {
+	this.createFuncQueryContext = queryContext
+}
+
+func (this *lexer) PopQueryContext() {
+	this.createFuncQueryContext = ""
+}
+
 func (this *lexer) QueryContext() string {
+	if this.createFuncQueryContext != "" {
+		return this.createFuncQueryContext
+	}
 	return this.queryContext
 }
