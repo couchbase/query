@@ -118,6 +118,7 @@ var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_
 
 func init() {
 	debug.SetGCPercent(_GOGC_PERCENT)
+	setOpenFilesLimit()
 }
 
 func main() {

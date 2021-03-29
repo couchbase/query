@@ -10,5 +10,39 @@
 
 package main
 
+import (
+	"syscall"
+
+	"github.com/couchbase/query/logging"
+)
+
 func HideConsole(_ bool) {
+}
+
+func setOpenFilesLimit() {
+	var lim syscall.Rlimit
+	var err error
+	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &lim)
+	if err == nil {
+		logging.Infof("Current nofiles rlimit: %v (max: %v)", lim.Cur, lim.Max)
+		if lim.Max != lim.Cur {
+			lim.Cur = lim.Max
+			err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &lim)
+			if err != nil && lim.Cur > 1048576 {
+				lim.Cur = 1048576
+				err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &lim)
+			}
+			if err != nil && lim.Cur > 12288 {
+				lim.Cur = 12288
+				err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &lim)
+			}
+			if err != nil {
+				logging.Warnf("Unable to increase nofiles limit to %v: %v", lim.Cur, err)
+			} else {
+				logging.Infof("nofiles limit set to: %v", lim.Cur)
+			}
+		}
+	} else {
+		logging.Warnf("Unable to query current nofiles limit: %v", err)
+	}
 }

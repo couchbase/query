@@ -28,3 +28,6 @@ func HideConsole(hide bool) {
 		sw.Call(hwnd, SW_RESTORE)
 	}
 }
+
+func setOpenFilesLimit() {
+}
