@@ -1358,14 +1358,14 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		if ks.cbKeyspace.collectionsManifestUid != uid {
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
+			if isSysBucket(ks.cbKeyspace.name) {
+				checkSysBucket = true
+			}
 		}
 
 		// the KV nodes list has changed, force a refresh on next use
 		if len(ks.cbKeyspace.cbbucket.VBServerMap().ServerList) != len(bucket.VBSMJson.ServerList) {
-			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
-		}
-		if isSysBucket(ks.cbKeyspace.name) {
-			checkSysBucket = true
+			ks.cbKeyspace.flags |= _NEEDS_REFRESH
 		}
 		ks.cbKeyspace.Unlock()
 	} else {
@@ -1760,7 +1760,7 @@ func (k *keyspace) checkRefresh(err error) {
 		k.Unlock()
 	} else if cb.IsUnknownCollection(err) {
 		k.Lock()
-		k.flags |= _NEEDS_REFRESH
+		k.flags |= _NEEDS_MANIFEST
 		k.Unlock()
 	}
 }
