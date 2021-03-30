@@ -1,4 +1,14 @@
 /*
+Copyright 2014-Present Couchbase, Inc.
+
+Use of this software is governed by the Business Source License included in
+the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
+file, in accordance with the Business Source License, use of this software will
+be governed by the Apache License, Version 2.0, included in the file
+licenses/APL.txt.
+*/
+
+/*
 NOTE:
 -Receiver “this” is not a keyword in Go, but is defined that way so as to maintain consistency.
 -Methods to access fields : In order to maintain encapsulation on value in the const struct to  prevent it from being set.
