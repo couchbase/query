@@ -10,8 +10,12 @@
 package auth
 
 import (
-	"github.com/couchbase/cbauth"
+	"encoding/base64"
+	"fmt"
 	"net/http"
+	"strings"
+
+	"github.com/couchbase/cbauth"
 )
 
 type Privilege int
@@ -138,3 +142,29 @@ func NewCredentials() *Credentials {
 Type AuthenticatedUsers is a list of users whose credentials checked out.
 */
 type AuthenticatedUsers []string
+
+// FIXME this should be provided by cbauth in order to support on behalf of
+func GetWebAuth(req *http.Request) (string, string, error) {
+	headers := req.Header["Authorization"]
+	if len(headers) == 0 {
+		return "", "", fmt.Errorf("no http request authorization found")
+	} else if len(headers) > 1 {
+		return "", "", fmt.Errorf("too many http request authorizations found")
+	}
+	if !strings.HasPrefix(headers[0], "Basic ") {
+		return "", "", fmt.Errorf("no http request authorization found")
+	}
+	encoded_creds := strings.Split(headers[0], " ")[1]
+	decoded_creds, err := base64.StdEncoding.DecodeString(encoded_creds)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Authorization header is in format "user:pass"
+	// per http://tools.ietf.org/html/rfc1945#section-10.2
+	u_details := strings.Split(string(decoded_creds), ":")
+	if len(u_details) == 2 {
+		return u_details[0], u_details[1], nil
+	}
+	return "", "", fmt.Errorf("no valid user details found")
+}

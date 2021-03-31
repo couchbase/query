@@ -121,8 +121,8 @@ func (this *FTSQuery) Evaluate(item value.Value, context expression.Context) (va
 	iter := 0
 	for {
 		if len(this.FtsCache) == 0 || errC != nil {
-			// Get current node auth credentials
-			user = this.getCredentials(context, "")
+			// Get current node admin auth credentials
+			user = this.getUrlCredentials(context, "")
 			// This is called when cache is empty
 			err = this.PopulateFTSCache(context, user)
 			if err != nil {
@@ -362,6 +362,19 @@ func (this *FTSQuery) PopulateFTSCache(context expression.Context, user string) 
 func ftsUrl(nodeIp, index string, portNo int64) value.Value {
 	return value.NewValue("http://" + nodeIp + ":" + portStr(portNo) + _FTS_PATH + index + _QUERY_PATH)
 }
+
+// get admin credentials for a node
+func (this *FTSQuery) getUrlCredentials(context expression.Context, hname string) (user string) {
+	up := context.(expression.CurlContext).UrlCredentials(hname)
+	for i, k := range up.Users {
+		if i != "" && k != "" {
+			user = i + ":" + k
+			break
+		}
+	}
+	return
+}
+
 func (this *FTSQuery) getCredentials(context expression.Context, hname string) (user string) {
 	// Get the credentials
 	// If there are input credentials in the hostname then use those
@@ -370,11 +383,17 @@ func (this *FTSQuery) getCredentials(context expression.Context, hname string) (
 	up := context.(expression.CurlContext).Credentials()
 	if up == nil {
 		up = context.(expression.CurlContext).UrlCredentials(hname)
-	}
-	for i, k := range up.Users {
-		if i != "" && k != "" {
-			user = i + ":" + k
-			break
+	} else if up.HttpRequest != nil {
+		// FIXME this should be done through cbauth to handle on behalf of execution
+		// cbauth does not yet offer such capability
+		u, p, _ := auth.GetWebAuth(up.HttpRequest)
+		user = u + ":" + p
+	} else {
+		for i, k := range up.Users {
+			if i != "" && k != "" {
+				user = i + ":" + k
+				break
+			}
 		}
 	}
 
