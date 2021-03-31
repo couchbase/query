@@ -295,7 +295,7 @@ func MakeKVRandomDocumentRetriever(serverURL, login, serverPass, bucket, bucketP
 	}
 
 	if len(bucketPass) > 0 {
-		kvrdr.bucket, err = pool.GetBucketWithAuth(bucket, bucket, bucketPass)
+		kvrdr.bucket, err = pool.GetBucketWithAuth(bucket, login, bucketPass)
 	} else {
 		kvrdr.bucket, err = pool.GetBucket(bucket)
 	}
