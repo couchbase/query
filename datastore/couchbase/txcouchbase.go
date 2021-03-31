@@ -85,7 +85,20 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		}
 
 		if resume {
+			atrCollectionName := txContext.AtrCollection()
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
+			if terr == nil && atrCollectionName != "" {
+				// If cluster/request level has atrCollectionName and resumed transaction
+				// doesn't have atrlocation, set it.
+				atrl := transaction.GetATRLocation()
+				if atrl.Agent == nil && atrl.ScopeName == "" && atrl.CollectionName == "" {
+					atrl.ScopeName, atrl.CollectionName, atrl.Agent,
+						terr = AtrCollectionAgentPovider(atrCollectionName)
+					if terr == nil {
+						terr = transaction.SetATRLocation(atrl)
+					}
+				}
+			}
 		} else {
 			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
 				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
