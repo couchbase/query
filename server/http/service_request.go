@@ -133,35 +133,35 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		}
 	}
 
-	// handle parameters that can't be handled dynamically
-	// get credentials even in case of error - for auditing and logging
-	pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
+	if err == nil {
+		// handle parameters that can't be handled dynamically
+		// get credentials even in case of error - for auditing and logging
+		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
 
-	// Creds check
-	creds, err1 := getCredentials(httpArgs)
+		// Creds check
+		creds, err1 := getCredentials(httpArgs)
 
-	if err1 == nil {
-		if len(creds.Users) == 0 && !pwdlessbkts {
-			err1 = errors.NewAdminAuthError(err, "cause: No credentials provided")
-		} else {
-			creds.HttpRequest = req
-			rv.SetCredentials(creds)
+		if err1 == nil {
+			if len(creds.Users) == 0 && !pwdlessbkts {
+				err1 = errors.NewAdminAuthError(err, "cause: No credentials provided")
+			} else {
+				creds.HttpRequest = req
+				rv.SetCredentials(creds)
 
-			// This means we got creds. Now we need to see if they are authorized users.
-			if !pwdlessbkts {
-				var authUsers auth.AuthenticatedUsers
+				// This means we got creds. Now we need to see if they are authorized users.
+				if !pwdlessbkts {
+					var authUsers auth.AuthenticatedUsers
 
-				authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
-				if authUsers == nil {
+					authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
+					if authUsers == nil {
 
-					// This means the users associated with the input credentials do not have authorization.
-					// Throw an error
-					err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
+						// This means the users associated with the input credentials do not have authorization.
+						// Throw an error
+						err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
+					}
 				}
 			}
 		}
-	}
-	if err == nil {
 		err = err1
 	}
 
