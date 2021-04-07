@@ -494,6 +494,9 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 						newOrigKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
 						newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces,
 							newOrigKeyspaces, this.isOnclause, orIsJoin)
+						if this.doSelec && !baseKspace.IsPrimaryUnnest() && baseKspace.DocCount() >= 0 {
+							optFilterSelectivity(newFilter, this.advisorValidate, this.context)
+						}
 						baseKspace.AddFilter(newFilter)
 					}
 				}
