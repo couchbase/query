@@ -18,7 +18,7 @@ import (
 
 func getScope(parts ...string) (datastore.Scope, errors.Error) {
 	if len(parts) != 4 {
-		return nil, errors.NewDatastoreInvalidPathPartsError(parts...)
+		return nil, errors.NewDatastoreInvalidCollectionPartsError(parts...)
 	}
 	return datastore.GetScope(parts[0:3]...)
 }

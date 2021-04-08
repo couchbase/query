@@ -230,7 +230,7 @@ func (e *err) SetCause(cause interface{}) {
 
 // only put errors in the reserved range here (7000-9999)
 func NewNotImplemented(feature string) Error {
-	return &err{level: EXCEPTION, ICode: 9999, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not yet implemented: %v", feature), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: 9999, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not available: %v", feature), InternalCaller: CallerN(1)}
 }
 
 // Returns "FileName:LineNum" of caller.
