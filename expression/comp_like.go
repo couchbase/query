@@ -11,7 +11,6 @@ package expression
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/couchbase/query/value"
 )
@@ -149,10 +148,8 @@ characters. Escape regexp special characters. Add start and end
 boundaries.
 */
 func likeCompile(s string) (re, part *regexp.Regexp, err error) {
-	// un-quote backslashes so they retain meaning for LIKE to RE transformation
-	s = strings.ReplaceAll(regexp.QuoteMeta(s), "\\\\", "\\")
-
-	repl := regexp.MustCompile("\\\\\\\\|\\\\%|\\\\_|_|%")
+	s = regexp.QuoteMeta(s)
+	repl := regexp.MustCompile(`\\_|\\%|_|%`)
 	s = repl.ReplaceAllStringFunc(s, replacer)
 
 	part, err = regexp.Compile(s)
@@ -160,9 +157,22 @@ func likeCompile(s string) (re, part *regexp.Regexp, err error) {
 		return
 	}
 
-	// turn *on* $ and . matching embedded \n (flag m)
-	// In the future we'll likely want to revise this to turn it off to match entire search space instead
-	s = "(?ms)^" + s + "$"
+	/* MB-19230 only add ^ and $ if we are not
+	   starting or ending with %.
+	   turn off $ and . matching \n
+	*/
+	if s != "" && s[0] != '%' && s[0] != '_' {
+		s = "^" + s
+	}
+	l := len(s)
+	if l > 0 && s[l-1] != '%' && s[l-1] != '_' {
+		s = s + "$"
+
+		// MB-35979 use $ for pattern ending with \%
+	} else if l > 1 && s[l-2] == '\\' {
+		s = s + "$"
+	}
+	s = "(?ms)" + s
 
 	re, err = regexp.Compile(s)
 	return
@@ -181,15 +191,15 @@ All these characters need to be replaced correctly.
 */
 func replacer(s string) string {
 	switch s {
-	case "\\_":
+	case `\_`:
 		return "_"
-	case "\\%":
+	case `\%`:
 		return "%"
-	case "_":
+	case `_`:
 		return "(.)"
-	case "%":
+	case `%`:
 		return "(.*)"
-	default: // "\\\\"
+	default:
 		return s
 	}
 }
