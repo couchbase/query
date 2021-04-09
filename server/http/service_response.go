@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
@@ -703,7 +704,19 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			if err != nil || !this.writer.printf("%s\"phaseOperators\": %s", newPrefix, e) {
 				logging.Infof("Error writing phaseOperators: %v", err)
 			}
+			needComma = true
 		}
+
+		if needComma && !this.writeString(",") {
+			return false
+		}
+		if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
+			logging.Infof("Error writing request time")
+		}
+		if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix, distributed.RemoteAccess().WhoAmI()) {
+			logging.Infof("Error writing servicing host")
+		}
+		needComma = true
 	}
 	if p == server.ProfOn || p == server.ProfBench {
 		timings := this.GetTimings()
