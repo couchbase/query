@@ -954,11 +954,27 @@ STAR
 |
 expr DOT STAR
 {
+    switch e := $1.(type) {
+      case *expression.All:
+        if e.Distinct() {
+          return yylex.(*lexer).FatalError("Syntax error - DISTINCT out of place")
+        } else {
+          return yylex.(*lexer).FatalError("Syntax error - ALL out of place")
+        }
+    }
     $$ = algebra.NewResultTerm($1, true, "")
 }
 |
 expr opt_as_alias
 {
+    switch e := $1.(type) {
+      case *expression.All:
+        if e.Distinct() {
+          return yylex.(*lexer).FatalError("Syntax error - DISTINCT out of place")
+        } else {
+          return yylex.(*lexer).FatalError("Syntax error - ALL out of place")
+        }
+    }
     $$ = algebra.NewResultTerm($1, false, $2)
 }
 ;
