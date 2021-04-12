@@ -28,15 +28,19 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
+	first, ferr := node.First().Accept(this)
+	if ferr != nil && !this.indexAdvisor {
+		return nil, ferr
 	}
 
 	this.cover = node.Second()
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
+	second, serr := node.Second().Accept(this)
+
+	if ferr != nil && this.indexAdvisor {
+		return nil, ferr
+	}
+	if serr != nil {
+		return nil, serr
 	}
 
 	cost := OPT_COST_NOT_AVAIL
@@ -69,15 +73,18 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	}()
 	this.cover = node.First()
 
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
+	first, ferr := node.First().Accept(this)
+	if ferr != nil && !this.indexAdvisor {
+		return nil, ferr
 	}
 
 	this.cover = node.Second()
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
+	second, serr := node.Second().Accept(this)
+	if ferr != nil && this.indexAdvisor {
+		return nil, ferr
+	}
+	if serr != nil {
+		return nil, serr
 	}
 
 	cost := OPT_COST_NOT_AVAIL
@@ -107,18 +114,21 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
+	first, ferr := node.First().Accept(this)
+	if ferr != nil && !this.indexAdvisor {
+		return nil, ferr
 	}
 
 	// Do not inject DISTINCT into second term (done at run time)
 	this.setOpDistinct = false
 
 	this.cover = node.Second()
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
+	second, serr := node.Second().Accept(this)
+	if ferr != nil && this.indexAdvisor {
+		return nil, ferr
+	}
+	if serr != nil {
+		return nil, serr
 	}
 
 	cost := OPT_COST_NOT_AVAIL
@@ -144,15 +154,18 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	}()
 	this.cover = node.First()
 
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
+	first, ferr := node.First().Accept(this)
+	if ferr != nil && !this.indexAdvisor {
+		return nil, ferr
 	}
 
 	this.cover = node.Second()
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
+	second, serr := node.Second().Accept(this)
+	if ferr != nil && this.indexAdvisor {
+		return nil, ferr
+	}
+	if serr != nil {
+		return nil, serr
 	}
 
 	cost := OPT_COST_NOT_AVAIL
@@ -182,18 +195,21 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
+	first, ferr := node.First().Accept(this)
+	if ferr != nil && !this.indexAdvisor {
+		return nil, ferr
 	}
 
 	// Do not inject DISTINCT into second term (done at run time)
 	this.setOpDistinct = false
 
 	this.cover = node.Second()
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
+	second, serr := node.Second().Accept(this)
+	if ferr != nil && this.indexAdvisor {
+		return nil, ferr
+	}
+	if serr != nil {
+		return nil, serr
 	}
 
 	cost := OPT_COST_NOT_AVAIL
@@ -219,15 +235,18 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	}()
 	this.cover = node.First()
 
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
+	first, ferr := node.First().Accept(this)
+	if ferr != nil && !this.indexAdvisor {
+		return nil, ferr
 	}
 
 	this.cover = node.Second()
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
+	second, serr := node.Second().Accept(this)
+	if ferr != nil && this.indexAdvisor {
+		return nil, ferr
+	}
+	if serr != nil {
+		return nil, serr
 	}
 
 	cost := OPT_COST_NOT_AVAIL
