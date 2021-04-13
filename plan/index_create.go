@@ -87,6 +87,8 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 	if this.node.With() != nil {
 		r["with"] = this.node.With()
 	}
+	// invert so the default if not present is to fail if exists
+	r["ifNotExists"] = !this.node.FailIfExists()
 
 	if f != nil {
 		f(r)
@@ -112,8 +114,9 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 			Exprs    []string                `json:"exprs"`
 			Strategy datastore.PartitionType `json:"strategy"`
 		} `json:"partition"`
-		Where string          `json:"where"`
-		With  json.RawMessage `json:"with"`
+		Where       string          `json:"where"`
+		With        json.RawMessage `json:"with"`
+		IfNotExists bool            `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -182,8 +185,9 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
 
+	// invert IfNotExists to obtain FailIfExists
 	this.node = algebra.NewCreateIndex(_unmarshalled.Index, ksref,
-		keys, partition, where, _unmarshalled.Using, with)
+		keys, partition, where, _unmarshalled.Using, with, !_unmarshalled.IfNotExists)
 	return nil
 }
 

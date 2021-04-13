@@ -25,16 +25,18 @@ drop collection statement, namely the keyspace and the collection name.
 type DropCollection struct {
 	statementBase
 
-	keyspace *KeyspaceRef `json:"keyspace"`
+	keyspace        *KeyspaceRef `json:"keyspace"`
+	failIfNotExists bool         `json:"failIfNotExists"`
 }
 
 /*
 The function NewDropCollection returns a pointer to the
 DropCollection struct with the input argument values as fields.
 */
-func NewDropCollection(keyspace *KeyspaceRef) *DropCollection {
+func NewDropCollection(keyspace *KeyspaceRef, failIfNotExists bool) *DropCollection {
 	rv := &DropCollection{
-		keyspace: keyspace,
+		keyspace:        keyspace,
+		failIfNotExists: failIfNotExists,
 	}
 
 	rv.stmt = rv
@@ -108,9 +110,14 @@ Marshals input receiver into byte array.
 func (this *DropCollection) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "dropCollection"}
 	r["keyspaceRef"] = this.keyspace
+	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)
 }
 
 func (this *DropCollection) Type() string {
 	return "DROP_COLLECTION"
+}
+
+func (this *DropCollection) FailIfNotExists() bool {
+	return this.failIfNotExists
 }

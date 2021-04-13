@@ -29,11 +29,12 @@ string.
 type CreatePrimaryIndex struct {
 	statementBase
 
-	name      string              `json:"name"`
-	keyspace  *KeyspaceRef        `json:"keyspace"`
-	partition *IndexPartitionTerm `json:"partition"`
-	using     datastore.IndexType `json:"using"`
-	with      value.Value         `json:"with"`
+	name         string              `json:"name"`
+	keyspace     *KeyspaceRef        `json:"keyspace"`
+	partition    *IndexPartitionTerm `json:"partition"`
+	using        datastore.IndexType `json:"using"`
+	with         value.Value         `json:"with"`
+	failIfExists bool                `json:"failIfExists"`
 }
 
 /*
@@ -42,13 +43,14 @@ to the CreatePrimaryIndex struct with the input
 argument values as fields.
 */
 func NewCreatePrimaryIndex(name string, keyspace *KeyspaceRef, partition *IndexPartitionTerm,
-	using datastore.IndexType, with value.Value) *CreatePrimaryIndex {
+	using datastore.IndexType, with value.Value, failIfExists bool) *CreatePrimaryIndex {
 	rv := &CreatePrimaryIndex{
-		name:      name,
-		keyspace:  keyspace,
-		partition: partition,
-		using:     using,
-		with:      with,
+		name:         name,
+		keyspace:     keyspace,
+		partition:    partition,
+		using:        using,
+		with:         with,
+		failIfExists: failIfExists,
 	}
 
 	rv.stmt = rv
@@ -153,6 +155,10 @@ func (this *CreatePrimaryIndex) With() value.Value {
 	return this.with
 }
 
+func (this *CreatePrimaryIndex) FailIfExists() bool {
+	return this.failIfExists
+}
+
 /*
 Marshals input receiver into byte array.
 */
@@ -167,6 +173,7 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	if this.with != nil {
 		r["with"] = this.with
 	}
+	r["failIfExists"] = this.failIfExists
 
 	return json.Marshal(r)
 }

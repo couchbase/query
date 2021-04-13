@@ -25,16 +25,18 @@ create collection statement.
 type CreateCollection struct {
 	statementBase
 
-	keyspace *KeyspaceRef `json:"keyspace"`
+	keyspace     *KeyspaceRef `json:"keyspace"`
+	failIfExists bool         `json:"failIfExists"`
 }
 
 /*
 The function NewCreateCollection returns a pointer to the
 CreateCollection struct with the input argument values as fields.
 */
-func NewCreateCollection(keyspace *KeyspaceRef) *CreateCollection {
+func NewCreateCollection(keyspace *KeyspaceRef, failIfExists bool) *CreateCollection {
 	rv := &CreateCollection{
-		keyspace: keyspace,
+		keyspace:     keyspace,
+		failIfExists: failIfExists,
 	}
 
 	rv.stmt = rv
@@ -109,9 +111,14 @@ Marshals input receiver into byte array.
 func (this *CreateCollection) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createCollection"}
 	r["keyspaceRef"] = this.keyspace
+	r["failIfExists"] = this.failIfExists
 	return json.Marshal(r)
 }
 
 func (this *CreateCollection) Type() string {
 	return "CREATE_COLLECTION"
+}
+
+func (this *CreateCollection) FailIfExists() bool {
+	return this.failIfExists
 }

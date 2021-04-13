@@ -52,6 +52,8 @@ func (this *DropCollection) MarshalJSON() ([]byte, error) {
 func (this *DropCollection) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DropCollection"}
 	this.node.Keyspace().MarshalKeyspace(r)
+	// invert so the default if not present is to fail if not exists
+	r["ifExists"] = !this.node.FailIfNotExists()
 	if f != nil {
 		f(r)
 	}
@@ -65,6 +67,7 @@ func (this *DropCollection) UnmarshalJSON(body []byte) error {
 		Bucket    string `json:"bucket"`
 		Scope     string `json:"scope"`
 		Keyspace  string `json:"keyspace"`
+		IfExists  bool   `json:"ifExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -79,7 +82,8 @@ func (this *DropCollection) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
-	this.node = algebra.NewDropCollection(ksref)
+	// invert IfExists to obtain FailIfNotExists
+	this.node = algebra.NewDropCollection(ksref, !_unmarshalled.IfExists)
 
 	return nil
 }

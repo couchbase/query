@@ -25,16 +25,18 @@ drop scope statement.
 type DropScope struct {
 	statementBase
 
-	scope *ScopeRef `json:"scope"`
+	scope           *ScopeRef `json:"scope"`
+	failIfNotExists bool      `json:"failIfNotExists"`
 }
 
 /*
 The function NewDropScope returns a pointer to the
 DropScope struct with the input argument values as fields.
 */
-func NewDropScope(scope *ScopeRef) *DropScope {
+func NewDropScope(scope *ScopeRef, failIfNotExists bool) *DropScope {
 	rv := &DropScope{
-		scope: scope,
+		scope:           scope,
+		failIfNotExists: failIfNotExists,
 	}
 
 	rv.stmt = rv
@@ -108,9 +110,14 @@ Marshals input receiver into byte array.
 func (this *DropScope) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "dropScope"}
 	r["scopeRef"] = this.scope
+	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)
 }
 
 func (this *DropScope) Type() string {
 	return "DROP_SCOPE"
+}
+
+func (this *DropScope) FailIfNotExists() bool {
+	return this.failIfNotExists
 }

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -246,4 +247,40 @@ func CallerN(level int) string {
 	}
 	return fmt.Sprintf("%s:%d",
 		strings.Split(path.Base(fname), ".")[0], lineno)
+}
+
+// In the future we should be able to check error codes or keys rather than matching error text, or even base it on error type but
+// for now we can only check the text
+func IsExistsError(object string, e error) bool {
+	re := regexp.MustCompile(object + ".*already exists")
+	return re.Match([]byte(e.Error()))
+}
+
+func IsNotFoundError(object string, e error) bool {
+	re := regexp.MustCompile(object + ".*not found")
+	return re.Match([]byte(e.Error()))
+}
+
+func IsIndexExistsError(e error) bool {
+	return IsExistsError("Index", e)
+}
+
+func IsScopeExistsError(e error) bool {
+	return IsExistsError("Scope", e)
+}
+
+func IsCollectionExistsError(e error) bool {
+	return IsExistsError("Collection", e)
+}
+
+func IsIndexNotFoundError(e error) bool {
+	return IsNotFoundError("Index", e)
+}
+
+func IsScopeNotFoundError(e error) bool {
+	return IsNotFoundError("Scope", e)
+}
+
+func IsCollectionNotFoundError(e error) bool {
+	return IsNotFoundError("Collection", e)
 }

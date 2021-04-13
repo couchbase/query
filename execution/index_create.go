@@ -81,7 +81,11 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			_, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
 				indexPartition, node.Where(), node.With())
 			if err != nil {
-				context.Error(err)
+				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
+					context.Error(err)
+				} else {
+					err = nil
+				}
 				return
 			}
 		} else {
@@ -100,7 +104,11 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 				_, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
 					rangeKeys, node.Where(), node.With())
 				if err != nil {
-					context.Error(err)
+					if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
+						context.Error(err)
+					} else {
+						err = nil
+					}
 					return
 				}
 			} else {
@@ -112,7 +120,11 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 				_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
 					node.RangeKeys(), node.Where(), node.With())
 				if err != nil {
-					context.Error(err)
+					if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
+						context.Error(err)
+					} else {
+						err = nil
+					}
 					return
 				}
 			}

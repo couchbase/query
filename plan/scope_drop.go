@@ -52,6 +52,8 @@ func (this *DropScope) MarshalJSON() ([]byte, error) {
 func (this *DropScope) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DropScope"}
 	this.node.Scope().MarshalKeyspace(r)
+	// invert so the default if not present is to fail if not exists
+	r["ifExists"] = !this.node.FailIfNotExists()
 	if f != nil {
 		f(r)
 	}
@@ -64,6 +66,7 @@ func (this *DropScope) UnmarshalJSON(body []byte) error {
 		Namespace string `json:"namespace"`
 		Bucket    string `json:"bucket"`
 		Scope     string `json:"scope"`
+		IfExists  bool   `json:"ifExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -77,7 +80,8 @@ func (this *DropScope) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewDropScope(scpref)
+	// invert IfExists to obtain FailIfNotExists
+	this.node = algebra.NewDropScope(scpref, !_unmarshalled.IfExists)
 
 	return nil
 }

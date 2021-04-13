@@ -52,6 +52,9 @@ func (this *CreateCollection) MarshalBase(f func(map[string]interface{})) map[st
 	r := map[string]interface{}{"#operator": "CreateCollection"}
 	this.node.Keyspace().MarshalKeyspace(r)
 
+	// invert so the default if not present is to fail if exists
+	r["ifNotExists"] = !this.node.FailIfExists()
+
 	if f != nil {
 		f(r)
 	}
@@ -60,11 +63,12 @@ func (this *CreateCollection) MarshalBase(f func(map[string]interface{})) map[st
 
 func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Namespace string `json:"namespace"`
-		Bucket    string `json:"bucket"`
-		Scope     string `json:"scope"`
-		Keyspace  string `json:"keyspace"`
+		_           string `json:"#operator"`
+		Namespace   string `json:"namespace"`
+		Bucket      string `json:"bucket"`
+		Scope       string `json:"scope"`
+		Keyspace    string `json:"keyspace"`
+		IfNotExists bool   `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -79,7 +83,8 @@ func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewCreateCollection(ksref)
+	// invert IfNotExists to obtain FailIfExists
+	this.node = algebra.NewCreateCollection(ksref, !_unmarshalled.IfNotExists)
 	return nil
 }
 

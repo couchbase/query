@@ -25,16 +25,18 @@ create scope statement.
 type CreateScope struct {
 	statementBase
 
-	scope *ScopeRef `json:"scope"`
+	scope        *ScopeRef `json:"scope"`
+	failIfExists bool      `json:"failIfExists"`
 }
 
 /*
 The function NewCreateScope returns a pointer to the
 CreateScope struct with the input argument values as fields.
 */
-func NewCreateScope(scope *ScopeRef) *CreateScope {
+func NewCreateScope(scope *ScopeRef, failIfExists bool) *CreateScope {
 	rv := &CreateScope{
-		scope: scope,
+		scope:        scope,
+		failIfExists: failIfExists,
 	}
 
 	rv.stmt = rv
@@ -109,9 +111,14 @@ Marshals input receiver into byte array.
 func (this *CreateScope) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createScope"}
 	r["scopeRef"] = this.scope
+	r["failIfExists"] = this.failIfExists
 	return json.Marshal(r)
 }
 
 func (this *CreateScope) Type() string {
 	return "CREATE_SCOPE"
+}
+
+func (this *CreateScope) FailIfExists() bool {
+	return this.failIfExists
 }

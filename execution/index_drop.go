@@ -62,7 +62,9 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_SERVTIME)
 		index := this.plan.Index()
 		if index == nil {
-			context.Error(errors.NewCbIndexNotFoundError(nil))
+			if this.plan.Node().FailIfNotExists() {
+				context.Error(errors.NewCbIndexNotFoundError(nil))
+			}
 			return
 		}
 		err := index.Drop(context.RequestId())

@@ -52,6 +52,9 @@ func (this *CreateScope) MarshalBase(f func(map[string]interface{})) map[string]
 	r := map[string]interface{}{"#operator": "CreateScope"}
 	this.node.Scope().MarshalKeyspace(r)
 
+	// invert so the default if not present is to fail if exists
+	r["ifNotExists"] = !this.node.FailIfExists()
+
 	if f != nil {
 		f(r)
 	}
@@ -60,10 +63,11 @@ func (this *CreateScope) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *CreateScope) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string `json:"#operator"`
-		Namespace string `json:"namespace"`
-		Bucket    string `json:"bucket"`
-		Scope     string `json:"scope"`
+		_           string `json:"#operator"`
+		Namespace   string `json:"namespace"`
+		Bucket      string `json:"bucket"`
+		Scope       string `json:"scope"`
+		IfNotExists bool   `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -77,7 +81,8 @@ func (this *CreateScope) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewCreateScope(scpref)
+	// invert IfNotExists to obtain FailIfExists
+	this.node = algebra.NewCreateScope(scpref, !_unmarshalled.IfNotExists)
 	return nil
 }
 

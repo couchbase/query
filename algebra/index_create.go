@@ -34,13 +34,14 @@ index value into the document.
 type CreateIndex struct {
 	statementBase
 
-	name      string                `json:"name"`
-	keyspace  *KeyspaceRef          `json:"keyspace"`
-	keys      IndexKeyTerms         `json:"keys"`
-	partition *IndexPartitionTerm   `json:"partition"`
-	where     expression.Expression `json:"where"`
-	using     datastore.IndexType   `json:"using"`
-	with      value.Value           `json:"with"`
+	name         string                `json:"name"`
+	keyspace     *KeyspaceRef          `json:"keyspace"`
+	keys         IndexKeyTerms         `json:"keys"`
+	partition    *IndexPartitionTerm   `json:"partition"`
+	where        expression.Expression `json:"where"`
+	using        datastore.IndexType   `json:"using"`
+	with         value.Value           `json:"with"`
+	failIfExists bool                  `json:"failIfExists"`
 }
 
 /*
@@ -48,15 +49,16 @@ The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
 func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, partition *IndexPartitionTerm,
-	where expression.Expression, using datastore.IndexType, with value.Value) *CreateIndex {
+	where expression.Expression, using datastore.IndexType, with value.Value, failIfExists bool) *CreateIndex {
 	rv := &CreateIndex{
-		name:      name,
-		keyspace:  keyspace,
-		keys:      keys,
-		partition: partition,
-		where:     where,
-		using:     using,
-		with:      with,
+		name:         name,
+		keyspace:     keyspace,
+		keys:         keys,
+		partition:    partition,
+		where:        where,
+		using:        using,
+		with:         with,
+		failIfExists: failIfExists,
 	}
 
 	rv.stmt = rv
@@ -194,6 +196,10 @@ func (this *CreateIndex) With() value.Value {
 	return this.with
 }
 
+func (this *CreateIndex) FailIfExists() bool {
+	return this.failIfExists
+}
+
 func (this *CreateIndex) SeekKeys() expression.Expressions {
 	return nil
 }
@@ -220,6 +226,7 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	if this.with != nil {
 		r["with"] = this.with
 	}
+	r["failIfExists"] = this.failIfExists
 
 	return json.Marshal(r)
 }

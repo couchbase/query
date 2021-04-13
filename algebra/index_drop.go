@@ -26,20 +26,22 @@ drop index statement, namely the keyspace and the index name.
 type DropIndex struct {
 	statementBase
 
-	keyspace *KeyspaceRef        `json:"keyspace"`
-	name     string              `json:"name"`
-	using    datastore.IndexType `json:"using"`
+	keyspace        *KeyspaceRef        `json:"keyspace"`
+	name            string              `json:"name"`
+	using           datastore.IndexType `json:"using"`
+	failIfNotExists bool                `json:"failIfNotExists"`
 }
 
 /*
 The function NewDropIndex returns a pointer to the
 DropIndex struct with the input argument values as fields.
 */
-func NewDropIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType) *DropIndex {
+func NewDropIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType, failIfNotExists bool) *DropIndex {
 	rv := &DropIndex{
-		keyspace: keyspace,
-		name:     name,
-		using:    using,
+		keyspace:        keyspace,
+		name:            name,
+		using:           using,
+		failIfNotExists: failIfNotExists,
 	}
 
 	rv.stmt = rv
@@ -114,6 +116,10 @@ func (this *DropIndex) Using() datastore.IndexType {
 	return this.using
 }
 
+func (this *DropIndex) FailIfNotExists() bool {
+	return this.failIfNotExists
+}
+
 /*
 Marshals input receiver into byte array.
 */
@@ -122,6 +128,7 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
 	r["using"] = this.using
+	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)
 }
 

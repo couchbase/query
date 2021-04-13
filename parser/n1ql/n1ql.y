@@ -424,7 +424,7 @@ tokOffset    int
 %type <groupTerms>       group_terms
 %type <expr>             limit opt_limit
 %type <expr>             offset opt_offset
-%type <b>                dir opt_dir
+%type <b>                dir opt_dir opt_if_not_exists opt_if_exists
 
 %type <statement>        stmt_body
 %type <statement>        stmt advise explain prepare execute select_stmt dml_stmt ddl_stmt
@@ -2406,9 +2406,9 @@ REVOKE role_list ON keyspace_scope_list FROM user_list
  *************************************************/
 
 create_scope:
-CREATE SCOPE named_scope_ref
+CREATE SCOPE named_scope_ref opt_if_not_exists
 {
-    $$ = algebra.NewCreateScope($3)
+    $$ = algebra.NewCreateScope($3, $4)
 }
 ;
 
@@ -2419,9 +2419,9 @@ CREATE SCOPE named_scope_ref
  *************************************************/
 
 drop_scope:
-DROP SCOPE named_scope_ref
+DROP SCOPE named_scope_ref opt_if_exists
 {
-    $$ = algebra.NewDropScope($3)
+    $$ = algebra.NewDropScope($3, $4)
 }
 ;
 
@@ -2432,9 +2432,9 @@ DROP SCOPE named_scope_ref
  *************************************************/
 
 create_collection:
-CREATE COLLECTION named_keyspace_ref
+CREATE COLLECTION named_keyspace_ref opt_if_not_exists
 {
-    $$ = algebra.NewCreateCollection($3)
+    $$ = algebra.NewCreateCollection($3, $4)
 }
 ;
 
@@ -2445,9 +2445,9 @@ CREATE COLLECTION named_keyspace_ref
  *************************************************/
 
 drop_collection:
-DROP COLLECTION named_keyspace_ref
+DROP COLLECTION named_keyspace_ref opt_if_exists
 {
-    $$ = algebra.NewDropCollection($3)
+    $$ = algebra.NewDropCollection($3, $4)
 }
 ;
 
@@ -2477,14 +2477,15 @@ TRUNCATE
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_primary_name ON named_keyspace_ref index_partition opt_index_using opt_index_with
+CREATE PRIMARY INDEX opt_primary_name opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_index_with
 {
-    $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8, $9)
+    $$ = algebra.NewCreatePrimaryIndex($4, $7, $8, $9, $10, $5)
 }
 |
-CREATE INDEX index_name ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_index_with
+CREATE INDEX index_name opt_if_not_exists
+ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_index_with
 {
-    $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11, $12)
+    $$ = algebra.NewCreateIndex($3, $6, $8, $10, $11, $12, $13, $4)
 }
 ;
 
@@ -2505,6 +2506,18 @@ opt_index_name:
 { $$ = "" }
 |
 index_name
+;
+
+opt_if_not_exists:
+/* empty */
+{
+    $$ = true
+}
+|
+IF NOT EXISTS
+{
+    $$ = false
+}
 ;
 
 named_keyspace_ref:
@@ -2712,19 +2725,31 @@ MISSING
  *************************************************/
 
 drop_index:
-DROP PRIMARY INDEX ON named_keyspace_ref opt_index_using
+DROP PRIMARY INDEX opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($5, "#primary", $6)
+    $$ = algebra.NewDropIndex($6, "#primary", $7, $4)
 }
 |
-DROP INDEX simple_named_keyspace_ref DOT index_name opt_index_using
+DROP INDEX simple_named_keyspace_ref DOT index_name opt_if_exists opt_index_using
 {
-    $$ = algebra.NewDropIndex($3, $5, $6)
+    $$ = algebra.NewDropIndex($3, $5, $7, $6)
 }
 |
-DROP INDEX index_name ON named_keyspace_ref opt_index_using
+DROP INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($5, $3, $6)
+    $$ = algebra.NewDropIndex($6, $3, $7, $4)
+}
+;
+
+opt_if_exists:
+/* empty */
+{
+    $$ = true
+}
+|
+IF EXISTS
+{
+    $$ = false
 }
 ;
 

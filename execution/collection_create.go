@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	//	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -62,7 +63,9 @@ func (this *CreateCollection) RunOnce(context *Context, parent value.Value) {
 		this.switchPhase(_SERVTIME)
 		err := this.plan.Scope().CreateCollection(this.plan.Node().Name())
 		if err != nil {
-			context.Error(err)
+			if !errors.IsCollectionExistsError(err) || this.plan.Node().FailIfExists() {
+				context.Error(err)
+			}
 		}
 	})
 }

@@ -66,6 +66,8 @@ func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[
 		q["strategy"] = this.node.Partition().Strategy()
 		r["partition"] = q
 	}
+	// invert so the default if not present is to fail if exists
+	r["ifNotExists"] = !this.node.FailIfExists()
 
 	if f != nil {
 		f(r)
@@ -88,6 +90,7 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 			Exprs    []string                `json:"exprs"`
 			Strategy datastore.PartitionType `json:"strategy"`
 		} `json:"partition"`
+		ifNotExists bool `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -121,8 +124,9 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Index != "" {
 		ksref := algebra.NewKeyspaceRefFromPath(path, "")
+		// invert ifNotExists to obtain FailIfExists
 		this.node = algebra.NewCreatePrimaryIndex(_unmarshalled.Index, ksref,
-			partition, _unmarshalled.Using, with)
+			partition, _unmarshalled.Using, with, !_unmarshalled.ifNotExists)
 	}
 
 	return err
