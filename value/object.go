@@ -37,9 +37,6 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 		return _NULL_BYTES, nil
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, 256))
-	buf.WriteString("{")
-
 	var nameBuf [_NAME_CAP]string
 	var names []string
 	if len(this) <= len(nameBuf) {
@@ -52,33 +49,54 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 
 	names = sortedNames(this, names)
 
+	if len(names) == 0 {
+		return []byte(""), nil
+	}
+
+	var err error
+	sz := 0
+	marshalledValues := make([][]byte, len(names))
 	for i, n := range names {
 		v := NewValue(this[n])
 		if v.Type() == MISSING {
 			continue
 		}
-
-		if i > 0 {
-			buf.WriteString(",")
-		}
-
-		b, err := json.Marshal(n)
+		marshalledValues[i], err = v.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
-
-		buf.Write(b)
-		buf.WriteString(":")
-
-		b, err = v.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-
-		buf.Write(b)
+		// allow for per-line overhead:
+		// 2 - name quotes
+		// 1 - comma separator
+		// 5 - possible HTML escaping in name (to minimise chances of buffer reallocation)
+		sz += len(marshalledValues[i]) + len(n) + 8
 	}
 
-	buf.WriteString("}")
+	buf := bytes.NewBuffer(make([]byte, 0, sz+2)) // overhead: {}
+	buf.WriteRune('{')
+	subsequent := false
+	for i, n := range names {
+		if marshalledValues[i] == nil {
+			continue
+		}
+		if subsequent {
+			buf.WriteRune(',')
+		} else {
+			subsequent = true
+		}
+
+		err = json.MarshalStringToBuffer(n, buf)
+		if err != nil {
+			return nil, err
+		}
+
+		buf.WriteRune(':')
+		buf.Write(marshalledValues[i])
+		marshalledValues[i] = nil
+	}
+	marshalledValues = nil
+
+	buf.WriteRune('}')
 	return buf.Bytes(), nil
 }
 
