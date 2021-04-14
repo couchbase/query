@@ -361,25 +361,27 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 	if this.poolName != "" {
 		pool, poolServices, newErr := this.getPoolServices(this.poolName)
 		if newErr != nil {
+			err = errors.NewAdminConnectionError(newErr, this.poolName)
+		} else {
 			defer pool.Close()
-		}
 
-		if poolServices.Rev == this.poolSrvRev {
-			return this.whoAmI, this.state, nil
-		}
+			if poolServices.Rev == this.poolSrvRev {
+				return this.whoAmI, this.state, nil
+			}
 
-		whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
-		if newErr == nil && state != "" {
-			this.whoAmI = whoAmI
-			this.state = state
+			whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
+			if newErr == nil && state != "" {
+				this.whoAmI = whoAmI
+				this.state = state
 
-			hostName, _ := server.HostNameandPort(whoAmI)
+				hostName, _ := server.HostNameandPort(whoAmI)
 
-			this.noMoreChecks = (state == clustering.STANDALONE ||
-				(state == clustering.CLUSTERED && hostName != server.GetIP(false)))
-			return this.whoAmI, this.state, nil
-		} else if err == nil {
-			err = newErr
+				this.noMoreChecks = (state == clustering.STANDALONE ||
+					(state == clustering.CLUSTERED && hostName != server.GetIP(false)))
+				return this.whoAmI, this.state, nil
+			} else if err == nil {
+				err = newErr
+			}
 		}
 	}
 
