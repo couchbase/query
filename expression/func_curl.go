@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,7 +24,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
-	curl "github.com/couchbasedeps/go-curl"
+	"github.com/couchbasedeps/go-curl"
 )
 
 ///////////////////////////////////////////////////
@@ -932,7 +933,7 @@ func setResponseSize(maxSize int64) (finalValue int64) {
 
 }
 
-func whitelistCheck(list map[string]interface{}, url string) error {
+func whitelistCheck(list map[string]interface{}, urlP string) error {
 	// Structure is as follows
 	// {
 	//  "all_access":true/false,
@@ -940,15 +941,25 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 	//  "disallowed_urls":[ list of urls ],
 	// }
 
+	urlParsed, err := url.Parse(urlP)
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(urlParsed.Path, "/diag/eval") {
+		return fmt.Errorf("Access restricted - %v.", urlP)
+
+	}
+
 	// Whitelist passed through ns server is empty then no access
 	if len(list) == 0 {
-		return fmt.Errorf("Allowed list for cluster is empty. Allowedlist must be populated for all CURL() end points.")
+		return fmt.Errorf("Allowed list for cluster is empty.")
 	}
 
 	// Whitelist passed through ns server doesnt contain all access field then no access
 	allaccess, ok := list["all_access"]
 	if !ok {
-		return fmt.Errorf("Boolean field all_access does not exist in allowedlist. It is mandatory")
+		return fmt.Errorf("all_access does not exist in allowedlist.")
 	}
 
 	_, isOk := allaccess.(bool)
@@ -970,12 +981,12 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 	if disallowedUrls, ok_dall := list["disallowed_urls"]; ok_dall {
 		dURL, ok := disallowedUrls.([]interface{})
 		if !ok {
-			return fmt.Errorf("disallowed_urls should be list of urls that are black-listed.")
+			return fmt.Errorf("Restrict access with disallowed urls")
 		}
 		if len(dURL) > 0 {
-			disallow, err := sliceContains(dURL, url)
+			disallow, err := sliceContains(dURL, urlP)
 			if err == nil && disallow {
-				return fmt.Errorf("URL end point isnt present in curl allowedlist " + url + ".")
+				return fmt.Errorf("The endpoint " + urlP + " is not permitted")
 			} else {
 				if err != nil {
 					return err
@@ -990,7 +1001,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 			return fmt.Errorf("allowed_urls should be list of urls present in the allowedlists.")
 		}
 		if len(alURL) > 0 {
-			allow, err := sliceContains(alURL, url)
+			allow, err := sliceContains(alURL, urlP)
 			if err == nil && allow {
 				return nil
 			} else {
@@ -1004,7 +1015,7 @@ func whitelistCheck(list map[string]interface{}, url string) error {
 	// URL is not present in disallowed url and is not in allowed_urls.
 	// If it reaches here, then the url isnt in the allowed_urls or the prefix_urls, and is also
 	// not in the disallowed urls.
-	return fmt.Errorf("URL end point isnt present in allowedlist " + url + ". Please make sure to add the URL to the curl allowedlist on the UI.")
+	return fmt.Errorf("The end point " + urlP + " is not permitted.  List allowed end points in the configuration.")
 
 }
 
@@ -1013,7 +1024,7 @@ func sliceContains(field []interface{}, url string) (bool, error) {
 	for _, val := range field {
 		nVal, ok := val.(string)
 		if !ok {
-			return false, fmt.Errorf("Both allowed_urls and disallowed urls should be list of url strings.")
+			return false, fmt.Errorf("Both allowed urls and disallowed urls should be list of url strings.")
 		}
 		// Check if list of values is a prefix of input url
 		if strings.HasPrefix(url, nVal) {
