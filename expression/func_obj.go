@@ -9,8 +9,11 @@
 package expression
 
 import (
+	"fmt"
 	"math"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -499,6 +502,211 @@ func (this *ObjectNames) Constructor() FunctionConstructor {
 		return NewObjectNames(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ObjectPaths
+//
+///////////////////////////////////////////////////
+
+type ObjectPaths struct {
+	FunctionBase
+}
+
+func NewObjectPaths(operands ...Expression) Function {
+	rv := &ObjectPaths{
+		*NewFunctionBase("object_paths", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectPaths) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectPaths) Type() value.Type { return value.ARRAY }
+
+type aNotation int
+
+const (
+	subscript aNotation = iota // indexed notation, e.g. [0]
+	star                       // all element notation, [*]
+	belowStar                  // once under [*], all arrays need [*] too to be selectable
+)
+
+func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT && arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	unique := true
+	aNote := subscript
+	comps := true
+	var re *regexp.Regexp
+
+	if len(this.operands) > 1 {
+		options, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if options.Type() != value.OBJECT {
+			return value.NULL_VALUE, nil
+		}
+
+		if u, ok := options.Field("unique"); ok && u.Type() == value.BOOLEAN {
+			unique = u.Truth()
+		}
+		if as, ok := options.Field("arraysubscript"); ok && as.Type() == value.BOOLEAN {
+			if !as.Truth() {
+				aNote = star
+			}
+		}
+		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
+			comps = c.Truth()
+		}
+		if p, ok := options.Field("pattern"); ok {
+			pattern := p.ToString()
+			if len(pattern) > 0 {
+				re, err = regexp.Compile(pattern)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+		}
+	}
+
+	var nameBuf [_NAME_CAP]string
+	var names []string
+
+	if arg.Type() == value.OBJECT {
+		oa := arg.Actual().(map[string]interface{})
+
+		l := len(oa)
+		l *= 3
+		if l <= len(nameBuf) {
+			names = nameBuf[0:0]
+		} else {
+			names = _NAME_POOL.GetCapped(l)
+			defer _NAME_POOL.Put(names)
+		}
+		names = getNames(names, "", oa, aNote, comps, re)
+
+	} else { // value.ARRAY
+		a := arg.Actual().([]interface{})
+
+		// assume an average of 3 fields per element
+		l := len(a) * 3
+		if l <= len(nameBuf) {
+			names = nameBuf[0:0]
+		} else {
+			names = _NAME_POOL.GetCapped(l)
+			defer _NAME_POOL.Put(names)
+		}
+		names = getNamesFromArray(names, "", a, aNote, comps, re)
+	}
+
+	sort.Strings(names)
+	ra := make([]interface{}, len(names))
+	i := 0
+	if unique {
+		nprev := ""
+		for _, n := range names {
+			if nprev != n {
+				ra[i] = n
+				i++
+				nprev = n
+			}
+		}
+	} else {
+		for i, n := range names {
+			ra[i] = n
+		}
+		i = len(names)
+	}
+
+	return value.NewValue(ra[:i]), nil
+}
+
+func getNamesFromArray(names []string, prefix string, a []interface{}, aNote aNotation, comps bool, re *regexp.Regexp) []string {
+	for i, val := range a {
+		if aNote == subscript {
+			names = processValueForNames(names, prefix+fmt.Sprintf("[%d]", i), val, aNote, comps, re)
+		} else {
+			names = processValueForNames(names, prefix, val, belowStar, comps, re)
+		}
+	}
+	return names
+}
+
+func getNames(names []string, prefix string, m map[string]interface{}, aNote aNotation, comps bool, re *regexp.Regexp) []string {
+	if len(prefix) > 0 {
+		if aNote == belowStar {
+			prefix = prefix + "[*]."
+		} else {
+			prefix = prefix + "."
+		}
+	}
+	for name, val := range m {
+		if strings.IndexAny(name, " \t.`") != -1 {
+			name = strings.Replace(name, "`", "\\u0060", -1)
+			name = prefix + "`" + name + "`"
+			if comps && (re == nil || re.MatchString(name)) {
+				names = append(names, name)
+			}
+			names = processValueForNames(names, name, val, aNote, comps, re)
+		} else {
+			name = prefix + name
+			if comps && (re == nil || re.MatchString(name)) {
+				names = append(names, name)
+			}
+			names = processValueForNames(names, name, val, aNote, comps, re)
+		}
+	}
+	return names
+}
+
+func processValueForNames(names []string, prefix string, val interface{}, aNote aNotation, comps bool, re *regexp.Regexp) []string {
+	withAct, ok := val.(interface{ Actual() interface{} })
+	if ok {
+		val = withAct.Actual()
+	}
+	switch ov := val.(type) {
+	case []interface{}:
+		names = getNamesFromArray(names, prefix, ov, aNote, comps, re)
+	case map[string]interface{}:
+		names = getNames(names, prefix, ov, aNote, comps, re)
+	default:
+		if !comps && (re == nil || re.MatchString(prefix)) {
+			names = append(names, prefix)
+		}
+	}
+	return names
+}
+
+func (this *ObjectPaths) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectPaths(operands...)
+	}
+}
+
+/*
+Minimum input arguments required is 1.
+*/
+func (this *ObjectPaths) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ObjectPaths) MaxArgs() int { return 2 }
 
 ///////////////////////////////////////////////////
 //

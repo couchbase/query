@@ -126,5 +126,30 @@
             ]
         }
     ]
+},
+
+{
+	"statements": "SELECT OBJECT_paths(customer) as paths FROM customer WHERE test_id='obj_func' LIMIT 1",
+	"results": [
+        {
+            "paths": [
+                "ccInfo",
+                "ccInfo.cardExpiry",
+                "ccInfo.cardNumber",
+                "ccInfo.cardType",
+                "customerId",
+                "dateAdded",
+                "dateLastActive",
+                "emailAddress",
+                "firstName",
+                "lastName",
+                "phoneNumber",
+                "postalCode",
+                "state",
+                "test_id",
+                "type"
+            ]
+        }
+    ]
 }
 ]

@@ -286,6 +286,7 @@ var _FUNCTIONS = map[string]Function{
 	"object_outer_values": &ObjectValues{},
 	"object_outervalues":  &ObjectValues{},
 	"object_pairs":        &ObjectPairs{},
+	"object_paths":        &ObjectPaths{},
 	"object_put":          &ObjectPut{},
 	"object_remove":       &ObjectRemove{},
 	"object_rename":       &ObjectRename{},

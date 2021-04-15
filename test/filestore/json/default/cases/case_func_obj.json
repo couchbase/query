@@ -434,5 +434,91 @@
             }
         }
     ]
+  },
+  {
+    "statements":"SELECT OBJECT_PATHS(t) FROM {'a':1,'b':2,'c':3} t",
+    "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c"
+            ]
+        }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_PATHS(t,{'unique':true,'arraysubscript':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c",
+                "c.a",
+                "c.a.b",
+                "c.a.b.c"
+            ]
+        }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_PATHS(t,{'unique':false,'arraysubscript':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c",
+                "c.a",
+                "c.a.b",
+                "c.a.b",
+                "c.a.b",
+                "c.a.b.c"
+            ]
+        }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_PATHS(t,{'arraysubscript':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c",
+                "c.a",
+                "c.a[0].b",
+                "c.a[1].b",
+                "c.a[2].b",
+                "c.a[2].b[0].c"
+            ]
+        }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_PATHS(t,{'composites':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c.a[0].b",
+                "c.a[1].b",
+                "c.a[2].b[0].c"
+            ]
+        }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_PATHS(t,{'pattern':'2'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+        {
+            "$1": [
+                "c.a[2].b",
+                "c.a[2].b[0].c"
+            ]
+        }
+    ]
   }
 ]
