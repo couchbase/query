@@ -93,7 +93,7 @@ func init() {
 
 	cb.EnableCollections = true
 
-	// transaction cache initalization
+	// transaction cache initialization
 	transactions.TranContextCacheInit(_TRAN_CLEANUP_INTERVAL)
 }
 

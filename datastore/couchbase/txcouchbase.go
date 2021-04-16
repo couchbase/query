@@ -730,7 +730,7 @@ func initGocb(s *store) (err errors.Error) {
 	}
 
 	if client == nil {
-		err = errors.NewError(cerr, "gcagent client initalization failed")
+		err = errors.NewError(cerr, "gcagent client initialization failed")
 		logging.Errorf(err.Error())
 		return err
 	}
@@ -749,7 +749,7 @@ func initGocb(s *store) (err errors.Error) {
 	if cerr != nil {
 		client.Close()
 		s.gcClient = nil
-		return errors.NewError(cerr, "Transaction initalization failed")
+		return errors.NewError(cerr, "Transaction initialization failed")
 	}
 
 	return nil
