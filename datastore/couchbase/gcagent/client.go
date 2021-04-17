@@ -76,18 +76,28 @@ type Client struct {
 	atrLocations  map[string]gctx.LostATRLocation
 }
 
-func NewClient(url, certFile string) (rv *Client, err error) {
+func NewClient(url, sslHost, sslPort, certFile string) (rv *Client, err error) {
 	var connSpec *connstr.ConnSpec
 
 	rv = &Client{}
-	if rv.config, connSpec, err = agentConfig(url); err != nil {
+	// network=default use internal (vs  alternative) addresses
+	// http bootstrap is faster
+	options := "?network=default&bootstrap_on=http"
+	if rv.config, connSpec, err = agentConfig(url, options); err != nil {
 		return nil, err
 	}
 
 	// create SSL agent config file
 	if len(connSpec.Addresses) > 0 {
-		surl := "couchbases://" + connSpec.Addresses[0].Host
-		if rv.sslConfig, _, err = agentConfig(surl); err != nil {
+		if sslHost == "" {
+			sslHost = connSpec.Addresses[0].Host
+		}
+		surl := "couchbases://" + sslHost
+		if sslPort != "" {
+			// couchbases schema with custom port will not allowed http bootstrap.
+			surl = "http://" + sslHost + ":" + sslPort
+		}
+		if rv.sslConfig, _, err = agentConfig(surl, options); err != nil {
 			return nil, err
 		}
 	}
@@ -105,7 +115,7 @@ func NewClient(url, certFile string) (rv *Client, err error) {
 	return rv, err
 }
 
-func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
+func agentConfig(url, options string) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
 	config = &gocbcore.AgentConfig{
 		ConnectTimeout:       _CONNECTTIMEOUT,
 		KVConnectTimeout:     _KVCONNECTTIMEOUT,
@@ -117,7 +127,7 @@ func agentConfig(url string) (config *gocbcore.AgentConfig, cspec *connstr.ConnS
 	}
 
 	var connSpec connstr.ConnSpec
-	if connSpec, err = connstr.Parse(url + "?bootstrap_on=http"); err == nil {
+	if connSpec, err = connstr.Parse(url + options); err == nil {
 		err = config.FromConnStr(connSpec.String())
 	}
 

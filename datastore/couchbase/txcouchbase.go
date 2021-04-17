@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	gerrors "errors"
 	"fmt"
+	"net"
 	"strconv"
 	"sync"
 
@@ -24,6 +25,10 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
+)
+
+const (
+	_DEFAULT_MGMT_SSLPORT = 18091
 )
 
 func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (dks map[string]bool, err errors.Error) {
@@ -723,7 +728,8 @@ func initGocb(s *store) (err errors.Error) {
 	txConfig.Internal.EnableNonFatalGets = true
 	txConfig.Internal.EnableParallelUnstaging = true
 
-	client, cerr := gcagent.NewClient(s.URL(), certFile)
+	sslHost, sslPort := getSSLHostPort(s)
+	client, cerr := gcagent.NewClient(s.URL(), sslHost, sslPort, certFile)
 	s.nslock.Lock()
 	defer s.nslock.Unlock()
 
@@ -758,4 +764,41 @@ func initGocb(s *store) (err errors.Error) {
 	}
 
 	return nil
+}
+
+/* host name inherits ip as name.
+ * encryption enabled certificates will have actual host name.
+ * ns_server passes http://127.0.0.1:8091, certificates doesn't have loop back address.
+ * Get actual host and custom SSL port
+ */
+
+func getSSLHostPort(s *store) (string, string) {
+	for _, p := range s.client.Info.Pools {
+		if pool, err := s.client.GetPool(p.Name); err == nil {
+			for _, node := range pool.Nodes {
+				if node.ThisNode {
+					host := ""
+					port := ""
+					if p, ok := node.Ports["httpsMgmt"]; ok && p != _DEFAULT_MGMT_SSLPORT {
+						port = strconv.Itoa(p)
+					}
+					if node.Hostname != "" {
+						host, _, err = net.SplitHostPort(node.Hostname)
+						if err == nil && host != "" {
+							ip := net.ParseIP(host)
+							if ip != nil && ip.To4() == nil && ip.To16() != nil { // IPv6 and not a FQDN
+								// Prefix and suffix square brackets as SplitHostPort removes them,
+								// see: https://golang.org/pkg/net/#SplitHostPort
+								host = "[" + host + "]"
+							}
+							pool.Close()
+						}
+					}
+					return host, port
+				}
+			}
+			pool.Close()
+		}
+	}
+	return "", ""
 }
