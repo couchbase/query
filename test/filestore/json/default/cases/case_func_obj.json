@@ -456,8 +456,8 @@
                 "b",
                 "c",
                 "c.a",
-                "c.a.b",
-                "c.a.b.c"
+                "c.a[*].b",
+                "c.a[*].b[*].c"
             ]
         }
     ]
@@ -471,10 +471,10 @@
                 "b",
                 "c",
                 "c.a",
-                "c.a.b",
-                "c.a.b",
-                "c.a.b",
-                "c.a.b.c"
+                "c.a[*].b",
+                "c.a[*].b",
+                "c.a[*].b",
+                "c.a[*].b[*].c"
             ]
         }
     ]
@@ -519,6 +519,123 @@
                 "c.a[2].b[0].c"
             ]
         }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_pairs_nested(t,{'composites':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          {
+            "name": "a",
+            "val": 1
+          },
+          {
+            "name": "b",
+            "val": 2
+          },
+          {
+            "name": "c",
+            "val": {
+              "a": [
+                {
+                  "b": 3
+                },
+                {
+                  "b": 4
+                },
+                {
+                  "b": [
+                    {
+                      "c": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "c.a",
+            "val": [
+              {
+                "b": 3
+              },
+              {
+                "b": 4
+              },
+              {
+                "b": [
+                  {
+                    "c": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "c.a[0].b",
+            "val": 3
+          },
+          {
+            "name": "c.a[1].b",
+            "val": 4
+          },
+          {
+            "name": "c.a[2].b",
+            "val": [
+              {
+                "c": 5
+              }
+            ]
+          },
+          {
+            "name": "c.a[2].b[0].c",
+            "val": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_pairs_nested(t,{'pattern':'\\\\[2\\\\].b'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          {
+            "name": "c.a[2].b[0].c",
+            "val": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_pairs_nested(t) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+          "$1": [
+              {
+                  "name": "a",
+                  "val": 1
+              },
+              {
+                  "name": "b",
+                  "val": 2
+              },
+              {
+                  "name": "c.a[0].b",
+                  "val": 3
+              },
+              {
+                  "name": "c.a[1].b",
+                  "val": 4
+              },
+              {
+                  "name": "c.a[2].b[0].c",
+                  "val": 5
+              }
+          ]
+      }
     ]
   }
 ]

@@ -796,6 +796,178 @@ func (this *ObjectPairs) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ObjectPairsNested
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_PAIRS(expr).
+It returns an array containing the attribute name and
+value pairs of the object, in N1QL collation order of
+the names.
+*/
+type ObjectPairsNested struct {
+	FunctionBase
+}
+
+func NewObjectPairsNested(operands ...Expression) Function {
+	rv := &ObjectPairsNested{
+		*NewFunctionBase("object_pairs_nested", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectPairsNested) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectPairsNested) Type() value.Type { return value.ARRAY }
+
+func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT && arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	var re *regexp.Regexp
+	comps := false
+	if len(this.operands) > 1 {
+		options, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if options.Type() != value.OBJECT {
+			return value.NULL_VALUE, nil
+		}
+
+		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
+			comps = c.Truth()
+		}
+		if p, ok := options.Field("pattern"); ok {
+			pattern := p.ToString()
+			if len(pattern) > 0 {
+				re, err = regexp.Compile(pattern)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+		}
+	}
+
+	var pairs util.Pairs
+
+	if arg.Type() == value.OBJECT {
+		oa := arg.Actual().(map[string]interface{})
+
+		l := len(oa) * 2
+		pairs = make(util.Pairs, 0, l)
+		pairs = getPairs(pairs, "", oa, comps, re)
+
+	} else { // value.ARRAY
+		a := arg.Actual().([]interface{})
+
+		l := len(a) * 3
+		pairs = make(util.Pairs, 0, l)
+		pairs = getPairsFromArray(pairs, "", a, comps, re)
+	}
+
+	sort.Sort(pairs)
+
+	rv := make([]interface{}, len(pairs))
+	for i, m := range pairs {
+		rv[i] = map[string]interface{}{"name": m.Name, "val": m.Value}
+	}
+
+	return value.NewValue(rv), nil
+}
+
+func getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, comps bool, re *regexp.Regexp) util.Pairs {
+	for i, val := range a {
+		pairs = processPairValue(pairs, prefix+fmt.Sprintf("[%d]", i), val, comps, re)
+	}
+	return pairs
+}
+
+func getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, comps bool, re *regexp.Regexp) util.Pairs {
+	if len(prefix) > 0 {
+		prefix = prefix + "."
+	}
+	for name, val := range m {
+		if strings.IndexAny(name, " \t.`") != -1 {
+			name = strings.Replace(name, "`", "\\u0060", -1)
+			name = prefix + "`" + name + "`"
+		} else {
+			name = prefix + name
+		}
+		if comps && (re == nil || re.MatchString(name)) {
+			// only add if it is actually a composite value
+			withAct, ok := val.(interface{ Actual() interface{} })
+			if ok {
+				val = withAct.Actual()
+			}
+			add := false
+			switch val.(type) {
+			case []interface{}:
+				add = true
+			case map[string]interface{}:
+				add = true
+			}
+			if add {
+				pairs = append(pairs, util.Pair{Name: name, Value: val})
+			}
+		}
+		pairs = processPairValue(pairs, name, val, comps, re)
+	}
+	return pairs
+}
+
+func processPairValue(pairs util.Pairs, prefix string, val interface{}, comps bool, re *regexp.Regexp) util.Pairs {
+	withAct, ok := val.(interface{ Actual() interface{} })
+	if ok {
+		val = withAct.Actual()
+	}
+	switch ov := val.(type) {
+	case []interface{}:
+		pairs = getPairsFromArray(pairs, prefix, ov, comps, re)
+	case map[string]interface{}:
+		pairs = getPairs(pairs, prefix, ov, comps, re)
+	default:
+		if re == nil || re.MatchString(prefix) {
+			pairs = append(pairs, util.Pair{Name: prefix, Value: val})
+		}
+	}
+	return pairs
+}
+
+/*
+Factory method pattern.
+*/
+func (this *ObjectPairsNested) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectPairsNested(operands...)
+	}
+}
+
+/*
+Minimum input arguments required is 1.
+*/
+func (this *ObjectPairsNested) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ObjectPairsNested) MaxArgs() int { return 2 }
+
+///////////////////////////////////////////////////
+//
 // ObjectPut
 //
 ///////////////////////////////////////////////////

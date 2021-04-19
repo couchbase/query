@@ -8,12 +8,27 @@
 
 package util
 
+import "strings"
+
 type Pairs []Pair
 
 // Key-value pair
 type Pair struct {
 	Name  string
 	Value interface{}
+}
+
+// for sorting
+func (s Pairs) Len() int {
+	return len(s)
+}
+
+func (s Pairs) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s Pairs) Less(i, j int) bool {
+	return strings.Compare(s[i].Name, s[j].Name) < 0
 }
 
 type IPairs []IPair
