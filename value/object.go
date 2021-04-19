@@ -50,7 +50,7 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	names = sortedNames(this, names)
 
 	if len(names) == 0 {
-		return []byte(""), nil
+		return []byte("{}"), nil
 	}
 
 	var err error
