@@ -165,10 +165,6 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		return nil
 	}
 
-	if txContext.TxExpired() {
-		return errors.NewTransactionExpired(nil)
-	}
-
 	txMutations, _ := txContext.TxMutations().(*TransactionMutations)
 	if txMutations == nil {
 		return nil
@@ -177,6 +173,10 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	if stmtAtomicity {
 		// Statement level atomicity.
 		return txMutations.MergeDeltaKeyspace()
+	}
+
+	if txContext.TxExpired() {
+		return errors.NewTransactionExpired(nil)
 	}
 
 	var err, cerr error
@@ -258,16 +258,15 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 		return nil
 	}
 
-	if txContext.TxExpired() {
-		return errors.NewTransactionExpired(nil)
-	}
-
 	txMutations, _ := txContext.TxMutations().(*TransactionMutations)
 	if txMutations == nil {
 		return nil
 	}
 
 	if !txMutations.TranImplicit() && (stmtAtomicity || sname != "") {
+		if sname != "" && txContext.TxExpired() {
+			return errors.NewTransactionExpired(nil)
+		}
 		// Statement level atomicity or savepoint rollback
 		slog, sindex, undo, err := txMutations.GetSavepointRange(sname)
 		if err == nil && undo {
