@@ -395,6 +395,10 @@ func (this *Context) SetTxContext(tc interface{}) {
 func (this *Context) AdjustTimeout(timeout time.Duration, stmtType string, isPrepare bool) time.Duration {
 
 	if this.txContext != nil {
+		if !isPrepare && (stmtType == "COMMIT" || stmtType == "ROLLBACK") {
+			// Don't start timer for the commit and rollback
+			return 0
+		}
 		timeout = this.txContext.TxTimeRemaining()
 		// At least keep 10ms so that executor can lanunch before timer kicks in.
 		if timeout <= 10*time.Millisecond {

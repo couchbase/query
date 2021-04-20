@@ -180,10 +180,6 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		return txMutations.MergeDeltaKeyspace()
 	}
 
-	if txContext.TxExpired() {
-		return errors.NewTransactionExpired(nil)
-	}
-
 	var err, cerr error
 
 	transaction := txMutations.Transaction()
@@ -202,7 +198,6 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	}
 	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write========", txId) })
 
-	cleanUp := true
 	if transaction != nil {
 		var wg sync.WaitGroup
 
@@ -220,15 +215,20 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 			cerr = resErr
 		})
 
+		txMutations.SetTransaction(nil, nil)
 		if err == nil {
 			wg.Wait()
 			if cerr != nil {
 				err = cerr
 			}
-			txMutations.SetTransaction(nil, nil)
 		} else {
-			// if commit request submission failed, let issue rollback
-			cleanUp = false
+			// commit request failed. rollback
+			rerr := transaction.Rollback(func(resErr error) {
+				defer wg.Done()
+			})
+			if rerr == nil {
+				wg.Wait()
+			}
 		}
 
 		logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Actual Commit end========", txId) })
@@ -237,13 +237,11 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		err = gcagent.ErrNoTransaction
 	}
 
-	if cleanUp {
-		// Release transaction mutations
-		var memSize int64
-		txMutations.DeleteAll(true, &memSize)
-		txMutations.Recycle()
-		txContext.SetTxMutations(nil)
-	}
+	// Release transaction mutations
+	var memSize int64
+	txMutations.DeleteAll(true, &memSize)
+	txMutations.Recycle()
+	txContext.SetTxMutations(nil)
 
 	if err != nil {
 		e, c := errorType(err, false)
@@ -309,15 +307,13 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 			defer wg.Done()
 			cerr = resErr
 		})
-
+		txMutations.SetTransaction(nil, nil)
 		if err == nil {
 			wg.Wait()
 			if cerr != nil {
 				err = cerr
 			}
 		}
-
-		txMutations.SetTransaction(nil, nil)
 	} else {
 		err = gcagent.ErrNoTransaction
 	}
