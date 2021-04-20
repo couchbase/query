@@ -34,8 +34,8 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.0.0-20201026062457-7b3be89bbd89
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
-	github.com/couchbase/gocbcore-transactions v0.0.0-20210407163552-b3b0be099900
-	github.com/couchbase/gocbcore/v9 v9.1.4-0.20210325182448-577aecce6dc6
+	github.com/couchbase/gocbcore-transactions v0.0.0-20210420181536-74d74532b5ca
+	github.com/couchbase/gocbcore/v9 v9.1.4
 	github.com/couchbase/godbc v0.0.0-20201207142944-d43b329cdf71
 	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
