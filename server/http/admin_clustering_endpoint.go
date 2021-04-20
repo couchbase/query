@@ -91,7 +91,7 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 
 func (this *HttpEndpoint) wrapHandlerFuncWithAdminAuth(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		authErr := this.hasAdminAuth(request)
+		authErr := this.hasAdminAuth(request, clustering.PRIV_SYS_ADMIN)
 		if authErr != nil {
 			writeError(writer, authErr)
 			return
@@ -110,7 +110,7 @@ type adminAuthHandlerWrapper struct {
 }
 
 func (wrapper *adminAuthHandlerWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	authErr := wrapper.endpoint.hasAdminAuth(r)
+	authErr := wrapper.endpoint.hasAdminAuth(r, clustering.PRIV_READ)
 	if authErr != nil {
 		writeError(rw, authErr)
 		return
@@ -126,7 +126,7 @@ func (this *HttpEndpoint) doConfigStore() (clustering.ConfigurationStore, errors
 	return configStore, nil
 }
 
-func (this *HttpEndpoint) hasAdminAuth(req *http.Request) errors.Error {
+func (this *HttpEndpoint) hasAdminAuth(req *http.Request, privilege clustering.Privilege) errors.Error {
 	// retrieve the credentials from the request; the credentials must be specified
 	// using basic authorization format. An error is returned if there is a step that
 	// prevents retrieval of the credentials.
@@ -160,7 +160,7 @@ func (this *HttpEndpoint) hasAdminAuth(req *http.Request) errors.Error {
 	if configErr != nil {
 		return configErr
 	}
-	sslPrivs := []clustering.Privilege{clustering.PRIV_SYS_ADMIN}
+	sslPrivs := []clustering.Privilege{privilege}
 	authErr := configstore.Authorize(creds, sslPrivs)
 	if authErr != nil {
 		return authErr
@@ -340,7 +340,7 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 		return nil, errors.NewAdminNotSSLEnabledError()
 	}
 
-	err := endpoint.hasAdminAuth(req)
+	err := endpoint.hasAdminAuth(req, clustering.PRIV_SYS_ADMIN)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +387,11 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.EventTypeId = audit.API_ADMIN_SETTINGS
 
 	// Admin auth required
-	err := endpoint.hasAdminAuth(req)
+	privilege := clustering.PRIV_SYS_ADMIN
+	if req.Method == "GET" {
+		privilege = clustering.PRIV_READ
+	}
+	err := endpoint.hasAdminAuth(req, privilege)
 	if err != nil {
 		return nil, err
 	}
