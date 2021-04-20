@@ -280,38 +280,33 @@ func (this intValue) Add(n NumberValue) NumberValue {
 }
 
 func (this intValue) IDiv(n NumberValue) Value {
+	var n1 intValue
 	switch n := n.(type) {
 	case intValue:
-		if n == 0 {
-			return NULL_VALUE
-		} else {
-			return this / n
-		}
+		n1 = n
 	default:
-		f := n.Actual().(float64)
-		if f == 0.0 {
-			return NULL_VALUE
-		} else {
-			return this / intValue(f)
-		}
+		n1 = intValue(n.Actual().(float64))
+	}
+
+	if n1 == 0 {
+		return NULL_VALUE
+	} else {
+		return this / n1
 	}
 }
 
 func (this intValue) IMod(n NumberValue) Value {
+	var n1 intValue
 	switch n := n.(type) {
 	case intValue:
-		if n == 0 {
-			return NULL_VALUE
-		} else {
-			return this % n
-		}
+		n1 = n
 	default:
-		f := n.Actual().(float64)
-		if f == 0.0 {
-			return NULL_VALUE
-		} else {
-			return this % intValue(f)
-		}
+		n1 = intValue(n.Actual().(float64))
+	}
+	if n1 == 0 {
+		return NULL_VALUE
+	} else {
+		return this % n1
 	}
 }
 
