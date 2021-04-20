@@ -394,12 +394,20 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 	// same process, but scan all pools now
 	for _, p := range this.getPools() {
 		pool, poolServices, newErr := this.getPoolServices(p.Name)
-		if err != nil && newErr != nil {
-			err = newErr
+		if newErr != nil {
+			logging.Tracef("%p.getPoolServices(%v) failed: %v", this, p.Name, newErr)
+			if err != nil {
+				err = newErr
+			}
+			if pool != nil {
+				pool.Close()
+			}
+			continue
 		}
 		whoAmI, state, newErr := this.checkPoolServices(pool, poolServices)
 		pool.Close()
 		if newErr != nil {
+			logging.Tracef("%p.checkPoolServices() (pool name: %v) failed: %v", this, p.Name, newErr)
 			if err == nil {
 				err = newErr
 			}
@@ -430,6 +438,9 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 }
 
 func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices *couchbase.PoolServices) (string, clustering.Mode, errors.Error) {
+	if poolServices == nil {
+		return "", "", errors.NewAdminConnectionError(nil, this.poolName)
+	}
 	for _, node := range poolServices.NodesExt {
 
 		// the assumption is that a n1ql node is started by the local mgmt service
