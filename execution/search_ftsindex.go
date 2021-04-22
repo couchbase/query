@@ -166,7 +166,12 @@ func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnec
 		return
 	}
 
-	index.Search(context.RequestId(), indexSearchInfo, context.ScanConsistency(), scanVector, conn)
+	consistency := context.ScanConsistency()
+	if consistency == datastore.SCAN_PLUS && context.txContext != nil {
+		consistency = datastore.UNBOUNDED
+	}
+
+	index.Search(context.RequestId(), indexSearchInfo, consistency, scanVector, conn)
 }
 
 func (this *IndexFtsSearch) planToSearchMapping(context *Context,
