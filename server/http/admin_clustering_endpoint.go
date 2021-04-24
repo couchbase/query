@@ -32,7 +32,8 @@ import (
 )
 
 const (
-	clustersPrefix = adminPrefix + "/clusters"
+	clustersPrefix   = adminPrefix + "/clusters"
+	profilePrivilege = clustering.PRIV_READ
 )
 
 func (this *HttpEndpoint) registerClusterHandlers() {
@@ -91,7 +92,7 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 
 func (this *HttpEndpoint) wrapHandlerFuncWithAdminAuth(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		authErr := this.hasAdminAuth(request, clustering.PRIV_SYS_ADMIN)
+		authErr := this.hasAdminAuth(request, profilePrivilege)
 		if authErr != nil {
 			writeError(writer, authErr)
 			return
@@ -110,7 +111,7 @@ type adminAuthHandlerWrapper struct {
 }
 
 func (wrapper *adminAuthHandlerWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	authErr := wrapper.endpoint.hasAdminAuth(r, clustering.PRIV_READ)
+	authErr := wrapper.endpoint.hasAdminAuth(r, profilePrivilege)
 	if authErr != nil {
 		writeError(rw, authErr)
 		return
