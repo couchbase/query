@@ -63,8 +63,8 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	arrays := _ARRAY_POOL.Get()
 	defer _ARRAY_POOL.Put(arrays)
 
-	covering := _COVERING_POOL.Get()
-	defer _COVERING_POOL.Put(covering)
+	covering := _ARRAY_POOL.Get()
+	defer _ARRAY_POOL.Put(covering)
 
 	// Remember filter covers
 	fc := make(map[datastore.Index]map[*expression.Cover]value.Value, len(indexes))
@@ -407,6 +407,5 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 }
 
 var _ARRAY_POOL = datastore.NewIndexBoolPool(64)
-var _COVERING_POOL = datastore.NewIndexBoolPool(64)
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

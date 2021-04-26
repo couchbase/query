@@ -42,7 +42,7 @@ func (this *SargSpansPool) GetSized(length int) []SargSpans {
 
 	rv := this.Get()
 	rv = rv[0:length]
-	for i := 0; i < length; i++ {
+	for i := range rv {
 		rv[i] = nil
 	}
 
@@ -54,6 +54,9 @@ func (this *SargSpansPool) Put(s []SargSpans) {
 		return
 	}
 
+	for i := range s {
+		s[i] = nil
+	}
 	this.pool.Put(s[0:0])
 }
 

@@ -37,6 +37,9 @@ func (this *AnnotatedPool) Put(s AnnotatedValues) {
 		return
 	}
 
+	for i := range s {
+		s[i] = nil
+	}
 	this.pool.Put(s[0:0])
 }
 

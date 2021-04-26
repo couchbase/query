@@ -56,5 +56,8 @@ func (this *StringPool) Put(s []string) {
 		return
 	}
 
+	for i := range s {
+		s[i] = ""
+	}
 	this.pool.Put(s[0:0])
 }

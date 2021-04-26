@@ -123,11 +123,15 @@ func aliasNamed(expr expression.Expression) expression.Expressions {
 		return _EMPTY_EXPRESSIONS
 	}
 
+	mapping := oc.Mapping()
+	if len(mapping) == 0 {
+		return _EMPTY_EXPRESSIONS
+	}
+
 	names := _NAMES_POOL.Get()
 	defer _NAMES_POOL.Put(names)
 
 	// Skip duplicate names
-	mapping := oc.Mapping()
 	for name, _ := range mapping {
 		names[name.String()]++
 	}

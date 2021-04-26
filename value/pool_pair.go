@@ -40,6 +40,9 @@ func (this *PairPool) Put(s []Pair) {
 		return
 	}
 
+	for i := range s {
+		s[i] = Pair{}
+	}
 	this.pool.Put(s[0:0])
 }
 

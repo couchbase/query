@@ -40,6 +40,9 @@ func (this *AnnotatedJoinPairPool) Put(s AnnotatedJoinPairs) {
 		return
 	}
 
+	for i := range s {
+		s[i] = AnnotatedJoinPair{}
+	}
 	this.pool.Put(s[0:0])
 }
 
