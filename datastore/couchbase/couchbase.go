@@ -803,8 +803,8 @@ func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
 		p.lock.RUnlock()
 
 		if preload && defaultCollection == nil {
-			ks, _ := p.KeyspaceByName(name)
-			if ks != nil {
+			ks, err := p.KeyspaceByName(name)
+			if ks != nil && err == nil {
 				defaultCollection = ks.(*keyspace).defaultCollection
 			}
 		}
