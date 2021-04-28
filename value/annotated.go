@@ -435,9 +435,14 @@ func (this *annotatedValue) recycle(lvl int32) {
 	if refcnt > 0 || this.noRecycle {
 		return
 	}
+	if refcnt < 0 {
+		panic("annotated value already recycled")
+	}
 
-	this.Value.Recycle()
-	this.Value = nil
+	if this.Value != nil {
+		this.Value.Recycle()
+		this.Value = nil
+	}
 	if this.covers != nil {
 		if !this.sharedAnnotations {
 			this.covers.Recycle()
@@ -472,5 +477,6 @@ func (this *annotatedValue) recycle(lvl int32) {
 		}
 	}
 	this.sharedAnnotations = false
+	this.id = nil
 	annotatedPool.Put(unsafe.Pointer(this))
 }

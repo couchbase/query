@@ -205,6 +205,9 @@ func (this *ScopeValue) recycle(lvl int32) {
 	if refcnt > 0 {
 		return
 	}
+	if refcnt < 0 {
+		panic("scope value already recycled")
+	}
 	if this.parent != nil {
 		this.parent.Recycle()
 		this.parent = nil

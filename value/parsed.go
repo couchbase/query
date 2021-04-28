@@ -439,6 +439,9 @@ func (this *parsedValue) Recycle() {
 	if refcnt > 0 {
 		return
 	}
+	if refcnt < 0 {
+		panic("parsed value already recycled")
+	}
 	if this.parsed != nil {
 		this.parsed.Recycle()
 		this.parsed = nil
