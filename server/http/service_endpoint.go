@@ -41,8 +41,8 @@ type HttpEndpoint struct {
 	certFile      string
 	keyFile       string
 	bufpool       BufferPool
-	listener      []net.Listener
-	listenerTLS   []net.Listener
+	listener      map[string]net.Listener
+	listenerTLS   map[string]net.Listener
 	mux           *mux.Router
 	actives       server.ActiveRequests
 	options       server.ServerOptions
@@ -51,7 +51,9 @@ type HttpEndpoint struct {
 }
 
 const (
-	servicePrefix = "/query/service"
+	servicePrefix   = "/query/service"
+	_MAXRETRIES     = 3
+	_LISTENINTERVAL = 100 * time.Millisecond
 )
 
 var _ENDPOINT *HttpEndpoint
@@ -78,6 +80,9 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 		actives:   NewActiveRequests(srv),
 		options:   NewHttpOptions(srv),
 	}
+
+	rv.listener = make(map[string]net.Listener, 2)
+	rv.listenerTLS = make(map[string]net.Listener, 2)
 
 	rv.connSecConfig.CertFile = certFile
 	rv.connSecConfig.KeyFile = keyFile
@@ -144,7 +149,7 @@ func (this *HttpEndpoint) Listen() error {
 				logging.Infof("Failed to start service: %v", err.Error())
 			}
 		} else {
-			this.listener = append(this.listener, ln)
+			this.listener[netW] = ln
 			go srv.Serve(ln)
 			logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: Listen Address - %v", ln.Addr()) })
 		}
@@ -156,6 +161,7 @@ func (this *HttpEndpoint) Listen() error {
 func (this *HttpEndpoint) ListenTLS() error {
 
 	netWs := getNetwProtocol()
+
 	if len(netWs) == 0 {
 		// Both values were set to off so we fail here.
 		return fmt.Errorf(" Failed to start service: Both IPv4 and IPv6 flags were not set.")
@@ -214,7 +220,19 @@ func (this *HttpEndpoint) ListenTLS() error {
 	}
 
 	for netW, val := range netWs {
-		ln, err := net.Listen(netW, this.httpsAddr)
+		var ln net.Listener
+		var err error
+
+		for i := 0; i < _MAXRETRIES; i++ {
+			if i != 0 {
+				time.Sleep(_LISTENINTERVAL)
+			}
+
+			ln, err = net.Listen(netW, this.httpsAddr)
+			if err == nil || !strings.Contains(strings.ToLower(err.Error()), "bind address already in use") {
+				break
+			}
+		}
 
 		if err != nil {
 			if val == server.TCP_REQ {
@@ -224,10 +242,11 @@ func (this *HttpEndpoint) ListenTLS() error {
 			}
 		} else {
 			tls_ln := tls.NewListener(ln, cfg)
-			this.listenerTLS = append(this.listenerTLS, tls_ln)
+			this.listenerTLS[netW] = tls_ln
 			go srv.Serve(tls_ln)
 			logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: ListenTLS Address - %v", ln.Addr()) })
 		}
+
 	}
 
 	return nil
@@ -271,11 +290,14 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 func (this *HttpEndpoint) Close() error {
 	serr := []error{}
-	for _, listener := range this.listener {
+	for netW, listener := range this.listener {
 		if listener != nil {
 			err := this.closeListener(listener)
 			if err != nil {
 				serr = append(serr, err)
+			} else {
+				this.listener[netW] = nil
+				delete(this.listener, netW)
 			}
 		}
 	}
@@ -287,11 +309,14 @@ func (this *HttpEndpoint) Close() error {
 
 func (this *HttpEndpoint) CloseTLS() error {
 	serr := []error{}
-	for _, listener := range this.listenerTLS {
+	for netW, listener := range this.listenerTLS {
 		if listener != nil {
 			err := this.closeListener(listener)
 			if err != nil {
 				serr = append(serr, err)
+			} else {
+				this.listenerTLS[netW] = nil
+				delete(this.listenerTLS, netW)
 			}
 		}
 	}
@@ -303,8 +328,17 @@ func (this *HttpEndpoint) CloseTLS() error {
 
 func (this *HttpEndpoint) closeListener(l net.Listener) error {
 	var err error
+
 	if l != nil {
-		err = l.Close()
+		for i := 0; i < _MAXRETRIES; i++ {
+			if i != 0 {
+				time.Sleep(_LISTENINTERVAL)
+			}
+			err = l.Close()
+			if err == nil {
+				break
+			}
+		}
 		logging.Infoa(func() string {
 			return fmt.Sprintf("HttpEndpoint: close listener, Address - %v, Error - %v", l.Addr(), err)
 		})
@@ -347,27 +381,21 @@ func (this *HttpEndpoint) setupSSL() {
 		if (configChange & cbauth.CFG_CHANGE_CERTS_TLSCONFIG) != 0 {
 			logging.Infof(" Certificates have been refreshed by ns server ")
 			closeErr := this.CloseTLS()
-			if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
-				logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
+
+			if closeErr != nil && !strings.Contains(strings.ToLower(closeErr.Error()), "closed network connection & use") {
+				logging.Errora(func() string {
+					return fmt.Sprintf("ERROR: Closing TLS listener - %s", closeErr.Error())
+				})
 				return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
 			}
 
 			tlsErr := this.ListenTLS()
 			if tlsErr != nil {
-				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
+				logging.Errora(func() string {
+					return fmt.Sprintf("ERROR: Starting TLS listener - %s", tlsErr.Error())
+				})
+				return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
 
-				if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address already in use") {
-					logging.Infof("ERROR: Retrying listen on TLS Endpoint after sleep")
-
-					// Wait a little and then retry as maybe closing the listener is taking time.
-					time.Sleep(100 * time.Millisecond)
-					tlsErr = this.ListenTLS()
-					time.Sleep(100 * time.Millisecond)
-				}
-
-				if tlsErr != nil {
-					return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
-				}
 			}
 			settingsUpdated = true
 		}
