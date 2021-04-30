@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
 
@@ -436,7 +437,11 @@ func (this *annotatedValue) recycle(lvl int32) {
 		return
 	}
 	if refcnt < 0 {
-		panic("annotated value already recycled")
+
+		// TODO enable
+		// panic("annotated value already recycled")
+		logging.Infof("annotated value already recycled")
+		return
 	}
 
 	if this.Value != nil {

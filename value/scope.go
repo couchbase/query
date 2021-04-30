@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
 
@@ -206,7 +207,11 @@ func (this *ScopeValue) recycle(lvl int32) {
 		return
 	}
 	if refcnt < 0 {
-		panic("scope value already recycled")
+
+		// TODO enable
+		// panic("scope value already recycled")
+		logging.Infof("scope value already recycled")
+		return
 	}
 	if this.parent != nil {
 		this.parent.Recycle()

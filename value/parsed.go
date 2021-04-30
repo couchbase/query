@@ -14,6 +14,7 @@ import (
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	json "github.com/couchbase/go_json"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
 
@@ -440,7 +441,11 @@ func (this *parsedValue) Recycle() {
 		return
 	}
 	if refcnt < 0 {
-		panic("parsed value already recycled")
+
+		// TODO enable
+		// panic("parsed value already recycled")
+		logging.Infof("parsed value already recycled")
+		return
 	}
 	if this.parsed != nil {
 		this.parsed.Recycle()
