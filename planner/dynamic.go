@@ -490,5 +490,10 @@ func fieldName(expr expression.Expression) (fn string) {
 	if _, ok := expr.(*expression.Identifier); ok {
 		return
 	}
+
+	// if not path return
+	if _, _, err := expression.PathString(expr); err != nil {
+		return
+	}
 	return expr.Alias()
 }
