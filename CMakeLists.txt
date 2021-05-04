@@ -87,9 +87,6 @@ IF (NOT CBQ_ONLY)
     ADD_DEPENDENCIES (cbq-engine js-evaluator jseval)
   ENDIF ()
 
-  GoModBuild (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
-    DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
-    GOVERSION ${GOVERSION})
 ENDIF (NOT CBQ_ONLY)
 
 GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
