@@ -58,9 +58,18 @@ DevStandaloneSetup() {
              cp -rp $JSEVAL $GOPATH/lib
            fi
        fi
-    # gocbcore v9 version point to master
-       if [[ ! -h ../gocbcore/v9 ]]; then
-           (cd ../gocbcore; ln -s . v9)
+    # gocbcore points to master; gocbcore/v9 points to 9.1.4
+       if [[ -d ../gocbcore/v9 ]]
+       then
+           cd ../gocbcore/v9
+           C=`git log --pretty=oneline --abbrev-commit -n 1|grep -c "v9.1.4"`
+           cd -
+       else
+           C=0
+       fi
+       if [[ $C -eq 0 ]]
+       then
+           (cd ..; rm -rf gocbcore/v9; git clone -b v9.1.4 https://github.com/couchbase/gocbcore.git gocbcore/v9)
        fi
     # bleve version
        if [[ ! -d ../../blevesearch/bleve/v2 ]]; then
@@ -82,6 +91,7 @@ DevStandaloneSetup() {
        if [[ ! -d ../../blevesearch/zapx/v15 ]]; then
            (cd ../../blevesearch; git clone -b v15.2.0 http://github.com/blevesearch/zapx.git zapx/v15)
        fi
+       (cd $GOPATH/src/golang.org/x/net; git checkout `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'`)
 }
 
 # turn off go module for non repo sync build or standalone build
