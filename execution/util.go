@@ -50,7 +50,7 @@ func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s str
 	default:
 		rv, err = expr.Evaluate(item, context)
 		if err != nil {
-			context.Error(errors.NewEvaluationError(err, "getCachedValue()"))
+			context.Error(errors.NewEvaluationError(err, "cached value"))
 			return
 		}
 
@@ -67,7 +67,7 @@ func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expressio
 	default:
 		rv, err = expr.Evaluate(item.Original(), context)
 		if err != nil {
-			context.Error(errors.NewEvaluationError(err, "getOriginalCachedValue()"))
+			context.Error(errors.NewEvaluationError(err, "original cached value"))
 			return
 		}
 		item.SetAttachment(s, rv)

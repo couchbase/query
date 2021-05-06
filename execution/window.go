@@ -682,7 +682,7 @@ func (this *AggregateInfo) windowValuePos(op *WindowAggregate, val value.Value, 
 	collation := int64(1)
 	if this.wTerm.WindowFrame().RangeWindowFrame() {
 		pos = cIndex
-		if op.oby[0].Descending() {
+		if op.oby[0].Descending(op.context) {
 			collation = int64(-1)
 		}
 

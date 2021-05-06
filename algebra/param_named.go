@@ -61,6 +61,9 @@ value.
 */
 func (this *NamedParameter) Evaluate(item value.Value, context expression.Context) (
 	value.Value, error) {
+	if context == nil {
+		return nil, fmt.Errorf("No context for parameters.")
+	}
 	val, ok := context.(Context).NamedArg(this.name)
 
 	if ok {

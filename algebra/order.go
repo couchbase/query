@@ -9,7 +9,12 @@
 package algebra
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -82,15 +87,15 @@ value that decides the sort order (ASC or DESC).
 */
 type SortTerm struct {
 	expr       expression.Expression `json:"expr"`
-	descending bool                  `json:"desc"`
-	nullsPos   bool                  `json:"nulls_pos"`
+	descending expression.Expression `json:"desc"`
+	nullsPos   expression.Expression `json:"nulls_pos"`
 }
 
 /*
 The function NewSortTerm returns a pointer to the SortTerm
 struct that has its fields set to the input arguments.
 */
-func NewSortTerm(expr expression.Expression, descending, nullsPos bool) *SortTerm {
+func NewSortTerm(expr, descending, nullsPos expression.Expression) *SortTerm {
 	return &SortTerm{
 		expr:       expr,
 		descending: descending,
@@ -116,11 +121,18 @@ func (this SortTerms) Copy() SortTerms {
 Copy
 */
 func (this *SortTerm) Copy() *SortTerm {
-	return &SortTerm{
+	rv := &SortTerm{
 		expr:       this.expr.Copy(),
-		descending: this.descending,
-		nullsPos:   this.nullsPos,
+		descending: nil,
+		nullsPos:   nil,
 	}
+	if this.descending != nil {
+		rv.descending = this.descending.Copy()
+	}
+	if this.nullsPos != nil {
+		rv.nullsPos = this.nullsPos.Copy()
+	}
+	return rv
 }
 
 /*
@@ -129,13 +141,17 @@ func (this *SortTerm) Copy() *SortTerm {
 func (this *SortTerm) String() string {
 	s := expression.NewStringer().Visit(this.expr)
 
-	if this.descending {
+	d := false
+	if this.Descending(nil) {
 		s += " DESC"
-		if this.NullsPos() {
-			s += " NULLS FIRST"
+		d = true
+	}
+	if this.NullsLast(nil) {
+		if !d {
+			s += " NULLS LAST"
 		}
-	} else if this.NullsPos() {
-		s += " NULLS LAST"
+	} else if d {
+		s += " NULLS FIRST"
 	}
 
 	return s
@@ -152,11 +168,87 @@ func (this *SortTerm) Expression() expression.Expression {
 /*
 Return bool value representing ASC or DESC sort order.
 */
-func (this *SortTerm) Descending() bool {
+func (this *SortTerm) Descending(context expression.Context) bool {
+	if this.descending == nil {
+		// optional expression missing so return default order
+		return false
+	}
+	r, err := this.descending.Evaluate(nil, context)
+	if err == nil {
+		if r.Type() == value.NULL {
+			if context != nil {
+				ectx, ok := context.(interface{ Error(errors.Error) })
+				if ok {
+					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid sort order expression: %v", r)))
+				}
+			}
+			return false
+		} else if s, ok := r.Actual().(string); ok {
+			if strings.ToLower(s) == "desc" {
+				return true
+			} else if strings.ToLower(s) == "asc" {
+				return false
+			} else if context != nil {
+				ectx, ok := context.(interface{ Error(errors.Error) })
+				if ok {
+					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid sort order: %s", s)))
+				}
+			}
+		}
+	} else {
+		if context != nil {
+			ectx, ok := context.(interface{ Error(errors.Error) })
+			if ok {
+				ectx.Error(errors.NewEvaluationError(err, "Invalid sort order expression"))
+			}
+		}
+	}
+	return false
+}
+
+func (this *SortTerm) DescendingExpr() expression.Expression {
 	return this.descending
 }
 
-func (this *SortTerm) NullsPos() bool {
+func (this *SortTerm) NullsLast(context expression.Context) bool {
+	if this.nullsPos == nil {
+		// optional expression missing so return default nulls position based on order
+		return this.Descending(context)
+	}
+	r, err := this.nullsPos.Evaluate(nil, context)
+	if err == nil {
+		if r.Type() != value.STRING {
+			if context != nil {
+				ectx, ok := context.(interface{ Error(errors.Error) })
+				if ok {
+					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid nulls sorted position expression: %v", r)))
+				}
+			}
+			return this.Descending(context)
+		} else if s, ok := r.Actual().(string); ok {
+			if strings.ToLower(s) == "last" {
+				return true
+			} else if strings.ToLower(s) == "first" {
+				return false
+			} else if context != nil {
+				ectx, ok := context.(interface{ Error(errors.Error) })
+				if ok {
+					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid nulls sorted position: %s", s)))
+				}
+			}
+		}
+	} else {
+		if context != nil {
+			ectx, ok := context.(interface{ Error(errors.Error) })
+			if ok {
+				ectx.Error(errors.NewEvaluationError(err, "Invalid nulls sorted position expression"))
+			}
+		}
+	}
+	return false
+}
+
+func (this *SortTerm) NullsPosExpr() expression.Expression {
 	return this.nullsPos
 }
 
@@ -202,38 +294,4 @@ func (this SortTerms) String() string {
 	}
 
 	return s
-}
-
-/*
-Handle [NULLS FIRST|LAST] caluse
-*/
-const (
-	ORDER_NULLS_NONE = 1 << iota
-	ORDER_NULLS_FIRST
-	ORDER_NULLS_LAST
-)
-
-func NewOrderNulls(none, nulls, last bool) (r uint32) {
-	if none {
-		r |= ORDER_NULLS_NONE
-	} else if nulls {
-		if last {
-			r |= ORDER_NULLS_LAST
-		} else {
-			r |= ORDER_NULLS_FIRST
-		}
-	}
-	return
-}
-
-/*
- Returns true only if it is not Natural order
- ASC NULLS FIRST is Natural order  -- false
- DESC NULLS LAST is Natural order  -- false
- ASC NULLS LAST                    -- true
- DESC NULLS FIRST                  -- true
-*/
-
-func NewOrderNullsPos(descending bool, nulls uint32) bool {
-	return (!descending && (nulls&ORDER_NULLS_LAST) != 0) || (descending && (nulls&ORDER_NULLS_FIRST) != 0)
 }

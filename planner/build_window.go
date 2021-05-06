@@ -9,6 +9,8 @@
 package planner
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
@@ -99,8 +101,8 @@ type WindowOrderGroups []*WindowOrderGroup
 type SortGroup struct {
 	groups     SortGroups
 	expr       expression.Expression
-	descending bool
-	nullsPos   bool
+	descending expression.Expression
+	nullsPos   expression.Expression
 	flags      uint32
 	exprStr    string
 	pos        int
@@ -166,7 +168,7 @@ outer:
 				flags := uint32(_SORT_POS_FXIED | _SORT_NULLS_FIXED | _SORT_COLLATION_FIXED)
 				for i, term := range wTerm.OrderBy().Terms() {
 					sg := &SortGroup{expr: term.Expression(), exprStr: term.Expression().String(),
-						descending: term.Descending(), nullsPos: term.NullsPos(), flags: flags}
+						descending: term.DescendingExpr(), nullsPos: term.NullsPosExpr(), flags: flags}
 					sg.pos = pl + i + 1
 					sg.minPos = pl + i + 1
 					sg.maxPos = pl + i + 1
@@ -301,10 +303,10 @@ func (this SortGroups) subSetOf(other SortGroups) bool {
 			}
 
 			// check positions
-			checkFalg := (ts.pos == os.pos)
+			checkFlag := (ts.pos == os.pos)
 
 			// position and others Collation is fixed then this and other collation needs to be matched
-			if checkFalg && hasAnyFlag(os.flags, _SORT_COLLATION_FIXED) {
+			if checkFlag && hasAnyFlag(os.flags, _SORT_COLLATION_FIXED) {
 				if ts.descending != os.descending {
 					return false
 				}
@@ -315,8 +317,27 @@ func (this SortGroups) subSetOf(other SortGroups) bool {
 			}
 
 			// position and others nulls is fixed then this and other nulls needs to be matched
-			if checkFalg && hasAnyFlag(os.flags, _SORT_NULLS_FIXED) {
-				if ts.nullsPos != os.nullsPos {
+			if checkFlag && hasAnyFlag(os.flags, _SORT_NULLS_FIXED) {
+				var ok bool
+				tstr := ""
+				if ts.nullsPos != nil {
+					t, err := ts.nullsPos.Evaluate(nil, nil)
+					if err != nil {
+						if tstr, ok = t.Actual().(string); !ok {
+							return false
+						}
+					}
+				}
+				ostr := ""
+				if os.nullsPos != nil {
+					o, err := os.nullsPos.Evaluate(nil, nil)
+					if err != nil {
+						if ostr, ok = o.Actual().(string); !ok {
+							return false
+						}
+					}
+				}
+				if strings.ToLower(tstr) != strings.ToLower(ostr) {
 					return false
 				}
 			} else {
@@ -326,7 +347,7 @@ func (this SortGroups) subSetOf(other SortGroups) bool {
 			}
 
 			// if positions are not fixed, fix position of this expr in others if needed split others PBY
-			if !checkFalg && !other.splitAndFixPos(this, os, ts.pos) {
+			if !checkFlag && !other.splitAndFixPos(this, os, ts.pos) {
 				return false
 			}
 		}

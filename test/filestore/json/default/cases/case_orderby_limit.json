@@ -69,6 +69,7 @@
                             "expr": "((`catalog`.`dimensions`).`length`)"
                         },
                         {
+                            "desc":"\"asc\"",
                             "expr": "((`catalog`.`dimensions`).`width`)"
                         }
                     ]
@@ -148,7 +149,7 @@
                             "expr": "`age`"
                         },
                         {
-                            "desc": true,
+                            "desc":"\"desc\"",
                             "expr": "`first_name`"
                         }
                     ]

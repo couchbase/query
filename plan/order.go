@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
 
@@ -60,13 +61,11 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 	for _, term := range this.terms {
 		q := make(map[string]interface{})
 		q["expr"] = term.Expression().String()
-
-		if term.Descending() {
-			q["desc"] = term.Descending()
+		if term.DescendingExpr() != nil {
+			q["desc"] = term.DescendingExpr().String()
 		}
-
-		if term.NullsPos() {
-			q["nulls_pos"] = term.NullsPos()
+		if term.NullsPosExpr() != nil {
+			q["nulls_pos"] = term.NullsPosExpr().String()
 		}
 
 		s = append(s, q)
@@ -92,8 +91,8 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		_     string `json:"#operator"`
 		Terms []struct {
 			Expr     string `json:"expr"`
-			Desc     bool   `json:"desc"`
-			NullsPos bool   `json:"nulls_pos"`
+			Desc     string `json:"desc"`
+			NullsPos string `json:"nulls_pos"`
 		} `json:"sort_terms"`
 		offsetExpr  string                 `json:"offset"`
 		limitExpr   string                 `json:"limit"`
@@ -111,7 +110,24 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		if err != nil {
 			return err
 		}
-		this.terms[i] = algebra.NewSortTerm(expr, term.Desc, term.NullsPos)
+		var desc, nullsPos expression.Expression
+		if term.Desc == "" {
+			desc = nil
+		} else {
+			desc, err = parser.Parse(term.Desc)
+			if err != nil {
+				return err
+			}
+		}
+		if term.NullsPos == "" {
+			nullsPos = nil
+		} else {
+			nullsPos, err = parser.Parse(term.NullsPos)
+			if err != nil {
+				return err
+			}
+		}
+		this.terms[i] = algebra.NewSortTerm(expr, desc, nullsPos)
 	}
 	if offsetExprStr := _unmarshalled.offsetExpr; offsetExprStr != "" {
 		offsetExpr, err := parser.Parse(offsetExprStr)

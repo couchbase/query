@@ -416,8 +416,10 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 outer:
 	for _, orderTerm := range this.order.Terms() {
-		// orderTerm is constant
-		if orderTerm.Expression().Static() != nil {
+		// orderTerm is constant or sort order or nulls order are non-static
+		if orderTerm.Expression().Static() != nil ||
+			(orderTerm.DescendingExpr() != nil && orderTerm.DescendingExpr().Static() == nil) ||
+			(orderTerm.NullsPosExpr() != nil && orderTerm.NullsPosExpr().Static() == nil) {
 			continue
 		}
 
@@ -430,14 +432,22 @@ outer:
 			return false, nil
 		}
 
+		d := orderTerm.Descending(nil)
+		nl := orderTerm.NullsLast(nil)
+		naturalOrder := false
+		if d && nl {
+			naturalOrder = true
+		} else if !d && !nl {
+			naturalOrder = true
+		}
 		for {
 			projexpr, projalias := hashProj[orderTerm.Expression().Alias()]
-			if indexKeyIsDescCollation(i, indexKeys) == orderTerm.Descending() &&
-				(!orderTerm.NullsPos() || !entry.spans.CanProduceUnknowns(i)) &&
+			if indexKeyIsDescCollation(i, indexKeys) == d &&
+				(naturalOrder || !entry.spans.CanProduceUnknowns(i)) &&
 				(orderTerm.Expression().EquivalentTo(keys[i]) ||
 					(projalias && expression.Equivalent(projexpr, keys[i]))) {
 				// orderTerm matched with index key
-				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, orderTerm.Descending()))
+				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, d))
 				i++
 				continue outer
 			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {

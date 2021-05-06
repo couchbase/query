@@ -903,7 +903,9 @@ func skipFixedOrderTerms(order *algebra.Order, pred expression.Expression) *alge
 	sortTerms := make(algebra.SortTerms, 0, len(order.Terms()))
 	for _, term := range order.Terms() {
 		expr := term.Expression()
-		if expr.Static() != nil {
+		if expr.Static() != nil &&
+			(term.DescendingExpr() != nil && term.DescendingExpr().Static() != nil) &&
+			(term.NullsPosExpr() != nil && term.NullsPosExpr().Static() != nil) {
 			continue
 		}
 

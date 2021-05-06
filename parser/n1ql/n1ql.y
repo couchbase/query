@@ -424,8 +424,8 @@ tokOffset    int
 %type <groupTerms>       group_terms
 %type <expr>             limit opt_limit
 %type <expr>             offset opt_offset
-%type <b>                dir opt_dir opt_if_not_exists opt_if_exists
-
+%type <expr>             dir opt_dir
+%type <b>                opt_if_not_exists opt_if_exists
 %type <statement>        stmt_body
 %type <statement>        stmt advise explain prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        infer
@@ -485,8 +485,9 @@ tokOffset    int
 %type <s>                role_name
 %type <s>                user
 
-%type <u32>              opt_order_nulls opt_ikattr ikattr
-%type <b>                first_last nulls
+%type <u32>              opt_ikattr ikattr
+%type <expr>             opt_order_nulls
+%type <b>                first_last
 
 %type <windowTerms>         opt_window_clause window_list
 %type <windowTerm>          window_term window_specification window_function_details opt_window_function
@@ -1634,7 +1635,7 @@ sort_terms COMMA sort_term
 sort_term:
 expr opt_dir opt_order_nulls
 {
-    $$ = algebra.NewSortTerm($1, $2, algebra.NewOrderNullsPos($2,$3))
+    $$ = algebra.NewSortTerm($1, $2, $3)
     $$.Expression().ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
 }
 ;
@@ -1642,33 +1643,48 @@ expr opt_dir opt_order_nulls
 opt_dir:
 /* empty */
 {
-    $$ = false
+    $$ = nil
 }
 |
 dir
 ;
 
 dir:
+param_expr
+{
+    $$ = $1
+}
+|
 ASC
 {
-    $$ = false
+    $$ = expression.NewConstant(value.NewValue("asc"))
 }
 |
 DESC
 {
-    $$ = true
+    $$ = expression.NewConstant(value.NewValue("desc"))
 }
 ;
 
 opt_order_nulls:
 /* empty */
 {
-    $$ = algebra.NewOrderNulls(true,false,false)
+    $$ = nil
 }
 |
-nulls first_last
+NULLS FIRST
 {
-    $$ = algebra.NewOrderNulls(false, $1,$2)
+    $$ = expression.NewConstant(value.NewValue("first"))
+}
+|
+NULLS LAST
+{
+    $$ = expression.NewConstant(value.NewValue("last"))
+}
+|
+NULLS param_expr
+{
+    $$ = $2
 }
 ;
 
@@ -1676,10 +1692,6 @@ first_last:
 FIRST { $$ = false }
 |
 LAST { $$ = true }
-;
-
-nulls:
-NULLS { $$ = true }
 ;
 
 /*************************************************

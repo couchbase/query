@@ -16,12 +16,18 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type orderTerm struct {
+	term       string
+	descending bool
+	nullsLast  bool
+}
+
 type Order struct {
 	base
 	plan    *plan.Order
 	values  value.AnnotatedValues
 	context *Context
-	terms   []string
+	terms   []orderTerm
 }
 
 const _ORDER_CAP = 1024
@@ -76,9 +82,11 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 
 func (this *Order) setupTerms(context *Context) {
 	this.context = context
-	this.terms = make([]string, len(this.plan.Terms()))
+	this.terms = make([]orderTerm, len(this.plan.Terms()))
 	for i, term := range this.plan.Terms() {
-		this.terms[i] = term.Expression().String()
+		this.terms[i].term = term.Expression().String()
+		this.terms[i].descending = term.Descending(this.context)
+		this.terms[i].nullsLast = term.NullsLast(this.context)
 	}
 }
 
@@ -126,7 +134,7 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 	var e error
 
 	for i, term := range this.plan.Terms() {
-		s := this.terms[i]
+		s := this.terms[i].term
 
 		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, this.context)
 		if e != nil {
@@ -138,8 +146,10 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 			return false
 		}
 
-		if !term.NullsPos() || ((ev1.Type() <= value.NULL && ev2.Type() <= value.NULL) ||
-			(ev1.Type() > value.NULL && ev2.Type() > value.NULL)) {
+		if (this.terms[i].descending && this.terms[i].nullsLast) ||
+			(!this.terms[i].descending && !this.terms[i].nullsLast) ||
+			((ev1.Type() <= value.NULL && ev2.Type() <= value.NULL) ||
+				(ev1.Type() > value.NULL && ev2.Type() > value.NULL)) {
 			c = ev1.Collate(ev2)
 		} else {
 			if ev1.Type() <= value.NULL && ev2.Type() > value.NULL {
@@ -151,7 +161,7 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 
 		if c == 0 {
 			continue
-		} else if term.Descending() {
+		} else if this.terms[i].descending {
 			return c > 0
 		} else {
 			return c < 0
