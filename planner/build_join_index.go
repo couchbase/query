@@ -72,7 +72,9 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			continue
 		}
 
+		formalizer.SetIndexScope()
 		key, err := formalizer.Map(keys[0].Copy())
+		formalizer.ClearIndexScope()
 		if err != nil {
 			return nil, nil, nil, err
 		}
