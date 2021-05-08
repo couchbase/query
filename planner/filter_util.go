@@ -138,7 +138,9 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 			}
 
 			key = key.Copy()
+			formalizer.SetIndexScope()
 			key, err = formalizer.Map(key)
+			formalizer.ClearIndexScope()
 			if err != nil {
 				return err
 			}

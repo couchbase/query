@@ -239,7 +239,9 @@ outer:
 		if cond != nil {
 			cond = cond.Copy()
 
+			formalizer.SetIndexScope()
 			cond, err = formalizer.Map(cond)
+			formalizer.ClearIndexScope()
 			if err != nil {
 				continue
 			}
@@ -281,7 +283,9 @@ outer:
 
 				if suf != nil {
 					op := suf.Operand().Copy()
+					formalizer.SetIndexScope()
 					op, err = formalizer.Map(op)
+					formalizer.ClearIndexScope()
 					if err != nil {
 						continue outer
 					}
@@ -292,7 +296,9 @@ outer:
 
 				if tok != nil {
 					op := tok.Operands()[0].Copy()
+					formalizer.SetIndexScope()
 					op, err = formalizer.Map(op)
+					formalizer.ClearIndexScope()
 					if err != nil {
 						continue outer
 					}

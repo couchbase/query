@@ -1247,7 +1247,9 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, alias string, filt
 		}
 
 		if condition != nil && err == nil {
+			formalizer.SetIndexScope()
 			condition, err = formalizer.Map(condition)
+			formalizer.ClearIndexScope()
 		}
 	}
 	if index.IsPrimary() {
