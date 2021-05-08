@@ -406,7 +406,9 @@ func indexPartitionKeys(index datastore.Index,
 	for i, key := range partitionKeys {
 		key = key.Copy()
 
+		formalizer.SetIndexScope()
 		partitionKeys[i], err = formalizer.Map(key)
+		formalizer.ClearIndexScope()
 		if err != nil {
 			return nil, err
 		}
