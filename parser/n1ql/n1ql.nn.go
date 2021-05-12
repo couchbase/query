@@ -14,6 +14,7 @@ type frame struct {
 	s            string
 	line, column int
 }
+
 type Lexer struct {
 	// The lexer runs in its own goroutine, and communicates via channel 'ch'.
 	ch      chan frame
@@ -201,8 +202,8 @@ type dfa struct {
 }
 
 var dfas = []dfa{
-	// \"((\\\")|[^\"])*\"
-	{[]bool{false, false, true, false, false, true}, []func(rune) int{ // Transitions
+	// \"(\\\"|\\[^"]|[^\"\\])*\"
+	{[]bool{false, false, true, false, false, false, false}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 34:
@@ -235,9 +236,9 @@ var dfas = []dfa{
 			case 34:
 				return 5
 			case 92:
-				return 3
+				return 6
 			}
-			return 4
+			return 6
 		},
 		func(r rune) int {
 			switch r {
@@ -257,14 +258,25 @@ var dfas = []dfa{
 			}
 			return 4
 		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
+		func(r rune) int {
+			switch r {
+			case 34:
+				return 2
+			case 92:
+				return 3
+			}
+			return 4
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// '(('')|[^'])*'
-	{[]bool{false, false, true, false, false}, []func(rune) int{ // Transitions
+	// '(''|\\'|\\[^']|[^'\\])*'
+	{[]bool{false, false, true, false, false, false, false, false}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 39:
 				return 1
+			case 92:
+				return -1
 			}
 			return -1
 		},
@@ -272,31 +284,66 @@ var dfas = []dfa{
 			switch r {
 			case 39:
 				return 2
+			case 92:
+				return 3
 			}
-			return 3
+			return 4
 		},
 		func(r rune) int {
 			switch r {
 			case 39:
-				return 4
+				return 7
+			case 92:
+				return -1
 			}
 			return -1
 		},
 		func(r rune) int {
 			switch r {
 			case 39:
-				return 2
+				return 5
+			case 92:
+				return 6
 			}
-			return 3
+			return 6
 		},
 		func(r rune) int {
 			switch r {
 			case 39:
 				return 2
+			case 92:
+				return 3
 			}
-			return 3
+			return 4
 		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1}, nil},
+		func(r rune) int {
+			switch r {
+			case 39:
+				return 2
+			case 92:
+				return 3
+			}
+			return 4
+		},
+		func(r rune) int {
+			switch r {
+			case 39:
+				return 2
+			case 92:
+				return 3
+			}
+			return 4
+		},
+		func(r rune) int {
+			switch r {
+			case 39:
+				return 2
+			case 92:
+				return 3
+			}
+			return 4
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
 	// `((``)|[^`])+`i
 	{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
@@ -35836,8 +35883,8 @@ OUTER0:
 			{
 				var e error
 
-				lval.s, e = UnmarshalDoubleQuoted(yylex.Text())
-				yylex.logToken(yylex.Text(), "STR - %s", lval.s)
+				lval.s, e = ProcessEscapeSequences(yylex.Text())
+				yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 				if e != nil {
 					yylex.reportError("invalid quoted string")
 					return _ERROR_
@@ -35848,8 +35895,8 @@ OUTER0:
 			{
 				var e error
 
-				lval.s, e = UnmarshalSingleQuoted(yylex.Text())
-				yylex.logToken(yylex.Text(), "STR - %s", lval.s)
+				lval.s, e = ProcessEscapeSequences(yylex.Text())
+				yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 				if e != nil {
 					yylex.reportError("invalid quoted string")
 					return _ERROR_
@@ -35863,7 +35910,7 @@ OUTER0:
 
 				text := yylex.Text()
 				text = text[0 : len(text)-1]
-				lval.s, e = UnmarshalBackQuoted(text)
+				lval.s, e = ProcessEscapeSequences(text)
 				yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
 				if e != nil {
 					yylex.reportError("invalid case insensitive identifier")
@@ -35876,7 +35923,7 @@ OUTER0:
 				// Escaped identifier
 				var e error
 
-				lval.s, e = UnmarshalBackQuoted(yylex.Text())
+				lval.s, e = ProcessEscapeSequences(yylex.Text())
 				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 				if e != nil {
 					yylex.reportError("invalid escaped identifier")

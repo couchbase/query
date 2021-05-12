@@ -1,8 +1,8 @@
-/\"((\\\")|[^\"])*\"/ {
+/\"(\\\"|\\[^"]|[^\"\\])*\"/ {
 		    var e error
 
-		    lval.s, e = UnmarshalDoubleQuoted(yylex.Text())
-		    yylex.logToken(yylex.Text(), "STR - %s", lval.s)
+		    lval.s, e = ProcessEscapeSequences(yylex.Text())
+		    yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 		    if e != nil {
 			yylex.reportError("invalid quoted string")
 			return _ERROR_
@@ -10,11 +10,11 @@
 		    return STR
 		  }
 
-/'(('')|[^'])*'/ {
+/'(''|\\'|\\[^']|[^'\\])*'/ {
 		    var e error
 
-		    lval.s, e = UnmarshalSingleQuoted(yylex.Text())
-		    yylex.logToken(yylex.Text(), "STR - %s", lval.s)
+		    lval.s, e = ProcessEscapeSequences(yylex.Text())
+		    yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 		    if e != nil {
 			yylex.reportError("invalid quoted string")
 			return _ERROR_
@@ -28,7 +28,7 @@
 
 		    text := yylex.Text()
 		    text = text[0 : len(text)-1]
-		    lval.s, e = UnmarshalBackQuoted(text)
+		    lval.s, e = ProcessEscapeSequences(text)
 		    yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
 		    if e != nil {
 			yylex.reportError("invalid case insensitive identifier")
@@ -41,7 +41,7 @@
 		    // Escaped identifier
 		    var e error
 
-		    lval.s, e = UnmarshalBackQuoted(yylex.Text())
+		    lval.s, e = ProcessEscapeSequences(yylex.Text())
 		    yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 		    if e != nil {
 			yylex.reportError("invalid escaped identifier")
