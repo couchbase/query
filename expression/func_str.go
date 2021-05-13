@@ -1279,3 +1279,142 @@ func strSubstrApply(args []value.Value, startPos int) (value.Value, error) {
 	return value.NewValue(str[pos : pos+length]), nil
 
 }
+
+///////////////////////////////////////////////////
+//
+// LPAD
+//
+///////////////////////////////////////////////////
+
+type LPad struct {
+	FunctionBase
+}
+
+func NewLPad(operands ...Expression) Function {
+	rv := &LPad{
+		*NewFunctionBase("lpad", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *LPad) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *LPad) Type() value.Type { return value.STRING }
+
+func (this *LPad) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return padString(item, context, this.operands, false)
+}
+
+func (this *LPad) MinArgs() int { return 2 }
+
+func (this *LPad) MaxArgs() int { return 3 }
+
+func (this *LPad) Constructor() FunctionConstructor {
+	return NewLPad
+}
+
+///////////////////////////////////////////////////
+//
+// RPAD
+//
+///////////////////////////////////////////////////
+
+type RPad struct {
+	FunctionBase
+}
+
+func NewRPad(operands ...Expression) Function {
+	rv := &RPad{
+		*NewFunctionBase("rpad", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *RPad) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RPad) Type() value.Type { return value.STRING }
+
+func (this *RPad) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return padString(item, context, this.operands, true)
+}
+
+func (this *RPad) MinArgs() int { return 2 }
+
+func (this *RPad) MaxArgs() int { return 3 }
+
+func (this *RPad) Constructor() FunctionConstructor {
+	return NewRPad
+}
+
+func padString(item value.Value, context Context, operands Expressions, right bool) (value.Value, error) {
+	var s string
+	var l int
+	pad := " "
+	null := false
+	missing := false
+
+	for i, op := range operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if (i == 0 || i == 2) && arg.Type() != value.STRING {
+			null = true
+		} else if i == 1 && arg.Type() != value.NUMBER {
+			null = true
+		} else if !null && !missing {
+			switch i {
+			case 0:
+				s = arg.ToString()
+			case 1:
+				num := arg.Actual().(float64)
+				if num < 0.0 || num != math.Trunc(num) {
+					null = true
+				} else {
+					l = int(num)
+				}
+			case 2:
+				pad = arg.ToString()
+				if len(pad) < 1 {
+					null = true
+				}
+			}
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	d := l - len(s)
+	if d <= 0 {
+		return value.NewValue(s[:l]), nil
+	}
+	var padded strings.Builder
+	if right {
+		padded.WriteString(s)
+	}
+	for d > 0 {
+		if len(pad) < d {
+			padded.WriteString(pad)
+		} else {
+			padded.WriteString(pad[:d])
+		}
+		d -= len(pad)
+	}
+	if !right {
+		padded.WriteString(s)
+	}
+	return value.NewValue(padded.String()), nil
+}
