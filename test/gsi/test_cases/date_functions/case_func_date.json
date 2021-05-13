@@ -130,6 +130,22 @@
     ]
     },
     {
+       "statements":"select DATE_TRUNC_STR(\"2021-05-13\",\"week\")",
+       "results": [
+        {
+            "$1": "2021-05-09"
+        }
+    ]
+    },
+    {
+       "statements":"select DATE_TRUNC_STR(\"2021-05-13\",\"iso_week\")",
+       "results": [
+        {
+            "$1": "2021-05-10"
+        }
+    ]
+    },
+    {
        "statements":"select MILLIS_TO_STR(1.453485008e+12,\"2006-01-02\")",
      "results": [
         {

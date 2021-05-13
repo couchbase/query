@@ -2895,6 +2895,14 @@ func dateTrunc(t time.Time, part string) (time.Time, error) {
 		return t.AddDate(0, -((int(t.Month()) - 1) % 3), 0), nil
 	case "month":
 		return monthTrunc(t), nil
+	case "week":
+		return t.AddDate(0, 0, -int(t.Weekday())), nil
+	case "iso_week": // ISO-8601:  Monday is the first day of the week
+		wd := int(t.Weekday()) - 1
+		if wd < 0 {
+			wd += 7
+		}
+		return t.AddDate(0, 0, -wd), nil
 	default:
 		return timeTrunc(t, p)
 	}
