@@ -2172,12 +2172,12 @@ This represents the Date function STR_TO_MILLIS(expr).
 It converts date in a supported format to UNIX milliseconds.
 */
 type StrToMillis struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewStrToMillis(operand Expression) Function {
+func NewStrToMillis(operands ...Expression) Function {
 	rv := &StrToMillis{
-		*NewUnaryFunctionBase("str_to_millis", operand),
+		*NewFunctionBase("str_to_millis", operands...),
 	}
 
 	rv.expr = rv
@@ -2202,9 +2202,24 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
-
 	str := arg.ToString()
-	t, err := strToTime(str)
+	var fmt string
+	var t time.Time
+	if len(this.operands) == 2 {
+		arg2, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		fmt = arg2.ToString()
+		t, err = time.ParseInLocation(fmt, str, time.Local)
+	} else {
+		t, err = strToTime(str)
+	}
+
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2212,13 +2227,14 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(timeToMillis(t)), nil
 }
 
+func (this *StrToMillis) MaxArgs() int { return 2 }
+func (this *StrToMillis) MinArgs() int { return 1 }
+
 /*
 Factory method pattern.
 */
 func (this *StrToMillis) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewStrToMillis(operands[0])
-	}
+	return NewStrToMillis
 }
 
 ///////////////////////////////////////////////////
