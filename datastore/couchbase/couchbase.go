@@ -949,7 +949,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		// all previously prepared statements are still good
 		entry = &keyspaceEntry{}
 		p.keyspaceCache[name] = entry
-	} else if entry.cbKeyspace != nil && entry.cbKeyspace.flags != 0 {
+	} else if entry.cbKeyspace != nil && entry.cbKeyspace.flags&(_NEEDS_REFRESH|_DELETED) != 0 {
 
 		// a keyspace that has been deleted or needs refreshing causes a
 		// version change
