@@ -253,6 +253,8 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 				return errors.NewAmbiguousCommitTransactionError(e, c)
 			case gctx.ErrorReasonTransactionFailedPostCommit:
 				return errors.NewPostCommitTransactionError(e, c)
+				// context.Warning(errors.NewPostCommitTransactionWarning(e, c))
+				// return nil
 			}
 		}
 		return errors.NewCommitTransactionError(e, c)
@@ -419,12 +421,14 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 
 	var transaction *gctx.Transaction
 	fkeys := keys
+	rollback := false
 	sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
 	if txMutations, _ := txContext.TxMutations().(*TransactionMutations); txMutations != nil {
 		var err errors.Error
 		var flag bool
 		mvs := make(map[string]*MutationValue, len(keys))
 		transaction = txMutations.Transaction()
+		rollback = !txMutations.TranImplicit()
 
 		// Fetch the keys from delta  keyspace
 		fkeys, flag, err = txMutations.Fetch(qualifiedName, keys, mvs)
@@ -472,18 +476,14 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 		if len(errs) > 0 {
 			if notFoundErr &&
 				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gctx.ErrDocumentNotFound)) {
-				_, c := errorType(errs[0], true)
+				_, c := errorType(errs[0], rollback)
 				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], c)}
 			}
 
 			var rerrs errors.Errors
 			for _, e := range errs {
-				e1, c := errorType(e, true)
-				rerr := errors.NewTransactionFetchError(e1)
-				if c != nil {
-					rerr.SetCause(c)
-				}
-				rerrs = append(rerrs, rerr)
+				e1, c := errorType(e, rollback)
+				rerrs = append(rerrs, errors.NewTransactionFetchError(e1, c))
 			}
 			return rerrs
 		}
@@ -600,7 +600,8 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 	if txMutations.TranImplicit() {
 		// implict transaction write the current batch
 		if terr := txMutations.Write(context.GetReqDeadline()); terr != nil {
-			return nil, errors.NewError(terr, "write error")
+			e, c := errorType(terr, false)
+			return nil, errors.NewWriteTransactionError(e, c)
 		}
 	}
 
