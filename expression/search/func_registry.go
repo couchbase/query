@@ -32,7 +32,6 @@ The variable _FUNCTIONS represents a map from string to
 Function. Each string returns a pointer to that function.
 */
 var _FUNCTIONS = map[string]expression.Function{
-	"search_query": &FTSQuery{},
 	"search":       &Search{},
 	"search_meta":  &SearchMeta{},
 	"search_score": &SearchScore{},
