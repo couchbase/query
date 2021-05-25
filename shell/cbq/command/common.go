@@ -146,8 +146,15 @@ func Resolve(param string) (val value.Value, err_code int, err_str string) {
 
 		v, ok := UserDefSV[key]
 		if !ok {
-			err_code = errors.NO_SUCH_PARAM
-			err_str = " " + param + " "
+
+			// Look into our os code - shell expansion for variables.
+			strval := os.Getenv(key)
+			if strings.TrimSpace(strval) == "" {
+				err_code = errors.NO_SUCH_PARAM
+				err_str = " " + param + " "
+			} else {
+				val = StrToVal(strval)
+			}
 		} else {
 			val, err_code, err_str = v.Top()
 		}
