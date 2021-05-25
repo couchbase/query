@@ -424,10 +424,10 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var itemMap map[string]interface{}
+		var res interface{}
 
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
-			itemMap = map[string]interface{}{
+			itemMap := map[string]interface{}{
 				"name":            entry.Prepared.Name(),
 				"uses":            entry.Uses,
 				"statement":       entry.Prepared.Text(),
@@ -467,8 +467,9 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 				itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
 				itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
 			}
+			res = itemMap
 		})
-		return itemMap, nil
+		return res, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -552,10 +553,10 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var itemMap map[string]interface{}
+		var res interface{}
 
 		functions.FunctionDo(name, func(entry *functions.FunctionEntry) {
-			itemMap = map[string]interface{}{
+			itemMap := map[string]interface{}{
 				"uses": entry.Uses,
 			}
 			entry.Signature(itemMap)
@@ -569,8 +570,9 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 				itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
 				itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
 			}
+			res = itemMap
 		})
-		return itemMap, nil
+		return res, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -640,16 +642,17 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var itemMap map[string]interface{}
+		var res interface{}
 
 		dictionary.DictCacheEntryDo(name, func(d interface{}) {
 			entry := d.(dictionary.DictCacheEntry)
 
-			itemMap = map[string]interface{}{}
+			itemMap := map[string]interface{}{}
 			entry.Target(itemMap)
 			entry.Dictionary(itemMap)
+			res = itemMap
 		})
-		return itemMap, nil
+		return res, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -716,10 +719,10 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var itemMap map[string]interface{}
+		var res interface{}
 
 		scheduler.TaskDo(name, func(entry *scheduler.TaskEntry) {
-			itemMap = map[string]interface{}{
+			itemMap := map[string]interface{}{
 				"class":      entry.Class,
 				"subClass":   entry.SubClass,
 				"name":       entry.Name,
@@ -740,8 +743,9 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			if !entry.EndTime.IsZero() {
 				itemMap["stopTime"] = entry.EndTime.String()
 			}
+			res = itemMap
 		})
-		return itemMap, nil
+		return res, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -824,13 +828,14 @@ func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Requ
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var itemMap map[string]interface{}
+		var res interface{}
 		transactions.TransactionEntryDo(txId, func(d interface{}) {
 			entry := d.(*transactions.TranContext)
-			itemMap = map[string]interface{}{}
+			itemMap := map[string]interface{}{}
 			entry.Content(itemMap)
+			res = itemMap
 		})
-		return itemMap, nil
+		return res, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -882,9 +887,8 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		reqMap := activeRequestWorkHorse(endpoint, requestId, (req.Method == "POST"))
+		return activeRequestWorkHorse(endpoint, requestId, (req.Method == "POST")), nil
 
-		return reqMap, nil
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
@@ -900,10 +904,13 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	}
 }
 
-func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling bool) map[string]interface{} {
-	reqMap := map[string]interface{}{}
+func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling bool) interface{} {
+	var res interface{}
+
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
-		reqMap["requestId"] = request.Id().String()
+		reqMap := map[string]interface{}{
+			"requestId": request.Id().String(),
+		}
 		cId := request.ClientID().String()
 		if cId != "" {
 			reqMap["clientContextID"] = cId
@@ -1009,8 +1016,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if userAgent != "" {
 			reqMap["userAgent"] = userAgent
 		}
+		res = reqMap
 	})
-	return reqMap
+	return res
 }
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
@@ -1109,8 +1117,7 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		reqMap := completedRequestWorkHorse(requestId, (req.Method == "POST"))
-		return reqMap, nil
+		return completedRequestWorkHorse(requestId, (req.Method == "POST")), nil
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
@@ -1127,10 +1134,13 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	}
 }
 
-func completedRequestWorkHorse(requestId string, profiling bool) map[string]interface{} {
-	reqMap := map[string]interface{}{}
+func completedRequestWorkHorse(requestId string, profiling bool) interface{} {
+	var res interface{}
+
 	server.RequestDo(requestId, func(request *server.RequestLogEntry) {
-		reqMap["requestId"] = request.RequestId
+		reqMap := map[string]interface{}{
+			"requestId": request.RequestId,
+		}
 		if request.ClientId != "" {
 			reqMap["clientContextID"] = request.ClientId
 		}
@@ -1219,8 +1229,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) map[string]inte
 		if request.UserAgent != "" {
 			reqMap["userAgent"] = request.UserAgent
 		}
+		res = reqMap
 	})
-	return reqMap
+	return res
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
