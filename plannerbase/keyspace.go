@@ -205,6 +205,10 @@ func (this *BaseKeyspace) SetOuterlevel(outerlevel int32) {
 	this.outerlevel = outerlevel
 }
 
+func (this *BaseKeyspace) IsOuter() bool {
+	return (this.outerlevel > 0)
+}
+
 // document count for keyspaces, 0 for others (ExpressionTerm, SubqueryTerm)
 func (this *BaseKeyspace) DocCount() int64 {
 	return this.docCount
