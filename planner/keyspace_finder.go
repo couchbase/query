@@ -21,6 +21,7 @@ import (
 // gather keyspace references in a FROM clause (by walking the algebra AST tree)
 type keyspaceFinder struct {
 	baseKeyspaces    map[string]*base.BaseKeyspace
+	outerlevel       int32
 	pushableOnclause expression.Expression
 	unnestDepends    map[string]*expression.Identifier
 }
@@ -39,6 +40,7 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias, keyspace string) error {
 		return errors.NewPlanInternalError(fmt.Sprintf("addKeyspaceAlias: duplicate keyspace %s", alias))
 	}
 	newBaseKeyspace := base.NewBaseKeyspace(alias, keyspace)
+	newBaseKeyspace.SetOuterlevel(this.outerlevel)
 	this.baseKeyspaces[alias] = newBaseKeyspace
 	return nil
 }
@@ -53,15 +55,24 @@ func (this *keyspaceFinder) addOnclause(onclause expression.Expression) {
 	}
 }
 
-func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.SimpleFromTerm) error {
+func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.SimpleFromTerm, outer bool) error {
+	outerlevel := this.outerlevel
+	defer func() { this.outerlevel = outerlevel }()
+
 	_, err := left.Accept(this)
 	if err != nil {
 		return err
 	}
+
+	if outer {
+		this.outerlevel++
+	}
+
 	_, err = right.Accept(this)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -99,35 +110,41 @@ func (this *keyspaceFinder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (inter
 }
 
 func (this *keyspaceFinder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	return nil, this.visitJoin(node.Left(), node.Right())
+	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
 func (this *keyspaceFinder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
-	return nil, this.visitJoin(node.Left(), node.Right())
+	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
 func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+	err := this.visitJoin(node.Left(), node.Right(), node.Outer())
+
 	// if this is inner join, gather ON-clause
 	if !node.Outer() {
 		this.addOnclause(node.Onclause())
 	}
-	return nil, this.visitJoin(node.Left(), node.Right())
+
+	return nil, err
 }
 
 func (this *keyspaceFinder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	return nil, this.visitJoin(node.Left(), node.Right())
+	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
 func (this *keyspaceFinder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
-	return nil, this.visitJoin(node.Left(), node.Right())
+	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
 func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+	err := this.visitJoin(node.Left(), node.Right(), node.Outer())
+
 	// if this is inner nest, gather ON-clause
 	if !node.Outer() {
 		this.addOnclause(node.Onclause())
 	}
-	return nil, this.visitJoin(node.Left(), node.Right())
+
+	return nil, err
 }
 
 func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {

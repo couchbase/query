@@ -27,17 +27,16 @@ type BaseKeyspace struct {
 	dnfPred     expression.Expression
 	origPred    expression.Expression
 	onclause    expression.Expression
+	outerlevel  int32
 	ksFlags     uint32
 	unnests     map[string]string
 }
 
 func NewBaseKeyspace(name, keyspace string) *BaseKeyspace {
-	rv := &BaseKeyspace{
+	return &BaseKeyspace{
 		name:     name,
 		keyspace: keyspace,
 	}
-
-	return rv
 }
 
 func (this *BaseKeyspace) PlanDone() bool {
@@ -70,6 +69,7 @@ func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	for _, kspace := range src {
 		dest[kspace.name] = NewBaseKeyspace(kspace.name, kspace.keyspace)
 		dest[kspace.name].ksFlags = kspace.ksFlags
+		dest[kspace.name].outerlevel = kspace.outerlevel
 		if len(kspace.unnests) > 0 {
 			dest[kspace.name].unnests = make(map[string]string, len(kspace.unnests))
 			for a, k := range kspace.unnests {
@@ -134,6 +134,18 @@ func (this *BaseKeyspace) SetPreds(dnfPred, origPred, onclause expression.Expres
 	this.dnfPred = dnfPred
 	this.origPred = origPred
 	this.onclause = onclause
+}
+
+func (this *BaseKeyspace) Outerlevel() int32 {
+	return this.outerlevel
+}
+
+func (this *BaseKeyspace) SetOuterlevel(outerlevel int32) {
+	this.outerlevel = outerlevel
+}
+
+func (this *BaseKeyspace) IsOuter() bool {
+	return (this.outerlevel > 0)
 }
 
 // unnests is only populated for the primary keyspace term

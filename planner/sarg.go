@@ -90,6 +90,11 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, max int, 
 	sargKeys := keys[0:max]
 
 	for _, fl := range filters {
+		if (baseKeyspace.OnclauseOnly() || baseKeyspace.IsOuter()) && !fl.IsOnclause() {
+			// only ON-clause filter should be used
+			continue
+		}
+
 		isJoin := fl.IsJoin() && !underHash
 		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isJoin,
 			doSelec, baseKeyspace, context)
