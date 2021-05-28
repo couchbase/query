@@ -463,9 +463,7 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 		}
 	}
 
-	// MB-38564: in case of outer join, filters from the WHERE clause should not
-	// be pushed to a subservient table
-	err = CombineFilters(baseKeyspace, true, outer)
+	err = CombineFilters(baseKeyspace, true)
 	if err != nil {
 		return err
 	}

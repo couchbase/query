@@ -17,7 +17,7 @@ import (
 // Combine an array of filters into a single expression by ANDing each filter expression,
 // perform transformation on each filter, and if an OR filter is involved, perform DNF
 // transformation on the combined filter
-func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause, onclauseOnly bool) error {
+func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause bool) error {
 	var err error
 	var predHasOr, onHasOr bool
 	var dnfPred, origPred, onclause expression.Expression
@@ -41,7 +41,9 @@ func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause, onclauseOn
 				continue
 			}
 		} else {
-			if onclauseOnly {
+			// MB-38564, MB-46607: in case of outer join, filters from the
+			// WHERE clause should not be pushed to a subservient table
+			if baseKeyspace.OnclauseOnly() || baseKeyspace.IsOuter() {
 				continue
 			}
 		}

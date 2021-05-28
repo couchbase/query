@@ -67,7 +67,7 @@
             ],
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` IS MISSING AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 2 END END"
         },
-        "statements":"SELECT l.c11, r.c22 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r.c21 IS NOT MISSING",
+        "statements":"SELECT l.c11, r.c22 FROM shellTest l LEFT JOIN shellTest r USE INDEX(st_ix23) ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r.c21 IS NOT MISSING",
         "results": [
         {
             "c11": 3,
@@ -110,6 +110,24 @@
         {
             "c11": 3
         },
+        {
+            "c11": 4
+        }
+	]
+    },
+    {
+        "testcase": "MB-46607",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` IS NOT MISSING AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'st_ix24' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 2 AND v.`spans`[0].`range`[1].high IS MISSING END END"
+        },
+        "statements":"SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c11 = r.c21 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r IS MISSING",
+        "results": [
         {
             "c11": 4
         }
