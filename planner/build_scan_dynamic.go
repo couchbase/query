@@ -77,7 +77,7 @@ outer:
 	if !ok {
 		return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildDynamicScan: missing baseKeyspace %s", node.Alias()))
 	}
-	err = CombineFilters(baseKeyspace, true, false)
+	err = CombineFilters(baseKeyspace, true)
 	if err != nil {
 		return nil, 0, err
 	}

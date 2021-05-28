@@ -126,7 +126,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	subset := pred
 	if kspace, ok := this.baseKeyspaces[node.Alias()]; ok {
-		err = CombineFilters(kspace, false, false)
+		err = CombineFilters(kspace, false)
 		if err != nil {
 			return nil, nil, nil, err
 		}

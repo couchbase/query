@@ -62,7 +62,7 @@ func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datas
 
 	addUnnestPreds(baseKeyspaces, newKeyspace)
 	baseKeyspace.SetFilters(newKeyspace.Filters(), newKeyspace.JoinFilters())
-	err = CombineFilters(baseKeyspace, true, false)
+	err = CombineFilters(baseKeyspace, true)
 	if err != nil {
 		return err
 	}

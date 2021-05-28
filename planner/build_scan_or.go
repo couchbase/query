@@ -142,13 +142,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 				addUnnestPreds(baseKeyspaces, baseKeyspace)
 			}
 
-			// for ANSI JOIN, all predicates in a sub-arm of OR clause are classified as ON-clause
-			// filters above (since it's not easy to actually determine whether it's ON-clause or not),
-			// the 3rd argument can be passed in as true in this case.
-			// It's ok to classify all predicates as ON-clause since we know the entire OR clause
-			// is applicable and thus can be used for index selection. This is also done on a temporary
-			// bases (a copy of BaseKeyspace) and does not affect original filters.
-			err = CombineFilters(baseKeyspace, join, join)
+			err = CombineFilters(baseKeyspace, join)
 			if err != nil {
 				return nil, 0, err
 			}
