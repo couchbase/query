@@ -244,6 +244,8 @@ var _FUNCTIONS = map[string]Function{
 	"array_avg":           &ArrayAvg{},
 	"array_concat":        &ArrayConcat{},
 	"array_contains":      &ArrayContains{},
+	"array_contains_all":  &ArrayContainsAll{},
+	"array_contains_any":  &ArrayContainsAny{},
 	"array_count":         &ArrayCount{},
 	"array_distinct":      &ArrayDistinct{},
 	"array_flatten":       &ArrayFlatten{},

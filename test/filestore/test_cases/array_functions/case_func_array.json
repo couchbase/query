@@ -180,6 +180,24 @@
     ]
   },
   {
+    "statements": "SELECT ARRAY_CONTAINS_ALL([1,2,3],[1,2,3,4]), ARRAY_CONTAINS_ALL([1,2,3],[1,2])",
+    "results": [
+      {
+        "$1": false,
+        "$2": true
+      }
+    ]
+  },
+  {
+    "statements": "SELECT ARRAY_CONTAINS_ANY([1,2,3],[1,2,3,4]), ARRAY_CONTAINS_ANY([1,2,3],[9,8])",
+    "results": [
+      {
+        "$1": true,
+        "$2": false
+      }
+    ]
+  },
+  {
     "statements": "SELECT ARRAY_COUNT(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\"",
     "results": [
       {

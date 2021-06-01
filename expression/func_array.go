@@ -340,6 +340,209 @@ func (this *ArrayContains) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayContainsAny
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_CONTAINS_ANY(expr, value).
+It returns true if the array contains value.
+*/
+type ArrayContainsAny struct {
+	BinaryFunctionBase
+}
+
+func NewArrayContainsAny(first, second Expression) Function {
+	rv := &ArrayContainsAny{
+		*NewBinaryFunctionBase("array_contains_any", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayContainsAny) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayContainsAny) Type() value.Type { return value.BOOLEAN }
+
+/*
+Tests for any element in the second argument being present in the first.
+*/
+func (this *ArrayContainsAny) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
+	fa := first.Actual().([]interface{})
+	if second.Type() == value.ARRAY {
+		sa := second.Actual().([]interface{})
+		for _, f := range fa {
+			if f == nil {
+				continue
+			}
+			fv := value.NewValue(f)
+			for _, s := range sa {
+				if s == nil {
+					continue
+				}
+				sv := value.NewValue(s)
+				if sv.Equals(fv).Truth() {
+					return value.TRUE_VALUE, nil
+				}
+			}
+		}
+	} else {
+		for _, f := range fa {
+			fv := value.NewValue(f)
+			if second.Equals(fv).Truth() {
+				return value.TRUE_VALUE, nil
+			}
+		}
+	}
+
+	return value.FALSE_VALUE, nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ArrayContainsAny) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
+Factory method pattern.
+*/
+func (this *ArrayContainsAny) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayContainsAny(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ArrayContainsAll
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_CONTAINS_ALL(expr, value).
+It returns true if the array contains all values in value.
+*/
+type ArrayContainsAll struct {
+	BinaryFunctionBase
+}
+
+func NewArrayContainsAll(first, second Expression) Function {
+	rv := &ArrayContainsAll{
+		*NewBinaryFunctionBase("array_contains_all", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayContainsAll) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayContainsAll) Type() value.Type { return value.BOOLEAN }
+
+/*
+Tests for all elements in the second argument being present in the first.
+*/
+func (this *ArrayContainsAll) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
+	var list []interface{}
+	if second.Type() != value.ARRAY {
+		// make an array with it as the only element to keep things simple
+		list = make([]interface{}, 1)
+		list[0] = second
+	} else {
+		list = second.Actual().([]interface{})
+	}
+
+	cont := first.Actual().([]interface{})
+	vcont := make([]value.Value, len(cont))
+	c := 0
+	for i, item := range list {
+		vitem := value.NewValue(item)
+		for j, cval := range cont {
+			if vcont[j] == nil {
+				vcont[j] = value.NewValue(cval)
+			}
+			val := vcont[j]
+			if vitem.Equals(val).Truth() {
+				c++
+				break
+			}
+		}
+		if i == c {
+			return value.FALSE_VALUE, nil
+		}
+	}
+	return value.TRUE_VALUE, nil
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ArrayContainsAll) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
+Factory method pattern.
+*/
+func (this *ArrayContainsAll) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayContainsAll(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ArrayCount
 //
 ///////////////////////////////////////////////////

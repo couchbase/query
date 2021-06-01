@@ -180,6 +180,22 @@
     ]
   },
   {
+    "statements": "SELECT ARRAY_CONTAINS_ANY(array_agg(LENGTH(custId)), [9,10]) FROM orders WHERE test_id=\"array_func\"",
+    "results": [
+      {
+        "$1": true
+      }
+    ]
+  },
+  {
+    "statements": "SELECT ARRAY_CONTAINS_ALL(array_agg(LENGTH(custId)), [10,11]) FROM orders WHERE test_id=\"array_func\"",
+    "results": [
+      {
+        "$1": true
+      }
+    ]
+  },
+  {
     "statements": "SELECT ARRAY_COUNT(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\"",
     "results": [
       {

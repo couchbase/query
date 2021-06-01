@@ -166,6 +166,22 @@
     ]
   },
   {
+     "statements":"SELECT ARRAY_CONTAINS_ANY(array_agg(LENGTH(title)), [500,7]) FROM default:catalog",
+     "results": [
+        {
+            "$1": true
+        }
+    ]
+  },
+  {
+     "statements":"SELECT ARRAY_CONTAINS_ALL(array_agg(LENGTH(title)), [7,16,18]) FROM default:catalog",
+     "results": [
+        {
+            "$1": true
+        }
+    ]
+  },
+  {
      "statements":"SELECT ARRAY_COUNT(array_agg(LENGTH(title))) FROM default:catalog",
      "results": [
         {
