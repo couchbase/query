@@ -41,7 +41,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -83,7 +84,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -125,7 +127,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -164,7 +167,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -206,7 +210,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -248,7 +253,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -290,7 +296,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -332,7 +339,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -374,7 +382,8 @@
 	"queryContext" : "",
 	"txId" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -413,7 +422,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -452,7 +462,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -489,7 +500,8 @@
       },
       "optional_fields" : {
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -528,7 +540,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -567,7 +580,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -606,7 +620,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -645,7 +660,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -684,7 +700,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1059,7 +1076,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1098,7 +1116,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1137,7 +1156,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     { 
@@ -1258,7 +1278,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1297,7 +1318,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1336,7 +1358,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1375,7 +1398,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1414,7 +1438,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1453,7 +1478,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1492,7 +1518,8 @@
 	"clientContextId" : "",
 	"queryContext" : "",
         "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ]
+        "positionalArgs" : [ "" ],
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1526,7 +1553,8 @@
 	}
       },
       "optional_fields" : {
-	"clientContextId" : ""
+	"clientContextId" : "",
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1562,7 +1590,8 @@
 	}
       },
       "optional_fields" : {
-	"clientContextId" : ""
+	"clientContextId" : "",
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1598,7 +1627,8 @@
 	}
       },
       "optional_fields" : {
-	"clientContextId" : ""
+	"clientContextId" : "",
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1635,7 +1665,8 @@
 	}
       },
       "optional_fields" : {
-	"clientContextId" : ""
+	"clientContextId" : "",
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1672,7 +1703,8 @@
 	}
       },
       "optional_fields" : {
-	"clientContextId" : ""
+	"clientContextId" : "",
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {
@@ -1709,7 +1741,8 @@
 	}
       },
       "optional_fields" : {
-	"clientContextId" : ""
+	"clientContextId" : "",
+        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
       }
     },
     {

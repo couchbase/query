@@ -1089,6 +1089,11 @@ func (this *BaseRequest) EventStatement() string {
 }
 
 // For audit.Auditable interface.
+func (this *BaseRequest) EventErrorMessage() []errors.Error {
+	return this.errors
+}
+
+// For audit.Auditable interface.
 func (this *BaseRequest) EventQueryContext() string {
 	return this.QueryContext()
 }

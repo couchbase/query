@@ -20,6 +20,7 @@ import (
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 )
@@ -52,6 +53,9 @@ type Auditable interface {
 
 	// The N1QL statement executed.
 	EventStatement() string
+
+	// The errors returned if any
+	EventErrorMessage() []errors.Error
 
 	// The query context used to formalize collections
 	EventQueryContext() string
@@ -593,6 +597,13 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 			Status:          status,
 			Metrics:         metrics,
 		}
+		if status != "success" {
+			finalErr := auditError(event.EventErrorMessage())
+			if len(finalErr) > 0 {
+				record.Errors = finalErr
+			}
+		}
+
 		entry := auditQueueEntry{
 			eventId:          eventTypeId,
 			isQueryType:      true,
@@ -633,6 +644,12 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 		}
 		record.GenericFields.RealUserid.Domain = user.Domain
 		record.GenericFields.RealUserid.Username = user.Name
+		if status != "success" {
+			finalErr := auditError(event.EventErrorMessage())
+			if len(finalErr) > 0 {
+				record.Errors = finalErr
+			}
+		}
 
 		entries[i] = auditQueueEntry{
 			eventId:          eventTypeId,
@@ -641,6 +658,42 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 		}
 	}
 	return entries
+}
+
+var AUTH_ERRORS = map[int32]bool{
+	errors.ADMIN_CONN_ERROR:                  true,
+	errors.ADMIN_AUTH_ERROR:                  true,
+	errors.ADMIN_SSL_NOT_ENABLED:             true,
+	errors.ADMIN_CREDS_ERROR:                 true,
+	errors.DS_AUTH_ERROR:                     true,
+	errors.DS_ROLES_ERROR:                    true,
+	errors.DS_INSUFFICIENT_CREDS:             true,
+	errors.DS_CB_CONN_ERROR:                  true,
+	errors.DS_CB_INIT_CBAUTH_ERROR:           true,
+	errors.DS_CB_SEC_CONFIG_ERROR:            true,
+	errors.DS_SYS_ROLE_ERROR:                 true,
+	errors.DS_SYS_UNABLE_TO_UPDATE_USER_INFO: true,
+	errors.DS_SYS_INSUFFICIENT_PERMISSION:    true,
+	errors.EXE_USER_NOT_FOUND:                true,
+	errors.EXE_ROLE_REQUIRES_KEYSPACE:        true,
+	errors.EXE_ROLE_TAKES_NO_KEYSPACE:        true,
+	errors.EXE_ROLE_NOT_FOUND:                true,
+	errors.EXE_ROLE_ALREADY_PRESENT:          true,
+	errors.EXE_ROLE_NOT_PRESENT:              true,
+	errors.EXE_NEW_USER_NO_ROLES:             true,
+	errors.NODE_ACCESS_ERR:                   true}
+
+func auditError(err []errors.Error) (finalErr []map[string]interface{}) {
+
+	for _, err := range err {
+		if ok := AUTH_ERRORS[err.Code()]; ok {
+			if finalErr == nil {
+				finalErr = make([]map[string]interface{}, 1)
+			}
+			finalErr = append(finalErr, map[string]interface{}{"code": err.Code(), "msg": err.Error()})
+		}
+	}
+	return finalErr
 }
 
 func userInfoFromUsername(user string) datastore.UserInfo {
@@ -736,13 +789,14 @@ type n1qlAuditEvent struct {
 	Remote *addressFields `json:"remote,omitempty"`
 	Local  *addressFields `json:"local,omitempty"`
 
-	RequestId       string                 `json:"requestId"`
-	Statement       string                 `json:"statement"`
-	QueryContext    string                 `json:"queryContext,omitempty"`
-	NamedArgs       map[string]interface{} `json:"namedArgs,omitempty"`
-	PositionalArgs  []interface{}          `json:"positionalArgs,omitempty"`
-	ClientContextId string                 `json:"clientContextId,omitempty"`
-	TxId            string                 `json:"txId,omitempty"`
+	RequestId       string                   `json:"requestId"`
+	Statement       string                   `json:"statement"`
+	Errors          []map[string]interface{} `json:"errors"`
+	QueryContext    string                   `json:"queryContext,omitempty"`
+	NamedArgs       map[string]interface{}   `json:"namedArgs,omitempty"`
+	PositionalArgs  []interface{}            `json:"positionalArgs,omitempty"`
+	ClientContextId string                   `json:"clientContextId,omitempty"`
+	TxId            string                   `json:"txId,omitempty"`
 
 	IsAdHoc    bool   `json:"isAdHoc"`
 	PreparedId string `json:"preparedId,omitempty"`
