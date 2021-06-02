@@ -662,6 +662,11 @@ func (this *httpRequest) EventErrorCount() int {
 }
 
 // For audit.Auditable interface.
+func (this *httpRequest) EventErrorMessage() []errors.Error {
+	return this.Errors()
+}
+
+// For audit.Auditable interface.
 func (this *httpRequest) EventWarningCount() int {
 	return this.warningCount
 }
