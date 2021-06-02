@@ -108,7 +108,8 @@ var FUNCTIONS_LIMIT = flag.Int("functions-limit", _DEF_FUNCTIONS_LIMIT, "maximum
 var TASKS_LIMIT = flag.Int("tasks-limit", _DEF_TASKS_LIMIT, "maximum number of cached tasks")
 
 // GOGC
-var _GOGC_PERCENT = 200
+var _GOGC_PERCENT_DEFAULT = 200
+var _GOGC_PERCENT = flag.Int("gc-percent", _GOGC_PERCENT_DEFAULT, "Go runtime garbage collection target percentage")
 
 // profiler, to use instead of the REST endpoint if needed
 // var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
@@ -117,7 +118,7 @@ var _GOGC_PERCENT = 200
 var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_CACHE_LIMIT, "maximum number of entries in dictionary cache")
 
 func init() {
-	debug.SetGCPercent(_GOGC_PERCENT)
+	debug.SetGCPercent(_GOGC_PERCENT_DEFAULT)
 	setOpenFilesLimit()
 }
 
@@ -320,6 +321,7 @@ func main() {
 		util.SetUseCBO(util.CE_USE_CBO)
 	}
 	server.SetMemoryQuota(*MEMORY_QUOTA)
+	server.SetGCPercent(*_GOGC_PERCENT)
 
 	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 
@@ -342,7 +344,8 @@ func main() {
 			" n1ql-feat-ctrl=%v"+
 			" use-cbo=%v"+
 			" timeout=%v"+
-			" txtimeout=%v",
+			" txtimeout=%v"+
+			" gc-percent=%v",
 			util.VERSION,
 			*DATASTORE,
 			numProcs,
@@ -360,6 +363,7 @@ func main() {
 			util.GetUseCBO(),
 			server.Timeout(),
 			server.TxTimeout(),
+			*_GOGC_PERCENT,
 		)
 	})
 

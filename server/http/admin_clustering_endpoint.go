@@ -483,6 +483,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[server.CLEANUPWINDOW] = tranSettings.CleanupWindow().String()
 	settings[server.CLEANUPCLIENTATTEMPTS] = tranSettings.CleanupClientAttempts()
 	settings[server.CLEANUPLOSTATTEMPTS] = tranSettings.CleanupLostAttempts()
+	settings[server.GCPERCENT] = srvr.GCPercent()
 	return settings
 }
 

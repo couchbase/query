@@ -200,6 +200,12 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	GCPERCENT: func(s *Server, o interface{}) errors.Error {
+		if err := s.SetGCPercent(int(getNumber(o))); err != nil {
+			return errors.NewServiceErrorBadValue(err, "settings")
+		}
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {

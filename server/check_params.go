@@ -53,6 +53,7 @@ const (
 	CLEANUPWINDOW         = "cleanupwindow"
 	CLEANUPCLIENTATTEMPTS = "cleanupclientattempts"
 	CLEANUPLOSTATTEMPTS   = "cleanuplostattempts"
+	GCPERCENT             = "gc-percent"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -84,6 +85,7 @@ var CHECKERS = map[string]Checker{
 	CLEANUPWINDOW:         checkDuration,
 	CLEANUPCLIENTATTEMPTS: checkBool,
 	CLEANUPLOSTATTEMPTS:   checkBool,
+	GCPERCENT:             checkNumber,
 }
 
 var CHECKERS_MIN = map[string]int{

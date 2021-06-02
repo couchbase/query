@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -151,6 +152,7 @@ type Server struct {
 	atrCollection     string
 	numAtrs           int
 	settingsCallback  func(string, interface{})
+	gcpercent         int
 }
 
 // Default and min Keep Alive Length
@@ -1327,6 +1329,22 @@ func (this *Server) getPreparedByName(prepareName string, request Request, conte
 	request.SetType(prepared.Type())
 
 	return prepared, nil
+}
+
+func (this *Server) GCPercent() int {
+	return this.gcpercent
+}
+
+func (this *Server) SetGCPercent(gcpercent int) error {
+	if gcpercent < 75 || gcpercent > 300 {
+		return fmt.Errorf("gcpercent (%v) outside permitted range (75-300)", gcpercent)
+	}
+	if this.gcpercent != gcpercent {
+		logging.Warnf("Changing GC percent from %d to %d", this.gcpercent, gcpercent)
+		this.gcpercent = gcpercent
+	}
+	debug.SetGCPercent(this.gcpercent)
+	return nil
 }
 
 func logExplain(prepared *plan.Prepared) {
