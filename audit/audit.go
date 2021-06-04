@@ -491,6 +491,7 @@ const (
 	API_ADMIN_TRANSACTIONS               = 28726
 	API_ADMIN_INDEXES_TRANSACTIONS       = 28727
 	API_ADMIN_FUNCTIONS_BACKUP           = 28728
+	API_ADMIN_SHUTDOWN                   = 28729
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {

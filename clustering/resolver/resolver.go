@@ -23,7 +23,6 @@ import (
 
 func NewConfigstore(uri string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(uri, "http:") {
-		clustering_cb.Enable_ns_server_shutdown()
 		return clustering_cb.NewConfigstore(uri)
 	}
 

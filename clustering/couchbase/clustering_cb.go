@@ -36,6 +36,8 @@ const _PREFIX = "couchbase:"
 
 const _GRACE_PERIOD = time.Second
 
+const _POLL_INTERVAL = 10 * time.Second
+
 ///////// Notes about Couchbase implementation of Clustering API
 //
 // clustering_cb (this package) -> primitives/couchbase -> couchbase cluster
@@ -99,7 +101,8 @@ func (this *cbConfigStore) URL() string {
 	return this.adminUrl
 }
 
-func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string, maybeManaged bool) errors.Error {
+func (this *cbConfigStore) SetOptions(monitor clustering.StateMonitor, httpAddr, httpsAddr string,
+	maybeManaged bool) errors.Error {
 	if httpAddr != "" {
 		_, port := server.HostNameandPort(httpAddr)
 		if port != "" {
@@ -127,6 +130,7 @@ func (this *cbConfigStore) SetOptions(httpAddr, httpsAddr string, maybeManaged b
 		}
 	}
 	this.maybeManaged = maybeManaged
+	pollStdin.Do(func() { go doPollStdin(monitor) })
 	return nil
 }
 
@@ -911,28 +915,19 @@ func getJsonString(i interface{}) string {
 	return s.String()
 }
 
-// ns_server shutdown protocol: poll stdin and exit upon reciept of EOF
-func Enable_ns_server_shutdown() {
-	go pollStdin()
-}
+var pollStdin util.Once
 
-func pollStdin() {
+func doPollStdin(monitor clustering.StateMonitor) {
 	reader := bufio.NewReader(os.Stdin)
-	logging.Infof("pollEOF: About to start stdin polling")
 	for {
 		ch, err := reader.ReadByte()
-		if err == io.EOF {
-			logging.Infof("Received EOF; Exiting...")
+		if err == io.EOF || (err == nil && (ch == '\n' || ch == '\r')) {
+			logging.Infof("Received EOF or EOL; Attempting graceful shutdown.")
+			monitor.InitiateShutdownAndWait()
 			os.Exit(0)
-		}
-		if err != nil {
+		} else if err != nil {
 			logging.Errorf("Unexpected error polling stdin: %v", err)
 			os.Exit(1)
-		}
-		if ch == '\n' || ch == '\r' {
-			logging.Infof("Received EOL; Exiting...")
-			// TODO: "graceful" shutdown should be placed here
-			os.Exit(0)
 		}
 	}
 }

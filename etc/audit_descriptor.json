@@ -1807,6 +1807,27 @@
       "optional_fields" : {
         "request" : ""
       }
+    },
+    {
+      "id" : 28729,
+      "name" : "/admin/shutdown API request",
+      "description" : "An HTTP request was made to initate graceful shutdown",
+      "sync" : false,
+      "enabled" : false,
+      "filtering_permitted" : true,
+      "mandatory_fields" : {
+        "timestamp" : "",
+        "real_userid" : {"domain" : "", "user" : ""},
+        "remote" : {"ip" : "", "port" : 1},
+        "local" : {"ip" : "", "port" : 1},
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields" : {
+        "request" : ""
+      }
     }
   ]
 }

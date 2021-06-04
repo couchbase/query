@@ -36,6 +36,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	server_package "github.com/couchbase/query/server"
+	control "github.com/couchbase/query/server/control/couchbase"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
 )
@@ -228,8 +229,6 @@ func main() {
 		logging.Errorf("Could not connect to configstore: %v", err)
 	}
 
-	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
-
 	// ditto for distributed access for monitoring
 	// also distributed is used by many init() functions and should be done as early as possible
 	prof, ctrl, err := monitoringInit(configstore)
@@ -322,6 +321,7 @@ func main() {
 	}
 	server.SetMemoryQuota(*MEMORY_QUOTA)
 	server.SetGCPercent(*_GOGC_PERCENT)
+	configstore.SetOptions(server, *HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
 	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
 
@@ -378,6 +378,12 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 	constructor.Init(endpoint.Mux())
 
+	_, err = control.NewManager(server)
+	if err != nil {
+		logging.Errorf("cbq-engine exiting as NewManager failed with error: %v", err)
+		os.Exit(1)
+	}
+
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
 
@@ -418,14 +424,7 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 		logging.Infof("Shutting down immediately")
 		os.Exit(0)
 	}
-	logging.Infof("Attempting graceful exit")
-	// Stop accepting new requests
-	err := endpoint.Close()
-	if err != nil {
-		logging.Errorf("error closing http listener: %v", err)
-	}
-	err = endpoint.CloseTLS()
-	if err != nil {
-		logging.Errorf("error closing https listener: %v", err)
-	}
+	// graceful shutdown on SIGTERM
+	server.InitiateShutdownAndWait()
+	os.Exit(0)
 }

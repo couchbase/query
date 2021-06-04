@@ -72,6 +72,10 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusBadRequest
 	case 1120:
 		return http.StatusNotAcceptable
+	case 1180:
+		return http.StatusServiceUnavailable
+	case 1181:
+		return http.StatusServiceUnavailable
 	case 13014:
 		return http.StatusUnauthorized
 	case 3000: // parse error range

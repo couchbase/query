@@ -54,27 +54,25 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		return
 	}
 
-	_, ok := obj.(textPlain)
+	text, ok := obj.(textPlain)
 	if ok {
-		auditFields.HttpResultCode = http.StatusOK
-		audit.SubmitApiRequest(&auditFields)
-		return
-	}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(text))
+	} else {
+		buf, json_err := json.Marshal(obj)
+		if json_err != nil {
+			e := errors.NewAdminDecodingError(json_err)
+			status := writeError(w, e)
 
-	buf, json_err := json.Marshal(obj)
-	if json_err != nil {
-		e := errors.NewAdminDecodingError(json_err)
-		status := writeError(w, e)
-
-		auditFields.HttpResultCode = status
-		auditFields.ErrorCode = int(e.Code())
-		auditFields.ErrorMessage = e.Error()
-		audit.SubmitApiRequest(&auditFields)
-		return
+			auditFields.HttpResultCode = status
+			auditFields.ErrorCode = int(e.Code())
+			auditFields.ErrorMessage = e.Error()
+			audit.SubmitApiRequest(&auditFields)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(buf)
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(buf)
 
 	auditFields.HttpResultCode = http.StatusOK
 	audit.SubmitApiRequest(&auditFields)
@@ -90,7 +88,6 @@ func writeError(w http.ResponseWriter, err errors.Error) int {
 	}
 	status := mapErrorToHttpStatus(err)
 	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json")
 	w.Write(buf)
 	return status
 }

@@ -110,3 +110,13 @@ func NewServiceErrorHttpMethod(method string) Error {
 	return &err{level: EXCEPTION, ICode: 1170, IKey: "service.io.request.method",
 		InternalMsg: fmt.Sprintf("Unsupported method %s", method), InternalCaller: CallerN(1)}
 }
+
+func NewServiceShuttingDownError() Error {
+	return &err{level: EXCEPTION, ICode: 1180, IKey: "service.shuttingdown",
+		InternalMsg: "Service shutting down", InternalCaller: CallerN(1)}
+}
+
+func NewServiceShutDownError() Error {
+	return &err{level: EXCEPTION, ICode: 1181, IKey: "service.shutdown",
+		InternalMsg: "Service shut down", InternalCaller: CallerN(1)}
+}

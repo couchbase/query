@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/clustering"
@@ -61,6 +62,9 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 	settingsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doSettings)
 	}
+	shutdownHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doShutdown)
+	}
 	indexHandler := this.wrapHandlerFuncWithAdminAuth(pprof.Index)
 	profileHandler := this.wrapHandlerFuncWithAdminAuth(pprof.Profile)
 	routeMap := map[string]struct {
@@ -77,6 +81,7 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 		clustersPrefix + "/{cluster}/nodes/{node}": {handler: nodeHandler, methods: []string{"GET", "PUT", "DELETE"}},
 		"/debug/pprof/":                            {handler: indexHandler, methods: []string{"GET"}},
 		"/debug/pprof/profile":                     {handler: profileHandler, methods: []string{"GET"}},
+		adminPrefix + "/shutdown":                  {handler: shutdownHandler, methods: []string{"GET", "POST"}},
 	}
 
 	for route, h := range routeMap {
@@ -171,9 +176,9 @@ func (this *HttpEndpoint) hasAdminAuth(req *http.Request, privilege clustering.P
 }
 
 var pingStatus = struct {
-	status string `json:"status"`
+	Status string `json:"status"`
 }{
-	"ok",
+	"OK",
 }
 
 func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
@@ -511,4 +516,47 @@ func getNodeFromRequest(req *http.Request) (clustering.QueryNode, errors.Error) 
 		return nil, errors.NewAdminDecodingError(err)
 	}
 	return node, nil
+}
+
+func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{},
+	errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_SHUTDOWN
+
+	// only permit internal callers
+	u, p, ok := req.BasicAuth()
+	if !ok {
+		return nil, errors.NewAdminAuthError(nil, "")
+	}
+
+	su, _, err := cbauth.GetHTTPServiceAuth(distributed.RemoteAccess().WhoAmI())
+	if err != nil {
+		return nil, errors.NewAdminAuthError(err, "")
+	}
+
+	if u != su {
+		return nil, errors.NewAdminAuthError(nil, "")
+	}
+
+	_, err = cbauth.Auth(u, p)
+	if err != nil {
+		return nil, errors.NewAdminAuthError(err, "")
+	}
+
+	switch req.Method {
+	case "POST":
+		if !endpoint.server.ShutDown() {
+			endpoint.server.InitiateShutdown()
+			return textPlain("shutdown requested\n"), nil
+		} else {
+			return errors.NewServiceShuttingDownError(), nil
+		}
+	case "GET":
+		if endpoint.server.ShutDown() {
+			return errors.NewServiceShutDownError(), nil
+		} else if endpoint.server.ShuttingDown() {
+			return errors.NewServiceShuttingDownError(), nil
+		}
+	}
+	return nil, errors.NewAdminEndpointError(nil, "Invalid method:"+req.Method)
 }

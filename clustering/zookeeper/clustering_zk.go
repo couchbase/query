@@ -66,7 +66,7 @@ func (z *zkConfigStore) URL() string {
 	return "zookeeper:" + z.url
 }
 
-func (z *zkConfigStore) SetOptions(httpAddr, httpsAddr string, managed bool) errors.Error {
+func (z *zkConfigStore) SetOptions(monitor clustering.StateMonitor, httpAddr, httpsAddr string, managed bool) errors.Error {
 	return nil
 }
 

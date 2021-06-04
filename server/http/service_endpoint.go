@@ -264,10 +264,24 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		requestPool.Put(request)
 	}()
 
+	defer this.doStats(request, this.server)
+
+	// check and act on this first to keep possible load as low as possible in the event of unmetered repeat attempts
+	// new transactions can't be started as the BEGIN doesn't carry a transaction ID and is ejected here
+	// invalid transaction IDs do pass through here but will be caught in server processing
+	if this.server.ShuttingDown() && request.TxId() == "" {
+		logging.Infof("Incoming request from '%v' rejected during service shutdown.", req.RemoteAddr)
+		if this.server.ShutDown() {
+			request.Fail(errors.NewServiceShutDownError())
+		} else {
+			request.Fail(errors.NewServiceShuttingDownError())
+		}
+		request.Failed(this.server)
+		return
+	}
+
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false)
-
-	defer this.doStats(request, this.server)
 
 	if request.State() == server.FATAL {
 

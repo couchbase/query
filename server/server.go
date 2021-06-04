@@ -37,6 +37,7 @@ import (
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
+	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -119,6 +120,12 @@ type txRunQueues struct {
 	txQueues map[string]*runQueue
 }
 
+const (
+	_SERVER_RUNNING  = 0
+	_REQUESTED       = 1
+	_SERVER_SHUTDOWN = 2
+)
+
 type Server struct {
 	// due to alignment issues on x86 platforms these atomic
 	// variables need to right at the beginning of the structure
@@ -153,6 +160,7 @@ type Server struct {
 	numAtrs           int
 	settingsCallback  func(string, interface{})
 	gcpercent         int
+	shutdown          int
 }
 
 // Default and min Keep Alive Length
@@ -600,7 +608,15 @@ func (this *Server) setupRequestContext(request Request) bool {
 		}
 
 		if err != nil {
-			request.Error(err)
+			if this.ShuttingDown() {
+				if this.ShutDown() {
+					request.Fail(errors.NewServiceShutDownError())
+				} else {
+					request.Fail(errors.NewServiceShuttingDownError())
+				}
+			} else {
+				request.Error(err)
+			}
 			return false
 		}
 
@@ -883,7 +899,11 @@ func (this *runQueue) checkWaiters() {
 }
 
 func (this *runQueue) load(txqueueCnt int) int {
-	return 100 * (int(this.runCnt) + int(this.queueCnt) + txqueueCnt) / this.servicers
+	return 100 * (this.activeRequests() + txqueueCnt) / this.servicers
+}
+
+func (this *runQueue) activeRequests() int {
+	return int(this.runCnt) + int(this.queueCnt)
 }
 
 func (this *Server) Load() int {
@@ -1345,6 +1365,85 @@ func (this *Server) SetGCPercent(gcpercent int) error {
 	}
 	debug.SetGCPercent(this.gcpercent)
 	return nil
+}
+
+func (this *Server) ShuttingDown() bool {
+	this.RLock()
+	rv := this.shutdown != _SERVER_RUNNING
+	this.RUnlock()
+	return rv
+}
+
+func (this *Server) ShutDown() bool {
+	this.RLock()
+	rv := this.shutdown == _SERVER_SHUTDOWN
+	this.RUnlock()
+	return rv
+}
+
+func (this *Server) InitiateShutdown() {
+	this.Lock()
+	if this.shutdown == _SERVER_RUNNING {
+		this.shutdown = _REQUESTED
+		this.Unlock()
+		logging.Infof("Graceful shutdown initiated.")
+		go this.monitorShutdown()
+	} else {
+		this.Unlock()
+	}
+}
+
+const _SHUTDOWN_WAIT_LIMIT = 10 * time.Minute
+
+func (this *Server) InitiateShutdownAndWait() {
+	this.InitiateShutdown()
+	start := time.Now()
+	for !this.ShutDown() && time.Now().Sub(start) < _SHUTDOWN_WAIT_LIMIT {
+		time.Sleep(time.Second)
+	}
+}
+
+func (this *Server) activeRequests() int {
+	return this.plusQueue.activeRequests() + this.unboundQueue.activeRequests()
+}
+
+const (
+	_CHECK_INTERVAL  = 100
+	_REPORT_INTERVAL = 10000
+)
+
+func (this *Server) monitorShutdown() {
+	// wait for existing requests to complete
+	ar := this.activeRequests()
+	at := transactions.CountTransContext()
+	if ar > 0 || at > 0 {
+		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
+		start := time.Now()
+		for {
+			ar = this.activeRequests()
+			at = transactions.CountTransContext()
+			if ar == 0 && at == 0 {
+				break
+			}
+			if time.Now().Sub(start) > time.Millisecond*_REPORT_INTERVAL {
+				logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
+				start = time.Now()
+			}
+			time.Sleep(time.Millisecond * _CHECK_INTERVAL)
+		}
+		logging.Infof("Shutdown: All requests and transactions completed.")
+	} else {
+		logging.Infof("Shutdown: No active requests or transactions.")
+	}
+
+	// only mark the server as now down; the master manager will use this state to report that this node is no longer active
+	this.Lock()
+	this.shutdown = _SERVER_SHUTDOWN
+	this.Unlock()
+
+	// after this point we have to trust the external monitoring will shut the process down eventually.  We cannot exit ourselves
+	// if it is still monitoring us as it will cause issues with running monitoring operations.  If the shutdown isn't initiated
+	// by something that will kill us off eventually, we will end up just sitting there unable to do anything.
 }
 
 func logExplain(prepared *plan.Prepared) {

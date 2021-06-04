@@ -421,6 +421,75 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 	}
 }
 
+// Performs an operation on all provided nodes (or all nodes if none provided) *including* the local node
+func (this *systemRemoteHttp) DoAdminOps(nodes []string, endpoint string, command string, key string, data string, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) ([][]byte, []errors.Error) {
+
+	if nodes == nil {
+		nodes = make([]string, 0, 16)
+	}
+
+	if key != "" {
+		endpoint = endpoint + "/" + key
+	}
+
+	cp := this.getCommParams()
+	// no nodes means all nodes
+	if len(nodes) == 0 {
+
+		clusters, err := this.configStore.ClusterNames()
+		if err != nil {
+			if warnFn != nil {
+				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+			}
+			errs := make([]errors.Error, 1)
+			errs[0] = err
+			return nil, errs
+		}
+
+		for c, _ := range clusters {
+			cl, err := this.configStore.ClusterByName(clusters[c])
+			if err != nil {
+				if warnFn != nil {
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+				}
+				continue
+			}
+			queryNodeNames, err := cl.QueryNodeNames()
+			if err != nil {
+				if warnFn != nil {
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+				}
+				continue
+			}
+
+			for _, nn := range queryNodeNames {
+				nodes = append(nodes, nn)
+			}
+		}
+	}
+
+	results := make([][]byte, len(nodes))
+	errs := make([]errors.Error, len(nodes))
+
+	for i, node := range nodes {
+		var queryNode clustering.QueryNode
+		queryNode, errs[i] = this.getQueryNode(node, "scan", endpoint)
+		if errs[i] != nil {
+			if warnFn != nil {
+				warnFn(errs[i])
+			}
+			continue
+		}
+
+		results[i], errs[i] = this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
+		if warnFn != nil && errs[i] != nil {
+			warnFn(errs[i])
+		}
+	}
+
+	return results, errs
+}
+
 func credsAsJSON(creds distributed.Creds) string {
 	buf := new(bytes.Buffer)
 	buf.WriteString("[")
