@@ -233,6 +233,18 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
+
+	keys := this.index.RangeKey()
+	for n, s := range this.spans {
+		// duplicate static spans so we can update with the information-only field
+		if s.Static {
+			s = s.Copy()
+			this.spans[n] = s
+		}
+		for i, r := range s.Ranges {
+			r.IndexKey = keys[i].String()
+		}
+	}
 	r["spans"] = this.spans
 
 	if this.term.As() != "" {

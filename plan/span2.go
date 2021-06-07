@@ -43,6 +43,7 @@ type Range2 struct {
 	Selec1    float64
 	Selec2    float64
 	Flags     uint32
+	IndexKey  string
 }
 
 func NewRange2(low, high expression.Expression, incl datastore.Inclusion, selec1, selec2 float64, flags uint32) *Range2 {
@@ -136,6 +137,10 @@ func (this *Range2) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 	if this.High != nil {
 		r["high"] = this.High
+	}
+
+	if len(this.IndexKey) > 0 {
+		r["index_key"] = this.IndexKey
 	}
 
 	if f != nil {
@@ -253,6 +258,7 @@ type Span2 struct {
 	Seek   expression.Expressions
 	Ranges Ranges2
 	Exact  bool
+	Static bool
 }
 
 func NewSpan2(seek expression.Expressions, ranges Ranges2, exact bool) *Span2 {
@@ -263,11 +269,18 @@ func NewSpan2(seek expression.Expressions, ranges Ranges2, exact bool) *Span2 {
 	}
 }
 
+func NewStaticSpan2(seek expression.Expressions, ranges Ranges2, exact bool) *Span2 {
+	rv := NewSpan2(seek, ranges, exact)
+	rv.Static = true
+	return rv
+}
+
 func (this *Span2) Copy() *Span2 {
 	return &Span2{
 		Seek:   expression.CopyExpressions(this.Seek),
 		Ranges: this.Ranges.Copy(),
 		Exact:  this.Exact,
+		Static: false,
 	}
 }
 

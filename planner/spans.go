@@ -102,36 +102,36 @@ func init() {
 	var range2 *plan.Range2
 
 	range2 = plan.NewRange2(expression.TRUE_EXPR, nil, datastore.LOW, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_SELF_SPAN)
-	_SELF_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, false)
-	_EXACT_SELF_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_SELF_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, false)
+	_EXACT_SELF_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_SELF_SPANS = NewTermSpans(_SELF_SPAN)
 	_EXACT_SELF_SPANS = NewTermSpans(_EXACT_SELF_SPAN)
 
 	range2 = plan.NewRange2(expression.NULL_EXPR, nil, datastore.LOW, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_FULL_SPAN)
-	_FULL_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, false)
-	_EXACT_FULL_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_FULL_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, false)
+	_EXACT_FULL_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_FULL_SPANS = NewTermSpans(_FULL_SPAN)
 	_EXACT_FULL_SPANS = NewTermSpans(_EXACT_FULL_SPAN)
 
 	range2 = plan.NewRange2(nil, nil, datastore.NEITHER, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_WHOLE_SPAN)
-	_WHOLE_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_WHOLE_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_WHOLE_SPANS = NewTermSpans(_WHOLE_SPAN)
 
 	range2 = plan.NewRange2(expression.NULL_EXPR, nil, datastore.NEITHER, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_VALUED_SPAN)
-	_VALUED_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, false)
-	_EXACT_VALUED_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_VALUED_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, false)
+	_EXACT_VALUED_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_VALUED_SPANS = NewTermSpans(_VALUED_SPAN)
 	_EXACT_VALUED_SPANS = NewTermSpans(_EXACT_VALUED_SPAN)
 
 	range2 = plan.NewRange2(expression.NULL_EXPR, expression.NULL_EXPR, datastore.NEITHER, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_EMPTY_SPAN)
-	_EMPTY_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_EMPTY_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_EMPTY_SPANS = NewTermSpans(_EMPTY_SPAN)
 
 	range2 = plan.NewRange2(expression.NULL_EXPR, expression.NULL_EXPR, datastore.BOTH, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_NULL_SPAN)
-	_NULL_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_NULL_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_NULL_SPANS = NewTermSpans(_NULL_SPAN)
 
 	range2 = plan.NewRange2(nil, expression.NULL_EXPR, datastore.NEITHER, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_MISSING_SPAN)
-	_MISSING_SPAN = plan.NewSpan2(nil, plan.Ranges2{range2}, true)
+	_MISSING_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_MISSING_SPANS = NewTermSpans(_MISSING_SPAN)
 }
