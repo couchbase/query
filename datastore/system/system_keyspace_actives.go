@@ -232,18 +232,15 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 }
 
 func (b *activeRequestsKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *activeRequestsKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *activeRequestsKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *activeRequestsKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {

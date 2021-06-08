@@ -134,18 +134,15 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 }
 
 func (b *dictionaryCacheKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *dictionaryCacheKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *dictionaryCacheKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *dictionaryCacheKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {

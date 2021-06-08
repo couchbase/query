@@ -122,18 +122,15 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 }
 
 func (b *functionsCacheKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *functionsCacheKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *functionsCacheKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *functionsCacheKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {

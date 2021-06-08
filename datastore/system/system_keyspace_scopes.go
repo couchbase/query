@@ -182,23 +182,19 @@ func (b *scopeKeyspace) fetchOne(ns, bn, sn string) (value.AnnotatedValue, error
 }
 
 func (b *scopeKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *scopeKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *scopeKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *scopeKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newScopesKeyspace(p *namespace, store datastore.Datastore, name string, skipSystem bool) (*scopeKeyspace, errors.Error) {

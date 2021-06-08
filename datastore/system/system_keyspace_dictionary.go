@@ -113,18 +113,15 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 }
 
 func (b *dictionaryKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *dictionaryKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *dictionaryKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *dictionaryKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {

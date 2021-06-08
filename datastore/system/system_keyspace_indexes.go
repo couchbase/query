@@ -421,23 +421,19 @@ func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, sk
 }
 
 func (b *indexKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *indexKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *indexKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func (b *indexKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 type indexIndex struct {
