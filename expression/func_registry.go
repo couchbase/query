@@ -148,6 +148,7 @@ var _FUNCTIONS = map[string]Function{
 	"lower":     &Lower{},
 	"lpad":      &LPad{},
 	"ltrim":     &LTrim{},
+	"mask":      &Mask{},
 	"position":  &Position0{},
 	"pos":       &Position0{},
 	"position0": &Position0{},

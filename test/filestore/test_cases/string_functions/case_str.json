@@ -631,5 +631,33 @@
           "$2": "trunc"
         }
       ]
+    },
+    {
+      "statements":"select mask(\"Some text to mask\"),mask(\"Some text to mask\",{\"mask\":\"++ ++ ++ ++\"}),mask(\"Some text to mask\",{\"length\":\"source\"}),mask(\"Some text to mask\",{\"anchor\":\"end\"}),mask(\"Some text to mask\",{\"mask\":\"LONGERTHANTHESOURCE\"}),mask(\"Some text to mask\",{\"mask\":\"LONGERTHANTHESOURCE\",\"length\":\"source\"}),mask(\"Some text to mask\",{\"mask\":\"LONGERTHANTHESOURCE\",\"anchor\":-10}),mask(\"Some text to mask\",{\"mask\":\"LONGERTHANTHESOURCE\",\"anchor\":-10,\"length\":\"source\"}),mask(\"Some text to mask\",{\"anchor\":\"text\"})",
+      "results": [
+        {
+            "$1": "********",
+            "$2": "++m++t++t++",
+            "$3": "********t to mask",
+            "$4": "********",
+            "$5": "LONGERTHANTHESOURCE",
+            "$6": "LONGERTHANTHESOUR",
+            "$7": "LONGERTHANTHESOURCExt to mask",
+            "$8": "ESOURCExt to mask",
+            "$9": "Some ********"
+        }
+      ]
+    },
+    {
+      "statements":"select mask(\"Some text to mask\",{\"anchor\":\"text\",\"length\":\"source\"}),mask(\"Some text to mask\",{\"mask\":\"**++**++**++**\",\"hole\":\"+\",\"inject\":\"*\"}),mask(\"Some text to mask\",{\"mask\":\"**++**++**++**\",\"hole\":\"+\"}),mask(\"Some text to mask\",{\"mask\":\"**++**++**++**\",\"hole\":\"+\",\"inject\":\"*\",\"length\":\"source\"}),mask(\"Some text to mask\",{\"mask\":\"**++**++**++**\",\"hole\":\"+\",\"length\":\"source\"})",
+      "results": [
+        {
+            "$1": "Some ********mask",
+            "$2": "**So**me** t**",
+            "$3": "**me**ex**to**",
+            "$4": "**So**me** t**ext to mask",
+            "$5": "**me**ex**to**ask"
+        }
+      ]
     }
 ]

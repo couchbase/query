@@ -10,6 +10,7 @@ package expression
 
 import (
 	"math"
+	"regexp"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -1210,6 +1211,261 @@ func (this *Upper) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewUpper(operands[0])
 	}
+}
+
+///////////////////////////////////////////////////
+//
+// Mask
+//
+///////////////////////////////////////////////////
+
+type Mask struct {
+	FunctionBase
+}
+
+func NewMask(operands ...Expression) Function {
+	rv := &Mask{
+		*NewFunctionBase("mask", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Mask) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Mask) Type() value.Type { return value.STRING }
+
+type _AnchorType int
+
+const (
+	_START _AnchorType = iota
+	_END
+	_TEXT
+	_POSITION
+)
+
+func (this *Mask) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var s string
+	null := false
+	missing := false
+
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		missing = true
+	} else if arg.Type() != value.STRING {
+		null = true
+	} else {
+		s = arg.ToString()
+	}
+
+	var mask string
+	hole := " "
+	inject := ""
+	preserve := false
+
+	anchorType := _START
+	var anchorPos int
+	var anchorRe *regexp.Regexp
+
+	if len(this.operands) > 1 {
+		options, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			missing = true
+		} else if options.Type() != value.OBJECT {
+			null = true
+		} else if !null && !missing {
+
+			if m, ok := options.Field("mask"); ok && m.Type() == value.STRING {
+				mask = m.Actual().(string)
+			}
+
+			if c, ok := options.Field("hole"); ok && c.Type() == value.STRING {
+				hole = c.Actual().(string)
+			}
+
+			if c, ok := options.Field("inject"); ok && c.Type() == value.STRING {
+				inject = c.Actual().(string)
+			}
+
+			if r, ok := options.Field("anchor"); ok {
+				switch r.Type() {
+				case value.NUMBER:
+					anchorType = _POSITION
+					anchorPos = int(r.(value.NumberValue).Int64())
+					anchorRe = nil
+				case value.STRING:
+					p := r.Actual().(string)
+					if strings.ToLower(p) == "start" {
+						anchorType = _START
+						anchorRe = nil
+					} else if strings.ToLower(p) == "end" {
+						anchorType = _END
+						anchorRe = nil
+					} else {
+						anchorType = _TEXT
+						anchorRe, err = regexp.Compile(r.Actual().(string))
+						if err != nil {
+							return nil, err
+						}
+					}
+					anchorPos = 0
+				default:
+					anchorType = _START
+					anchorRe = nil
+					anchorPos = 0
+				}
+			}
+
+			if r, ok := options.Field("length"); ok && r.Type() == value.STRING {
+				if strings.ToLower(r.Actual().(string)) == "source" {
+					preserve = true
+				} else {
+					preserve = false
+				}
+			}
+		}
+	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	if len(mask) == 0 {
+		mask = "********"
+	}
+
+	if anchorType == _TEXT {
+		m := anchorRe.FindStringIndex(s)
+		if m == nil {
+			return value.NewValue(s), nil
+		}
+		anchorPos = m[0]
+	}
+
+	var l int
+	if preserve {
+		l = len(s)
+	} else {
+		l = len(mask)
+	}
+
+	if preserve {
+		for _, mc := range mask {
+			if strings.ContainsRune(inject, mc) {
+				l++
+			}
+		}
+	}
+
+	right := anchorType == _END || anchorPos < 0
+	if anchorPos < 0 {
+		anchorPos *= -1
+	}
+
+	if anchorPos > len(s) {
+		return value.NewValue(s), nil
+	}
+
+	if !preserve {
+		l += anchorPos
+	}
+	rv := make([]rune, l)
+	mr := getReader(mask, right)
+	sr := getReader(s, right)
+
+	i := 0
+
+	body := func() {
+		mc, _, e := mr.ReadRune()
+		if e == nil {
+			if strings.ContainsRune(hole, mc) {
+				sc, _, e := sr.ReadRune()
+				if e == nil {
+					rv[i] = sc
+				} else {
+					rv[i] = mc
+				}
+			} else if strings.ContainsRune(inject, mc) {
+				rv[i] = mc
+			} else {
+				rv[i] = mc
+				_, _, _ = sr.ReadRune()
+			}
+		} else {
+			sc, _, e := sr.ReadRune()
+			if e == nil {
+				rv[i] = sc
+			}
+		}
+	}
+
+	if !right {
+		i = 0
+		for ; anchorPos > 0 && i < l; anchorPos-- {
+			sc, _, e := sr.ReadRune()
+			if e != nil {
+				break
+			}
+			rv[i] = sc
+			i++
+		}
+		for ; i < l; i++ {
+			body()
+		}
+	} else {
+		i = l - 1
+		for ; anchorPos > 0 && i >= 0; anchorPos-- {
+			sc, _, e := sr.ReadRune()
+			if e != nil {
+				break
+			}
+			rv[i] = sc
+			i--
+		}
+		for ; i >= 0; i-- {
+			body()
+		}
+	}
+
+	return value.NewValue(rv), nil
+}
+
+func getReader(s string, reverse bool) *strings.Reader {
+	if reverse {
+		return strings.NewReader(util.ReversePreservingCombiningCharacters(s))
+	} else {
+		return strings.NewReader(s)
+	}
+}
+
+/*
+Minimum input arguments required for the MASK function
+is 1.
+*/
+func (this *Mask) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments required for the MASK function
+is 2.
+*/
+func (this *Mask) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *Mask) Constructor() FunctionConstructor {
+	return NewMask
 }
 
 func strPositionApply(first, second value.Value, startPos int) (value.Value, error) {
