@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/cbauth/metakv"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/datastore"
@@ -372,8 +373,8 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 
 // FTS MetakvNotifier notifies the FTS client about any metakv changes it subscribed for.
 
-func N1ftyMetakvNotifier(path string, val []byte, rev interface{}) error {
-	configs := map[string]interface{}{path: val}
+func N1ftyMetakvNotifier(kve metakv.KVEntry) error {
+	configs := map[string]interface{}{kve.Path: kve.Value}
 	idxConfig, err := ftsclient.GetConfig()
 	if err != nil {
 		logging.Errorf(" Cannot get n1fty index config :: %v", err.Error())

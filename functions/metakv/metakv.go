@@ -42,17 +42,17 @@ func Init() {
 	}
 
 	// fire callback runner. It won't ever return
-	go metakv.RunObserveChildren(_CHANGE_COUNTER_PATH, callback, make(chan struct{}))
+	go metakv.RunObserveChildrenV2(_CHANGE_COUNTER_PATH, callback, make(chan struct{}))
 }
 
 // change callback
-func callback(path string, val []byte, rev interface{}) error {
+func callback(kve metakv.KVEntry) error {
 
 	// should never happen
-	if path != _CHANGE_COUNTER {
+	if kve.Path != _CHANGE_COUNTER {
 		return nil
 	}
-	node, _ := distributed.RemoteAccess().SplitKey(string(val))
+	node, _ := distributed.RemoteAccess().SplitKey(string(kve.Value))
 
 	// unclustered nodes can't check against themselves as there may be many of
 	// them, and all present themselves with an empty name
@@ -92,21 +92,21 @@ func fmtChangeCounter() []byte {
 // TODO this is very inefficient - we'll amend when we write the new storage
 func DropScope(namespace, bucket, scope string) {
 	scopePath := _FUNC_PATH + namespace + ":" + bucket + "." + scope + "."
-	metakv.IterateChildren(_FUNC_PATH, func(path string, value []byte, rev interface{}) error {
-		if strings.HasPrefix(path, scopePath) {
+	metakv.IterateChildrenV2(_FUNC_PATH, func(kve metakv.KVEntry) error {
+		if strings.HasPrefix(kve.Path, scopePath) {
 
 			// technically, we don't need to clear the cache because clearing the
 			// storage will invalidate the entry, but for completeness
-			functions.FunctionClear(path[len(scopePath):], nil)
-			metakv.Delete(path, nil)
+			functions.FunctionClear(kve.Path[len(scopePath):], nil)
+			metakv.Delete(kve.Path, nil)
 		}
 		return nil
 	})
 }
 
 func Foreach(f func(path string, value []byte) error) error {
-	return metakv.IterateChildren(_FUNC_PATH, func(p string, value []byte, rev interface{}) error {
-		return f(p[len(_FUNC_PATH):], value)
+	return metakv.IterateChildrenV2(_FUNC_PATH, func(kve metakv.KVEntry) error {
+		return f(kve.Path[len(_FUNC_PATH):], kve.Value)
 	})
 }
 

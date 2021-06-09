@@ -40,14 +40,14 @@ var GLOBALPARAM = map[string]string{
 
 type Config value.Value
 
-func Subscribe(callb metakv.Callback, path string, cancelCh chan struct{}) {
+func Subscribe(callb metakv.CallbackV2, path string, cancelCh chan struct{}) {
 	go func() {
 		fn := func(r int, err error) error {
 			if r > 0 {
 				logging.Errorf("ERROR: metakv notifier failed (%v)..Retrying %v", err, r)
 			}
 			// cancelCh is the cancel channel to return contril back to metakv.
-			err = metakv.RunObserveChildren(path, callb, cancelCh)
+			err = metakv.RunObserveChildrenV2(path, callb, cancelCh)
 			if err != nil {
 				logging.Infof("New susbscription %s done:%v", path, err)
 			}
@@ -67,15 +67,15 @@ func Subscribe(callb metakv.Callback, path string, cancelCh chan struct{}) {
 func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 	// Callback function that processes the input key value given by metakv.
 
-	metaKvCallback := func(path string, val []byte, rev interface{}) error {
-		if path == QuerySettingsMetaPath {
-			logging.Infof("New settings received: %s", string(val))
+	metaKvCallback := func(kve metakv.KVEntry) error {
+		if kve.Path == QuerySettingsMetaPath {
+			logging.Infof("New settings received: %s", string(kve.Value))
 
 			// To be able to process these settings correctly, convert to a map
 			// from string to value.Value.
 
 			// This function will also type check each input value.
-			newConfig, err := valConvert(val)
+			newConfig, err := valConvert(kve.Value)
 
 			if err != nil {
 				// Invalid values log this
