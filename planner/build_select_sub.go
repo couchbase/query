@@ -616,7 +616,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(aggs) > 0 {
-			ec := getFirstErrorContext(&aggs)
+			ec := getFirstErrorContext(aggs)
 			if len(ec) == 0 {
 				ec = node.Let()[0].Expression().ErrorContext()
 			}
@@ -624,7 +624,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(windowAggs) > 0 {
-			ec := getFirstErrorContext(&windowAggs)
+			ec := getFirstErrorContext(windowAggs)
 			if len(ec) == 0 {
 				ec = node.Let()[0].Expression().ErrorContext()
 			}
@@ -638,7 +638,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(aggs) > 0 {
-			ec := getFirstErrorContext(&aggs)
+			ec := getFirstErrorContext(aggs)
 			if len(ec) == 0 {
 				ec = node.Where().ErrorContext()
 			}
@@ -646,7 +646,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(windowAggs) > 0 {
-			ec := getFirstErrorContext(&windowAggs)
+			ec := getFirstErrorContext(windowAggs)
 			if len(ec) == 0 {
 				ec = node.Where().ErrorContext()
 			}
@@ -661,7 +661,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(aggs) > 0 {
-			ec := getFirstErrorContext(&aggs)
+			ec := getFirstErrorContext(aggs)
 			if len(ec) == 0 {
 				ec = group.By()[0].ErrorContext()
 			}
@@ -669,7 +669,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if len(windowAggs) > 0 {
-			ec := getFirstErrorContext(&windowAggs)
+			ec := getFirstErrorContext(windowAggs)
 			if len(ec) == 0 {
 				ec = group.By()[0].ErrorContext()
 			}
@@ -682,7 +682,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 			}
 
 			if len(windowAggs) > 0 {
-				ec := getFirstErrorContext(&windowAggs)
+				ec := getFirstErrorContext(windowAggs)
 				if len(ec) == 0 {
 					ec = group.Letting()[0].Expression().ErrorContext()
 				}
@@ -696,7 +696,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 			}
 
 			if len(windowAggs) > 0 {
-				ec := getFirstErrorContext(&windowAggs)
+				ec := getFirstErrorContext(windowAggs)
 				if len(ec) == 0 {
 					ec = group.Having().ErrorContext()
 				}
@@ -719,7 +719,7 @@ func allAggregates(node *algebra.Subselect, order *algebra.Order) (algebra.Aggre
 		}
 
 		if !allow && group == nil && len(aggs) > 0 {
-			ec := getFirstErrorContext(&aggs)
+			ec := getFirstErrorContext(aggs)
 			return nil, nil, fmt.Errorf("Aggregates not available for this ORDER BY%v.", ec)
 		}
 	}
@@ -812,10 +812,10 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 	return
 }
 
-func getFirstErrorContext(m *map[string]algebra.Aggregate) string {
+func getFirstErrorContext(m map[string]algebra.Aggregate) string {
 	ec := ""
 	ml, mc := math.MaxInt32, math.MaxInt32
-	for _, v := range *m {
+	for _, v := range m {
 		l, c := v.GetErrorContext()
 		if l < ml || (l == ml && c < mc) {
 			ml, mc = l, c
