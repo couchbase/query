@@ -362,7 +362,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 					errActual, errMatch, fname, i))
 				return
 			}
-			doResultsMatch(resultsActual, resultsMatch, fname, i)
+			doResultsMatch(resultsActual, resultsMatch, fname, i, b)
 		}
 
 		v, ok = c["error"]
@@ -437,7 +437,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, fname, i)
+			okres := doResultsMatch(resultsActual, resultsExpected, fname, i, b)
 			if okres != nil {
 				errstring = okres
 				return
@@ -451,20 +451,62 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int, content []byte) (errstring error) {
 	if len(resultsActual) != len(resultsExpected) {
-		errstring = go_er.New(fmt.Sprintf("results len don't match, %v vs %v, %v vs %v"+
-			", for case file: %v, index: %v",
+		errstring = go_er.New(fmt.Sprintf("results len don't match, %v vs %v\n  actual: %v\nexpected: %v\n"+
+			" for case file: %v, index: %v%s",
 			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, fname, i))
+			resultsActual, resultsExpected, fname, i, findIndex(content, i)))
 		return
 	}
 
 	if !reflect.DeepEqual(resultsActual, resultsExpected) {
-		errstring = go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
-			", for case file: %v, index: %v",
-			resultsActual, resultsExpected, fname, i))
+		errstring = go_er.New(fmt.Sprintf("results don't match\n  actual: %#v\nexpected: %#v\n"+
+			" for case file: %v, index: %v%s",
+			resultsActual, resultsExpected, fname, i, findIndex(content, i)))
 		return
 	}
 	return nil
+}
+
+// Search the file content trying to locate the line the index in question starts on
+func findIndex(content []byte, index int) string {
+	if content == nil {
+		return ""
+	}
+	curIdx := 0
+	elementLevel := 0
+	line := 1
+	quote := byte(0)
+	skipNext := false
+	for _, b := range content {
+		if skipNext {
+			continue
+		}
+		skipNext = false
+		if quote != byte(0) {
+			if b == byte('\\') {
+				skipNext = true
+			} else if b == quote {
+				quote = byte(0)
+			} else if b == byte('\n') {
+				line++
+			}
+		} else if b == byte('"') {
+			quote = b
+		} else if b == byte('\n') {
+			line++
+		} else if b == byte('{') {
+			if elementLevel == 0 {
+				if curIdx == index {
+					return fmt.Sprintf(" (line: %d)", line)
+				}
+				curIdx++
+			}
+			elementLevel++
+		} else if b == byte('}') {
+			elementLevel--
+		}
+	}
+	return ""
 }

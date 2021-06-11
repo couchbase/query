@@ -530,7 +530,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 
 		if explain {
-			if errstring = checkExplain(qc, queryParams, namespace, statements, c, ordered, namedArgs, positionalArgs, fname, i); errstring != nil {
+			if errstring = checkExplain(qc, queryParams, namespace, statements, c, ordered, namedArgs, positionalArgs, fname, i, b); errstring != nil {
 				return
 			}
 		}
@@ -559,14 +559,14 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			}
 
 			if errExpected == "" {
-				errstring = go_er.New(fmt.Sprintf("unexpected err: %v, statements: %v"+
-					", for case file: %v, index: %v", errActual, statements, fname, i))
+				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
+					" for case file: %v, index: %v%s", errActual, statements, fname, i, findIndex(b, i)))
 				return
 			}
 
 			if errExpected != errActual.Error() {
-				errstring = go_er.New(fmt.Sprintf("Mismatched error - expected '%s' actual '%s'"+
-					", for case file: %v, index: %v", errExpected, errActual.Error(), fname, i))
+				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
+					" for case file: %v, index: %v%s", errExpected, errActual.Error(), fname, i, findIndex(b, i)))
 				return
 			}
 
@@ -574,8 +574,8 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 
 		if errExpected != "" || errCodeExpected != 0 {
-			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v, statements: %v"+
-				", for case file: %v, index: %v", errActual, statements, fname, i))
+			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
+				" for case file: %v, index: %v%s", errActual, statements, fname, i, findIndex(b, i)))
 			return
 		}
 
@@ -633,7 +633,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				if isAdvise, ok := isAdvise.(bool); ok && isAdvise {
 					resultsExpected := v.([]interface{})
 					for _, sub := range Subpath_advise {
-						okres := doResultsMatch(getAdviseResults(sub, resultsActual), getAdviseResults(sub, resultsExpected), ordered, statements, fname, i)
+						okres := doResultsMatch(getAdviseResults(sub, resultsActual), getAdviseResults(sub, resultsExpected), ordered, statements, fname, i, b)
 						if okres != nil {
 							errstring = okres
 							return
@@ -642,7 +642,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				}
 			} else {
 				resultsExpected := v.([]interface{})
-				okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i)
+				okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i, b)
 				if okres != nil {
 					errstring = okres
 					return
@@ -657,19 +657,19 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int, content []byte) (errstring error) {
 	if len(resultsActual) != len(resultsExpected) {
-		return go_er.New(fmt.Sprintf("results len don't match, %v vs %v, %v vs %v"+
-			", (%v)for case file: %v, index: %v",
+		return go_er.New(fmt.Sprintf("results len don't match, %v vs %v\n  actual: %v\nexpected: %v\n"+
+			" (%v)for case file: %v, index: %v%s",
 			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, stmt, fname, i))
+			resultsActual, resultsExpected, stmt, fname, i, findIndex(content, i)))
 	}
 
 	if ordered {
 		if !reflect.DeepEqual(resultsActual, resultsExpected) {
-			return go_er.New(fmt.Sprintf("results don't match, actual: %#v, expected: %#v"+
-				", (%v) for case file: %v, index: %v",
-				resultsActual, resultsExpected, stmt, fname, i))
+			return go_er.New(fmt.Sprintf("results don't match\n  actual: %#v\nexpected: %#v\n"+
+				" (%v) for case file: %v, index: %v%s",
+				resultsActual, resultsExpected, stmt, fname, i, findIndex(content, i)))
 		}
 	} else {
 	nextresult:
@@ -681,8 +681,8 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 				}
 			}
 			return go_er.New(fmt.Sprintf("results don't match: %#v is not present in : %#v"+
-				", (%v) for case file: %v, index: %v",
-				re, resultsActual, stmt, fname, i))
+				", (%v) for case file: %v, index: %v%s",
+				re, resultsActual, stmt, fname, i, findIndex(content, i)))
 		}
 
 	}
@@ -690,8 +690,50 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 	return nil
 }
 
+// Search the file content trying to locate the line the index in question starts on
+func findIndex(content []byte, index int) string {
+	if content == nil {
+		return ""
+	}
+	curIdx := 0
+	elementLevel := 0
+	line := 1
+	quote := byte(0)
+	skipNext := false
+	for _, b := range content {
+		if skipNext {
+			continue
+		}
+		skipNext = false
+		if quote != byte(0) {
+			if b == byte('\\') {
+				skipNext = true
+			} else if b == quote {
+				quote = byte(0)
+			} else if b == byte('\n') {
+				line++
+			}
+		} else if b == byte('"') {
+			quote = b
+		} else if b == byte('\n') {
+			line++
+		} else if b == byte('{') {
+			if elementLevel == 0 {
+				if curIdx == index {
+					return fmt.Sprintf(" (line: %d)", line)
+				}
+				curIdx++
+			}
+			elementLevel++
+		} else if b == byte('}') {
+			elementLevel--
+		}
+	}
+	return ""
+}
+
 func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace string, statement string, c map[string]interface{},
-	ordered bool, namedArgs map[string]value.Value, positionalArgs value.Values, fname string, i int) (errstring error) {
+	ordered bool, namedArgs map[string]value.Value, positionalArgs value.Values, fname string, i int, content []byte) (errstring error) {
 	var ev map[string]interface{}
 
 	e, ok := c["explain"]
@@ -745,7 +787,7 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	resultsActual, _, errActual := Run(qc, queryParams, explainStmt, namespace, namedArgs, positionalArgs, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return go_er.New(fmt.Sprintf("(%v) error actual: code - %d, msg - %s"+
-			", for case file: %v, index: %v", explainStmt, errActual.Code(), errActual.Error(), fname, i))
+			", for case file: %v, index: %v%s", explainStmt, errActual.Code(), errActual.Error(), fname, i, findIndex(content, i)))
 	}
 
 	namedParams := make(map[string]value.Value, 1)
@@ -754,11 +796,11 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	resultsActual, _, errActual = Run(qc, queryParams, eStmt, namespace, namedParams, nil, nil)
 	if errActual != nil {
 		return go_er.New(fmt.Sprintf("unexpected err: code - %d, msg - %s, statement: %v"+
-			", for case file: %v, index: %v", errActual.Code(), errActual.Error(), eStmt, fname, i))
+			", for case file: %v, index: %v%s", errActual.Code(), errActual.Error(), eStmt, fname, i, findIndex(content, i)))
 	}
 
 	if rok {
-		return doResultsMatch(resultsActual, erExpected, ordered, eStmt, fname, i)
+		return doResultsMatch(resultsActual, erExpected, ordered, eStmt, fname, i, content)
 	}
 
 	return
