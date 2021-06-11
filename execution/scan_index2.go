@@ -188,7 +188,7 @@ func (this *IndexScan2) scan(context *Context, conn *datastore.IndexConnection, 
 	var indexProjection *datastore.IndexProjection
 
 	proj := plan.Projection()
-	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Keyspace())
+	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())
 
 	if proj != nil {
 		indexProjection = &datastore.IndexProjection{EntryKeys: proj.EntryKeys, PrimaryKey: proj.PrimaryKey}

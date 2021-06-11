@@ -284,7 +284,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), context)
 
 	keyspaceTerm := this.plan.Term()
-	scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
+	scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Path().Bucket())
 	this.plan.Index().Scan(context.RequestId(), dspan, this.plan.Distinct(), limit,
 		context.ScanConsistency(), scanVector, conn)
 }

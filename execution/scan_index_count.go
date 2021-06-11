@@ -68,7 +68,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		countChannel := make(value.ValueChannel, n)
 
 		keyspaceTerm := this.plan.Term()
-		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
+		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Path().Bucket())
 
 		var count int64
 

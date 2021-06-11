@@ -204,7 +204,7 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 
 	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), context)
-	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Keyspace())
+	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())
 
 	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(plan.Index(), plan.Projection(),
 		plan.OrderTerms(), plan.GroupAggs(), plan.Covers())

@@ -197,8 +197,8 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection, limit int64) {
 	defer context.Recover(nil) // Recover from any panic
 
-	keyspace := this.plan.Keyspace()
-	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
+	term := this.plan.Term()
+	scanVector := context.ScanVectorSource().ScanVector(term.Namespace(), term.Path().Bucket())
 
 	index := this.plan.Index()
 	index.ScanEntries(context.RequestId(), limit, context.ScanConsistency(), scanVector, conn)
@@ -212,8 +212,8 @@ func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnec
 		Inclusion: datastore.NEITHER,
 		Low:       []value.Value{value.NewValue(indexEntry.PrimaryKey)},
 	}
-	keyspace := this.plan.Keyspace()
-	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
+	term := this.plan.Term()
+	scanVector := context.ScanVectorSource().ScanVector(term.Namespace(), term.Path().Bucket())
 	this.plan.Index().Scan(context.RequestId(), ds, true, limit,
 		context.ScanConsistency(), scanVector, conn)
 }

@@ -156,7 +156,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnection, parent value.Value) {
 	defer context.Recover(nil) // Recover from any panic
 
-	scanVector := context.ScanVectorSource().ScanVector(this.plan.Term().Namespace(), this.plan.Term().Keyspace())
+	scanVector := context.ScanVectorSource().ScanVector(this.plan.Term().Namespace(), this.plan.Term().Path().Bucket())
 
 	indexSearchInfo, err := this.planToSearchMapping(context, parent)
 	index, ok := this.plan.Index().(datastore.FTSIndex)
