@@ -1,12 +1,10 @@
-/*
-Copyright 2014-Present Couchbase, Inc.
-
-Use of this software is governed by the Business Source License included in
-the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
-file, in accordance with the Business Source License, use of this software will
-be governed by the Apache License, Version 2.0, included in the file
-licenses/APL.txt.
-*/
+//  Copyright 2014-Present Couchbase, Inc.
+//
+//  Use of this software is governed by the Business Source License included in
+//  the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
+//  file, in accordance with the Business Source License, use of this software will
+//  be governed by the Apache License, Version 2.0, included in the file
+//  licenses/APL.txt.
 
 package n1ql
 
@@ -24,6 +22,7 @@ type frame struct {
 	s            string
 	line, column int
 }
+
 type Lexer struct {
 	// The lexer runs in its own goroutine, and communicates via channel 'ch'.
 	ch      chan frame
@@ -354,8 +353,8 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// `((``)|[^`])+`i
-	{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
+	// `((``)|[^`])*`i
+	{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 96:
@@ -377,56 +376,9 @@ var dfas = []dfa{
 		func(r rune) int {
 			switch r {
 			case 96:
-				return 5
-			case 105:
-				return -1
-			}
-			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
 				return 4
 			case 105:
-				return 3
-			}
-			return 3
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
 				return 5
-			case 105:
-				return 6
-			}
-			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
-				return 4
-			case 105:
-				return 3
-			}
-			return 3
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
-				return -1
-			case 105:
-				return -1
-			}
-			return -1
-		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
-
-	// `((``)|[^`])+`
-	{[]bool{false, false, false, false, true, false}, []func(rune) int{ // Transitions
-		func(r rune) int {
-			switch r {
-			case 96:
-				return 1
 			}
 			return -1
 		},
@@ -434,38 +386,69 @@ var dfas = []dfa{
 			switch r {
 			case 96:
 				return 2
+			case 105:
+				return 3
 			}
 			return 3
 		},
 		func(r rune) int {
 			switch r {
 			case 96:
-				return 5
+				return 2
+			case 105:
+				return 3
+			}
+			return 3
+		},
+		func(r rune) int {
+			switch r {
+			case 96:
+				return -1
+			case 105:
+				return -1
 			}
 			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
-				return 4
-			}
-			return 3
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
-				return 5
-			}
-			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
-				return 4
-			}
-			return 3
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
+
+	// `((``)|[^`])*`
+	{[]bool{false, false, true, false, false}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 96:
+				return 1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 96:
+				return 2
+			}
+			return 3
+		},
+		func(r rune) int {
+			switch r {
+			case 96:
+				return 4
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 96:
+				return 2
+			}
+			return 3
+		},
+		func(r rune) int {
+			switch r {
+			case 96:
+				return 2
+			}
+			return 3
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1}, nil},
 
 	// (0|[1-9][0-9]*)\.[0-9]+([eE][+\-]?[0-9]+)?
 	{[]bool{false, false, false, false, false, true, false, false, true}, []func(rune) int{ // Transitions
