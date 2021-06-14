@@ -16,13 +16,13 @@ import (
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/shell/cbq/command"
-	"github.com/peterh/liner"
+	"github.com/couchbase/query/shell/liner"
 )
 
 var Server = "http://localhost:8091"
 
 func execline(line string, t *testing.T) {
-	var liner = liner.NewLiner()
+	var liner = liner.NewLiner(false)
 	defer liner.Close()
 
 	var b bytes.Buffer
@@ -60,7 +60,7 @@ func TestExecuteInput(t *testing.T) {
 
 func execn1ql(line string, t *testing.T) bool {
 
-	var liner = liner.NewLiner()
+	var liner = liner.NewLiner(false)
 	defer liner.Close()
 
 	var b bytes.Buffer
@@ -199,7 +199,7 @@ func testFileCmd(t *testing.T) {
 
 func execshell(line string, t *testing.T) {
 
-	var liner = liner.NewLiner()
+	var liner = liner.NewLiner(false)
 	defer liner.Close()
 
 	var b bytes.Buffer
