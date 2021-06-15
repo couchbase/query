@@ -398,6 +398,24 @@ func init() {
 	flag.BoolVar(&viModeMultiLineFlag, "vim", false, usage)
 }
 
+/*
+   Option        : -history or -hist
+   Args          : Path to load query history from.
+
+   Load history (query history) from input path and use that to save query statements as well.
+*/
+
+var histFlag string
+
+func init() {
+	const (
+		defaultval = ".cbq_history"
+		usage      = command.HISTORYMSG
+	)
+	flag.StringVar(&histFlag, "history", defaultval, usage)
+	flag.StringVar(&histFlag, "hist", defaultval, command.NewShorthandMsg("history"))
+}
+
 var (
 	SERVICE_URL  string
 	DISCONNECT   bool
@@ -634,6 +652,11 @@ func main() {
 				command.PrintError(s_err)
 			}
 		}
+	}
+
+	// Verify histfile input path is valid.
+	if histFlag != "" {
+		command.HISTFILE = histFlag
 	}
 
 	//Set QUIET to enable/disable histfile path message

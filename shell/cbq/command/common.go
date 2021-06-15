@@ -469,27 +469,12 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		args_str := strings.Join(args[1:], " ")
 
 		if vble == "histfile" {
-			//Verify if the value for histfile is valid.
+			err_code, err_Str := VerifyHistPath(args_str)
+
 			//the path is given is relative to the HOME dir.
-			//dir+"/"+HISTFILE ==>
-
-			homeDir, err_code, err_str := GetHome()
 			if err_code != 0 {
-				return err_code, err_str
-			}
-
-			path := GetPath(homeDir, args_str)
-
-			_, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-			//If err then the value for histfile is invalid. Hence return an error.
-			//For this case, the HISTFILE will retain its original value.
-			if err != nil {
-				return errors.FILE_OPEN, err.Error()
-			} else {
-				HISTFILE = path
-				if !QUIET {
-					io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
-				}
+				//dir+"/"+HISTFILE ==>
+				return err_code, err_Str
 			}
 		} else if vble == "batch" {
 			if args_str != "on" && args_str != "off" {
@@ -509,6 +494,32 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			return err_code, err_str
 		}
 
+	}
+	return 0, ""
+}
+
+func VerifyHistPath(args string) (int, string) {
+	//Verify if the value for histfile is valid.
+	//the path is given is relative to the HOME dir.
+	//dir+"/"+HISTFILE ==>
+
+	homeDir, err_code, err_str := GetHome()
+	if err_code != 0 {
+		return err_code, err_str
+	}
+
+	path := GetPath(homeDir, args)
+
+	_, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	//If err then the value for histfile is invalid. Hence return an error.
+	//For this case, the HISTFILE will retain its original value.
+	if err != nil {
+		return errors.FILE_OPEN, err.Error()
+	} else {
+		HISTFILE = path
+		if !QUIET {
+			io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
+		}
 	}
 	return 0, ""
 }
@@ -647,7 +658,12 @@ func GetPath(homeDir, inputPath string) (path string) {
 
 		if strings.HasPrefix(inputPath, "\\") ||
 			strings.Index(inputPath, ":\\") == 1 ||
-			strings.HasPrefix(inputPath, "\\\\") {
+			strings.HasPrefix(inputPath, "\\\\") ||
+			// this is a relative path. We need to explicitly specify
+			// the .\ or D: otherwise we make the path relative to HOME dir
+			// for backward compatibility.
+			strings.HasPrefix(inputPath, "..\\") ||
+			strings.Index(inputPath, ":") == 1 {
 
 			path = inputPath
 		} else {
@@ -655,7 +671,12 @@ func GetPath(homeDir, inputPath string) (path string) {
 		}
 
 	} else {
-		if strings.HasPrefix(inputPath, "/") {
+		if strings.HasPrefix(inputPath, "/") ||
+			// this is a relative path. We need to explicitly specify
+			// the ./ otherwise we make the path relative to HOME dir
+			// for backward compatibility.
+			strings.HasPrefix(inputPath, "../") ||
+			strings.HasPrefix(inputPath, "./") {
 			//This is an absolute path. Hence we need not prefix it with
 			//$HOME
 			path = inputPath
