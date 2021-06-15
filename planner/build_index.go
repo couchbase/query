@@ -72,12 +72,6 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		}
 	}
 
-	// Check that the index does not already exist.
-	index, _ := indexer.IndexByName(stmt.Name())
-	if index != nil {
-		return nil, errors.NewIndexAlreadyExistsError(stmt.Name())
-	}
-
 	// Make sure you dont have multiple xattrs
 	_, names := expression.XattrsNames(stmt.Expressions(), "")
 	if ok := isValidXattrs(names); !ok {
@@ -104,10 +98,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 		return nil, er
 	}
 
-	index, er := indexer.IndexByName(stmt.Name())
-	if er != nil {
-		return nil, er
-	}
+	index, _ := indexer.IndexByName(stmt.Name())
 
 	return plan.NewDropIndex(index, indexer, stmt), nil
 }
@@ -129,14 +120,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, er
 	}
 
-	index, er := indexer.IndexByName(stmt.Name())
-	if er != nil {
-		return nil, er
-	}
-
-	if _, ok := index.(datastore.Index3); !ok {
-		return nil, errors.NewAlterIndexError()
-	}
+	index, _ := indexer.IndexByName(stmt.Name())
 
 	return plan.NewAlterIndex(index, indexer, stmt, keyspace), nil
 }

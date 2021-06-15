@@ -62,8 +62,12 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 
 func (this *AlterIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "AlterIndex"}
-	r["index"] = this.index.Name()
-	r["index_id"] = this.index.Id()
+	if this.index != nil {
+		r["index"] = this.index.Name()
+		r["index_id"] = this.index.Id()
+	} else {
+		r["index"] = this.node.Name()
+	}
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 
@@ -120,9 +124,17 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	index, err := indexer.IndexById(_unmarshalled.IndexId)
-	if err != nil {
-		return err
+	var index datastore.Index
+	if len(_unmarshalled.IndexId) > 0 {
+		index, err = indexer.IndexById(_unmarshalled.IndexId)
+		if err != nil {
+			return err
+		}
+	} else {
+		index, err = indexer.IndexByName(_unmarshalled.Index)
+		if err != nil {
+			return err
+		}
 	}
 
 	if _, ok := index.(datastore.Index3); !ok {
@@ -136,5 +148,12 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 }
 
 func (this *AlterIndex) verify(prepared *Prepared) bool {
+	if this.index == nil {
+		var err error
+		this.index, err = this.indexer.IndexByName(this.node.Name())
+		if err != nil {
+			return false
+		}
+	}
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }

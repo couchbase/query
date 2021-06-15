@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -59,7 +60,12 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 
 		// Actually drop index
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Index().Drop(context.RequestId())
+		index := this.plan.Index()
+		if index == nil {
+			context.Error(errors.NewCbIndexNotFoundError(nil))
+			return
+		}
+		err := index.Drop(context.RequestId())
 		if err != nil {
 			context.Error(err)
 		}

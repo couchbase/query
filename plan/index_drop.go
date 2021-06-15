@@ -56,7 +56,9 @@ func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]in
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 	r["name"] = this.node.Name()
-	r["index_id"] = this.index.Id()
+	if this.index != nil {
+		r["index_id"] = this.index.Id()
+	}
 	if f != nil {
 		f(r)
 	}
@@ -94,16 +96,31 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
-	index, err := indexer.IndexById(_unmarshalled.IndexId)
-	if err != nil {
-		return err
+	if len(_unmarshalled.IndexId) > 0 {
+		index, err := indexer.IndexById(_unmarshalled.IndexId)
+		if err != nil {
+			return err
+		}
+		this.index = index
+	} else {
+		index, err := indexer.IndexByName(_unmarshalled.Name)
+		if err != nil {
+			return err
+		}
+		this.index = index
 	}
-	this.index = index
 	this.indexer = indexer
 
 	return nil
 }
 
 func (this *DropIndex) verify(prepared *Prepared) bool {
+	if this.index == nil {
+		var err error
+		this.index, err = this.indexer.IndexByName(this.node.Name())
+		if err != nil {
+			return false
+		}
+	}
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
