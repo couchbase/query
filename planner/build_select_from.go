@@ -472,8 +472,6 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 }
 
 func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
-	this.requirePrimaryKey = true
-
 	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
 		this.group == nil && node.Right().JoinHint() != algebra.USE_HASH_PROBE {
 		this.resetProjection()
@@ -595,8 +593,6 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 }
 
 func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
-	this.requirePrimaryKey = true
-
 	if this.group == nil && node.Right().JoinHint() != algebra.USE_HASH_PROBE &&
 		this.hasOffsetOrLimit() && !node.Outer() {
 		this.resetProjection()
