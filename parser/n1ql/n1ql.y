@@ -3149,6 +3149,18 @@ expr LBRACKET expr COLON expr RBRACKET
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr LBRACKET COLON expr RBRACKET
+{
+    $$ = expression.NewSliceEnd($1, $4)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr LBRACKET COLON RBRACKET
+{
+    $$ = expression.NewSlice($1)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr LBRACKET STAR RBRACKET
 {
     $$ = expression.NewArrayStar($1)
@@ -3460,9 +3472,21 @@ b_expr LBRACKET expr COLON RBRACKET
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+b_expr LBRACKET COLON expr RBRACKET
+{
+    $$ = expression.NewSliceEnd($1, $4)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 b_expr LBRACKET expr COLON expr RBRACKET
 {
     $$ = expression.NewSlice($1, $3, $5)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+b_expr LBRACKET COLON RBRACKET
+{
+    $$ = expression.NewSlice($1)
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |

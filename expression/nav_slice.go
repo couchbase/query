@@ -19,14 +19,33 @@ Nested expressions are used to access slices inside of arrays.
 */
 type Slice struct {
 	FunctionBase
+	start bool
+	end   bool
 }
 
 func NewSlice(operands ...Expression) Function {
 	rv := &Slice{
 		*NewFunctionBase("slice", operands...),
+		false,
+		false,
+	}
+
+	if len(operands) == 3 {
+		rv.start = true
+		rv.end = true
+	} else if len(operands) == 2 {
+		rv.start = true
 	}
 
 	rv.expr = rv
+	return rv
+}
+
+func NewSliceEnd(operands ...Expression) Function {
+	rv := NewSlice(operands...)
+	s, _ := rv.(*Slice)
+	s.start = false
+	s.end = true
 	return rv
 }
 
@@ -56,17 +75,23 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 		missing = true
 	}
 
-	start, err := this.operands[1].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if start.Type() == value.MISSING {
-		missing = true
+	var start value.Value
+	n := 1
+	if this.start {
+		start, err = this.operands[n].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if start.Type() == value.MISSING {
+			missing = true
+		}
+		n++
+	} else {
+		start = value.ZERO_VALUE
 	}
 
 	ev := -1
-	var end value.Value
-	if len(this.operands) > 2 {
-		end, err = this.operands[2].Evaluate(item, context)
+	if this.end {
+		end, err := this.operands[n].Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		} else if end.Type() == value.MISSING {
@@ -84,17 +109,17 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.MISSING_VALUE, nil
 	}
 
+	if source.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
 	sa, ok := start.Actual().(float64)
 	if !ok || sa != math.Trunc(sa) {
 		return value.NULL_VALUE, nil
 	}
 
-	if source.Type() != value.ARRAY {
-		return value.NULL_VALUE, nil
-	}
-
 	var rv value.Value
-	if end != nil {
+	if this.end {
 		rv, _ = source.Slice(int(sa), ev)
 	} else {
 		rv, _ = source.SliceTail(int(sa))
@@ -104,9 +129,9 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 /*
-Minimum input arguments required for Slices is 2.
+Minimum input arguments required for Slices is 1.
 */
-func (this *Slice) MinArgs() int { return 2 }
+func (this *Slice) MinArgs() int { return 1 }
 
 /*
 Minimum input arguments allowed for Slices is 3.
