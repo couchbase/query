@@ -22,6 +22,7 @@
                                     {
                                         "high": "5",
                                         "inclusion": 3,
+                                        "index_key": "`f1`",
                                         "low": "5"
                                     }
                                 ]
@@ -87,6 +88,7 @@
                                     {
                                         "high": "5",
                                         "inclusion": 3,
+                                        "index_key": "`f1`",
                                         "low": "5"
                                     }
                                 ]
@@ -215,6 +217,7 @@
                                     {
                                         "high": "5",
                                         "inclusion": 3,
+                                        "index_key": "`f1`",
                                         "low": "5"
                                     }
                                 ]
@@ -280,6 +283,7 @@
                                     {
                                         "high": "1",
                                         "inclusion": 3,
+                                        "index_key": "`k0`",
                                         "low": "1"
                                     }
                                 ]
@@ -351,6 +355,7 @@
                                 "range": [
                                     {
                                         "inclusion": 0,
+                                        "index_key": "`x`",
                                         "low": "null"
                                     }
                                 ]
@@ -408,6 +413,7 @@
                                     {
                                         "high": "1",
                                         "inclusion": 3,
+                                        "index_key": "`k0`",
                                         "low": "1"
                                     }
                                 ]
@@ -500,11 +506,13 @@
                                     {
                                         "high": "1",
                                         "inclusion": 3,
+                                        "index_key": "`k0`",
                                         "low": "1"
                                     },
                                     {
                                         "high": "{}",
                                         "inclusion": 1,
+                                        "index_key": "`k1`",
                                         "low": "[]"
                                     }
                                 ]
@@ -665,14 +673,17 @@
                                     {
                                         "high": "[]",
                                         "inclusion": 1,
+                                        "index_key": "`email`",
                                         "low": "\"\""
                                     },
                                     {
                                         "inclusion": 0,
+                                        "index_key": "`VMs`",
                                         "low": "null"
                                     },
                                     {
                                         "inclusion": 0,
+                                        "index_key": "`join_day`",
                                         "low": "10"
                                     }
                                 ]
@@ -731,6 +742,7 @@
                                     {
                                         "high": "\"OPEN\"",
                                         "inclusion": 3,
+                                        "index_key": "(`main`.`status`)",
                                         "low": "\"OPEN\""
                                     }
                                 ]
@@ -812,6 +824,7 @@
                                             {
                                                 "high": "10",
                                                 "inclusion": 3,
+                                                "index_key": "`f1`",
                                                 "low": "10"
                                             }
                                         ]

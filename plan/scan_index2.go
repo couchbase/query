@@ -211,6 +211,9 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 			this.spans[n] = s
 		}
 		for i, r := range s.Ranges {
+			if i >= len(keys) {
+				break
+			}
 			r.IndexKey = keys[i].String()
 		}
 	}
