@@ -176,7 +176,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 	}
 
-	scan, err := this.selectScan(keyspace, node)
+	scan, err := this.selectScan(keyspace, node, false)
 
 	uncovered := len(this.coveringScans) == 0 && this.countScan == nil
 	this.appendQueryInfo(scan, keyspace, node, uncovered)

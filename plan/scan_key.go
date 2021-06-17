@@ -19,13 +19,15 @@ import (
 // KeyScan is used for USE KEYS clauses.
 type KeyScan struct {
 	readonly
-	keys expression.Expression
+	keys     expression.Expression
+	distinct bool
 }
 
-func NewKeyScan(keys expression.Expression) *KeyScan {
+func NewKeyScan(keys expression.Expression, distinct bool) *KeyScan {
 	keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 	return &KeyScan{
-		keys: keys,
+		keys:     keys,
+		distinct: distinct,
 	}
 }
 
@@ -41,6 +43,10 @@ func (this *KeyScan) Keys() expression.Expression {
 	return this.keys
 }
 
+func (this *KeyScan) Distinct() bool {
+	return this.distinct
+}
+
 func (this *KeyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -48,6 +54,9 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "KeyScan"}
 	r["keys"] = expression.NewStringer().Visit(this.keys)
+	if this.distinct {
+		r["distinct"] = this.distinct
+	}
 	if f != nil {
 		f(r)
 	}
@@ -56,8 +65,9 @@ func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]inte
 
 func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string `json:"#operator"`
-		Keys string `json:"keys"`
+		_        string `json:"#operator"`
+		Keys     string `json:"keys"`
+		Distinct bool   `json:"distinct"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -71,6 +81,7 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 			this.keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 		}
 	}
+	this.distinct = _unmarshalled.Distinct
 
 	return err
 }

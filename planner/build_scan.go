@@ -23,7 +23,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (op plan.Operator, err error) {
+func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	mutate bool) (op plan.Operator, err error) {
 
 	keys := node.Keys()
 	if keys != nil {
@@ -35,7 +36,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 			this.maxParallelism = 1
 		}
 
-		return plan.NewKeyScan(keys), nil
+		return plan.NewKeyScan(keys, mutate), nil
 	}
 
 	secondary, primary, err := this.buildScan(keyspace, node)
