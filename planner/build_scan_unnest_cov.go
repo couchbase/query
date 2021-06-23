@@ -26,41 +26,50 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 		return nil, 0, nil
 	}
 
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+
 	indexPushDowns := this.storeIndexPushDowns()
 	cops := make(map[datastore.Index]plan.SecondaryScan, len(unnests))
+	unnestIndexMap := make(map[datastore.Index]string, len(unnests))
 
 	for _, index := range unnestIndexes {
 		this.restoreIndexPushDowns(indexPushDowns, true)
 
 		entry := indexes[index]
-		cop, cun, err := this.buildOneCoveringUnnestScan(node, pred, entry, arrayKeys[index],
+		cop, cun, un, err := this.buildOneCoveringUnnestScan(node, pred, entry, arrayKeys[index],
 			unnests, hasDeltaKeyspace)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		if cop == nil {
+		if cop == nil || un == nil {
 			continue
 		}
 
 		// The group, order, offset are exact (not a hint) if pushed then return immediately
 		if len(cun) > 0 || this.group != nil || this.order != nil || this.offset != nil {
 			this.coveredUnnests = cun
+			baseKeyspace.AddUnnestIndex(index, un.Alias())
 			return cop, len(entry.sargKeys), nil
 		}
 
 		cops[index] = cop
+		unnestIndexMap[index] = un.Alias()
 	}
 
 	// Find shortest covering scan
 	n := 0
 	sargLength := 0
 	var cop plan.SecondaryScan
+	var bestIndex datastore.Index
+	var bestUnnestAlias string
 	for index, c := range cops {
 		if cop == nil || len(index.RangeKey()) < n {
 			cop = c
 			n = len(index.RangeKey())
 			sargLength = len(indexes[index].sargKeys)
+			bestIndex = index
+			bestUnnestAlias = unnestIndexMap[index]
 		}
 	}
 
@@ -68,6 +77,9 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 	if cop != nil {
 		this.coveringScans = append(this.coveringScans, cop)
 		this.coveredUnnests = nil
+		if bestIndex != nil {
+			baseKeyspace.AddUnnestIndex(bestIndex, bestUnnestAlias)
+		}
 		this.resetIndexGroupAggs()
 		return cop, sargLength, nil
 	}
@@ -77,12 +89,12 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 
 func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
 	entry *indexEntry, arrKey *expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
-	plan.SecondaryScan, map[*algebra.Unnest]bool, error) {
+	plan.SecondaryScan, map[*algebra.Unnest]bool, *algebra.Unnest, error) {
 
 	// Sarg and populate spans
 	op, unnest, arrayKey, _, err := this.matchUnnest(node, pred, unnests[0], entry, arrKey, unnests, hasDeltaKeyspace)
 	if op == nil || err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Include filter covers in covering expressions
@@ -164,7 +176,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		dnf := base.NewDNF(expr, true, true)
 		expr, err = dnf.Map(expr)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		fc = expr.FilterCovers(fc)
 	}
@@ -181,7 +193,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	filterCovers, err := mapFilterCovers(fc, alias)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	unnestFilters := make(expression.Expressions, 0, len(filterCovers)+1)
@@ -212,7 +224,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		if !ok && (!expression.IsCovered(expr, alias, coveringExprs) ||
 			(len(coveredUnnests) > 0 && !expression.IsCovered(expr, unAlias, coveringExprs))) {
 
-			return nil, nil, nil
+			return nil, nil, nil, nil
 		}
 	}
 
@@ -235,7 +247,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 	scan := this.buildCoveringPushdDownIndexScan2(entry, node, baseKeyspace, pred, indexProjection,
 		array, array, covers, filterCovers)
 	if scan != nil {
-		return scan, coveredUnnests, nil
+		return scan, coveredUnnests, unnest, nil
 	}
 
 	// Aggregates check and reset
@@ -278,7 +290,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
 			covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if this.useCBO {
 			entry.cost = cost
@@ -296,7 +308,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)
 	}
-	return scan, coveredUnnests, nil
+	return scan, coveredUnnests, unnest, nil
 }
 
 var _EMPTY_COVERED_EXPRS = make(map[expression.Expression]bool, 0)

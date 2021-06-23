@@ -845,7 +845,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 
 	if len(spans) > 0 {
 		// mark index filters for seletivity calculation
-		markIndexFlags(index, spans, alias, baseKeyspace.Filters())
+		markIndexFlags(index, spans, baseKeyspace)
 	}
 
 	filter, selec, err = this.getFilter(alias, nil)
