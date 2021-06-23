@@ -2682,10 +2682,22 @@ Parse method is defined by the time package.
 func strToTime(s string) (time.Time, error) {
 	var t time.Time
 	var err error
+	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
-		t, err = time.ParseInLocation(f, s, time.Local)
-		if err == nil {
-			return t, nil
+		if len(f) == len(s) {
+			t, err = time.ParseInLocation(f, s, time.Local)
+			if err == nil {
+				return t, nil
+			}
+		}
+	}
+	// only check formats we've not checked above
+	for _, f := range _DATE_FORMATS {
+		if len(f) != len(s) {
+			t, err = time.ParseInLocation(f, s, time.Local)
+			if err == nil {
+				return t, nil
+			}
 		}
 	}
 
@@ -2695,22 +2707,41 @@ func strToTime(s string) (time.Time, error) {
 func strToTimeforTrunc(s string) (time.Time, string, error) {
 	var t time.Time
 	var err error
+	var f string
 	newloc, _ := time.LoadLocation("UTC")
-	for _, f := range _DATE_FORMATS {
-		// Check if the format has a timezone
-		t, err = time.ParseInLocation(f, s, newloc)
-		if err == nil {
-			// Calculate the timezone component for input string
-			pos := strings.Index(f, "Z")
-			tz := ""
-			spos := strings.LastIndexAny(s, "Z+-")
-			if pos > 0 && spos > 0 {
-				tz = s[spos:]
+	// first pass try formats that match length before encountering the overhead of parsing all
+	for _, f = range _DATE_FORMATS {
+		if len(f) == len(s) {
+			// Check if the format has a timezone
+			t, err = time.ParseInLocation(f, s, newloc)
+			if err == nil {
+				break
 			}
-			return t, tz, nil
+		}
+	}
+	if err != nil {
+		// only check formats we've not checked above
+		for _, f = range _DATE_FORMATS {
+			if len(f) != len(s) {
+				// Check if the format has a timezone
+				t, err = time.ParseInLocation(f, s, newloc)
+				if err == nil {
+					break
+				}
+			}
 		}
 	}
 
+	if err == nil {
+		// Calculate the timezone component for input string
+		pos := strings.Index(f, "Z")
+		tz := ""
+		spos := strings.LastIndexAny(s, "Z+-")
+		if pos > 0 && spos > 0 {
+			tz = s[spos:]
+		}
+		return t, tz, nil
+	}
 	return t, "", err
 }
 
@@ -2722,10 +2753,22 @@ error. The Parse method is defined by the time package.
 func StrToTimeFormat(s string) (time.Time, string, error) {
 	var t time.Time
 	var err error
+	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
-		t, err = time.ParseInLocation(f, s, time.Local)
-		if err == nil {
-			return t, f, nil
+		if len(f) == len(s) {
+			t, err = time.ParseInLocation(f, s, time.Local)
+			if err == nil {
+				return t, f, nil
+			}
+		}
+	}
+	// only check formats we've not checked above
+	for _, f := range _DATE_FORMATS {
+		if len(f) != len(s) {
+			t, err = time.ParseInLocation(f, s, time.Local)
+			if err == nil {
+				return t, f, nil
+			}
 		}
 	}
 
