@@ -11,8 +11,10 @@ package expression
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
@@ -110,7 +112,7 @@ func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *ClockStr) Type() value.Type { return value.STRING }
 
 func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	fmt := DEFAULT_FORMAT
+	fmt := ""
 
 	if len(this.operands) > 0 {
 		fv, err := this.operands[0].Evaluate(item, context)
@@ -188,7 +190,7 @@ func (this *ClockTZ) Type() value.Type { return value.STRING }
 func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	fmt := DEFAULT_FORMAT
+	fmt := ""
 
 	// Get current time
 	timeVal := time.Now()
@@ -292,7 +294,7 @@ func (this *ClockUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *ClockUTC) Type() value.Type { return value.STRING }
 
 func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	fmt := DEFAULT_FORMAT
+	fmt := ""
 
 	if len(this.operands) > 0 {
 		fv, err := this.operands[0].Evaluate(item, context)
@@ -621,13 +623,13 @@ func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	da1 := date1.ToString()
-	t1, err := strToTime(da1)
+	t1, err := strToTime(da1, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	da2 := date2.ToString()
-	t2, err := strToTime(da2)
+	t2, err := strToTime(da2, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -769,13 +771,13 @@ func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.V
 	}
 
 	da1 := date1.ToString()
-	t1, err := strToTime(da1)
+	t1, err := strToTime(da1, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	da2 := date2.ToString()
-	t2, err := strToTime(da2)
+	t2, err := strToTime(da2, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -844,7 +846,7 @@ func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Va
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str)
+	t, err := strToTime(str, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -1035,7 +1037,7 @@ func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str)
+	t, err := strToTime(str, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -1542,6 +1544,7 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 	// For date trunc we do not consider the timezone.
 	// This messes up the result of the golang time functions.
 	// To avoid this remove it before processing
+
 	_, tzComponent, _ := strToTimeforTrunc(str)
 
 	if tzComponent != "" {
@@ -1559,7 +1562,7 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, err
 	}
 
-	return value.NewValue(timeToStr(t, str) + tzComponent), nil
+	return value.NewValue(timeToStr(t, formatFromStr(str)) + tzComponent), nil
 }
 
 /*
@@ -1620,9 +1623,9 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 		null = true
 	}
 	// Default value for the increment is 1.
-	fv := _DEFAULT_FMT_VALUE
+	fmt := ""
 	if len(this.operands) > 1 {
-		fv, err = this.operands[1].Evaluate(item, context)
+		fv, err := this.operands[1].Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		} else if fv.Type() == value.MISSING {
@@ -1630,6 +1633,7 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 		} else if fv.Type() != value.STRING {
 			null = true
 		}
+		fmt = fv.ToString()
 	}
 
 	if missing {
@@ -1639,7 +1643,6 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	millis := ev.Actual().(float64)
-	fmt := fv.ToString()
 	t := millisToTime(millis)
 	return value.NewValue(timeToStr(t, fmt)), nil
 }
@@ -1706,10 +1709,10 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 	} else if ev.Type() != value.NUMBER {
 		null = true
 	}
-	fv := _DEFAULT_FMT_VALUE
+	fmt := ""
 
 	if len(this.operands) > 1 {
-		fv, err = this.operands[1].Evaluate(item, context)
+		fv, err := this.operands[1].Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		} else if fv.Type() == value.MISSING {
@@ -1717,6 +1720,7 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 		} else if fv.Type() != value.STRING {
 			null = true
 		}
+		fmt = fv.ToString()
 	}
 
 	if missing {
@@ -1726,7 +1730,6 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	millis := ev.Actual().(float64)
-	fmt := fv.ToString()
 	t := millisToTime(millis).UTC()
 	return value.NewValue(timeToStr(t, fmt)), nil
 }
@@ -1802,7 +1805,7 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 	} else if zv.Type() != value.STRING {
 		null = true
 	}
-	fv := _DEFAULT_FMT_VALUE
+	fmt := ""
 
 	if len(this.operands) > 2 {
 		fv, err := this.operands[2].Evaluate(item, context)
@@ -1813,6 +1816,7 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 		} else if fv.Type() != value.STRING {
 			null = true
 		}
+		fmt = fv.ToString()
 	}
 
 	if missing {
@@ -1828,7 +1832,6 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 		return value.NULL_VALUE, nil
 	}
 
-	fmt := fv.ToString()
 	t := millisToTime(millis).In(loc)
 	return value.NewValue(timeToStr(t, fmt)), nil
 }
@@ -1938,7 +1941,7 @@ func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowStr) Type() value.Type { return value.STRING }
 
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	fmt := DEFAULT_FORMAT
+	fmt := ""
 
 	if len(this.operands) > 0 {
 		fv, err := this.operands[0].Evaluate(item, context)
@@ -2018,7 +2021,7 @@ func (this *NowTZ) Type() value.Type { return value.STRING }
 func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	fmt := DEFAULT_FORMAT
+	fmt := ""
 	now := context.Now()
 
 	tz, err := this.operands[0].Evaluate(item, context)
@@ -2120,7 +2123,7 @@ func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowUTC) Type() value.Type { return value.STRING }
 
 func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	fmt := DEFAULT_FORMAT
+	fmt := ""
 
 	if len(this.operands) > 0 {
 		fv, err := this.operands[0].Evaluate(item, context)
@@ -2206,7 +2209,7 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 	var fmt string
 	var t time.Time
 	if len(this.operands) == 2 {
-		arg2, err := this.operands[1].Evaluate(item, context)
+		arg, err = this.operands[1].Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		} else if arg.Type() == value.MISSING {
@@ -2214,12 +2217,10 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 		} else if arg.Type() != value.STRING {
 			return value.NULL_VALUE, nil
 		}
-		fmt = arg2.ToString()
-		t, err = time.ParseInLocation(fmt, str, time.Local)
-	} else {
-		t, err = strToTime(str)
+		fmt = arg.ToString()
 	}
 
+	t, err = strToTime(str, fmt)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2245,16 +2246,16 @@ func (this *StrToMillis) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function STR_TO_UTC(expr). It
-converts the input expression in the ISO 8601 timestamp
+converts the input expression in the given format
 to UTC.
 */
 type StrToUTC struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewStrToUTC(operand Expression) Function {
+func NewStrToUTC(operands ...Expression) Function {
 	rv := &StrToUTC{
-		*NewUnaryFunctionBase("str_to_utc", operand),
+		*NewFunctionBase("str_to_utc", operands...),
 	}
 
 	rv.expr = rv
@@ -2281,22 +2282,38 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 
 	str := arg.ToString()
-	t, err := strToTime(str)
+	var format string
+	var t time.Time
+	if len(this.operands) == 2 {
+		arg, err = this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		format = arg.ToString()
+		t, err = strToTime(str, format)
+	} else {
+		format = formatFromStr(str)
+		t, err = strToTime(str, "")
+	}
+
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	t = t.UTC()
-	return value.NewValue(timeToStr(t, str)), nil
+
+	return value.NewValue(timeToStr(t, format)), nil
 }
 
-/*
-Factory method pattern.
-*/
+func (this *StrToUTC) MaxArgs() int { return 2 }
+func (this *StrToUTC) MinArgs() int { return 1 }
+
 func (this *StrToUTC) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewStrToUTC(operands[0])
-	}
+	return NewStrToUTC
 }
 
 ///////////////////////////////////////////////////
@@ -2310,12 +2327,12 @@ This represents the Date function STR_TO_ZONE_NAME(expr, tz_name).
 It converts the supported timestamp string to the named time zone.
 */
 type StrToZoneName struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewStrToZoneName(first, second Expression) Function {
+func NewStrToZoneName(operands ...Expression) Function {
 	rv := &StrToZoneName{
-		*NewBinaryFunctionBase("str_to_zone_name", first, second),
+		*NewFunctionBase("str_to_zone_name", operands...),
 	}
 
 	rv.expr = rv
@@ -2348,10 +2365,6 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str)
-	if err != nil {
-		return value.NULL_VALUE, nil
-	}
 
 	tz := second.ToString()
 	loc, err := time.LoadLocation(tz)
@@ -2359,16 +2372,37 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(timeToStr(t.In(loc), str)), nil
+	format := ""
+	var t time.Time
+	if len(this.operands) == 3 {
+		var arg value.Value
+		arg, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		format = arg.ToString()
+		t, err = strToTime(str, format)
+	} else {
+		format = formatFromStr(str)
+		t, err = strToTime(str, "")
+	}
+
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(timeToStr(t.In(loc), format)), nil
 }
 
-/*
-Factory method pattern.
-*/
+func (this *StrToZoneName) MaxArgs() int { return 3 }
+func (this *StrToZoneName) MinArgs() int { return 2 }
+
 func (this *StrToZoneName) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewStrToZoneName(operands[0], operands[1])
-	}
+	return NewStrToZoneName
 }
 
 ///////////////////////////////////////////////////
@@ -2651,7 +2685,7 @@ func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str)
+	t, err := strToTime(str, "")
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2674,12 +2708,810 @@ func (this *WeekdayStr) Constructor() FunctionConstructor {
 	}
 }
 
+// Date string parsing:
+// First we try to determine the type of the format string given by interrogating its contents.  The possible formats are example
+// dates, common specification (YYYY,MM,DD,..), Unix date-style format (%Y,%m,%d,...) and Go-lang's native format type
+// (2006.01,02,...).  Parsing tries to be flexible where possible to allow easy ingest of any date source.
+
+type formatType int
+
+const (
+	percentFormat formatType = iota // e.g. %Y-%m-%d %H:%M:%S.%N %z
+	commonFormat                    // e.g. YYYY-MM-DD HH:mm:ss.s TZD
+	goFormat                        // e.g. 2006-01-02 15:04:05.999 -0700
+	exampleFormat                   // e.g. 1111-11-11 11:11:11.111 +0000
+	defaultFormat                   // = DEFAULT_FORMAT or try the list of default formats
+)
+
+func strToTime(s string, format string) (time.Time, error) {
+	switch determineFormat(format) {
+	case defaultFormat:
+		return strToTimeTryAllDefaultFormats(s)
+	case percentFormat:
+		return strToTimePercentFormat(s, format)
+	case commonFormat:
+		return strToTimeCommonFormat(s, format)
+	case goFormat:
+		return strToTimeGoFormat(s, format)
+	default:
+		return strToTimeExampleFormat(s, format)
+	}
+}
+
+// find one of the standard formats that parses the format string (which is an example) and use it
+func strToTimeExampleFormat(s string, format string) (time.Time, error) {
+	var t time.Time
+	_, f, err := strToTimeFormatClosest(format, true)
+	if err != nil {
+		return t, err
+	}
+	return strToTimeGoFormat(s, f)
+}
+
+// Use go's standard formatting (e.g. 2006-01-02 03:04:05.000)
+func strToTimeGoFormat(s string, format string) (time.Time, error) {
+	return time.ParseInLocation(format, s, time.Local)
+}
+
+const (
+	padZero int = iota
+	padSpace
+	noPad
+)
+
 /*
-Parse the input string using the defined formats for Date
-and return the time value it represents, and error. The
-Parse method is defined by the time package.
+Date format *similar* to Unix 'date' command. Notable exceptions are locale-specific formats (we don't have locale internally
+curently) and opposite case specification; width specification is ignored too.  Upper case preference modifier is sequestered
+to mean case insensitive and a literal space means any literal character (useful when delimiters aren't consistent or there are
+portions to be ignored).
+
+Examples:
+	format    ...      parses
+	%F                 2021-06-25T04:00:00.000+05:30
+	%D                 2021-06-25
+	%Y %m %d           2021/06/25, 2021-06-25, 2021.06.25, etc.
+	%T %N              14:24:37.001002003, 14:24:37,001002003, 14:24:37:001002003, 14:24:37.2, 14:24:37,345, etc.
+	%d/%m/%y %-I %^p   25/06/21 4 am, 25/06/21 11 PM
 */
-func strToTime(s string) (time.Time, error) {
+func strToTimePercentFormat(s string, format string) (time.Time, error) {
+	var t time.Time
+	var century, year, month, day, hour, minute, second, fraction, l, zoneh, zonem int
+	var loc *time.Location
+
+	century = -1
+	yearSeen := false
+	month = -1
+	day = -1
+	n := 0
+	i := 0
+	zoneh = -1
+	pm := false
+	h12 := false
+	for i = 0; i < len(format) && n < len(s); i++ {
+		if format[i] != '%' {
+			if format[i] == ' ' {
+				// space matches any character
+				n++
+			} else if format[i] != s[n] {
+				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+			} else {
+				n++
+			}
+		} else if i+1 == len(format) {
+			return t, fmt.Errorf("Invalid format: '%s'", format)
+		} else {
+			i++
+			pad := padZero
+			preferUpper := false
+			if format[i] == '_' {
+				pad = padSpace
+				i++
+			} else if format[i] == '-' {
+				pad = noPad
+				i++
+			} else if format[i] == '0' {
+				pad = padZero
+				i++
+			} else if format[i] == '^' {
+				preferUpper = true
+				i++
+			} else if format[i] == '#' {
+				// ignore
+				i++
+			}
+			if i >= len(format) {
+				return t, fmt.Errorf("Invalid format: '%s'", format)
+			}
+			st := i
+			for ; unicode.IsNumber(rune(format[i])) && i < len(format); i++ {
+			}
+			if st < i {
+				if i >= len(format) {
+					return t, fmt.Errorf("Invalid format: '%s'", format)
+				}
+				// ignore the width specification
+			}
+			if format[i] == 'E' || format[i] == 'O' {
+				i++
+				if i >= len(format) {
+					return t, fmt.Errorf("Invalid format: '%s'", format)
+				}
+			}
+			switch format[i] {
+			case '%':
+				if s[n] != '%' {
+					return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+				}
+			case 'D':
+				if n+len(DEFAULT_SHORT_DATE_FORMAT) <= len(s) {
+					pt, err := time.ParseInLocation(DEFAULT_SHORT_DATE_FORMAT, s[n:n+len(DEFAULT_SHORT_DATE_FORMAT)], time.Local)
+					if err != nil {
+						return t, err
+					}
+					century = pt.Year() / 100
+					year = pt.Year() % 100
+					month = int(pt.Month())
+					day = pt.Day()
+					n += len(DEFAULT_SHORT_DATE_FORMAT)
+				} else {
+					return t, fmt.Errorf("Invalid date string")
+				}
+			case 'F':
+				if n+len(DEFAULT_FORMAT) <= len(s) {
+					pt, err := time.ParseInLocation(DEFAULT_FORMAT, s[n:n+len(DEFAULT_FORMAT)], time.Local)
+					if err != nil {
+						return t, err
+					}
+					century = pt.Year() / 100
+					year = pt.Year() % 100
+					month = int(pt.Month())
+					day = pt.Day()
+					hour = pt.Hour()
+					h12 = false
+					minute = pt.Minute()
+					second = pt.Second()
+					fraction = pt.Nanosecond()
+					loc = pt.Location()
+					n += len(DEFAULT_FORMAT)
+				} else {
+					return t, fmt.Errorf("Invalid date string")
+				}
+			case 'Y':
+				year, l = gatherNumber(s[n:], 4, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 4) || year < 0 {
+					return t, fmt.Errorf("Invalid year in date string")
+				}
+				century = year / 100
+				year = year % 100
+				n += l
+			case 'C':
+				century, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || century < 0 {
+					return t, fmt.Errorf("Invalid century in date string")
+				}
+				n += l
+			case 'y':
+				year, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || year < 0 || year > 99 {
+					return t, fmt.Errorf("Invalid year (in century) in date string")
+				}
+				yearSeen = true
+				n += l
+			case 'm':
+				month, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || month < 1 || month > 12 {
+					return t, fmt.Errorf("Invalid month in date string")
+				}
+				n += l
+			case 'B':
+				var m time.Month
+				for m = time.January; m <= time.December; m++ {
+					name := m.String()
+					if n+len(name) <= len(s) && (s[n:n+len(name)] == name ||
+						(preferUpper && strings.ToUpper(s[n:n+len(name)]) == strings.ToUpper(name))) {
+						month = int(m)
+						n += len(name)
+						break
+					}
+				}
+				if m > time.December {
+					return t, fmt.Errorf("Invalid month in date string")
+				}
+			case 'b':
+				var m time.Month
+				for m = time.January; m <= time.December; m++ {
+					name := m.String()[:3]
+					if n+3 <= len(s) && (s[n:n+3] == name || (preferUpper && strings.ToUpper(s[n:n+3]) == strings.ToUpper(name))) {
+						month = int(m)
+						n += 3
+						break
+					}
+				}
+				if m > time.December {
+					return t, fmt.Errorf("Invalid month in date string")
+				}
+			case 'd':
+				day, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || day < 1 || day > 31 {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+				n += l
+			case 'e':
+				day, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || day < 1 || day > 31 {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+				n += l
+			case 'A':
+				// parse/validate but do nothing with it
+				var d time.Weekday
+				for d = time.Sunday; d <= time.Saturday; d++ {
+					name := d.String()
+					if n+len(name) <= len(s) && (s[n:n+len(name)] == name ||
+						(preferUpper && strings.ToUpper(s[n:n+len(name)]) == strings.ToUpper(name))) {
+						n += len(name)
+						break
+					}
+				}
+				if d > time.Saturday {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+			case 'a':
+				// parse/validate but do nothing with it
+				var d time.Weekday
+				for d = time.Sunday; d <= time.Saturday; d++ {
+					name := d.String()[:3]
+					if n+3 <= len(s) && (s[n:n+3] == name || (preferUpper && strings.ToUpper(s[n:n+3]) == strings.ToUpper(name))) {
+						n += 3
+						break
+					}
+				}
+				if d > time.Saturday {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+			case 'f':
+				// gobble valid suffix
+				if n+1 < len(s) {
+					var suffix string
+					if preferUpper {
+						suffix = strings.ToLower(s[n : n+2])
+					} else {
+						suffix = s[n : n+2]
+					}
+					if suffix == "st" || suffix == "rd" || suffix == "th" || suffix == "nd" {
+						n += 2
+					}
+				}
+			case 'H':
+				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+			case 'I':
+				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 1 || hour > 12 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = true
+				n += l
+			case 'k':
+				hour, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || hour < 0 || hour > 23 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+			case 'l':
+				hour, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || hour < 0 || hour > 11 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = true
+				n += l
+			case 'p':
+				if n+1 < len(s) && ((s[n] == 'A' || s[n] == 'P') || (preferUpper && (s[n] == 'a' || s[n] == 'p'))) &&
+					(s[n+1] == 'M' || (preferUpper && s[n+1] == 'm')) {
+					if s[n] == 'P' || s[n] == 'p' {
+						pm = true
+					} else {
+						pm = false
+					}
+					n += 2
+				} else {
+					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				}
+			case 'P':
+				if n+1 < len(s) && ((s[n] == 'a' || s[n] == 'p') || (preferUpper && (s[n] == 'A' || s[n] == 'P'))) &&
+					(s[n+1] == 'm' || (preferUpper && s[n+1] == 'M')) {
+					if s[n] == 'p' || s[n] == 'P' {
+						pm = true
+					} else {
+						pm = false
+					}
+					n += 2
+				} else {
+					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				}
+			case 'M':
+				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
+					return t, fmt.Errorf("Invalid minute in date string")
+				}
+				n += l
+			case 'S':
+				second, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || second < 0 || second > 59 {
+					return t, fmt.Errorf("Invalid second in date string")
+				}
+				n += l
+			case 'R':
+				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
+					return t, fmt.Errorf("Invalid minute in date string")
+				}
+				n += l
+			case 'T':
+				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
+					return t, fmt.Errorf("Invalid minute in date string")
+				}
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				second, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || second < 0 || second > 59 {
+					return t, fmt.Errorf("Invalid second in date string")
+				}
+				n += l
+			case 'N':
+				fraction, l = gatherNumber(s[n:], 9, pad == padSpace)
+				if l == 0 {
+					return t, fmt.Errorf("Invalid fraction in date string")
+				}
+				// convert to ns
+				fraction *= int(math.Pow10(9 - l))
+				n += l
+			case 'Z':
+				fallthrough
+			case 'z':
+				var err error
+				n, zoneh, zonem, loc, err = gatherZone(s, n)
+				if err != nil {
+					return t, err
+				}
+			case 's':
+				epoch := 0
+				epoch, l = gatherNumber(s[n:], 10, pad == padSpace)
+				if l == 0 {
+					return t, fmt.Errorf("Invalid seconds since epoch")
+				}
+				e := time.Unix(int64(epoch), 0)
+				century = e.Year() / 100
+				year = e.Year() % 100
+				month = int(e.Month())
+				day = e.Day()
+				hour = e.Hour()
+				minute = e.Minute()
+				second = e.Second()
+				loc = nil
+				zoneh = 0
+				zonem = 0
+				h12 = false
+				n += l
+			default:
+				return t, fmt.Errorf("Invalid format '%c' (position %d)", format[i], i)
+			}
+		}
+	}
+
+	if i != len(format) || n != len(s) {
+		return t, fmt.Errorf("Failed to completely parse date string")
+	}
+
+	// only default the century based on the final parsed year value
+	if century == -1 && yearSeen {
+		if year >= 69 {
+			century = 19
+		} else {
+			century = 20
+		}
+	}
+	if century != -1 {
+		year = century*100 + year
+	}
+	if month == -1 {
+		month = int(time.January)
+	}
+	if day == -1 {
+		day = 1
+	}
+	err := validateMonthAndDay(year, month, day)
+	if err != nil {
+		return t, err
+	}
+
+	if h12 == true {
+		if pm == true {
+			if hour < 12 {
+				hour += 12
+			}
+		} else if hour == 12 {
+			hour = 0
+		}
+	}
+
+	if loc == nil {
+		loc = getLocation(zoneh, zonem)
+	}
+
+	t = time.Date(year, time.Month(month), day, hour, minute, second, fraction, loc)
+	return t, nil
+}
+
+/*
+Common date format, e.g. YYYY-MM-DD hh:mm:ss.s
+
+Components are:
+YYYY - 4 digit century+year
+CC   - 2 digit century (00...99)
+YY   - 2 digit year (00...99)
+MM   - 2 digit month (01..12)
+DD   - 2 digit day-of-month (01...31) (depending on month)
+hh   - 2 digit 24-hour hour (00...23)
+HH   - 2 digit 12-hour hour (01...12)
+mm   - 2 digit minute (00...59)
+ss   - 2 digit second (00...59)
+s    - up to 9 digit fraction of a second
+pp   - 2 character 12-hour cycle indicator (AM/PM)
+TZD  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
+
+Spaces match any character else non format characters have to be matched exactly. There is no escape sequence to use components
+listed above as literal content (individual parts can be, e.g. a single Y).
+*/
+func strToTimeCommonFormat(s string, format string) (time.Time, error) {
+	var t time.Time
+	var century, year, month, day, hour, minute, second, fraction, l, zoneh, zonem int
+	var loc *time.Location
+
+	century = -1
+	yearSeen := false
+	month = -1
+	day = -1
+	n := 0
+	i := 0
+	zoneh = -1
+	pm := false
+	h12 := false
+	for i = 0; i < len(format) && n < len(s); i++ {
+		if format[i] == ' ' {
+			// space matches any character
+			n++
+		} else if format[i] == 'Y' {
+			if i+4 <= len(format) && format[i:i+4] == "YYYY" {
+				year, l = gatherNumber(s[n:], 4, false)
+				if l != 4 || year < 0 {
+					return t, fmt.Errorf("Invalid year in date string")
+				}
+				century = year / 100
+				year = year % 100
+				i += 3
+			} else if i+1 < len(format) && format[+1] == 'Y' {
+				year, l = gatherNumber(s[n:], 2, false)
+				if l != 2 || year < 0 || year > 99 {
+					return t, fmt.Errorf("Invalid year in date string")
+				}
+				i++
+				yearSeen = true
+			} else {
+				return t, fmt.Errorf("Invalid format")
+			}
+			n += l
+		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' {
+			i++
+			switch format[i] {
+			case 'C':
+				century, l = gatherNumber(s[n:], 2, false)
+				if l != 2 || century < 0 {
+					return t, fmt.Errorf("Invalid century in date string")
+				}
+				n += 2
+			case 'M':
+				month, l = gatherNumber(s[n:], 2, false)
+				if (l != 1 && l != 2) || month < 1 || month > 12 {
+					return t, fmt.Errorf("Invalid month in date string")
+				}
+				n += l
+			case 'D':
+				day, l = gatherNumber(s[n:], 2, false)
+				if (l != 1 && l != 2) || day < 1 || day > 31 {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+				n += l
+			case 'h':
+				hour, l = gatherNumber(s[n:], 2, false)
+				if (l != 1 && l != 2) || hour < 0 || hour > 23 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+			case 'H':
+				hour, l = gatherNumber(s[n:], 2, false)
+				if (l != 1 && l != 2) || hour < 1 || hour > 12 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = true
+				n += l
+			case 'p':
+				if n+1 < len(s) && (s[n] == 'p' || s[n] == 'P') {
+					pm = true
+				} else if n+1 < len(s) && (s[n] == 'a' || s[n] == 'A') {
+					pm = false
+				} else {
+					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				}
+				n += 2
+			case 'm':
+				minute, l = gatherNumber(s[n:], 2, false)
+				if (l != 1 && l != 2) || minute < 0 || minute > 59 {
+					return t, fmt.Errorf("Invalid minute in date string")
+				}
+				n += l
+			default:
+				return t, fmt.Errorf("Invalid format")
+			}
+		} else if format[i] == 's' {
+			j := 0
+			for j = 0; i+j < len(format); j++ {
+				if format[i+j] != 's' {
+					break
+				}
+			}
+			if j == 2 {
+				second, l = gatherNumber(s[n:], 2, false)
+				if (l != 1 && l != 2) || second < 0 || second > 59 {
+					return t, fmt.Errorf("Invalid second in date string")
+				}
+			} else if j == 1 {
+				fraction, l = gatherNumber(s[n:], 9, false)
+				if l == 0 {
+					return t, fmt.Errorf("Invalid fraction in date string")
+				}
+				// convert to ns
+				fraction *= int(math.Pow10(9 - l))
+			} else {
+				return t, fmt.Errorf("Invalid format")
+			}
+			i += j - 1
+			n += l
+		} else if i+2 < len(format) && format[i:i+3] == "TZD" {
+			var err error
+			n, zoneh, zonem, loc, err = gatherZone(s, n)
+			if err != nil {
+				return t, err
+			}
+			i += 2
+		} else {
+			if format[i] != s[n] {
+				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+			}
+			n++
+		}
+	}
+
+	if i != len(format) || n != len(s) {
+		return t, fmt.Errorf("Failed to completely parse date string")
+	}
+
+	// only default the century based on the final parsed year value
+	if century == -1 && yearSeen {
+		if year >= 69 {
+			century = 19
+		} else {
+			century = 20
+		}
+	}
+	if century != -1 {
+		year = century*100 + year
+	}
+	if month == -1 {
+		month = int(time.January)
+	}
+	if day == -1 {
+		day = 1
+	}
+	err := validateMonthAndDay(year, month, day)
+	if err != nil {
+		return t, err
+	}
+
+	if h12 == true {
+		if pm == true {
+			if hour < 12 {
+				hour += 12
+			}
+		} else if hour == 12 {
+			hour = 0
+		}
+	}
+
+	if loc == nil {
+		loc = getLocation(zoneh, zonem)
+	}
+
+	t = time.Date(year, time.Month(month), day, hour, minute, second, fraction, loc)
+	return t, nil
+}
+
+// Determine the type of format string based on the content
+func determineFormat(fmt string) formatType {
+	tf := strings.TrimSpace(fmt)
+	if len(tf) == 0 {
+		return defaultFormat
+	} else if strings.IndexAny(tf, "%") != -1 {
+		return percentFormat
+	} else if strings.IndexAny(tf, "0123456789") == -1 {
+		return commonFormat
+	} else if !unicode.IsNumber(rune(tf[0])) { // standard formats all start with a digit
+		return goFormat
+	}
+	i := 0
+	for i = 0; i < len(tf); i++ {
+		if !unicode.IsNumber(rune(tf[i])) {
+			break
+		}
+	}
+	n := tf[0:i]
+	if n == "2006" {
+		return goFormat
+	} else if len(n) < 3 {
+		a := make([]rune, 2)
+		a[0] = '0'
+		for i := 1; i < 7; i++ {
+			a[1] = rune('0' + i)
+			if n == string(a) || n == string(a[1:]) {
+				return goFormat
+			}
+		}
+	}
+	return exampleFormat
+}
+
+func gatherNumber(s string, max int, countLeadingSpaces bool) (int, int) {
+	i := 0
+	st := 0
+	leading := true
+	for i = 0; i < len(s) && i < max; i++ {
+		if leading && countLeadingSpaces && unicode.IsSpace(rune(s[i])) {
+			st++
+			continue
+		}
+		if !unicode.IsNumber(rune(s[i])) {
+			break
+		}
+		leading = false
+	}
+	if i == 0 || leading {
+		return 0, 0
+	}
+	r, _ := strconv.Atoi(s[st:i])
+	return r, i
+}
+
+// try parse ISO-8601 time zone formats, or load location by name
+func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
+	var err error
+	var zoneh, zonem int
+	var loc *time.Location
+	if s[n] == 'Z' {
+		zoneh = 0
+		zonem = 0
+		loc = nil
+		n++
+	} else if n+8 < len(s) && s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
+		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) &&
+		unicode.IsNumber(rune(s[n+4])) && unicode.IsNumber(rune(s[n+5])) &&
+		unicode.IsNumber(rune(s[n+7])) && unicode.IsNumber(rune(s[n+8])) {
+		zoneh, _ = strconv.Atoi(s[n : n+3])
+		zonem, _ = strconv.Atoi(s[n+4 : n+6])
+		// seconds are ignored as aren't ISO-8601
+		loc = nil
+		n += 9
+	} else if n+5 < len(s) && s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
+		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) &&
+		unicode.IsNumber(rune(s[n+4])) && unicode.IsNumber(rune(s[n+5])) {
+		zoneh, _ = strconv.Atoi(s[n : n+3])
+		zonem, _ = strconv.Atoi(s[n+4 : n+6])
+		loc = nil
+		n += 6
+	} else if n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
+		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) &&
+		unicode.IsNumber(rune(s[n+3])) && unicode.IsNumber(rune(s[n+4])) {
+		zoneh, _ = strconv.Atoi(s[n : n+3])
+		zonem, _ = strconv.Atoi(s[n+3 : n+5])
+		loc = nil
+		n += 5
+	} else if n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
+		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) {
+		zoneh, _ = strconv.Atoi(s[n : n+3])
+		zonem = 0
+		loc = nil
+		n += 3
+	} else {
+		f := strings.Fields(s[n:])
+		loc, err = time.LoadLocation(f[0])
+		if err != nil {
+			err = fmt.Errorf("Invalid time zone in date string")
+		} else {
+			n += len(f[0])
+		}
+	}
+	return n, zoneh, zonem, loc, err
+}
+
+// Make sure YMD specification makes sense
+func validateMonthAndDay(year int, month int, day int) error {
+	if month < 1 || month > 12 {
+		return fmt.Errorf("Invalid month in date string")
+	}
+	if day < 1 {
+		return fmt.Errorf("Invalid day in date string")
+	}
+	if month == int(time.February) {
+		if isLeapYear(year) {
+			if day > 29 {
+				return fmt.Errorf("Invalid day in date string")
+			}
+		} else if day > 28 {
+			return fmt.Errorf("Invalid day in date string")
+		}
+	} else if month == int(time.April) || month == int(time.June) || month == int(time.September) || month == int(time.November) {
+		if day > 30 {
+			return fmt.Errorf("Invalid day in date string")
+		}
+	} else {
+		if day > 31 {
+			return fmt.Errorf("Invalid day in date string")
+		}
+	}
+	return nil
+}
+
+// wrapper for loading a fixed location from a seconds-offset
+func getLocation(h int, m int) *time.Location {
+	if h == -1 {
+		return time.Local
+	}
+	return time.FixedZone(fmt.Sprintf("%+03d%02d", h, m), h*60*60+m*60)
+}
+
+/*
+Parse the input string using the defined formats for Date and return the time value it represents, and error.
+Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
+(Optional components are handled by the time package API.)
+*/
+
+func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	var t time.Time
 	var err error
 	// first pass try formats that match length before encountering the overhead of parsing all
@@ -2746,13 +3578,25 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 }
 
 /*
-Parse the input string using the defined formats for Date
-and return the time value it represents, the format and an
-error. The Parse method is defined by the time package.
+Parse the input string using the defined formats for Date and return the time value it represents, and error.
+Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
+(Optional components are handled by the time package API.)
+
+If an exact-length format can't be founf, This tries all remaining and the one closest in length to the input string is picked in
+an effort to improve the selection especially when using an example to identify a format to use (some formats have components
+which are optional when parsing but present when formatting).
 */
+
 func StrToTimeFormat(s string) (time.Time, string, error) {
-	var t time.Time
+	return strToTimeFormatClosest(s, false)
+}
+
+func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, error) {
+	var t, rt time.Time
+	var rf string
+	var closest int
 	var err error
+
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
@@ -2763,25 +3607,378 @@ func StrToTimeFormat(s string) (time.Time, string, error) {
 		}
 	}
 	// only check formats we've not checked above
+	closest = math.MaxInt32
 	for _, f := range _DATE_FORMATS {
 		if len(f) != len(s) {
 			t, err = time.ParseInLocation(f, s, time.Local)
 			if err == nil {
-				return t, f, nil
+				if !nearestFormat {
+					return t, f, nil
+				}
+				l := len(s) - len(f)
+				if l < 0 {
+					l = l * -1
+				}
+				if l < closest {
+					rf = f
+					rt = t
+					closest = l
+				}
 			}
 		}
+	}
+
+	if closest < math.MaxInt32 {
+		return rt, rf, nil
 	}
 
 	return t, DEFAULT_FORMAT, err
 }
 
-/*
-It returns a textual representation of the time value formatted
-according to the Format string.
-*/
+// Date string formatting:
+// Returns a textual representation of the time value formatted according to the format string.
 func timeToStr(t time.Time, format string) string {
-	_, fmt, _ := StrToTimeFormat(format)
-	return t.Format(fmt)
+	switch determineFormat(format) {
+	case defaultFormat:
+		return timeToStrGoFormat(t, DEFAULT_FORMAT)
+	case percentFormat:
+		return timeToStrPercentFormat(t, format)
+	case commonFormat:
+		return timeToStrCommonFormat(t, format)
+	case goFormat:
+		return timeToStrGoFormat(t, format)
+	default:
+		return timeToStrExampleFormat(t, format)
+	}
+}
+
+// format string is go standard (e.g. 2006-01-02 15:04:05)
+func timeToStrGoFormat(t time.Time, format string) string {
+	return t.Format(format)
+}
+
+// find a default format that parses the example given in the format string and use that to format the result
+func timeToStrExampleFormat(t time.Time, format string) string {
+	_, f, _ := strToTimeFormatClosest(format, true)
+	return timeToStrGoFormat(t, f)
+}
+
+/*
+format using Unix date-like format string (e.g. %Y-%m-%d %H:%M:%S.%N)
+
+Examples:
+	format    ...      produces
+	%F                 2021-06-25T04:00:00.000+05:30
+	%D                 2021-06-25
+	%Y.%m.%d           2021.06.25
+	%T,%n              14:24:37,345
+	%d/%m/%y %-I %^p   25/06/21 4 AM
+	[%_3S]             [ 37]
+	%Z                 BST
+*/
+
+func timeToStrPercentFormat(t time.Time, format string) string {
+	res := make([]rune, 0, len(format)*3)
+	i := 0
+	for i = 0; i < len(format); i++ {
+		if format[i] == '%' && i+1 < len(format) {
+			i++
+			pad := padZero
+			preferUpper := false
+			if format[i] == '_' {
+				pad = padSpace
+				i++
+			} else if format[i] == '-' {
+				pad = noPad
+				i++
+			} else if format[i] == '0' {
+				pad = padZero
+				i++
+			} else if format[i] == '^' {
+				preferUpper = true
+				i++
+			} else if format[i] == '#' {
+				// ignore
+				i++
+			}
+			if i >= len(format) {
+				return fmt.Sprintf("!(Invalid format: '%s')", format)
+			}
+			width := 0
+			st := i
+			for ; unicode.IsNumber(rune(format[i])) && i < len(format); i++ {
+			}
+			if st < i {
+				if i >= len(format) {
+					return fmt.Sprintf("!(Invalid format: '%s')", format)
+				}
+				width, _ = strconv.Atoi(format[st:i])
+			}
+			if format[i] == 'E' || format[i] == 'O' {
+				i++
+				if i >= len(format) {
+					return fmt.Sprintf("!(Invalid format: '%s')", format)
+				}
+			}
+			switch format[i] {
+			case 'D':
+				res = append(res, []rune(t.Format(DEFAULT_SHORT_DATE_FORMAT))...)
+			case 'F':
+				res = append(res, []rune(t.Format(DEFAULT_FORMAT))...)
+			case 'Y':
+				res = append(res, formatInt(width, 4, pad, t.Year())...)
+			case 'C':
+				res = append(res, formatInt(width, 2, pad, t.Year()/100)...)
+			case 'y':
+				res = append(res, formatInt(width, 2, pad, t.Year()%100)...)
+			case 'm':
+				res = append(res, formatInt(width, 2, pad, int(t.Month()))...)
+			case 'B':
+				if preferUpper {
+					res = append(res, []rune(strings.ToUpper(t.Month().String()))...)
+				} else {
+					res = append(res, []rune(t.Month().String())...)
+				}
+			case 'b':
+				if preferUpper {
+					res = append(res, []rune(strings.ToUpper(t.Month().String()[:3]))...)
+				} else {
+					res = append(res, []rune(t.Month().String()[:3])...)
+				}
+			case 'd':
+				res = append(res, formatInt(width, 2, pad, t.Day())...)
+			case 'f':
+				if t.Day() == 3 || t.Day() == 23 {
+					if preferUpper {
+						res = append(res, []rune("RD")...)
+					} else {
+						res = append(res, []rune("rd")...)
+					}
+				} else if t.Day() == 1 || t.Day() == 21 {
+					if preferUpper {
+						res = append(res, []rune("ST")...)
+					} else {
+						res = append(res, []rune("st")...)
+					}
+				} else if t.Day() == 2 || t.Day() == 22 {
+					if preferUpper {
+						res = append(res, []rune("ND")...)
+					} else {
+						res = append(res, []rune("nd")...)
+					}
+				} else {
+					if preferUpper {
+						res = append(res, []rune("TH")...)
+					} else {
+						res = append(res, []rune("th")...)
+					}
+				}
+			case 'A':
+				if preferUpper {
+					res = append(res, []rune(strings.ToUpper(t.Weekday().String()))...)
+				} else {
+					res = append(res, []rune(t.Weekday().String())...)
+				}
+			case 'a':
+				if preferUpper {
+					res = append(res, []rune(strings.ToUpper(t.Weekday().String()[:3]))...)
+				} else {
+					res = append(res, []rune(t.Weekday().String()[:3])...)
+				}
+			case 'H':
+				res = append(res, formatInt(width, 2, pad, t.Hour())...)
+			case 'I':
+				h := t.Hour()
+				if h == 0 {
+					h = 12
+				} else if h > 12 {
+					h -= 12
+				}
+				res = append(res, formatInt(width, 2, pad, h)...)
+			case 'p':
+				h := t.Hour()
+				if h < 12 {
+					res = append(res, []rune("AM")...)
+				} else {
+					res = append(res, []rune("PM")...)
+				}
+			case 'P':
+				h := t.Hour()
+				if h < 12 {
+					if preferUpper {
+						res = append(res, []rune("AM")...)
+					} else {
+						res = append(res, []rune("am")...)
+					}
+				} else {
+					if preferUpper {
+						res = append(res, []rune("PM")...)
+					} else {
+						res = append(res, []rune("pm")...)
+					}
+				}
+			case 'M':
+				res = append(res, formatInt(width, 2, pad, t.Minute())...)
+			case 'S':
+				res = append(res, formatInt(width, 2, pad, t.Second())...)
+			case 's':
+				res = append(res, formatInt(width, 0, pad, int(t.Unix()))...)
+			case 'R':
+				res = append(res, formatInt(width, 2, pad, t.Hour())...)
+				res = append(res, rune(':'))
+				res = append(res, formatInt(width, 2, pad, t.Minute())...)
+			case 'T':
+				res = append(res, formatInt(width, 2, pad, t.Hour())...)
+				res = append(res, rune(':'))
+				res = append(res, formatInt(width, 2, pad, t.Minute())...)
+				res = append(res, rune(':'))
+				res = append(res, formatInt(width, 2, pad, t.Second())...)
+			case 'N':
+				res = append(res, formatInt(width, 9, pad, t.Nanosecond())...)
+			case 'n':
+				res = append(res, formatInt(width, 3, pad, int(t.Round(time.Millisecond).Nanosecond()/1000000))...)
+			case 'z':
+				_, off := t.Zone()
+				h := off / (60 * 60)
+				m := off - (h * 60 * 60)
+				m /= 60
+				if m < 0 {
+					m = m * -1
+				}
+				res = append(res, []rune(fmt.Sprintf("%+03d%02d", h, m))...)
+			case 'Z':
+				zone, _ := t.Zone()
+				res = append(res, []rune(zone)...)
+			case '%':
+				res = append(res, rune('%'))
+			default:
+				res = append(res, []rune(fmt.Sprintf("!(Unknown format: '%c')", format[i]))...)
+			}
+		} else {
+			res = append(res, rune(format[i]))
+		}
+	}
+	return string(res)
+}
+
+func formatInt(width int, defWidth int, pad int, val int) []rune {
+	if width <= 0 {
+		width = defWidth
+	}
+	f := ""
+	switch pad {
+	case padSpace:
+		f = fmt.Sprintf("%%%dd", width)
+	case noPad:
+		f = "%d"
+	default:
+		f = fmt.Sprintf("%%0%dd", width)
+	}
+	return []rune(fmt.Sprintf(f, val))
+}
+
+/*
+format using common-style format string (e.g. YYYY-MM-DD HH:mm:ss.s)
+
+Components are:
+YYYY - 4 digit century+year
+CC   - 2 digit century (00...99)
+YY   - 2 digit year (00...99)
+MM   - 2 digit month (01..12)
+DD   - 2 digit day-of-month (01...31) (depending on month)
+hh   - 2 digit 24-hour hour (00...23)
+HH   - 2 digit 12-hour hour (01...12)
+mm   - 2 digit minute (00...59)
+ss   - 2 digit second (00...59)
+s    - 3 digit zero-padded milliseconds
+sss  - 9 digit zero-padded nanoseconds
+PP   - 2 character upper case 12-hour cycle indicator (AM/PM)
+pp   - 2 character lower case 12-hour cycle indicator (am/pm)
+TZD  - timezone Z or +hh:mm
+
+Other characters/sequences are produced literally in the output.
+*/
+func timeToStrCommonFormat(t time.Time, format string) string {
+	res := make([]rune, 0, len(format)*3)
+	i := 0
+	for i = 0; i < len(format); i++ {
+		if i+3 < len(format) && format[i:i+4] == "YYYY" {
+			res = append(res, []rune(fmt.Sprintf("%04d", t.Year()))...)
+			i += 3
+		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' {
+			i++
+			switch format[i] {
+			case 'C':
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Year()/100))...)
+			case 'Y':
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Year()%100))...)
+			case 'M':
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Month()))...)
+			case 'D':
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Day()))...)
+			case 'h':
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Hour()))...)
+			case 'H':
+				h := t.Hour()
+				if h == 0 {
+					h = 12
+				} else if h > 12 {
+					h -= 12
+				}
+				res = append(res, []rune(fmt.Sprintf("%02d", h))...)
+			case 'P':
+				h := t.Hour()
+				if h < 12 {
+					res = append(res, []rune("AM")...)
+				} else {
+					res = append(res, []rune("PM")...)
+				}
+			case 'p':
+				h := t.Hour()
+				if h < 12 {
+					res = append(res, []rune("am")...)
+				} else {
+					res = append(res, []rune("pm")...)
+				}
+			case 'm':
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Minute()))...)
+			default:
+				res = append(res, []rune(fmt.Sprintf("%c%c", format[i], format[i]))...)
+			}
+		} else if i+2 < len(format) && format[i:i+3] == "TZD" {
+			_, off := t.Zone()
+			if off == 0 {
+				res = append(res, rune('Z'))
+			} else {
+				h := off / (60 * 60)
+				m := (off - (h * 60 * 60))
+				m /= 60
+				if m < 0 {
+					m = m * -1
+				}
+				res = append(res, []rune(fmt.Sprintf("%+03d:%02d", h, m))...)
+			}
+			i += 2
+		} else if format[i] == 's' {
+			n := 0
+			for n = 0; n+i < len(format); n++ {
+				if format[i+n] != 's' {
+					break
+				}
+			}
+			if n == 2 {
+				res = append(res, []rune(fmt.Sprintf("%02d", t.Second()))...)
+			} else if n == 1 {
+				res = append(res, []rune(fmt.Sprintf("%03d", int(t.Round(time.Millisecond).Nanosecond()/1000000)))...)
+			} else if n == 3 {
+				res = append(res, []rune(fmt.Sprintf("%09d", t.Nanosecond()))...)
+			}
+			i += n - 1
+		} else {
+			res = append(res, rune(format[i]))
+		}
+	}
+	return string(res)
 }
 
 /*
@@ -2827,6 +4024,8 @@ var _DATE_FORMATS = []string{
 	"2006-01-02",
 	"15:04:05.999Z07:00",
 	"15:04:05Z07:00",
+	"15:04:05.000000000",
+	"15:04:05.000000",
 	"15:04:05.999",
 	"15:04:05",
 }
@@ -2836,10 +4035,8 @@ Represents the default format of the time string.
 */
 const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 
-/*
-Represents a value of the default format.
-*/
-var _DEFAULT_FMT_VALUE = value.NewValue(DEFAULT_FORMAT)
+// Used solely for the %D format specifier
+const DEFAULT_SHORT_DATE_FORMAT = "2006-01-02"
 
 /*
 This function returns the part of the time string that is
@@ -3207,4 +4404,15 @@ be evenly divided by 400.
 */
 func isLeapYear(year int) bool {
 	return year%400 == 0 || (year%4 == 0 && year%100 != 0)
+}
+
+// Generate a format from the input date that can't be confused with a go-lang native style format
+func formatFromStr(str string) string {
+	f := append([]rune(nil), []rune(str)...)
+	for i, r := range f {
+		if unicode.IsNumber(r) {
+			f[i] = rune('1')
+		}
+	}
+	return string(f)
 }

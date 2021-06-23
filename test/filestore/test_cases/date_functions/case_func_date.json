@@ -153,10 +153,24 @@
     ]
     },
     {
-       "statements":"select STR_TO_MILLIS(\"2015-01-01T16:00:00-08:00\")",
+       "statements":"select STR_TO_MILLIS('2015-01-01T16:00:00-08:00'),STR_TO_MILLIS('2015/01/01 16:00:00-08:00','YYYY MM DD hh:mm:ssTZD'),STR_TO_MILLIS('2015/01/01T16:00:00-08:00','%Y/%m/%dT%T%z'),STR_TO_MILLIS('4pm on 1st JaN 15 in America/Los_Angeles','%-I%P on %-d%f %^b %y in %z'),STR_TO_MILLIS('00:00:00','%I:%M:%S'),STR_TO_MILLIS('00:00:00+0000','%H:%M:%S%z')",
        "results": [
         {
-            "$1": 1420156800000
+            "$1": 1420156800000,
+            "$2": 1420156800000,
+            "$3": 1420156800000,
+            "$4": 1420156800000,
+            "$5": null,
+            "$6": -62167219200000
+        }
+    ]
+    },
+    {
+       "statements":"select str_to_millis('2021-06-25-14:48:42.123+00:00pm','YYYY-MM-DD-hh:mm:ss.sTZDpp'),str_to_millis('2021-06-25-14:48:42.123+00:00pmJuneFri','%C%y-%m-%d-%H:%M:%S.%N%z%P%B%a')",
+       "results": [
+        {
+            "$1": 1624632522123,
+            "$2": 1624632522123
         }
     ]
     },
@@ -169,15 +183,337 @@
     ]
     },
     {
-       "statements":"select MILLIS_TO_UTC(1.4201568e+12,\"2006-01-02 15:04:05\")",
+       "statements":"select MILLIS_TO_UTC(1.4201968e+12,'2006-01-02 15:04:05'),MILLIS_TO_UTC(1.4201968e+12,'(CC)YY/MM/DD @ HH.mm (PP) [TZD]'),MILLIS_TO_UTC(1.4201968e+12,'%T %z %D')",
        "results": [
         {
-            "$1": "2015-01-02 00:00:00"
+            "$1": "2015-01-02 11:06:40",
+            "$2": "(20)15/01/02 @ 11.06 (AM) [Z]",
+            "$3": "11:06:40 +0000 2015-01-02"
         }
     ]
     },
     {
-      "statements":"select DATE_PART_STR(MILLIS_TO_STR(NOW_MILLIS()),\"decade\")",
+      "statements": "select nvl2(str_to_millis('30','CC'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('30','YY'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('3030','YYYY'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('06','MM'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('25','DD'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('12','hh'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('13','hh'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('12','HH'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('13','HH'),false,true) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('22','mm'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('11','ss'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('123','s'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('am','pp'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('zm','pp'),false,true) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('AM','pp'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('XX','pp'),false,true) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('Z','TZD'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('+0000','TZD'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('-08','TZD'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('-05:00','TZD'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('30','%C'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('30','%y'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('3030','%Y'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('06','%m'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('25','%d'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('12','%H'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('13','%H'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('12','%I'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('13','%I'),false,true) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('22','%M'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('11','%S'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('123','%N'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('am','%P'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('am','%p'),false,true) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('AM','%P'),false,true) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('AM','%p'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('Z','%z'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('+0000','%z'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('-08','%z'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements": "select nvl2(str_to_millis('-05:00','%z'),true,false) ",
+      "results": [
+        {
+          "$1": true
+        }
+      ]
+    },
+    {
+      "statements":"select DATE_PART_STR(MILLIS_TO_STR(1624561830632),\"decade\")",
       "results": [
         {
             "$1": 202
