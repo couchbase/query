@@ -23,17 +23,18 @@ const (
 )
 
 type BaseKeyspace struct {
-	name        string
-	keyspace    string
-	filters     Filters
-	joinfilters Filters
-	dnfPred     expression.Expression
-	origPred    expression.Expression
-	onclause    expression.Expression
-	outerlevel  int32
-	ksFlags     uint32
-	docCount    int64
-	unnests     map[string]string
+	name          string
+	keyspace      string
+	filters       Filters
+	joinfilters   Filters
+	dnfPred       expression.Expression
+	origPred      expression.Expression
+	onclause      expression.Expression
+	outerlevel    int32
+	ksFlags       uint32
+	docCount      int64
+	unnests       map[string]string
+	unnestIndexes map[datastore.Index]string
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path) *BaseKeyspace {
@@ -127,6 +128,12 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			dest[kspace.name].unnests = make(map[string]string, len(kspace.unnests))
 			for a, k := range kspace.unnests {
 				dest[kspace.name].unnests[a] = k
+			}
+			if len(kspace.unnestIndexes) > 0 {
+				dest[kspace.name].unnestIndexes = make(map[datastore.Index]string, len(kspace.unnestIndexes))
+				for i, a := range kspace.unnestIndexes {
+					dest[kspace.name].unnestIndexes[i] = a
+				}
 			}
 		}
 		if copyFilter {
@@ -228,6 +235,17 @@ func (this *BaseKeyspace) AddUnnestAlias(alias, keyspace string, size int) {
 
 func (this *BaseKeyspace) GetUnnests() map[string]string {
 	return this.unnests
+}
+
+func (this *BaseKeyspace) AddUnnestIndex(index datastore.Index, alias string) {
+	if this.unnestIndexes == nil {
+		this.unnestIndexes = make(map[datastore.Index]string, len(this.unnests))
+	}
+	this.unnestIndexes[index] = alias
+}
+
+func (this *BaseKeyspace) GetUnnestIndexes() map[datastore.Index]string {
+	return this.unnestIndexes
 }
 
 func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) string {

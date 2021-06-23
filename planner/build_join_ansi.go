@@ -568,7 +568,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	}
 
 	// temporarily mark index filters for selectivity calculation
-	err = markPlanFlagsChildren(node.Alias(), baseKeyspace.Filters(), this.children)
+	err = markPlanFlagsChildren(baseKeyspace, this.children)
 	if err != nil {
 		return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
@@ -1146,7 +1146,7 @@ func (this *builder) markPlanFlags(op plan.Operator, term algebra.SimpleFromTerm
 			children = this.children
 		}
 	case *plan.DistinctScan, *plan.IntersectScan, *plan.OrderedIntersectScan, *plan.UnionScan, *plan.IndexScan3:
-		return markPlanFlagsScanOperator(alias, filters, op.(plan.SecondaryScan))
+		return markPlanFlagsScanOperator(baseKeyspace, op.(plan.SecondaryScan))
 	case *plan.PrimaryScan3:
 		// nothing to do
 		return nil
@@ -1156,10 +1156,10 @@ func (this *builder) markPlanFlags(op plan.Operator, term algebra.SimpleFromTerm
 		return nil
 	}
 
-	return markPlanFlagsChildren(alias, filters, children)
+	return markPlanFlagsChildren(baseKeyspace, children)
 }
 
-func markPlanFlagsChildren(alias string, filters base.Filters, children []plan.Operator) error {
+func markPlanFlagsChildren(baseKeyspace *base.BaseKeyspace, children []plan.Operator) error {
 	for _, child := range children {
 		// only linear join is supported currently
 		// if more complex plan shape is supported in the future, needs
@@ -1167,7 +1167,7 @@ func markPlanFlagsChildren(alias string, filters base.Filters, children []plan.O
 		// (e.g. Sequence, Parallel, NLJoin, HashJoin, NLNest, HashNest, etc)
 		if scan, ok := child.(plan.SecondaryScan); ok {
 			// recurse to handle SecondaryScans under join/nest
-			err := markPlanFlagsScanOperator(alias, filters, scan)
+			err := markPlanFlagsScanOperator(baseKeyspace, scan)
 			if err != nil {
 				return err
 			}
@@ -1177,37 +1177,37 @@ func markPlanFlagsChildren(alias string, filters base.Filters, children []plan.O
 	return nil
 }
 
-func markPlanFlagsScanOperator(alias string, filters base.Filters, scan plan.SecondaryScan) error {
+func markPlanFlagsScanOperator(baseKeyspace *base.BaseKeyspace, scan plan.SecondaryScan) error {
 	switch op := scan.(type) {
 	case *plan.DistinctScan:
-		return markPlanFlagsSecondaryScans(alias, filters, op.Scan())
+		return markPlanFlagsSecondaryScans(baseKeyspace, op.Scan())
 	case *plan.IntersectScan:
-		return markPlanFlagsSecondaryScans(alias, filters, op.Scans()...)
+		return markPlanFlagsSecondaryScans(baseKeyspace, op.Scans()...)
 	case *plan.OrderedIntersectScan:
-		return markPlanFlagsSecondaryScans(alias, filters, op.Scans()...)
+		return markPlanFlagsSecondaryScans(baseKeyspace, op.Scans()...)
 	case *plan.UnionScan:
-		return markPlanFlagsSecondaryScans(alias, filters, op.Scans()...)
+		return markPlanFlagsSecondaryScans(baseKeyspace, op.Scans()...)
 	case *plan.IndexScan3:
-		return markPlanFlagsSecondaryScans(alias, filters, op)
+		return markPlanFlagsSecondaryScans(baseKeyspace, op)
 	}
 
 	return nil
 }
 
-func markPlanFlagsSecondaryScans(alias string, filters base.Filters, scans ...plan.SecondaryScan) error {
+func markPlanFlagsSecondaryScans(baseKeyspace *base.BaseKeyspace, scans ...plan.SecondaryScan) error {
 	// look for index scan
 	var err error
 	for _, scan := range scans {
 		if iscan, ok := scan.(*plan.IndexScan3); ok {
 			sterm := iscan.Term()
-			if sterm != nil && sterm.Alias() == alias {
-				err = markIndexFlags(iscan.Index(), iscan.Spans(), sterm.Alias(), filters)
+			if sterm != nil && sterm.Alias() == baseKeyspace.Name() {
+				err = markIndexFlags(iscan.Index(), iscan.Spans(), baseKeyspace)
 				if err != nil {
 					return err
 				}
 			}
 		} else if sscan, ok := scan.(plan.SecondaryScan); ok {
-			err = markPlanFlagsScanOperator(alias, filters, sscan)
+			err = markPlanFlagsScanOperator(baseKeyspace, sscan)
 			if err != nil {
 				return err
 			}
@@ -1217,10 +1217,11 @@ func markPlanFlagsSecondaryScans(alias string, filters base.Filters, scans ...pl
 	return nil
 }
 
-func markIndexFlags(index datastore.Index, spans plan.Spans2, alias string, filters base.Filters) error {
+func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base.BaseKeyspace) error {
 	var err error
 	var keys expression.Expressions
 	var condition expression.Expression
+	alias := baseKeyspace.Name()
 
 	if !index.IsPrimary() {
 		keys = index.RangeKey().Copy()
@@ -1258,7 +1259,13 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, alias string, filt
 		return err
 	}
 
-	optMarkIndexFilters(keys, spans, condition, filters)
+	var unnestAlias string
+	unnestIndexes := baseKeyspace.GetUnnestIndexes()
+	if a, ok := unnestIndexes[index]; ok {
+		unnestAlias = a
+	}
+
+	optMarkIndexFilters(keys, spans, condition, unnestAlias, baseKeyspace)
 
 	return nil
 }

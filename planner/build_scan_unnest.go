@@ -287,7 +287,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
 	plan.SecondaryScan, *algebra.Unnest, *expression.All, int, error) {
 
-	var sargKey expression.Expression
+	var sargKey, origSargKey expression.Expression
 	var err error
 
 	newArrayKey := arrayKey
@@ -302,6 +302,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 			return nil, nil, nil, 0, nil
 		}
 
+		var origBinding *expression.Binding
 		when := array.When()
 		arrayMapping := array.ValueMapping()
 		alias := expression.NewIdentifier(unnest.As())
@@ -318,6 +319,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 				nakey, naok = a.ValueMapping().(*expression.All)
 			}
 
+			origBinding = binding
 			binding = expression.NewSimpleBinding(unnest.As(), unnest.Expression())
 			renamer := expression.NewRenamer(array.Bindings(), expression.Bindings{binding})
 			if when != nil {
@@ -361,8 +363,15 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		}
 
 		sargKey = arrayMapping
-		newArrayKey = expression.NewAll(expression.NewArray(arrayMapping,
-			expression.Bindings{binding}, when), arrayKey.Distinct())
+		if origBinding != nil {
+			if unnest.As() != origBinding.Variable() {
+				// remember the original mapping before binding variable replacement
+				origSargKey = array.ValueMapping()
+			}
+
+			newArrayKey = expression.NewAll(expression.NewArray(arrayMapping,
+				expression.Bindings{binding}, when), arrayKey.Distinct())
+		}
 	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
 		return nil, nil, nil, 0, nil
 	} else {
@@ -425,6 +434,12 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
 	if useCBO {
+		restore := false
+		if origSargKey != nil {
+			// use the original binding ariable in array index key
+			sargKeys[0] = origSargKey
+			restore = true
+		}
 		cost, selectivity, cardinality, size, frCost, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(),
 			spans, node.Alias(), this.advisorValidate(), this.context)
 		if err != nil {
@@ -433,6 +448,11 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 			size = OPT_SIZE_NOT_AVAIL
 			frCost = OPT_COST_NOT_AVAIL
 		}
+		if restore {
+			sargKeys[0] = sargKey
+		}
+
+		baseKeyspace.AddUnnestIndex(index, unnest.Alias())
 	}
 
 	entry.sargKeys = sargKeys[0:n]
