@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
-	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached"
 	"github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
@@ -40,6 +39,7 @@ import (
 	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
@@ -99,7 +99,7 @@ func init() {
 
 // store is the root for the couchbase datastore
 type store struct {
-	client         cb.Client // instance of go-couchbase client
+	client         cb.Client // instance of primitives/couchbase client
 	gcClient       *gcagent.Client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
 	CbAuthInit     bool                  // whether cbAuth is initialized
@@ -1251,7 +1251,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)
-		// go-couchbase caches the buckets
+		// primitives/couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
 		p.reload()
@@ -1309,7 +1309,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	return rv, nil
 }
 
-// Called by go-couchbase if a configured keyspace is deleted
+// Called by primitives/couchbase if a configured keyspace is deleted
 func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 
 	var cbKeyspace *keyspace
@@ -1343,7 +1343,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	}
 }
 
-// Called by go-couchbase if a configured keyspace is updated
+// Called by primitives/couchbase if a configured keyspace is updated
 func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 
 	checkSysBucket := false

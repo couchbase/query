@@ -16,10 +16,10 @@ package couchbase
 import (
 	"time"
 
-	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	cb "github.com/couchbase/query/primitives/couchbase"
 )
 
 const (

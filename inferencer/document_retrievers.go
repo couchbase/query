@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -224,8 +224,8 @@ func MakeKeyspaceRandomDocumentRetriever(ks datastore.Keyspace, sampleSize int) 
 // KVRandomDocumentRetriever implementation
 //
 // Given a server name, login & password, and bucket name and password,
-// use the go-couchbase bucket GetRandomDoc() method to retrieve
-// non-duplicate radom docs until we have sampleSize (or give up becasue we
+// use the couchbase bucket GetRandomDoc() method to retrieve
+// non-duplicate radom docs until we have sampleSize (or give up because we
 // keep seeing duplicates).
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -268,7 +268,7 @@ func (kvrdr *KVRandomDocumentRetriever) GetNextDoc(context datastore.QueryContex
 	return _EMPTY_KEY, nil, nil
 }
 
-func MakeKVRandomDocumentRetriever(serverURL, login, serverPass, bucket, bucketPass string, sampleSize int) (*KVRandomDocumentRetriever, *string) {
+func MakeKVRandomDocumentRetriever(serverURL, bucket, bucketPass string, sampleSize int) (*KVRandomDocumentRetriever, *string) {
 
 	kvrdr := new(KVRandomDocumentRetriever)
 	kvrdr.docIdsSeen = make(map[string]bool)
@@ -278,11 +278,7 @@ func MakeKVRandomDocumentRetriever(serverURL, login, serverPass, bucket, bucketP
 	var err error
 
 	// need to connect to the server...
-	if len(login) == 0 {
-		client, err = couchbase.Connect(serverURL)
-	} else {
-		client, err = couchbase.ConnectWithAuthCreds(serverURL, login, serverPass)
-	}
+	client, err = couchbase.Connect(serverURL)
 	if err != nil { // check for errors
 		error_msg := err.Error()
 		return nil, &error_msg
@@ -294,11 +290,7 @@ func MakeKVRandomDocumentRetriever(serverURL, login, serverPass, bucket, bucketP
 		return nil, &error_msg
 	}
 
-	if len(bucketPass) > 0 {
-		kvrdr.bucket, err = pool.GetBucketWithAuth(bucket, login, bucketPass)
-	} else {
-		kvrdr.bucket, err = pool.GetBucket(bucket)
-	}
+	kvrdr.bucket, err = pool.GetBucket(bucket)
 	if err != nil { // check for errors
 		error_msg := fmt.Sprintf("Error getting bucket: %s - %s", bucket, err.Error())
 		return nil, &error_msg

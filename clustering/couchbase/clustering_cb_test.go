@@ -15,11 +15,11 @@ import (
 	"testing"
 
 	"github.com/couchbase/cbauth"
-	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore/mock"
 	_ "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
 )
 

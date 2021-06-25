@@ -14,11 +14,11 @@ import (
 	"strconv"
 	"sync"
 
-	cb "github.com/couchbase/go-couchbase"
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
+	cb "github.com/couchbase/query/primitives/couchbase"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"

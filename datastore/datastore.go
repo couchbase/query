@@ -420,7 +420,7 @@ func IndexerQualifiedKeyspacePath(indexer Indexer) string {
 }
 
 // These structures are generic representations of users and their roles.
-// Very similar structures exist in go-couchbase, but to keep open the
+// Very similar structures exist in primitives/couchbase, but to keep open the
 // possibility of connecting to other back ends, the query engine
 // uses its own representation.
 type User struct {

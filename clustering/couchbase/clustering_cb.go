@@ -21,12 +21,12 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
-	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
@@ -38,7 +38,7 @@ const _GRACE_PERIOD = time.Second
 
 ///////// Notes about Couchbase implementation of Clustering API
 //
-// clustering_cb (this package) -> go-couchbase -> couchbase cluster
+// clustering_cb (this package) -> primitives/couchbase -> couchbase cluster
 //
 // pool is a synonym for cluster
 //
@@ -603,7 +603,7 @@ func (this *cbCluster) Name() string {
 
 func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
-	// Get a handle of the go-couchbase connection:
+	// Get a handle of the couchbase connection:
 	configStore, ok := this.configStore.(*cbConfigStore)
 	if !ok {
 		return nil, errors.NewAdminConnectionError(nil, this.ConfigurationStoreId())
