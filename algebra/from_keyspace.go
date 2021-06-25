@@ -239,7 +239,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 /*
 Return the primary term in the FROM clause.
 */
-func (this *KeyspaceTerm) PrimaryTerm() FromTerm {
+func (this *KeyspaceTerm) PrimaryTerm() SimpleFromTerm {
 	return this
 }
 

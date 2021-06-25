@@ -51,7 +51,7 @@ type FromTerm interface {
 	/*
 	   Represents the primary (first) term of this FROM term.
 	*/
-	PrimaryTerm() FromTerm
+	PrimaryTerm() SimpleFromTerm
 
 	/*
 	   Represents alias string.

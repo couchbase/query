@@ -137,7 +137,7 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 Returns the primary term in the left source of
 the JOIN.
 */
-func (this *IndexJoin) PrimaryTerm() FromTerm {
+func (this *IndexJoin) PrimaryTerm() SimpleFromTerm {
 	return this.left.PrimaryTerm()
 }
 

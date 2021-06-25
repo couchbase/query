@@ -100,7 +100,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 /*
 Return the primary term in the from clause.
 */
-func (this *SubqueryTerm) PrimaryTerm() FromTerm {
+func (this *SubqueryTerm) PrimaryTerm() SimpleFromTerm {
 	return this
 }
 

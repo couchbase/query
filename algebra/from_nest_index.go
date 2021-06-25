@@ -144,7 +144,7 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 /*
 Return the primary term in the left term of the NEST clause.
 */
-func (this *IndexNest) PrimaryTerm() FromTerm {
+func (this *IndexNest) PrimaryTerm() SimpleFromTerm {
 	return this.left.PrimaryTerm()
 }
 

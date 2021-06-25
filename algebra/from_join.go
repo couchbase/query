@@ -128,7 +128,7 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 Returns the primary term in the left source of
 the JOIN.
 */
-func (this *Join) PrimaryTerm() FromTerm {
+func (this *Join) PrimaryTerm() SimpleFromTerm {
 	return this.left.PrimaryTerm()
 }
 

@@ -170,7 +170,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 /*
 Return the primary term in the from clause.
 */
-func (this *ExpressionTerm) PrimaryTerm() FromTerm {
+func (this *ExpressionTerm) PrimaryTerm() SimpleFromTerm {
 	return this
 }
 

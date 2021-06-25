@@ -131,7 +131,7 @@ func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Form
 Return the primary term in the parent object
 (left term) of the UNNEST clause.
 */
-func (this *Unnest) PrimaryTerm() FromTerm {
+func (this *Unnest) PrimaryTerm() SimpleFromTerm {
 	return this.left.PrimaryTerm()
 }
 

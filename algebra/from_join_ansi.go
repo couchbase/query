@@ -150,7 +150,7 @@ func (this *AnsiJoin) Formalize(parent *expression.Formalizer) (f *expression.Fo
 Returns the primary term in the left source of
 the JOIN.
 */
-func (this *AnsiJoin) PrimaryTerm() FromTerm {
+func (this *AnsiJoin) PrimaryTerm() SimpleFromTerm {
 	return this.left.PrimaryTerm()
 }
 

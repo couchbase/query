@@ -133,7 +133,7 @@ func (this *AnsiNest) Formalize(parent *expression.Formalizer) (f *expression.Fo
 /*
 Return the primary term in the left term of the NEST clause.
 */
-func (this *AnsiNest) PrimaryTerm() FromTerm {
+func (this *AnsiNest) PrimaryTerm() SimpleFromTerm {
 	return this.left.PrimaryTerm()
 }
 
