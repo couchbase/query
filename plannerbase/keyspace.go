@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	KS_PLAN_DONE      = 1 << iota // planning is done for this keyspace
-	KS_ONCLAUSE_ONLY              // use ON-clause only for planning
-	KS_PRIMARY_UNNEST             // primary unnest
-	KS_IN_CORR_SUBQ               // in correlated subquery
-	KS_HAS_DOC_COUNT              // docCount retrieved for keyspace
+	KS_PLAN_DONE     = 1 << iota // planning is done for this keyspace
+	KS_ONCLAUSE_ONLY             // use ON-clause only for planning
+	KS_IS_UNNEST                 // unnest
+	KS_IN_CORR_SUBQ              // in correlated subquery
+	KS_HAS_DOC_COUNT             // docCount retrieved for keyspace
 )
 
 type BaseKeyspace struct {
@@ -82,12 +82,12 @@ func (this *BaseKeyspace) SetOnclauseOnly() {
 	this.ksFlags |= KS_ONCLAUSE_ONLY
 }
 
-func (this *BaseKeyspace) IsPrimaryUnnest() bool {
-	return (this.ksFlags & KS_PRIMARY_UNNEST) != 0
+func (this *BaseKeyspace) IsUnnest() bool {
+	return (this.ksFlags & KS_IS_UNNEST) != 0
 }
 
-func (this *BaseKeyspace) SetPrimaryUnnest() {
-	this.ksFlags |= KS_PRIMARY_UNNEST
+func (this *BaseKeyspace) SetUnnest() {
+	this.ksFlags |= KS_IS_UNNEST
 }
 
 func (this *BaseKeyspace) IsInCorrSubq() bool {

@@ -9,8 +9,11 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -165,48 +168,54 @@ type opEntry struct {
 	Len int
 }
 
-func addUnnestPreds(baseKeyspaces map[string]*base.BaseKeyspace, primary *base.BaseKeyspace) {
-	primaries := make(map[string]bool, len(baseKeyspaces))
+func addUnnestPreds(baseKeyspaces map[string]*base.BaseKeyspace, primary *base.BaseKeyspace) error {
+	unnests := primary.GetUnnests()
+	if len(unnests) == 0 {
+		return nil
+	}
+
+	primaries := make(map[string]bool, len(unnests)+1)
 	primaries[primary.Name()] = true
 	nlen := 0
 
-	for _, unnestKeyspace := range baseKeyspaces {
-		if unnestKeyspace.IsPrimaryUnnest() {
-			nlen += len(unnestKeyspace.Filters())
-			nlen += len(unnestKeyspace.JoinFilters())
-			primaries[unnestKeyspace.Name()] = true
+	for a, _ := range unnests {
+		unnestKeyspace, ok := baseKeyspaces[a]
+		if !ok {
+			return errors.NewPlanInternalError(fmt.Sprintf("addUnnestPreds: baseKeyspace not found for %s", a))
 		}
+		nlen += len(unnestKeyspace.Filters())
+		nlen += len(unnestKeyspace.JoinFilters())
+		primaries[unnestKeyspace.Name()] = true
 	}
 
 	if nlen == 0 {
-		return
+		return nil
 	}
 
 	newfilters := make(base.Filters, 0, nlen)
 
-	for _, unnestKeyspace := range baseKeyspaces {
-		if unnestKeyspace.IsPrimaryUnnest() {
-			// MB-25949, includes predicates on the unnested alias
-			for _, fl := range unnestKeyspace.Filters() {
-				newfltr := fl.Copy()
+	for a, _ := range unnests {
+		unnestKeyspace, _ := baseKeyspaces[a]
+		// MB-25949, includes predicates on the unnested alias
+		for _, fl := range unnestKeyspace.Filters() {
+			newfltr := fl.Copy()
+			newfltr.SetUnnest()
+			newfilters = append(newfilters, newfltr)
+		}
+		// MB-28720, includes join predicates that only refer to primary term
+		// MB-30292, in case of multiple levels of unnest, include join predicates
+		//           that only refers to aliases in the multiple levels of unnest
+		for _, jfl := range unnestKeyspace.JoinFilters() {
+			if jfl.SingleJoinFilter(primaries) {
+				newfltr := jfl.Copy()
 				newfltr.SetUnnest()
 				newfilters = append(newfilters, newfltr)
-			}
-			// MB-28720, includes join predicates that only refer to primary term
-			// MB-30292, in case of multiple levels of unnest, include join predicates
-			//           that only refers to aliases in the multiple levels of unnest
-			for _, jfl := range unnestKeyspace.JoinFilters() {
-				if jfl.SingleJoinFilter(primaries) {
-					newfltr := jfl.Copy()
-					newfltr.SetUnnest()
-					newfilters = append(newfilters, newfltr)
-				}
 			}
 		}
 	}
 
 	primary.AddFilters(newfilters)
-	return
+	return nil
 }
 
 /*

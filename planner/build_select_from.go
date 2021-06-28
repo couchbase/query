@@ -45,20 +45,17 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
 		this.collectKeyspaceNames()
 
-		numUnnests := 0
-		for _, keyspace := range this.baseKeyspaces {
-			if keyspace.IsPrimaryUnnest() {
-				numUnnests++
-			}
-		}
-		if numUnnests > 0 {
+		if len(keyspaceFinder.unnestDepends) > 1 {
 			primKeyspace, _ := this.baseKeyspaces[primaryTerm.Alias()]
 
 			// MB-38105 gather all unnest aliases for the primary keyspace
-			for _, keyspace := range this.baseKeyspaces {
-				if keyspace.IsPrimaryUnnest() {
-					primKeyspace.AddUnnestAlias(keyspace.Name(), keyspace.Keyspace(), numUnnests)
+			for a, _ := range keyspaceFinder.unnestDepends {
+				if a == primaryTerm.Alias() {
+					continue
 				}
+				keyspace, _ := this.baseKeyspaces[a]
+				primKeyspace.AddUnnestAlias(keyspace.Name(), keyspace.Keyspace(),
+					len(keyspaceFinder.unnestDepends)-1)
 			}
 
 		}

@@ -468,7 +468,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
 			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
 				this.isOnclause, len(origKeyspaces) > 1)
-			if this.doSelec && !baseKspace.IsPrimaryUnnest() && baseKspace.DocCount() >= 0 {
+			if this.doSelec && !baseKspace.IsUnnest() && baseKspace.DocCount() >= 0 {
 				optFilterSelectivity(filter, this.advisorValidate, this.context)
 			}
 			if len(subqueries) > 0 {
@@ -493,7 +493,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 						newOrigKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
 						newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces,
 							newOrigKeyspaces, this.isOnclause, orIsJoin)
-						if this.doSelec && !baseKspace.IsPrimaryUnnest() && baseKspace.DocCount() >= 0 {
+						if this.doSelec && !baseKspace.IsUnnest() && baseKspace.DocCount() >= 0 {
 							optFilterSelectivity(newFilter, this.advisorValidate, this.context)
 						}
 						baseKspace.AddFilter(newFilter)

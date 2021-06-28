@@ -139,7 +139,10 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 		if baseKeyspace, ok := baseKeyspaces[node.Alias()]; ok {
 			if !join {
-				addUnnestPreds(baseKeyspaces, baseKeyspace)
+				err = addUnnestPreds(baseKeyspaces, baseKeyspace)
+				if err != nil {
+					return nil, 0, err
+				}
 			}
 
 			err = CombineFilters(baseKeyspace, join)

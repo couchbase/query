@@ -359,7 +359,10 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 
 				bk, _ := baseKeyspacesCopy[node.Alias()]
 				if !ansijoin {
-					addUnnestPreds(baseKeyspacesCopy, bk)
+					err = addUnnestPreds(baseKeyspacesCopy, bk)
+					if err != nil {
+						continue outer
+					}
 				}
 				p := advisor.NewKeyspaceInfo(keyspace, node,
 					getFilterInfos(bk.Filters(), this.context),
