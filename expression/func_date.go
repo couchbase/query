@@ -2815,15 +2815,12 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 			} else if format[i] == '^' {
 				preferUpper = true
 				i++
-			} else if format[i] == '#' {
-				// ignore
-				i++
 			}
 			if i >= len(format) {
 				return t, fmt.Errorf("Invalid format: '%s'", format)
 			}
 			st := i
-			for ; unicode.IsNumber(rune(format[i])) && i < len(format); i++ {
+			for ; unicode.IsDigit(rune(format[i])) && i < len(format); i++ {
 			}
 			if st < i {
 				if i >= len(format) {
@@ -3372,12 +3369,12 @@ func determineFormat(fmt string) formatType {
 		return percentFormat
 	} else if strings.IndexAny(tf, "0123456789") == -1 {
 		return commonFormat
-	} else if !unicode.IsNumber(rune(tf[0])) { // standard formats all start with a digit
+	} else if !unicode.IsDigit(rune(tf[0])) { // standard formats all start with a digit
 		return goFormat
 	}
 	i := 0
 	for i = 0; i < len(tf); i++ {
-		if !unicode.IsNumber(rune(tf[i])) {
+		if !unicode.IsDigit(rune(tf[i])) {
 			break
 		}
 	}
@@ -3406,7 +3403,7 @@ func gatherNumber(s string, max int, countLeadingSpaces bool) (int, int) {
 			st++
 			continue
 		}
-		if !unicode.IsNumber(rune(s[i])) {
+		if !unicode.IsDigit(rune(s[i])) {
 			break
 		}
 		leading = false
@@ -3429,36 +3426,36 @@ func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
 		loc = nil
 		n++
 	} else if n+8 < len(s) && s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
-		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) &&
-		unicode.IsNumber(rune(s[n+4])) && unicode.IsNumber(rune(s[n+5])) &&
-		unicode.IsNumber(rune(s[n+7])) && unicode.IsNumber(rune(s[n+8])) {
+		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
+		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) &&
+		unicode.IsDigit(rune(s[n+7])) && unicode.IsDigit(rune(s[n+8])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
 		// seconds are ignored as aren't ISO-8601
 		loc = nil
 		n += 9
 	} else if n+5 < len(s) && s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
-		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) &&
-		unicode.IsNumber(rune(s[n+4])) && unicode.IsNumber(rune(s[n+5])) {
+		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
+		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
 		loc = nil
 		n += 6
 	} else if n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
-		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) &&
-		unicode.IsNumber(rune(s[n+3])) && unicode.IsNumber(rune(s[n+4])) {
+		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
+		unicode.IsDigit(rune(s[n+3])) && unicode.IsDigit(rune(s[n+4])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
 		loc = nil
 		n += 5
 	} else if n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
-		unicode.IsNumber(rune(s[n+1])) && unicode.IsNumber(rune(s[n+2])) {
+		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem = 0
 		loc = nil
 		n += 3
 	} else {
-		f := strings.Fields(s[n:])
+		f := strings.FieldsFunc(s[n:], nonIANATZDBRune)
 		loc, err = time.LoadLocation(f[0])
 		if err != nil {
 			err = fmt.Errorf("Invalid time zone in date string")
@@ -3467,6 +3464,13 @@ func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
 		}
 	}
 	return n, zoneh, zonem, loc, err
+}
+
+func nonIANATZDBRune(r rune) bool {
+	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '/' || r == '_' || r == '+' || r == '-' {
+		return false
+	}
+	return true
 }
 
 // Make sure YMD specification makes sense
@@ -3697,16 +3701,13 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 			} else if format[i] == '^' {
 				preferUpper = true
 				i++
-			} else if format[i] == '#' {
-				// ignore
-				i++
 			}
 			if i >= len(format) {
 				return fmt.Sprintf("!(Invalid format: '%s')", format)
 			}
 			width := 0
 			st := i
-			for ; unicode.IsNumber(rune(format[i])) && i < len(format); i++ {
+			for ; unicode.IsDigit(rune(format[i])) && i < len(format); i++ {
 			}
 			if st < i {
 				if i >= len(format) {
@@ -4410,7 +4411,7 @@ func isLeapYear(year int) bool {
 func formatFromStr(str string) string {
 	f := append([]rune(nil), []rune(str)...)
 	for i, r := range f {
-		if unicode.IsNumber(r) {
+		if unicode.IsDigit(r) {
 			f[i] = rune('1')
 		}
 	}
