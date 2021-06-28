@@ -269,6 +269,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_symdiff1":      &ArraySymdiff1{},
 	"array_symdiffn":      &ArraySymdiffn{},
 	"array_union":         &ArrayUnion{},
+	"array_upsert":        &ArrayPut{},
 	"array_swap":          &ArraySwap{},
 	"array_move":          &ArrayMove{},
 	"array_except":        &ArrayExcept{},
