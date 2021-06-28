@@ -1074,9 +1074,6 @@ mainLoop:
 					return "", err
 				}
 				s.record(r)
-				if !s.replayActive {
-					s.cmdRepeat = append(s.cmdRepeat, r)
-				}
 				for ; 0 < repeat && len(line) > pos; repeat-- {
 					line[pos] = r
 					if 0 != repeat {
