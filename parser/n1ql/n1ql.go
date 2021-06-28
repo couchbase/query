@@ -41,7 +41,7 @@ func ParseStatement2(input string, namespace string, queryContext string) (algeb
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
-		return nil, fmt.Errorf(strings.Join(lex.errs, " \n "))
+		return nil, fmt.Errorf("%s", strings.Join(lex.errs, " \n "))
 	} else if lex.stmt == nil {
 		return nil, fmt.Errorf("Input was not a statement.")
 	} else {
@@ -64,7 +64,7 @@ func ParseExpression(input string) (expression.Expression, error) {
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
-		return nil, fmt.Errorf(strings.Join(lex.errs, " \n "))
+		return nil, fmt.Errorf("%s", strings.Join(lex.errs, " \n "))
 	} else if lex.expr == nil {
 		return nil, fmt.Errorf("Input was not an expression.")
 	} else {
