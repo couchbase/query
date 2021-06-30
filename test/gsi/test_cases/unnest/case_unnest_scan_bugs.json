@@ -66,6 +66,23 @@
         "ordered": true,
         "results": [
     ]
+    },
+    {
+        "testcase": "MB-46641",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "cnt": 0
+                }
+            ],
+            "statement": "SELECT COUNT(1) AS cnt FROM (SELECT 1 FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' END) AS present"
+        },
+        "statements":"SELECT * FROM shellTest AS d UNNEST d.arr AS u WHERE d.type = 'doc' AND u > 10",
+        "ordered": true,
+        "results": [
+    ]
     }
 ]
 
