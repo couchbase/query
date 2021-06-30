@@ -221,7 +221,11 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		} else {
 			errString = "subquery"
 		}
-		err = errors.NewDuplicateAliasError(errString, keyspace+this.fromExpr.ErrorContext(), "semantics.keyspace.duplicate_alias")
+		var errContext string
+		if this.fromExpr != nil {
+			errContext = this.fromExpr.ErrorContext()
+		}
+		err = errors.NewDuplicateAliasError(errString, keyspace+errContext, "semantics.keyspace.duplicate_alias")
 		return nil, err
 	}
 

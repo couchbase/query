@@ -53,11 +53,14 @@ func (this *ExpressionBase) SetErrorContext(line, column int) {
 }
 
 func (this *ExpressionBase) GetErrorContext() (int, int) {
+	if this == nil {
+		return 0, 0
+	}
 	return this.line, this.column
 }
 
 func (this *ExpressionBase) ErrorContext() string {
-	if this.line > 0 {
+	if this != nil && this.line > 0 {
 		return errors.NewErrorContext(this.line, this.column).Error()
 	}
 	return ""

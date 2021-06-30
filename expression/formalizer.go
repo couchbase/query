@@ -366,7 +366,11 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 			// when sarging index keys, allow variables used in index definition
 			// to be the same as a keyspace alias
 			if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
-				err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.Variable(), b.Expression().ErrorContext())
+				var errContext string
+				if b.Expression() != nil {
+					errContext = b.Expression().ErrorContext()
+				}
+				err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.Variable(), errContext)
 				return
 			}
 		} else {
@@ -387,7 +391,11 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
 				tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
 				if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
-					err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.NameVariable(), b.Expression().ErrorContext())
+					var errContext string
+					if b.Expression() != nil {
+						errContext = b.Expression().ErrorContext()
+					}
+					err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.NameVariable(), errContext)
 					return
 				}
 			} else {

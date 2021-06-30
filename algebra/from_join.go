@@ -111,11 +111,11 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 
 	_, ok := f.Allowed().Field(alias)
 	if ok {
+		var errContext string
 		if len(this.left.Expressions()) > 0 {
-			err = errors.NewDuplicateAliasError("JOIN", alias+this.left.Expressions()[0].ErrorContext(), "semantics.join.duplicate_alias")
-		} else {
-			err = errors.NewDuplicateAliasError("JOIN", alias, "semantics.join.duplicate_alias")
+			errContext = this.left.Expressions()[0].ErrorContext()
 		}
+		err = errors.NewDuplicateAliasError("JOIN", alias+errContext, "semantics.join.duplicate_alias")
 		return nil, err
 	}
 

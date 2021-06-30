@@ -158,7 +158,11 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 		}
 
 		if aliases[term.alias] {
-			return nil, fmt.Errorf("Duplicate result alias %s%v.", term.alias, term.expr.ErrorContext())
+			var errContext string
+			if term.expr != nil {
+				errContext = term.expr.ErrorContext()
+			}
+			return nil, fmt.Errorf("Duplicate result alias %s%v.", term.alias, errContext)
 		}
 
 		aliases[term.alias] = true

@@ -165,7 +165,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		for _, p := range proj {
 			expr := p.Expression()
 			if expr == nil {
-				return nil, errors.NewNotGroupKeyOrAggError(p.String() + expr.ErrorContext())
+				return nil, errors.NewNotGroupKeyOrAggError(p.String())
 			}
 
 			err = constrainGroupTerm(expr, groupKeys, allowed)
@@ -884,7 +884,7 @@ func constrainGroupTerm(expr expression.Expression, groupKeys expression.Express
 		if rexpr == nil {
 			rexpr = expr
 		}
-		return errors.NewNotGroupKeyOrAggError(rexpr.String() + expr.ErrorContext())
+		return errors.NewNotGroupKeyOrAggError(rexpr.String() + rexpr.ErrorContext())
 	}
 	return nil
 }

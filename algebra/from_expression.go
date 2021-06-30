@@ -121,21 +121,21 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 	alias := this.Alias()
 	if alias == "" {
-		if this.fromExpr != nil && this.fromExpr.ExprBase() != nil {
-			err = errors.NewNoTermNameError("FROM expression"+this.fromExpr.ErrorContext(), "semantics.fromExpr.requires_name_or_alias")
-		} else {
-			err = errors.NewNoTermNameError("FROM expression", "semantics.fromExpr.requires_name_or_alias")
+		var errContext string
+		if this.fromExpr != nil {
+			errContext = this.fromExpr.ErrorContext()
 		}
+		err = errors.NewNoTermNameError("FROM expression"+errContext, "semantics.fromExpr.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := parent.Allowed().Field(alias)
 	if ok && !parent.WithAlias(alias) {
-		if this.fromExpr != nil && this.fromExpr.ExprBase() != nil {
-			err = errors.NewDuplicateAliasError("FROM expression", alias+this.fromExpr.ErrorContext(), "semantics.fromExpr.duplicate_alias")
-		} else {
-			err = errors.NewDuplicateAliasError("FROM expression", alias, "semantics.fromExpr.duplicate_alias")
+		var errContext string
+		if this.fromExpr != nil {
+			errContext = this.fromExpr.ErrorContext()
 		}
+		err = errors.NewDuplicateAliasError("FROM expression"+errContext, alias, "semantics.fromExpr.duplicate_alias")
 		return nil, err
 	}
 
