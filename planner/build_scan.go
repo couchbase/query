@@ -408,9 +408,60 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 				return unnest, unnestSargLength, err
 			}
 
-			scans = append(scans, unnest)
-			if sargLength < unnestSargLength {
-				sargLength = unnestSargLength
+			// MB-46641
+			// if the sargable keys of unnest index scan is a superset of the
+			// sargable keys of a secondary index scan generated earlier,
+			// replace that secondary index scan with the unnest index scan
+			// (instead of trying to do an intersect scan).
+			add := true
+			unnestIndex := unnest.GetIndex()
+			if unnestIndex != nil {
+				unnestEntry := all[unnestIndex]
+
+				var predFc map[string]value.Value
+				if pred != nil {
+					predFc = _FILTER_COVERS_POOL.Get()
+					defer _FILTER_COVERS_POOL.Put(predFc)
+					predFc = pred.FilterCovers(predFc)
+				}
+
+				for i, sc := range scans {
+					// do not replace potential ordered index scan
+					if i == 0 {
+						continue
+					}
+					idx := sc.GetIndex()
+					if idx == nil {
+						// uses multiple indexes below
+						break
+					}
+					entry := all[idx]
+					if unnestEntry != nil && entry != nil {
+						nk, nc := matchedKeysConditions(unnestEntry, entry,
+							true, predFc)
+						nsarg := 0
+						for j, _ := range entry.skeys {
+							if entry.skeys[j] {
+								nsarg++
+							}
+						}
+						if nsarg != 0 && (nk+nc) >= nsarg {
+							scans[i] = unnest
+							if sargLength < unnestSargLength {
+								sargLength = unnestSargLength
+							}
+							add = false
+							break
+						}
+					}
+				}
+			}
+
+			if add {
+				scans = append(scans, unnest)
+				if sargLength < unnestSargLength {
+					sargLength = unnestSargLength
+				}
 			}
 
 			unnestOffsetPushed = this.offset != nil

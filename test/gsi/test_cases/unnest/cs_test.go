@@ -34,6 +34,8 @@ func TestUnnestFunc(t *testing.T) {
 	runStmt(qc, "CREATE INDEX iax2 ON shellTest(DISTINCT ARRAY v.y FOR v IN a1 END)")
 	runStmt(qc, "CREATE INDEX ix22 ON shellTest((ALL ARRAY (ALL ARRAY [op.name, op.val,x] FOR op IN x END) FOR x IN a1 END))")
 	runStmt(qc, "CREATE INDEX idx11 ON shellTest(c1)")
+	runStmt(qc, "CREATE INDEX ix11 ON shellTest(type)")
+	runStmt(qc, "CREATE INDEX ix12 ON shellTest(DISTINCT arr) WHERE type = \"doc\"")
 
 	runMatch("case_unnest_scan_bugs.json", false, true, qc, t)
 
@@ -42,6 +44,8 @@ func TestUnnestFunc(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.iax2")
 	runStmt(qc, "DROP INDEX shellTest.ix22")
 	runStmt(qc, "DROP INDEX shellTest.idx11")
+	runStmt(qc, "DROP INDEX shellTest.ix11")
+	runStmt(qc, "DROP INDEX shellTest.ix12")
 
 	_, _, errcs := runStmt(qc, "delete from purchase where test_id = \"unnest\"")
 	if errcs != nil {

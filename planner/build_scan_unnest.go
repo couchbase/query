@@ -151,15 +151,19 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		scans = make([]plan.SecondaryScan, 0, len(entries))
 	}
 
+	sargLength = 1 // the unnest index key
 	for index, _ := range entries {
 		scans = append(scans, ops[index].Op)
+		if ops[index].Len > sargLength {
+			sargLength = ops[index].Len
+		}
 	}
 
 	if len(scans) == 1 {
-		return scans[0], 1, nil
+		return scans[0], sargLength, nil
 	} else {
 		cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
-		return plan.NewIntersectScan(nil, cost, cardinality, size, frCost, scans...), 1, nil
+		return plan.NewIntersectScan(nil, cost, cardinality, size, frCost, scans...), sargLength, nil
 	}
 }
 
@@ -421,7 +425,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		}
 	}
 
-	min, max, _, _ := SargableFor(pred, sargKeys, false, true)
+	min, max, _, skeys := SargableFor(pred, sargKeys, false, true)
 	if min == 0 {
 		return nil, nil, nil, 0, nil
 	}
@@ -465,6 +469,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 	}
 
 	entry.sargKeys = sargKeys[0:n]
+	entry.skeys = skeys
 	entry.spans = spans
 	entry.exactSpans = exactSpans
 	entry.cost = cost
