@@ -149,6 +149,10 @@ func NewScopeFunction(namespace string, bucket string, scope string, name string
 	return rv, nil
 }
 
+func (name *metaEntry) Path() []string {
+	return name.path.Parts()
+}
+
 func (name *metaEntry) Name() string {
 	return name.path.Keyspace()
 }

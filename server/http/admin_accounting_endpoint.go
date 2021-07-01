@@ -9,14 +9,16 @@
 package http
 
 import (
-	"encoding/json"
+	go_errors "errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/couchbase/cbauth"
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -25,6 +27,8 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
+	functionsMeta "github.com/couchbase/query/functions/metakv"
+	functionsResolver "github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
@@ -34,19 +38,20 @@ import (
 )
 
 const (
-	accountingPrefix   = adminPrefix + "/stats"
-	vitalsPrefix       = adminPrefix + "/vitals"
-	preparedsPrefix    = adminPrefix + "/prepareds"
-	requestsPrefix     = adminPrefix + "/active_requests"
-	completedsPrefix   = adminPrefix + "/completed_requests"
-	functionsPrefix    = adminPrefix + "/functions_cache"
-	dictionaryPrefix   = adminPrefix + "/dictionary_cache"
-	tasksPrefix        = adminPrefix + "/tasks_cache"
-	indexesPrefix      = adminPrefix + "/indexes"
-	expvarsRoute       = "/debug/vars"
-	prometheusLow      = "/_prometheusMetrics"
-	prometheusHigh     = "/_prometheusMetricsHigh"
-	transactionsPrefix = adminPrefix + "/transactions"
+	accountingPrefix      = adminPrefix + "/stats"
+	vitalsPrefix          = adminPrefix + "/vitals"
+	preparedsPrefix       = adminPrefix + "/prepareds"
+	requestsPrefix        = adminPrefix + "/active_requests"
+	completedsPrefix      = adminPrefix + "/completed_requests"
+	functionsPrefix       = adminPrefix + "/functions_cache"
+	dictionaryPrefix      = adminPrefix + "/dictionary_cache"
+	tasksPrefix           = adminPrefix + "/tasks_cache"
+	indexesPrefix         = adminPrefix + "/indexes"
+	expvarsRoute          = "/debug/vars"
+	prometheusLow         = "/_prometheusMetrics"
+	prometheusHigh        = "/_prometheusMetricsHigh"
+	transactionsPrefix    = adminPrefix + "/transactions"
+	functionsBackupPrefix = "/api/v1"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -139,36 +144,44 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	transactionsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTransactions)
 	}
+	functionsGlobalBackupHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doFunctionsGlobalBackup)
+	}
+	functionsBucketBackupHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doFunctionsBucketBackup)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:                      {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}":          {handler: statHandler, methods: []string{"GET", "DELETE"}},
-		vitalsPrefix:                          {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:                       {handler: preparedsHandler, methods: []string{"GET"}},
-		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
-		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET"}},
-		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
-		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET"}},
-		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
-		functionsPrefix:                       {handler: functionsHandler, methods: []string{"GET"}},
-		functionsPrefix + "/{name}":           {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
-		dictionaryPrefix:                      {handler: dictionaryHandler, methods: []string{"GET"}},
-		dictionaryPrefix + "/{name}":          {handler: dictionaryEntryHandler, methods: []string{"GET", "POST", "DELETE"}},
-		tasksPrefix:                           {handler: tasksHandler, methods: []string{"GET"}},
-		tasksPrefix + "/{name}":               {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
-		transactionsPrefix:                    {handler: transactionsHandler, methods: []string{"GET"}},
-		transactionsPrefix + "/{txid}":        {handler: transactionHandler, methods: []string{"GET", "POST", "DELETE"}},
-		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/function_cache":     {handler: functionsIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/dictionary_cache":   {handler: dictionaryIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
-		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
-		prometheusHigh:                        {handler: prometheusHighHandler, methods: []string{"GET"}},
-		indexesPrefix + "/transactions":       {handler: transactionsIndexHandler, methods: []string{"GET"}},
+		accountingPrefix:                           {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}":               {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                               {handler: vitalsHandler, methods: []string{"GET"}},
+		preparedsPrefix:                            {handler: preparedsHandler, methods: []string{"GET"}},
+		preparedsPrefix + "/{name}":                {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
+		requestsPrefix:                             {handler: requestsHandler, methods: []string{"GET"}},
+		requestsPrefix + "/{request}":              {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
+		completedsPrefix:                           {handler: completedsHandler, methods: []string{"GET"}},
+		completedsPrefix + "/{request}":            {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
+		functionsPrefix:                            {handler: functionsHandler, methods: []string{"GET"}},
+		functionsPrefix + "/{name}":                {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
+		dictionaryPrefix:                           {handler: dictionaryHandler, methods: []string{"GET"}},
+		dictionaryPrefix + "/{name}":               {handler: dictionaryEntryHandler, methods: []string{"GET", "POST", "DELETE"}},
+		tasksPrefix:                                {handler: tasksHandler, methods: []string{"GET"}},
+		tasksPrefix + "/{name}":                    {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
+		transactionsPrefix:                         {handler: transactionsHandler, methods: []string{"GET"}},
+		transactionsPrefix + "/{txid}":             {handler: transactionHandler, methods: []string{"GET", "POST", "DELETE"}},
+		indexesPrefix + "/prepareds":               {handler: preparedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/active_requests":         {handler: requestIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/completed_requests":      {handler: completedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/function_cache":          {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/dictionary_cache":        {handler: dictionaryIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/tasks_cache":             {handler: tasksIndexHandler, methods: []string{"GET"}},
+		prometheusLow:                              {handler: prometheusLowHandler, methods: []string{"GET"}},
+		prometheusHigh:                             {handler: prometheusHighHandler, methods: []string{"GET"}},
+		indexesPrefix + "/transactions":            {handler: transactionsIndexHandler, methods: []string{"GET"}},
+		functionsBackupPrefix + "/backup":          {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
+		functionsBackupPrefix + "/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
 	}
 
 	for route, h := range routeMap {
@@ -800,6 +813,240 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
+}
+
+func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
+	switch req.Method {
+	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		numFunctions, _ := functionsMeta.Count()
+		data := make([]interface{}, 0, numFunctions)
+
+		snapshot := func(name string, val []byte) error {
+			path := algebra.ParsePath(name)
+			if len(path) == 2 {
+				data = append(data, value.NewParsedValue(val, false))
+			}
+			return nil
+		}
+
+		functionsMeta.Foreach(snapshot)
+		return makeBackupHeader(data), nil
+
+	case "POST":
+		var iState json.IndexState
+
+		// http.BasicAuth eats the body, so verify credentials after getting the body.
+		bytes, e := ioutil.ReadAll(req.Body)
+		defer req.Body.Close()
+		if e != nil {
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "UDF restore body")
+		}
+
+		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		data, e := checkBackupHeader(bytes)
+		if e != nil {
+			return nil, errors.NewServiceErrorBadValue(e, "UDF restore body")
+		}
+		index := 0
+		json.SetIndexState(&iState, data)
+		for {
+			v, err := iState.FindIndex(index)
+			if err != nil {
+				iState.Release()
+				return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
+			}
+			if string(v) == "" {
+
+				// if there's no array, we'll try a single function
+				if index == 0 {
+					err := doFunctionRestore(bytes, 2, "")
+					if err != nil {
+						iState.Release()
+						return nil, err
+					}
+				}
+				break
+			}
+			index++
+			err1 := doFunctionRestore(v, 2, "")
+			if err1 != nil {
+				iState.Release()
+				return nil, err1
+			}
+		}
+		iState.Release()
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+	return "", nil
+}
+
+func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	bucket := vars["bucket"]
+	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
+	switch req.Method {
+	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
+		numFunctions, _ := functionsMeta.Count()
+		data := make([]interface{}, 0, numFunctions)
+		snapshot := func(name string, val []byte) error {
+			path := algebra.ParsePath(name)
+			if len(path) == 4 && path[1] == bucket {
+				data = append(data, value.NewParsedValue(val, false))
+			}
+			return nil
+		}
+
+		functionsMeta.Foreach(snapshot)
+		return makeBackupHeader(data), nil
+
+	case "POST":
+		var iState json.IndexState
+
+		// http.BasicAuth eats the body, so verify credentials after getting the body.
+		bytes, e := ioutil.ReadAll(req.Body)
+		defer req.Body.Close()
+		if e != nil {
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "UDF restore body")
+		}
+
+		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		data, e := checkBackupHeader(bytes)
+		if e != nil {
+			return nil, errors.NewServiceErrorBadValue(e, "UDF restore body")
+		}
+
+		index := 0
+		json.SetIndexState(&iState, data)
+		for {
+			v, err := iState.FindIndex(index)
+			if err != nil {
+				iState.Release()
+				return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
+			}
+			if string(v) == "" {
+
+				// if there's no array, we'll try a single function
+				if index == 0 {
+					err := doFunctionRestore(bytes, 4, bucket)
+					if err != nil {
+						iState.Release()
+						return nil, err
+					}
+				}
+				break
+			}
+			index++
+			err1 := doFunctionRestore(v, 4, bucket)
+			if err1 != nil {
+				iState.Release()
+				return nil, err1
+			}
+		}
+		iState.Release()
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+	return "", nil
+}
+
+const _MAGIC_KEY = "udfMagic"
+const _MAGIC = "4D6172636F2072756C6573"
+const _VERSION_KEY = "version"
+const _VERSION = "0x01"
+const _UDF_KEY = "udfs"
+
+func makeBackupHeader(v interface{}) interface{} {
+	data := make(map[string]interface{}, 3)
+	data[_MAGIC_KEY] = _MAGIC
+	data[_VERSION_KEY] = _VERSION
+	data[_UDF_KEY] = v
+	return data
+}
+
+func checkBackupHeader(d []byte) ([]byte, error) {
+	var oState json.KeyState
+
+	json.SetKeyState(&oState, d)
+	magic, err := oState.FindKey(_MAGIC_KEY)
+	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
+		oState.Release()
+		return nil, errors.NewServiceErrorBadValue(err, "UDF invalid magic")
+	}
+	version, err := oState.FindKey(_VERSION_KEY)
+	if err != nil || string(version) != "\""+_VERSION+"\"" {
+		oState.Release()
+		return nil, errors.NewServiceErrorBadValue(err, "UDF invalid version")
+	}
+	udfs, err := oState.FindKey(_UDF_KEY)
+	if err != nil {
+		oState.Release()
+		return nil, errors.NewServiceErrorBadValue(err, "UDF missing UDF field")
+	}
+	oState.Release()
+	return udfs, nil
+}
+
+// Restore semantics:
+// - for global functions, no include, exclude remap is possible.
+//   any non global functions passed will simply be skipped
+// - for scope functions, include, exclude and remap will only operate at the bucket and scope level
+//   currently no check is made that the target bucket and scope exist, which may very well leave stale function definitions
+// - for both cases the only thing that counts is the name, and not the signature, it is therefore possible to go back in
+//   time and restore function definitions with different parameter lists
+// - be aware that remapping may have side effects: for query context based statements contained within functions, the new targets
+//   will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
+//   this makes perfect sense, but may not necessarely be what the user intended
+func doFunctionRestore(v []byte, l int, b string) errors.Error {
+	var oState json.KeyState
+
+	json.SetKeyState(&oState, v)
+	identity, err := oState.FindKey("identity")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "UDF missing identity")
+	}
+	definition, err := oState.FindKey("definition")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "UDF missing body")
+	}
+	oState.Release()
+	if string(identity) == "" || string(definition) == "" {
+		return errors.NewServiceErrorBadValue(go_errors.New("missing function definition or body"), "UDF restore body")
+	}
+	name, err1 := functionsResolver.MakeName(identity)
+	if err1 != nil {
+		return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+	}
+
+	// we skip the entries that do no apply
+	if len(name.Path()) != l || l > 2 && b != name.Path()[1] {
+		return nil
+	}
+	body, err1 := functionsResolver.MakeBody(name.Name(), definition)
+	if err1 != nil {
+		return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+	}
+	return name.Save(body, true)
 }
 
 func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,

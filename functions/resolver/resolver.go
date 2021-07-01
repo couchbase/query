@@ -22,6 +22,51 @@ import (
 	"github.com/couchbase/query/functions/javascript"
 )
 
+func MakeName(bytes []byte) (functions.FunctionName, errors.Error) {
+	var name_type struct {
+		Type string `json:"type"`
+	}
+
+	err := json.Unmarshal(bytes, &name_type)
+	if err != nil {
+		return nil, errors.NewFunctionEncodingError("decode name", "unknown", err)
+	}
+	switch name_type.Type {
+	case "global":
+		var _unmarshalled struct {
+			_         string `json:"type"`
+			Namespace string `json:"namespace"`
+			Name      string `json:"name"`
+		}
+		err := json.Unmarshal(bytes, &_unmarshalled)
+		if err != nil {
+			return nil, errors.NewFunctionEncodingError("decode name", "unknown", err)
+		}
+		if _unmarshalled.Namespace == "" || _unmarshalled.Name == "" {
+			return nil, errors.NewFunctionEncodingError("decode name", "unknown", go_errors.New("incomplete function name"))
+		}
+		return functions.Constructor([]string{_unmarshalled.Namespace, _unmarshalled.Name}, _unmarshalled.Namespace, "")
+	case "scope":
+		var _unmarshalled struct {
+			_         string `json:"type"`
+			Namespace string `json:"namespace"`
+			Bucket    string `json:"bucket"`
+			Scope     string `json:"scope"`
+			Name      string `json:"name"`
+		}
+		err := json.Unmarshal(bytes, &_unmarshalled)
+		if err != nil {
+			return nil, errors.NewFunctionEncodingError("decode name", "unknown", err)
+		}
+		if _unmarshalled.Namespace == "" || _unmarshalled.Bucket == "" || _unmarshalled.Scope == "" || _unmarshalled.Name == "" {
+			return nil, errors.NewFunctionEncodingError("decode name", "unknown", go_errors.New("incomplete function name"))
+		}
+		return functions.Constructor([]string{_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Name}, _unmarshalled.Namespace, "")
+	default:
+		return nil, errors.NewFunctionEncodingError("decode name", "unknown", fmt.Errorf("unknown type %v", name_type.Type))
+	}
+}
+
 func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) {
 	var language_type struct {
 		Language string `json:"#language"`
