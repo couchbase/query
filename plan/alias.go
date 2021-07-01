@@ -15,12 +15,14 @@ import (
 type Alias struct {
 	readonly
 	optEstimate
-	alias string
+	alias   string
+	primary bool // alias for subquery as primary term
 }
 
-func NewAlias(alias string, cost, cardinality float64, size int64, frCost float64) *Alias {
+func NewAlias(alias string, primary bool, cost, cardinality float64, size int64, frCost float64) *Alias {
 	rv := &Alias{
-		alias: alias,
+		alias:   alias,
+		primary: primary,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -38,6 +40,10 @@ func (this *Alias) Alias() string {
 	return this.alias
 }
 
+func (this *Alias) Primary() bool {
+	return this.primary
+}
+
 func (this *Alias) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -45,6 +51,9 @@ func (this *Alias) MarshalJSON() ([]byte, error) {
 func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Alias"}
 	r["as"] = this.alias
+	if this.primary {
+		r["primary_term"] = this.primary
+	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -58,10 +67,12 @@ func (this *Alias) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string                 `json:"#operator"`
 		As          string                 `json:"as"`
+		Primary     bool                   `json:"primary_term"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
 	this.alias = _unmarshalled.As
+	this.primary = _unmarshalled.Primary
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 	return err
 }

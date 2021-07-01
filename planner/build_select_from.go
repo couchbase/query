@@ -45,9 +45,10 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
 		this.collectKeyspaceNames()
 
-		if len(keyspaceFinder.unnestDepends) > 1 {
-			primKeyspace, _ := this.baseKeyspaces[primaryTerm.Alias()]
+		primKeyspace, _ := this.baseKeyspaces[primaryTerm.Alias()]
+		primKeyspace.SetPrimaryTerm()
 
+		if len(keyspaceFinder.unnestDepends) > 1 {
 			// MB-38105 gather all unnest aliases for the primary keyspace
 			for a, _ := range keyspaceFinder.unnestDepends {
 				if a == primaryTerm.Alias() {
@@ -313,7 +314,12 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 	selOp := sel.(plan.Operator)
-	this.addChildren(selOp, plan.NewAlias(node.Alias(), selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
+	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	if !ok {
+		return nil, errors.NewPlanInternalError("VisitSubqueryTerm: baseKeyspace not found for " + node.Alias())
+	}
+	this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
+		selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
 
 	filter, _, err := this.getFilter(node.Alias(), nil)
 	if err != nil {
