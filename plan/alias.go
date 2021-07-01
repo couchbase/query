@@ -51,8 +51,8 @@ func (this *Alias) MarshalJSON() ([]byte, error) {
 func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Alias"}
 	r["as"] = this.alias
-	if this.primary {
-		r["primary_term"] = this.primary
+	if !this.primary {
+		r["secondary_term"] = !this.primary
 	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -67,12 +67,12 @@ func (this *Alias) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_           string                 `json:"#operator"`
 		As          string                 `json:"as"`
-		Primary     bool                   `json:"primary_term"`
+		Secondary   bool                   `json:"secondary_term"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
 	this.alias = _unmarshalled.As
-	this.primary = _unmarshalled.Primary
+	this.primary = !_unmarshalled.Secondary // if not set assume to be primary to be safe
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 	return err
 }
