@@ -42,6 +42,7 @@ const (
 const _LIMIT = 16384
 
 type FunctionName interface {
+	Path() []string
 	Name() string
 	Key() string
 	IsGlobal() bool
@@ -169,6 +170,10 @@ type mockName struct {
 
 func mockFunction(namespace string, name string) FunctionName {
 	return &mockName{name, namespace}
+}
+
+func (name *mockName) Path() []string {
+	return []string{name.namespace, name.name}
 }
 
 func (name *mockName) Name() string {
