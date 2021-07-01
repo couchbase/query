@@ -575,6 +575,7 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 	unique := true
 	aNote := subscript
 	comps := true
+	index := false
 	var re *regexp.Regexp
 
 	if len(this.operands) > 1 {
@@ -608,6 +609,15 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 			}
 
 		}
+		if c, ok := options.Field("index"); ok && c.Type() == value.BOOLEAN {
+			index = c.Truth()
+		}
+	}
+
+	// index==true forces no composites and no array subscript
+	if index == true {
+		comps = false
+		aNote = star
 	}
 
 	var nameBuf [_NAME_CAP]string
@@ -624,7 +634,7 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 			names = _NAME_POOL.GetCapped(l)
 			defer _NAME_POOL.Put(names)
 		}
-		names = getNames(names, "", oa, aNote, comps, re)
+		names = getNames(names, "", oa, aNote, comps, re, index)
 
 	} else { // value.ARRAY
 		a := arg.Actual().([]interface{})
@@ -637,7 +647,7 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 			names = _NAME_POOL.GetCapped(l)
 			defer _NAME_POOL.Put(names)
 		}
-		names = getNamesFromArray(names, "", a, aNote, comps, re)
+		names = getNamesFromArray(names, "", a, aNote, comps, re, index)
 	}
 
 	sort.Strings(names)
@@ -662,54 +672,64 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(ra[:i]), nil
 }
 
-func getNamesFromArray(names []string, prefix string, a []interface{}, aNote aNotation, comps bool, re *regexp.Regexp) []string {
+func getNamesFromArray(names []string, prefix string, a []interface{}, aNote aNotation, comps bool,
+	re *regexp.Regexp, index bool) []string {
+
 	for i, val := range a {
 		if aNote == subscript {
-			names = processValueForNames(names, prefix+fmt.Sprintf("[%d]", i), val, aNote, comps, re)
+			names = processValueForNames(names, prefix+fmt.Sprintf("[%d]", i), val, aNote, comps, re, index)
 		} else {
-			names = processValueForNames(names, prefix, val, belowStar, comps, re)
+			names = processValueForNames(names, prefix, val, belowStar, comps, re, index)
 		}
 	}
 	return names
 }
 
-func getNames(names []string, prefix string, m map[string]interface{}, aNote aNotation, comps bool, re *regexp.Regexp) []string {
+func getNames(names []string, prefix string, m map[string]interface{}, aNote aNotation, comps bool,
+	re *regexp.Regexp, index bool) []string {
+
 	if len(prefix) > 0 {
 		if aNote == belowStar {
-			prefix = prefix + "[*]."
+			if index {
+				prefix = prefix + "[]."
+			} else {
+				prefix = prefix + "[*]."
+			}
 		} else {
 			prefix = prefix + "."
 		}
 	}
 	for name, val := range m {
-		if strings.IndexAny(name, " \t.`") != -1 {
+		if strings.IndexAny(name, " \t.`") != -1 || index == true {
 			name = strings.Replace(name, "`", "\\u0060", -1)
 			name = prefix + "`" + name + "`"
 			if comps && (re == nil || re.MatchString(name)) {
 				names = append(names, name)
 			}
-			names = processValueForNames(names, name, val, aNote, comps, re)
+			names = processValueForNames(names, name, val, aNote, comps, re, index)
 		} else {
 			name = prefix + name
 			if comps && (re == nil || re.MatchString(name)) {
 				names = append(names, name)
 			}
-			names = processValueForNames(names, name, val, aNote, comps, re)
+			names = processValueForNames(names, name, val, aNote, comps, re, index)
 		}
 	}
 	return names
 }
 
-func processValueForNames(names []string, prefix string, val interface{}, aNote aNotation, comps bool, re *regexp.Regexp) []string {
+func processValueForNames(names []string, prefix string, val interface{}, aNote aNotation, comps bool,
+	re *regexp.Regexp, index bool) []string {
+
 	withAct, ok := val.(interface{ Actual() interface{} })
 	if ok {
 		val = withAct.Actual()
 	}
 	switch ov := val.(type) {
 	case []interface{}:
-		names = getNamesFromArray(names, prefix, ov, aNote, comps, re)
+		names = getNamesFromArray(names, prefix, ov, aNote, comps, re, index)
 	case map[string]interface{}:
-		names = getNames(names, prefix, ov, aNote, comps, re)
+		names = getNames(names, prefix, ov, aNote, comps, re, index)
 	default:
 		if !comps && (re == nil || re.MatchString(prefix)) {
 			names = append(names, prefix)
@@ -859,6 +879,7 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 
 	var re *regexp.Regexp
 	comps := false
+	index := false
 	if len(this.operands) > 1 {
 		options, err := this.operands[1].Evaluate(item, context)
 		if err != nil {
@@ -882,6 +903,14 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 			}
 
 		}
+		if c, ok := options.Field("index"); ok && c.Type() == value.BOOLEAN {
+			index = c.Truth()
+		}
+	}
+
+	// index==true forces no composites
+	if index == true {
+		comps = false
 	}
 
 	var pairs util.Pairs
@@ -891,14 +920,14 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 
 		l := len(oa) * 2
 		pairs = make(util.Pairs, 0, l)
-		pairs = getPairs(pairs, "", oa, comps, re)
+		pairs = getPairs(pairs, "", oa, comps, re, index)
 
 	} else { // value.ARRAY
 		a := arg.Actual().([]interface{})
 
 		l := len(a) * 3
 		pairs = make(util.Pairs, 0, l)
-		pairs = getPairsFromArray(pairs, "", a, comps, re)
+		pairs = getPairsFromArray(pairs, "", a, comps, re, index)
 	}
 
 	sort.Sort(pairs)
@@ -911,19 +940,25 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	return value.NewValue(rv), nil
 }
 
-func getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, comps bool, re *regexp.Regexp) util.Pairs {
-	for i, val := range a {
-		pairs = processPairValue(pairs, prefix+fmt.Sprintf("[%d]", i), val, comps, re)
+func getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, comps bool, re *regexp.Regexp, index bool) util.Pairs {
+	if index == true {
+		for _, val := range a {
+			pairs = processPairValue(pairs, prefix+"[]", val, comps, re, index)
+		}
+	} else {
+		for i, val := range a {
+			pairs = processPairValue(pairs, prefix+fmt.Sprintf("[%d]", i), val, comps, re, index)
+		}
 	}
 	return pairs
 }
 
-func getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, comps bool, re *regexp.Regexp) util.Pairs {
+func getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, comps bool, re *regexp.Regexp, index bool) util.Pairs {
 	if len(prefix) > 0 {
 		prefix = prefix + "."
 	}
 	for name, val := range m {
-		if strings.IndexAny(name, " \t.`") != -1 {
+		if strings.IndexAny(name, " \t.`") != -1 || index == true {
 			name = strings.Replace(name, "`", "\\u0060", -1)
 			name = prefix + "`" + name + "`"
 		} else {
@@ -946,21 +981,21 @@ func getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, comps b
 				pairs = append(pairs, util.Pair{Name: name, Value: val})
 			}
 		}
-		pairs = processPairValue(pairs, name, val, comps, re)
+		pairs = processPairValue(pairs, name, val, comps, re, index)
 	}
 	return pairs
 }
 
-func processPairValue(pairs util.Pairs, prefix string, val interface{}, comps bool, re *regexp.Regexp) util.Pairs {
+func processPairValue(pairs util.Pairs, prefix string, val interface{}, comps bool, re *regexp.Regexp, index bool) util.Pairs {
 	withAct, ok := val.(interface{ Actual() interface{} })
 	if ok {
 		val = withAct.Actual()
 	}
 	switch ov := val.(type) {
 	case []interface{}:
-		pairs = getPairsFromArray(pairs, prefix, ov, comps, re)
+		pairs = getPairsFromArray(pairs, prefix, ov, comps, re, index)
 	case map[string]interface{}:
-		pairs = getPairs(pairs, prefix, ov, comps, re)
+		pairs = getPairs(pairs, prefix, ov, comps, re, index)
 	default:
 		if re == nil || re.MatchString(prefix) {
 			pairs = append(pairs, util.Pair{Name: prefix, Value: val})
