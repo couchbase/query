@@ -456,5 +456,127 @@
             "id": "1236"
         }
     ]
+ },
+ {
+   "comment":"Empty array brackets",
+   "statements":"SELECT info.vehicles[].MOT[].`testDate` FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+     {
+     "testDate": [
+            "2022-10-01",
+            "2021-10-15",
+            "2020-11-13",
+            "2019-11-11"
+        ]
+     }
+   ]
+ },
+ {
+   "comment":"Empty array brackets: contrast [] with [*]",
+   "statements":"SELECT info.vehicles[].MOT[*].`testDate` FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+    {
+     "testDate": [
+            "2022-10-01",
+            "2021-10-15",
+            null,
+            "2020-11-13",
+            "2019-11-11",
+            null
+        ]
+    }
+   ]
+ },
+ {
+   "comment":"Empty array brackets: no de-ref and the array of values is returned",
+   "statements":"SELECT info.vehicles[].MOT FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+     {
+     "MOT": [
+            {
+                "testDate": "2022-10-01",
+                "testerId": "0-0"
+            },
+            {
+                "testDate": "2021-10-15",
+                "testerId": "0-1"
+            },
+            {
+                "firstRegistered": "2017-11-01"
+            },
+            {
+                "testDate": "2020-11-13",
+                "testerId": "1-0"
+            },
+            {
+                "testDate": "2019-11-11",
+                "testerId": "1-1"
+            },
+            {
+                "firstRegistered": "2016-12-01"
+            }
+        ]
+     }
+    ]
+ },
+ {
+   "comment":"Empty array brackets: same as without the last [], only unnamed",
+   "statements":"SELECT info.vehicles[].MOT[] FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+    {
+     "$1": [
+            {
+                "testDate": "2022-10-01",
+                "testerId": "0-0"
+            },
+            {
+                "testDate": "2021-10-15",
+                "testerId": "0-1"
+            },
+            {
+                "firstRegistered": "2017-11-01"
+            },
+            {
+                "testDate": "2020-11-13",
+                "testerId": "1-0"
+            },
+            {
+                "testDate": "2019-11-11",
+                "testerId": "1-1"
+            },
+            {
+                "firstRegistered": "2016-12-01"
+            }
+        ]
+    }
+    ]
+ },
+ {
+   "comment":"Empty array brackets: [][] without an anonymous array is missing",
+   "statements":"SELECT info.vehicles[].MOT[][] FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+     {}
+   ]
+ },
+ {
+   "comment":"Empty array brackets: [] on non-array type is NULL",
+   "statements":"SELECT info.employee[] FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+     {
+       "$1": null
+     }
+   ]
+ },
+ {
+   "comment":"Empty array brackets: [] on non-array field below successful [] is an array",
+   "statements":"SELECT info.vehicles[].registration[] FROM {\"employee\":\"J Doe\",\"vehicles\":[{\"registration\":\"12345678\",\"MOT\":[{\"testerId\":\"0-0\",\"testDate\":\"2022-10-01\"}, {\"testerId\":\"0-1\",\"testDate\":\"2021-10-15\"}, {\"firstRegistered\":\"2017-11-01\"}]},{\"registration\":\"23423423\",\"MOT\":[{\"testerId\":\"1-0\",\"testDate\":\"2020-11-13\"}, {\"testerId\":\"1-1\",\"testDate\":\"2019-11-11\"}, {\"firstRegistered\":\"2016-12-01\"} ]}]} info",
+   "results": [
+     {
+     "$1": [
+            "12345678",
+            "23423423"
+        ]
+     }
+   ]
  }
 ]

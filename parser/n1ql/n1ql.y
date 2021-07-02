@@ -3499,6 +3499,12 @@ expr LBRACKET COLON RBRACKET
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr LBRACKET RBRACKET
+{
+    $$ = expression.NewSlice($1)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr LBRACKET STAR RBRACKET
 {
     $$ = expression.NewArrayStar($1)

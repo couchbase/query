@@ -11,6 +11,7 @@ package expression
 import (
 	"strings"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -23,6 +24,7 @@ type Field struct {
 	BinaryFunctionBase
 	caseInsensitive bool
 	parenthesis     bool
+	cache           Expression
 }
 
 func NewField(first, second Expression) *Field {
@@ -61,12 +63,67 @@ func (this *Field) Evaluate(item value.Value, context Context) (value.Value, err
 		return nil, err
 	}
 
-	return this.DoEvaluate(context, first, second)
+	// only walk if after []
+	walk := false
+	if se, ok := this.operands[0].(*Slice); ok {
+		walk = se.IsFromEmptyBrackets()
+	}
+
+	switch second.Type() {
+	case value.STRING:
+		// if the argument is a field name we must use it as is and not parse it
+		_, fieldName := this.operands[1].(*FieldName)
+		if fieldName {
+			return this.doEvaluate(context, first, second, walk)
+		}
+		exp := this.cache
+		static := this.operands[1].Static() != nil
+		// only consider cached value if operand is static
+		if exp == nil || !static {
+			s := second.ToString()
+			r, e := context.Parse(s)
+			if e != nil {
+				e = errors.NewParsingError(e, this.operands[1].ErrorContext())
+				return value.NULL_VALUE, e
+			}
+			exp, _ = r.(Expression)
+			switch i := exp.(type) {
+			case *Identifier:
+				if this.CaseInsensitive() {
+					i.SetCaseInsensitive(true)
+				}
+			}
+			if static {
+				this.cache = exp
+			}
+		}
+		return exp.Evaluate(first, context)
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	default:
+		if first.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else {
+			return value.NULL_VALUE, nil
+		}
+	}
 }
 
 // needed as logic externally accessed directly
 // only evaluates literal field names
 func (this *Field) DoEvaluate(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+	return this.doEvaluate(context, first, second, false)
+}
+
+func (this *Field) doEvaluate(context Context, first, second value.Value, walk bool) (value.Value, error) {
+	if walk && first.Type() == value.ARRAY {
+		return this.doArrayEvaluate(context, first, second)
+	}
 	switch second.Type() {
 	case value.STRING:
 		s := second.ToString()
@@ -84,12 +141,33 @@ func (this *Field) DoEvaluate(context Context, first, second value.Value) (value
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
 	default:
-		if first.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else {
-			return value.NULL_VALUE, nil
+		return value.NULL_VALUE, nil
+	}
+}
+
+// for each element in the array, look for the field in question and return all results as an array
+// do NOT processes nested arrays recursively
+func (this *Field) doArrayEvaluate(context Context, first, second value.Value) (value.Value, error) {
+	rv := make([]interface{}, 0, 16)
+	fa, _ := first.Actual().([]interface{})
+	for _, ff := range fa {
+		fv := value.NewValue(ff)
+		v, e := this.doEvaluate(context, fv, second, true)
+		if e != nil {
+			return nil, e
+		} else if v.Type() == value.ARRAY {
+			// flatten first level
+			for _, e := range v.Actual().([]interface{}) {
+				rv = append(rv, e)
+			}
+		} else if v.Type() != value.MISSING {
+			rv = append(rv, v)
 		}
 	}
+	if len(rv) == 0 {
+		return value.MISSING_VALUE, nil
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *Field) Alias() string {

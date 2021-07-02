@@ -74,6 +74,10 @@ func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Slice) Type() value.Type { return value.ARRAY }
 
+func (this *Slice) IsFromEmptyBrackets() bool {
+	return !this.start && !this.end
+}
+
 /*
 This method Evaluates the slice using the input args depending on the
 number of args. The form source-expr [ start : end ] is called array
@@ -132,6 +136,21 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 	sa, ok := start.Actual().(float64)
 	if !ok || sa != math.Trunc(sa) {
 		return value.NULL_VALUE, nil
+	}
+
+	if this.IsFromEmptyBrackets() {
+		if se, ok := this.operands[0].(*Slice); ok && se.IsFromEmptyBrackets() {
+			// [] of []; parent slice must contain only anonymous array elements
+			for i := 0; ; i++ {
+				v, ok := source.Index(i)
+				if !ok {
+					break
+				}
+				if v.Type() != value.ARRAY {
+					return value.MISSING_VALUE, nil
+				}
+			}
+		}
 	}
 
 	var rv value.Value
