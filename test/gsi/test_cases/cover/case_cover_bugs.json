@@ -1,0 +1,19 @@
+[
+    {
+        "testcase": "MB-47220",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT c1 FROM shellTest WHERE ANY v IN arr1 SATISFIES v = 10 END AND to_number(c1) < 20",
+        "results": [
+    ]
+    }
+]
+

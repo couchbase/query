@@ -79,4 +79,10 @@ func TestCover(t *testing.T) {
 	runMatch("case_cover6.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX shellTest.ixCover15")
+
+	runStmt(qc, "CREATE INDEX ixCover16 on shellTest(DISTINCT arr1, to_number(c1), c1)")
+
+	runMatch("case_cover_bugs.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ixCover16")
 }
