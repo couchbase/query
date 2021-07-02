@@ -230,6 +230,13 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool,
 	context *PrepareContext) ([]SargSpans, bool, error) {
 
+	// is the predicate simple?
+	simple := true
+	switch pred.(type) {
+	case *expression.And, *expression.Or:
+		simple = false
+	}
+
 	n := len(sargKeys)
 
 	exactSpan := true
@@ -259,7 +266,18 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 				return []SargSpans{_EMPTY_SPANS}, true, nil
 			}
 
-			exactSpan = exactSpan && rs.Exact()
+			if simple {
+				// if the same simple predicate can be used to sarg multiple
+				// index keys, we can safely just use the exactSpan information
+				// from this key and disregard that of the previous keys since
+				// the index keys are walked backwards.
+				// Specifically, if it generate an exact span for one of the
+				// index key, we can set exactSpan to true even if it is not exact
+				// for a different key (which appears after this index key)
+				exactSpan = rs.Exact()
+			} else {
+				exactSpan = exactSpan && rs.Exact()
+			}
 		} else if exactSpan && pred.DependsOn(sargKeys[i]) {
 			exactSpan = false
 		}
