@@ -266,12 +266,15 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 				return []SargSpans{_EMPTY_SPANS}, true, nil
 			}
 
-			if simple && rs.Exact() {
+			if simple {
 				// if the same simple predicate can be used to sarg multiple
-				// index keys, and generate an exact span for one of the index key,
-				// we can set exactSpan to true even if it is not exact for
-				// a different key (which appears after this index key)
-				exactSpan = true
+				// index keys, we can safely just use the exactSpan information
+				// from this key and disregard that of the previous keys since
+				// the index keys are walked backwards.
+				// Specifically, if it generate an exact span for one of the
+				// index key, we can set exactSpan to true even if it is not exact
+				// for a different key (which appears after this index key)
+				exactSpan = rs.Exact()
 			} else {
 				exactSpan = exactSpan && rs.Exact()
 			}
