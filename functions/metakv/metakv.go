@@ -153,6 +153,15 @@ func (name *metaEntry) Path() []string {
 	return name.path.Parts()
 }
 
+func (name *metaEntry) Remap(p []string) {
+	switch len(p) {
+	case 2:
+		algebra.SetPathShort(p[0], p[1], &name.path)
+	case 4:
+		algebra.SetPathLong(p[0], p[1], p[2], p[3], &name.path)
+	}
+}
+
 func (name *metaEntry) Name() string {
 	return name.path.Keyspace()
 }

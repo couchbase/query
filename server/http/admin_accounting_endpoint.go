@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -29,6 +30,7 @@ import (
 	"github.com/couchbase/query/functions"
 	functionsMeta "github.com/couchbase/query/functions/metakv"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
@@ -869,7 +871,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 
 				// if there's no array, we'll try a single function
 				if index == 0 {
-					err := doFunctionRestore(bytes, 2, "")
+					err := doFunctionRestore(bytes, 2, "", nil, nil, nil)
 					if err != nil {
 						iState.Release()
 						return nil, err
@@ -878,7 +880,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 				break
 			}
 			index++
-			err1 := doFunctionRestore(v, 2, "")
+			err1 := doFunctionRestore(v, 2, "", nil, nil, nil)
 			if err1 != nil {
 				iState.Release()
 				return nil, err1
@@ -902,11 +904,20 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, err
 		}
 
+		include, err := newFilter(req.FormValue("include"))
+		if err != nil {
+			return nil, err
+		}
+		exclude, err := newFilter(req.FormValue("exclude"))
+		if err != nil {
+			return nil, err
+		}
 		numFunctions, _ := functionsMeta.Count()
 		data := make([]interface{}, 0, numFunctions)
 		snapshot := func(name string, val []byte) error {
 			path := algebra.ParsePath(name)
-			if len(path) == 4 && path[1] == bucket {
+			if len(path) == 4 && path[1] == bucket &&
+				(include.match(path) || !exclude.match(path)) {
 				data = append(data, value.NewParsedValue(val, false))
 			}
 			return nil
@@ -934,6 +945,18 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, errors.NewServiceErrorBadValue(e, "UDF restore body")
 		}
 
+		include, err := newFilter(req.FormValue("include"))
+		if err != nil {
+			return nil, err
+		}
+		exclude, err := newFilter(req.FormValue("exclude"))
+		if err != nil {
+			return nil, err
+		}
+		remap, err := newRemapper(req.FormValue("remap"))
+		if err != nil {
+			return nil, err
+		}
 		index := 0
 		json.SetIndexState(&iState, data)
 		for {
@@ -946,7 +969,7 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 
 				// if there's no array, we'll try a single function
 				if index == 0 {
-					err := doFunctionRestore(bytes, 4, bucket)
+					err := doFunctionRestore(bytes, 4, bucket, include, exclude, remap)
 					if err != nil {
 						iState.Release()
 						return nil, err
@@ -955,7 +978,7 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 				break
 			}
 			index++
-			err1 := doFunctionRestore(v, 4, bucket)
+			err1 := doFunctionRestore(v, 4, bucket, include, exclude, remap)
 			if err1 != nil {
 				iState.Release()
 				return nil, err1
@@ -982,7 +1005,7 @@ func makeBackupHeader(v interface{}) interface{} {
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, error) {
+func checkBackupHeader(d []byte) ([]byte, errors.Error) {
 	var oState json.KeyState
 
 	json.SetKeyState(&oState, d)
@@ -1005,6 +1028,153 @@ func checkBackupHeader(d []byte) ([]byte, error) {
 	return udfs, nil
 }
 
+type matcher map[string]map[string]bool
+type remapper map[string]map[string][]string
+
+func parsePath(p string) []string {
+	var out []string
+
+	if strings.IndexByte(p, '\\') < 0 {
+		return strings.Split(p, ".")
+	}
+	wasSlash := false
+	elem := ""
+	for _, c := range p {
+		switch c {
+		case '\\':
+			wasSlash = true
+		case '.':
+			if wasSlash {
+				elem = elem + string(c)
+			} else {
+				out = append(out, elem)
+				elem = ""
+			}
+			wasSlash = false
+		default:
+			elem = elem + string(c)
+			wasSlash = false
+		}
+	}
+	if len(elem) > 0 {
+		out = append(out, elem)
+	}
+	return out
+}
+
+// filter implements the backup service include and exclude form entries
+// no namespaces are considered
+// duplicates entries are not allowed
+func newFilter(p string) (matcher, errors.Error) {
+	paths := strings.Split(p, ",")
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	m := make(matcher, len(paths))
+	for _, entry := range paths {
+		elems := parsePath(entry)
+		b, ok := m[elems[0]]
+
+		// found, check and add to bucket
+		if ok {
+			if len(b) > 0 && len(elems) > 1 {
+				b[elems[1]] = true
+			} else {
+				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"), "UDF restore parameters")
+			}
+
+			// currently we ignore overlapping and duplicates
+		} else if len(elems) > 1 {
+
+			// not found, entry has bucket and scope
+			m[elems[0]] = map[string]bool{elems[1]: true}
+		} else {
+
+			// not found, entry has just bucket
+			m[elems[0]] = map[string]bool{}
+		}
+	}
+	return m, nil
+}
+
+func (f matcher) match(p []string) bool {
+	bucket, ok := f[p[1]]
+	if !ok {
+		return false
+	}
+	if len(bucket) == 0 {
+		return true
+	}
+	return bucket[p[2]]
+}
+
+func newRemapper(p string) (remapper, errors.Error) {
+	if len(p) == 0 {
+		return nil, nil
+	}
+	paths := strings.Split(p, ",")
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	m := make(remapper, len(paths))
+	for _, entry := range paths {
+		rm := strings.Split(entry, ":")
+		if len(rm) != 2 {
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper is incomplete"), "UDF restore parameter")
+		}
+		inElems := parsePath(rm[0])
+		outElems := parsePath(rm[1])
+		if len(inElems) != len(outElems) || len(inElems) > 2 {
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper has mismatching or invalid entries"), "UDF restore parameter")
+		}
+		b, ok := m[inElems[0]]
+
+		// found, check and add to bucket
+		if ok {
+			_, foundEmpty := b[""]
+			if len(inElems) > 0 && !foundEmpty {
+				b[inElems[1]] = outElems
+			} else {
+				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"), "UDF restore parameter")
+			}
+
+			// currently we ignore overlapping and duplicates
+		} else if len(inElems) > 1 {
+
+			// not found, entry has bucket and scope
+			m[inElems[0]] = map[string][]string{inElems[1]: outElems}
+		} else {
+
+			// not found, entry has just bucket
+			m[inElems[0]] = map[string][]string{"": outElems}
+		}
+	}
+	logging.Infof("remapper is %v", m)
+	return m, nil
+}
+
+func (r remapper) remap(name functions.FunctionName) {
+	path := name.Path()
+	bucket, ok := r[path[1]]
+	if !ok {
+		return
+	}
+	target, onlyBucket := bucket[""]
+	if onlyBucket {
+		path[1] = target[0]
+		name.Remap(path)
+	} else {
+		scope, ok := bucket[path[1]]
+		if !ok {
+			return
+		}
+		path[1] = scope[0]
+		path[2] = scope[1]
+		name.Remap(path)
+	}
+	logging.Infof("old new %v %v", path, name.Path())
+}
+
 // Restore semantics:
 // - for global functions, no include, exclude remap is possible.
 //   any non global functions passed will simply be skipped
@@ -1015,7 +1185,7 @@ func checkBackupHeader(d []byte) ([]byte, error) {
 // - be aware that remapping may have side effects: for query context based statements contained within functions, the new targets
 //   will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
 //   this makes perfect sense, but may not necessarely be what the user intended
-func doFunctionRestore(v []byte, l int, b string) errors.Error {
+func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, remap remapper) errors.Error {
 	var oState json.KeyState
 
 	json.SetKeyState(&oState, v)
@@ -1039,14 +1209,21 @@ func doFunctionRestore(v []byte, l int, b string) errors.Error {
 	}
 
 	// we skip the entries that do no apply
-	if len(name.Path()) != l || l > 2 && b != name.Path()[1] {
+	path := name.Path()
+	if len(path) != l || l > 2 && b != path[1] {
 		return nil
 	}
-	body, err1 := functionsResolver.MakeBody(name.Name(), definition)
-	if err1 != nil {
-		return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+
+	if include.match(path) || !exclude.match(path) {
+		remap.remap(name)
+
+		body, err1 := functionsResolver.MakeBody(name.Name(), definition)
+		if err1 != nil {
+			return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+		}
+		return name.Save(body, true)
 	}
-	return name.Save(body, true)
+	return nil
 }
 
 func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
