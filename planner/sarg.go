@@ -233,7 +233,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 	// is the predicate simple?
 	simple := true
 	switch pred.(type) {
-	case *expression.And, *expression.Or:
+	case *expression.And, *expression.Or, *expression.Not:
 		simple = false
 	}
 
