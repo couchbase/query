@@ -397,7 +397,7 @@ tokOffset    int
 %type <subselect>        subselect
 %type <subselect>        select_from
 %type <subselect>        from_select
-%type <fromTerm>         from_term from opt_from
+%type <fromTerm>         from_term from opt_from from_terms
 %type <simpleFromTerm>   simple_from_term
 %type <keyspaceTerm>     keyspace_term
 %type <keyspacePath>     keyspace_path
@@ -1028,9 +1028,39 @@ from
 ;
 
 from:
-FROM from_term
+FROM from_terms
 {
     $$ = $2
+}
+;
+
+from_terms:
+from_term
+{
+    $$ = $1
+}
+|
+from_terms COMMA from_term
+{
+    switch term := $1.(type) {
+    case algebra.SimpleFromTerm:
+    case *algebra.AnsiJoin:
+    case *algebra.AnsiNest:
+    case *algebra.Unnest:
+    default:
+        yylex.Error(fmt.Sprintf("Cannot mix non ANSI (%s) and comma-form (%s) JOIN notation%s", term.String(), $3.String(),
+              $1.Expressions()[0].ExprBase().ErrorContext()))
+    }
+
+    // enforce the RHS being a SimpleFromTerm here so we can produce a more meaningful error
+    switch rterm := $3.(type) {
+    case algebra.SimpleFromTerm:
+        rterm.SetAnsiJoin()
+        $$ = algebra.NewAnsiJoin($1, false, rterm, expression.TRUE_EXPR)
+    default:
+        yylex.Error(fmt.Sprintf("Right side (%s%s) of a COMMA in a FROM clause must be a simple term or sub-query", $3.String(),
+            $3.Expressions()[0].ExprBase().ErrorContext()))
+    }
 }
 ;
 

@@ -1,0 +1,441 @@
+[
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c, purchase p WHERE c.customerId = p.customerId AND c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c, purchase p WHERE c.customerId = p.customerId AND c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c, purchase p WHERE c.customerId = p.customerId AND c.lastName = \"Champlin\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c, purchase p WHERE c.customerId = p.customerId AND c.lastName = \"Champlin\" AND c.type = \"customer\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c, purchase p WHERE c.customerId = p.customerId AND c.lastName = \"Champlin\" AND c.type = \"customer\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.customer.firstName, c.customer.lastName, c.customer.customerId, p.purchase.purchaseId FROM (SELECT * FROM customer) c, (SELECT * FROM purchase) p WHERE c.customer.customerId = p.purchase.customerId AND c.customer.lastName = \"Champlin\" AND c.customer.type = \"customer\" AND p.purchase.type = \"purchase\" ORDER BY p.purchase.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT p.dateAdded,pu.purchasedAt FROM purchase pu JOIN orders o ON pu.customerId = o.customerId, product p WHERE o.productId = p.productId ORDER BY pu.purchasedAt DESC LIMIT 5",
+        "ordered": true,
+        "results": [
+              {
+                "dateAdded":"2013-11-07T15:52:18Z",
+                "purchasedAt":"2014-05-06T15:52:37Z"
+              },
+              {
+                "dateAdded":"2013-06-10T15:52:18Z",
+                "purchasedAt":"2014-05-06T15:52:37Z"
+              },
+              {
+                "dateAdded":"2014-05-06T15:52:18Z",
+                "purchasedAt":"2013-06-10T15:52:36Z"
+              },
+              {
+                "dateAdded":"2013-05-11T15:52:18Z",
+                "purchasedAt":"2013-06-10T15:52:36Z"
+              },
+              {
+                "dateAdded":"2014-01-06T15:52:18Z",
+                "purchasedAt":"2013-06-10T15:52:36Z"
+              }
+        ]
+    },
+    {
+        "statements":"SELECT * FROM purchase pu, product p JOIN orders ON true",
+        "error":"Right side (`default`:`product` as `p` join `default`:`orders` on true (near line 1, column 52)) of a COMMA in a FROM clause must be a simple term or sub-query"
+    },
+    {
+        "statements":"SELECT c.firstName,p.purchaseId FROM purchase p JOIN orders o ON KEYS ['k1'], customer c WHERE c.customerId = o.customerId",
+        "error":"Cannot mix non ANSI (`default`:`purchase` as `p` join `default`:`orders` as `o` on keys [\"k1\"]) and comma-form (`default`:`customer` as `c`) JOIN notation (near line 1, column 75)"
+    },
+    {
+        "statements":"SELECT c.firstName,p.purchaseId FROM purchase p NEST orders o ON KEYS ['k1'], customer c WHERE c.customerId = o.customerId",
+        "error":"Cannot mix non ANSI (`default`:`purchase` as `p` nest `default`:`orders` as `o` on keys [\"k1\"]) and comma-form (`default`:`customer` as `c`) JOIN notation (near line 1, column 75)"
+    },
+    {
+        "statements":"SELECT c.firstName,p.purchaseId FROM purchase p JOIN orders o ON KEY 'k1' FOR IDENT, customer c WHERE c.customerId = o.customerId",
+        "error":"Cannot mix non ANSI (`default`:`purchase` as `p` join `default`:`orders` as `o` on key \"k1\" for IDENT) and comma-form (`default`:`customer` as `c`) JOIN notation (near line 1, column 69)"
+    }
+]
+

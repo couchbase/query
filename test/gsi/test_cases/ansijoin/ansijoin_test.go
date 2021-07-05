@@ -23,7 +23,7 @@ func TestAnsiJoin(t *testing.T) {
 
 	qc := start_cs()
 
-	fmt.Print("\n\nInserting values into Buckets for ANSI JOIN \n\n")
+	fmt.Print("\n\nInserting values into Buckets for ANSI JOIN\n\n")
 	runMatch("insert.json", false, false, qc, t)
 
 	fmt.Println("Creating indexes")
@@ -98,6 +98,12 @@ func TestAnsiJoin(t *testing.T) {
 	// test ANSI JOIN bug fixes
 	runMatch("case_ansijoin_bugs.json", false, true, qc, t)
 
+	// test COMMA form ANSI join syntax
+	// create two PRIMARY indexes here to support the simple from-sub-select test
+	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
+	runStmt(qc, "CREATE PRIMARY INDEX ON purchase")
+	runMatch("case_comma_form_ansijoin_simple.json", false, false, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
@@ -116,9 +122,9 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.st_ix24")
 
 	// create primary indexes
-	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
+	//runStmt(qc, "CREATE PRIMARY INDEX ON customer")
 	runStmt(qc, "CREATE PRIMARY INDEX ON product")
-	runStmt(qc, "CREATE PRIMARY INDEX ON purchase")
+	//runStmt(qc, "CREATE PRIMARY INDEX ON purchase")
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
 
