@@ -17,6 +17,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	curl "github.com/andelf/go-curl"
@@ -487,6 +488,19 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			}
 			this.curlAuth(value.NewValue(val).String())
 		/*
+			ciphers: Set input ciphers
+		*/
+		case "ciphers":
+			/*
+				Libcurl code to set user
+				curl_easy_setopt(hnd, CURLOPT_USERPWD, "Administrator:password");
+			*/
+			inpVal := value.NewValue(val)
+			if inpVal.Type() != value.STRING {
+				return nil, fmt.Errorf(" Incorrect type for ciphers option in CURL. It should be a string. ")
+			}
+			this.curlCiphers(inpVal.String())
+		/*
 			basic: Use HTTP Basic Authentication. It has to be a boolean, otherwise
 			we error out.
 		*/
@@ -707,7 +721,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 
 	// Set the header, so that the entire []string are passed in.
 	this.curlHeader(header)
-	if err := this.curlCiphers(); err != nil {
+	if err := this.curlCiphers(""); err != nil {
 		return nil, err
 	}
 
@@ -869,22 +883,32 @@ func (this *Curl) curlCacert(fileName string) {
 	myCurl.Setopt(curl.OPT_CAINFO, fileName)
 }
 
-func (this *Curl) curlCiphers() error {
+func (this *Curl) curlCiphers(val string) error {
 
-	// Get the Ciphers supported by couchbase based on the level set
-	tlsCfg, err := cbauth.GetTLSConfig()
-	if err != nil {
-		return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
+	nVal := strings.TrimSpace(val)
+
+	if nVal != "" {
+		myCurl := this.myCurl
+		myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, nVal)
+	} else {
+		if runtime.GOOS != "windows" {
+			// Get the Ciphers supported by couchbase based on the level set
+			tlsCfg, err := cbauth.GetTLSConfig()
+			if err != nil {
+				return fmt.Errorf("Failed to get cbauth tls config: %v", err.Error())
+			}
+
+			/*
+				Libcurl code to set the ssl ciphers to be used during connection.
+				curl_easy_setopt(hnd, CURLOPT_SSL_CIPHER_LIST, "rsa_aes_128_sha,rsa_aes_256_sha");
+			*/
+			cbCiphers := strings.Join(tlsCfg.CipherSuiteOpenSSLNames, ",")
+
+			myCurl := this.myCurl
+			myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, cbCiphers)
+		}
 	}
-	cbCiphers := strings.Join(tlsCfg.CipherSuiteOpenSSLNames, ",")
 
-	/*
-		Libcurl code to set the ssl ciphers to be used during connection.
-		curl_easy_setopt(hnd, CURLOPT_SSL_CIPHER_LIST, "rsa_aes_128_sha,rsa_aes_256_sha");
-	*/
-
-	myCurl := this.myCurl
-	myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, cbCiphers)
 	return nil
 }
 
