@@ -47,6 +47,7 @@ type RequestLogEntry struct {
 	TransactionRemainingTime time.Duration
 	QueryContext             string
 	Statement                string
+	StatementType            string
 	Plan                     *plan.Prepared
 	State                    string
 	ScanConsistency          string
@@ -551,6 +552,10 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	stmt := request.Statement()
 	if stmt != "" {
 		re.Statement = stmt
+	}
+	stmtType := request.Type()
+	if stmtType != "" {
+		re.StatementType = stmtType
 	}
 	plan := request.Prepared()
 	if plan != nil {

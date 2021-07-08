@@ -1342,6 +1342,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if request.Statement() != "" {
 			reqMap["statement"] = request.Statement()
 		}
+		if request.Type() != "" {
+			reqMap["statementType"] = request.Type()
+		}
 		if request.QueryContext() != "" {
 			reqMap["queryContext"] = request.QueryContext()
 		}
@@ -1475,6 +1478,9 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		if request.Statement() != "" {
 			requests[i]["statement"] = request.Statement()
 		}
+		if request.Type() != "" {
+			requests[i]["statementType"] = request.Type()
+		}
 		if request.Prepared() != nil {
 			p := request.Prepared()
 			requests[i]["preparedName"] = p.Name()
@@ -1582,6 +1588,9 @@ func completedRequestWorkHorse(requestId string, profiling bool) interface{} {
 		if request.Statement != "" {
 			reqMap["statement"] = request.Statement
 		}
+		if request.StatementType != "" {
+			reqMap["statementType"] = request.StatementType
+		}
 		if request.PreparedName != "" {
 			reqMap["preparedName"] = request.PreparedName
 			reqMap["preparedText"] = request.PreparedText
@@ -1684,6 +1693,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		requests[i]["scanConsistency"] = request.ScanConsistency
 		if request.Statement != "" {
 			requests[i]["statement"] = request.Statement
+		}
+		if request.StatementType != "" {
+			requests[i]["statementType"] = request.StatementType
 		}
 		if request.QueryContext != "" {
 			requests[i]["queryContext"] = request.QueryContext

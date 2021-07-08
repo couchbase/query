@@ -122,6 +122,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.Statement != "" {
 					item.SetField("statement", entry.Statement)
 				}
+				if entry.StatementType != "" {
+					item.SetField("statementType", entry.StatementType)
+				}
 				if entry.QueryContext != "" {
 					item.SetField("queryContext", entry.QueryContext)
 				}

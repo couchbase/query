@@ -125,6 +125,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.Statement() != "" {
 					item.SetField("statement", request.Statement())
 				}
+				if request.Type() != "" {
+					item.SetField("statementType", request.Type())
+				}
 				if request.QueryContext() != "" {
 					item.SetField("queryContext", request.QueryContext())
 				}
