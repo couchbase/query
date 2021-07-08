@@ -13,13 +13,8 @@ package http
 import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/value"
 )
 
 func getProfileRequest(a httpRequestArgs, parm string, val interface{}) (server.Profile, errors.Error) {
 	return server.ProfUnset, nil
-}
-
-func getControlsRequest(a httpRequestArgs, parm string, val interface{}) (value.Tristate, errors.Error) {
-	return value.NONE, nil
 }
