@@ -2102,3 +2102,7 @@ func txDataValidation(tgt interface{}) (err error) {
 
 	return nil
 }
+
+func getControlsRequest(a httpRequestArgs, parm string, val interface{}) (value.Tristate, errors.Error) {
+	return a.getTristateVal(parm, val)
+}

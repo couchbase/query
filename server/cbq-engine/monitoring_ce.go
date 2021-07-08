@@ -19,7 +19,7 @@ import (
 )
 
 var PROFILE = flag.String("profile", "off", "EE only - Profiling state: off, phases, timings")
-var CONTROLS = flag.Bool("controls", false, "EE only - Response to include controls section")
+var CONTROLS = flag.Bool("controls", false, "Response to include controls section")
 
 func monitoringInit(configstore clustering.ConfigurationStore) (server.Profile, bool, errors.Error) {
 	var err errors.Error
@@ -28,8 +28,5 @@ func monitoringInit(configstore clustering.ConfigurationStore) (server.Profile, 
 	if prof != server.ProfOff {
 		err = errors.NewNotImplemented("Profiling is an EE only feature")
 	}
-	if *CONTROLS {
-		err = errors.NewNotImplemented("Controls is an EE only feature")
-	}
-	return server.ProfOff, false, err
+	return server.ProfOff, *CONTROLS, err
 }
