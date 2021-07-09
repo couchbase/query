@@ -223,6 +223,10 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 		exp2 := expression.NewLT(expr.Operand(), expression.EMPTY_OBJECT_EXPR)
 		exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
 		exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
+		if expr.HasExprFlag(expression.EXPR_UNNEST_ISARRAY) {
+			exp1.SetExprFlag(expression.EXPR_UNNEST_ISARRAY)
+			exp2.SetExprFlag(expression.EXPR_UNNEST_ISARRAY)
+		}
 		exp = expression.NewAnd(exp1, exp2)
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsObject:
