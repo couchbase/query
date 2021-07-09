@@ -659,7 +659,10 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		size := OPT_SIZE_NOT_AVAIL
 		frCost := OPT_COST_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality, size, frCost = getUnnestCost(node, this.lastOp, this.keyspaceNames, this.advisorValidate())
+			baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+			CombineFilters(baseKeyspace, true)
+			cost, cardinality, size, frCost = getUnnestCost(node, this.lastOp,
+				this.baseKeyspaces, this.keyspaceNames, this.advisorValidate())
 			if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
 				(size > 0) && (frCost > 0.0) {
 				cost, cardinality, size, frCost = getSimpleFilterCost(node.Alias(),

@@ -140,7 +140,8 @@ func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTer
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }
 
-func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string,
+func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator,
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
 	advisorValidate bool) (float64, float64, int64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }

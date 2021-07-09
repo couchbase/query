@@ -242,9 +242,10 @@ func getIndexNestCost(left plan.Operator, outer bool, right *algebra.KeyspaceTer
 		false, index, requestId, optutil.COST_NEST, advisorValidate, context)
 }
 
-func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator, keyspaces map[string]string,
+func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator,
+	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
 	advisorValidate bool) (float64, float64, int64, float64) {
-	return optutil.CalcUnnestCost(node, lastOp, keyspaces, advisorValidate)
+	return optutil.CalcUnnestCost(node, lastOp, baseKeyspaces, keyspaceNames, advisorValidate)
 }
 
 func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64, int64, float64) {
