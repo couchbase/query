@@ -36,6 +36,7 @@ func init() {
 func newAnnotatedValue() *annotatedValue {
 	rv := (*annotatedValue)(annotatedPool.Get())
 	rv.refCnt = 1
+	rv.seenCnt = 0
 	rv.bit = 0
 	rv.self = false
 	rv.noRecycle = false
@@ -63,6 +64,7 @@ type AnnotatedValue interface {
 	Value
 	Stash() int32
 	Restore(lvl int32)
+	Seen() bool
 	GetValue() Value
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
@@ -115,6 +117,7 @@ type annotatedValue struct {
 	bit               uint8
 	id                interface{}
 	refCnt            int32
+	seenCnt           int32
 	self              bool
 	original          Value
 	annotatedOrig     AnnotatedValue
@@ -418,6 +421,10 @@ func (this *annotatedValue) Stash() int32 {
 
 func (this *annotatedValue) Restore(lvl int32) {
 	atomic.StoreInt32(&this.refCnt, lvl)
+}
+
+func (this *annotatedValue) Seen() bool {
+	return atomic.AddInt32(&this.seenCnt, 1) > 1
 }
 
 func (this *annotatedValue) Track() {

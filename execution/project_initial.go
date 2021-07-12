@@ -104,6 +104,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			context.Error(errors.NewEvaluationError(err, "projection"))
 			return false
 		}
+		if av, ok := v.(value.AnnotatedValue); ok && av.Seen() {
+			av.Track()
+		}
 
 		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
 		if result.As() != "" {
