@@ -1511,6 +1511,10 @@ mainLoop:
 			}
 			fallthrough
 		case _CHANGE:
+			if 0 == len(line) {
+				mode = _NORMAL
+				break
+			}
 			if pos == startPos {
 				startPos++
 			}
@@ -1537,6 +1541,10 @@ mainLoop:
 			}
 			mode = _NORMAL
 		case _YANK:
+			if 0 == len(line) {
+				mode = _NORMAL
+				break
+			}
 			if pos != startPos {
 				if startPos < pos {
 					if expandEnd {
