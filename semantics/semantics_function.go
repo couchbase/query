@@ -26,9 +26,12 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		return expr, this.visitSearchFunction(nexpr)
 	case *expression.Advisor:
 		return expr, this.visitAdvisorFunction(nexpr)
-	default:
-		return expr, expr.MapChildren(this)
+	case *expression.UserDefinedFunction:
+		if this.hasSemFlag(_SEM_TRANSACTION) {
+			return expr, errors.NewTranFunctionNotSupportedError(nexpr.Name())
+		}
 	}
+	return expr, expr.MapChildren(this)
 }
 
 func (this *SemChecker) visitSearchFunction(search *search.Search) (err error) {
