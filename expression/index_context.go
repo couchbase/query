@@ -45,7 +45,7 @@ func (this *IndexContext) Now() time.Time {
 	return this.now
 }
 
-// 6 next methods are unused and only for expression Context compatibility
+// next methods are unused and only for expression Context compatibility
 func (this *IndexContext) GetTimeout() time.Duration {
 	return time.Duration(0)
 }
@@ -64,6 +64,10 @@ func (this *IndexContext) DatastoreVersion() string {
 
 func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
 	return nil, 0, nil
+}
+
+func (this *IndexContext) Parse(s string) (interface{}, error) {
+	return nil, nil
 }
 
 func (this *IndexContext) Readonly() bool {

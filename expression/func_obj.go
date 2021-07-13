@@ -1707,6 +1707,80 @@ func (this *ObjectExtract) Constructor() FunctionConstructor {
 	return NewObjectExtract
 }
 
+///////////////////////////////////////////////////
+//
+// ObjectField
+//
+///////////////////////////////////////////////////
+
+type ObjectField struct {
+	BinaryFunctionBase
+	cache Expression
+}
+
+func NewObjectField(first, second Expression) Function {
+	rv := &ObjectField{
+		*NewBinaryFunctionBase("object_field", first, second),
+		nil,
+	}
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectField) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectField) Type() value.Type { return value.ARRAY }
+
+func (this *ObjectField) Evaluate(item value.Value, context Context) (value.Value, error) {
+
+	obj, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	fld, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if obj.Type() == value.MISSING || fld.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if obj.Type() != value.OBJECT || fld.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	exp := this.cache
+	static := this.operands[1].Static() != nil
+	// only consider using a cached value if second argument is static
+	if exp == nil || !static {
+		// parse field descriptor expression
+		r, e := context.Parse(fld.Actual().(string))
+		if e != nil {
+			return nil, e
+		} else if r == nil {
+			return value.NULL_VALUE, nil
+		}
+		exp, _ = r.(Expression)
+		if static {
+			this.cache = exp
+		}
+	}
+	res, err := exp.Evaluate(obj, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (this *ObjectField) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectField(operands[0], operands[1])
+	}
+}
+
 const _FIELD_CAP = 16
 
 var _FIELD_POOL = util.NewInterfacePool(256)

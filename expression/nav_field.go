@@ -23,6 +23,7 @@ type Field struct {
 	BinaryFunctionBase
 	caseInsensitive bool
 	parenthesis     bool
+	cache           Expression
 }
 
 func NewField(first, second Expression) *Field {
@@ -49,7 +50,7 @@ func (this *Field) Accept(visitor Visitor) (interface{}, error) {
 func (this *Field) Type() value.Type { return value.JSON }
 
 /*
-Perform either case-sensitive or case-insensitive field lookup.
+Perform either case-sensitive or case-insensitive field lookup including possibly nested fields.
 */
 func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
 	first, err := this.operands[0].Evaluate(item, context)
@@ -60,16 +61,53 @@ func (this *Field) Evaluate(item value.Value, context Context) (value.Value, err
 	if err != nil {
 		return nil, err
 	}
-	return this.DoEvaluate(context, first, second)
+
+	switch second.Type() {
+	case value.STRING:
+		// if the argument is a field name we must use it as is and not parse it
+		_, fieldName := this.operands[1].(*FieldName)
+		if fieldName {
+			return this.DoEvaluate(context, first, second)
+		}
+		exp := this.cache
+		static := this.operands[1].Static() != nil
+		// only consider cached value if operand is static
+		if exp == nil || !static {
+			s := second.ToString()
+			r, e := context.Parse(s)
+			if e != nil {
+				return value.NULL_VALUE, e
+			}
+			exp, _ = r.(Expression)
+			switch i := exp.(type) {
+			case *Identifier:
+				if this.CaseInsensitive() {
+					i.SetCaseInsensitive(true)
+				}
+			}
+			if static {
+				this.cache = exp
+			}
+		}
+		return exp.Evaluate(first, context)
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	default:
+		if first.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else {
+			return value.NULL_VALUE, nil
+		}
+	}
 }
 
 // needed as logic externally accessed directly
+// only evaluates literal field names
 func (this *Field) DoEvaluate(context Context, first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.STRING:
 		s := second.ToString()
 		v, ok := first.Field(s)
-
 		if !ok && this.caseInsensitive {
 			s = strings.ToLower(s)
 			fields := first.Fields()
@@ -79,7 +117,6 @@ func (this *Field) DoEvaluate(context Context, first, second value.Value) (value
 				}
 			}
 		}
-
 		return v, nil
 	case value.MISSING:
 		return value.MISSING_VALUE, nil

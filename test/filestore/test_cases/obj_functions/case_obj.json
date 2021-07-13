@@ -267,5 +267,30 @@
           ]
       }
     ]
+  },
+  {
+    "statements":"SELECT object_field(c, 'ccInfo.cardExpiry'),object_field(c, '`CCINFO`i.cardExpiry') FROM customer c WHERE c.test_id='obj_func' ORDER BY customerId LIMIT 5",
+    "results": [
+      {
+          "$1": "2012-11-12",
+          "$2": "2012-11-12"
+      },
+      {
+          "$1": "2011-10-12",
+          "$2": "2011-10-12"
+      },
+      {
+          "$1": "2012-11-12",
+          "$2": "2012-11-12"
+      },
+      {
+          "$1": "2015-11-11",
+          "$2": "2015-11-11"
+      },
+      {
+          "$1": "2011-10-12",
+          "$2": "2011-10-12"
+      }
+    ]
   }
 ]

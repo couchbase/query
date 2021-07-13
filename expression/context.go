@@ -32,6 +32,7 @@ type Context interface {
 	Readonly() bool
 	SetAdvisor()
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error)
+	Parse(s string) (interface{}, error)
 }
 
 type CurlContext interface {

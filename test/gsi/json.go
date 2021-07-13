@@ -386,7 +386,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	server.InitDictionaryCache(1024)
 
 	srv, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
-		false, 10, 10, 1, 1, 1, 0, false, false, true, true,
+		false, 10, 10, 1, 1, 16, 0, false, false, true, true,
 		server.ProfOff, false)
 	if err != nil {
 		logging.Errorf("%v", err.Error())

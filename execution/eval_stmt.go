@@ -385,3 +385,7 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 
 	return
 }
+
+func (this *Context) Parse(s string) (interface{}, error) {
+	return n1ql.ParseExpression(s)
+}
