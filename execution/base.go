@@ -71,6 +71,9 @@ type annotatedChannel chan value.AnnotatedValue
 // and after.
 // Also, since we can't guarantee that operators will come to stop naturally, it's
 // probably safer to send a stop before calling Done() even on a successful execution.
+// At the same time, it's not safe to dispose of operators that haven't started without
+// first signaling related operators (parent and stop), because that too will
+// lead to deadly embraces.
 
 // Conversely, dormant operators should never change state during request execution,
 // because marking them as inactive will terminate early a result stream.
@@ -88,6 +91,7 @@ const (
 	// not yet active
 	_CREATED = opState(iota)
 	_DORMANT
+	_LATE // forcibly terminating before starting
 
 	// operating
 	_RUNNING
@@ -322,6 +326,19 @@ func (this *base) baseDone() {
 
 	// from now on, this operator can't be touched
 	switch this.opState {
+	case _LATE:
+
+		// MB-47358 before being forcibly disposed, a _LATE operator must notify parents
+		this.opState = _KILLED
+		parent := this.parent
+		stop := this.stop
+		this.parent = nil
+		this.stop = nil
+		this.activeCond.L.Unlock()
+		this.notifyParent1(parent)
+		this.notifyStop1(stop)
+		return
+
 	case _COMPLETED, _STOPPED:
 		this.opState = _DONE
 	case _HALTED:
@@ -353,7 +370,7 @@ func (this *base) baseReopen(context *Context) bool {
 	// the request terminated, a stop was sent, or something catastrophic happened
 	// cannot reopen, bail out
 	if this.opState == _HALTED || this.opState == _DONE || this.opState == _ENDED ||
-		this.opState == _KILLED || this.opState == _PANICKED {
+		this.opState == _LATE || this.opState == _KILLED || this.opState == _PANICKED {
 		this.activeCond.L.Unlock()
 		return false
 	}
@@ -571,13 +588,13 @@ func (this *base) baseSendAction(action opAction) bool {
 			this.opState = _PAUSED
 			rv = true
 		} else { // _ACTION_STOP
-			this.kill()
+			this.opState = _LATE
 		}
 		this.activeCond.L.Unlock()
 
 	case _PAUSED:
 		if action == _ACTION_STOP {
-			this.kill()
+			this.opState = _LATE
 		} else { // action == _ACTION_PAUSE, no-op
 			rv = true
 		}
@@ -614,12 +631,12 @@ func (this *base) chanSendAction(action opAction) {
 		if action == _ACTION_PAUSE {
 			this.opState = _PAUSED
 		} else { // _ACTION_STOP
-			this.kill()
+			this.opState = _LATE
 		}
 		this.activeCond.L.Unlock()
 	} else if this.opState == _PAUSED {
 		if action == _ACTION_STOP {
-			this.kill()
+			this.opState = _LATE
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
@@ -647,12 +664,12 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 		if action == _ACTION_PAUSE {
 			this.opState = _PAUSED
 		} else { // _ACTION_STOP
-			this.kill()
+			this.opState = _LATE
 		}
 		this.activeCond.L.Unlock()
 	} else if this.opState == _PAUSED {
 		if action == _ACTION_STOP {
-			this.kill()
+			this.opState = _LATE
 		} // else action == _ACTION_PAUSE, no-op
 		this.activeCond.L.Unlock()
 	} else if this.opState == _RUNNING {
@@ -670,20 +687,6 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 		this.switchPhase(_EXECTIME)
 	} else {
 		this.activeCond.L.Unlock()
-	}
-}
-
-func (this *base) kill() {
-	this.opState = _KILLED
-
-	// This operator is being killed before it started as part of a request wide OpStop() or Done()
-	// it doesn't need to warn anyone else anymore
-	this.stop = nil
-
-	// keepAlive parents still need to be notified
-	// TODO devise a mechanism where keepAlive parents can be freed without waiting for children
-	if this.parent != nil && this.parent.getBase().childrenLeft == 0 {
-		this.parent = nil
 	}
 }
 
@@ -823,7 +826,7 @@ func (this *base) childrenWaitNoStop(ops ...Operator) {
 		b := o.getBase()
 		b.activeCond.L.Lock()
 		switch b.opState {
-		case _RUNNING, _STOPPING, _HALTING:
+		case _RUNNING, _STOPPING, _HALTING, _LATE:
 			// signal reliably sent
 			b.activeCond.Wait()
 		case _COMPLETED, _STOPPED, _HALTED:
@@ -997,7 +1000,11 @@ func (this *base) keepAlive(op Operator) bool {
 
 // Notify parent, if any.
 func (this *base) notifyParent() {
-	parent := this.parent
+	this.notifyParent1(this.parent)
+	this.parent = nil
+}
+
+func (this *base) notifyParent1(parent Operator) {
 	if parent != nil && !parent.keepAlive(parent) {
 
 		// Block on parent
@@ -1005,12 +1012,15 @@ func (this *base) notifyParent() {
 		parent.ValueExchange().sendChild(int(this.bit))
 		this.switchPhase(_EXECTIME)
 	}
-	this.parent = nil
 }
 
 // Notify upstream to stop.
 func (this *base) notifyStop() {
-	stop := this.stop
+	this.notifyStop1(this.stop)
+	this.stop = nil
+}
+
+func (this *base) notifyStop1(stop Operator) {
 	if stop != nil {
 		var action opAction
 		this.activeCond.L.Lock()
@@ -1024,7 +1034,6 @@ func (this *base) notifyStop() {
 		}
 		this.activeCond.L.Unlock()
 		stop.SendAction(action)
-		this.stop = nil
 	}
 }
 
