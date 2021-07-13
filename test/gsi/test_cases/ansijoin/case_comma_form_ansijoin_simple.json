@@ -427,15 +427,15 @@
     },
     {
         "statements":"SELECT c.firstName,p.purchaseId FROM purchase p JOIN orders o ON KEYS ['k1'], customer c WHERE c.customerId = o.customerId",
-        "error":"Cannot mix non ANSI (`default`:`purchase` as `p` join `default`:`orders` as `o` on keys [\"k1\"]) and comma-form (`default`:`customer` as `c`) JOIN notation (near line 1, column 75)"
+        "error":"Cannot mix non ANSI JOIN on o with ANSI JOIN on c."
     },
     {
         "statements":"SELECT c.firstName,p.purchaseId FROM purchase p NEST orders o ON KEYS ['k1'], customer c WHERE c.customerId = o.customerId",
-        "error":"Cannot mix non ANSI (`default`:`purchase` as `p` nest `default`:`orders` as `o` on keys [\"k1\"]) and comma-form (`default`:`customer` as `c`) JOIN notation (near line 1, column 75)"
+        "error":"Cannot mix non ANSI NEST on o with ANSI JOIN on c."
     },
     {
-        "statements":"SELECT c.firstName,p.purchaseId FROM purchase p JOIN orders o ON KEY 'k1' FOR IDENT, customer c WHERE c.customerId = o.customerId",
-        "error":"Cannot mix non ANSI (`default`:`purchase` as `p` join `default`:`orders` as `o` on key \"k1\" for IDENT) and comma-form (`default`:`customer` as `c`) JOIN notation (near line 1, column 69)"
+        "statements":"SELECT c.firstName,p.purchaseId FROM purchase p JOIN orders o ON KEY 'k1' FOR p, customer c WHERE c.customerId = o.customerId",
+        "error":"Cannot mix non ANSI JOIN on o with ANSI JOIN on c."
     }
 ]
 

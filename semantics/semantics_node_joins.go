@@ -26,7 +26,8 @@ func (this *SemChecker) visitJoin(left algebra.FromTerm, right algebra.SimpleFro
 }
 
 func (this *SemChecker) VisitJoin(node *algebra.Join) (interface{}, error) {
-	switch left := node.Left().(type) {
+	left := skipUnnest(node.Left())
+	switch left := left.(type) {
 	case *algebra.AnsiJoin:
 		return nil, errors.NewMixedJoinError("ANSI JOIN", left.Alias(), "non ANSI JOIN",
 			node.Alias(), "semantics.visit_join.ansi_mixed_join")
@@ -50,7 +51,8 @@ func (this *SemChecker) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
-	switch left := node.Left().(type) {
+	left := skipUnnest(node.Left())
+	switch left := left.(type) {
 	case *algebra.AnsiJoin:
 		return nil, errors.NewMixedJoinError("ANSI JOIN", left.Alias(), "non ANSI JOIN",
 			node.Alias(), "semantics.visit_index_join.ansi_mixed_join")
@@ -74,7 +76,8 @@ func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, er
 }
 
 func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, err error) {
-	switch left := node.Left().(type) {
+	left := skipUnnest(node.Left())
+	switch left := left.(type) {
 	case *algebra.Join, *algebra.IndexJoin:
 		return nil, errors.NewMixedJoinError("non ANSI JOIN", left.Alias(), "ANSI JOIN",
 			node.Alias(), "semantics.visit_ansi_join.ansi_mixed_join")
@@ -102,7 +105,8 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, er
 }
 
 func (this *SemChecker) VisitNest(node *algebra.Nest) (interface{}, error) {
-	switch left := node.Left().(type) {
+	left := skipUnnest(node.Left())
+	switch left := left.(type) {
 	case *algebra.AnsiJoin:
 		return nil, errors.NewMixedJoinError("ANSI JOIN", left.Alias(), "non ANSI NEST",
 			node.Alias(), "semantics.visit_nest.ansi_mixed_join")
@@ -126,7 +130,8 @@ func (this *SemChecker) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
-	switch left := node.Left().(type) {
+	left := skipUnnest(node.Left())
+	switch left := left.(type) {
 	case *algebra.AnsiJoin:
 		return nil, errors.NewMixedJoinError("ANSI JOIN", left.Alias(), "non ANSI NEST",
 			node.Alias(), "semantics.visit_index_nest.ansi_mixed_join")
@@ -150,7 +155,8 @@ func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (interface{}, er
 }
 
 func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (r interface{}, err error) {
-	switch left := node.Left().(type) {
+	left := skipUnnest(node.Left())
+	switch left := left.(type) {
 	case *algebra.Join, *algebra.IndexJoin:
 		return nil, errors.NewMixedJoinError("non ANSI JOIN", left.Alias(), "ANSI NEST",
 			node.Alias(), "semantics.visit_ansi_nest.ansi_mixed_join")
@@ -184,4 +190,16 @@ func (this *SemChecker) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	}
 	_, err = this.Map(node.Expression())
 	return nil, err
+}
+
+func skipUnnest(node algebra.FromTerm) algebra.FromTerm {
+	for {
+		if unnest, ok := node.(*algebra.Unnest); ok {
+			node = unnest.Left()
+		} else {
+			return node
+		}
+	}
+
+	return node
 }

@@ -1042,16 +1042,6 @@ from_term
 |
 from_terms COMMA from_term
 {
-    switch term := $1.(type) {
-    case algebra.SimpleFromTerm:
-    case *algebra.AnsiJoin:
-    case *algebra.AnsiNest:
-    case *algebra.Unnest:
-    default:
-        yylex.Error(fmt.Sprintf("Cannot mix non ANSI (%s) and comma-form (%s) JOIN notation%s", term.String(), $3.String(),
-              $1.Expressions()[0].ExprBase().ErrorContext()))
-    }
-
     // enforce the RHS being a SimpleFromTerm here so we can produce a more meaningful error
     switch rterm := $3.(type) {
     case algebra.SimpleFromTerm:
