@@ -330,7 +330,7 @@
     ]
     },
     {
-        "statements":"SELECT c.customer.firstName, c.customer.lastName, c.customer.customerId, p.purchase.purchaseId FROM (SELECT * FROM customer) c, (SELECT * FROM purchase) p WHERE c.customer.customerId = p.purchase.customerId AND c.customer.lastName = \"Champlin\" AND c.customer.type = \"customer\" AND p.purchase.type = \"purchase\" ORDER BY p.purchase.purchaseId LIMIT 10",
+        "statements":"SELECT c.customer.firstName, c.customer.lastName, c.customer.customerId, p.purchase.purchaseId FROM (SELECT * FROM customer WHERE customerId IS VALUED) c, (SELECT * FROM purchase WHERE purchaseId IS VALUED) p WHERE c.customer.customerId = p.purchase.customerId AND c.customer.lastName = \"Champlin\" AND c.customer.type = \"customer\" AND p.purchase.type = \"purchase\" ORDER BY p.purchase.purchaseId LIMIT 10",
         "ordered": true,
         "results": [
         {

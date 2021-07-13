@@ -72,7 +72,10 @@ func (this *AnsiJoin) MapExpressions(mapper expression.Mapper) (err error) {
 		return
 	}
 
-	this.onclause, err = mapper.Map(this.onclause)
+	if !this.IsCommaJoin() {
+		this.onclause, err = mapper.Map(this.onclause)
+	}
+
 	return
 }
 
@@ -82,7 +85,9 @@ func (this *AnsiJoin) MapExpressions(mapper expression.Mapper) (err error) {
 func (this *AnsiJoin) Expressions() expression.Expressions {
 	exprs := this.left.Expressions()
 	exprs = append(exprs, this.right.Expressions()...)
-	exprs = append(exprs, this.onclause)
+	if !this.IsCommaJoin() {
+		exprs = append(exprs, this.onclause)
+	}
 	return exprs
 }
 
@@ -101,7 +106,10 @@ func (this *AnsiJoin) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	privs.AddAll(rprivs)
-	privs.AddAll(this.onclause.Privileges())
+	if !this.IsCommaJoin() {
+		privs.AddAll(this.onclause.Privileges())
+	}
+
 	return privs, nil
 }
 
@@ -111,15 +119,21 @@ func (this *AnsiJoin) Privileges() (*auth.Privileges, errors.Error) {
 func (this *AnsiJoin) String() string {
 	s := this.left.String()
 
-	if this.outer {
+	commaJoin := this.IsCommaJoin()
+	if commaJoin {
+		s += ", "
+	} else if this.outer {
 		s += " left outer join "
 	} else {
 		s += " join "
 	}
 
 	s += this.right.String()
-	s += " on "
-	s += this.onclause.String()
+	if !commaJoin {
+		s += " on "
+		s += this.onclause.String()
+	}
+
 	return s
 }
 
@@ -138,9 +152,11 @@ func (this *AnsiJoin) Formalize(parent *expression.Formalizer) (f *expression.Fo
 		return
 	}
 
-	this.onclause, err = f.Map(this.onclause)
-	if err != nil {
-		return
+	if !this.IsCommaJoin() {
+		this.onclause, err = f.Map(this.onclause)
+		if err != nil {
+			return
+		}
 	}
 
 	return
@@ -242,6 +258,13 @@ func (this *AnsiJoin) IsCorrelated() bool {
 }
 
 /*
+Returns whether this is a comma-separated join
+*/
+func (this *AnsiJoin) IsCommaJoin() bool {
+	return this.right.IsCommaJoin()
+}
+
+/*
 Marshals input JOIN terms.
 */
 func (this *AnsiJoin) MarshalJSON() ([]byte, error) {
@@ -249,6 +272,8 @@ func (this *AnsiJoin) MarshalJSON() ([]byte, error) {
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer
-	r["onclause"] = this.onclause
+	if !this.IsCommaJoin() {
+		r["onclause"] = this.onclause
+	}
 	return json.Marshal(r)
 }

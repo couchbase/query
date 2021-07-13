@@ -92,7 +92,9 @@ func (this *HashJoin) MarshalJSON() ([]byte, error) {
 
 func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "HashJoin"}
-	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+	if this.onclause != nil {
+		r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+	}
 
 	if this.outer {
 		r["outer"] = this.outer

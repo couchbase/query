@@ -97,9 +97,11 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, er
 		}
 	}
 
-	this.setSemFlag(_SEM_ON)
-	_, err = this.Map(node.Onclause())
-	this.unsetSemFlag(_SEM_ON)
+	if !node.IsCommaJoin() {
+		this.setSemFlag(_SEM_ON)
+		_, err = this.Map(node.Onclause())
+		this.unsetSemFlag(_SEM_ON)
+	}
 
 	return nil, err
 }

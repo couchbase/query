@@ -168,6 +168,13 @@ func (this *SubqueryTerm) IsAnsiJoinOp() bool {
 }
 
 /*
+Returns whether this keyspace is for a comma-separated join
+*/
+func (this *SubqueryTerm) IsCommaJoin() bool {
+	return (this.property & TERM_COMMA_JOIN) != 0
+}
+
+/*
 Set join hint
 */
 func (this *SubqueryTerm) SetJoinHint(joinHint JoinHint) {
@@ -186,6 +193,13 @@ Set ANSI NEST property
 */
 func (this *SubqueryTerm) SetAnsiNest() {
 	this.property |= TERM_ANSI_NEST
+}
+
+/*
+Set COMMA JOIN property
+*/
+func (this *SubqueryTerm) SetCommaJoin() {
+	this.property |= TERM_COMMA_JOIN
 }
 
 /*

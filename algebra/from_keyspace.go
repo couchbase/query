@@ -26,6 +26,7 @@ const (
 	TERM_UNDER_HASH                  // right-hand side of Hash Join
 	TERM_INDEX_JOIN_NEST             // right-hand side of index join/nest
 	TERM_IN_CORR_SUBQ                // inside a correlated subquery
+	TERM_COMMA_JOIN                  // right-hand side of comma-separated join
 )
 
 /*
@@ -392,6 +393,13 @@ func (this *KeyspaceTerm) IsPrimaryJoin() bool {
 }
 
 /*
+Returns whether this keyspace is for a comma-separated join
+*/
+func (this *KeyspaceTerm) IsCommaJoin() bool {
+	return (this.property & TERM_COMMA_JOIN) != 0
+}
+
+/*
 Returns whether under inner of nested-loop join
 */
 func (this *KeyspaceTerm) IsUnderNL() bool {
@@ -461,6 +469,13 @@ func (this *KeyspaceTerm) SetPrimaryJoin() {
 	if this.IsAnsiJoinOp() {
 		this.property |= TERM_PRIMARY_JOIN
 	}
+}
+
+/*
+Set COMMA JOIN property
+*/
+func (this *KeyspaceTerm) SetCommaJoin() {
+	this.property |= TERM_COMMA_JOIN
 }
 
 /*

@@ -71,7 +71,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
 
-		filter, selec, err := this.getFilter(right.Alias(), node.Onclause())
+		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +217,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			return nil, err
 		}
 
-		filter, selec, err := this.getFilter(right.Alias(), node.Onclause())
+		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +277,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
 
-		filter, selec, err := this.getFilter(right.Alias(), node.Onclause())
+		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -401,7 +401,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		}
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		filter, selec, err := this.getFilter(right.Alias(), node.Onclause())
+		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -445,7 +445,7 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 	}
 
 	// add ON-clause if it's not already part of this.pushableOnclause
-	if outer || !pushable {
+	if (outer || !pushable) && onclause != nil {
 		// For the keyspace as the inner of an ANSI JOIN, the processPredicate() call
 		// will effectively put ON clause filters on top of WHERE clause filters
 		// for each keyspace, as a result, both ON clause filters and WHERE clause
@@ -518,26 +518,28 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 	var primaryJoinKeys expression.Expression
 
-	for _, fltr := range baseKeyspace.Filters() {
-		if fltr.IsOnclause() {
-			if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
-				if eqFltr.First().EquivalentTo(id) {
-					node.SetPrimaryJoin()
-					fltr.SetPrimaryJoin()
-					primaryJoinKeys = eqFltr.Second().Copy()
-					break
-				} else if eqFltr.Second().EquivalentTo(id) {
-					node.SetPrimaryJoin()
-					fltr.SetPrimaryJoin()
-					primaryJoinKeys = eqFltr.First().Copy()
-					break
-				}
-			} else if inFltr, ok := fltr.FltrExpr().(*expression.In); ok {
-				if inFltr.First().EquivalentTo(id) {
-					node.SetPrimaryJoin()
-					fltr.SetPrimaryJoin()
-					primaryJoinKeys = inFltr.Second().Copy()
-					break
+	if !node.IsCommaJoin() {
+		for _, fltr := range baseKeyspace.Filters() {
+			if fltr.IsOnclause() {
+				if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
+					if eqFltr.First().EquivalentTo(id) {
+						node.SetPrimaryJoin()
+						fltr.SetPrimaryJoin()
+						primaryJoinKeys = eqFltr.Second().Copy()
+						break
+					} else if eqFltr.Second().EquivalentTo(id) {
+						node.SetPrimaryJoin()
+						fltr.SetPrimaryJoin()
+						primaryJoinKeys = eqFltr.First().Copy()
+						break
+					}
+				} else if inFltr, ok := fltr.FltrExpr().(*expression.In); ok {
+					if inFltr.First().EquivalentTo(id) {
+						node.SetPrimaryJoin()
+						fltr.SetPrimaryJoin()
+						primaryJoinKeys = inFltr.Second().Copy()
+						break
+					}
 				}
 			}
 		}
@@ -583,12 +585,14 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	// the expression changes), otherwise the transformed onclause will not be in
 	// the plan operators.
 
-	var newFilter expression.Expression
+	var newFilter, newOnclause expression.Expression
 	if filter != nil {
 		newFilter = filter.Copy()
 	}
 
-	newOnclause := onclause.Copy()
+	if onclause != nil {
+		newOnclause = onclause.Copy()
+	}
 
 	// do right-hand-side covering index scan first, in case an ANY clause contains
 	// a join filter, if part of the join filter gets transformed first, the ANY clause
@@ -610,9 +614,11 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 					return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 				}
 			}
-			newOnclause, err = coverer.Map(newOnclause)
-			if err != nil {
-				return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			if newOnclause != nil {
+				newOnclause, err = coverer.Map(newOnclause)
+				if err != nil {
+					return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+				}
 			}
 		}
 	}
@@ -633,9 +639,11 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 					return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 				}
 			}
-			newOnclause, err = coverer.Map(newOnclause)
-			if err != nil {
-				return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			if newOnclause != nil {
+				newOnclause, err = coverer.Map(newOnclause)
+				if err != nil {
+					return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+				}
 			}
 
 			// also need to perform cover transformation for index spans for
@@ -890,7 +898,9 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 		newFilter = filter.Copy()
 	}
 
-	newOnclause = onclause.Copy()
+	if onclause != nil {
+		newOnclause = onclause.Copy()
+	}
 
 	if len(this.coveringScans) > 0 {
 		for _, op := range this.coveringScans {
@@ -903,9 +913,11 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 				}
 			}
 
-			newOnclause, err = coverer.Map(newOnclause)
-			if err != nil {
-				return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			if newOnclause != nil {
+				newOnclause, err = coverer.Map(newOnclause)
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+				}
 			}
 
 			for i, _ := range rightExprs {
@@ -928,9 +940,11 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 				}
 			}
 
-			newOnclause, err = coverer.Map(newOnclause)
-			if err != nil {
-				return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			if newOnclause != nil {
+				newOnclause, err = coverer.Map(newOnclause)
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+				}
 			}
 
 			for i, _ := range leftExprs {
@@ -1008,20 +1022,26 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 			}
 		}
 
-		newOnclause = onclause.Copy()
+		if onclause != nil {
+			newOnclause = onclause.Copy()
+		}
 
-		for _, op := range this.coveringScans {
-			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+		if newOnclause != nil || fromExpr != nil {
+			for _, op := range this.coveringScans {
+				coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 
-			newOnclause, err = coverer.Map(newOnclause)
-			if err != nil {
-				return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-			}
+				if newOnclause != nil {
+					newOnclause, err = coverer.Map(newOnclause)
+					if err != nil {
+						return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+					}
+				}
 
-			if fromExpr != nil {
-				fromExpr, err = coverer.Map(fromExpr)
-				if err != nil {
-					return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+				if fromExpr != nil {
+					fromExpr, err = coverer.Map(fromExpr)
+					if err != nil {
+						return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+					}
 				}
 			}
 		}

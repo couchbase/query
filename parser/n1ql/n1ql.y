@@ -1046,7 +1046,8 @@ from_terms COMMA from_term
     switch rterm := $3.(type) {
     case algebra.SimpleFromTerm:
         rterm.SetAnsiJoin()
-        $$ = algebra.NewAnsiJoin($1, false, rterm, expression.TRUE_EXPR)
+        rterm.SetCommaJoin()
+        $$ = algebra.NewAnsiJoin($1, false, rterm, nil)
     default:
         yylex.Error(fmt.Sprintf("Right side (%s%s) of a COMMA in a FROM clause must be a simple term or sub-query", $3.String(),
             $3.Expressions()[0].ExprBase().ErrorContext()))

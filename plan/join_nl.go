@@ -80,7 +80,9 @@ func (this *NLJoin) MarshalJSON() ([]byte, error) {
 func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "NestedLoopJoin"}
 	r["alias"] = this.alias
-	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+	if this.onclause != nil {
+		r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+	}
 
 	if this.outer {
 		r["outer"] = this.outer

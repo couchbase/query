@@ -72,21 +72,24 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 	if !context.assert(this.child != nil, "Nested Loop Join has no child") {
 		return false
 	}
-	if !context.assert(this.plan.Onclause() != nil, "ANSI JOIN does not have onclause") {
-		return false
-	}
 
 	// check for constant TRUE or FALSE onclause
-	cpred := this.plan.Onclause().Value()
-	if cpred != nil {
-		if cpred.Truth() {
-			this.ansiFlags |= ANSI_ONCLAUSE_TRUE
+	onclause := this.plan.Onclause()
+	if onclause != nil {
+		cpred := onclause.Value()
+		if cpred != nil {
+			if cpred.Truth() {
+				this.ansiFlags |= ANSI_ONCLAUSE_TRUE
+			} else {
+				this.ansiFlags |= ANSI_ONCLAUSE_FALSE
+			}
 		} else {
-			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
+			onclause.EnableInlistHash(context)
+			SetSearchInfo(this.aliasMap, parent, context, onclause)
 		}
 	} else {
-		this.plan.Onclause().EnableInlistHash(context)
-		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
+		// for comma-separated join, treat it as having a TRUE onclause
+		this.ansiFlags |= ANSI_ONCLAUSE_TRUE
 	}
 
 	return true
@@ -170,7 +173,10 @@ loop:
 }
 
 func (this *NLJoin) afterItems(context *Context) {
-	this.plan.Onclause().ResetMemory(context)
+	onclause := this.plan.Onclause()
+	if onclause != nil {
+		onclause.ResetMemory(context)
+	}
 }
 
 func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,

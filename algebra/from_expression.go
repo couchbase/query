@@ -266,6 +266,13 @@ func (this *ExpressionTerm) IsAnsiJoinOp() bool {
 }
 
 /*
+Returns whether this keyspace is for a comma-separated join
+*/
+func (this *ExpressionTerm) IsCommaJoin() bool {
+	return (this.property & TERM_COMMA_JOIN) != 0
+}
+
+/*
 Set the from Expression
 */
 func (this *ExpressionTerm) SetExpressionTerm(fromExpr expression.Expression) {
@@ -291,6 +298,13 @@ Set ANSI NEST property
 */
 func (this *ExpressionTerm) SetAnsiNest() {
 	this.property |= TERM_ANSI_NEST
+}
+
+/*
+Set COMMA JOIN property
+*/
+func (this *ExpressionTerm) SetCommaJoin() {
+	this.property |= TERM_COMMA_JOIN
 }
 
 /*

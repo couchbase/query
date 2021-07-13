@@ -71,6 +71,8 @@ type SimpleFromTerm interface {
 	IsAnsiJoin() bool
 	IsAnsiNest() bool
 	IsAnsiJoinOp() bool
+	SetCommaJoin()
+	IsCommaJoin() bool
 	JoinHint() JoinHint
 	SetJoinHint(joinHint JoinHint)
 	PreferHash() bool
