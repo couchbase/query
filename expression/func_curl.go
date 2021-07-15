@@ -502,7 +502,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			if inpVal.Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for ciphers option in CURL. It should be a string. ")
 			}
-			this.curlCiphers(inpVal.String())
+			this.curlCiphers(inpVal.Actual().(string))
 		/*
 			basic: Use HTTP Basic Authentication. It has to be a boolean, otherwise
 			we error out.
@@ -732,8 +732,11 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 
 	// Set the header, so that the entire []string are passed in.
 	this.curlHeader(header)
-	if err := this.curlCiphers(""); err != nil {
-		return nil, err
+	_, ok = options["ciphers"]
+	if !ok {
+		if err := this.curlCiphers(""); err != nil {
+			return nil, err
+		}
 	}
 
 	var b bytes.Buffer
