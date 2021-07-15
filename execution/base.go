@@ -982,8 +982,14 @@ func (this *base) notify() {
 	if err != nil {
 		panic(err)
 	}
-	this.notifyStop()
-	this.notifyParent()
+	this.activeCond.L.Lock()
+	parent := this.parent
+	stop := this.stop
+	this.parent = nil
+	this.stop = nil
+	this.activeCond.L.Unlock()
+	this.notifyStop1(stop)
+	this.notifyParent1(parent)
 }
 
 // release parent resources, if necessary
@@ -1000,8 +1006,11 @@ func (this *base) keepAlive(op Operator) bool {
 
 // Notify parent, if any.
 func (this *base) notifyParent() {
-	this.notifyParent1(this.parent)
+	this.activeCond.L.Lock()
+	parent := this.parent
 	this.parent = nil
+	this.activeCond.L.Unlock()
+	this.notifyParent1(parent)
 }
 
 func (this *base) notifyParent1(parent Operator) {
@@ -1016,8 +1025,11 @@ func (this *base) notifyParent1(parent Operator) {
 
 // Notify upstream to stop.
 func (this *base) notifyStop() {
-	this.notifyStop1(this.stop)
+	this.activeCond.L.Lock()
+	stop := this.stop
 	this.stop = nil
+	this.activeCond.L.Unlock()
+	this.notifyStop1(stop)
 }
 
 func (this *base) notifyStop1(stop Operator) {
