@@ -31,6 +31,13 @@ func NewExecutionParameterError(what string) Error {
 		InternalMsg: fmt.Sprintf("Execution parameter error: %v", what), InternalCaller: CallerN(1)}
 }
 
+func NewParsingError(e error, ctx string) Error {
+	return &err{level: EXCEPTION, ICode: 5004, IKey: "execution.expression.parse.failed",
+		ICause:         e,
+		InternalMsg:    fmt.Sprintf("Expression parsing%s failed.", ctx),
+		InternalCaller: CallerN(1)}
+}
+
 func NewEvaluationError(e error, termType string) Error {
 	_, ok := e.(*AbortError)
 	if ok {
@@ -301,12 +308,5 @@ func NewIndexNotFoundError(name string, ikey string, e error) Error {
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: 5500, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",
-		InternalCaller: CallerN(1)}
-}
-
-func NewParsingError(e error, ctx string) Error {
-	return &err{level: EXCEPTION, ICode: 5004, IKey: "execution.expression.parse.failed",
-		ICause:         e,
-		InternalMsg:    fmt.Sprintf("Expression parsing%s failed.", ctx),
 		InternalCaller: CallerN(1)}
 }
