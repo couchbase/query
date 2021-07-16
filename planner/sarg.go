@@ -111,7 +111,7 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, max int, 
 		exactSpan = exactSpan && flExactSpan
 
 		for pos, sargKey := range sargKeys {
-			isArray, _ := sargKey.IsArrayIndexKey()
+			isArray, _, _ := sargKey.IsArrayIndexKey()
 			if flSargSpans[pos] == nil || flSargSpans[pos].Size() == 0 {
 				if exactSpan && !isArray && fl.FltrExpr().DependsOn(sargKey) {
 					exactSpan = false

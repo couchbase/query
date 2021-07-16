@@ -167,6 +167,7 @@ tokOffset    int
 %token FILTER
 %token FIRST
 %token FLATTEN
+%token FLATTEN_KEYS
 %token FLUSH
 %token FOLLOWING
 %token FOR
@@ -469,9 +470,9 @@ tokOffset    int
 %type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
-%type <expr>             index_term_expr index_expr index_where
-%type <indexKeyTerm>     index_term
-%type <indexKeyTerms>    index_terms
+%type <expr>             index_term_expr index_where
+%type <indexKeyTerm>     index_term flatten_keys_expr
+%type <indexKeyTerms>    index_terms flatten_keys_exprs
 %type <expr>             expr_input all_expr
 
 %type <exprs>            update_stat_terms
@@ -2675,33 +2676,26 @@ index_term_expr opt_ikattr
 ;
 
 index_term_expr:
-index_expr
+expr
 |
-all index_expr
+all_expr
+;
+
+
+all_expr:
+all expr
 {
     $$ = expression.NewAll($2, false)
 }
 |
-all DISTINCT index_expr
+all DISTINCT expr
 {
     $$ = expression.NewAll($3, true)
 }
 |
-DISTINCT index_expr
+DISTINCT expr
 {
     $$ = expression.NewAll($2, true)
-}
-;
-
-index_expr:
-expr
-{
-    exp := $1
-    if exp != nil && (!exp.Indexable() || exp.Value() != nil) {
-        yylex.Error(fmt.Sprintf("Expression not indexable: %s%s", exp.String(), yylex.(*lexer).ErrorContext()))
-    }
-
-    $$ = exp
 }
 ;
 
@@ -2711,13 +2705,32 @@ ALL
 EACH
 ;
 
+flatten_keys_expr:
+expr opt_ikattr
+{
+   $$ = algebra.NewIndexKeyTerm($1, $2)
+}
+;
+
+flatten_keys_exprs:
+flatten_keys_expr
+{
+    $$ = algebra.IndexKeyTerms{$1}
+}
+|
+flatten_keys_exprs COMMA flatten_keys_expr
+{
+    $$ = append($1, $3)
+}
+;
+
 index_where:
 /* empty */
 {
     $$ = nil
 }
 |
-WHERE index_expr
+WHERE expr
 {
     $$ = $2
 }
@@ -3899,6 +3912,26 @@ ELSE expr
  *************************************************/
 
 function_expr:
+FLATTEN_KEYS LPAREN flatten_keys_exprs RPAREN
+{
+    $$ = nil
+    fname := "flatten_keys"
+    f, ok := expression.GetFunction(fname)
+    if ok {
+        if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
+            ectx := $3[0].Expression().ErrorContext()
+            yylex.Error(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.", fname, ectx, f.MinArgs(), f.MaxArgs()))
+        } else {
+            $$ = f.Constructor()($3.Expressions()...)
+            if fk, ok := $$.(*expression.FlattenKeys); ok {
+                fk.SetAttributes($3.Attributes())
+            }
+        }
+    } else {
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s.", fname, $3[0].Expression().ErrorContext()))
+    }
+}
+|
 NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_function_details
 {
     $$ = nil
@@ -4228,22 +4261,6 @@ expr
 all_expr
 ;
 
-all_expr:
-all expr
-{
-    $$ = expression.NewAll($2, false)
-}
-|
-all DISTINCT expr
-{
-    $$ = expression.NewAll($3, true)
-}
-|
-DISTINCT expr
-{
-    $$ = expression.NewAll($2, true)
-}
-;
 
 /*************************************************
  *

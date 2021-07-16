@@ -23,6 +23,10 @@ func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, 
 }
 
 func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
+	saveStmtType := stmt.Type()
+	defer func() { this.stmtType = saveStmtType }()
+	this.stmtType = stmt.Statement().Type()
+
 	return stmt.Statement().Accept(this)
 }
 
@@ -30,6 +34,11 @@ func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Advise", "semantics.visit_advise")
 	}
+
+	saveStmtType := stmt.Type()
+	defer func() { this.stmtType = saveStmtType }()
+	this.stmtType = stmt.Statement().Type()
+
 	switch stmt.Statement().Type() {
 	case "SELECT", "DELETE", "MERGE", "UPDATE":
 		return stmt.Statement().Accept(this)
@@ -39,6 +48,9 @@ func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 }
 
 func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
+	saveStmtType := stmt.Type()
+	defer func() { this.stmtType = saveStmtType }()
+	this.stmtType = stmt.Statement().Type()
 	return stmt.Statement().Accept(this)
 }
 

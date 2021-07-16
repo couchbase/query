@@ -12,6 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 )
 
 func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -20,11 +21,41 @@ func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex
 
 func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	gsi := stmt.Using() == datastore.GSI || stmt.Using() == datastore.DEFAULT
-	for i, term := range stmt.Keys() {
-		if term.HasAttribute(algebra.IK_MISSING) && (i > 0 || !gsi) {
-			return nil, errors.NewSemanticsError(nil, "MISSING attribute only allowed on GSI index leading key")
+	var fk *expression.FlattenKeys
+	for _, expr := range stmt.Expressions() {
+		if !expr.Indexable() || expr.Value() != nil {
+			return nil, errors.NewCreateIndexNotIndexable(expr.String(), expr.ErrorContext())
 		}
 	}
+
+	for i, term := range stmt.Keys() {
+		expr := term.Expression()
+		if all, ok := expr.(*expression.All); ok && all.Flatten() {
+			if term.Attributes() != 0 {
+				return nil, errors.NewCreateIndexAttribute(expr.String(), expr.ErrorContext())
+			}
+
+			fk = all.FlattenKeys()
+			for pos, fke := range fk.Operands() {
+				if !fke.Indexable() || fke.Value() != nil {
+					return nil, errors.NewCreateIndexNotIndexable(fke.String(), fke.ErrorContext())
+				}
+				if fk.HasMissing(pos) && (i > 0 || pos > 0 || !gsi) {
+					return nil, errors.NewCreateIndexAttributeMissing(fke.String(), fke.ErrorContext())
+				}
+			}
+		}
+		if term.HasAttribute(algebra.IK_MISSING) && (i > 0 || !gsi) {
+			return nil, errors.NewCreateIndexAttributeMissing(expr.String(), expr.ErrorContext())
+		}
+	}
+
+	// check FLATTEN_KEYS() is present in the correct context
+	cfk := NewCheckFlattenKeys(fk)
+	if err := stmt.MapExpressions(cfk); err != nil {
+		return nil, err
+	}
+
 	return nil, stmt.MapExpressions(this)
 }
 
@@ -58,4 +89,29 @@ func (this *SemChecker) VisitDropCollection(stmt *algebra.DropCollection) (inter
 
 func (this *SemChecker) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
+}
+
+type CheckFlattenKeys struct {
+	expression.MapperBase
+	flattenKeys expression.Expression
+}
+
+/* FLATTEN_KEYS() function allowed only in
+   -   Array indexing key deepest value mapping
+   -   Not surounded by any function
+   -   No recursive
+*/
+
+func NewCheckFlattenKeys(flattenKeys expression.Expression) *CheckFlattenKeys {
+	rv := &CheckFlattenKeys{
+		flattenKeys: flattenKeys,
+	}
+	rv.SetMapper(rv)
+	rv.SetMapFunc(func(expr expression.Expression) (expression.Expression, error) {
+		if _, ok := expr.(*expression.FlattenKeys); ok && rv.flattenKeys != expr {
+			return expr, errors.NewFlattenKeys(expr.String(), expr.ErrorContext())
+		}
+		return expr, expr.MapChildren(rv)
+	})
+	return rv
 }

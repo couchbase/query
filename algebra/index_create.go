@@ -374,6 +374,16 @@ func (this IndexKeyTerms) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this IndexKeyTerms) Attributes() []uint32 {
+	attrs := make([]uint32, len(this))
+
+	for i, term := range this {
+		attrs[i] = term.attributes
+	}
+
+	return attrs
+}
+
 /*
    Representation as a N1QL string.
 */

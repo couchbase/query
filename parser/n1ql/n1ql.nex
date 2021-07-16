@@ -184,6 +184,7 @@
 /[fF][iI][lL][tT][eE][rR]/			 { yylex.logToken(yylex.Text(), "FILTER"); return FILTER }
 /[fF][iI][rR][sS][tT]/				 { yylex.logToken(yylex.Text(), "FIRST"); return FIRST }
 /[fF][lL][aA][tT][tT][eE][nN]/			 { yylex.logToken(yylex.Text(), "FLATTEN"); return FLATTEN }
+/[fF][lL][aA][tT][tT][eE][nN][_][kK][eE][yY][sS]/ { yylex.logToken(yylex.Text(), "FLATTEN_KEYS"); return FLATTEN_KEYS }
 /[fF][lL][uU][sS][hH]/				 { yylex.logToken(yylex.Text(), "FLUSH"); return FLUSH }
 /[fF][oO][lL][lL][oO][wW][iI][nN][gG]/		 { yylex.logToken(yylex.Text(), "FOLLOWING"); return FOLLOWING }
 /[fF][oO][rR]/					 { yylex.logToken(yylex.Text(), "FOR"); return FOR }

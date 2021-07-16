@@ -516,7 +516,7 @@ func (this *builder) purgeFTSFlexIndex(se, te *indexEntry, best bool) (ri *index
 			if te.sumKeys == se.sumKeys &&
 				se.minKeys == te.minKeys &&
 				(te.PushDownProperty() > se.PushDownProperty() ||
-				(te.PushDownProperty() == se.PushDownProperty() && te.numIndexedKeys <= se.numIndexedKeys)) {
+					(te.PushDownProperty() == se.PushDownProperty() && te.numIndexedKeys <= se.numIndexedKeys)) {
 				return se
 			}
 			return te

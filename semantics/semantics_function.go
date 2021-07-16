@@ -26,6 +26,10 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		return expr, this.visitSearchFunction(nexpr)
 	case *expression.Advisor:
 		return expr, this.visitAdvisorFunction(nexpr)
+	case *expression.FlattenKeys:
+		if this.stmtType != "CREATE_INDEX" {
+			return expr, errors.NewFlattenKeys(nexpr.String(), nexpr.ErrorContext())
+		}
 	case *expression.UserDefinedFunction:
 		if this.hasSemFlag(_SEM_TRANSACTION) {
 			return expr, errors.NewTranFunctionNotSupportedError(nexpr.Name())
@@ -64,4 +68,12 @@ func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err e
 
 	this.setSemFlag(_SEM_ADVISOR_FUNC)
 	return nil
+}
+
+func (this *SemChecker) VisitAll(expr *expression.All) (interface{}, error) {
+
+	if this.stmtType != "CREATE_INDEX" {
+		return expr, errors.NewAllDistinctNotAllowed(expr.String(), expr.ErrorContext())
+	}
+	return expr, expr.MapChildren(this)
 }

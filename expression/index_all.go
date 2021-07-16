@@ -17,8 +17,9 @@ Expression that implements array indexing in CREATE INDEX.
 */
 type All struct {
 	ExpressionBase
-	array    Expression
-	distinct bool
+	array        Expression
+	distinct     bool
+	flatten_keys *FlattenKeys
 }
 
 func NewAll(array Expression, distinct bool) *All {
@@ -28,6 +29,7 @@ func NewAll(array Expression, distinct bool) *All {
 	}
 
 	rv.expr = rv
+	rv.flatten_keys = rv.flattenKeys()
 	return rv
 }
 
@@ -80,8 +82,8 @@ var _NULL_ARRAY = value.Values{value.NULL_VALUE}
 
 var _MISSING_ARRAY = value.Values{value.MISSING_VALUE}
 
-func (this *All) IsArrayIndexKey() (bool, bool) {
-	return true, this.distinct
+func (this *All) IsArrayIndexKey() (bool, bool, bool) {
+	return true, this.distinct, this.flatten_keys != nil
 }
 
 func (this *All) Value() value.Value {
@@ -143,6 +145,7 @@ func (this *All) MapChildren(mapper Mapper) error {
 func (this *All) Copy() Expression {
 	rv := NewAll(this.array.Copy(), this.distinct)
 	rv.BaseCopy(this)
+	rv.flatten_keys = rv.flattenKeys()
 	return rv
 }
 
@@ -152,4 +155,43 @@ func (this *All) Array() Expression {
 
 func (this *All) Distinct() bool {
 	return this.distinct
+}
+
+func (this *All) Flatten() bool {
+	return this.flatten_keys != nil
+}
+
+func (this *All) FlattenSize() int {
+	if this.flatten_keys != nil {
+		return len(this.flatten_keys.Operands())
+	}
+	return 0
+}
+
+func (this *All) FlattenKeys() *FlattenKeys {
+	return this.flatten_keys
+}
+
+/*
+   DISTINCT ARRAY ( DISTINCT ARRAY flatten_keys(v.c1,v.c2) FOR v IN v1.aa END) FOR v1 IN a1 END
+*/
+
+func (this *All) flattenKeys() *FlattenKeys {
+	all := this
+	for {
+		switch array := all.Array().(type) {
+		case *Array:
+			switch valMapping := array.ValueMapping().(type) {
+			case *All:
+				all = valMapping
+			case *FlattenKeys:
+				return valMapping
+			default:
+				return nil
+			}
+		default:
+			return nil
+		}
+	}
+	return nil
 }

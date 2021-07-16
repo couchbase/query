@@ -219,7 +219,7 @@ func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys expression
 	distinctDocid := false
 	keys := entry.index.RangeKey()
 	if len(keys) > 0 && !unnest {
-		if isArray, distinct := keys[0].IsArrayIndexKey(); isArray && !distinct {
+		if isArray, distinct, _ := keys[0].IsArrayIndexKey(); isArray && !distinct {
 			distinctDocid = true
 		}
 	}

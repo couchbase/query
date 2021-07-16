@@ -103,8 +103,8 @@ This method indicates if the expression is an array index key, and
 if so, whether it is distinct.
 */
 
-func (this *ExpressionBase) IsArrayIndexKey() (bool, bool) {
-	return false, false
+func (this *ExpressionBase) IsArrayIndexKey() (bool, bool, bool) {
+	return false, false, false
 }
 
 func (this *ExpressionBase) getExprFlags() uint64 {

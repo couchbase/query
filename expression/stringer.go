@@ -616,6 +616,9 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	if expr.Aggregate() {
 		return expr.String(), nil
 	}
+	if fk, ok := expr.(*FlattenKeys); ok {
+		return this.visitFlattenKeys(fk)
+	}
 
 	var buf bytes.Buffer
 	buf.WriteString(expr.Name())
@@ -705,6 +708,23 @@ func (this *Stringer) visitBindings(bindings Bindings, w io.Writer, in, within s
 
 		io.WriteString(w, this.Visit(b.expr))
 	}
+}
+
+func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString(fk.Name())
+	buf.WriteString("(")
+	for i, op := range fk.Operands() {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+
+		buf.WriteString(this.Visit(op))
+		buf.WriteString(fk.AttributeString(i))
+	}
+
+	buf.WriteString(")")
+	return buf.String(), nil
 }
 
 type PathToString struct {

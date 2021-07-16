@@ -325,7 +325,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 				keys[i] = key
 
 				if !isArray {
-					isArray, _ = key.IsArrayIndexKey()
+					isArray, _, _ = key.IsArrayIndexKey()
 				}
 			}
 		}
@@ -712,7 +712,7 @@ func indexHasArrayIndexKey(index datastore.Index) bool {
 
 func hasArrayIndexKey(keys expression.Expressions) bool {
 	for _, sk := range keys {
-		if isArray, _ := sk.IsArrayIndexKey(); isArray {
+		if isArray, _, _ := sk.IsArrayIndexKey(); isArray {
 			return true
 		}
 	}

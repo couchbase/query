@@ -152,7 +152,7 @@ func (this *builder) indexAggPushDownProperty(entry *indexEntry, indexKeys expre
 
 	arrayIndexIsOK := true
 	for i, sk := range entry.index.RangeKey() {
-		if isArray, distinct := sk.IsArrayIndexKey(); isArray {
+		if isArray, distinct, _ := sk.IsArrayIndexKey(); isArray {
 			if unnest {
 				arrayIndexIsOK = !distinct
 			} else {

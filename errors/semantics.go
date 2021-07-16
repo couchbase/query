@@ -175,6 +175,35 @@ func NewUpdateStatIndexAllCollectionOnly() Error {
 		InternalMsg: "INDEX ALL option for UPDATE STATISTICS (ANALYZE) can only be used for a collection.", InternalCaller: CallerN(1)}
 }
 
+func NewCreateIndexNotIndexable(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: 3280, IKey: "semantics_create_index",
+		InternalMsg: fmt.Sprintf("%s%s is not indexable.", msg, at), InternalCaller: CallerN(1)}
+}
+
+func NewCreateIndexAttributeMissing(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: 3281, IKey: "semantics_create_index",
+		InternalMsg:    fmt.Sprintf("%s%s MISSING attribute not allowed (Only allowed with gsi leading key).", msg, at),
+		InternalCaller: CallerN(1)}
+}
+
+func NewCreateIndexAttribute(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: 3282, IKey: "semantics_create_index",
+		InternalMsg:    fmt.Sprintf("Attributes are not allowed on %s%s of flatten_keys.", msg, at),
+		InternalCaller: CallerN(1)}
+}
+
+func NewFlattenKeys(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: 3283, IKey: "semantics_flatten_keys",
+		InternalMsg:    fmt.Sprintf("%s%s is not allowed in this context.", msg, at),
+		InternalCaller: CallerN(1)}
+}
+
+func NewAllDistinctNotAllowed(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: 3284, IKey: "semantics_no_distinct",
+		InternalMsg:    fmt.Sprintf("ALL/DISTINCT is not allowed in %s%s.", msg, at),
+		InternalCaller: CallerN(1)}
+}
+
 /* ---- BEGIN MOVED error numbers ----
    The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
    although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.

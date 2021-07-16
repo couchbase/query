@@ -23,7 +23,7 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 	}
 
 	// MB-21720. Handle array index keys differently.
-	if isArray, _ := this.key.IsArrayIndexKey(); isArray {
+	if isArray, _, _ := this.key.IsArrayIndexKey(); isArray {
 		return this.visitAndArrayKey(pred, this.key)
 	}
 

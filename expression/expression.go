@@ -66,9 +66,9 @@ type Expression interface {
 
 	/*
 	   This method indicates if the expression is an array index
-	   key, and if so, whether it is distinct.
+	   key, and if so, whether it is distinct, flatten.
 	*/
-	IsArrayIndexKey() (bool, bool)
+	IsArrayIndexKey() (bool, bool, bool)
 
 	/*
 	   Value() returns the static / constant value of this

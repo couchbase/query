@@ -134,7 +134,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 		keys := index.RangeKey()
 		if len(keys) > 0 {
 			key := keys[0]
-			isArray, _ := key.IsArrayIndexKey()
+			isArray, _, _ := key.IsArrayIndexKey()
 			if isArray {
 				continue
 			}
