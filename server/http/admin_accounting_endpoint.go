@@ -859,6 +859,15 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "UDF restore body")
 		}
+
+		// if it's not an array, we'll try a single function
+		if data[0] != '[' {
+			err := doFunctionRestore(data, 2, "", nil, nil, nil)
+			if err != nil {
+				return nil, err
+			}
+			return "", nil
+		}
 		index := 0
 		json.SetIndexState(&iState, data)
 		for {
@@ -868,15 +877,6 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 				return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
 			}
 			if string(v) == "" {
-
-				// if there's no array, we'll try a single function
-				if index == 0 {
-					err := doFunctionRestore(bytes, 2, "", nil, nil, nil)
-					if err != nil {
-						iState.Release()
-						return nil, err
-					}
-				}
 				break
 			}
 			index++
@@ -957,6 +957,15 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		if err != nil {
 			return nil, err
 		}
+
+		// if it's not an array, we'll try a single function
+		if data[0] != '[' {
+			err := doFunctionRestore(data, 4, bucket, include, exclude, remap)
+			if err != nil {
+				return nil, err
+			}
+			return "", nil
+		}
 		index := 0
 		json.SetIndexState(&iState, data)
 		for {
@@ -966,15 +975,6 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 				return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
 			}
 			if string(v) == "" {
-
-				// if there's no array, we'll try a single function
-				if index == 0 {
-					err := doFunctionRestore(bytes, 4, bucket, include, exclude, remap)
-					if err != nil {
-						iState.Release()
-						return nil, err
-					}
-				}
 				break
 			}
 			index++
