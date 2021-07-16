@@ -303,3 +303,10 @@ func NewMemoryQuotaExceededError() Error {
 		InternalMsg:    "Request has exceeded memory quota",
 		InternalCaller: CallerN(1)}
 }
+
+func NewParsingError(e error, ctx string) Error {
+	return &err{level: EXCEPTION, ICode: 5004, IKey: "execution.expression.parse.failed",
+		ICause:         e,
+		InternalMsg:    fmt.Sprintf("Expression parsing%s failed.", ctx),
+		InternalCaller: CallerN(1)}
+}
