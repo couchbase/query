@@ -60,6 +60,7 @@ func ParseExpression(input string) (expression.Expression, error) {
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
 	lex.nex.ResetOffset()
+	lex.text = input
 	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
 
@@ -196,6 +197,9 @@ func (this *lexer) ErrorContext() string {
 }
 
 func (this *lexer) getContextFor(contextLine, contextColumn int) string {
+	if len(this.text) == 0 {
+		return ""
+	}
 	line := 0
 	eoff := 0
 	for eoff = 0; eoff < len(this.text); eoff++ {
