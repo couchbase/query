@@ -10,9 +10,11 @@ package errors
 
 import ()
 
+const DS_CB_CONN_ERROR = 12000
+
 // Datastore/couchbase error codes
 func NewCbConnectionError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 12000, IKey: "datastore.couchbase.connection_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: DS_CB_CONN_ERROR, IKey: "datastore.couchbase.connection_error", ICause: e,
 		InternalMsg: "Cannot connect " + msg, InternalCaller: CallerN(1)}
 
 }
@@ -101,8 +103,10 @@ func NewCbGetRandomEntryError(e error) Error {
 		InternalMsg: "Error getting random entry from keyspace", InternalCaller: CallerN(1)}
 }
 
+const DS_CB_INIT_CBAUTH_ERROR = 12018
+
 func NewUnableToInitCbAuthError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 12018, IKey: "datastore.couchbase.unable_to_init_cbauth_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: DS_CB_INIT_CBAUTH_ERROR, IKey: "datastore.couchbase.unable_to_init_cbauth_error", ICause: e,
 		InternalMsg: "Unable to initialize authorization system as required", InternalCaller: CallerN(1)}
 }
 
@@ -126,8 +130,10 @@ func NewCbKeyspaceSizeError(e error, msg string) Error {
 		InternalMsg: "Failed to get size for keyspace" + msg, InternalCaller: CallerN(1), retry: true}
 }
 
+const DS_CB_SEC_CONFIG_ERROR = 12023
+
 func NewCbSecurityConfigNotProvided(bucket string) Error {
-	return &err{level: EXCEPTION, ICode: 12023, IKey: "datastore.couchbase.security_config_not_provided",
+	return &err{level: EXCEPTION, ICode: DS_CB_SEC_CONFIG_ERROR, IKey: "datastore.couchbase.security_config_not_provided",
 		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: true}
 }
 

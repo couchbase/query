@@ -25,12 +25,16 @@ func NewDatastoreClusterError(e error, msg string) Error {
 		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}
 }
 
+const DS_ROLES_ERROR = 13013
+
 func NewDatastoreUnableToRetrieveRoles(e error) Error {
-	return &err{level: EXCEPTION, ICode: 13013, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
+	return &err{level: EXCEPTION, ICode: DS_ROLES_ERROR, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
 		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
 }
 
+const DS_INSUFFICIENT_CREDS = 13014
+
 func NewDatastoreInsufficientCredentials(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 13014, IKey: "datastore.couchbase.insufficient_credentials",
+	return &err{level: EXCEPTION, ICode: DS_INSUFFICIENT_CREDS, IKey: "datastore.couchbase.insufficient_credentials",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }

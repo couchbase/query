@@ -14,8 +14,10 @@ import (
 
 // admin level errors - errors that are created in the clustering and accounting packages
 
+const ADMIN_CONN_ERROR = 2000
+
 func NewAdminConnectionError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2000, IKey: "admin.clustering.connection_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: ADMIN_CONN_ERROR, IKey: "admin.clustering.connection_error", ICause: e,
 		InternalMsg: "Error connecting to " + msg, InternalCaller: CallerN(1)}
 }
 
