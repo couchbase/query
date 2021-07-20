@@ -152,18 +152,24 @@ func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
 
 // Error code 5200 is retired. Do not reuse.
 
+const EXE_USER_NOT_FOUND = 5210
+
 func NewUserNotFoundError(u string) Error {
-	return &err{level: EXCEPTION, ICode: 5210, IKey: "execution.user_not_found",
+	return &err{level: EXCEPTION, ICode: EXE_USER_NOT_FOUND, IKey: "execution.user_not_found",
 		InternalMsg: fmt.Sprintf("Unable to find user %s.", u), InternalCaller: CallerN(1)}
 }
 
+const EXE_ROLE_REQUIRES_KEYSPACE = 5220
+
 func NewRoleRequiresKeyspaceError(role string) Error {
-	return &err{level: EXCEPTION, ICode: 5220, IKey: "execution.role_requires_keyspace",
+	return &err{level: EXCEPTION, ICode: EXE_ROLE_REQUIRES_KEYSPACE, IKey: "execution.role_requires_keyspace",
 		InternalMsg: fmt.Sprintf("Role %s requires a keyspace.", role), InternalCaller: CallerN(1)}
 }
 
+const EXE_ROLE_TAKES_NO_KEYSPACE = 5230
+
 func NewRoleTakesNoKeyspaceError(role string) Error {
-	return &err{level: EXCEPTION, ICode: 5230, IKey: "execution.role_takes_no_keyspace",
+	return &err{level: EXCEPTION, ICode: EXE_ROLE_TAKES_NO_KEYSPACE, IKey: "execution.role_takes_no_keyspace",
 		InternalMsg: fmt.Sprintf("Role %s does not take a keyspace.", role), InternalCaller: CallerN(1)}
 }
 
@@ -182,10 +188,14 @@ func NewNoSuchBucketError(bucket string) Error {
 		InternalMsg: fmt.Sprintf("Bucket %s is not valid.", bucket), InternalCaller: CallerN(1)}
 }
 
+const EXE_ROLE_NOT_FOUND = 5250
+
 func NewRoleNotFoundError(role string) Error {
-	return &err{level: EXCEPTION, ICode: 5250, IKey: "execution.role_not_found",
+	return &err{level: EXCEPTION, ICode: EXE_ROLE_NOT_FOUND, IKey: "execution.role_not_found",
 		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}
 }
+
+const EXE_ROLE_ALREADY_PRESENT = 5260
 
 func NewRoleAlreadyPresent(user string, role string, bucket string) Error {
 	var msg string
@@ -194,9 +204,11 @@ func NewRoleAlreadyPresent(user string, role string, bucket string) Error {
 	} else {
 		msg = fmt.Sprintf("User %s already has role %s(%s).", user, role, bucket)
 	}
-	return &err{level: WARNING, ICode: 5260, IKey: "execution.role_already_present",
+	return &err{level: WARNING, ICode: EXE_ROLE_ALREADY_PRESENT, IKey: "execution.role_already_present",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
+
+const EXE_ROLE_NOT_PRESENT = 5270
 
 func NewRoleNotPresent(user string, role string, bucket string) Error {
 	var msg string
@@ -205,12 +217,14 @@ func NewRoleNotPresent(user string, role string, bucket string) Error {
 	} else {
 		msg = fmt.Sprintf("User %s did not have role %s(%s).", user, role, bucket)
 	}
-	return &err{level: WARNING, ICode: 5270, IKey: "execution.role_not_present",
+	return &err{level: WARNING, ICode: EXE_ROLE_NOT_PRESENT, IKey: "execution.role_not_present",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+const EXE_NEW_USER_NO_ROLES = 5280
+
 func NewUserWithNoRoles(user string) Error {
-	return &err{level: WARNING, ICode: 5280, IKey: "execution.user_with_no_roles",
+	return &err{level: WARNING, ICode: EXE_NEW_USER_NO_ROLES, IKey: "execution.user_with_no_roles",
 		InternalMsg:    fmt.Sprintf("User %s has no roles. Connecting with this user may not be possible", user),
 		InternalCaller: CallerN(1)}
 }

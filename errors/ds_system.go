@@ -61,18 +61,24 @@ func NewSystemRemoteWarning(e error, op string, ks string) Error {
 		InternalMsg: "System datastore : " + op + " on " + ks + " failed", InternalCaller: CallerN(1)}
 }
 
+const DS_SYS_ROLE_ERROR = 11009
+
 func NewSystemUnableToRetrieveError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 11009, IKey: "datastore.system.unable_to_retrieve", ICause: e,
+	return &err{level: EXCEPTION, ICode: DS_SYS_ROLE_ERROR, IKey: "datastore.system.unable_to_retrieve", ICause: e,
 		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: true}
 }
 
+const DS_SYS_UNABLE_TO_UPDATE_USER_INFO = 11010
+
 func NewSystemUnableToUpdateError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 11010, IKey: "datastore.system.unable_to_update", ICause: e,
+	return &err{level: EXCEPTION, ICode: DS_SYS_UNABLE_TO_UPDATE_USER_INFO, IKey: "datastore.system.unable_to_update", ICause: e,
 		InternalMsg: "System datastore : unable to update user information in server", InternalCaller: CallerN(1)}
 }
 
+const DS_SYS_INSUFFICIENT_PERMISSION = 11011
+
 func NewSystemFilteredRowsWarning(keyspace string) Error {
-	return &err{level: WARNING, ICode: 11011, IKey: "datastore.system.filtered_keyspaces", onceOnly: true,
+	return &err{level: WARNING, ICode: DS_SYS_INSUFFICIENT_PERMISSION, IKey: "datastore.system.filtered_keyspaces", onceOnly: true,
 		InternalMsg: fmt.Sprintf("One or more documents were excluded from the %s bucket because of insufficient user permissions. "+
 			"In an EE system, add the query_system_catalog role to see all rows. In a CE system, add the administrator role to see all rows.", keyspace),
 		InternalCaller: CallerN(1)}
