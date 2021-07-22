@@ -48,7 +48,8 @@ func Init() {
 }
 
 func (this *golang) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
-	var args, val value.Value
+	var args value.Value
+	var val interface{}
 
 	funcName := name.Name()
 	funcBody, ok := body.(*golangBody)
@@ -71,7 +72,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		return nil, funcBody.execError(err, funcName)
 	}
 
-	udf, ok := obj.(func(value.Value, functions.Context) (value.Value, error))
+	udf, ok := obj.(func(interface{}, interface{}) (interface{}, error))
 	if !ok {
 		return nil, funcBody.execError(fmt.Errorf("invalid object"), funcName)
 	}
@@ -89,11 +90,11 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		args = value.NewValue(values)
 	}
 
-	val, err = udf(args, context)
+	val, err = udf(args, functions.NewUdfContext(context))
 	if err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {
-		return val, nil
+		return value.NewValue(val), nil
 	}
 }
 
