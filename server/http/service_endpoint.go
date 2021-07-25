@@ -408,9 +408,22 @@ func (this *HttpEndpoint) setupSSL() {
 			}
 			this.connSecConfig.ClusterEncryptionConfig = cryptoConfig
 
+			// Disable non ssl ports when cluster encryption has changed and if disablenonsslports
+			// is set to true
+
+			if this.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts == true {
+				closeErr := this.Close()
+				if closeErr != nil {
+					logging.Errora(func() string {
+						return fmt.Sprintf("ERROR: Closing HTTP listener - %s", closeErr.Error())
+					})
+				}
+			}
+
 			// Temporary log message.
 			logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)
 			settingsUpdated = true
+
 		}
 
 		if settingsUpdated {
