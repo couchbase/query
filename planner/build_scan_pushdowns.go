@@ -233,7 +233,7 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 			}
 		}
 	} else if len(entry.partitionKeys) > 0 {
-		// no group keys present, every partition key present in the index keys and equavalent span then
+		// no group keys present, every partition key present in the index keys and equivalent span then
 		// it resolves single partition. Let apply non-partition index rules.
 
 		idxKeys := make(map[string]int, len(indexKeys))
