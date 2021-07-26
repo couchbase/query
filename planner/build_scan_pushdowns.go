@@ -225,10 +225,29 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 		groupkeys[gexpr.String()] = true
 	}
 
-	// For Partition index the partition keys needs to be in group keys to use DIstinct aggregates
-	for _, pexpr := range entry.partitionKeys {
-		if _, ok := groupkeys[pexpr.String()]; !ok {
-			return false, 0
+	// For Partition index the partition keys needs to be in group keys to use Distinct aggregates
+	if len(groupkeys) > 0 {
+		for _, pexpr := range entry.partitionKeys {
+			if _, ok := groupkeys[pexpr.String()]; !ok {
+				return false, 0
+			}
+		}
+	} else if len(entry.partitionKeys) > 0 {
+		// no group keys present, every partition key present in the index keys and equavalent span then
+		// it resolves single partition. Let apply non-partition index rules.
+
+		idxKeys := make(map[string]int, len(indexKeys))
+		for i, iexpr := range indexKeys {
+			idxKeys[iexpr.String()] = i
+		}
+		for _, pexpr := range entry.partitionKeys {
+			i, ok := idxKeys[pexpr.String()]
+			if !ok {
+				return false, 0
+			}
+			if eq, _ := entry.spans.EquivalenceRangeAt(i); !eq {
+				return false, 0
+			}
 		}
 	}
 
