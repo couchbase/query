@@ -298,13 +298,13 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 		} else {
 			if !found {
 				cerr = errors.NewAdminUnknownSettingError(setting)
-				logging.Infof("Query Configuration %v", cerr.Error())
+				logging.Infof("Query Configuration: %v", cerr.Error())
 			} else {
 				if cerr == nil {
 					cerr = errors.NewAdminSettingTypeError(setting, value)
-					logging.Infof("Query Configuration %v", cerr.Error())
+					logging.Infof("Query Configuration: %v", cerr.Error())
 				} else {
-					logging.Infof("Query Configuration incorrect value %v for setting: %s, error: %v ", value, s, cerr)
+					logging.Infof("Query Configuration: Incorrect value %v for setting: %s, error: %v ", value, s, cerr)
 				}
 			}
 
