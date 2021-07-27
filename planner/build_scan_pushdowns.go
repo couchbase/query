@@ -435,10 +435,14 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 outer:
 	for _, orderTerm := range this.order.Terms() {
-		// orderTerm is constant or sort order or nulls order are non-static
-		if orderTerm.Expression().Static() != nil ||
-			(orderTerm.DescendingExpr() != nil && orderTerm.DescendingExpr().Static() == nil) ||
-			(orderTerm.NullsPosExpr() != nil && orderTerm.NullsPosExpr().Static() == nil) {
+		// sort order or nulls order are parameters, then we can't use index order
+		if (orderTerm.DescendingExpr() != nil && orderTerm.DescendingExpr().Indexable() == false) ||
+			(orderTerm.NullsPosExpr() != nil && orderTerm.NullsPosExpr().Indexable() == false) {
+			return false, nil
+		}
+
+		// orderTerm is constant
+		if orderTerm.Expression().Static() != nil {
 			continue
 		}
 

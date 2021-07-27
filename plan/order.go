@@ -10,10 +10,12 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 type Order struct {
@@ -90,9 +92,9 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string `json:"#operator"`
 		Terms []struct {
-			Expr     string `json:"expr"`
-			Desc     string `json:"desc"`
-			NullsPos string `json:"nulls_pos"`
+			Expr     string      `json:"expr"`
+			Desc     interface{} `json:"desc"`
+			NullsPos interface{} `json:"nulls_pos"`
 		} `json:"sort_terms"`
 		offsetExpr  string                 `json:"offset"`
 		limitExpr   string                 `json:"limit"`
@@ -111,22 +113,58 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			return err
 		}
 		var desc, nullsPos expression.Expression
-		if term.Desc == "" {
-			desc = nil
-		} else {
-			desc, err = parser.Parse(term.Desc)
-			if err != nil {
-				return err
+
+		oldStylePermitted := true
+		newStylePermitted := true
+		switch tDesc := term.Desc.(type) {
+		case nil:
+		case bool:
+			newStylePermitted = false
+			if tDesc {
+				desc = expression.NewConstant(value.NewValue("desc"))
 			}
-		}
-		if term.NullsPos == "" {
-			nullsPos = nil
-		} else {
-			nullsPos, err = parser.Parse(term.NullsPos)
-			if err != nil {
-				return err
+		case string:
+			oldStylePermitted = false
+			if tDesc != "" {
+				desc, err = parser.Parse(tDesc)
+				if err != nil {
+					return err
+				}
 			}
+		default:
+			return fmt.Errorf("Invalid marshalled Order")
+
 		}
+
+		switch tNullsPos := term.NullsPos.(type) {
+		case nil:
+		case bool:
+			if !oldStylePermitted {
+				return fmt.Errorf("Invalid marshalled Order")
+			}
+			if bDesc, _ := term.Desc.(bool); bDesc {
+				if tNullsPos == true {
+					nullsPos = expression.NewConstant(value.NewValue("first"))
+				}
+			} else {
+				if tNullsPos == true {
+					nullsPos = expression.NewConstant(value.NewValue("last"))
+				}
+			}
+		case string:
+			if !newStylePermitted {
+				return fmt.Errorf("Invalid marshalled Order")
+			}
+			if tNullsPos != "" {
+				nullsPos, err = parser.Parse(tNullsPos)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			return fmt.Errorf("Invalid marshalled Order")
+		}
+
 		this.terms[i] = algebra.NewSortTerm(expr, desc, nullsPos)
 	}
 	if offsetExprStr := _unmarshalled.offsetExpr; offsetExprStr != "" {
