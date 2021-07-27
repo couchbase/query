@@ -30,7 +30,6 @@ import (
 	"github.com/couchbase/query/functions"
 	functionsMeta "github.com/couchbase/query/functions/metakv"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
@@ -1063,7 +1062,7 @@ func parsePath(p string) []string {
 }
 
 // filter implements the backup service include and exclude form entries
-// no namespaces are considered
+// only considers scopes and collections
 // duplicates entries are not allowed
 func newFilter(p string) (matcher, errors.Error) {
 	paths := strings.Split(p, ",")
@@ -1073,12 +1072,12 @@ func newFilter(p string) (matcher, errors.Error) {
 	m := make(matcher, len(paths))
 	for _, entry := range paths {
 		elems := parsePath(entry)
-		b, ok := m[elems[0]]
+		s, ok := m[elems[0]]
 
-		// found, check and add to bucket
+		// found, check and add to scope
 		if ok {
-			if len(b) > 0 && len(elems) > 1 {
-				b[elems[1]] = true
+			if len(s) > 0 && len(elems) > 1 {
+				s[elems[1]] = true
 			} else {
 				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"), "UDF restore parameters")
 			}
@@ -1090,7 +1089,7 @@ func newFilter(p string) (matcher, errors.Error) {
 			m[elems[0]] = map[string]bool{elems[1]: true}
 		} else {
 
-			// not found, entry has just bucket
+			// not found, entry has just scope
 			m[elems[0]] = map[string]bool{}
 		}
 	}
@@ -1098,14 +1097,16 @@ func newFilter(p string) (matcher, errors.Error) {
 }
 
 func (f matcher) match(p []string) bool {
-	bucket, ok := f[p[1]]
+	scope, ok := f[p[2]]
 	if !ok {
 		return false
 	}
-	if len(bucket) == 0 {
+	if len(scope) == 0 {
 		return true
 	}
-	return bucket[p[2]]
+
+	// any collections matches are ignored
+	return false
 }
 
 func newRemapper(p string) (remapper, errors.Error) {
@@ -1127,13 +1128,13 @@ func newRemapper(p string) (remapper, errors.Error) {
 		if len(inElems) != len(outElems) || len(inElems) > 2 {
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper has mismatching or invalid entries"), "UDF restore parameter")
 		}
-		b, ok := m[inElems[0]]
+		s, ok := m[inElems[0]]
 
 		// found, check and add to bucket
 		if ok {
-			_, foundEmpty := b[""]
+			_, foundEmpty := s[""]
 			if len(inElems) > 0 && !foundEmpty {
-				b[inElems[1]] = outElems
+				s[inElems[1]] = outElems
 			} else {
 				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"), "UDF restore parameter")
 			}
@@ -1141,48 +1142,43 @@ func newRemapper(p string) (remapper, errors.Error) {
 			// currently we ignore overlapping and duplicates
 		} else if len(inElems) > 1 {
 
-			// not found, entry has bucket and scope
+			// not found, entry has scope and collection
 			m[inElems[0]] = map[string][]string{inElems[1]: outElems}
 		} else {
 
-			// not found, entry has just bucket
+			// not found, entry has just scope
 			m[inElems[0]] = map[string][]string{"": outElems}
 		}
 	}
-	logging.Infof("remapper is %v", m)
 	return m, nil
 }
 
-func (r remapper) remap(name functions.FunctionName) {
-	path := name.Path()
-	bucket, ok := r[path[1]]
-	if !ok {
+func (r remapper) remap(bucket string, path []string) {
+	if bucket == "" || len(path) != 4 {
 		return
 	}
-	target, onlyBucket := bucket[""]
-	if onlyBucket {
-		path[1] = target[0]
-		name.Remap(path)
-	} else {
-		scope, ok := bucket[path[1]]
-		if !ok {
-			return
+	path[1] = bucket
+	scope, ok := r[path[2]]
+
+	// in order to remap functions, we must be remapping scopes, not individual collections
+	if ok {
+		target, ok := scope[""]
+		if ok {
+			path[2] = target[0]
 		}
-		path[1] = scope[0]
-		path[2] = scope[1]
-		name.Remap(path)
 	}
-	logging.Infof("old new %v %v", path, name.Path())
 }
 
 // Restore semantics:
 // - for global functions, no include, exclude remap is possible.
 //   any non global functions passed will simply be skipped
-// - for scope functions, include, exclude and remap will only operate at the bucket and scope level
-//   currently no check is made that the target bucket and scope exist, which may very well leave stale function definitions
+// - for scope functions, include, exclude and remap will only operate at scope level
+//   currently no check is made that the target scope exist, which may very well leave stale function definitions
 // - for both cases the only thing that counts is the name, and not the signature, it is therefore possible to go back in
 //   time and restore function definitions with different parameter lists
-// - be aware that remapping may have side effects: for query context based statements contained within functions, the new targets
+// - remapping to an existing scope will replace existing functions, with the same or different signature, which may not be
+//   intended, however a different conflict resolution would prevent going back in time
+// - be aware that remapping may have other side effects: for query context based statements contained within functions, the new targets
 //   will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
 //   this makes perfect sense, but may not necessarely be what the user intended
 func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, remap remapper) errors.Error {
@@ -1203,20 +1199,23 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 	if string(identity) == "" || string(definition) == "" {
 		return errors.NewServiceErrorBadValue(go_errors.New("missing function definition or body"), "UDF restore body")
 	}
-	name, err1 := functionsResolver.MakeName(identity)
+	path, err1 := functionsResolver.MakePath(identity)
 	if err1 != nil {
 		return errors.NewServiceErrorBadValue(err1, "UDF restore body")
 	}
 
 	// we skip the entries that do no apply
-	path := name.Path()
-	if len(path) != l || l > 2 && b != path[1] {
+	if len(path) != l {
 		return nil
 	}
 
-	if include.match(path) || !exclude.match(path) {
-		remap.remap(name)
+	if l == 2 || include.match(path) || !exclude.match(path) {
+		remap.remap(b, path)
 
+		name, err1 := functions.Constructor(path, path[0], "")
+		if err1 != nil {
+			return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+		}
 		body, err1 := functionsResolver.MakeBody(name.Name(), definition)
 		if err1 != nil {
 			return errors.NewServiceErrorBadValue(err1, "UDF restore body")
