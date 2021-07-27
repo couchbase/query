@@ -22,7 +22,7 @@ import (
 	"github.com/couchbase/query/functions/javascript"
 )
 
-func MakeName(bytes []byte) (functions.FunctionName, errors.Error) {
+func MakePath(bytes []byte) ([]string, errors.Error) {
 	var name_type struct {
 		Type string `json:"type"`
 	}
@@ -45,7 +45,7 @@ func MakeName(bytes []byte) (functions.FunctionName, errors.Error) {
 		if _unmarshalled.Namespace == "" || _unmarshalled.Name == "" {
 			return nil, errors.NewFunctionEncodingError("decode name", "unknown", go_errors.New("incomplete function name"))
 		}
-		return functions.Constructor([]string{_unmarshalled.Namespace, _unmarshalled.Name}, _unmarshalled.Namespace, "")
+		return []string{_unmarshalled.Namespace, _unmarshalled.Name}, nil
 	case "scope":
 		var _unmarshalled struct {
 			_         string `json:"type"`
@@ -61,7 +61,7 @@ func MakeName(bytes []byte) (functions.FunctionName, errors.Error) {
 		if _unmarshalled.Namespace == "" || _unmarshalled.Bucket == "" || _unmarshalled.Scope == "" || _unmarshalled.Name == "" {
 			return nil, errors.NewFunctionEncodingError("decode name", "unknown", go_errors.New("incomplete function name"))
 		}
-		return functions.Constructor([]string{_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Name}, _unmarshalled.Namespace, "")
+		return []string{_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Name}, nil
 	default:
 		return nil, errors.NewFunctionEncodingError("decode name", "unknown", fmt.Errorf("unknown type %v", name_type.Type))
 	}

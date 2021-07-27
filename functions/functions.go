@@ -43,7 +43,6 @@ const _LIMIT = 16384
 
 type FunctionName interface {
 	Path() []string
-	Remap(p []string)
 	Name() string
 	Key() string
 	IsGlobal() bool
@@ -175,13 +174,6 @@ func mockFunction(namespace string, name string) FunctionName {
 
 func (name *mockName) Path() []string {
 	return []string{name.namespace, name.name}
-}
-
-func (name *mockName) Remap(p []string) {
-	if len(p) == 2 {
-		name.namespace = p[0]
-		name.name = p[1]
-	}
 }
 
 func (name *mockName) Name() string {
