@@ -687,9 +687,6 @@ func auditError(err []errors.Error) (finalErr []map[string]interface{}) {
 
 	for _, err := range err {
 		if ok := AUTH_ERRORS[err.Code()]; ok {
-			if finalErr == nil {
-				finalErr = make([]map[string]interface{}, 1)
-			}
 			finalErr = append(finalErr, map[string]interface{}{"code": err.Code(), "msg": err.Error()})
 		}
 	}
