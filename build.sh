@@ -73,23 +73,23 @@ DevStandaloneSetup() {
        fi
     # bleve version
        if [[ ! -d ../../blevesearch/bleve/v2 ]]; then
-           (cd ../../blevesearch; git clone -b v2.0.3 http://github.com/blevesearch/bleve.git bleve/v2)
+           (cd ../../blevesearch; git clone -b v2.0.7 http://github.com/blevesearch/bleve.git bleve/v2)
        fi
     # zapx versions
        if [[ ! -d ../../blevesearch/zapx/v11 ]]; then
-           (cd ../../blevesearch; git clone -b v11.2.0 http://github.com/blevesearch/zapx.git zapx/v11)
+           (cd ../../blevesearch; git clone -b v11.2.1 http://github.com/blevesearch/zapx.git zapx/v11)
        fi
        if [[ ! -d ../../blevesearch/zapx/v12 ]]; then
-           (cd ../../blevesearch; git clone -b v12.2.0 http://github.com/blevesearch/zapx.git zapx/v12)
+           (cd ../../blevesearch; git clone -b v12.2.1 http://github.com/blevesearch/zapx.git zapx/v12)
        fi
        if [[ ! -d ../../blevesearch/zapx/v13 ]]; then
-           (cd ../../blevesearch; git clone -b v13.2.0 http://github.com/blevesearch/zapx.git zapx/v13)
+           (cd ../../blevesearch; git clone -b v13.2.1 http://github.com/blevesearch/zapx.git zapx/v13)
        fi
        if [[ ! -d ../../blevesearch/zapx/v14 ]]; then
-           (cd ../../blevesearch; git clone -b v14.2.0 http://github.com/blevesearch/zapx.git zapx/v14)
+           (cd ../../blevesearch; git clone -b v14.2.1 http://github.com/blevesearch/zapx.git zapx/v14)
        fi
        if [[ ! -d ../../blevesearch/zapx/v15 ]]; then
-           (cd ../../blevesearch; git clone -b v15.2.0 http://github.com/blevesearch/zapx.git zapx/v15)
+           (cd ../../blevesearch; git clone -b v15.2.1 http://github.com/blevesearch/zapx.git zapx/v15)
        fi
        (cd $GOPATH/src/golang.org/x/net; git checkout `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'`)
 }
