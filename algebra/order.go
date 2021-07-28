@@ -175,11 +175,11 @@ func (this *SortTerm) Descending(context expression.Context) bool {
 	}
 	r, err := this.descending.Evaluate(nil, context)
 	if err == nil {
-		if r.Type() == value.NULL {
+		if r.Type() != value.STRING {
 			if context != nil {
-				ectx, ok := context.(interface{ Error(errors.Error) })
+				ectx, ok := context.(interface{ Warning(errors.Error) })
 				if ok {
-					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid sort order expression: %v", r)))
+					ectx.Warning(errors.NewEvaluationError(nil, fmt.Sprintf("sort order: Invalid value %v", r)))
 				}
 			}
 			return false
@@ -189,17 +189,17 @@ func (this *SortTerm) Descending(context expression.Context) bool {
 			} else if strings.ToLower(s) == "asc" {
 				return false
 			} else if context != nil {
-				ectx, ok := context.(interface{ Error(errors.Error) })
+				ectx, ok := context.(interface{ Warning(errors.Error) })
 				if ok {
-					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid sort order: %s", s)))
+					ectx.Warning(errors.NewEvaluationError(nil, fmt.Sprintf("sort order: Invalid value %s", s)))
 				}
 			}
 		}
 	} else {
 		if context != nil {
-			ectx, ok := context.(interface{ Error(errors.Error) })
+			ectx, ok := context.(interface{ Warning(errors.Error) })
 			if ok {
-				ectx.Error(errors.NewEvaluationError(err, "Invalid sort order expression"))
+				ectx.Warning(errors.NewEvaluationError(err, "sort order"))
 			}
 		}
 	}
@@ -219,9 +219,10 @@ func (this *SortTerm) NullsLast(context expression.Context) bool {
 	if err == nil {
 		if r.Type() != value.STRING {
 			if context != nil {
-				ectx, ok := context.(interface{ Error(errors.Error) })
+				ectx, ok := context.(interface{ Warning(errors.Error) })
 				if ok {
-					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid nulls sorted position expression: %v", r)))
+					ectx.Warning(errors.NewEvaluationError(nil,
+						fmt.Sprintf("nulls sorted position: Invalid value %v", r)))
 				}
 			}
 			return this.Descending(context)
@@ -231,21 +232,23 @@ func (this *SortTerm) NullsLast(context expression.Context) bool {
 			} else if strings.ToLower(s) == "first" {
 				return false
 			} else if context != nil {
-				ectx, ok := context.(interface{ Error(errors.Error) })
+				ectx, ok := context.(interface{ Warning(errors.Error) })
 				if ok {
-					ectx.Error(errors.NewEvaluationError(nil, fmt.Sprintf("Invalid nulls sorted position: %s", s)))
+					ectx.Warning(errors.NewEvaluationError(nil,
+						fmt.Sprintf("nulls sorted position: Invalid value %s", s)))
 				}
 			}
 		}
 	} else {
 		if context != nil {
-			ectx, ok := context.(interface{ Error(errors.Error) })
+			ectx, ok := context.(interface{ Warning(errors.Error) })
 			if ok {
-				ectx.Error(errors.NewEvaluationError(err, "Invalid nulls sorted position expression"))
+				ectx.Warning(errors.NewEvaluationError(err, "nulls sorted position"))
 			}
 		}
 	}
-	return false
+	// if we failed to evaluate, use the default nulls position based on order
+	return this.Descending(context)
 }
 
 func (this *SortTerm) NullsPosExpr() expression.Expression {
