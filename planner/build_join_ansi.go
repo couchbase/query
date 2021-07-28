@@ -653,7 +653,9 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	this.lastOp = nil
 
 	children := this.children
+	subChildren := this.subChildren
 	this.children = make([]plan.Operator, 0, 16)
+	this.subChildren = make([]plan.Operator, 0, 16)
 
 	// Note that by this point join filters involving keyspaces that's already done planning
 	// are already moved into filters and thus is available for index selection. This is ok
@@ -675,20 +677,6 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	// if no plan generated, bail out
 	if len(this.children) == 0 {
 		return nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, nil
-	}
-
-	if buildRight {
-		child = plan.NewSequence(this.children...)
-		this.children = children
-		buildAliases = []string{alias}
-	} else {
-		child = plan.NewSequence(children...)
-		buildAliases = make([]string, 0, len(this.baseKeyspaces))
-		for _, kspace := range this.baseKeyspaces {
-			if kspace.PlanDone() && kspace.Name() != alias {
-				buildAliases = append(buildAliases, kspace.Name())
-			}
-		}
 	}
 
 	// perform cover transformation of leftExprs and rightExprs and onclause
@@ -742,11 +730,30 @@ func (this *builder) buildHashJoinScan(right algebra.SimpleFromTerm, outer bool,
 	}
 
 	if buildRight {
+		if len(this.subChildren) > 0 {
+			this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
+		}
+		child = plan.NewSequence(this.children...)
+		this.children = children
+		this.subChildren = subChildren
 		probeExprs = leftExprs
 		buildExprs = rightExprs
+		buildAliases = []string{alias}
+		this.lastOp = this.children[len(this.children)-1]
 	} else {
+		if len(subChildren) > 0 {
+			children = append(children, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+		}
+		child = plan.NewSequence(children...)
 		buildExprs = leftExprs
 		probeExprs = rightExprs
+		buildAliases = make([]string, 0, len(this.baseKeyspaces))
+		for _, kspace := range this.baseKeyspaces {
+			if kspace.PlanDone() && kspace.Name() != alias {
+				buildAliases = append(buildAliases, kspace.Name())
+			}
+		}
+		this.lastOp = this.children[len(this.children)-1]
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, cost, cardinality, nil
