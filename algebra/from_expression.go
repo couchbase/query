@@ -104,7 +104,10 @@ duplicate aliases.
 func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	if this.keyspaceTerm != nil {
 		path := this.keyspaceTerm.Path()
-		if path.IsCollection() {
+		_, isIdentifier := this.fromExpr.(*expression.Identifier)
+
+		// MB-46856 if the expression path is longer than 1, use the bucket
+		if !isIdentifier && path.IsCollection() {
 			_, ok := parent.Aliases().Field(path.Bucket())
 			this.isKeyspace = !ok
 		} else {
