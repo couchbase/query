@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 // An auditor the just records the audit events that would be sent to the audit daemon,
@@ -72,6 +73,11 @@ type simpleAuditable struct {
 	eventErrorCount        int
 	eventWarningCount      int
 	txId                   string
+	errors                 []errors.Error
+}
+
+func (this *simpleAuditable) EventErrorMessage() []errors.Error {
+    return this.errors
 }
 
 func (sa *simpleAuditable) EventGenericFields() adt.GenericFields {
