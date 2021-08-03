@@ -467,6 +467,7 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 		flexRequest.Cond, flexRequest.OrigCond, nil, isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS), nil)
 	entry.setSearchOrders(resp.SearchOrders)
 	entry.pushDownProperty = pushDownProperty
+	entry.numIndexedKeys = resp.NumIndexedKeys
 	return entry, nil
 }
 
@@ -498,6 +499,7 @@ func (this *builder) minimalFTSFlexIndexes(sargables map[datastore.Index]*indexE
         keep highest sargable keys (static + dynamic)
         both equal highest static sargable keys
         both equal highest pushdwon property
+        both equal lowest numIndexedKeys
         both equal random
     best=false
         both equal follow best=true
@@ -509,8 +511,10 @@ func (this *builder) purgeFTSFlexIndex(se, te *indexEntry, best bool) (ri *index
 	var s, t *indexEntry
 	if se.sumKeys > te.sumKeys || (se.sumKeys == te.sumKeys && se.minKeys >= te.minKeys) {
 		if best {
-			if te.sumKeys == se.sumKeys && se.minKeys == te.minKeys &&
-				te.PushDownProperty() > se.PushDownProperty() {
+			if te.sumKeys == se.sumKeys &&
+				se.minKeys == te.minKeys &&
+				(te.PushDownProperty() > se.PushDownProperty() ||
+				(te.PushDownProperty() == se.PushDownProperty() && te.numIndexedKeys <= se.numIndexedKeys)) {
 				return se
 			}
 			return te
@@ -537,7 +541,10 @@ func (this *builder) purgeFTSFlexIndex(se, te *indexEntry, best bool) (ri *index
 		}
 	}
 
-	if t.sumKeys != s.sumKeys || t.minKeys < s.minKeys || t.PushDownProperty() < s.PushDownProperty() {
+	if t.sumKeys != s.sumKeys ||
+		t.minKeys < s.minKeys ||
+		t.PushDownProperty() < s.PushDownProperty() ||
+		t.numIndexedKeys > s.numIndexedKeys {
 		return t
 	}
 
