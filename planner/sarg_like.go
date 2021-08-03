@@ -96,9 +96,9 @@ func likeSpans(pred expression.LikeFunction, selec float64) SargSpans {
 
 	switch pred := pred.(type) {
 	case *expression.Like:
-		if pred.Second().Static() != nil {
-			range2.Low = expression.NewLikePrefix(pred.Second())
-			range2.High = expression.NewLikeStop(pred.Second())
+		if pred.Second().Static() != nil && pred.Escape().Static() != nil {
+			range2.Low = expression.NewLikePrefix(pred.Second(), pred.Escape().Static())
+			range2.High = expression.NewLikeStop(pred.Second(), pred.Escape().Static())
 		}
 	case *expression.RegexpLike:
 		if pred.Second().Static() != nil {

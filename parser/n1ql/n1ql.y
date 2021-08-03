@@ -209,6 +209,7 @@ tokOffset    int
 %token LETTING
 %token LEVEL
 %token LIKE
+%token ESCAPE
 %token LIMIT
 %token LSM
 %token MAP
@@ -332,6 +333,7 @@ tokOffset    int
 %nonassoc       EQ DEQ NE
 %nonassoc       LT GT LE GE
 %nonassoc       LIKE
+%nonassoc       ESCAPE
 %nonassoc       BETWEEN
 %nonassoc       IN WITHIN
 %nonassoc       EXISTS
@@ -3337,15 +3339,27 @@ expr NOT BETWEEN b_expr AND b_expr
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr LIKE expr ESCAPE expr
+{
+    $$ = expression.NewLike($1, $3, $5)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr LIKE expr
 {
-    $$ = expression.NewLike($1, $3)
+    $$ = expression.NewLike($1, $3, expression.DEFAULT_ESCAPE_EXPR)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr NOT LIKE expr ESCAPE expr
+{
+    $$ = expression.NewNotLike($1, $4, $6)
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
 expr NOT LIKE expr
 {
-    $$ = expression.NewNotLike($1, $4)
+    $$ = expression.NewNotLike($1, $4, expression.DEFAULT_ESCAPE_EXPR)
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |

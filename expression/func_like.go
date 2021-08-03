@@ -30,12 +30,12 @@ type LikeFunction interface {
 This represents the pattern matching function LIKE_PREFIX(expr).
 */
 type LikePrefix struct {
-	UnaryFunctionBase
+	BinaryFunctionBase
 }
 
-func NewLikePrefix(operand Expression) Function {
+func NewLikePrefix(first, second Expression) Function {
 	rv := &LikePrefix{
-		*NewUnaryFunctionBase("like_prefix", operand),
+		*NewBinaryFunctionBase("like_prefix", first, second),
 	}
 
 	rv.expr = rv
@@ -61,13 +61,22 @@ func (this *LikePrefix) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.ToString()
-	_, part, err := likeCompile(s)
+	esc, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return nil, err
+	} else if esc.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if esc.Type() != value.STRING {
+		return value.NULL_VALUE, nil
 	}
 
-	prefix, _ := part.LiteralPrefix()
+	s := arg.ToString()
+	escape, err := getEscapeRuneFromValue(esc)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix, _ := likeLiteralPrefix(s, escape)
 	return value.NewValue(prefix), nil
 }
 
@@ -76,7 +85,7 @@ Factory method pattern.
 */
 func (this *LikePrefix) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewLikePrefix(operands[0])
+		return NewLikePrefix(operands[0], operands[1])
 	}
 }
 
@@ -90,12 +99,12 @@ func (this *LikePrefix) Constructor() FunctionConstructor {
 This represents the pattern-matching function LIKE_STOP(expr).
 */
 type LikeStop struct {
-	UnaryFunctionBase
+	BinaryFunctionBase
 }
 
-func NewLikeStop(operand Expression) Function {
+func NewLikeStop(first, second Expression) Function {
 	rv := &LikeStop{
-		*NewUnaryFunctionBase("like_stop", operand),
+		*NewBinaryFunctionBase("like_stop", first, second),
 	}
 
 	rv.expr = rv
@@ -121,13 +130,22 @@ func (this *LikeStop) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	s := arg.ToString()
-	_, part, err := likeCompile(s)
+	esc, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return nil, err
+	} else if esc.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if esc.Type() != value.STRING {
+		return value.NULL_VALUE, nil
 	}
 
-	prefix, complete := part.LiteralPrefix()
+	s := arg.ToString()
+	escape, err := getEscapeRuneFromValue(esc)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix, complete := likeLiteralPrefix(s, escape)
 	if complete {
 		return value.NewValue(prefix + "\x00"), nil
 	}
@@ -147,7 +165,7 @@ Factory method pattern.
 */
 func (this *LikeStop) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewLikeStop(operands[0])
+		return NewLikeStop(operands[0], operands[1])
 	}
 }
 
@@ -161,12 +179,12 @@ func (this *LikeStop) Constructor() FunctionConstructor {
 This represents the pattern matching function LIKE_SUFFIX(expr).
 */
 type LikeSuffix struct {
-	UnaryFunctionBase
+	BinaryFunctionBase
 }
 
-func NewLikeSuffix(operand Expression) Function {
+func NewLikeSuffix(first, second Expression) Function {
 	rv := &LikeSuffix{
-		*NewUnaryFunctionBase("like_suffix", operand),
+		*NewBinaryFunctionBase("like_suffix", first, second),
 	}
 
 	rv.expr = rv
@@ -192,13 +210,22 @@ func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	for s := arg.ToString(); s != ""; s = s[1:] {
-		_, part, err := likeCompile(s)
-		if err != nil {
-			return value.NULL_VALUE, err
-		}
+	esc, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if esc.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if esc.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
 
-		prefix, _ := part.LiteralPrefix()
+	escape, err := getEscapeRuneFromValue(esc)
+	if err != nil {
+		return nil, err
+	}
+
+	for s := arg.ToString(); s != ""; s = s[1:] {
+		prefix, _ := likeLiteralPrefix(s, escape)
 		if prefix != "" {
 			return value.NewValue(s), nil
 		}
@@ -212,7 +239,7 @@ Factory method pattern.
 */
 func (this *LikeSuffix) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewLikeSuffix(operands[0])
+		return NewLikeSuffix(operands[0], operands[1])
 	}
 }
 

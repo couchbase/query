@@ -100,8 +100,8 @@ func (this *pattern) VisitLike(expr *expression.Like) (interface{}, error) {
 
 	suffixes := expression.NewSuffixes(source)
 	binding := expression.NewSimpleBinding(variable, suffixes)
-	suffix := expression.NewLikeSuffix(expr.Second())
-	sat := expression.NewLike(expression.NewIdentifier(variable), suffix)
+	suffix := expression.NewLikeSuffix(expr.Second(), expr.Escape())
+	sat := expression.NewLike(expression.NewIdentifier(variable), suffix, expr.Escape().Copy())
 	any := expression.NewAny(expression.Bindings{binding}, sat)
 	return expression.NewAnd(expr, any), nil
 }
@@ -135,7 +135,7 @@ func (this *pattern) visitContains(expr *expression.Contains) (interface{}, erro
 	suffixes := expression.NewSuffixes(source)
 	binding := expression.NewSimpleBinding(variable, suffixes)
 	suffix := expression.NewConcat(expr.Second(), expression.NewConstant("%"))
-	sat := expression.NewLike(expression.NewIdentifier(variable), suffix)
+	sat := expression.NewLike(expression.NewIdentifier(variable), suffix, expression.DEFAULT_ESCAPE_EXPR)
 	any := expression.NewAny(expression.Bindings{binding}, sat)
 	return expression.NewAnd(expr, any), nil
 }
@@ -177,7 +177,7 @@ func (this *pattern) visitContainsTokenLike(expr *expression.ContainsTokenLike) 
 	}
 
 	binding := expression.NewSimpleBinding(variable, tokens)
-	sat := expression.NewLike(expression.NewIdentifier(variable), operands[1])
+	sat := expression.NewLike(expression.NewIdentifier(variable), operands[1], expression.DEFAULT_ESCAPE_EXPR)
 	any := expression.NewAny(expression.Bindings{binding}, sat)
 	return expression.NewAnd(expr, any), nil
 }

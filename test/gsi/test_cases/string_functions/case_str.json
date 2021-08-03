@@ -584,7 +584,7 @@
       ]
     },
     {
-      "statements":"select like_prefix(\"abc%123\"),like_suffix(\"___123\"),like_stop(\"abc\\u0000\"),like_stop(\"abc%\")",
+      "statements":"select like_prefix(\"abc%123\",\"\\\\\"),like_suffix(\"___123\",\"\\\\\"),like_stop(\"abc\\u0000\",\"\\\\\"),like_stop(\"abc%\",\"\\\\\")",
       "results": [
         {
             "$1": "abc",

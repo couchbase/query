@@ -168,6 +168,7 @@
 /[eE][lL][eE][mM][eE][nN][tT]/			 { yylex.logToken(yylex.Text(), "ELEMENT"); return ELEMENT }
 /[eE][lL][sS][eE]/				 { yylex.logToken(yylex.Text(), "ELSE"); return ELSE }
 /[eE][nN][dD]/					 { yylex.logToken(yylex.Text(), "END"); return END }
+/[eE][sS][cC][aA][pP][eE]/				 { yylex.logToken(yylex.Text(), "ESCAPE"); return ESCAPE }
 /[eE][vV][eE][rR][yY]/				 { yylex.logToken(yylex.Text(), "EVERY"); return EVERY }
 /[eE][xX][cC][eE][pP][tT]/			 { yylex.logToken(yylex.Text(), "EXCEPT"); return EXCEPT }
 /[eE][xX][cC][lL][uU][dD][eE]/			 { yylex.logToken(yylex.Text(), "EXCLUDE"); return EXCLUDE }

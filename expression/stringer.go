@@ -324,6 +324,10 @@ func (this *Stringer) VisitLike(expr *Like) (interface{}, error) {
 	buf.WriteString(this.Visit(expr.First()))
 	buf.WriteString(" like ")
 	buf.WriteString(this.Visit(expr.Second()))
+	if !expr.IsDefaultEscape() {
+		buf.WriteString(" escape ")
+		buf.WriteString(this.Visit(expr.Escape()))
+	}
 	buf.WriteString(")")
 	return buf.String(), nil
 }

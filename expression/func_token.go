@@ -125,7 +125,7 @@ func NewContainsTokenLike(operands ...Expression) Function {
 		nil,
 	}
 
-	rv.re, rv.part, _ = precompileLike(operands[1].Value())
+	rv.re, rv.part, _ = precompileLike(operands[1].Value(), '\\')
 	rv.expr = rv
 	return rv
 }
@@ -180,7 +180,10 @@ func (this *ContainsTokenLike) Evaluate(item value.Value, context Context) (valu
 	re := this.re
 	if re == nil {
 		var err error
-		re, _, err = likeCompile(pattern.ToString())
+		// because the tokenising disallows special characters we don't have to care about the escape character
+		// (tokens can never contain anything other than letters and numbers)
+		// if we change the tokenising at some point to allow character groups then we'll have to add "escape" to the options
+		re, _, err = likeCompile(pattern.ToString(), '\\')
 		if err != nil {
 			return nil, err
 		}

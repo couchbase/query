@@ -246,6 +246,7 @@ func (this *dynamic) visitGE(expr *expression.LE, alias string, static expressio
 func (this *dynamic) VisitLike(expr *expression.Like) (interface{}, error) {
 	alias := fieldName(expr.First())
 	static := expr.Second().Static()
+	escape := expr.Escape().Static()
 
 	if alias == "" || static == nil {
 		return expr, nil
@@ -254,11 +255,11 @@ func (this *dynamic) VisitLike(expr *expression.Like) (interface{}, error) {
 	sat := expression.NewAnd(
 		expression.NewGE(
 			this.NewVariable(),
-			this.NewArray(alias, expression.NewLikePrefix(static)),
+			this.NewArray(alias, expression.NewLikePrefix(static, escape)),
 		),
 		expression.NewLT(
 			this.NewVariable(),
-			this.NewArray(alias, expression.NewLikeStop(static)),
+			this.NewArray(alias, expression.NewLikeStop(static, escape)),
 		),
 	)
 	any := expression.NewAny(this.NewBindings(), sat)
