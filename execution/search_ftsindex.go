@@ -258,7 +258,8 @@ func SetSearchInfo(aliasMap map[string]string, item value.Value,
 			}
 
 			if err == nil {
-				v, err = ftsverify.NewVerify(sfn.KeyspacePath(), sfn.FieldName(), q, o)
+				v, err = ftsverify.NewVerify(sfn.KeyspacePath(), sfn.FieldName(),
+					q, o, context.MaxParallelism())
 			}
 
 			sfn.SetVerify(v, err)

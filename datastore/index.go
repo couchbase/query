@@ -482,12 +482,13 @@ type FTSIndex interface {
 /*
  * This global package level function.
  *
- * NewVerify (collection, field string, query, options value.Value) (datastore.Verify, errors.Error)
+ * NewVerify (collection, field string, query, options value.Value, parallelism int) (datastore.Verify, errors.Error)
  *
- * collection -- bucketname or collection name (namespace:bucket.scope.collection)
- * filed      -- serach filed name
- * query      -- serach query
- * options    -- serach options
+ * collection  -- bucketname or collection name (namespace:bucket.scope.collection)
+ * filed       -- search filed name
+ * query       -- search query
+ * options     -- search options
+ * parallelism -- max_parallelism
  *
  * NOTE: If FTSclient uses N1QL expression package, This must be put in separate package and should not use
  *       FTSclient package or N1QL expression package to avoid circular refrences.
