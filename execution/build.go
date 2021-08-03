@@ -611,6 +611,11 @@ func (this *builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
 	return checkOp(NewCollect(plan, this.context), this.context)
 }
 
+// Receive
+func (this *builder) VisitReceive(plan *plan.Receive) (interface{}, error) {
+	return checkOp(NewReceive(plan, this.context), this.context)
+}
+
 // CreateIndex
 func (this *builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (interface{}, error) {
 	return checkOp(NewCreatePrimaryIndex(plan, this.context), this.context)

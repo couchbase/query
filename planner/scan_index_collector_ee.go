@@ -380,6 +380,10 @@ func (this *scanIdxCol) VisitCollect(op *plan.Collect) (interface{}, error) {
 	return nil, nil
 }
 
+func (this *scanIdxCol) VisitReceive(op *plan.Receive) (interface{}, error) {
+	return nil, nil
+}
+
 // Index DDL
 func (this *scanIdxCol) VisitCreatePrimaryIndex(op *plan.CreatePrimaryIndex) (interface{}, error) {
 	return nil, nil

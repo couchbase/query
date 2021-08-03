@@ -195,6 +195,7 @@ type Context struct {
 	flags               uint32
 	result              func(context *Context, item value.AnnotatedValue) bool
 	likeRegexMap        map[*expression.Like]*expression.LikeRegex
+	udfValueMap         map[string]interface{}
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -598,6 +599,29 @@ func (this *Context) TrackValueSize(size uint64) bool {
 
 func (this *Context) ReleaseValueSize(size uint64) {
 	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
+}
+
+// UDF memory storage
+
+func (this *Context) StoreValue(key string, val interface{}) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.udfValueMap == nil {
+		this.udfValueMap = make(map[string]interface{})
+	}
+	this.udfValueMap[key] = val
+}
+
+func (this *Context) RetrieveValue(key string) interface{} {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.udfValueMap[key]
+}
+
+func (this *Context) ReleaseValue(key string) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	delete(this.udfValueMap, key)
 }
 
 func (this *Context) SetDeltaKeyspaces(d map[string]bool) {

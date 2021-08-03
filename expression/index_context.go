@@ -66,6 +66,14 @@ func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[stri
 	return nil, 0, nil
 }
 
+func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (
+	interface {
+		NextDocument() (value.Value, error)
+		Cancel()
+	}, error) {
+	return nil, nil
+}
+
 func (this *IndexContext) Parse(s string) (interface{}, error) {
 	return nil, nil
 }
@@ -79,5 +87,17 @@ func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) in
 }
 
 func (this *IndexContext) SetAdvisor() {
+	// no-op
+}
+
+func (this *IndexContext) StoreValue(key string, val interface{}) {
+	// no-op
+}
+
+func (this *IndexContext) RetrieveValue(key string) interface{} {
+	return nil
+}
+
+func (this *IndexContext) ReleaseValue(key string) {
 	// no-op
 }

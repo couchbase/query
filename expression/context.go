@@ -31,8 +31,19 @@ type Context interface {
 	NewQueryContext(queryContext string, readonly bool) interface{}
 	Readonly() bool
 	SetAdvisor()
+	StoreValue(key string, val interface{})
+	RetrieveValue(key string) interface{}
+	ReleaseValue(key string)
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error)
+	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (interface {
+		NextDocument() (value.Value, error)
+		Cancel()
+	}, error)
 	Parse(s string) (interface{}, error)
+}
+
+type ExecutionHandle interface {
+	NextDocument() (value.Value, error)
 }
 
 type CurlContext interface {

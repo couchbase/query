@@ -128,6 +128,20 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	return newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
 }
 
+func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool) (interface {
+	NextDocument() (value.Value, error)
+	Cancel()
+}, error) {
+	prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+	if err != nil {
+		return nil, err
+	}
+
+	newContext := this.Copy()
+	return newContext.OpenPrepared(prepared, isPrepared, namedArgs, positionalArgs)
+}
+
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly, autoPrepare bool) (prepared *plan.Prepared, isPrepared bool, rerr error) {
 
@@ -273,6 +287,63 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	this.output.AddPhaseTime(RUN, util.Since(exec))
 
 	return results, output.mutationCount, output.err
+}
+
+func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
+	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
+	NextDocument() (value.Value, error)
+	Cancel()
+}, error) {
+
+	handle := &executionHandle{}
+	handle.context = this.Copy()
+	handle.context.output = &internalOutput{}
+
+	handle.context.SetIsPrepared(isPrepared)
+	handle.context.SetPrepared(prepared)
+	handle.context.namedArgs = namedArgs
+	handle.context.positionalArgs = positionalArgs
+
+	build := util.Now()
+	pipeline, err := Build(prepared, this)
+	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect statements results
+	// We use the sequence value exchange, and the fact that the sequence sets
+	// the last operator's output to itself
+	handle.input = NewReceive(plan.NewReceive(), handle.context)
+	handle.root = NewSequence(plan.NewSequence(), handle.context, pipeline, handle.input)
+	handle.exec = util.Now()
+	handle.root.RunOnce(handle.context, nil)
+	return handle, nil
+}
+
+type executionHandle struct {
+	exec    util.Time
+	root    *Sequence
+	input   *Receive
+	context *Context
+}
+
+func (this *executionHandle) NextDocument() (value.Value, error) {
+	item, _ := this.input.getItem()
+	if item != nil {
+		return item, nil
+	}
+	this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+	this.root.SendAction(_ACTION_STOP)
+	this.root.Done()
+	return nil, nil
+}
+
+func (this *executionHandle) Cancel() {
+	this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+	this.root.SendAction(_ACTION_STOP)
+	this.root.Done()
 }
 
 func (this *Context) executeTranStatementAtomicity(stmtType string) (map[string]bool, errors.Error) {
