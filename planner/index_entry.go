@@ -50,6 +50,7 @@ type indexEntry struct {
 	searchOrders     []string
 	condFc           map[string]value.Value
 	nEqCond          int
+	numIndexedKeys   uint32
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,

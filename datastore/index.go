@@ -545,6 +545,7 @@ type FTSFlexResponse struct {
 	StaticSargKeys  map[string]expression.Expression // static sargable key paths
 	DynamicSargKeys map[string]expression.Expression // dynamic sargable key paths
 	RespFlags       uint32                           // Response Flags
+	NumIndexedKeys  uint32                           // number of indexed keys
 }
 
 ////////////////////////////////////////////////////////////////////////
