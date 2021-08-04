@@ -418,6 +418,13 @@ func (this *HttpEndpoint) setupSSL() {
 						return fmt.Sprintf("ERROR: Closing HTTP listener - %s", closeErr.Error())
 					})
 				}
+			} else {
+				listenErr := this.Listen()
+				if listenErr != nil {
+					logging.Errora(func() string {
+						return fmt.Sprintf("ERROR: Starting HTTP listener - %s", listenErr.Error())
+					})
+				}
 			}
 
 			// Temporary log message.
