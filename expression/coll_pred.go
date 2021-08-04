@@ -67,7 +67,9 @@ func (this *collPredBase) equivalentTo(other Expression, strict bool) bool {
 		Expressions{this.satisfies}, Expressions{o.Satisfies()})
 }
 
-func (this *collPredBase) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
+func (this *collPredBase) coveredBy(keyspace string, exprs Expressions,
+	options CoveredOptions) Covered {
+
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
 			return CoveredEquiv
@@ -93,7 +95,38 @@ func (this *collPredBase) CoveredBy(keyspace string, exprs Expressions, options 
 	// check satisfies expression
 	options.unsetCoverBindExpr()
 	options.setCoverSatisfies()
-	return this.satisfies.CoveredBy(keyspace, exprs, options)
+	allExprs := make(Expressions, 0, len(exprs))
+	for _, expr := range exprs {
+		if aexpr, ok := expr.(*All); ok {
+			if array, aok := aexpr.array.(*Array); aok {
+				if array.When() != nil {
+					fc := make(map[Expression]value.Value, 4)
+					fc = array.When().FilterExpressionCovers(fc)
+					for e, _ := range fc {
+						allExprs = append(allExprs, e)
+					}
+				}
+				if fk, fok := array.valueMapping.(*FlattenKeys); fok {
+					allExprs = append(allExprs, fk.Operands()...)
+				} else {
+					allExprs = append(allExprs, array.valueMapping)
+				}
+			} else {
+				allExprs = append(allExprs, expr)
+			}
+		} else {
+			allExprs = append(allExprs, expr)
+		}
+
+	}
+	return this.satisfies.CoveredBy(keyspace, allExprs, options)
+}
+
+func (this *collPredBase) CoveredBy(keyspace string, exprs Expressions,
+	options CoveredOptions) Covered {
+
+	options.unsetCoverBindVar()
+	return this.coveredBy(keyspace, exprs, options)
 }
 
 func (this *collPredBase) Children() Expressions {

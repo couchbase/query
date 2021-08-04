@@ -8,6 +8,10 @@
 
 package expression
 
+import (
+	"fmt"
+)
+
 /*
 Renamer is used to rename binding variables, but is a generic
 expression renamer.
@@ -70,4 +74,94 @@ func (this *Renamer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	} else {
 		return expr, nil
 	}
+}
+
+func (this *Renamer) VisitAll(expr *All) (interface{}, error) {
+	if array, ok := expr.array.(*Array); ok {
+		for _, b := range array.Bindings() {
+			if name, ok := this.names[b.variable]; ok {
+				b.variable = name.Alias()
+			}
+			if name, ok := this.names[b.nameVariable]; ok {
+				b.nameVariable = name.Alias()
+			}
+		}
+	}
+	return expr, expr.array.MapChildren(this)
+}
+
+func (this *Renamer) VisitAny(expr *Any) (interface{}, error) {
+	for _, b := range expr.Bindings() {
+		if name, ok := this.names[b.variable]; ok {
+			b.variable = name.Alias()
+		}
+		if name, ok := this.names[b.nameVariable]; ok {
+			b.nameVariable = name.Alias()
+		}
+	}
+	return expr, expr.MapChildren(this)
+}
+
+func (this *Renamer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+	for _, b := range expr.Bindings() {
+		if name, ok := this.names[b.variable]; ok {
+			b.variable = name.Alias()
+		}
+		if name, ok := this.names[b.nameVariable]; ok {
+			b.nameVariable = name.Alias()
+		}
+	}
+	return expr, expr.MapChildren(this)
+}
+
+// Rename ANY (nested level too) clause binding variables with arrayKey binding variables
+
+type AnyRenamer struct {
+	MapperBase
+	arrayKey *All
+}
+
+func NewAnyRenamer(arrayKey *All) *AnyRenamer {
+	rv := &AnyRenamer{
+		arrayKey: arrayKey,
+	}
+
+	rv.mapFunc = func(expr Expression) (Expression, error) {
+		if rv.arrayKey == nil {
+			return expr, nil
+		} else {
+			return expr, expr.MapChildren(rv)
+		}
+	}
+
+	rv.mapper = rv
+	return rv
+}
+
+func (this *AnyRenamer) VisitAny(expr *Any) (interface{}, error) {
+	array, ok := this.arrayKey.Array().(*Array)
+	if ok && equivalentBindingsWithExpression(expr.Bindings(), array.Bindings(), nil, nil) {
+		arrayKey := this.arrayKey
+		cnflict, _, nExpr := renameBindings(expr, this.arrayKey, false)
+		expr, ok = nExpr.(*Any)
+		if cnflict || !ok {
+			return nil, fmt.Errorf("Binding variable conflict")
+		}
+
+		defer func() {
+			this.arrayKey = arrayKey
+		}()
+
+		this.arrayKey, _ = array.valueMapping.(*All)
+	}
+
+	return expr, expr.MapChildren(this)
+}
+
+func RenameAnyExpr(expr Expression, arrayKey *All) (Expression, error) {
+	if arrayKey != nil && expr != nil {
+		rv := NewAnyRenamer(arrayKey)
+		return rv.Map(expr)
+	}
+	return expr, nil
 }

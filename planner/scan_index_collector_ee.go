@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	base "github.com/couchbase/query/plannerbase"
 )
 
 type scanIdxCol struct {
@@ -507,31 +506,13 @@ func formalizeIndexKeys(alias string, keys expression.Expressions) expression.Ex
 	keys = keys.Copy()
 
 	for i, key := range keys {
-		expr, err := formalizeExpr(formalizer, key)
+		expr, _, err := formalizeExpr(formalizer, key, false)
 		if err != nil {
 			return nil
 		}
 		keys[i] = expr
 	}
 	return keys
-}
-
-func formalizeExpr(formalizer *expression.Formalizer, key expression.Expression) (expression.Expression, error) {
-	key = key.Copy()
-
-	formalizer.SetIndexScope()
-	key, err := formalizer.Map(key)
-	formalizer.ClearIndexScope()
-	if err != nil {
-		return nil, err
-	}
-
-	dnf := base.NewDNF(key, true, true)
-	key, err = dnf.Map(key)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
 }
 
 func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore.Keyspace, deferred, validatePhase bool) *iaplan.IndexInfo {
@@ -543,25 +524,12 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 	if validatePhase {
 		info.SetCovering()
 	} else if index.Type() == datastore.GSI {
-		if index2, ok := index.(datastore.Index2); ok {
-			info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, getIndexKeyExpressions(index2.RangeKey2())))
-		} else {
-			info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
-		}
+		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
 		info.SetKeyStrings(getIndexKeyStringArray(index))
 		info.SetCondition(index.Condition())
 		info.SetPartition(getIndexPartitionToString(index))
 	}
 	return info
-}
-
-func getIndexKeyExpressions(keys datastore.IndexKeys) expression.Expressions {
-	indexKeyExprs := make(expression.Expressions, 0, len(keys))
-	for _, k := range keys {
-		indexKeyExprs = append(indexKeyExprs, k.Expr)
-
-	}
-	return indexKeyExprs
 }
 
 func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
@@ -575,9 +543,10 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
 			desc[i] = kp.HasAttribute(datastore.IK_DESC)
 		}
 	} else {
-		rv = make([]string, len(index.RangeKey()))
-		desc = make([]bool, len(index.RangeKey()))
-		for i, kp := range index.RangeKey() {
+		keys := index2.RangeKey()
+		rv = make([]string, len(keys))
+		desc = make([]bool, len(keys))
+		for i, kp := range keys {
 			rv[i] = stringer.Visit(kp)
 		}
 	}

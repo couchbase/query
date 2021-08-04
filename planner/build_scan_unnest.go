@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
@@ -58,122 +57,67 @@ then recursively attempt to chain another UNNEST for the index's next
 dimension.
 
 */
-func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.FromTerm,
-	pred, subset expression.Expression, indexes map[datastore.Index]*indexEntry, hasDeltaKeyspace bool) (
-	op plan.SecondaryScan, sargLength int, err error) {
+func (this *builder) buildUnnestIndexes(node *algebra.KeyspaceTerm, from algebra.FromTerm,
+	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
+	unnests, primaryUnnests []*algebra.Unnest, unnestIndexes map[datastore.Index]*indexEntry) {
 
-	if pred == nil {
-		return nil, 0, nil
+	if from == nil || pred == nil || node.IsAnsiJoinOp() {
+		return
 	}
 
 	// Enumerate INNER UNNESTs
 	joinTerm, ok := from.(algebra.JoinTerm)
 	if !ok {
-		return nil, 0, nil
+		return
 	}
 
-	unnests := _UNNEST_POOL.Get()
-	defer _UNNEST_POOL.Put(unnests)
-	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
+	// Enumerate candidate array indexes
+	unnestIndexes = collectUnnestIndexes(indexes)
+	if len(unnestIndexes) == 0 {
+		return
+	}
 
+	// Enumerate primary UNNESTs
+	unnests = _UNNEST_POOL.Get()
+	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
 	// Enumerate primary UNNESTs
 	primaryTerm := from.PrimaryTerm()
 	if this.joinEnum() {
 		primaryTerm = node
 	}
-	primaryUnnests := collectPrimaryUnnests(primaryTerm, unnests)
-	if nil != primaryUnnests {
-		defer _UNNEST_POOL.Put(primaryUnnests)
+	primaryUnnests = collectPrimaryUnnests(primaryTerm, unnests)
+	return
+}
+
+// release to the pool
+func releaseUnnestPools(unnests, primaryUnnests []*algebra.Unnest) {
+	if unnests != nil {
+		_UNNEST_POOL.Put(unnests)
 	}
-	if len(primaryUnnests) == 0 {
-		return nil, 0, nil
-	}
-
-	// Enumerate candidate array indexes
-	unnestIndexes, arrayKeys := collectUnnestIndexes(subset, indexes)
-	if nil != unnestIndexes {
-		defer _INDEX_POOL.Put(unnestIndexes)
-	}
-	if len(unnestIndexes) == 0 {
-		return nil, 0, nil
-	}
-
-	cop, sargLength, err := this.buildCoveringUnnestScan(node, pred, subset, indexes, unnestIndexes, arrayKeys,
-		unnests, hasDeltaKeyspace)
-	if cop != nil || err != nil {
-		return cop, sargLength, err
-	}
-
-	// No pushdowns
-	this.resetPushDowns()
-
-	n := 0
-	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
-	for _, unnest := range primaryUnnests {
-		for _, index := range unnestIndexes {
-			arrayKey := arrayKeys[index]
-			op, _, _, n, err = this.matchUnnest(node, pred, subset, unnest, indexes[index],
-				arrayKey, unnests, hasDeltaKeyspace)
-			if err != nil {
-				return nil, 0, err
-			}
-
-			if op == nil {
-				continue
-			}
-
-			// Keep the longest match for this index
-			if entry, ok := ops[index]; ok && entry.Len >= n {
-				continue
-			} else {
-				ops[index] = &opEntry{op, n}
-			}
-		}
-	}
-
-	// No UNNEST scan
-	if len(ops) == 0 {
-		return nil, 0, nil
-	}
-
-	// No pushdowns
-	this.resetPushDowns()
-
-	// Eliminate redundant scans
-	entries := make(map[datastore.Index]*indexEntry, len(ops))
-	for index, _ := range ops {
-		entries[index] = indexes[index]
-	}
-
-	entries = this.minimalIndexesUnnest(entries, ops, node)
-
-	var scanBuf [16]plan.SecondaryScan
-	var scans []plan.SecondaryScan
-	if len(entries) <= len(scanBuf) {
-		scans = scanBuf[0:0]
-	} else {
-		scans = make([]plan.SecondaryScan, 0, len(entries))
-	}
-
-	sargLength = 1 // the unnest index key
-	for index, _ := range entries {
-		scans = append(scans, ops[index].Op)
-		if ops[index].Len > sargLength {
-			sargLength = ops[index].Len
-		}
-	}
-
-	if len(scans) == 1 {
-		return scans[0], sargLength, nil
-	} else {
-		cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
-		return plan.NewIntersectScan(nil, cost, cardinality, size, frCost, scans...), sargLength, nil
+	if primaryUnnests != nil {
+		_UNNEST_POOL.Put(primaryUnnests)
 	}
 }
 
-type opEntry struct {
-	Op  plan.SecondaryScan
-	Len int
+func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
+	unnests, primaryUnnests []*algebra.Unnest, unnestIndexes map[datastore.Index]*indexEntry,
+	hasDeltaKeyspace bool) (map[datastore.Index]*indexEntry, error) {
+
+	sargables := make(map[datastore.Index]*indexEntry, len(primaryUnnests))
+	for _, unnest := range primaryUnnests {
+		for index, idxEntry := range unnestIndexes {
+			entry, _, _, err := this.matchUnnestScan(node, pred, subset, unnest, idxEntry,
+				idxEntry.arrayKey, unnests, hasDeltaKeyspace)
+			if err != nil {
+				return nil, err
+			}
+			if entry != nil {
+				sargables[index] = entry
+			}
+		}
+	}
+
+	return sargables, nil
 }
 
 func addUnnestPreds(baseKeyspaces map[string]*base.BaseKeyspace, primary *base.BaseKeyspace) error {
@@ -189,7 +133,8 @@ func addUnnestPreds(baseKeyspaces map[string]*base.BaseKeyspace, primary *base.B
 	for a, _ := range unnests {
 		unnestKeyspace, ok := baseKeyspaces[a]
 		if !ok {
-			return errors.NewPlanInternalError(fmt.Sprintf("addUnnestPreds: baseKeyspace not found for %s", a))
+			return errors.NewPlanInternalError(
+				fmt.Sprintf("addUnnestPreds: baseKeyspace not found for %s", a))
 		}
 		nlen += len(unnestKeyspace.Filters())
 		nlen += len(unnestKeyspace.JoinFilters())
@@ -271,38 +216,22 @@ func collectPrimaryUnnests(term algebra.SimpleFromTerm, unnests []*algebra.Unnes
 /*
 Enumerate array indexes for UNNEST.
 */
-func collectUnnestIndexes(subset expression.Expression, indexes map[datastore.Index]*indexEntry) (
-	[]datastore.Index, map[datastore.Index]*expression.All) {
-	var unnestIndexes []datastore.Index
+func collectUnnestIndexes(indexes map[datastore.Index]*indexEntry) map[datastore.Index]*indexEntry {
 
-	arrayKeys := make(map[datastore.Index]*expression.All, len(indexes))
-
+	unnestIndexes := make(map[datastore.Index]*indexEntry, len(indexes))
 	for index, entry := range indexes {
-		if len(entry.keys) == 0 {
-			continue
+		if len(entry.keys) != 0 && entry.arrayKeyPos == 0 {
+			unnestIndexes[index] = entry
 		}
-
-		firstKey := entry.keys[0]
-		all, ok := firstKey.(*expression.All)
-		if !ok {
-			continue
-		}
-
-		if entry.cond != nil &&
-			!base.SubsetOf(subset, entry.cond) {
-			continue
-		}
-
-		unnestIndexes = append(poolAllocIndexSlice(unnestIndexes), index)
-		arrayKeys[index] = all
 	}
 
-	return unnestIndexes, arrayKeys
+	return unnestIndexes
 }
 
-func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expression.Expression, unnest *algebra.Unnest,
-	entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
-	plan.SecondaryScan, *algebra.Unnest, *expression.All, int, error) {
+func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
+	unnest *algebra.Unnest, entry *indexEntry, arrayKey *expression.All,
+	unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
+	*indexEntry, *algebra.Unnest, *expression.All, error) {
 
 	var sargKey, origSargKey expression.Expression
 	var err error
@@ -314,12 +243,12 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 	array, ok := arrayKey.Array().(*expression.Array)
 	if ok {
 		if len(array.Bindings()) != 1 {
-			return nil, nil, nil, 0, nil
+			return nil, nil, nil, nil
 		}
 
 		binding := array.Bindings()[0]
-		if !unnest.Expression().EquivalentTo(binding.Expression()) {
-			return nil, nil, nil, 0, nil
+		if binding.Descend() || !unnest.Expression().EquivalentTo(binding.Expression()) {
+			return nil, nil, nil, nil
 		}
 
 		var origBinding *expression.Binding
@@ -333,8 +262,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 			for naok {
 				a, aok := nakey.Array().(*expression.Array)
 				// disallow if unnest alias is nested binding variable in the array index
-				if !aok || len(a.Bindings()) != 1 || unnest.As() == a.Bindings()[0].Variable() {
-					return nil, nil, nil, 0, nil
+				if !aok || len(a.Bindings()) != 1 ||
+					unnest.As() == a.Bindings()[0].Variable() {
+					return nil, nil, nil, nil
 				}
 				nakey, naok = a.ValueMapping().(*expression.All)
 			}
@@ -345,17 +275,17 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 			if when != nil {
 				when, err = renamer.Map(when.Copy())
 				if err != nil {
-					return nil, nil, nil, 0, nil
+					return nil, nil, nil, nil
 				}
 			}
 			arrayMapping, err = renamer.Map(arrayMapping.Copy())
 			if err != nil {
-				return nil, nil, nil, 0, nil
+				return nil, nil, nil, nil
 			}
 		}
 
 		if when != nil && !base.SubsetOf(subset, when) {
-			return nil, nil, nil, 0, nil
+			return nil, nil, nil, nil
 		}
 
 		nestedArrayKey, ok := arrayMapping.(*expression.All)
@@ -366,23 +296,20 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 					continue
 				}
 
-				op, un, nArrayKey, n, err := this.matchUnnest(node, pred, subset, u, entry,
+				nEntry, un, nArrayKey, err := this.matchUnnest(node, pred, subset, u, entry,
 					nestedArrayKey, unnests, hasDeltaKeyspace)
 				if err != nil {
-					return nil, nil, nil, 0, err
+					return nil, nil, nil, err
 				}
 
-				if op != nil {
+				if nEntry != nil {
 					newArrayKey = expression.NewAll(expression.NewArray(nArrayKey,
 						expression.Bindings{binding}, when), arrayKey.Distinct())
-					if useCBO {
-						baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
-					}
-					return op, un, newArrayKey, n + 1, err
+					return nEntry, un, newArrayKey, err
 				}
 			}
 
-			return nil, nil, nil, 0, nil
+			return nil, nil, nil, nil
 		}
 
 		sargKey = arrayMapping
@@ -396,7 +323,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 				expression.Bindings{binding}, when), arrayKey.Distinct())
 		}
 	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
-		return nil, nil, nil, 0, nil
+		return nil, nil, nil, nil
 	} else {
 		unnestIdent := expression.NewIdentifier(unnest.As())
 		unnestIdent.SetUnnestAlias(true)
@@ -415,139 +342,134 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		}
 	}
 
-	index := entry.index
-	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
-	sargKeys := make(expression.Expressions, 0, len(index.RangeKey()))
-	for i, key := range index.RangeKey() {
-		if i == 0 {
-			sargKeys = append(sargKeys, sargKey)
-		} else {
-			formalizer.SetIndexScope()
-			key, err := formalizer.Map(key.Copy())
-			formalizer.ClearIndexScope()
-			if err != nil {
-				return nil, nil, nil, 0, nil
-			}
-			sargKeys = append(sargKeys, key)
-		}
+	keys := getUnnestSargKeys(entry.keys, sargKey)
+	origKeys := keys
+	if origSargKey != nil {
+		origKeys = getUnnestSargKeys(entry.keys, origSargKey)
 	}
 
-	min, max, _, skeys := SargableFor(pred, sargKeys, false, true, this.context)
+	min, max, sum, skeys := SargableFor(pred, keys, false, true, this.context, this.aliases)
 	if min == 0 {
-		return nil, nil, nil, 0, nil
+		return nil, nil, nil, nil
 	}
 
 	n := min
-	if useSkipIndexKeys(index, this.context.IndexApiVersion()) {
+	if useSkipIndexKeys(entry.index, this.context.IndexApiVersion()) {
 		n = max
 	}
 
-	spans, exactSpans, err := SargFor(pred, entry, sargKeys, n, false, useCBO,
-		baseKeyspace, this.keyspaceNames, advisorValidate, this.context)
+	spans, exactSpans, err := SargFor(pred, entry, keys, n, false, useCBO,
+		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
 	if err != nil {
-		return nil, nil, nil, 0, err
+		return nil, nil, nil, err
 	}
 
-	cost := OPT_COST_NOT_AVAIL
-	cardinality := OPT_CARD_NOT_AVAIL
-	selectivity := OPT_SELEC_NOT_AVAIL
-	size := OPT_SIZE_NOT_AVAIL
-	frCost := OPT_COST_NOT_AVAIL
+	cardinality, selectivity, cost, frCost, size :=
+		OPT_CARD_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_COST_NOT_AVAIL,
+		OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL
 	if useCBO {
-		restore := false
-		if origSargKey != nil {
-			// use the original binding ariable in array index key
-			sargKeys[0] = origSargKey
-			restore = true
-		}
-		cost, selectivity, cardinality, size, frCost, err = indexScanCost(entry.index, sargKeys, this.context.RequestId(),
-			spans, node.Alias(), this.advisorValidate(), this.context)
-		if err != nil {
-			cost = OPT_COST_NOT_AVAIL
-			cardinality = OPT_CARD_NOT_AVAIL
-			size = OPT_SIZE_NOT_AVAIL
-			frCost = OPT_COST_NOT_AVAIL
-		}
-		if restore {
-			sargKeys[0] = sargKey
-		}
-
-		baseKeyspace.AddUnnestIndex(index, unnest.Alias())
+		cost, selectivity, cardinality, size, frCost, _ =
+			indexScanCost(entry.index, origKeys, this.context.RequestId(),
+				spans, node.Alias(), this.advisorValidate(), this.context)
+		baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
 	}
 
-	entry.sargKeys = sargKeys[0:n]
-	entry.skeys = skeys
-	entry.spans = spans
-	entry.exactSpans = exactSpans
-	entry.cost = cost
-	entry.cardinality = cardinality
-	entry.selectivity = selectivity
-	entry.size = size
-	entry.frCost = frCost
-	indexProjection := this.buildIndexProjection(entry, nil, nil, true)
-	this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
-	scan := entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
-		pred.MayOverlapSpans(), false, nil, nil, indexProjection, nil, nil, nil, nil, nil,
-		cost, cardinality, size, frCost, hasDeltaKeyspace)
-	return scan, unnest, newArrayKey, n, nil
+	entry = newIndexEntry(entry.index, keys, keys[0:n], entry.partitionKeys, min, n, sum,
+		entry.cond, entry.origCond, spans, exactSpans, skeys)
+	entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size =
+		cardinality, selectivity, cost, frCost, size
+	return entry, unnest, newArrayKey, nil
 }
 
-func (this *builder) minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
-	ops map[datastore.Index]*opEntry, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
-	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
-	for s, se := range indexes {
-		if useCBO && (se.cost <= 0.0 || se.cardinality <= 0.0) {
-			useCBO = false
-		}
+func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
+	unnest *algebra.Unnest, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest,
+	hasDeltaKeyspace bool) (
+	*indexEntry, *algebra.Unnest, *expression.All, error) {
 
-		for t, te := range indexes {
-			if t == s {
-				continue
-			}
+	var err error
+	arrayKey, _ = arrayKey.Copy().(*expression.All)
+	entry, unnest, arrayKey, err = this.matchUnnest(node, pred, subset, unnest, entry,
+		arrayKey, unnests, hasDeltaKeyspace)
+	if err != nil || entry == nil {
+		return entry, unnest, arrayKey, err
+	}
+	entry.setArrayKey(arrayKey, entry.arrayKeyPos)
+	entry.unnestAliases = getUnnestAliases(entry.arrayKey, unnest, false)
 
-			if narrowerOrEquivalentUnnest(se, te, ops[s], ops[t]) {
-				delete(indexes, t)
-				delete(ops, t)
-			}
-		}
+	unnestFilters, coveredExprs, _, _, err := this.coveringExpressions(node, entry, unnest,
+		unnests, false)
+	if err != nil {
+		return entry, unnest, arrayKey, err
+	}
+	unnestFilters = append(unnestFilters, coveredExprs...)
+	unnestFilters = append(unnestFilters, getUnnestFilters(entry.unnestAliases)...)
+
+	coverAliases := getUnnestAliases(entry.arrayKey, unnest, true)
+	entry.pushDownProperty = this.indexPushDownProperty(entry, entry.sargKeys,
+		unnestFilters, pred, node.Alias(), coverAliases, true, false,
+		(len(this.baseKeyspaces) == len(entry.unnestAliases)+1), false)
+
+	return entry, unnest, arrayKey, err
+}
+
+func getUnnestSargKeys(keys expression.Expressions, sargKey expression.Expression) (
+	rv expression.Expressions) {
+
+	rv = make(expression.Expressions, 0, len(keys))
+	if fks, ok := sargKey.(*expression.FlattenKeys); ok {
+		rv = append(rv, fks.Operands()...)
+	} else {
+		rv = append(rv, sargKey)
 	}
 
-	if useCBO && len(indexes) > 0 {
-		indexes = this.chooseIntersectScan(indexes, node)
-		for t, _ := range ops {
-			if _, ok := indexes[t]; !ok {
-				delete(ops, t)
-			}
-		}
+	if len(rv) < len(keys) {
+		rv = append(rv, keys[len(rv):]...)
 	}
 
-	return indexes
+	return rv
+}
+
+func getUnnestFilters(aliases []string) expression.Expressions {
+	unnestFilters := make(expression.Expressions, 0, len(aliases))
+	for _, s := range aliases {
+		if s != "" {
+			unnestIdent := expression.NewIdentifier(s)
+			unnestIdent.SetUnnestAlias(true)
+			unnestFilters = append(unnestFilters, expression.NewIsNotMissing(unnestIdent))
+		}
+	}
+	return unnestFilters
 }
 
 /*
-Is se narrower or equivalent to te.
+ Array varaibles replaced with and unnest variables.
+ Collect the varaibles from the leaf (if no binding varaible replace with leaf Unnest alias)
+ If emptyIdentifer set, when leaf is Identifier consider alias as ""
 */
-func narrowerOrEquivalentUnnest(se, te *indexEntry, sop, top *opEntry) bool {
-	if top.Len > sop.Len {
-		return false
-	}
 
-	if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
-		return false
-	}
-
-outer:
-	for _, tk := range te.keys {
-		for _, sk := range se.keys {
-			if base.SubsetOf(sk, tk) || sk.DependsOn(tk) {
-				continue outer
+func getUnnestAliases(expr expression.Expression, leafUnnest *algebra.Unnest, emptyIdentifer bool) (
+	unnestAliases []string) {
+	for all, ok := expr.(*expression.All); ok; all, ok = expr.(*expression.All) {
+		alias := ""
+		if array, ok := all.Array().(*expression.Array); ok {
+			expr = array.ValueMapping()
+			if _, ok1 := expr.(*expression.Identifier); !ok1 || !emptyIdentifer {
+				alias = array.Bindings()[0].Variable()
 			}
+			unnestAliases = append(unnestAliases, alias)
+		} else {
+			if !emptyIdentifer {
+				alias = leafUnnest.Alias()
+			}
+			unnestAliases = append(unnestAliases, alias)
+			break
 		}
-
-		return false
 	}
-
-	return len(se.keys) <= len(te.keys)
+	// reverse the aliases
+	for i, j := 0, len(unnestAliases)-1; i < j; i, j = i+1, j-1 {
+		unnestAliases[i], unnestAliases[j] = unnestAliases[j], unnestAliases[i]
+	}
+	return unnestAliases
 }
 
 /*
@@ -565,7 +487,8 @@ func (this *builder) collectUnnestBindings(from algebra.FromTerm, ua expression.
 			for _, a := range ua {
 				if unnest.Expression().DependsOn(a) {
 					ua = append(ua, expression.NewIdentifier(unnest.Alias()))
-					ub = append(ub, expression.NewSimpleBinding(unnest.Alias(), unnest.Expression()))
+					ub = append(ub, expression.NewSimpleBinding(unnest.Alias(),
+						unnest.Expression()))
 					return ua, ub
 				}
 			}

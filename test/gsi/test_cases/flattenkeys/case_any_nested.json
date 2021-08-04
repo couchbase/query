@@ -1,0 +1,284 @@
+[
+    {
+       "testcase": "Flatten Array index without ANY clause. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND f.isbn >= 1 AND f.year >= 2000",
+       "results": [
+           {"id":"book1"},
+           {"id":"book2"},
+           {"id":"book3"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[2].`low` IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND ch.description = 'chapter 1 description' END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause, LIKE. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 2 AND v.index_projection.entry_keys = [0,2,3,5] AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num IN [1,2] AND pg.name LIKE 'page %' END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause, OR. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 2 AND v.index_projection.entry_keys = [0,2,5] AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 OR pg.num = 2 END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause, AND, OR. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 2 AND v.index_projection.entry_keys = [0,2,3,5] AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num >= 1 AND (pg.name = 'page 1' OR pg.name = 'page 2') END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause (addittional predicate). No Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.spans[0].`range`[2].`low` IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND pg.xyz IS MISSING END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause(different bindings). Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[2].`low` IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch1 IN f.chapters SATISFIES (ANY pg1 IN ch1.pages SATISFIES pg1.num = 1 AND pg1.name = 'page 1' END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause(bindings reverse order). Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[2].`low` IS MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY pg IN f.chapters SATISFIES (ANY ch IN pg.pages SATISFIES ch.num = 1 AND ch.name = 'page 1' END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY AND EVERY clause(different bindings). Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[3].`low` IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY AND EVERY ch1 IN f.chapters SATISFIES (ANY pg1 IN ch1.pages SATISFIES pg1.name LIKE 'page %' END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with EVERY clause(different bindings). Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[3].`low` IS MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND EVERY ch1 IN f.chapters SATISFIES (ANY pg1 IN ch1.pages SATISFIES pg1.name LIKE 'page %' END) END AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+           {"id":"book1"}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause. Index Aggregation. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[3].`low` IS NOT MISSING AND v.index_group_aggs IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT f.isbn, COUNT(1) AS cnt FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND ch.description = 'chapter 1 description' END) END AND f.isbn = 1 AND f.year = 2020 GROUP BY f.isbn",
+       "results": [
+           {"isbn":1, "cnt":1}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause (Not all flatten keys are part of sargable keys). No Index Aggregation. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[3].`low` IS NOT MISSING AND v.index_group_aggs IS MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT f.isbn, COUNT(1) AS cnt FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' END) END AND f.isbn = 1 AND f.year = 2020 GROUP BY f.isbn",
+       "results": [
+           {"isbn":1, "cnt":1}
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY AND EVERY clause. No Index Aggregation. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[3].`low` IS NOT MISSING AND v.index_group_aggs IS MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT f.isbn, COUNT(1) AS cnt FROM flattenkeys AS f WHERE f.type = 'book' AND ANY AND EVERY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND ch.description = 'chapter 1 description' END) END AND f.isbn = 1 AND f.year = 2020 GROUP BY f.isbn",
+       "results": [
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with EVERY clause. No Index Aggregation. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[3].`low` IS MISSING AND v.index_group_aggs IS MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT f.isbn, COUNT(1) AS cnt FROM flattenkeys AS f WHERE f.type = 'book' AND EVERY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND ch.description = 'chapter 1 description' END) END AND f.isbn = 1 AND f.year = 2020 GROUP BY f.isbn",
+       "results": [
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause. ORDER, LIMIT. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+       "ordered": true,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[3].`low` IS NOT MISSING AND v.index_order IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id, f.isbn, f.author, f.year FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND ch.description = 'chapter 1 description' END) END AND f.isbn >= 1 AND f.year >= 2020 ORDER BY f.isbn, f.author DESC, f.year LIMIT 5",
+       "ordered": true,
+       "results": [
+          {
+             "author": "James",
+             "id": "book1",
+             "isbn": 1,
+             "year": 2020
+         },
+         {
+             "author": "Mark",
+             "id": "book2",
+             "isbn": 2,
+             "year": 2021
+         }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with ANY clause. No Index ORDER. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+       "ordered": true,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[3].`low` IS NOT MISSING AND v.index_order IS MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id, f.isbn, f.author, f.year FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES pg.num = 1 AND pg.name = 'page 1' AND ch.description LIKE 'chapter 1 %' END) END AND f.isbn >= 1 AND f.year >= 2020 ORDER BY f.isbn, f.author DESC, f.year LIMIT 5",
+       "ordered": true,
+       "results": [
+          {
+             "author": "James",
+             "id": "book1",
+             "isbn": 1,
+             "year": 2020
+         },
+         {
+             "author": "Mark",
+             "id": "book2",
+             "isbn": 2,
+             "year": 2021
+         }
+        ]
+    }
+]

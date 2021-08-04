@@ -66,6 +66,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest"
                 }

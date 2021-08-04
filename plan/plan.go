@@ -50,6 +50,8 @@ type CoveringOperator interface {
 	FilterCovers() map[*expression.Cover]value.Value
 	Covering() bool
 	SetCovers(covers expression.Covers)
+	SetImplicitArrayKey(arrayKey *expression.All)
+	ImplicitArrayKey() *expression.All
 
 	GroupAggs() *IndexGroupAggregates
 }
@@ -64,7 +66,8 @@ type SecondaryScan interface {
 	Offset() expression.Expression
 	SetOffset(offset expression.Expression)
 
-	CoverJoinSpanExpressions(coverer *expression.Coverer) error
+	CoverJoinSpanExpressions(coverer *expression.Coverer,
+		implicitArrayKey *expression.All) error
 
 	IsUnderNL() bool
 

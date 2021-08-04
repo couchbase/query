@@ -98,6 +98,11 @@ func (this *Within) FilterCovers(covers map[string]value.Value) map[string]value
 	return covers
 }
 
+func (this *Within) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *Within) MayOverlapSpans() bool {
 	return this.Second().Value() == nil
 }

@@ -86,6 +86,14 @@ func (this *And) FilterCovers(covers map[string]value.Value) map[string]value.Va
 	return covers
 }
 
+func (this *And) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	for _, op := range this.operands {
+		covers = op.FilterExpressionCovers(covers)
+	}
+
+	return covers
+}
+
 /*
 Factory method pattern.
 */

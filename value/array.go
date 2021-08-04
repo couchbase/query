@@ -25,6 +25,7 @@ type sliceValue []interface{}
 EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 */
 var EMPTY_ARRAY_VALUE Value = sliceValue([]interface{}{})
+var TRUE_ARRAY_VALUE Value = sliceValue([]interface{}{true})
 
 func (this sliceValue) String() string {
 	return marshalString(this)

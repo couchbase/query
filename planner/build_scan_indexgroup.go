@@ -217,11 +217,8 @@ func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys expression
 
 	// First index key is ALL array key and Not Unnest Scan we need one per META().id
 	distinctDocid := false
-	keys := entry.index.RangeKey()
-	if len(keys) > 0 && !unnest {
-		if isArray, distinct, _ := keys[0].IsArrayIndexKey(); isArray && !distinct {
-			distinctDocid = true
-		}
+	if entry.arrayKey != nil && entry.arrayKeyPos == 0 && !unnest {
+		distinctDocid = !entry.arrayKey.NoAll()
 	}
 
 	sort.Ints(dependsOnIndexKeys)

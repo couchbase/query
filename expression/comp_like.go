@@ -154,6 +154,11 @@ func (this *Like) FilterCovers(covers map[string]value.Value) map[string]value.V
 	return covers
 }
 
+func (this *Like) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */

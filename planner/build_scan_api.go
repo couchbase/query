@@ -30,18 +30,50 @@ func useSkipIndexKeys(index datastore.Index, indexApiVersion int) bool {
 	return useIndex3API(index, indexApiVersion) && (index.Type() == datastore.GSI || index.Type() == datastore.VIRTUAL)
 }
 
-func getIndexKeys(entry *indexEntry) (indexKeys datastore.IndexKeys) {
-	if index2, ok := entry.index.(datastore.Index2); ok {
+func getIndexKeys(index datastore.Index) (indexKeys datastore.IndexKeys) {
+	if index2, ok := index.(datastore.Index2); ok {
 		indexKeys = index2.RangeKey2()
+	} else {
+		for _, e := range index.RangeKey() {
+			indexKeys = append(indexKeys, &datastore.IndexKey{Expr: e, Attributes: datastore.IK_NONE})
+		}
 	}
 
-	return
+	flattenIndexKeys := make(datastore.IndexKeys, 0, len(indexKeys))
+	for _, ik := range indexKeys {
+		if all, ok := ik.Expr.(*expression.All); ok && all.Flatten() {
+			fkeys := all.FlattenKeys()
+			for pos, fk := range fkeys.Operands() {
+				fkey := all.Copy().(*expression.All)
+				fkey.SetFlattenValueMapping(fk.Copy())
+				var attr datastore.IkAttributes
+				if fkeys.HasDesc(pos) {
+					attr |= datastore.IK_DESC
+				}
+				if fkeys.HasMissing(pos) {
+					attr |= datastore.IK_MISSING
+				}
+				flattenIndexKeys = append(flattenIndexKeys, &datastore.IndexKey{Expr: fkey, Attributes: attr})
+			}
+		} else {
+			flattenIndexKeys = append(flattenIndexKeys, ik)
+		}
+	}
+
+	return flattenIndexKeys
 }
 
 func indexHasDesc(index datastore.Index) bool {
 	if index2, ok := index.(datastore.Index2); ok {
 		for _, key := range index2.RangeKey2() {
-			if key.HasAttribute(datastore.IK_DESC) {
+			if all, ok := key.Expr.(*expression.All); ok && all.Flatten() {
+				fks := all.FlattenKeys()
+				for i := 0; i < all.FlattenSize(); i++ {
+					if fks.HasDesc(i) {
+						return true
+					}
+				}
+			} else if key.HasAttribute(datastore.IK_DESC) {
 				return true
 			}
 		}
@@ -51,7 +83,7 @@ func indexHasDesc(index datastore.Index) bool {
 }
 
 func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Expressions, id expression.Expression,
-	primary bool) *plan.IndexProjection {
+	primary bool, idxProj map[int]bool) *plan.IndexProjection {
 
 	var size int
 	if entry != nil {
@@ -76,20 +108,24 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 
 		if !entry.index.IsPrimary() {
 			for keyPos, indexKey := range entry.keys {
-				curKey := false
-				for _, expr := range exprs {
-					if expr.DependsOn(indexKey) {
-						if id != nil && id.EquivalentTo(indexKey) {
-							indexProjection.PrimaryKey = true
-							primaryKey = true
-						} else {
-							indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
-							curKey = true
+				if _, ok := idxProj[keyPos]; ok {
+					indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+				} else {
+					curKey := false
+					for _, expr := range exprs {
+						if expr.DependsOn(indexKey) {
+							if id != nil && id.EquivalentTo(indexKey) {
+								indexProjection.PrimaryKey = true
+								primaryKey = true
+							} else {
+								indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+								curKey = true
+							}
+							break
 						}
-						break
 					}
+					allKeys = allKeys && curKey
 				}
-				allKeys = allKeys && curKey
 			}
 		}
 
@@ -130,11 +166,32 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 		return plan.NewIndexCountScan2(countIndex2, node, termSpans.Spans(), covers, filterCovers)
 	}
 
-	spans, exact := ConvertSpans2ToSpan(termSpans.Spans(), len(entry.index.RangeKey()))
+	spans, exact := ConvertSpans2ToSpan(termSpans.Spans(), getIndexSize(entry.index))
 	if exact {
 		this.maxParallelism = 1
 		return plan.NewIndexCountScan(countIndex, node, spans, covers, filterCovers)
 	}
 
 	return nil
+}
+
+func indexHasFlattenKeys(index datastore.Index) bool {
+	for _, expr := range index.RangeKey() {
+		if _, _, flatten := expr.IsArrayIndexKey(); flatten {
+			return true
+		}
+	}
+	return false
+}
+
+func getIndexSize(index datastore.Index) int {
+	keys := index.RangeKey()
+	size := len(keys)
+	for _, k := range keys {
+		if all, ok := k.(*expression.All); ok && all.Flatten() {
+			size += all.FlattenSize() - 1
+			return size
+		}
+	}
+	return size
 }

@@ -17,18 +17,22 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys, unnestFiletrs expression.Expressions,
-	pred expression.Expression, alias string, unnest, covering bool) (pushDownProperty PushDownProperties) {
+func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
+	unnestFiletrs expression.Expressions, pred expression.Expression,
+	alias string, unnestAliases []string, unnest, covering, allKeyspaces, implicitAny bool) (
+	pushDownProperty PushDownProperties) {
 
 	// Check all predicates are part of spans, exact and no false positives possible
-	exact := this.checkExactSpans(entry, pred, alias, unnestFiletrs)
+	exact := allKeyspaces && this.checkExactSpans(entry, pred, alias, unnestAliases,
+		unnestFiletrs, implicitAny)
 	if exact {
 		pushDownProperty |= _PUSHDOWN_EXACTSPANS
 	}
 
 	// Covering index check for other pushdowns
 	if covering && exact {
-		pushDownProperty |= this.indexCoveringPushDownProperty(entry, indexKeys, alias, unnest, pushDownProperty)
+		pushDownProperty |= this.indexCoveringPushDownProperty(entry, indexKeys, alias,
+			unnestAliases, unnest, implicitAny, pushDownProperty)
 	}
 
 	// Check Query Order By matches with index key order.
@@ -62,7 +66,8 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys, unnestF
 		//        *  Query Order By not present
 		//        *  Query Order By matches with Index key order
 
-		if this.offset != nil && exactLimitOffset && useIndex2API(entry.index, this.context.IndexApiVersion()) &&
+		if this.offset != nil && exactLimitOffset &&
+			useIndex2API(entry.index, this.context.IndexApiVersion()) &&
 			entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(),
 				!unnest && indexHasArrayIndexKey(entry.index)) {
 			pushDownProperty |= _PUSHDOWN_OFFSET
@@ -74,8 +79,9 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys, unnestF
 	return pushDownProperty
 }
 
-func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys expression.Expressions,
-	alias string, unnest bool, pushDownProperty PushDownProperties) PushDownProperties {
+func (this *builder) indexCoveringPushDownProperty(entry *indexEntry,
+	indexKeys expression.Expressions, alias string, unnestAliases []string,
+	unnest, implicitAny bool, pushDownProperty PushDownProperties) PushDownProperties {
 
 	// spans needs to be exact
 	if !isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
@@ -83,7 +89,8 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 	}
 
 	// Check aggregate pushdowns using API3
-	aggProperty, tryApi2 := this.indexAggPushDownProperty(entry, indexKeys, alias, unnest, pushDownProperty)
+	aggProperty, tryApi2 := this.indexAggPushDownProperty(entry, indexKeys, alias,
+		unnestAliases, unnest, implicitAny, pushDownProperty)
 	pushDownProperty |= aggProperty
 
 	// Exploiting IndexScan for aggregates using API2/API1.
@@ -126,43 +133,26 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 }
 
 func (this *builder) indexAggPushDownProperty(entry *indexEntry, indexKeys expression.Expressions,
-	alias string, unnest bool, pushDownProperty PushDownProperties) (PushDownProperties, bool) {
+	alias string, unnestAliases []string, unnest, implicitAny bool,
+	pushDownProperty PushDownProperties) (PushDownProperties, bool) {
 
 	if this.group == nil || !useIndex3API(entry.index, this.context.IndexApiVersion()) ||
 		!isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) ||
 		isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) ||
 		!util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_GROUPAGG_PUSHDOWN) {
-		return pushDownProperty, true
+		return pushDownProperty, !implicitAny
 	}
 
 	// Group keys needs to be covered by index keys (including document key)
 	for _, gexpr := range this.group.By() {
-		if !expression.IsCovered(gexpr, alias, indexKeys) {
+		if !isImplicitCovered(gexpr, indexKeys, alias, unnestAliases, implicitAny, entry.arrayKey) {
 			return pushDownProperty, false
 		}
 	}
 
 	groupMatch, maxKeyPos := this.indexGroupLeadingIndexKeysMatch(entry, indexKeys)
 
-	// For array Index to use for  non-MIN,non-MAX aggregates
-	//    For non Unnest Scan
-	//       * Equality predicate on array Index required
-	//       * DISTINCT on the array Index key required
-	//       * ALL is ok if it is leading key. Indexer will consider one row for META().id
-	// For Unnest Scan ALL index or DISTINCT index with Distinct aggregates can use it
-
-	arrayIndexIsOK := true
-	for i, sk := range entry.index.RangeKey() {
-		if isArray, distinct, _ := sk.IsArrayIndexKey(); isArray {
-			if unnest {
-				arrayIndexIsOK = !distinct
-			} else {
-				eq, _ := entry.spans.EquivalenceRangeAt(i)
-				arrayIndexIsOK = eq && (distinct || i == 0)
-			}
-			break
-		}
-	}
+	arrayIndexIsOK := isValidAggregateArrayIndex(entry, unnest)
 
 nextagg:
 	for _, agg := range this.aggs {
@@ -171,8 +161,10 @@ nextagg:
 		constOp := (op == nil || op.Value() != nil)
 
 		// aggregate expression needs to be covered by index keys (including document key)
-		if !constOp && !expression.IsCovered(op, alias, indexKeys) {
-			return pushDownProperty, false
+		if !constOp {
+			if !isImplicitCovered(op, indexKeys, alias, unnestAliases, implicitAny, entry.arrayKey) {
+				return pushDownProperty, false
+			}
 		}
 
 		switch agg.(type) {
@@ -212,6 +204,65 @@ nextagg:
 		pushDownProperty |= _PUSHDOWN_FULLGROUPAGGS
 	}
 	return pushDownProperty, false
+}
+
+func isImplicitCovered(expr expression.Expression, indexKeys expression.Expressions, alias string,
+	unnestAliases []string, implicitAny bool, arrayKey *expression.All) bool {
+	if !expression.IsCovered(expr, alias, indexKeys, implicitAny) {
+		return false
+	}
+	for _, a := range unnestAliases {
+		if !expression.IsCovered(expr, a, indexKeys, implicitAny) {
+			return false
+		}
+	}
+
+	// Check Any clause in the expression.
+	// EVERY, ANY AND EVERY will not implicitly cover
+	if implicitAny {
+		mapAnys, err := expression.GatherAny(expression.Expressions{expr}, arrayKey, false)
+		if err != nil || len(mapAnys) > 0 {
+			return false
+		}
+	}
+
+	return true
+
+}
+
+/*
+ For array Index to use for  non-MIN,non-MAX aggregates
+    For non Unnest Scan
+       * Equality predicate on array Index required
+       * DISTINCT on the array Index key required
+       * ALL is ok if it is leading key. Indexer will consider one row for META().id
+ For Unnest Scan ALL index or DISTINCT index with Distinct aggregates can use it
+*/
+
+func isValidAggregateArrayIndex(entry *indexEntry, unnest bool) bool {
+	if entry.arrayKey == nil || entry.arrayKeyPos < 0 {
+		return true
+	}
+	pos := entry.arrayKeyPos
+	all := entry.arrayKey
+	noDistinct := entry.arrayKey.NoDistinct()
+	noAll := entry.arrayKey.NoAll()
+	if unnest {
+		return noDistinct
+	} else if all.Flatten() && all.FlattenSize() > 1 {
+		eq := true
+		for i := 0; i < all.FlattenSize(); i++ {
+			eq, _ = entry.spans.EquivalenceRangeAt(i + pos)
+			if !eq {
+				return false
+			}
+		}
+		return eq && (noAll || pos == 0)
+	} else {
+		eq, _ := entry.spans.EquivalenceRangeAt(pos)
+		return eq && (noAll || pos == 0)
+	}
+	return true
 }
 
 func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKeys expression.Expressions) (bool, int) {
@@ -282,7 +333,7 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 }
 
 func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expression, alias string,
-	unnestFiletrs expression.Expressions) bool {
+	unnestAliases []string, unnestFiletrs expression.Expressions, implicitAny bool) bool {
 	// spans are not exact
 	if !entry.exactSpans {
 		return false
@@ -302,8 +353,14 @@ func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expressi
 		exprs = append(exprs, unnestFiletrs...)
 	}
 
-	if !expression.IsCovered(pred, alias, exprs) {
+	if !expression.IsCovered(pred, alias, exprs, implicitAny) {
 		return false
+	}
+
+	for _, a := range unnestAliases {
+		if !expression.IsCovered(pred, a, exprs, implicitAny) {
+			return false
+		}
 	}
 
 	// all predicates are part of spans, exact and no false positives possible
@@ -356,7 +413,7 @@ func (this *builder) canPushDownMinMax(entry *indexEntry, op expression.Expressi
 	}
 
 	// get the index collation of the leading key
-	descCollation := indexKeyIsDescCollation(0, getIndexKeys(entry))
+	descCollation := indexKeyIsDescCollation(0, getIndexKeys(entry.index))
 	if max {
 		// MAX() can be pushdown when leading index key is DESC collation
 		return descCollation && entry.spans.CanUseIndexOrder(false)
@@ -431,7 +488,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		}
 	}
 
-	indexKeys := getIndexKeys(entry)
+	indexKeys := getIndexKeys(entry.index)
 	i := 0
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 outer:

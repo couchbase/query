@@ -67,6 +67,12 @@ func (this *IsMissing) FilterCovers(covers map[string]value.Value) map[string]va
 	return covers
 }
 
+func (this *IsMissing) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this.Operand()] = value.MISSING_VALUE
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -127,6 +133,11 @@ For IsNotMissing, simply list this expression.
 */
 func (this *IsNotMissing) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *IsNotMissing) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

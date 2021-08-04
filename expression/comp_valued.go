@@ -66,6 +66,11 @@ func (this *IsValued) FilterCovers(covers map[string]value.Value) map[string]val
 	return covers
 }
 
+func (this *IsValued) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -126,6 +131,11 @@ For IsNotValued, simply list this expression.
 */
 func (this *IsNotValued) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *IsNotValued) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

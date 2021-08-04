@@ -34,7 +34,7 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 
 	for _, child := range pred.Operands() {
 		cspans, err := sargFor(child, this.key, this.isJoin, this.doSelec, this.baseKeyspace,
-			this.keyspaceNames, this.advisorValidate, this.context)
+			this.keyspaceNames, this.advisorValidate, this.aliases, this.context)
 		if err != nil {
 			return nil, err
 		}

@@ -91,7 +91,8 @@ func (this *IndexCountDistinctScan2) IsUnderNL() bool {
 	return this.term.IsUnderNL()
 }
 
-func (this *IndexCountDistinctScan2) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+func (this *IndexCountDistinctScan2) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) error {
 	return nil
 }
 
@@ -126,6 +127,7 @@ func (this *IndexCountDistinctScan2) MarshalBase(f func(map[string]interface{}))
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
+	setRangeIndexKey(this.spans, this.index)
 	r["spans"] = this.spans
 
 	if this.term.As() != "" {

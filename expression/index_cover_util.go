@@ -28,6 +28,7 @@ const (
 	COVER_BIND_VAR
 	COVER_BIND_EXPR
 	COVER_SATISFIES
+	COVER_IMPLICIT_ARRAYKEY
 )
 
 const COVER_ARRAY_KEY_OPTIONS = (COVER_BIND_VAR | COVER_BIND_EXPR | COVER_SATISFIES)
@@ -88,38 +89,39 @@ func (this *CoveredOptions) hasCoverArrayKeyOptions() bool {
 	return (this.coverFlags & COVER_ARRAY_KEY_OPTIONS) != 0
 }
 
-func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *All, options CoveredOptions) Covered {
-	// make a copy of exprs but excludes array keys (*All expression)
-	allExprs := make(Expressions, 0, len(exprs))
-	for _, exp := range exprs {
-		if _, ok := exp.(*All); !ok {
-			allExprs = append(allExprs, exp)
-		}
-	}
+func (this *CoveredOptions) setCoverArrayKeyOptions() {
+	this.coverFlags |= COVER_ARRAY_KEY_OPTIONS
+}
 
-	if array, ok := all.array.(*Array); ok {
-		if options.hasCoverBindExpr() {
+func (this *CoveredOptions) hasCoverImplicitArrayKey() bool {
+	return (this.coverFlags & COVER_IMPLICIT_ARRAYKEY) != 0
+}
+
+func (this *CoveredOptions) setCoverImplicitArrayKey() {
+	this.coverFlags |= COVER_IMPLICIT_ARRAYKEY
+}
+
+func (this *CoveredOptions) unsetCoverImplicitArrayKey() {
+	this.coverFlags &^= COVER_IMPLICIT_ARRAYKEY
+}
+
+func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *All,
+	options CoveredOptions) Covered {
+
+	if options.hasCoverBindExpr() {
+		if array, ok := all.array.(*Array); ok {
 			for _, b := range array.bindings {
 				if pred.EquivalentTo(b.expr) {
 					return CoveredEquiv
 				}
 			}
-		} else if options.hasCoverSatisfies() {
-			allExprs = append(allExprs, array.valueMapping)
-			switch pred.CoveredBy(keyspace, allExprs, options) {
-			case CoveredEquiv:
-				return CoveredEquiv
-			case CoveredTrue:
-				return CoveredTrue
-			}
+		} else if pred.EquivalentTo(all.array) {
+			return CoveredEquiv
 		}
-	} else {
-		if options.hasCoverBindExpr() {
-			if pred.EquivalentTo(all.array) {
-				return CoveredEquiv
-			}
-		} else if options.hasCoverSatisfies() {
-			switch pred.CoveredBy(keyspace, allExprs, options) {
+	} else if options.hasCoverSatisfies() {
+		switch pred.(type) {
+		case *Any, *AnyEvery, *Every:
+			switch pred.CoveredBy(keyspace, exprs, options) {
 			case CoveredEquiv:
 				return CoveredEquiv
 			case CoveredTrue:
@@ -131,13 +133,35 @@ func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *
 	return CoveredFalse
 }
 
+func renameBindings(other, expr Expression, copy bool) (bool, bool, Expression) {
+	ie := HasRenameableBindings(expr, other, nil)
+	ei := HasRenameableBindings(other, expr, nil)
+	if ie == BINDING_VARS_CONFLICT || ei == BINDING_VARS_CONFLICT {
+		return true, false, other
+	} else if ei == BINDING_VARS_DIFFER {
+		renamer := NewRenamer(getExprBindings(other), getExprBindings(expr))
+		if copy {
+			other = other.Copy()
+		}
+		rv, err := renamer.Map(other)
+		return err != nil, true, rv
+	}
+	return false, false, other
+}
+
 /*
 Wrapper for Expression.CoveredBy - to be used by the planner
 Function rather than method to make sure we don't pick up
 ExpressionBase.CoveredBy() in error
 */
-func IsCovered(expr Expression, keyspace string, exprs Expressions) bool {
-	isCovered := expr.CoveredBy(keyspace, exprs, CoveredOptions{0})
+
+func IsCovered(expr Expression, keyspace string, exprs Expressions,
+	implicitAny bool) bool {
+	options := CoveredOptions{0}
+	if implicitAny {
+		options.setCoverImplicitArrayKey()
+	}
+	isCovered := expr.CoveredBy(keyspace, exprs, options)
 	return isCovered == CoveredSkip || isCovered == CoveredEquiv || isCovered == CoveredTrue
 }
 

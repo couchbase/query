@@ -14,11 +14,11 @@ import (
 )
 
 func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool,
-	context *PrepareContext) (min, max, sum int, skeys []bool) {
+	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
 	skeys = make([]bool, len(keys))
 	if or, ok := pred.(*expression.Or); ok {
-		return sargableForOr(or, keys, missing, gsi, context)
+		return sargableForOr(or, keys, missing, gsi, context, aliases)
 	}
 
 	skiped := false
@@ -29,7 +29,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 			return
 		}
 
-		s := &sargable{keys[i], missing, gsi, context}
+		s := &sargable{keys[i], missing, gsi, context, aliases}
 
 		r, err := pred.Accept(s)
 
@@ -61,10 +61,10 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 }
 
 func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool,
-	context *PrepareContext) (min, max, sum int, skeys []bool) {
+	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
 	for _, c := range or.Operands() {
-		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, context)
+		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, context, aliases)
 		if cmin == 0 || cmax == 0 || csum < cmin {
 			return 0, 0, 0, nil
 		}
@@ -90,6 +90,7 @@ type sargable struct {
 	missing bool
 	gsi     bool
 	context *PrepareContext
+	aliases map[string]bool
 }
 
 // Arithmetic

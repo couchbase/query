@@ -42,6 +42,7 @@ type IndexScan3 struct {
 	covers           expression.Covers
 	filterCovers     map[*expression.Cover]value.Value
 	filter           expression.Expression
+	implicitArrayKey *expression.All
 	hasDeltaKeyspace bool
 }
 
@@ -156,9 +157,42 @@ func (this *IndexScan3) SetOffset(offset expression.Expression) {
 	this.offset = offset
 }
 
-func (this *IndexScan3) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
-	var err error
-	for _, span := range this.spans {
+func anyRenameExpressions(arrayKey *expression.All, spans Spans2) (err error) {
+	if arrayKey == nil {
+		return nil
+	}
+
+	anyRenamer := expression.NewAnyRenamer(arrayKey)
+	for _, span := range spans {
+		for i, seek := range span.Seek {
+			if seek != nil {
+				span.Seek[i], err = anyRenamer.Map(seek)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		for _, srange := range span.Ranges {
+			if srange.Low != nil {
+				srange.Low, err = anyRenamer.Map(srange.Low)
+				if err != nil {
+					return err
+				}
+			}
+			if srange.High != nil {
+				srange.High, err = anyRenamer.Map(srange.High)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func coverJoinSpanExpressions(coverer *expression.Coverer, spans Spans2) (err error) {
+	for _, span := range spans {
 		for i, seek := range span.Seek {
 			if seek != nil {
 				span.Seek[i], err = coverer.Map(seek)
@@ -186,12 +220,29 @@ func (this *IndexScan3) CoverJoinSpanExpressions(coverer *expression.Coverer) er
 	return nil
 }
 
+func (this *IndexScan3) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) (err error) {
+	err = anyRenameExpressions(implicitArrayKey, this.spans)
+	if err == nil {
+		err = coverJoinSpanExpressions(coverer, this.spans)
+	}
+	return err
+}
+
 func (this *IndexScan3) Covers() expression.Covers {
 	return this.covers
 }
 
 func (this *IndexScan3) SetCovers(covers expression.Covers) {
 	this.covers = covers
+}
+
+func (this *IndexScan3) SetImplicitArrayKey(arrayKey *expression.All) {
+	this.implicitArrayKey = arrayKey
+}
+
+func (this *IndexScan3) ImplicitArrayKey() *expression.All {
+	return this.implicitArrayKey
 }
 
 func (this *IndexScan3) FilterCovers() map[*expression.Cover]value.Value {
@@ -234,20 +285,7 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
 
-	keys := this.index.RangeKey()
-	for n, s := range this.spans {
-		// duplicate static spans so we can update with the information-only field
-		if s.Static {
-			s = s.Copy()
-			this.spans[n] = s
-		}
-		for i, r := range s.Ranges {
-			if i >= len(keys) {
-				break
-			}
-			r.IndexKey = keys[i].String()
-		}
-	}
+	setRangeIndexKey(this.spans, this.index)
 	r["spans"] = this.spans
 
 	if this.term.As() != "" {

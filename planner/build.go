@@ -121,6 +121,7 @@ type builder struct {
 	useCBO             bool
 	hintIndexes        bool
 	lastOp             plan.Operator // last operator built, to get cost/cardinality info
+	aliases            map[string]bool
 }
 
 func (this *builder) Copy() *builder {
@@ -149,6 +150,7 @@ func (this *builder) Copy() *builder {
 		indexAdvisor:       this.indexAdvisor,
 		useCBO:             this.useCBO,
 		hintIndexes:        this.hintIndexes,
+		aliases:            this.aliases,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 	}

@@ -93,6 +93,11 @@ func (this *RegexpContains) FilterCovers(covers map[string]value.Value) map[stri
 	return covers
 }
 
+func (this *RegexpContains) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -197,6 +202,11 @@ For boolean functions, simply list this expression.
 */
 func (this *RegexpLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *RegexpLike) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

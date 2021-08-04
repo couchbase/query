@@ -91,7 +91,8 @@ func (this *IndexCountScan) IsUnderNL() bool {
 	return this.term.IsUnderNL()
 }
 
-func (this *IndexCountScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+func (this *IndexCountScan) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) error {
 	return nil
 }
 

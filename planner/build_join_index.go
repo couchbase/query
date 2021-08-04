@@ -29,10 +29,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 		return nil, err
 	}
 
-	cost := OPT_COST_NOT_AVAIL
-	cardinality := OPT_CARD_NOT_AVAIL
-	size := OPT_SIZE_NOT_AVAIL
-	frCost := OPT_COST_NOT_AVAIL
+	cost, cardinality, size, frCost := OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, node.Alias())
 		cost, cardinality, size, frCost = getIndexJoinCost(this.lastOp, node.Outer(), node.Right(),
@@ -88,6 +85,9 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	indexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(indexes)
 	for _, index := range allindexes {
+		if indexHasArrayIndexKey(index) {
+			continue
+		}
 		keys := index.RangeKey()
 		if len(keys) == 0 {
 			continue
@@ -106,10 +106,9 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			return nil, nil, nil, err
 		}
 
-		if onkey.EquivalentTo(key) && !indexHasArrayIndexKey(index) {
+		if onkey.EquivalentTo(key) {
 			indexes = append(indexes, index)
 		}
-
 	}
 
 	if len(indexes) == 0 && !this.indexAdvisor {
@@ -161,7 +160,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		}
 	}
 
-	sargables, _, _, _, err := this.sargableIndexes(indexes, pred, subset, primaryKey, formalizer, nil, false)
+	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, primaryKey, formalizer, nil, false)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -200,7 +199,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			}
 
 			for _, expr := range exprs {
-				if !expression.IsCovered(expr, alias, coveringExprs) {
+				if !expression.IsCovered(expr, alias, coveringExprs, false) {
 					continue outer
 				}
 			}

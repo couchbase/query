@@ -96,6 +96,11 @@ func (this *AnyEvery) FilterCovers(covers map[string]value.Value) map[string]val
 	return covers
 }
 
+func (this *AnyEvery) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *AnyEvery) Copy() Expression {
 	rv := NewAnyEvery(this.bindings.Copy(), Copy(this.satisfies))
 	rv.BaseCopy(this)

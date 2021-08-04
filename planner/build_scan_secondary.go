@@ -22,21 +22,26 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, id expression.Expression,
+func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, subset, id expression.Expression,
 	searchSargables []*indexEntry) (scan plan.SecondaryScan, sargLength int, err error) {
 
-	scan, sargLength, err = this.buildCovering(indexes, flex, node, baseKeyspace, id, searchSargables)
+	pred := baseKeyspace.DnfPred()
+	unnests, primaryUnnests, unnestIndexes := this.buildUnnestIndexes(node, this.from,
+		pred, arrayIndexes)
+	defer releaseUnnestPools(unnests, primaryUnnests)
+
+	scan, sargLength, err = this.buildCovering(indexes, unnestIndexes, flex, node,
+		baseKeyspace, subset, id, searchSargables, unnests)
 	if scan != nil || err != nil {
 		return
 	}
 
 	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+
 	if this.group != nil || hasDeltaKeyspace {
 		this.resetPushDowns()
 	}
-
-	pred := baseKeyspace.DnfPred()
 
 	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
 		err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
@@ -47,8 +52,30 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 
 	for _, entry := range indexes {
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
-			pred, node.Alias(), false, false)
+			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
+			implicitAnyCover(entry, true, this.context.FeatureControls()))
 	}
+
+	if len(primaryUnnests) > 0 && len(unnests) > 0 && len(unnestIndexes) > 0 {
+		var unnestSargables map[datastore.Index]*indexEntry
+		unnestSargables, err = this.buildUnnestScan(node, pred, subset, unnests,
+			primaryUnnests, unnestIndexes, hasDeltaKeyspace)
+		if err != nil {
+			return nil, 0, err
+		}
+		// add to regular Secondary IndexScan list
+		for index, entry := range unnestSargables {
+			indexes[index] = entry
+		}
+	}
+
+	return this.buildCreateSecondaryScan(indexes, flex, node, baseKeyspace,
+		pred, id, searchSargables, hasDeltaKeyspace)
+}
+
+func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, pred, id expression.Expression,
+	searchSargables []*indexEntry, hasDeltaKeyspace bool) (scan plan.SecondaryScan, sargLength int, err error) {
 
 	indexes = this.minimalIndexes(indexes, true, pred, node)
 	// Already done. need only for one index
@@ -72,7 +99,7 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 
 	if len(indexes) == 1 {
 		for _, entry := range indexes {
-			indexProjection = this.buildIndexProjection(entry, nil, nil, true)
+			indexProjection = this.buildIndexProjection(entry, nil, nil, true, nil)
 			if cap == 1 && this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
 				this.limit = offsetPlusLimit(this.offset, this.limit)
 				this.resetOffset()
@@ -80,7 +107,7 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 			break
 		}
 	} else {
-		indexProjection = this.buildIndexProjection(nil, nil, nil, true)
+		indexProjection = this.buildIndexProjection(nil, nil, nil, true, nil)
 	}
 
 	for index, entry := range indexes {
@@ -91,7 +118,7 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 		// not include meta().id as a sargable index key. In addition,
 		// the index must have either a WHERE clause or at least
 		// one other sargable key.
-		if node.IsPrimaryJoin() {
+		if node.IsPrimaryJoin() && id != nil {
 			metaFound := false
 			for _, key := range entry.sargKeys {
 				if key.EquivalentTo(id) {
@@ -126,6 +153,9 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 
 		if len(entry.sargKeys) > sargLength {
 			sargLength = len(entry.sargKeys)
+		}
+		for _, a := range entry.unnestAliases {
+			baseKeyspace.AddUnnestIndex(index, a)
 		}
 	}
 
@@ -252,7 +282,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer,
 	ubs expression.Bindings, join bool) (
-	sargables, all, arrays, flex map[datastore.Index]*indexEntry, err error) {
+	sargables, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
 	flexPred := pred
 	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
@@ -263,7 +293,6 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 	}
 
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
-	all = make(map[datastore.Index]*indexEntry, len(indexes))
 	arrays = make(map[datastore.Index]*indexEntry, len(indexes))
 
 	var keys expression.Expressions
@@ -291,7 +320,9 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 			continue
 		}
 
-		var isArray bool
+		var cond, origCond expression.Expression
+		var allKey *expression.All
+		var apos int
 
 		if index.IsPrimary() {
 			if primaryKey != nil {
@@ -300,58 +331,36 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 				continue
 			}
 		} else {
-			keys = expression.CopyExpressions(index.RangeKey())
+			cond = index.Condition()
+			if cond != nil {
+				if subset == nil {
+					continue
+				}
+
+				if cond, origCond, err = formalizeExpr(formalizer, cond, true); err != nil {
+					return
+				}
+
+				if !base.SubsetOf(subset, cond) {
+					continue
+				}
+			}
+
+			rangeKeys := index.RangeKey()
+			for i, key := range rangeKeys {
+				if a, ok := key.(*expression.All); ok {
+					allKey = a
+					apos = i
+				}
+			}
+
+			keys = expression.CopyExpressions(expression.GetFlattenKeys(rangeKeys))
 
 			for i, key := range keys {
-				key = key.Copy()
-
-				formalizer.SetIndexScope()
-				key, err = formalizer.Map(key)
-				formalizer.ClearIndexScope()
-				if err != nil {
+				if key, _, err = formalizeExpr(formalizer, key, false); err != nil {
 					return
 				}
-
-				dnf := base.NewDNF(key, true, true)
-				key, err = dnf.Map(key)
-				if err != nil {
-					return
-				}
-
 				keys[i] = key
-
-				if !isArray {
-					isArray, _, _ = key.IsArrayIndexKey()
-				}
-			}
-		}
-
-		var origCond expression.Expression
-		cond := index.Condition()
-		if cond != nil {
-			if subset == nil {
-				continue
-			}
-
-			cond = cond.Copy()
-
-			formalizer.SetIndexScope()
-			cond, err = formalizer.Map(cond)
-			formalizer.ClearIndexScope()
-			if err != nil {
-				return
-			}
-
-			origCond = cond.Copy()
-
-			dnf := base.NewDNF(cond, true, true)
-			cond, err = dnf.Map(cond)
-			if err != nil {
-				return
-			}
-
-			if !base.SubsetOf(subset, cond) {
-				continue
 			}
 		}
 
@@ -362,7 +371,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
-		min, max, sum, skeys := SargableFor(pred, keys, false, skip, this.context)
+		min, max, sum, skeys := SargableFor(pred, keys, false, skip, this.context, this.aliases)
 
 		n := min
 		if skip {
@@ -370,18 +379,42 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, min, n, sum, cond, origCond, nil, false, skeys)
-		all[index] = entry
+		if allKey != nil {
+			arrays[index] = entry
+			var ak expression.Expression
+			if ak, _, err = formalizeExpr(formalizer, allKey, false); err != nil {
+				return
+			}
+			allKey, _ := ak.(*expression.All)
+			entry.setArrayKey(allKey, apos)
+		}
 
 		if min > 0 {
 			sargables[index] = entry
 		}
 
-		if isArray {
-			arrays[index] = entry
-		}
 	}
 
-	return sargables, all, arrays, flex, nil
+	return sargables, arrays, flex, nil
+}
+
+func formalizeExpr(formalizer *expression.Formalizer, expr expression.Expression, orig bool) (
+	newExpr, origExpr expression.Expression, err error) {
+	if expr != nil {
+		expr = expr.Copy()
+		formalizer.SetIndexScope()
+		expr, err = formalizer.Map(expr)
+		formalizer.ClearIndexScope()
+		if err == nil {
+			if orig {
+				origExpr = expr.Copy()
+			}
+
+			dnf := base.NewDNF(expr, true, true)
+			expr, err = dnf.Map(expr)
+		}
+	}
+	return expr, origExpr, err
 }
 
 func indexPartitionKeys(index datastore.Index,
@@ -439,11 +472,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
-					se.cost = cost
-					se.cardinality = card
-					se.selectivity = selec
-					se.size = size
-					se.frCost = frCost
+					se.cardinality, se.selectivity, se.cost, se.frCost, se.size = card, selec, cost, frCost, size
 				}
 			}
 		}
@@ -672,11 +701,11 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		if useFilters {
 			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
 				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
-				advisorValidate, this.context)
+				advisorValidate, this.aliases, this.context)
 		} else {
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
 				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
-				advisorValidate, this.context)
+				advisorValidate, this.aliases, this.context)
 		}
 		if err != nil || spans.Size() == 0 {
 			logging.Errora(func() string {

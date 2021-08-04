@@ -125,34 +125,13 @@ func (this *IndexScan2) IsUnderNL() bool {
 	return this.term.IsUnderNL()
 }
 
-func (this *IndexScan2) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
-	var err error
-	for _, span := range this.spans {
-		for i, seek := range span.Seek {
-			if seek != nil {
-				span.Seek[i], err = coverer.Map(seek)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		for _, srange := range span.Ranges {
-			if srange.Low != nil {
-				srange.Low, err = coverer.Map(srange.Low)
-				if err != nil {
-					return err
-				}
-			}
-			if srange.High != nil {
-				srange.High, err = coverer.Map(srange.High)
-				if err != nil {
-					return err
-				}
-			}
-		}
+func (this *IndexScan2) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) (err error) {
+	err = anyRenameExpressions(implicitArrayKey, this.spans)
+	if err == nil {
+		err = coverJoinSpanExpressions(coverer, this.spans)
 	}
-
-	return nil
+	return err
 }
 
 func (this *IndexScan2) Covers() expression.Covers {
@@ -203,20 +182,7 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
 
-	keys := this.index.RangeKey()
-	for n, s := range this.spans {
-		// duplicate static spans so we can update with the information-only field
-		if s.Static {
-			s = s.Copy()
-			this.spans[n] = s
-		}
-		for i, r := range s.Ranges {
-			if i >= len(keys) {
-				break
-			}
-			r.IndexKey = keys[i].String()
-		}
-	}
+	setRangeIndexKey(this.spans, this.index)
 	r["spans"] = this.spans
 
 	if this.term.As() != "" {

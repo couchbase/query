@@ -95,6 +95,11 @@ func (this *ContainsToken) FilterCovers(covers map[string]value.Value) map[strin
 	return covers
 }
 
+func (this *ContainsToken) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *ContainsToken) MinArgs() int { return 2 }
 
 func (this *ContainsToken) MaxArgs() int { return 3 }
@@ -210,6 +215,11 @@ For boolean functions, simply list this expression.
 */
 func (this *ContainsTokenLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *ContainsTokenLike) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 
@@ -344,6 +354,11 @@ For boolean functions, simply list this expression.
 */
 func (this *ContainsTokenRegexp) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *ContainsTokenRegexp) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

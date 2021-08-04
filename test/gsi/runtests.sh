@@ -1,6 +1,4 @@
 #!/bin/bash
-
-
 # Copyright 2016-Present Couchbase, Inc.
 #
 # Use of this software is governed by the Business Source License included in
@@ -8,6 +6,20 @@
 # file, in accordance with the Business Source License, use of this software will
 # be governed by the Apache License, Version 2.0, included in the file
 # licenses/APL.txt.
+
+args=""
+skiptests=""
+verbose=
+while [ $# -gt 0 ]; do
+  case $1 in
+    -v) verbose="$1" ;;
+    -s) skiptests="test_cases/curl test_cases/fts" ;;
+    *) args="$args $1" ;;
+  esac
+  shift
+done
+
+set -- $args
 
 verbose=$1
 Site=http://127.0.0.1:8091/pools/nodes/
@@ -23,6 +35,9 @@ go clean -testcache
 cd $GOPATH/src/github.com/couchbase/query/test/gsi
 for i in test_cases/*
 do
+    if [[ $skiptests =~ (^|[[:space:]])"$i"($|[[:space:]]) ]] ; then
+        continue
+    fi
     source ./exportval.sh $*
     cd $i
     go test $verbose -p 1 -tags enterprise ./...

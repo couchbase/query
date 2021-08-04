@@ -102,7 +102,8 @@ func (this *IndexScan) IsUnderNL() bool {
 	return this.term.IsUnderNL()
 }
 
-func (this *IndexScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+func (this *IndexScan) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) error {
 	var err error
 	for _, span := range this.spans {
 		for i, seek := range span.Seek {

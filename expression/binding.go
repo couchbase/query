@@ -26,6 +26,14 @@ type Binding struct {
 	static       bool       `json:"static"`
 }
 
+const (
+	BINDING_VARS_SAME = BindingVarOptions(iota)
+	BINDING_VARS_CONFLICT
+	BINDING_VARS_DIFFER
+)
+
+type BindingVarOptions uint32
+
 func NewBinding(nameVariable, variable string, expr Expression, descend bool) *Binding {
 	return &Binding{nameVariable, variable, expr, descend, false}
 }
@@ -172,6 +180,50 @@ func (this Bindings) SubsetOf(other Bindings) bool {
 	}
 
 	return true
+}
+
+func (this Bindings) RenameVariables(other Bindings) (BindingVarOptions, map[string]bool) {
+	if !this.SubsetOf(other) {
+		return BINDING_VARS_SAME, nil
+	}
+	bnames := make(map[string]bool, 2*len(this))
+	onames := make(map[string]bool, 2*len(this))
+	for i, b := range this {
+		o := other[i]
+		if b.variable != o.variable {
+			bnames[b.variable] = true
+			onames[o.variable] = true
+		}
+		if b.nameVariable != o.nameVariable {
+			if b.nameVariable != "" {
+				bnames[b.nameVariable] = true
+			}
+			if o.nameVariable != "" {
+				onames[o.nameVariable] = true
+			}
+		}
+	}
+	for n, _ := range onames {
+		if _, ok := bnames[n]; ok {
+			return BINDING_VARS_CONFLICT, onames
+		}
+	}
+
+	return BINDING_VARS_DIFFER, onames
+}
+
+func (this Bindings) DuplicateVariable(names map[string]bool) bool {
+	for _, b := range this {
+		if _, ok := names[b.variable]; ok {
+			return true
+		}
+		if b.nameVariable != "" {
+			if _, ok := names[b.nameVariable]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (this Bindings) DependsOn(expr Expression) bool {

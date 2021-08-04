@@ -425,6 +425,15 @@ func (this Spans2) EquivalentTo(other Spans2) bool {
 	return true
 }
 
+func (this Spans2) HasStatic() bool {
+	for _, sp := range this {
+		if sp.Static {
+			return true
+		}
+	}
+	return false
+}
+
 func (this Spans2) HasDynamicIn() bool {
 	for _, sp := range this {
 		for _, rg := range sp.Ranges {
@@ -435,4 +444,32 @@ func (this Spans2) HasDynamicIn() bool {
 	}
 
 	return false
+}
+
+func setRangeIndexKey(spans Spans2, index datastore.Index) {
+	keys := index.RangeKey()
+	flattenKeys := make(expression.Expressions, 0, len(keys))
+	for _, expr := range keys {
+		if all, ok := expr.(*expression.All); ok && all.Flatten() {
+			for _, fk := range all.FlattenKeys().Operands() {
+				flattenKeys = append(flattenKeys, fk)
+			}
+		} else {
+			flattenKeys = append(flattenKeys, expr)
+		}
+	}
+
+	for n, s := range spans {
+		// duplicate static spans so we can update with the information-only field
+		if s.Static {
+			s = s.Copy()
+			spans[n] = s
+		}
+		for i, r := range s.Ranges {
+			if i >= len(flattenKeys) {
+				break
+			}
+			r.IndexKey = flattenKeys[i].String()
+		}
+	}
 }

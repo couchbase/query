@@ -123,7 +123,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 				// derive IS NOT NULL predicate
 				err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
 					this.context.IndexApiVersion(), virtualIndexes,
-					this.advisorValidate(), this.context)
+					this.advisorValidate(), this.context, this.aliases)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -342,7 +342,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	sargables, all, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, primaryKey,
+	sargables, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, primaryKey,
 		formalizer, ubs, node.IsUnderNL())
 	if err != nil {
 		return nil, 0, err
@@ -386,6 +386,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	indexPushDowns := this.storeIndexPushDowns()
+	this.orderScan = nil
 
 	defer func() {
 		if this.orderScan != nil {
@@ -397,15 +398,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	var limitPushed bool
 
 	// Try secondary scan
-	if len(minimals) > 0 || len(searchSargables) > 0 || len(flex) > 0 {
-		if len(this.baseKeyspaces) > 1 {
-			this.resetOffsetLimit()
-			this.resetProjection()
-			this.resetIndexGroupAggs()
-		}
-
-		secondary, sargLength, err = this.buildSecondaryScan(minimals, flex, node, baseKeyspace,
-			id, searchSargables)
+	if len(minimals) > 0 || len(arrays) > 0 || len(searchSargables) > 0 || len(flex) > 0 {
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, arrays, flex, node, baseKeyspace,
+			subset, id, searchSargables)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -424,85 +419,6 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 			secOffsetPushed = this.offset != nil
 			limitPushed = limitPushed || this.limit != nil
 		}
-	}
-
-	// Try UNNEST scan
-	if !join && this.from != nil {
-		// Try pushdowns
-		this.restoreIndexPushDowns(indexPushDowns, true)
-		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
-
-		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, subset, all, hasDeltaKeyspace)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		if unnest != nil {
-			if len(this.coveringScans) > 0 || this.countScan != nil {
-				return unnest, unnestSargLength, err
-			}
-
-			// MB-46641
-			// if the sargable keys of unnest index scan is a superset of the
-			// sargable keys of a secondary index scan generated earlier,
-			// replace that secondary index scan with the unnest index scan
-			// (instead of trying to do an intersect scan).
-			add := true
-			unnestIndex := unnest.GetIndex()
-			if unnestIndex != nil {
-				unnestEntry := all[unnestIndex]
-
-				var predFc map[string]value.Value
-				if pred != nil {
-					predFc = _FILTER_COVERS_POOL.Get()
-					defer _FILTER_COVERS_POOL.Put(predFc)
-					predFc = pred.FilterCovers(predFc)
-				}
-
-				for i, sc := range scans {
-					// do not replace potential ordered index scan
-					if i == 0 {
-						continue
-					}
-					idx := sc.GetIndex()
-					if idx == nil {
-						// uses multiple indexes below
-						break
-					}
-					entry := all[idx]
-					if unnestEntry != nil && entry != nil {
-						nk, nc := matchedKeysConditions(unnestEntry, entry,
-							true, predFc)
-						nsarg := 0
-						for j, _ := range entry.skeys {
-							if entry.skeys[j] {
-								nsarg++
-							}
-						}
-						if nsarg != 0 && (nk+nc) >= nsarg {
-							scans[i] = unnest
-							if sargLength < unnestSargLength {
-								sargLength = unnestSargLength
-							}
-							add = false
-							break
-						}
-					}
-				}
-			}
-
-			if add {
-				scans = append(scans, unnest)
-				if sargLength < unnestSargLength {
-					sargLength = unnestSargLength
-				}
-			}
-
-			unnestOffsetPushed = this.offset != nil
-			limitPushed = limitPushed || this.limit != nil
-		}
-
-		this.resetPushDowns()
 	}
 
 	// Try dynamic scan

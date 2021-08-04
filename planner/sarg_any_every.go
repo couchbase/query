@@ -50,15 +50,14 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, false,
-			this.advisorValidate, this.context)
+			this.advisorValidate, false, this.aliases, this.context)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
 		return sp, nil
 	}
 
-	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
-	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +69,6 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 	// Array Index key can have only single binding
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
 		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, false,
-		this.advisorValidate, this.context)
+		this.advisorValidate, all.IsDerivedFromFlatten(), this.aliases, this.context)
 
 }

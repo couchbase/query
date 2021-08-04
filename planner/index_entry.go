@@ -22,6 +22,7 @@ const (
 	_PUSHDOWN_EXACTSPANS
 	_PUSHDOWN_LIMIT
 	_PUSHDOWN_OFFSET
+	_PUSHDOWN_COVERED_UNNEST
 	_PUSHDOWN_ORDER
 	_PUSHDOWN_GROUPAGGS
 	_PUSHDOWN_FULLGROUPAGGS
@@ -32,6 +33,8 @@ type indexEntry struct {
 	keys             expression.Expressions
 	sargKeys         expression.Expressions
 	partitionKeys    expression.Expressions
+	arrayKey         *expression.All
+	arrayKeyPos      int
 	minKeys          int
 	maxKeys          int
 	sumKeys          int
@@ -51,6 +54,7 @@ type indexEntry struct {
 	condFc           map[string]value.Value
 	nEqCond          int
 	numIndexedKeys   uint32
+	unnestAliases    []string
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
@@ -77,6 +81,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		frCost:           OPT_COST_NOT_AVAIL,
 	}
 
+	rv.arrayKeyPos = -1
 	for _, b := range skeys {
 		if b {
 			rv.nSargKeys++
@@ -97,6 +102,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		keys:             expression.CopyExpressions(this.keys),
 		sargKeys:         expression.CopyExpressions(this.sargKeys),
 		partitionKeys:    expression.CopyExpressions(this.partitionKeys),
+		arrayKeyPos:      this.arrayKeyPos,
 		minKeys:          this.minKeys,
 		maxKeys:          this.maxKeys,
 		sumKeys:          this.sumKeys,
@@ -114,9 +120,15 @@ func (this *indexEntry) Copy() *indexEntry {
 		condFc:           this.condFc,
 		nEqCond:          this.nEqCond,
 	}
-
+	if this.arrayKey != nil {
+		rv.arrayKey, _ = expression.Copy(this.arrayKey).(*expression.All)
+	}
+	rv.searchOrders = make([]string, len(this.searchOrders))
 	copy(rv.searchOrders, this.searchOrders)
+	rv.unnestAliases = make([]string, len(this.unnestAliases))
+	copy(rv.unnestAliases, this.unnestAliases)
 	if len(this.skeys) > 0 {
+		rv.skeys = make([]bool, len(this.skeys))
 		copy(rv.skeys, this.skeys)
 	}
 
@@ -133,6 +145,11 @@ func (this *indexEntry) IsPushDownProperty(property PushDownProperties) bool {
 
 func (this *indexEntry) setSearchOrders(so []string) {
 	this.searchOrders = so
+}
+
+func (this *indexEntry) setArrayKey(key *expression.All, pos int) {
+	this.arrayKey = key
+	this.arrayKeyPos = pos
 }
 
 func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {

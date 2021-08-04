@@ -263,6 +263,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	}
 
 	server.NewBaseRequest(&query.BaseRequest)
+
 	if prepare {
 		prepared, err := PrepareStmt(mockServer, queryParams, namespace, q)
 		if err != nil {
@@ -313,6 +314,12 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if txImplict, ok := queryParams["tximplicit"]; ok {
 		if b, ok := txImplict.(bool); ok && b {
 			query.SetTxImplicit(b)
+		}
+	}
+
+	if s, ok := queryParams["query_context"]; ok {
+		if qcs, ok := s.(string); ok && qcs != "" {
+			query.SetQueryContext(qcs)
 		}
 	}
 
@@ -554,22 +561,23 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			}
 		}
 
-		if prepared {
+		errCodeExpected := int(0)
+		if v, ok = c["errorCode"]; ok {
+			errCodeExpectedf, _ := v.(float64)
+			errCodeExpected = int(errCodeExpectedf)
+		}
+
+		// no index, test infrastructure can't handle this.
+		if prepared && errCodeExpected != 4000 {
 			resultsActual, _, errActual = RunPrepared(qc, queryParams, statements, namespace, namedArgs, positionalArgs)
 		} else {
 			resultsActual, _, errActual = Run(qc, queryParams, statements, namespace, namedArgs, positionalArgs, userArgs)
 		}
 
 		errExpected := ""
-		errCodeExpected := int(0)
 		v, ok = c["error"]
 		if ok {
 			errExpected = v.(string)
-		}
-
-		if v, ok = c["errorCode"]; ok {
-			errCodeExpectedf, _ := v.(float64)
-			errCodeExpected = int(errCodeExpectedf)
 		}
 
 		if errActual != nil {
@@ -826,6 +834,10 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 }
 
 func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, statement string) (*plan.Prepared, errors.Error) {
+	var queryContext string
+	if s, ok := queryParams["query_context"]; ok {
+		queryContext, _ = s.(string)
+	}
 	prepareStmt := "PREPARE " + statement
 	resultsActual, _, errActual := Run(qc, queryParams, prepareStmt, namespace, nil, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
@@ -838,18 +850,18 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 	done := qc.prepDone[statement]
 	qc.RUnlock()
 	if done {
-		return prepareds.GetPrepared(ra["name"].(string), make(map[string]bool, 1))
+		return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil)
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
-	rv, err := prepareds.DecodePrepared(ra["name"].(string), ra["encoded_plan"].(string), false)
+	rv, err := prepareds.DecodePreparedWithContext(ra["name"].(string), queryContext, ra["encoded_plan"].(string), false, nil, false)
 	if err != nil {
 		return rv, err
 	}
 	qc.Lock()
 	qc.prepDone[statement] = true
 	qc.Unlock()
-	return prepareds.GetPrepared(ra["name"].(string), make(map[string]bool, 1))
+	return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil)
 }
 
 /*

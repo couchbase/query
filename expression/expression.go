@@ -143,6 +143,13 @@ type Expression interface {
 	*/
 	FilterCovers(covers map[string]value.Value) map[string]value.Value
 
+	/* Same as FilterCovers() instead of string use expression.
+	   In expression package we will not able to parse from expression.
+	   Used in CoveredBy() to build ALL index key WHEN clause after rename binding
+	   variables from ANY clause
+	*/
+	FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value
+
 	/*
 	   Utility function that returns the children of the
 	   expression. For expression a+b, a and b are the children.
@@ -324,4 +331,25 @@ func Equivalents(exprs1, exprs2 Expressions) bool {
 	}
 
 	return true
+}
+
+func GetFlattenKeys(keys Expressions) Expressions {
+	for i, key := range keys {
+		if all, ok := key.(*All); ok && all.Flatten() {
+			fkeys := make(Expressions, 0, len(keys)+all.FlattenSize()-1)
+			if i > 0 {
+				fkeys = append(fkeys, keys[0:i]...)
+			}
+			for _, fk := range all.FlattenKeys().Operands() {
+				aKey := all.Copy().(*All)
+				aKey.SetFlattenValueMapping(fk.Copy())
+				fkeys = append(fkeys, aKey)
+			}
+			if i <= len(keys)-1 {
+				fkeys = append(fkeys, keys[i+1:]...)
+			}
+			return fkeys
+		}
+	}
+	return keys
 }

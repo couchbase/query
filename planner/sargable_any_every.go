@@ -34,9 +34,7 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
 		return false, nil
 	}
-
-	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
-	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +44,6 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 	}
 
 	mappings := expression.Expressions{array.ValueMapping()}
-	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context)
+	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context, this.aliases)
 	return min > 0, nil
 }

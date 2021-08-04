@@ -114,9 +114,10 @@ func (this *UnionScan) IsUnderNL() bool {
 	return this.scans[0].IsUnderNL()
 }
 
-func (this *UnionScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+func (this *UnionScan) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) error {
 	for _, scan := range this.scans {
-		err := scan.CoverJoinSpanExpressions(coverer)
+		err := scan.CoverJoinSpanExpressions(coverer, implicitArrayKey)
 		if err != nil {
 			return err
 		}

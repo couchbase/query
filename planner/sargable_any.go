@@ -35,10 +35,9 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 		return false, nil
 	}
 
-	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
-	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
 	if err != nil {
-		return nil, err
+		return false, nil
 	}
 
 	if array.When() != nil && !checkSubset(satisfies, array.When(), this.context) {
@@ -46,6 +45,24 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 	}
 
 	mappings := expression.Expressions{array.ValueMapping()}
-	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context)
+	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context, this.aliases)
 	return min > 0, nil
+}
+
+func getSatisfies(pred, key expression.Expression, array *expression.Array, aliases map[string]bool) (
+	satisfies expression.Expression, err error) {
+	var pBindings expression.Bindings
+	switch p := pred.(type) {
+	case *expression.Any:
+		satisfies = p.Satisfies()
+		pBindings = p.Bindings()
+	case *expression.AnyEvery:
+		satisfies = p.Satisfies()
+		pBindings = p.Bindings()
+	}
+	if expression.HasRenameableBindings(pred, key, aliases) == expression.BINDING_VARS_DIFFER {
+		renamer := expression.NewRenamer(pBindings, array.Bindings())
+		return renamer.Map(satisfies.Copy())
+	}
+	return satisfies, nil
 }

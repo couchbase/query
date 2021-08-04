@@ -52,15 +52,14 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, true,
-			this.advisorValidate, this.context)
+			this.advisorValidate, false, this.aliases, this.context)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
 		return sp, nil
 	}
 
-	renamer := expression.NewRenamer(pred.Bindings(), array.Bindings())
-	satisfies, err := renamer.Map(pred.Satisfies().Copy())
+	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
 	if err != nil {
 		return nil, err
 	}
@@ -72,16 +71,22 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 	// Array Index key can have only single binding
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
 		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, true,
-		this.advisorValidate, this.context)
+		this.advisorValidate, all.IsDerivedFromFlatten(), this.aliases, this.context)
 }
 
 func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, alias string,
-	selec float64, any, advisorValidate bool, context *PrepareContext) (SargSpans, error) {
+	selec float64, any, advisorValidate, flatten bool, aliases map[string]bool,
+	context *PrepareContext) (SargSpans, error) {
 
-	sp, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate, context)
+	sp, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
+		advisorValidate, aliases, context)
 	if err != nil || sp == nil {
 		return sp, err
+	}
+
+	if sp.HasStatic() {
+		sp = sp.Copy()
 	}
 
 	if tsp, ok := sp.(*TermSpans); ok && tsp.Size() == 1 {
@@ -112,7 +117,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 		}
 	}
 
-	if err != nil || !expression.IsArrayCovered(pred, alias, exprs) {
+	if err != nil || (!flatten && !expression.IsArrayCovered(pred, alias, exprs)) {
 		sp.SetExact(false)
 	}
 

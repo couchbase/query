@@ -21,9 +21,10 @@ import (
 
 // Covering Scan
 
-func (this *builder) buildCovering(indexes, flex map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, id expression.Expression,
-	searchSargables []*indexEntry) (scan plan.SecondaryScan, sargLength int, err error) {
+func (this *builder) buildCovering(indexes, unnestIndexes, flex map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, subset, id expression.Expression,
+	searchSargables []*indexEntry, unnests []*algebra.Unnest) (
+	scan plan.SecondaryScan, sargLength int, err error) {
 
 	// covering turrned off or ANSI NEST
 	if this.cover == nil || node.IsAnsiNest() {
@@ -41,6 +42,14 @@ func (this *builder) buildCovering(indexes, flex map[datastore.Index]*indexEntry
 	// Delta keyspace present no covering
 	if hasDeltaKeyspace {
 		return
+	}
+	// GSI Unnest covering scan
+	if len(unnests) > 0 && len(unnestIndexes) > 0 {
+		scan, sargLength, err = this.buildCoveringUnnestScan(node, baseKeyspace.DnfPred(),
+			subset, id, unnestIndexes, unnests)
+		if scan != nil || err != nil {
+			return
+		}
 	}
 
 	// Flex FTS covering scan
@@ -80,20 +89,15 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 	exprs := this.cover.Expressions()
 	pred := baseKeyspace.DnfPred()
 	origPred := baseKeyspace.OrigPred()
+	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 
-	arrays := _ARRAY_POOL.Get()
-	defer _ARRAY_POOL.Put(arrays)
-
-	covering := _ARRAY_POOL.Get()
-	defer _ARRAY_POOL.Put(covering)
-
-	// Remember filter covers
-	fc := make(map[datastore.Index]map[*expression.Cover]value.Value, len(indexes))
+	narrays := 0
+	coveringEntries := _COVERING_ENTRY_POOL.Get()
+	defer _COVERING_ENTRY_POOL.Put(coveringEntries)
 
 outer:
 	for index, entry := range indexes {
-		hasArrayKey := indexHasArrayIndexKey(index)
-		if hasArrayKey && (len(arrays) < len(covering)) {
+		if !useCBO && entry.arrayKey != nil && narrays < len(coveringEntries) {
 			continue
 		}
 
@@ -118,133 +122,68 @@ outer:
 			return nil, 0, err
 		}
 
+		implicitAny := implicitAnyCover(entry, true, this.context.FeatureControls())
+
 		// Skip non-covering index
 		for _, expr := range exprs {
-			if !expression.IsCovered(expr, alias, coveringExprs) {
+			if !expression.IsCovered(expr, alias, coveringExprs, implicitAny) {
 				continue outer
 			}
 		}
 
-		if hasArrayKey {
-			arrays[index] = true
-		}
-
-		covering[index] = true
-		fc[index] = filterCovers
-		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, alias, false, covering[index])
-	}
-
-	// No covering index available
-	if len(covering) == 0 {
-		return nil, 0, nil
-	}
-
-	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
-	if useCBO {
-		for c, _ := range covering {
-			entry := indexes[c]
-			if entry.cost <= 0.0 {
-				cost, _, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys, this.context.RequestId(),
-					entry.spans, node.Alias(), this.advisorValidate(), this.context)
-				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
-					useCBO = false
+		var implcitIndexProj map[int]bool
+		if implicitAny {
+			mapAnys, err1 := expression.GatherAny(exprs, entry.arrayKey, false)
+			if err1 != nil {
+				continue
+			}
+			ifc, err1 := implicitFilterCovers(entry.arrayKey)
+			if err1 != nil {
+				continue
+			}
+			if len(ifc) > 0 {
+				if len(filterCovers) == 0 {
+					filterCovers = ifc
 				} else {
-					entry.cost = cost
-					entry.cardinality = card
-					entry.size = size
-					entry.frCost = frCost
-				}
-			}
-		}
-	}
-
-	var index datastore.Index
-	if useCBO {
-		for c, _ := range covering {
-			// consider pushdown property before considering cost
-			if index == nil {
-				index = c
-			} else {
-				c_pushdown := indexes[c].PushDownProperty()
-				i_pushdown := indexes[index].PushDownProperty()
-				if (c_pushdown > i_pushdown) ||
-					((c_pushdown == i_pushdown) &&
-						(indexes[c].cost < indexes[index].cost)) {
-					index = c
-				}
-			}
-		}
-	} else {
-		// Avoid array indexes if possible
-		if len(arrays) < len(covering) {
-			for a, _ := range arrays {
-				delete(covering, a)
-			}
-		}
-
-	couter:
-		// keep indexes with highest continous sargable indexes
-		for sc, _ := range covering {
-			se := indexes[sc]
-			for tc, _ := range covering {
-				if sc != tc {
-					te := indexes[tc]
-					if be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond); be != nil {
-						if be == te {
-							delete(covering, sc)
-							continue couter
+					for c, v := range ifc {
+						if _, ok := filterCovers[c]; !ok {
+							filterCovers[c] = v
 						}
-						delete(covering, tc)
 					}
 				}
 			}
+
+			implcitIndexProj = implicitIndexKeysProj(implicitIndexKeys(entry), mapAnys)
 		}
 
-		// Keep indexes with max sumKeys
-		sumKeys := 0
-		for c, _ := range covering {
-			if max := indexes[c].sumKeys + indexes[c].nEqCond; max > sumKeys {
-				sumKeys = max
-			}
+		if entry.arrayKey != nil {
+			narrays++
 		}
 
-		for c, _ := range covering {
-			if indexes[c].sumKeys+indexes[c].nEqCond < sumKeys {
-				delete(covering, c)
-			}
-		}
-
-		// Use shortest remaining index
-		minLen := 0
-		for c, _ := range covering {
-			cLen := len(c.RangeKey())
-			if index == nil {
-				index = c
-				minLen = cLen
-			} else {
-				c_pushdown := indexes[c].PushDownProperty()
-				i_pushdown := indexes[index].PushDownProperty()
-				if (c_pushdown > i_pushdown) ||
-					((c_pushdown == i_pushdown) &&
-						(cLen < minLen || (cLen == minLen && c.Condition() != nil))) {
-					index = c
-					minLen = cLen
-				}
-			}
-		}
+		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, alias, nil,
+			false, true, (len(this.baseKeyspaces) == 1), implicitAny)
+		coveringEntries[index] = &coveringEntry{idxEntry: entry, filterCovers: filterCovers,
+			implcitIndexProj: implcitIndexProj, implicitAny: implicitAny}
 	}
 
-	entry := indexes[index]
-	sargLength := len(entry.sargKeys)
-	keys := entry.keys
+	// No covering index available
+	if len(coveringEntries) == 0 {
+		return nil, 0, nil
+	}
+
+	index := this.bestCoveringIndex(useCBO, node, coveringEntries, (narrays < len(coveringEntries)))
+	coveringEntry := coveringEntries[index]
+	keys := coveringEntry.idxEntry.keys
+	var implcitIndexProj map[int]bool
+	if coveringEntry.implicitAny {
+		keys = implicitIndexKeys(coveringEntry.idxEntry)
+		implcitIndexProj = coveringEntry.implcitIndexProj
+	}
 
 	// Matches execution.spanScan.RunOnce()
 	if !index.IsPrimary() {
 		keys = append(keys, id)
 	}
-
-	// Include covering expression from index WHERE clause
-	filterCovers := fc[index]
 
 	// Include covering expression from index keys
 	covers := make(expression.Covers, 0, len(keys))
@@ -252,16 +191,136 @@ outer:
 		covers = append(covers, expression.NewCover(key))
 	}
 
-	arrayIndex := arrays[index]
-	duplicates := entry.spans.CanHaveDuplicates(index, this.context.IndexApiVersion(), pred.MayOverlapSpans(), false)
-	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || arrayIndex || duplicates)
+	return this.buildCreateCoveringScan(coveringEntry.idxEntry, node, id, pred, exprs, keys, false,
+		coveringEntry.idxEntry.arrayKey != nil, coveringEntry.implicitAny, covers,
+		coveringEntry.filterCovers, implcitIndexProj)
+}
+
+func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
+	coveringEntries map[datastore.Index]*coveringEntry, noArray bool) (index datastore.Index) {
+	if useCBO {
+		for _, ce := range coveringEntries {
+			entry := ce.idxEntry
+			if entry.cost <= 0.0 {
+				cost, _, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
+					this.context.RequestId(), entry.spans, node.Alias(),
+					this.advisorValidate(), this.context)
+				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
+					useCBO = false
+				} else {
+					entry.cardinality, entry.cost, entry.frCost, entry.size = card, cost, frCost, size
+				}
+			}
+		}
+	}
+
+	var centry *coveringEntry
+	if useCBO {
+		for _, ce := range coveringEntries {
+			// consider pushdown property before considering cost
+			if centry == nil {
+				centry = ce
+			} else {
+				c_pushdown := ce.idxEntry.PushDownProperty()
+				i_pushdown := centry.idxEntry.PushDownProperty()
+				if (c_pushdown > i_pushdown) ||
+					((c_pushdown == i_pushdown) &&
+						(ce.idxEntry.cost < centry.idxEntry.cost)) {
+					centry = ce
+				}
+			}
+		}
+		return centry.idxEntry.index
+	}
+
+	// Avoid array indexes if possible
+	if noArray {
+		for a, ce := range coveringEntries {
+			if ce.idxEntry.arrayKey != nil {
+				delete(coveringEntries, a)
+			}
+		}
+	}
+
+couter:
+	// keep indexes with highest continous sargable indexes
+	for sc, _ := range coveringEntries {
+		se := coveringEntries[sc].idxEntry
+		for tc, _ := range coveringEntries {
+			if sc != tc {
+				te := coveringEntries[tc].idxEntry
+				if be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond); be != nil {
+					if be == te {
+						delete(coveringEntries, sc)
+						continue couter
+					}
+					delete(coveringEntries, tc)
+				}
+			}
+		}
+	}
+
+	// Keep indexes with max sumKeys
+	sumKeys := 0
+	for _, ce := range coveringEntries {
+		if max := ce.idxEntry.sumKeys + ce.idxEntry.nEqCond; max > sumKeys {
+			sumKeys = max
+		}
+	}
+
+	for c, ce := range coveringEntries {
+		if ce.idxEntry.sumKeys+ce.idxEntry.nEqCond < sumKeys {
+			delete(coveringEntries, c)
+		}
+	}
+
+	// Use shortest remaining index
+	minLen := 0
+	for _, ce := range coveringEntries {
+		cLen := len(ce.idxEntry.keys)
+		if centry == nil {
+			centry = ce
+			minLen = cLen
+		} else {
+			c_pushdown := ce.idxEntry.PushDownProperty()
+			i_pushdown := centry.idxEntry.PushDownProperty()
+			if (c_pushdown > i_pushdown) ||
+				((c_pushdown == i_pushdown) &&
+					(cLen < minLen || (cLen == minLen && ce.idxEntry.index.Condition() != nil))) {
+				centry = ce
+				minLen = cLen
+			}
+		}
+	}
+	return centry.idxEntry.index
+}
+
+func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.KeyspaceTerm,
+	id, pred expression.Expression, exprs, keys expression.Expressions, unnestScan, arrayIndex, implicitAny bool,
+	covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
+	idxProj map[int]bool) (plan.SecondaryScan, int, error) {
+
+	sargLength := len(entry.sargKeys)
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+	countPush := arrayIndex
+	array := arrayIndex
+	if !unnestScan {
+		countPush = !arrayIndex
+		array = false
+	}
+
+	index := entry.index
+	duplicates := entry.spans.CanHaveDuplicates(index, this.context.IndexApiVersion(), pred.MayOverlapSpans(), arrayIndex)
+	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || arrayIndex || duplicates, idxProj)
 
 	// Check and reset pagination pushdows
 	indexKeyOrders := this.checkResetPaginations(entry, keys)
 
 	// Build old Aggregates on Index2 only
 	scan := this.buildCoveringPushdDownIndexScan2(entry, node, baseKeyspace, pred, indexProjection,
-		!arrayIndex, false, covers, filterCovers)
+		countPush, array, covers, filterCovers)
 	if scan != nil {
 		return scan, sargLength, nil
 	}
@@ -276,53 +335,48 @@ outer:
 	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, false, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
-	cost := OPT_COST_NOT_AVAIL
-	cardinality := OPT_CARD_NOT_AVAIL
-	size := OPT_SIZE_NOT_AVAIL
-	frCost := OPT_COST_NOT_AVAIL
+	cost, cardinality, size, frCost := OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	if useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
 		if indexGroupAggs != nil {
-			cost, cardinality, size, frCost = getIndexGroupAggsCost(index, indexGroupAggs, indexProjection, this.keyspaceNames, entry.cardinality)
-			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
-				entry.cost += cost
-				entry.cardinality = cardinality
-				entry.size += size
-				entry.frCost += frCost
-			}
+			cost, cardinality, size, frCost = getIndexGroupAggsCost(index, indexGroupAggs,
+				indexProjection, this.keyspaceNames, entry.cardinality)
 		} else {
 			cost, cardinality, size, frCost = getIndexProjectionCost(index, indexProjection, entry.cardinality)
-			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
-				entry.cost += cost
-				entry.cardinality = cardinality
-				entry.size += size
-				entry.frCost += frCost
-			}
+		}
+
+		if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+			entry.cost += cost
+			entry.cardinality = cardinality
+			entry.size += size
+			entry.frCost += frCost
 		}
 	}
 
+	arrayKey := entry.arrayKey
+	if !implicitAny {
+		arrayKey = nil
+	}
 	// generate filters for covering index scan
 	var filter expression.Expression
-	var err error
-	if indexGroupAggs == nil && !hasDeltaKeyspace {
+	if indexGroupAggs == nil {
+		var err error
 		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
-			covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
+			arrayKey, covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
 		if err != nil {
 			return nil, 0, err
 		}
 		if useCBO {
-			entry.cost = cost
-			entry.cardinality = cardinality
-			entry.size = size
-			entry.frCost = frCost
+			entry.cardinality, entry.cost, entry.frCost, entry.size = cardinality, cost, frCost, size
 		}
 	}
 
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
-		pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection, indexKeyOrders,
+		pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, indexKeyOrders,
 		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
 		entry.size, entry.frCost, hasDeltaKeyspace)
 	if scan != nil {
+		scan.SetImplicitArrayKey(arrayKey)
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		}
@@ -434,12 +488,26 @@ func mapFilterCovers(fc map[string]value.Value, keyspace string) (map[*expressio
 	return rv, nil
 }
 
-func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred, origPred expression.Expression,
-	keyspace string, context *PrepareContext) (expression.Expressions, map[*expression.Cover]value.Value, error) {
+func unFlattenKeys(keys expression.Expressions, arrayKey *expression.All) expression.Expressions {
+	if arrayKey == nil || !arrayKey.Flatten() {
+		return keys
+	}
+	rv := make(expression.Expressions, 0, len(keys))
+	for _, k := range keys {
+		if _, ok := k.(*expression.All); !ok {
+			rv = append(rv, k)
+		}
+	}
+	return append(rv, arrayKey)
+}
+
+func indexCoverExpressions(entry *indexEntry, keys expression.Expressions,
+	pred, origPred expression.Expression, keyspace string, context *PrepareContext) (
+	expression.Expressions, map[*expression.Cover]value.Value, error) {
 
 	var filterCovers map[*expression.Cover]value.Value
 	exprs := make(expression.Expressions, 0, len(keys))
-	exprs = append(exprs, keys...)
+	exprs = append(exprs, unFlattenKeys(keys, entry.arrayKey)...)
 	if entry.cond != nil {
 		var err error
 		fc := _FILTER_COVERS_POOL.Get()
@@ -453,23 +521,19 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 	}
 
 	// Allow array indexes to cover ANY predicates
-	if pred != nil && entry.exactSpans && indexHasArrayIndexKey(entry.index) {
-		sargKeysHasArray := hasArrayIndexKey(entry.sargKeys)
+	if pred != nil && entry.exactSpans && implicitAnyCover(entry, false, uint64(0)) {
+		covers, err := CoversFor(pred, origPred, keys, context)
+		if err != nil {
+			return nil, nil, err
+		}
 
-		if _, ok := entry.spans.(*IntersectSpans); !ok && sargKeysHasArray {
-			covers, err := CoversFor(pred, origPred, keys, context)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			if len(covers) > 0 {
-				if len(filterCovers) == 0 {
-					filterCovers = covers
-				} else {
-					for c, v := range covers {
-						if _, ok := filterCovers[c]; !ok {
-							filterCovers[c] = v
-						}
+		if len(covers) > 0 {
+			if len(filterCovers) == 0 {
+				filterCovers = covers
+			} else {
+				for c, v := range covers {
+					if _, ok := filterCovers[c]; !ok {
+						filterCovers[c] = v
 					}
 				}
 			}
@@ -477,9 +541,6 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 	}
 
 	if len(filterCovers) > 0 {
-		exprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
-		copy(exprs, keys)
-
 		for c, _ := range filterCovers {
 			exprs = append(exprs, c.Covered())
 		}
@@ -488,6 +549,100 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 	return exprs, filterCovers, nil
 }
 
-var _ARRAY_POOL = datastore.NewIndexBoolPool(64)
+func hasSargableArrayKey(entry *indexEntry) bool {
+	if entry.arrayKey != nil {
+		for i, k := range entry.sargKeys {
+			if _, ok := k.(*expression.All); ok &&
+				i < len(entry.skeys) && entry.skeys[i] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func implicitFilterCovers(expr expression.Expression) (map[*expression.Cover]value.Value, error) {
+	fc := _FILTER_COVERS_POOL.Get()
+	defer _FILTER_COVERS_POOL.Put(fc)
+	for all, ok := expr.(*expression.All); ok; all, ok = expr.(*expression.All) {
+		if array, ok := all.Array().(*expression.Array); ok {
+			for _, b := range array.Bindings() {
+				fc[b.Expression().String()] = value.TRUE_ARRAY_VALUE
+			}
+			if array.When() != nil {
+				fc = array.When().FilterCovers(fc)
+			}
+			expr = array.ValueMapping()
+		} else {
+			break
+		}
+	}
+	return mapFilterCovers(fc, "")
+
+}
+
+func implicitIndexKeys(entry *indexEntry) (rv expression.Expressions) {
+	keys := entry.keys
+	all := entry.arrayKey
+	pos := entry.arrayKeyPos
+	if all == nil || !all.Flatten() {
+		return keys
+	}
+	rv = make(expression.Expressions, 0, len(keys))
+	rv = append(rv, keys[0:pos]...)
+	rv = append(rv, all.FlattenKeys().Operands()...)
+	rv = append(rv, keys[pos+all.FlattenSize():]...)
+	return rv
+}
+
+func implicitIndexKeysProj(keys expression.Expressions,
+	anys map[expression.Expression]expression.Expression) (rv map[int]bool) {
+	rv = make(map[int]bool, len(keys))
+	for keyPos, indexKey := range keys {
+		for _, expr := range anys {
+			if expr.DependsOn(indexKey) {
+				rv[keyPos] = true
+				break
+			}
+		}
+	}
+	return
+}
+
+func implicitAnyCover(entry *indexEntry, flatten bool, featControl uint64) bool {
+	_, ok := entry.spans.(*IntersectSpans)
+	if ok || entry.arrayKey == nil || !hasSargableArrayKey(entry) {
+		return false
+	}
+	enabled := !flatten || (util.IsFeatureEnabled(featControl, util.N1QL_IMPLICIT_ARRAY_COVER) &&
+		!bindingExpressionInIndexKeys(entry))
+	return enabled && (flatten == entry.arrayKey.Flatten())
+}
+
+func bindingExpressionInIndexKeys(entry *indexEntry) bool {
+	if entry.arrayKey == nil {
+		return false
+	}
+	array, ok := entry.arrayKey.Array().(*expression.Array)
+	if !ok {
+		for _, key := range entry.keys {
+			if expression.Equivalent(key, entry.arrayKey.Array()) {
+				return true
+			}
+		}
+		return false
+	}
+outer:
+	for _, b := range array.Bindings() {
+		for _, key := range entry.keys {
+			if expression.Equivalent(key, b.Expression()) {
+				continue outer
+			}
+		}
+		return false
+	}
+	return true
+}
+
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

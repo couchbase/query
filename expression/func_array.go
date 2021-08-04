@@ -329,6 +329,11 @@ func (this *ArrayContains) FilterCovers(covers map[string]value.Value) map[strin
 	return covers
 }
 
+func (this *ArrayContains) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -427,6 +432,11 @@ For boolean functions, simply list this expression.
 */
 func (this *ArrayContainsAny) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *ArrayContainsAny) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 
@@ -529,6 +539,11 @@ For boolean functions, simply list this expression.
 */
 func (this *ArrayContainsAll) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *ArrayContainsAll) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

@@ -85,7 +85,7 @@ func (this *TermSpans) CreateScan(
 	} else {
 		var limitOffset expression.Expression
 
-		spans, exact := ConvertSpans2ToSpan(this.spans, len(index.RangeKey()))
+		spans, exact := ConvertSpans2ToSpan(this.Spans(), getIndexSize(index))
 		if !exact {
 			limit = nil
 			offset = nil
@@ -143,8 +143,20 @@ func (this *TermSpans) ExactSpan1(nkeys int) bool {
 	return exact
 }
 
+func (this *TermSpans) HasStatic() bool {
+	return this.spans.HasStatic()
+}
+
 func (this *TermSpans) SetExact(exact bool) {
-	for _, s := range this.spans {
+	if len(this.spans) == 1 && this.HasStatic() {
+		return
+	}
+
+	for pos, s := range this.spans {
+		if s.Static {
+			s = s.Copy()
+			this.spans[pos] = s
+		}
 		s.Exact = exact
 	}
 }

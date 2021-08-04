@@ -83,6 +83,36 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 	return value.FALSE_VALUE, nil
 }
 
+func (this *Any) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
+
+	nExprs := make(Expressions, 0, len(exprs))
+	var all *All
+
+	for _, expr := range exprs {
+		if aexpr, ok := expr.(*All); ok {
+			all = aexpr
+		} else {
+			nExprs = append(nExprs, expr)
+		}
+	}
+
+	if options.hasCoverImplicitArrayKey() && all != nil && all.Flatten() {
+		cnflict, _, expr := renameBindings(all, this, true)
+		if cnflict {
+			return CoveredFalse
+		}
+		if aexpr, ok := expr.(*All); ok {
+			all = aexpr
+		}
+		options.setCoverArrayKeyOptions()
+	}
+
+	if all != nil {
+		nExprs = append(nExprs, all)
+	}
+	return this.coveredBy(keyspace, nExprs, options)
+}
+
 /*
 If this expression is in the WHERE clause of a partial index, lists
 the Expressions that are implicitly covered.
@@ -91,6 +121,11 @@ For ANY, simply list this expression.
 */
 func (this *Any) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *Any) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

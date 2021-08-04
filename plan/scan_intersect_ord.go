@@ -115,9 +115,10 @@ func (this *OrderedIntersectScan) IsUnderNL() bool {
 	return this.scans[0].IsUnderNL()
 }
 
-func (this *OrderedIntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
+func (this *OrderedIntersectScan) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) error {
 	for _, scan := range this.scans {
-		err := scan.CoverJoinSpanExpressions(coverer)
+		err := scan.CoverJoinSpanExpressions(coverer, implicitArrayKey)
 		if err != nil {
 			return err
 		}

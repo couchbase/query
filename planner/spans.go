@@ -40,6 +40,7 @@ type SargSpans interface {
 	Exact() bool                                   // Are all spans exact
 	ExactSpan1(nkeys int) bool                     // Are all spans exact - Api1
 	SetExact(exact bool)                           // Set exact on spans
+	HasStatic() bool                               // Has Static spans
 	CanUseIndexOrder(allowMultipleSpans bool) bool // Can use index ORDER
 	CanHaveDuplicates(index datastore.Index, indexApiVersion int,
 		overlap, array bool) bool // Can have duplicates

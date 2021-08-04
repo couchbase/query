@@ -216,7 +216,7 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END) WHERE `test_id` = 'advise'",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [`x`, `y`] FOR `x` IN `a21`, `y` IN `a22` END) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
                 }
@@ -391,13 +391,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_type ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END,`type`)",
+                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_type ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR `x` IN `a21`, `y` IN `a22` END,`type`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22 ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR x in `a21`, y in `a22` END)",
+                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22 ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR `x` IN `a21`, `y` IN `a22` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
                 }
@@ -480,13 +480,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END,`type`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -524,9 +524,15 @@
           "#operator": "IndexAdvice",
           "adviseinfo": {
             "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name_type ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -548,9 +554,15 @@
           "#operator": "IndexAdvice",
           "adviseinfo": {
             "recommended_indexes": {
+              "covering_indexes": [
+                 {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name_type ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(length((`y`.`name`)),`y`.`id`) FOR `y` IN `x`.`fields` END) FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                 }
+               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY length((`y`.`name`)) FOR y in `x`.`fields` END) FOR x in `a21` END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(length((`y`.`name`)),`y`.`id`) FOR `y` IN `x`.`fields` END) FOR `x` IN `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
@@ -633,13 +645,13 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END,`type`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END,`type`)",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }
@@ -677,9 +689,15 @@
           "#operator": "IndexAdvice",
           "adviseinfo": {
             "recommended_indexes": {
+              "covering_indexes": [
+                 {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name_type ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                 }
+               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR x in `a21` END)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
                 }

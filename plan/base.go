@@ -8,6 +8,10 @@
 
 package plan
 
+import (
+	"github.com/couchbase/query/expression"
+)
+
 type readonly struct {
 }
 
@@ -17,6 +21,13 @@ func (this *readonly) Readonly() bool {
 
 func (this *readonly) verify(prepared *Prepared) bool {
 	return true
+}
+
+func (this *readonly) SetImplicitArrayKey(arrayKey *expression.All) {
+}
+
+func (this *readonly) ImplicitArrayKey() *expression.All {
+	return nil
 }
 
 type readwrite struct {

@@ -113,7 +113,7 @@ func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression)
 		if pairs != nil {
 			scope := pairs.Operand()
 			if scope.EquivalentTo(alias) ||
-				expression.IsCovered(pred, alias.Identifier(), aliasNamed(scope)) {
+				expression.IsCovered(pred, alias.Identifier(), aliasNamed(scope), false) {
 
 				return &dynamicKey{
 					variable: variable,

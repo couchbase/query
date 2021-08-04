@@ -66,6 +66,11 @@ func (this *IsArray) FilterCovers(covers map[string]value.Value) map[string]valu
 	return covers
 }
 
+func (this *IsArray) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -139,6 +144,11 @@ func (this *IsAtom) FilterCovers(covers map[string]value.Value) map[string]value
 	return covers
 }
 
+func (this *IsAtom) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -199,6 +209,11 @@ For boolean functions, simply list this expression.
 */
 func (this *IsBinary) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *IsBinary) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 
@@ -265,6 +280,11 @@ func (this *IsBoolean) FilterCovers(covers map[string]value.Value) map[string]va
 	return covers
 }
 
+func (this *IsBoolean) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -325,6 +345,11 @@ For boolean functions, simply list this expression.
 */
 func (this *IsNumber) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *IsNumber) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 
@@ -391,6 +416,11 @@ func (this *IsObject) FilterCovers(covers map[string]value.Value) map[string]val
 	return covers
 }
 
+func (this *IsObject) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -451,6 +481,11 @@ For boolean functions, simply list this expression.
 */
 func (this *IsString) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *IsString) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

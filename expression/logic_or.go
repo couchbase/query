@@ -180,6 +180,37 @@ func (this *Or) FilterCovers(covers map[string]value.Value) map[string]value.Val
 	return covers
 }
 
+func (this *Or) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	c := make(map[Expression]value.Value, 4)
+
+	c = this.operands[0].FilterExpressionCovers(c)
+	if len(c) == 0 {
+		return covers
+	}
+
+	for i := 1; i < len(this.operands); i++ {
+		ci := make(map[Expression]value.Value, 4)
+
+		ci = this.operands[i].FilterExpressionCovers(ci)
+		if len(ci) == 0 {
+			return covers
+		}
+
+		for s, v := range c {
+			vi, ok := ci[s]
+			if !ok || !v.Equals(vi).Truth() {
+				delete(c, s)
+			}
+		}
+	}
+
+	for s, v := range c {
+		covers[s] = v
+	}
+
+	return covers
+}
+
 var _COVERS_POOL = value.NewStringValuePool(16)
 
 /*

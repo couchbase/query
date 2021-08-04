@@ -262,7 +262,7 @@ outer:
 		}
 
 		for _, key := range index.RangeKey() {
-			if all, ok := key.(*expression.All); ok {
+			if all, ok := key.(*expression.All); ok && !all.Flatten() {
 				sufVar := _DEFAULT_SUFFIXES_VARIABLE
 				suf, _ := all.Array().(*expression.Suffixes)
 

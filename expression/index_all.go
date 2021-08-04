@@ -20,6 +20,7 @@ type All struct {
 	array        Expression
 	distinct     bool
 	flatten_keys *FlattenKeys
+	derived      bool // derived from flatten
 }
 
 func NewAll(array Expression, distinct bool) *All {
@@ -79,6 +80,7 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 }
 
 var _NULL_ARRAY = value.Values{value.NULL_VALUE}
+var _TRUE_ARRAY = value.Values{value.TRUE_VALUE}
 
 var _MISSING_ARRAY = value.Values{value.MISSING_VALUE}
 
@@ -144,6 +146,7 @@ func (this *All) MapChildren(mapper Mapper) error {
 
 func (this *All) Copy() Expression {
 	rv := NewAll(this.array.Copy(), this.distinct)
+	rv.derived = this.derived
 	rv.BaseCopy(this)
 	rv.flatten_keys = rv.flattenKeys()
 	return rv
@@ -155,6 +158,41 @@ func (this *All) Array() Expression {
 
 func (this *All) Distinct() bool {
 	return this.distinct
+}
+
+// No ALL in the expression (i.e. all of them are DISTINCT)
+func (this *All) NoAll() bool {
+	var expr Expression
+	expr = this
+	for all, ok := expr.(*All); ok; all, ok = expr.(*All) {
+		if !all.Distinct() {
+			return false
+		}
+		if array, ok := all.Array().(*Array); ok {
+			expr = array.ValueMapping()
+		} else {
+			return true
+		}
+	}
+	return true
+}
+
+// No DISTINCT in the expression (i.e. all of them are ALL)
+
+func (this *All) NoDistinct() bool {
+	var expr Expression
+	expr = this
+	for all, ok := expr.(*All); ok; all, ok = expr.(*All) {
+		if all.Distinct() {
+			return false
+		}
+		if array, ok := all.Array().(*Array); ok {
+			expr = array.ValueMapping()
+		} else {
+			return true
+		}
+	}
+	return true
 }
 
 func (this *All) Flatten() bool {
@@ -172,6 +210,24 @@ func (this *All) FlattenKeys() *FlattenKeys {
 	return this.flatten_keys
 }
 
+func (this *All) IsDerivedFromFlatten() bool {
+	all := this
+	for {
+		switch array := all.Array().(type) {
+		case *Array:
+			switch valMapping := array.ValueMapping().(type) {
+			case *All:
+				all = valMapping
+			default:
+				return all.derived
+			}
+		default:
+			return false
+		}
+	}
+	return false
+}
+
 /*
    DISTINCT ARRAY ( DISTINCT ARRAY flatten_keys(v.c1,v.c2) FOR v IN v1.aa END) FOR v1 IN a1 END
 */
@@ -186,6 +242,29 @@ func (this *All) flattenKeys() *FlattenKeys {
 				all = valMapping
 			case *FlattenKeys:
 				return valMapping
+			default:
+				return nil
+			}
+		default:
+			return nil
+		}
+	}
+	return nil
+}
+
+func (this *All) SetFlattenValueMapping(fk Expression) *All {
+	all := this
+	for {
+		switch array := all.Array().(type) {
+		case *Array:
+			switch valMapping := array.ValueMapping().(type) {
+			case *All:
+				all = valMapping
+			case *FlattenKeys:
+				all.array = NewArray(fk, array.Bindings(), array.When())
+				all.derived = true
+				this.flatten_keys = this.flattenKeys()
+				return this
 			default:
 				return nil
 			}

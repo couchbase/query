@@ -306,16 +306,9 @@ func planToScanMapping(index datastore.Index, proj *plan.IndexProjection, indexO
 			}
 		}
 
-		// include META().id which is at nKeys+1
-		nKeys := len(index.RangeKey())
-		IndexKeyNames := make([]string, 0, nKeys+1)
-		for i := 0; i <= nKeys; i++ {
-			IndexKeyNames = append(IndexKeyNames, covers[i].Text())
-		}
-
 		indexGroupAggs = &datastore.IndexGroupAggregates{Name: groupAggs.Name, Group: group,
 			Aggregates: aggs, DependsOnIndexKeys: groupAggs.DependsOnIndexKeys,
-			IndexKeyNames: IndexKeyNames, OneForPrimaryKey: groupAggs.DistinctDocid,
+			IndexKeyNames: getIndexKeyNames(index, covers), OneForPrimaryKey: groupAggs.DistinctDocid,
 			AllowPartialAggr: groupAggs.Partial}
 	}
 
@@ -337,4 +330,22 @@ func (this *IndexScan3) SendAction(action opAction) {
 func (this *IndexScan3) Done() {
 	this.baseDone()
 	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
+}
+
+func getIndexKeyNames(index datastore.Index, covers expression.Covers) []string {
+	pos := 0
+	names := make([]string, 0, len(covers))
+	for _, key := range index.RangeKey() {
+		if all, ok := key.(*expression.All); ok && all.Flatten() {
+			for _, _ = range all.FlattenKeys().Operands() {
+				names = append(names, covers[pos].Text())
+				pos++
+			}
+		} else {
+			names = append(names, covers[pos].Text())
+			pos++
+		}
+	}
+	names = append(names, covers[pos].Text()) // include META().id
+	return names
 }

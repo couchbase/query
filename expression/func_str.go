@@ -87,6 +87,11 @@ func (this *Contains) FilterCovers(covers map[string]value.Value) map[string]val
 	return covers
 }
 
+func (this *Contains) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */

@@ -84,6 +84,11 @@ func (this *Between) FilterCovers(covers map[string]value.Value) map[string]valu
 	return covers
 }
 
+func (this *Between) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */

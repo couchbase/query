@@ -34,6 +34,7 @@ const (
 	N1QL_CBO_NEW
 	N1QL_DISABLE_PWD_BKT
 	N1QL_READ_FROM_REPLICA
+	N1QL_IMPLICIT_ARRAY_COVER
 	N1QL_ALL_BITS // Add anything above this. This needs to be last one
 )
 

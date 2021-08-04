@@ -407,6 +407,10 @@ func (this *ExpressionBase) FilterCovers(covers map[string]value.Value) map[stri
 	return covers
 }
 
+func (this *ExpressionBase) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	return covers
+}
+
 func (this *ExpressionBase) valueEquivalentTo(other Expression) bool {
 	thisValue := this.expr.Value()
 	otherValue := other.Value()

@@ -34,6 +34,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevPushableOnclause := this.pushableOnclause
 	prevBuilderFlags := this.builderFlags
 	prevMaxParallelism := this.maxParallelism
+	prevAliases := this.aliases
 	prevLastOp := this.lastOp
 
 	indexPushDowns := this.storeIndexPushDowns()
@@ -52,6 +53,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.builderFlags = prevBuilderFlags
 		this.maxParallelism = prevMaxParallelism
 		this.lastOp = prevLastOp
+		this.aliases = prevAliases
 		this.restoreIndexPushDowns(indexPushDowns, false)
 	}()
 
@@ -65,6 +67,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.builderFlags = 0
 	this.maxParallelism = 0
 	this.lastOp = nil
+	this.aliases = nil
 
 	this.projection = node.Projection()
 	this.resetIndexGroupAggs()
@@ -177,8 +180,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		if this.order != nil {
 			allow_flags := value.NewValue(uint32(expression.IDENT_IS_PROJ_ALIAS))
 			for _, t := range proj {
-				if t.As() != "" {
-					allowed.SetField(t.As(), allow_flags)
+				if !t.Star() && t.Alias() != "" {
+					allowed.SetField(t.Alias(), allow_flags)
 				}
 			}
 
@@ -424,27 +427,60 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 	this.addLetAndPredicate(group.Letting(), group.Having())
 }
 
-func (this *builder) coverExpressions() error {
+func (this *builder) renameAnyExpression(arrayKey *expression.All, filter, where, joinKeys expression.Expression) (
+	expression.Expression, expression.Expression, expression.Expression, error) {
+	var err error
+	if arrayKey != nil {
+		anyRenamer := expression.NewAnyRenamer(arrayKey)
+		if filter != nil {
+			filter, err = anyRenamer.Map(filter)
+		}
+		if err == nil && where != nil {
+			where, err = anyRenamer.Map(where)
+		}
+		if err == nil && joinKeys != nil {
+			joinKeys, err = anyRenamer.Map(joinKeys)
+		}
+	}
+	return filter, where, joinKeys, err
+}
+
+func (this *builder) coverExpression(coverer *expression.Coverer, filter, where, joinKeys expression.Expression) (
+	expression.Expression, expression.Expression, expression.Expression, error) {
+
+	var err error
+	filter, err = coverer.CoverExpr(filter)
+	if err == nil {
+		where, err = coverer.CoverExpr(where)
+	}
+	if err == nil {
+		joinKeys, err = coverer.CoverExpr(joinKeys)
+	}
+	return filter, where, joinKeys, err
+}
+
+func (this *builder) coverExpressions() (err error) {
+	for _, op := range this.coveringScans {
+		if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+			anyRenamer := expression.NewAnyRenamer(arrayKey)
+			err = this.cover.MapExpressions(anyRenamer)
+			if err == nil {
+				this.filter, this.where, _, err = this.renameAnyExpression(arrayKey, this.filter, this.where, nil)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	for _, op := range this.coveringScans {
 		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-
-		err := this.cover.MapExpressions(coverer)
+		err = this.cover.MapExpressions(coverer)
+		if err == nil {
+			this.filter, this.where, _, err = this.coverExpression(coverer, this.filter, this.where, nil)
+		}
 		if err != nil {
 			return err
-		}
-
-		if this.where != nil {
-			this.where, err = coverer.Map(this.where)
-			if err != nil {
-				return err
-			}
-		}
-
-		if this.filter != nil {
-			this.filter, err = coverer.Map(this.filter)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

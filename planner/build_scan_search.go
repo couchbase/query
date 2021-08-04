@@ -66,7 +66,7 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	}
 
 	for _, expr := range exprs {
-		if !expression.IsCovered(expr, alias, coveringExprs) {
+		if !expression.IsCovered(expr, alias, coveringExprs, false) {
 			return nil, 0, nil
 		}
 	}
@@ -111,7 +111,7 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 	coveringExprs := expression.Expressions{pred, id}
 
 	for _, expr := range this.cover.Expressions() {
-		if !expression.IsCovered(expr, alias, coveringExprs) {
+		if !expression.IsCovered(expr, alias, coveringExprs, false) {
 			return nil, 0, nil
 		}
 	}
@@ -173,8 +173,8 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 	if len(searchSargables) == 0 {
 		return nil, nil, nil
 	} else if this.hasOffsetOrLimit() && (len(searchSargables) > 1 ||
-		!searchSargables[0].exactSpans ||
-		!this.checkExactSpans(searchSargables[0], pred, alias, nil)) {
+		!searchSargables[0].exactSpans || len(this.baseKeyspaces) != 1 ||
+		!this.checkExactSpans(searchSargables[0], pred, alias, nil, nil, false)) {
 		this.resetOffsetLimit()
 	}
 
@@ -413,8 +413,10 @@ func (this *builder) buildFTSFlexRequest(alias string, pred expression.Expressio
 
 	if flexRequest.CheckPageable {
 		flexRequest.Order = flexOrder
-		flexRequest.Offset = getLimitOffset(this.offset, int64(0))
-		flexRequest.Limit = getLimitOffset(this.limit, math.MaxInt64)
+		if len(this.baseKeyspaces) == 1 {
+			flexRequest.Offset = getLimitOffset(this.offset, int64(0))
+			flexRequest.Limit = getLimitOffset(this.limit, math.MaxInt64)
+		}
 	}
 
 	return

@@ -65,6 +65,12 @@ func (this *IsNull) FilterCovers(covers map[string]value.Value) map[string]value
 	return covers
 }
 
+func (this *IsNull) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this.Operand()] = value.NULL_VALUE
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */
@@ -120,6 +126,11 @@ For IsNotNull, simply list this expression.
 */
 func (this *IsNotNull) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+func (this *IsNotNull) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
 	return covers
 }
 

@@ -46,6 +46,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		}
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
 		this.collectKeyspaceNames()
+		this.collectAliases(node)
 
 		node.SetOptimHints(deriveOptimHints(this.baseKeyspaces, node.OptimHints()))
 		if node.OptimHints() != nil {
@@ -192,6 +193,19 @@ func isValidXattrs(names []string) bool {
 	}
 	return len(names) <= 1 || (strings.HasPrefix(names[0], "$") && !strings.HasPrefix(names[1], "$")) ||
 		(!strings.HasPrefix(names[0], "$") && strings.HasPrefix(names[1], "$"))
+}
+
+func (this *builder) collectAliases(node *algebra.Subselect) {
+	this.aliases = make(map[string]bool, len(this.baseKeyspaces))
+	for a, _ := range this.baseKeyspaces {
+		this.aliases[a] = true
+	}
+	for _, b := range node.With() {
+		this.aliases[b.Variable()] = true
+	}
+	for _, b := range node.Let() {
+		this.aliases[b.Variable()] = true
+	}
 }
 
 func (this *builder) GetSubPaths(keyspace string) (names []string, err error) {
@@ -874,7 +888,7 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 }
 
 func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans SargSpans,
-	covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
+	arrayKey *expression.All, covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
 	cost, cardinality float64, size int64, frCost float64) (
 	expression.Expression, float64, float64, int64, float64, error) {
 
@@ -909,7 +923,10 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 
 	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
 		coverer := expression.NewCoverer(covers, filterCovers)
-		filter, err = coverer.Map(filter)
+		filter, err = expression.RenameAnyExpr(filter, arrayKey)
+		if err == nil {
+			filter, err = coverer.Map(filter)
+		}
 		if err != nil {
 			return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}

@@ -87,8 +87,9 @@ func (this *DistinctScan) IsUnderNL() bool {
 	return this.scan.IsUnderNL()
 }
 
-func (this *DistinctScan) CoverJoinSpanExpressions(coverer *expression.Coverer) error {
-	return this.scan.CoverJoinSpanExpressions(coverer)
+func (this *DistinctScan) CoverJoinSpanExpressions(coverer *expression.Coverer,
+	implicitArrayKey *expression.All) error {
+	return this.scan.CoverJoinSpanExpressions(coverer, implicitArrayKey)
 }
 
 func (this *DistinctScan) GroupAggs() *IndexGroupAggregates {
@@ -101,6 +102,14 @@ func (this *DistinctScan) OrderTerms() IndexKeyOrders {
 
 func (this *DistinctScan) GetIndex() datastore.Index {
 	return this.scan.GetIndex()
+}
+
+func (this *DistinctScan) SetImplicitArrayKey(arrayKey *expression.All) {
+	this.scan.SetImplicitArrayKey(arrayKey)
+}
+
+func (this *DistinctScan) ImplicitArrayKey() *expression.All {
+	return this.scan.ImplicitArrayKey()
 }
 
 func (this *DistinctScan) String() string {

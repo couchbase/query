@@ -610,73 +610,54 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		// a join filter, if part of the join filter gets transformed first, the ANY clause
 		// will no longer match during transformation.
 		// (note this assumes the ANY clause is on the right-hand-side keyspace)
-		if len(this.coveringScans) > 0 {
-			for _, op := range this.coveringScans {
-				coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-
-				if primaryJoinKeys != nil {
-					primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
-					if err != nil {
-						return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-				if newFilter != nil {
-					newFilter, err = coverer.Map(newFilter)
-					if err != nil {
-						return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-				if newOnclause != nil {
-					newOnclause, err = coverer.Map(newOnclause)
-					if err != nil {
-						return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
+		for _, op := range this.coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+				newFilter, newOnclause, primaryJoinKeys, err =
+					this.renameAnyExpression(arrayKey, newFilter, newOnclause, primaryJoinKeys)
+			}
+			if err == nil {
+				newFilter, newOnclause, primaryJoinKeys, err =
+					this.coverExpression(coverer, newFilter, newOnclause, primaryJoinKeys)
+			}
+			if err != nil {
+				return nil, nil, nil, nil,
+					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 			}
 		}
 
-		if len(coveringScans) > 0 {
-			for _, op := range coveringScans {
-				coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+		for _, op := range coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+				newFilter, newOnclause, primaryJoinKeys, err =
+					this.renameAnyExpression(arrayKey, newFilter, newOnclause, primaryJoinKeys)
+			}
+			if err == nil {
+				newFilter, newOnclause, primaryJoinKeys, err =
+					this.coverExpression(coverer, newFilter, newOnclause, primaryJoinKeys)
+			}
+			if err != nil {
+				return nil, nil, nil, nil,
+					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			}
 
-				if primaryJoinKeys != nil {
-					primaryJoinKeys, err = coverer.Map(primaryJoinKeys)
+			// also need to perform cover transformation for index spans for
+			// right-hand-side index scans since left-hand-side expressions
+			// could be used as part of index spans for right-hand-side index scan
+			for _, child := range this.children {
+				if secondary, ok := child.(plan.SecondaryScan); ok {
+					err := secondary.CoverJoinSpanExpressions(coverer, op.ImplicitArrayKey())
 					if err != nil {
-						return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+						return nil, nil, nil, nil,
+							OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 					}
-				}
-				if newFilter != nil {
-					newFilter, err = coverer.Map(newFilter)
-					if err != nil {
-						return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-				if newOnclause != nil {
-					newOnclause, err = coverer.Map(newOnclause)
-					if err != nil {
-						return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
 
-				// also need to perform cover transformation for index spans for
-				// right-hand-side index scans since left-hand-side expressions
-				// could be used as part of index spans for right-hand-side index scan
-				for _, child := range this.children {
-					if secondary, ok := child.(plan.SecondaryScan); ok {
-						err := secondary.CoverJoinSpanExpressions(coverer)
-						if err != nil {
-							return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-						}
-					}
 				}
 			}
 		}
 	}
 
-	cost := OPT_COST_NOT_AVAIL
-	cardinality := OPT_CARD_NOT_AVAIL
-	size := OPT_SIZE_NOT_AVAIL
-	frCost := OPT_COST_NOT_AVAIL
+	cost, cardinality, size, frCost := OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	if useCBO && len(this.children) > 0 {
 		cost, cardinality, size, frCost = getNLJoinCost(lastOp, this.lastOp,
@@ -887,11 +868,14 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 			this.lastOp = qPlan[len(qPlan)-1]
 		} else {
 			/* should not come here */
-			return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError("buildHashjoinOp: no plan for inner side")
+			return nil, nil, nil, nil, nil, nil,
+				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
+				errors.NewPlanInternalError("buildHashjoinOp: no plan for inner side")
 		}
 		_, _, err := this.getFilter(alias, true, nil)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			return nil, nil, nil, nil, nil, nil,
+				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 	} else {
 		this.coveringScans = nil
@@ -919,12 +903,14 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 
 		_, err = right.Accept(this)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			return nil, nil, nil, nil, nil, nil,
+				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 
 		// if no plan generated, bail out
 		if len(this.children) == 0 {
-			return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
+			return nil, nil, nil, nil, nil, nil,
+				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 
 		// perform cover transformation of leftExprs and rightExprs and onclause
@@ -936,56 +922,70 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 			newOnclause = onclause.Copy()
 		}
 
-		if len(this.coveringScans) > 0 {
-			for _, op := range this.coveringScans {
-				coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-
-				if newFilter != nil {
-					newFilter, err = coverer.Map(newFilter)
-					if err != nil {
-						return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
+		for _, op := range this.coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+				newFilter, newOnclause, _, err =
+					this.renameAnyExpression(arrayKey, newFilter, newOnclause, nil)
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil,
+						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 				}
-
-				if newOnclause != nil {
-					newOnclause, err = coverer.Map(newOnclause)
-					if err != nil {
-						return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-
+				anyRenamer := expression.NewAnyRenamer(arrayKey)
 				for i, _ := range rightExprs {
-					rightExprs[i], err = coverer.Map(rightExprs[i])
+					rightExprs[i], err = anyRenamer.Map(rightExprs[i])
 					if err != nil {
-						return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+						return nil, nil, nil, nil, nil, nil,
+							OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 					}
+				}
+			}
+
+			newFilter, newOnclause, _, err = this.coverExpression(coverer, newFilter, newOnclause, nil)
+			if err != nil {
+				return nil, nil, nil, nil, nil, nil,
+					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			}
+
+			for i, _ := range rightExprs {
+				rightExprs[i], err = coverer.Map(rightExprs[i])
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil,
+						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 				}
 			}
 		}
 
-		if len(coveringScans) > 0 {
-			for _, op := range coveringScans {
-				coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-
-				if newFilter != nil {
-					newFilter, err = coverer.Map(newFilter)
-					if err != nil {
-						return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
+		for _, op := range coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+				newFilter, newOnclause, _, err =
+					this.renameAnyExpression(arrayKey, newFilter, newOnclause, nil)
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil,
+						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 				}
-
-				if newOnclause != nil {
-					newOnclause, err = coverer.Map(newOnclause)
-					if err != nil {
-						return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-
+				anyRenamer := expression.NewAnyRenamer(arrayKey)
 				for i, _ := range leftExprs {
-					leftExprs[i], err = coverer.Map(leftExprs[i])
+					leftExprs[i], err = anyRenamer.Map(leftExprs[i])
 					if err != nil {
-						return nil, nil, nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+						return nil, nil, nil, nil, nil, nil,
+							OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 					}
+				}
+			}
+
+			newFilter, newOnclause, _, err = this.coverExpression(coverer, newFilter, newOnclause, nil)
+			if err != nil {
+				return nil, nil, nil, nil, nil, nil,
+					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			}
+
+			for i, _ := range leftExprs {
+				leftExprs[i], err = coverer.Map(leftExprs[i])
+				if err != nil {
+					return nil, nil, nil, nil, nil, nil,
+						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 				}
 			}
 		}
@@ -993,15 +993,13 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 
 	if useCBO {
 		var bldRight bool
-		cost, cardinality, size, frCost, bldRight = getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, filters, outer, op)
+		cost, cardinality, size, frCost, bldRight =
+			getHashJoinCost(lastOp, this.lastOp, leftExprs, rightExprs, buildRight, force, filters, outer, op)
 		if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 			buildRight = bldRight
 		}
 	} else {
-		cost = OPT_COST_NOT_AVAIL
-		cardinality = OPT_COST_NOT_AVAIL
-		size = OPT_SIZE_NOT_AVAIL
-		frCost = OPT_COST_NOT_AVAIL
+		cost, cardinality, size, frCost = OPT_COST_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
 
 	if buildRight {
@@ -1065,25 +1063,23 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 			if newOnclause != nil || fromExpr != nil {
 				for _, op := range this.coveringScans {
 					coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-
-					if newOnclause != nil {
-						newOnclause, err = coverer.Map(newOnclause)
-						if err != nil {
-							return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-						}
+					if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+						_, newOnclause, fromExpr, err =
+							this.renameAnyExpression(arrayKey, nil, newOnclause, fromExpr)
 					}
-
-					if fromExpr != nil {
-						fromExpr, err = coverer.Map(fromExpr)
-						if err != nil {
-							return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-						}
+					if err == nil {
+						_, newOnclause, fromExpr, err =
+							this.coverExpression(coverer, nil, newOnclause, fromExpr)
+					}
+					if err != nil {
+						return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL,
+							OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 					}
 				}
-			}
 
-			if exprTerm != nil && fromExpr != nil {
-				exprTerm.SetExpressionTerm(fromExpr)
+				if exprTerm != nil && fromExpr != nil {
+					exprTerm.SetExpressionTerm(fromExpr)
+				}
 			}
 		}
 	}
@@ -1278,42 +1274,30 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base
 	var err error
 	var keys expression.Expressions
 	var condition expression.Expression
+
 	alias := baseKeyspace.Name()
-
-	if !index.IsPrimary() {
-		keys = index.RangeKey().Copy()
-	}
-	if index.Condition() != nil {
-		condition = index.Condition().Copy()
-	}
-	if len(keys) > 0 || condition != nil {
+	if index.IsPrimary() {
+		keys = expression.Expressions{expression.NewMeta(expression.NewIdentifier(alias))}
+	} else {
 		formalizer := expression.NewSelfFormalizer(alias, nil)
-
-		for i, key := range keys {
-			key = key.Copy()
-
+		if index.Condition() != nil {
 			formalizer.SetIndexScope()
-			key, err = formalizer.Map(key)
+			condition, err = formalizer.Map(index.Condition().Copy())
 			formalizer.ClearIndexScope()
 			if err != nil {
-				break
+				return err
 			}
-
+		}
+		keys = expression.GetFlattenKeys(index.RangeKey()).Copy()
+		for i, key := range keys {
+			formalizer.SetIndexScope()
+			key, err = formalizer.Map(key.Copy())
+			formalizer.ClearIndexScope()
+			if err != nil {
+				return err
+			}
 			keys[i] = key
 		}
-
-		if condition != nil && err == nil {
-			formalizer.SetIndexScope()
-			condition, err = formalizer.Map(condition)
-			formalizer.ClearIndexScope()
-		}
-	}
-	if index.IsPrimary() {
-		meta := expression.NewMeta(expression.NewIdentifier(alias))
-		keys = append(keys, meta)
-	}
-	if err != nil {
-		return err
 	}
 
 	var unnestAliases []string

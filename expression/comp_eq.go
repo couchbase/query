@@ -81,6 +81,25 @@ func (this *Eq) FilterCovers(covers map[string]value.Value) map[string]value.Val
 	return covers
 }
 
+func (this *Eq) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	var static, other Expression
+	if this.Second().Value() != nil {
+		static = this.Second()
+		other = this.First()
+	} else if this.First().Value() != nil {
+		static = this.First()
+		other = this.Second()
+	}
+
+	if static != nil {
+		covers[other] = static.Value()
+	} else {
+		covers[this] = value.TRUE_VALUE
+	}
+
+	return covers
+}
+
 /*
 Factory method pattern.
 */

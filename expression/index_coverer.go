@@ -45,6 +45,14 @@ func NewCoverer(covers []*Cover, filterCovers map[*Cover]value.Value) *Coverer {
 	return rv
 }
 
+func (this *Coverer) CoverExpr(expr Expression) (Expression, error) {
+	if expr != nil {
+		return this.Map(expr)
+	}
+	return expr, nil
+
+}
+
 func (this *Coverer) Covers() []*Cover {
 	return this.covers
 }

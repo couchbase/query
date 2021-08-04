@@ -68,6 +68,11 @@ func (this *LT) FilterCovers(covers map[string]value.Value) map[string]value.Val
 	return covers
 }
 
+func (this *LT) FilterExpressionCovers(covers map[Expression]value.Value) map[Expression]value.Value {
+	covers[this] = value.TRUE_VALUE
+	return covers
+}
+
 /*
 Factory method pattern.
 */

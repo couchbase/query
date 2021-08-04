@@ -20,6 +20,7 @@ type sarg struct {
 	isJoin          bool
 	doSelec         bool
 	advisorValidate bool
+	aliases         map[string]bool
 	context         *PrepareContext
 }
 

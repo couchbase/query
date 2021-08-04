@@ -68,6 +68,15 @@ func (this *multiSpansBase) SetExact(exact bool) {
 	}
 }
 
+func (this *multiSpansBase) HasStatic() bool {
+	for _, s := range this.spans {
+		if s.HasStatic() {
+			return true
+		}
+	}
+	return false
+}
+
 func (this *multiSpansBase) EquivalenceRangeAt(pos int) (eq bool, expr expression.Expression) {
 	missing := false //To mark IS MISSING range
 
