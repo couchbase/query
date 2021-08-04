@@ -11,6 +11,7 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -62,7 +63,7 @@ value.
 func (this *NamedParameter) Evaluate(item value.Value, context expression.Context) (
 	value.Value, error) {
 	if context == nil {
-		return nil, fmt.Errorf("No context for parameters.")
+		return nil, errors.NewNilEvaluateParamError("context")
 	}
 	val, ok := context.(Context).NamedArg(this.name)
 

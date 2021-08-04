@@ -324,3 +324,9 @@ func NewMemoryQuotaExceededError() Error {
 		InternalMsg:    "Request has exceeded memory quota",
 		InternalCaller: CallerN(1)}
 }
+
+func NewNilEvaluateParamError(param string) Error {
+	return &err{level: EXCEPTION, ICode: 5501, IKey: "execution.evaluate.nil.param",
+		InternalMsg:    fmt.Sprintf("nil '%s' parameter for evaluation", param),
+		InternalCaller: CallerN(1)}
+}

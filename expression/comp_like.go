@@ -14,6 +14,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 

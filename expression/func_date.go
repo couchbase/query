@@ -1891,6 +1891,9 @@ func (this *NowMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowMillis) Type() value.Type { return value.NUMBER }
 
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
 	nanos := context.Now().UnixNano()
 	return value.NewValue(float64(nanos) / 1000000.0), nil
 }
@@ -1941,6 +1944,9 @@ func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowStr) Type() value.Type { return value.STRING }
 
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
 	fmt := ""
 
 	if len(this.operands) > 0 {
@@ -2019,6 +2025,9 @@ func (this *NowTZ) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowTZ) Type() value.Type { return value.STRING }
 
 func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
 	null := false
 	missing := false
 	fmt := ""
@@ -2123,6 +2132,9 @@ func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
 func (this *NowUTC) Type() value.Type { return value.STRING }
 
 func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
 	fmt := ""
 
 	if len(this.operands) > 0 {
