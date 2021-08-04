@@ -56,10 +56,10 @@ func NewCbBulkGetError(e error, msg string) Error {
 func NewCbDMLError(e error, msg string, casMismatch int) Error {
 	if casMismatch != 0 {
 		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
-			InternalMsg: "DML Error, possible causes include CAS mismatch" + msg, InternalCaller: CallerN(1)}
+			InternalMsg: "DML Error, possible causes include CAS mismatch " + msg, InternalCaller: CallerN(1)}
 	} else {
 		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
-			InternalMsg: "DML Error, possible causes include concurrent modification" + msg, InternalCaller: CallerN(1)}
+			InternalMsg: "DML Error, possible causes include concurrent modification " + msg, InternalCaller: CallerN(1)}
 	}
 }
 
@@ -170,5 +170,17 @@ func NewCbBucketFlushCollectionError(c string, e error) Error {
 func NewBinaryDocumentMutationError(op, key string) Error {
 	return &err{level: EXCEPTION, ICode: 12030, IKey: "mutation.binarydocument.not_supported",
 		InternalMsg:    op + " of binary document is not supported: " + key,
+		InternalCaller: CallerN(1)}
+}
+
+func NewDurabilityNotSupported() Error {
+	return &err{level: EXCEPTION, ICode: 12031, IKey: "datastore.couchbase.durability",
+		InternalMsg:    "Durability is not supported.",
+		InternalCaller: CallerN(1)}
+}
+
+func NewPreserveExpiryNotSupported() Error {
+	return &err{level: EXCEPTION, ICode: 12032, IKey: "datastore.couchbase.preserve_expiration",
+		InternalMsg:    "Preserve expiration is not supported.",
 		InternalCaller: CallerN(1)}
 }

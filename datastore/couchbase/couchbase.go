@@ -91,7 +91,17 @@ func init() {
 	cb.InitBulkGet()
 	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
 
+	// Enable sync replication (durability)
+	cb.EnableSyncReplication = true
+
+	// Enable collections
 	cb.EnableCollections = true
+
+	// Enable Preserve Expiry
+	cb.EnablePreserveExpiry = true
+
+	// Enable KV Error maps
+	cb.EnableXerror = true
 
 	// transaction cache initialization
 	transactions.TranContextCacheInit(_TRAN_CLEANUP_INTERVAL)
@@ -1820,10 +1830,11 @@ func SetMetaCas(val value.Value, cas uint64) bool {
 	return false
 }
 
-func getExpiration(options value.Value) (exptime uint32) {
+func getExpiration(options value.Value) (exptime int, present bool) {
 	if options != nil && options.Type() == value.OBJECT {
 		if v, ok := options.Field("expiration"); ok && v.Type() == value.NUMBER {
-			exptime = uint32(value.AsNumberValue(v).Int64())
+			present = true
+			exptime = int(value.AsNumberValue(v).Int64())
 		}
 	}
 	return
@@ -1841,6 +1852,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 		return b.txPerformOp(op, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
 			pairs, context, txContext)
 	}
+	if err := setMutateClientContext(context, clientContext...); err != nil {
+		return nil, err
+	}
 
 	var failedDeletes []string
 	var err error
@@ -1849,6 +1863,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	for _, kv := range pairs {
 		var val interface{}
 		var exptime int
+		var present bool
 		var cas, newCas uint64
 
 		key := kv.Name
@@ -1857,12 +1872,8 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
 			}
 			val = kv.Value.ActualForIndex()
-			exptime = int(getExpiration(kv.Options))
+			exptime, present = getExpiration(kv.Options)
 		}
-
-		//mv := kv.Value.GetMeta()
-
-		// TODO Need to also set meta
 
 		switch op {
 
@@ -1890,11 +1901,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			var flags uint32
 
 			cas, flags, _, err = getMeta(key, kv.Value, true)
-			if err != nil {
-				// Don't perform the update if the meta values are not found
+			if err != nil { // Don't perform the update if the meta values are not found
 				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
+			} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
+				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
 			} else {
-
 				logging.Debuga(func() string {
 					return fmt.Sprintf("Before update: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud>",
 						key, cas, flags, val)
@@ -1909,11 +1920,15 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			}
 
 		case MOP_UPSERT:
-			newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
-			b.checkRefresh(err)
-			if err == nil {
-				logging.Debuga(func() string { return fmt.Sprintf("After upsert: key {<ud>%v</ud>} CAS %v", key, cas) })
-				SetMetaCas(kv.Value, newCas)
+			if err = setPreserveExpiry(present, context, clientContext...); err != nil {
+				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
+			} else {
+				newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
+				b.checkRefresh(err)
+				if err == nil {
+					logging.Debuga(func() string { return fmt.Sprintf("After upsert: key {<ud>%v</ud>} CAS %v", key, cas) })
+					SetMetaCas(kv.Value, newCas)
+				}
 			}
 		case MOP_DELETE:
 			err = b.cbbucket.Delete(key, clientContext...)
@@ -2156,4 +2171,27 @@ func getCollectionId(clientContext ...*memcached.ClientContext) uint32 {
 		collectionId = clientContext[0].CollId
 	}
 	return collectionId
+}
+
+func setPreserveExpiry(present bool, context datastore.QueryContext, clientContext ...*memcached.ClientContext) errors.Error {
+	preserve := !present && context.PreserveExpiry()
+	if len(clientContext) > 0 {
+		clientContext[0].PreserveExpiry = preserve
+	} else if preserve {
+		return errors.NewPreserveExpiryNotSupported()
+	}
+	return nil
+}
+
+func setMutateClientContext(context datastore.QueryContext, clientContext ...*memcached.ClientContext) errors.Error {
+	durability_level := context.DurabilityLevel()
+	if durability_level >= datastore.DL_MAJORITY {
+		if len(clientContext) > 0 {
+			clientContext[0].DurabilityLevel = gomemcached.DurabilityLvl(durability_level - 1)
+			clientContext[0].DurabilityTimeout = context.KvTimeout()
+		} else {
+			return errors.NewDurabilityNotSupported()
+		}
+	}
+	return nil
 }

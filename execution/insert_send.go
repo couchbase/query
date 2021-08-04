@@ -189,7 +189,8 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		}
 
 		dpair.Options = adjustExpiration(options)
-		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), getExpiration(dpair.Options), context)
+		expiration, _ := getExpiration(dpair.Options)
+		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), expiration, context)
 		i++
 	}
 

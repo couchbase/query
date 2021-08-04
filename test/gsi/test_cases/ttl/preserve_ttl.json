@@ -1,0 +1,120 @@
+[
+    { "statements": "DELETE FROM orders USE KEYS ['pttlk01', 'pttlk02', 'pttlk03', 'pttlk04']"},
+    { "statements": "INSERT INTO orders VALUES ('pttlk01', {'a': 'pttlk01'}, {'expiration': 3100000000})" },
+    { 
+       "queryParams": {"preserve_expiry": true},
+       "statements": "INSERT INTO orders VALUES ('pttlk03', {'a': 'pttlk03'}, {'expiration': 3300000000})" 
+    },
+    { 
+       "statements": "SELECT o.a, o.b, META(o).expiration FROM orders AS o USE KEYS ['pttlk01','pttlk02','pttlk03','pttlk04']",
+       "results": [
+             {
+                 "expiration": 3100000000,
+                 "a": "pttlk01"
+             },
+             {
+                 "expiration": 3300000000,
+                 "a": "pttlk03"
+             }
+        ]
+    },
+    { "statements": "UPSERT INTO orders VALUES ('pttlk01', {'a': 'pttlk01','b':1}), VALUES ('pttlk02', {'a': 'pttlk02','b':2}, {'expiration': 3200000000})" },
+    { 
+       "statements": "SELECT o.a, o.b, META(o).expiration FROM orders AS o USE KEYS ['pttlk01','pttlk02','pttlk03','pttlk04']",
+       "results": [
+             {
+                 "expiration": 0,
+                 "a": "pttlk01",
+                 "b": 1
+             },
+             {
+                 "expiration": 3200000000,
+                 "a": "pttlk02",
+                 "b": 2
+             },
+             {
+                 "expiration": 3300000000,
+                 "a": "pttlk03"
+             }
+        ]
+    },
+    { 
+       "queryParams": {"preserve_expiry": true},
+       "statements": "UPSERT INTO orders VALUES ('pttlk01', {'a': 'pttlk01','b':1}, {'expiration': 3100000000}), VALUES ('pttlk03', {'a': 'pttlk03','b':3}), VALUES ('pttlk04', {'a': 'pttlk04','b':4}, {'expiration': 3400000000})" 
+    },
+    { 
+       "queryParams": {"preserve_expiry": true},
+       "statements": "SELECT o.a, o.b, META(o).expiration FROM orders AS o USE KEYS ['pttlk01','pttlk02','pttlk03','pttlk04']",
+       "results": [
+             {
+                 "expiration": 3100000000,
+                 "a": "pttlk01",
+                 "b": 1
+             },
+             {
+                 "expiration": 3200000000,
+                 "a": "pttlk02",
+                 "b": 2
+             },
+             {
+                 "expiration": 3300000000,
+                 "a": "pttlk03",
+                 "b": 3
+             },
+             {
+                 "expiration": 3400000000,
+                 "a": "pttlk04",
+                 "b": 4
+             }
+        ]
+    },
+    { "statements": "UPDATE orders AS o USE KEYS 'pttlk01' SET o.comment = 'xyz'" },
+    { "statements": "UPDATE orders AS o USE KEYS 'pttlk02' SET o.comment = 'xyz', META(o).expiration = 3.22*1000*1000*1000" },
+    { 
+       "queryParams": {"preserve_expiry": true},
+       "statements": "UPDATE orders AS o USE KEYS 'pttlk03' SET o.comment = 'xyz', META(o).expiration = 3.33*1000*1000*1000" 
+    },
+    { 
+       "queryParams": {"preserve_expiry": true},
+       "statements": "UPDATE orders AS o USE KEYS 'pttlk04' SET o.comment = 'xyz'" 
+    },
+    { 
+       "statements": "SELECT o.a, o.b, o.comment, META(o).expiration FROM orders AS o USE KEYS ['pttlk01','pttlk02','pttlk03','pttlk04']",
+       "results": [
+             {
+                 "comment": "xyz",
+                 "expiration": 0,
+                 "a": "pttlk01",
+                 "b": 1
+             },
+             {
+                 "comment": "xyz",
+                 "expiration": 3220000000,
+                 "a": "pttlk02",
+                 "b": 2
+             },
+             {
+                 "comment": "xyz",
+                 "expiration": 3330000000,
+                 "a": "pttlk03",
+                 "b": 3
+             },
+             {
+                 "comment": "xyz",
+                 "expiration": 3400000000,
+                 "a": "pttlk04",
+                 "b": 4
+             }
+        ]
+    },
+    { "statements": "DELETE FROM orders USE KEYS ['pttlk01', 'pttlk02']"},
+    { 
+       "queryParams": {"preserve_expiry": true},
+       "statements": "DELETE FROM orders USE KEYS ['pttlk03', 'pttlk04']"
+    },
+    { 
+       "statements": "SELECT o.a FROM orders AS o USE KEYS ['pttlk01','pttlk02','pttlk03','pttlk04']",
+       "results": [
+        ]
+    }
+]

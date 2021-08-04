@@ -58,6 +58,18 @@ func (ci *queryContextImpl) Warning(warn errors.Error) {
 	ci.t.Logf("datastore warning: %v", warn)
 }
 
+func (ci *queryContextImpl) DurabilityLevel() datastore.DurabilityLevel {
+	return datastore.DL_NONE
+}
+
+func (ci *queryContextImpl) KvTimeout() time.Duration {
+	return datastore.DEF_KVTIMEOUT
+}
+
+func (ci *queryContextImpl) PreserveExpiry() bool {
+	return false
+}
+
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
 	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")

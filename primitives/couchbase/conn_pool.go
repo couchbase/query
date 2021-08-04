@@ -125,8 +125,20 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		features = append(features, memcached.FeatureXattr)
 	}
 
+	if EnableSyncReplication {
+		features = append(features, memcached.FeatureSyncReplication)
+	}
+
 	if EnableCollections {
 		features = append(features, memcached.FeatureCollections)
+	}
+
+	if EnablePreserveExpiry {
+		features = append(features, memcached.FeaturePreserveExpiry)
+	}
+
+	if EnableXerror {
+		features = append(features, memcached.FeatureXerror)
 	}
 
 	if len(features) > 0 {

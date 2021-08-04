@@ -1,0 +1,27 @@
+[
+    { "statements": "DELETE FROM customer USE KEYS ['dura001', 'dura002', 'dura003', 'dura004']"},
+    {
+       "testcase": "customer bucket has replica enabled by default. unit test should fail",
+       "queryParams": {"durability_level":"majority"},
+       "statements": "INSERT INTO customer VALUES ('dura002',{'a':'dura002'})",
+       "error": "DURABILITY_IMPOSSIBLE"
+    },
+    {
+       "testcase": "customer bucket has replica enabled by default. unit test should fail",
+       "queryParams": {"durability_level":"majorityAndPersistActive"},
+       "statements": "INSERT INTO customer VALUES ('dura003',{'a':'dura003'})",
+       "error": "DURABILITY_IMPOSSIBLE"
+    },
+    {
+       "testcase": "customer bucket has replica enabled by default. unit test should fail",
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "INSERT INTO customer VALUES ('dura004',{'a':'dura004'})",
+       "error": "DURABILITY_IMPOSSIBLE"
+    },
+    {
+       "statements": "SELECT d.a, d.b, d.comment FROM customer AS d USE KEYS ['dura001','dura002','dura003','dura004']",
+       "results": [
+        ]
+    },
+    { "statements": "DELETE FROM customer USE KEYS ['dura001', 'dura002', 'dura003', 'dura004']"}
+]

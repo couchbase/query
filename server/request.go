@@ -136,6 +136,8 @@ type Request interface {
 	SetAtrCollection(s string)
 	NumAtrs() int
 	SetNumAtrs(n int)
+	PreserveExpiry() bool
+	SetPreserveExpiry(a bool)
 	ExecutionContext() *execution.Context
 	SetExecutionContext(ctx *execution.Context)
 	SetExecTime(time time.Time)
@@ -314,6 +316,7 @@ type BaseRequest struct {
 	kvTimeout            time.Duration
 	atrCollection        string
 	numAtrs              int
+	preserveExpiry       bool
 	executionContext     *execution.Context
 }
 
@@ -366,6 +369,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.SetMaxParallelism(1)
 	rv.useCBO = util.GetUseCBO()
 	rv.durabilityTimeout = datastore.DEF_DURABILITY_TIMEOUT
+	rv.kvTimeout = datastore.DEF_KVTIMEOUT
 	rv.durabilityLevel = datastore.DL_UNSET
 }
 
@@ -970,6 +974,14 @@ func (this *BaseRequest) SetNumAtrs(n int) {
 
 func (this *BaseRequest) NumAtrs() int {
 	return this.numAtrs
+}
+
+func (this *BaseRequest) SetPreserveExpiry(a bool) {
+	this.preserveExpiry = a
+}
+
+func (this *BaseRequest) PreserveExpiry() bool {
+	return this.preserveExpiry
 }
 
 func (this *BaseRequest) SetExecutionContext(ctx *execution.Context) {

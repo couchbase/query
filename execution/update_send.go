@@ -172,7 +172,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			// Adjust expiration to absolute value
 			pairs[i].Options = adjustExpiration(options)
 			// Update in the meta attachment so that it reflects in RETURNING clause
-			setMetaExpiration(cav, pairs[i].Options)
+			setMetaExpiration(cav, pairs[i].Options, context.PreserveExpiry())
 
 			item.SetField(this.plan.Alias(), cav)
 
@@ -223,9 +223,10 @@ func (this *SendUpdate) Done() {
 	}
 }
 
-func getExpiration(options value.Value) (exptime uint32) {
+func getExpiration(options value.Value) (exptime uint32, present bool) {
 	if options != nil && options.Type() == value.OBJECT {
 		if v, ok := options.Field("expiration"); ok && v.Type() == value.NUMBER {
+			present = true
 			expiration := value.AsNumberValue(v).Int64()
 			if expiration > 0 {
 				exptime = uint32(expiration)
@@ -238,20 +239,25 @@ func getExpiration(options value.Value) (exptime uint32) {
 const _MONTH = uint32(30 * 24 * 60 * 60)
 
 func adjustExpiration(options value.Value) value.Value {
-	expiration := getExpiration(options)
+	expiration, present := getExpiration(options)
 	if expiration > 0 && expiration < _MONTH {
 		expiration += uint32(time.Now().UTC().Unix())
 	}
 
 	if options != nil && options.Type() == value.OBJECT {
-		options.SetField("expiration", expiration)
+		if present {
+			options.SetField("expiration", expiration)
+		}
 	}
 
 	return options
 }
 
-func setMetaExpiration(av value.AnnotatedValue, options value.Value) {
-	av.NewMeta()["expiration"] = getExpiration(options)
+func setMetaExpiration(av value.AnnotatedValue, options value.Value, preserveExpiry bool) {
+	expiration, present := getExpiration(options)
+	if !preserveExpiry || present {
+		av.NewMeta()["expiration"] = expiration
+	}
 }
 
 var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)

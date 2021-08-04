@@ -1,4 +1,4 @@
-//  Copyright 2019-Present Couchbase, Inc.
+//  Copyright 2021-Present Couchbase, Inc.
 //
 //  Use of this software is governed by the Business Source License included in
 //  the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
@@ -9,10 +9,10 @@
 package ttl
 
 import (
-	//	"fmt"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
@@ -22,23 +22,16 @@ import (
 Basic test to ensure connections to both
 Datastore and Couchbase server, work.
 */
-func TestWindow(t *testing.T) {
+func TestDurability(t *testing.T) {
 	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
 		return
 	}
 
 	qc := start_cs()
 
-	runMatch("insert_test.json", false, false, qc, t)  // non-prepared, no-explain
-	runMatch("insert_test.json", true, false, qc, t)   // prepared, no-explain
-	runMatch("upsert_test.json", false, false, qc, t)  // non-prepared, no-explain
-	runMatch("upsert_test.json", true, false, qc, t)   // prepared, no-explain
-	runMatch("update_test.json", false, false, qc, t)  // non-prepared, no-explain
-	runMatch("update_test.json", true, false, qc, t)   // prepared, no-explain
-	runMatch("merge_test.json", false, false, qc, t)   // non-prepared, no-explain
-	runMatch("merge_test.json", true, false, qc, t)    // prepared, no-explain
-	runMatch("preserve_ttl.json", false, false, qc, t) // non-prepared, no-explain
-	runMatch("preserve_ttl.json", true, false, qc, t)  // prepared, no-explain
+	time.Sleep(2 * time.Second)
+	runMatch("durability.json", false, false, qc, t)     // non-prepared, no-explain
+	runMatch("durability_neg.json", false, false, qc, t) // non-prepared, no-explain
 }
 
 func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {

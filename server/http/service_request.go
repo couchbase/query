@@ -631,6 +631,14 @@ func handleNumAtrs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
+func handlePreserveExpiry(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	preserveExpiry, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetPreserveExpiry(preserveExpiry == value.TRUE)
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -762,6 +770,7 @@ const ( // Request argument names
 	KVTIMEOUT          = "kvtimeout"
 	ATRCOLLECTION      = "atrcollection"
 	NUMATRS            = "numatrs"
+	PRESERVE_EXPIRY    = "preserve_expiry"
 )
 
 type argHandler struct {
@@ -777,43 +786,44 @@ var _PARAMETERS = map[string]*argHandler{
 	ENCODED_PLAN:   {handleEncodedPlan, true},
 	TXID:           {handleTxId, true},
 
-	STATEMENT:          {handleStatement, false},
-	PREPARED:           {handlePrepared, false},
-	CREDS:              {handleCreds, false},
-	ARGS:               {handlePositionalArgs, false},
-	TIMEOUT:            {handleTimeout, false},
-	SCAN_CONSISTENCY:   {handleConsistency, false},
-	SCAN_WAIT:          {handleScanWait, false},
-	SCAN_VECTOR:        {handleScanVector, false},
-	SCAN_VECTORS:       {handleScanVectors, false},
-	MAX_PARALLELISM:    {handleMaxParallelism, false},
-	SCAN_CAP:           {handleScanCap, false},
-	PIPELINE_CAP:       {handlePipelineCap, false},
-	PIPELINE_BATCH:     {handlePipelineBatch, false},
-	READONLY:           {handleReadonly, false},
-	METRICS:            {handleMetrics, false},
-	FORMAT:             {handleFormat, false},
-	ENCODING:           {handleEncoding, false},
-	COMPRESSION:        {handleCompression, false},
-	SIGNATURE:          {handleSignature, false},
-	PRETTY:             {handlePretty, false},
-	CLIENT_CONTEXT_ID:  {handleClientContextID, false},
-	PROFILE:            {handleProfile, false},
-	CONTROLS:           {handleControls, false},
-	AUTO_PREPARE:       {handleAutoPrepare, false},
-	AUTO_EXECUTE:       {handleAutoExecute, false},
-	USE_FTS:            {handleUseFts, false},
-	MEMORY_QUOTA:       {handleMemoryQuota, false},
-	USE_CBO:            {handleUseCBO, false},
-	TXIMPLICIT:         {handleTxImplicit, false},
-	TXSTMTNUM:          {handleTxStmtNum, false},
-	TXTIMEOUT:          {handleTxTimeout, false},
-	TXDATA:             {handleTxData, false},
-	DURABILITY_LEVEL:   {handleDurabilityLevel, false},
-	DURABILITY_TIMEOUT: {handleDurabilityTimeout, false},
-	KVTIMEOUT:          {handleKvTimeout, false},
-	ATRCOLLECTION:      {handleAtrCollection, false},
+	STATEMENT:         {handleStatement, false},
+	PREPARED:          {handlePrepared, false},
+	CREDS:             {handleCreds, false},
+	ARGS:              {handlePositionalArgs, false},
+	TIMEOUT:           {handleTimeout, false},
+	SCAN_CONSISTENCY:  {handleConsistency, false},
+	SCAN_WAIT:         {handleScanWait, false},
+	SCAN_VECTOR:       {handleScanVector, false},
+	SCAN_VECTORS:      {handleScanVectors, false},
+	MAX_PARALLELISM:   {handleMaxParallelism, false},
+	SCAN_CAP:          {handleScanCap, false},
+	PIPELINE_CAP:      {handlePipelineCap, false},
+	PIPELINE_BATCH:    {handlePipelineBatch, false},
+	READONLY:          {handleReadonly, false},
+	METRICS:           {handleMetrics, false},
+	FORMAT:            {handleFormat, false},
+	ENCODING:          {handleEncoding, false},
+	COMPRESSION:       {handleCompression, false},
+	SIGNATURE:         {handleSignature, false},
+	PRETTY:            {handlePretty, false},
+	CLIENT_CONTEXT_ID: {handleClientContextID, false},
+	PROFILE:           {handleProfile, false},
+	CONTROLS:          {handleControls, false},
+	AUTO_PREPARE:      {handleAutoPrepare, false},
+	AUTO_EXECUTE:      {handleAutoExecute, false},
+	USE_FTS:           {handleUseFts, false},
+	MEMORY_QUOTA:      {handleMemoryQuota, false},
+	USE_CBO:           {handleUseCBO, false},
+	TXIMPLICIT:        {handleTxImplicit, false},
+	TXSTMTNUM:         {handleTxStmtNum, false},
+	TXTIMEOUT:         {handleTxTimeout, false},
+	TXDATA:            {handleTxData, false},
+	DURABILITY_LEVEL:  {handleDurabilityLevel, false},
+	//	DURABILITY_TIMEOUT: {handleDurabilityTimeout, false},
+	KVTIMEOUT:     {handleKvTimeout, false},
+	ATRCOLLECTION: {handleAtrCollection, false},
 	//	NUMATRS:            {handleNumAtrs, false},
+	PRESERVE_EXPIRY: {handlePreserveExpiry, false},
 }
 
 // common storage for the httpArgs implementations

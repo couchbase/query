@@ -600,6 +600,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetWhitelist(this.whitelist)
 	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
+	context.SetPreserveExpiry(request.PreserveExpiry())
 
 	if request.TxId() != "" {
 		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())

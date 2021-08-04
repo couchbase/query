@@ -290,11 +290,25 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	}
 	query.SetTxId(mockServer.getTxId(gv))
 
-	var dl string
-	if dli, dliOk := queryParams["durability_level"]; dliOk {
-		dl, _ = dli.(string)
+	if s, ok := queryParams["durability_level"]; ok {
+		if dl, ok := s.(string); ok && dl != "" {
+			query.SetDurabilityLevel(datastore.DurabilityNameToLevel(dl))
+		}
 	}
-	query.SetDurabilityLevel(datastore.DurabilityNameToLevel(dl))
+
+	if s, ok := queryParams["kvtimeout"]; ok {
+		if sk, ok := s.(string); ok && sk != "" {
+			if kvTimeout, e := time.ParseDuration(sk); e != nil {
+				query.SetKvTimeout(kvTimeout)
+			}
+		}
+	}
+
+	if s, ok := queryParams["preserve_expiry"]; ok {
+		if b, ok := s.(bool); ok && b {
+			query.SetPreserveExpiry(b)
+		}
+	}
 
 	if txImplict, ok := queryParams["tximplicit"]; ok {
 		if b, ok := txImplict.(bool); ok && b {
@@ -564,7 +578,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				return
 			}
 
-			if errExpected != errActual.Error() {
+			if errExpected != errActual.Error() && !strings.Contains(errActual.Error(), errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
 					" for case file: %v, index: %v%s", errExpected, errActual.Error(), fname, i, findIndex(b, i)))
 				return

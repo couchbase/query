@@ -63,6 +63,9 @@ type QueryContext interface {
 	SetTxContext(tc interface{})
 	Datastore() Datastore
 	TxDataVal() value.Value
+	DurabilityLevel() DurabilityLevel
+	KvTimeout() time.Duration
+	PreserveExpiry() bool
 }
 
 type queryContextImpl struct {
@@ -96,4 +99,16 @@ func (ci *queryContextImpl) SetTxContext(tc interface{}) {
 
 func (ci *queryContextImpl) TxDataVal() value.Value {
 	return nil
+}
+
+func (ci *queryContextImpl) DurabilityLevel() DurabilityLevel {
+	return DL_NONE
+}
+
+func (ci *queryContextImpl) KvTimeout() time.Duration {
+	return DEF_KVTIMEOUT
+}
+
+func (ci *queryContextImpl) PreserveExpiry() bool {
+	return false
 }

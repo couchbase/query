@@ -61,7 +61,7 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
 	clone := item.CopyForUpdate()
 	if av, ok := clone.(value.AnnotatedValue); ok && av != nil {
-		options := map[string]interface{}{"expiration": uint32(0)}
+		options := make(map[string]interface{})
 		mv := av.NewMeta()
 		mv["expiration"] = uint32(0)
 		options["xattrs"] = mv["xattrs"]

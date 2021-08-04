@@ -15,10 +15,15 @@ q=${1:-250}
 
 for i in "${bucket[@]}"
 do
-  curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase $Site > /dev/null
+  if [ $i == 'orders' ]
+   then
+      curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase -d replicaNumber=0 $Site > /dev/null
+  else
+      curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase $Site > /dev/null
+  fi
 done
 
-collections=('orders,_default,transactions')
+collections=('orders,_default,transactions' 'orders,_default,durability')
 for coll in "${collections[@]}"
 do
     collpath=(${coll//,/ })

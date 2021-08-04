@@ -1,0 +1,127 @@
+[
+    { "statements": "DELETE FROM orders._default.durability USE KEYS ['dura001', 'dura002', 'dura003', 'dura004']"},
+    { "statements": "INSERT INTO orders._default.durability VALUES ('dura001',{'a':'dura001'})"},
+    {
+       "queryParams": {"durability_level":"majority"},
+       "statements": "INSERT INTO orders._default.durability VALUES ('dura002',{'a':'dura002'})"
+    },
+    {
+       "queryParams": {"durability_level":"majorityAndPersistActive"},
+       "statements": "INSERT INTO orders._default.durability VALUES ('dura003',{'a':'dura003'})"
+    },
+    {
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "INSERT INTO orders._default.durability VALUES ('dura004',{'a':'dura004'})"
+    },
+    {
+       "queryParams": {"durability_level":"majority"},
+       "statements": "SELECT d.a, d.b, d.comment FROM orders._default.durability AS d USE KEYS ['dura001','dura002','dura003','dura004']",
+       "results": [
+             {
+                 "a": "dura001"
+             },
+             {
+                 "a": "dura002"
+             },
+             {
+                 "a": "dura003"
+             },
+             {
+                 "a": "dura004"
+             }
+        ]
+    },
+    { "statements": "UPSERT INTO orders._default.durability VALUES ('dura001',{'a':'dura001','b':1})"},
+    {
+       "queryParams": {"durability_level":"majority"},
+       "statements": "UPSERT INTO orders._default.durability VALUES ('dura002',{'a':'dura002','b':2})"
+    },
+    {
+       "queryParams": {"durability_level":"majorityAndPersistActive"},
+       "statements": "UPSERT INTO orders._default.durability VALUES ('dura003',{'a':'dura003','b':3})"
+    },
+    {
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "UPSERT INTO orders._default.durability VALUES ('dura004',{'a':'dura004', 'b':4})"
+    },
+    {
+       "queryParams": {"durability_level":"majorityAndPersistActive"},
+       "statements": "SELECT d.a, d.b, d.comment FROM orders._default.durability AS d USE KEYS ['dura001','dura002','dura003','dura004']",
+       "results": [
+             {
+                 "a": "dura001",
+                 "b": 1
+             },
+             {
+                 "a": "dura002",
+                 "b": 2
+             },
+             {
+                 "a": "dura003",
+                 "b": 3
+             },
+             {
+                 "a": "dura004",
+                 "b": 4
+             }
+        ]
+    },
+    { "statements": "UPDATE orders._default.durability AS d USE KEYS 'dura001' SET d.comment = 'xyz'" },
+    {
+       "queryParams": {"durability_level":"majority"},
+       "statements": "UPDATE orders._default.durability AS d USE KEYS 'dura002' SET d.comment = 'xyz'"
+    },
+    {
+       "queryParams": {"durability_level":"majorityAndPersistActive"},
+       "statements": "UPDATE orders._default.durability AS d USE KEYS 'dura003' SET d.comment = 'xyz'"
+    },
+    {
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "UPDATE orders._default.durability AS d USE KEYS 'dura004' SET d.comment = 'xyz'"
+    },
+    {
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "SELECT d.a, d.b, d.comment FROM orders._default.durability AS d USE KEYS ['dura001','dura002','dura003','dura004']",
+       "results": [
+             {
+                 "comment": "xyz",
+                 "a": "dura001",
+                 "b": 1
+             },
+             {
+                 "comment": "xyz",
+                 "a": "dura002",
+                 "b": 2
+             },
+             {
+                 "comment": "xyz",
+                 "a": "dura003",
+                 "b": 3
+             },
+             {
+                 "comment": "xyz",
+                 "a": "dura004",
+                 "b": 4
+             }
+        ]
+    },
+    { "statements": "DELETE FROM orders._default.durability AS d USE KEYS 'dura001'" },
+    {
+       "queryParams": {"durability_level":"majority"},
+       "statements": "DELETE FROM orders._default.durability AS d USE KEYS 'dura002'"
+    },
+    {
+       "queryParams": {"durability_level":"majorityAndPersistActive"},
+       "statements": "DELETE FROM orders._default.durability AS d USE KEYS 'dura003'"
+    },
+    {
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "DELETE FROM orders._default.durability AS d USE KEYS 'dura004'"
+    },
+    {
+       "queryParams": {"durability_level":"persistToMajority"},
+       "statements": "SELECT d.a, d.b, d.comment FROM orders._default.durability AS d USE KEYS ['dura001','dura002','dura003','dura004']",
+       "results": [
+        ]
+    }
+]

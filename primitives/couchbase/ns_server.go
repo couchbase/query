@@ -62,8 +62,17 @@ var EnableDataType = false
 // Enable Xattr
 var EnableXattr = false
 
+// Enable SyncReplication
+var EnableSyncReplication = false
+
 // Enable Collections
 var EnableCollections = false
+
+// Enable Preserve Expiry
+var EnablePreserveExpiry = false
+
+// Enable KV error map
+var EnableXerror = false
 
 // TCP keepalive interval in seconds. Default 30 minutes
 var TCPKeepaliveInterval = 30 * 60

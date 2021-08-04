@@ -150,7 +150,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		}
 
 		dpair.Options = adjustExpiration(options)
-		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), getExpiration(dpair.Options), context)
+		expiration, _ := getExpiration(dpair.Options)
+		// UPSERT can preserve expiration, but we can't get old value without read for RETURNING clause.
+		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), expiration, context)
 		i++
 	}
 

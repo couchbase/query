@@ -527,7 +527,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 	var retCas uint64
 	for _, kv := range pairs {
 		var data interface{}
-		var exptime uint32
+		var exptime int
 		var dataSize int64
 
 		key := kv.Name
@@ -541,7 +541,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		if op != MOP_DELETE {
 			data = val.ActualForIndex()
 			dataSize = int64(val.Size())
-			exptime = getExpiration(kv.Options)
+			exptime, _ = getExpiration(kv.Options)
 		}
 
 		if op == MOP_INSERT || op == MOP_UPSERT {
@@ -577,7 +577,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 
 		// Add to mutations
 		retCas, err = txMutations.Add(nop, qualifiedName, ks.name, scopeName, collectionName, collId,
-			key, data, cas, MV_FLAGS_WRITE, exptime, txnMeta, nil, ks, dataSize)
+			key, data, cas, MV_FLAGS_WRITE, uint32(exptime), txnMeta, nil, ks, dataSize)
 
 		if err != nil {
 			return nil, err

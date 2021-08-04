@@ -192,6 +192,7 @@ type Context struct {
 	atrCollection       string
 	numAtrs             int
 	kvTimeout           time.Duration
+	preserveExpiry      bool
 	flags               uint32
 	result              func(context *Context, item value.AnnotatedValue) bool
 	likeRegexMap        map[*expression.Like]*expression.LikeRegex
@@ -278,6 +279,7 @@ func (this *Context) Copy() *Context {
 		kvTimeout:           this.kvTimeout,
 		atrCollection:       this.atrCollection,
 		numAtrs:             this.numAtrs,
+		preserveExpiry:      this.preserveExpiry,
 		flags:               this.flags,
 		reqTimeout:          this.reqTimeout,
 	}
@@ -643,6 +645,18 @@ func (this *Context) DurabilityLevel() datastore.DurabilityLevel {
 
 func (this *Context) DurabilityTimeout() time.Duration {
 	return this.durabilityTimeout
+}
+
+func (this *Context) KvTimeout() time.Duration {
+	return this.kvTimeout
+}
+
+func (this *Context) SetPreserveExpiry(preserve bool) {
+	this.preserveExpiry = preserve
+}
+
+func (this *Context) PreserveExpiry() bool {
+	return this.preserveExpiry
 }
 
 func (this *Context) ResetTxContext() {
