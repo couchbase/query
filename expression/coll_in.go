@@ -70,8 +70,10 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 	sa := second.Actual().([]interface{})
 
 	var inlistHash *InlistHash
-	if inlistContext, ok := context.(InlistContext); ok {
-		inlistHash = inlistContext.GetInlistHash(this)
+	if context != nil {
+		if inlistContext, ok := context.(InlistContext); ok {
+			inlistHash = inlistContext.GetInlistHash(this)
+		}
 	}
 
 	if inlistHash != nil {
@@ -174,19 +176,23 @@ func (this *In) Constructor() FunctionConstructor {
 }
 
 func (this *In) EnableInlistHash(context Context) {
-	if inlistContext, ok := context.(InlistContext); ok {
-		inlistContext.EnableInlistHash(this)
-		for _, child := range this.expr.Children() {
-			child.EnableInlistHash(context)
+	if context != nil {
+		if inlistContext, ok := context.(InlistContext); ok {
+			inlistContext.EnableInlistHash(this)
+			for _, child := range this.expr.Children() {
+				child.EnableInlistHash(context)
+			}
 		}
 	}
 }
 
 func (this *In) ResetMemory(context Context) {
-	if inlistContext, ok := context.(InlistContext); ok {
-		inlistContext.RemoveInlistHash(this)
-		for _, child := range this.expr.Children() {
-			child.ResetMemory(context)
+	if context != nil {
+		if inlistContext, ok := context.(InlistContext); ok {
+			inlistContext.RemoveInlistHash(this)
+			for _, child := range this.expr.Children() {
+				child.ResetMemory(context)
+			}
 		}
 	}
 }

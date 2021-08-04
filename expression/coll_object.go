@@ -69,8 +69,10 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 		}
 
 		av := value.NewAnnotatedValue(cv)
-		if ai, ok := item.(value.AnnotatedValue); ok {
-			av.CopyAnnotations(ai)
+		if item != nil {
+			if ai, ok := item.(value.AnnotatedValue); ok {
+				av.CopyAnnotations(ai)
+			}
 		}
 
 		if this.when != nil {
