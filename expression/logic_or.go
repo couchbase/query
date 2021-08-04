@@ -128,6 +128,13 @@ func (this *Or) Value() value.Value {
 			}
 		}
 
+		defer func() {
+			err := recover()
+			if err != nil {
+				this.value = &_NIL_VALUE
+			}
+		}()
+
 		val, err := orExpr.Evaluate(nil, nil)
 		if err != nil {
 			this.value = &_NIL_VALUE

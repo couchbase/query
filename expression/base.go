@@ -10,12 +10,10 @@ package expression
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -197,7 +195,6 @@ func (this *ExpressionBase) Value() value.Value {
 		err := recover()
 		if err != nil {
 			this.value = &_NIL_VALUE
-			logging.Debuga(func() string { return fmt.Sprintf("Panic during evaluation: %v", err) })
 		}
 	}()
 

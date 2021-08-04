@@ -11,7 +11,6 @@ package expression
 import (
 	"encoding/base64"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -506,9 +505,6 @@ func (this *CurrentUsers) Accept(visitor Visitor) (interface{}, error) {
 func (this *CurrentUsers) Type() value.Type { return value.ARRAY }
 
 func (this *CurrentUsers) Evaluate(item value.Value, context Context) (value.Value, error) {
-	if context == nil {
-		return nil, errors.NewNilEvaluateParamError("context")
-	}
 	authUsers := context.AuthenticatedUsers()
 	arr := make([]interface{}, len(authUsers))
 	for i, user := range authUsers {
@@ -565,9 +561,6 @@ func (this *DsVersion) Type() value.Type { return value.STRING }
 Return the current server version, wrapped in a value.
 */
 func (this *DsVersion) Evaluate(item value.Value, context Context) (value.Value, error) {
-	if context == nil {
-		return nil, errors.NewNilEvaluateParamError("context")
-	}
 	version := context.DatastoreVersion()
 	return value.NewValue(version), nil
 }

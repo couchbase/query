@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -286,9 +285,6 @@ aggregate string is not found.
 */
 func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 	context expression.Context) (result value.Value, err error) {
-	if item == nil {
-		return nil, errors.NewNilEvaluateParamError("item")
-	}
 	defer func() {
 		r := recover()
 		if r != nil {

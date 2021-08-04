@@ -11,7 +11,6 @@ package expression
 import (
 	"strings"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -63,9 +62,6 @@ func (this *Identifier) Type() value.Type { return value.JSON }
 Evaluate this as a top-level identifier.
 */
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
-	if item == nil {
-		return nil, errors.NewNilEvaluateParamError("item")
-	}
 	var rv value.Value
 	if this.caseInsensitive {
 		fn := strings.ToLower(this.identifier)

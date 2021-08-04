@@ -11,7 +11,6 @@ package algebra
 import (
 	"fmt"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -62,9 +61,6 @@ operands (count (*)), get the count from the attachment and
 then evaluate.
 */
 func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
-	if item == nil {
-		return nil, errors.NewNilEvaluateParamError("item")
-	}
 	// Full keyspace count is short-circuited
 	switch item := item.(type) {
 	case value.AnnotatedValue:

@@ -69,9 +69,6 @@ func (this *Advisor) Type() value.Type {
 }
 
 func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, error) {
-	if context == nil {
-		return nil, errors.NewNilEvaluateParamError("context")
-	}
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err

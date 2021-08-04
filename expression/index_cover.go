@@ -9,7 +9,6 @@
 package expression
 
 import (
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -52,9 +51,6 @@ func (this *Cover) Type() value.Type {
 
 func (this *Cover) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var rv value.Value
-	if item == nil {
-		return nil, errors.NewNilEvaluateParamError("item")
-	}
 	switch item := item.(type) {
 	case value.AnnotatedValue:
 		rv = item.GetCover(this.text)
