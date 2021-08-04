@@ -770,11 +770,13 @@ func (this *base) childrenWaitNoStop(ops ...Operator) {
 		b := o.getBase()
 		b.activeCond.L.Lock()
 		switch b.opState {
-		case _RUNNING, _STOPPING, _HALTING, _LATE:
+		case _RUNNING, _STOPPING, _HALTING:
 			// signal reliably sent
 			b.activeCond.Wait()
 		case _COMPLETED, _STOPPED, _HALTED:
 			// signal reliably sent, but already stopped
+		case _LATE:
+			// signal reliably sent, but never started
 		case _CREATED, _PAUSED, _KILLED, _PANICKED:
 			// signal reliably not sent
 		default:
