@@ -368,7 +368,7 @@ tokOffset    int
 %type <pairs>            members opt_members
 
 %type <expr>             expr c_expr b_expr
-%type <exprs>            exprs opt_exprs
+%type <exprs>            exprs opt_exprs in_expr_list in_expr_list1
 %type <binding>          binding with_term
 %type <bindings>         bindings with_list
 
@@ -3369,9 +3369,21 @@ expr IN expr
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr IN LPAREN in_expr_list RPAREN
+{
+    $$ = expression.NewIn($1, expression.NewArrayConstruct($4...))
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr NOT IN expr
 {
     $$ = expression.NewNotIn($1, $4)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr NOT IN LPAREN in_expr_list RPAREN
+{
+    $$ = expression.NewNotIn($1, expression.NewArrayConstruct($5...))
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
@@ -3381,9 +3393,21 @@ expr WITHIN expr
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr WITHIN LPAREN in_expr_list RPAREN
+{
+    $$ = expression.NewWithin($1, expression.NewArrayConstruct($4...))
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr NOT WITHIN expr
 {
     $$ = expression.NewNotWithin($1, $4)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr NOT WITHIN LPAREN in_expr_list RPAREN
+{
+    $$ = expression.NewNotWithin($1, expression.NewArrayConstruct($5...))
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
@@ -3607,7 +3631,6 @@ b_expr CONCAT b_expr
 }
 ;
 
-
 /*************************************************
  *
  * Literal
@@ -3741,6 +3764,29 @@ expr
 }
 |
 exprs COMMA expr
+{
+    $$ = append($1, $3)
+}
+;
+
+/* This parses 0 or 2+ elements for an IN/WITHIN statement's list, enclosed in parentheses.  Single element lists are catered for
+ * in post-proccessing owing to the syntactic conflict with paren_expr.
+ */
+in_expr_list:
+{
+  $$ = expression.Expressions{}
+}
+|
+in_expr_list1
+;
+
+in_expr_list1:
+expr COMMA expr
+{
+    $$ = expression.Expressions{$1,$3}
+}
+|
+in_expr_list1 COMMA expr
 {
     $$ = append($1, $3)
 }
@@ -4135,6 +4181,7 @@ LPAREN expr RPAREN
     default:
         $$ = other
     }
+    $$.SetExprFlag(expression.EXPR_IN_PAREN)
 }
 |
 LPAREN all_expr RPAREN

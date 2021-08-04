@@ -105,7 +105,7 @@
             ],
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY i WITHIN p.plan.`~children` SATISFIES i.`#operator` = 'NestedLoopJoin' AND i.`alias` = 'r' AND i.`outer` = true END"
         },
-        "statements":"SELECT l.c11, r.c22 FROM shellTest l LEFT JOIN shellTest r ON l.c11 = r.c21 AND r.c22 <= 0 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND l.c12 IN (CASE WHEN r.c21 IS VALUED THEN [r.c22] ELSE [30, 40] END)",
+        "statements":"SELECT l.c11, r.c22 FROM shellTest l LEFT JOIN shellTest r ON l.c11 = r.c21 AND r.c22 <= 0 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND l.c12 IN CASE WHEN r.c21 IS VALUED THEN [r.c22] ELSE [30, 40] END",
         "results": [
         {
             "c11": 3

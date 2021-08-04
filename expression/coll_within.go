@@ -51,6 +51,11 @@ func (this *Within) Evaluate(item value.Value, context Context) (value.Value, er
 
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
+	} else if this.operands[1].HasExprFlag(EXPR_IN_PAREN) {
+		// if flagged as having being in parentheses then we need to restore the meaning as defining an array
+		n := make([]interface{}, 1)
+		n[0] = second
+		second = value.NewValue(n)
 	} else if second.Type() != value.ARRAY && second.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
 	}
