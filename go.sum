@@ -22,8 +22,8 @@ github.com/blevesearch/scorch_segment_api v1.0.0 h1:BUkCPWDg2gimTEyVDXf85I2buqqt
 github.com/blevesearch/scorch_segment_api v1.0.0/go.mod h1:KgRYmlfYC27NeM6cXOHx8LBgq7jn0atpV8mVWoBKBng=
 github.com/blevesearch/scorch_segment_api/v2 v2.0.1 h1:fd+hPtZ8GsbqPK1HslGp7Vhoik4arZteA/IsCEgOisw=
 github.com/blevesearch/scorch_segment_api/v2 v2.0.1/go.mod h1:lq7yK2jQy1yQjtjTfU931aVqz7pYxEudHaDwOt1tXfU=
-github.com/blevesearch/sear v0.0.2 h1:AxXH0EjLL4rzboy2CHOPOr+cepBisjVjUCdEXHUIK9Q=
-github.com/blevesearch/sear v0.0.2/go.mod h1:/2INo670Nthed5Q6jF8Urfc+Mw+VIGhfWoclfSdigrc=
+github.com/blevesearch/sear v0.0.3 h1:CPPI3JKMgjfYFw+yGMd+P2EEar2wd86uiaxV/V+kbx4=
+github.com/blevesearch/sear v0.0.3/go.mod h1:/2INo670Nthed5Q6jF8Urfc+Mw+VIGhfWoclfSdigrc=
 github.com/blevesearch/segment v0.9.0 h1:5lG7yBCx98or7gK2cHMKPukPZ/31Kag7nONpoBt22Ac=
 github.com/blevesearch/segment v0.9.0/go.mod h1:9PfHYUdQCgHktBgvtUOF4x+pc4/l8rdH0u5spnW85UQ=
 github.com/blevesearch/snowballstem v0.9.0 h1:lMQ189YspGP6sXvZQ4WZ+MLawfV8wOmPoD/iWeNXm8s=
