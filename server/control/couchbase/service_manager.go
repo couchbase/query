@@ -17,11 +17,9 @@ import (
 	"sync"
 
 	"github.com/couchbase/cbauth/service"
-	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/server"
 )
 
 type Manager interface {
@@ -33,9 +31,6 @@ type ServiceMgr struct {
 
 	nodeInfo *service.NodeInfo
 	waiters  waiters
-
-	managedServer *server.Server
-	cluster       clustering.Cluster
 }
 
 type state struct {
@@ -48,32 +43,19 @@ type state struct {
 type waiter chan state
 type waiters map[waiter]struct{}
 
-func NewManager(server *server.Server) (Manager, error) {
+func NewManager() Manager {
 	var mgr *ServiceMgr
 	logging.Debugf("server::NewManager entry")
 	defer logging.Debuga(func() string { return fmt.Sprintf("server::NewManager exit: %v", mgr) })
 
-	if server == nil {
-		return nil, fmt.Errorf("Invalid server.")
-	}
-
-	c, err := server.ConfigurationStore().Cluster()
-	if err != nil || c == nil {
-		return nil, fmt.Errorf("Unable to access cluster information.")
-	}
-
-	mu := &sync.RWMutex{}
-
 	mgr = &ServiceMgr{
-		mu: mu,
+		mu: &sync.RWMutex{},
 		state: state{
 			rev:      0,
 			servers:  nil,
 			eject:    nil,
 			changeID: "",
 		},
-		managedServer: server,
-		cluster:       c,
 	}
 
 	mgr.waiters = make(waiters)
@@ -86,7 +68,7 @@ func NewManager(server *server.Server) (Manager, error) {
 	mgr.setInitialNodeList()
 	go mgr.registerWithServer() // Note: doesn't complete unless an error occurs
 
-	return mgr, nil
+	return mgr
 }
 
 func (m *ServiceMgr) setInitialNodeList() {

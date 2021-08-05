@@ -378,11 +378,8 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 	constructor.Init(endpoint.Mux())
 
-	_, err = control.NewManager(server)
-	if err != nil {
-		logging.Errorf("cbq-engine exiting as NewManager failed with error: %v", err)
-		os.Exit(1)
-	}
+	// topology awareness
+	_ = control.NewManager()
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
