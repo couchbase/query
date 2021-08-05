@@ -915,8 +915,7 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		data := make([]interface{}, 0, numFunctions)
 		snapshot := func(name string, val []byte) error {
 			path := algebra.ParsePath(name)
-			if len(path) == 4 && path[1] == bucket &&
-				(include.match(path) || !exclude.match(path)) {
+			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
 				data = append(data, value.NewParsedValue(val, false))
 			}
 			return nil
@@ -1065,6 +1064,9 @@ func parsePath(p string) []string {
 // only considers scopes and collections
 // duplicates entries are not allowed
 func newFilter(p string) (matcher, errors.Error) {
+	if len(p) == 0 {
+		return nil, nil
+	}
 	paths := strings.Split(p, ",")
 	if len(paths) == 0 {
 		return nil, nil
@@ -1106,6 +1108,21 @@ func (f matcher) match(p []string) bool {
 	}
 
 	// any collections matches are ignored
+	return false
+}
+
+func filterEval(path []string, include, exclude matcher) bool {
+	if len(include) == 0 && len(exclude) == 0 {
+		return true
+	}
+	if len(include) > 0 {
+		return include.match(path)
+	}
+	if len(exclude) > 0 {
+		return !exclude.match(path)
+	}
+
+	// should never reach this
 	return false
 }
 
@@ -1209,7 +1226,7 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 		return nil
 	}
 
-	if l == 2 || include.match(path) || !exclude.match(path) {
+	if l == 2 || filterEval(path, include, exclude) {
 		remap.remap(b, path)
 
 		name, err1 := functions.Constructor(path, path[0], "")
