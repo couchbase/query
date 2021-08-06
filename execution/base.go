@@ -861,9 +861,15 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			this.setExecPhase(this.execPhase, context)
 		}
 		this.switchPhase(_EXECTIME)
-		defer this.switchPhase(_NOTIME) // accrue current phase's time
 		if this.serialized == true {
 			ok := true
+			defer func() {
+				this.switchPhase(_NOTIME) // accrue current phase's time
+				if !ok {
+					this.notify()
+					this.close(context)
+				}
+			}()
 			if !active || (context.Readonly() && !cons.readonly()) {
 				ok = false
 			} else {
@@ -874,14 +880,11 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 				this.fork(this.input, context, parent)
 			}
 
-			if !ok {
-				this.notify()
-				this.close(context)
-			}
 			return
 		}
 		defer this.close(context)
-		defer this.notify() // Notify that I have stopped
+		defer this.switchPhase(_NOTIME) // accrue current phase's time
+		defer this.notify()             // Notify that I have stopped
 		defer func() { this.batch = nil }()
 		if !active {
 			return
