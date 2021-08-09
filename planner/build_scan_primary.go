@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -122,7 +123,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 		if ok {
 			return
 		} else {
-			return nil, fmt.Errorf("Unable to cast index %s to primary index", index.Name())
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildPrimaryIndex: Unable to cast index %s to primary index", index.Name()))
 		}
 	}
 
@@ -155,10 +156,8 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 	}
 
 	if primary == nil {
-		return nil, fmt.Errorf(
-			"No index available on keyspace %s that matches your query. Use CREATE PRIMARY INDEX ON %s to create a primary index, or check that your expected index is online.",
-			node.PathString(), node.PathString())
+		return nil, errors.NewWrapPlanError(errors.NewNoPrimaryIndexError(node.PathString()))
 	}
 
-	return nil, fmt.Errorf("Primary index %s not online.", primary.Name())
+	return nil, errors.NewWrapPlanError(errors.NewPrimaryIndexOfflineError(primary.Name()))
 }

@@ -24,6 +24,25 @@ func NewPlanError(e error, msg string) Error {
 	}
 }
 
+// for situations where we want to maintain previous error code of 4000 but a proper enclosed error
+func NewWrapPlanError(e error) Error {
+	if er, ok := e.(Error); ok && er.Code() == 4000 {
+		return er
+	}
+	return &err{level: EXCEPTION, ICode: 4000, IKey: "plan_error", ICause: e, InternalCaller: CallerN(1)}
+}
+
+func IsWrapPlanError(e error, code int32) bool {
+	if er, ok := e.(Error); ok && er.Code() == 4000 {
+		if cause := er.GetICause(); cause != nil {
+			if enclosed, ok := cause.(Error); ok && enclosed.Code() == code {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func NewReprepareError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 4001, IKey: "reprepare_error", ICause: e, InternalMsg: "Reprepare error", InternalCaller: CallerN(1)}
 }
@@ -112,6 +131,21 @@ func NewNoIndexJoinError(alias, op string) Error {
 }
 
 /* error number 4110 moved to semantics.go */
+
+const NO_PRIMARY_INDEX = 4120
+
+func NewNoPrimaryIndexError(alias string) Error {
+	return &err{level: EXCEPTION, ICode: NO_PRIMARY_INDEX, IKey: "plan.build_primary_index.no_index",
+		InternalMsg:    fmt.Sprintf("No index available on keyspace %s that matches your query. Use CREATE PRIMARY INDEX ON %s to create a primary index, or check that your expected index is online.", alias, alias),
+		InternalCaller: CallerN(1)}
+}
+
+const PRIMARY_INDEX_OFFLINE = 4125
+
+func NewPrimaryIndexOfflineError(name string) Error {
+	return &err{level: EXCEPTION, ICode: PRIMARY_INDEX_OFFLINE, IKey: "plan.build_primary_index.index_offline",
+		InternalMsg: fmt.Sprintf("Primary index %s not online.", name), InternalCaller: CallerN(1)}
+}
 
 const NOT_GROUP_KEY_OR_AGG = 4210
 
