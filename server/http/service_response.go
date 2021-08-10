@@ -411,8 +411,8 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 		"code": err.Code(),
 		"msg":  err.Error(),
 	}
-	if err.Retry() {
-		m["retry"] = true
+	if err.Retry() != value.NONE {
+		m["retry"] = value.ToBool(err.Retry())
 	}
 	if err.Cause() != nil {
 		m["cause"] = err.Cause()

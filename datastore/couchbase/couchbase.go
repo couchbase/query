@@ -1856,6 +1856,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 		return nil, err
 	}
 
+	retry := value.NONE
 	var failedDeletes []string
 	var err error
 	mPairs := make(value.Pairs, 0, len(pairs))
@@ -1888,8 +1889,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				if err != nil {
 					err = errors.NewError(err, "Key "+key)
 				} else {
-					err = errors.NewError(nil, "Duplicate Key "+key)
+					err = errors.NewDuplicateKeyError(key)
 				}
+				retry = value.FALSE
 			} else if err == nil {
 				// refresh local meta CAS value
 				logging.Debuga(func() string { return fmt.Sprintf("After insert: key {<ud>%v</ud>} CAS %v", key, cas) })
@@ -1903,8 +1905,10 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			cas, flags, _, err = getMeta(key, kv.Value, true)
 			if err != nil { // Don't perform the update if the meta values are not found
 				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
+				retry = value.TRUE
 			} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
 				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
+				retry = value.TRUE
 			} else {
 				logging.Debuga(func() string {
 					return fmt.Sprintf("Before update: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud>",
@@ -1945,7 +1949,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications. Error - %v", key, err)
 				if op != MOP_INSERT {
 					casMismatch++
+					retry = value.FALSE
 				}
+			} else if isNotFoundError(err) {
+				err = errors.NewKeyNotFoundError(key, nil)
+				retry = value.FALSE
 			} else {
 				// err contains key, redact
 				logging.Errorf("Failed to perform %s on key <ud>%s</ud> for Keyspace %s. Error - <ud>%v</ud>",
@@ -1961,7 +1969,13 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			return mPairs, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 		}
 	} else if len(mPairs) == 0 {
-		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op), casMismatch)
+		if mcr, ok := err.(*gomemcached.MCResponse); ok {
+			err = errors.NewCbDMLMCError(mcr.Status.String())
+			if retry == value.NONE && gomemcached.IsFatal(err) {
+				retry = value.FALSE
+			}
+		}
+		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op), casMismatch, retry)
 	}
 
 	return mPairs, nil

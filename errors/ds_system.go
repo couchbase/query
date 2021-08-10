@@ -10,6 +10,8 @@ package errors
 
 import (
 	"fmt"
+
+	"github.com/couchbase/query/value"
 )
 
 // System datastore error codes
@@ -65,7 +67,7 @@ const DS_SYS_ROLE_ERROR = 11009
 
 func NewSystemUnableToRetrieveError(e error) Error {
 	return &err{level: EXCEPTION, ICode: DS_SYS_ROLE_ERROR, IKey: "datastore.system.unable_to_retrieve", ICause: e,
-		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
 const DS_SYS_UNABLE_TO_UPDATE_USER_INFO = 11010

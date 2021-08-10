@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/couchbase/query/value"
 )
 
 const (
@@ -47,7 +49,7 @@ type Error interface {
 	IsWarning() bool
 	OnceOnly() bool
 	Object() map[string]interface{}
-	Retry() bool
+	Retry() value.Tristate
 	Cause() interface{}
 	SetCause(cause interface{})
 }
@@ -116,7 +118,7 @@ type err struct {
 	InternalCaller string
 	level          int
 	onceOnly       bool
-	retry          bool // Retrying this query might be useful.
+	retry          value.Tristate // Retrying this query might be useful.
 	cause          interface{}
 }
 
@@ -142,8 +144,8 @@ func (e *err) Object() map[string]interface{} {
 	if e.ICause != nil {
 		m["icause"] = e.ICause.Error()
 	}
-	if e.retry {
-		m["retry"] = true
+	if e.retry != value.NONE {
+		m["retry"] = value.ToBool(e.retry)
 	}
 	if e.cause != nil {
 		m["cause"] = e.cause
@@ -162,13 +164,13 @@ func (e *err) MarshalJSON() ([]byte, error) {
 
 func (e *err) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Caller  string      `json:"caller"`
-		Code    int32       `json:"code"`
-		ICause  string      `json:"icasue"`
-		Key     string      `json:"key"`
-		Message string      `json:"message"`
-		Retry   bool        `json:"retry"`
-		Cause   interface{} `json:"cause"`
+		Caller  string         `json:"caller"`
+		Code    int32          `json:"code"`
+		ICause  string         `json:"icasue"`
+		Key     string         `json:"key"`
+		Message string         `json:"message"`
+		Retry   value.Tristate `json:"retry"`
+		Cause   interface{}    `json:"cause"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -216,7 +218,7 @@ func (e *err) OnceOnly() bool {
 	return e.onceOnly
 }
 
-func (e *err) Retry() bool {
+func (e *err) Retry() value.Tristate {
 	return e.retry
 }
 

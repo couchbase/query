@@ -8,7 +8,9 @@
 
 package errors
 
-import ()
+import (
+	"github.com/couchbase/query/value"
+)
 
 const DS_CB_CONN_ERROR = 12000
 
@@ -43,22 +45,24 @@ func NewCbIndexerNotImplementedError(e error, msg string) Error {
 
 func NewCbKeyspaceCountError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12006, IKey: "datastore.couchbase.keyspace_count_error", ICause: e,
-		InternalMsg: "Failed to get count for keyspace " + msg, InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Failed to get count for keyspace " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
 // Error code 12007 is retired. Do not reuse.
 
 func NewCbBulkGetError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12008, IKey: "datastore.couchbase.bulk_get_error", ICause: e,
-		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
-func NewCbDMLError(e error, msg string, casMismatch int) Error {
+func NewCbDMLError(e error, msg string, casMismatch int, r value.Tristate) Error {
 	if casMismatch != 0 {
-		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
+		e = newCASMismatchError(nil)
+		r = value.FALSE
+		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
 			InternalMsg: "DML Error, possible causes include CAS mismatch " + msg, InternalCaller: CallerN(1)}
 	} else {
-		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
 			InternalMsg: "DML Error, possible causes include concurrent modification " + msg, InternalCaller: CallerN(1)}
 	}
 }
@@ -93,7 +97,7 @@ const INDEX_NOT_FOUND = 12016
 
 func NewCbIndexNotFoundError(e error) Error {
 	return &err{level: EXCEPTION, ICode: INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e,
-		InternalMsg: "Index Not Found", InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Index Not Found", InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
 const GET_RANDOM_ENTRY_ERROR = 12017
@@ -127,14 +131,14 @@ func NewCbScopeNotFoundError(e error, msg string) Error {
 
 func NewCbKeyspaceSizeError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12022, IKey: "datastore.couchbase.keyspace_size_error", ICause: e,
-		InternalMsg: "Failed to get size for keyspace" + msg, InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Failed to get size for keyspace" + msg, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
 const DS_CB_SEC_CONFIG_ERROR = 12023
 
 func NewCbSecurityConfigNotProvided(bucket string) Error {
 	return &err{level: EXCEPTION, ICode: DS_CB_SEC_CONFIG_ERROR, IKey: "datastore.couchbase.security_config_not_provided",
-		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: true}
+		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
 func NewCbCreateSystemBucketError(s string, e error) Error {
@@ -183,4 +187,15 @@ func NewPreserveExpiryNotSupported() Error {
 	return &err{level: EXCEPTION, ICode: 12032, IKey: "datastore.couchbase.preserve_expiration",
 		InternalMsg:    "Preserve expiration is not supported.",
 		InternalCaller: CallerN(1)}
+}
+
+// this is only embedded in 12009
+func newCASMismatchError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 12033, IKey: "datastore.couchbase.CAS_mismatch",
+		InternalMsg: "CAS mismatch", cause: e, InternalCaller: CallerN(2)} // note caller level
+}
+
+func NewCbDMLMCError(s string) Error {
+	return &err{level: EXCEPTION, ICode: 12034, IKey: "datastore.couchbase.mc_error",
+		InternalMsg: "MC error", cause: s, InternalCaller: CallerN(1)}
 }
