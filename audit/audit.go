@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/clog"
 	mcc "github.com/couchbase/gomemcached/client"
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/accounting"
@@ -179,6 +180,20 @@ func (sa *standardAuditor) submit(entry auditQueueEntry) {
 
 var _AUDITOR Auditor
 
+func loggerFunc(level string, format string, args ...interface{}) string {
+	l := logging.NONE
+	if strings.HasPrefix(format, "audit:") || strings.HasPrefix(format, "Auditing:") {
+		l = logging.AUDIT
+	} else {
+		var ok bool
+		l, ok = logging.ParseLevel(level)
+		if !ok {
+			l = logging.NONE
+		}
+	}
+	return logging.Stringf(l, format, args...)
+}
+
 // numServicers is the number of worker threads we expect to see
 // accessing the audit functionality. It is NOT the number of worker threads
 // the audit system itself has.
@@ -189,6 +204,8 @@ func StartAuditService(server string, numServicers int) {
 		_AUDITOR = nil
 		return
 	}
+
+	clog.SetLoggerCallback(loggerFunc)
 
 	var err error
 	service, err := adt.NewAuditSvc(server)

@@ -40,7 +40,7 @@ func NewLogger(out io.Writer, lvl logging.Level, jsonLogging bool) *goLogger {
 	if jsonLogging {
 		logger.entryFormatter = &jsonFormatter{}
 	} else {
-		logger.entryFormatter = &textFormatter{}
+		logger.entryFormatter = &standardFormatter{}
 	}
 	return logger
 }
@@ -92,6 +92,10 @@ func (gl *goLogger) Fatala(f func() string) {
 	gl.Loga(logging.FATAL, f)
 }
 
+func (gl *goLogger) Audita(f func() string) {
+	gl.Loga(logging.AUDIT, f)
+}
+
 // printf-style variants
 
 func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}) {
@@ -140,6 +144,10 @@ func (gl *goLogger) Fatalf(format string, args ...interface{}) {
 	gl.Logf(logging.FATAL, format, args...)
 }
 
+func (gl *goLogger) Auditf(format string, args ...interface{}) {
+	gl.Logf(logging.AUDIT, format, args...)
+}
+
 func (gl *goLogger) Level() logging.Level {
 	return gl.level
 }
@@ -149,12 +157,39 @@ func (gl *goLogger) SetLevel(level logging.Level) {
 }
 
 func (gl *goLogger) log(level logging.Level, rlevel logging.Level, msg string) {
+	gl.logger.Print(gl.str(level, rlevel, msg))
+}
+
+func (gl *goLogger) str(level logging.Level, rlevel logging.Level, msg string) string {
 	tm := time.Now().Format("2006-01-02T15:04:05.000-07:00") // time.RFC3339 with milliseconds
-	gl.logger.Print(gl.entryFormatter.format(tm, level, rlevel, msg))
+	return gl.entryFormatter.format(tm, level, rlevel, msg)
+}
+
+func (gl *goLogger) Stringf(level logging.Level, format string, args ...interface{}) string {
+	return gl.str(level, logging.NONE, fmt.Sprintf(format, args...))
 }
 
 type formatter interface {
 	format(string, logging.Level, logging.Level, string) string
+}
+
+type standardFormatter struct {
+}
+
+func (*standardFormatter) format(tm string, level logging.Level, rlevel logging.Level, msg string) string {
+	var b strings.Builder
+	b.Grow(len(tm) + len(msg) + 32)
+	b.WriteString(tm)
+	b.WriteString(" [")
+	b.WriteString(level.String())
+	if rlevel != logging.NONE {
+		b.WriteRune(rune(','))
+		b.WriteString(rlevel.String())
+	}
+	b.WriteString("] ")
+	b.WriteString(strings.TrimSpace(msg))
+	b.WriteRune(rune('\n'))
+	return b.String()
 }
 
 type textFormatter struct {

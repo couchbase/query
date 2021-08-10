@@ -18,6 +18,7 @@ type Level int
 
 const (
 	NONE    = Level(iota) // Disable all logging
+	AUDIT                 // Audit messages
 	FATAL                 // System is in severe error state and has to terminate
 	SEVERE                // System is in severe error state and cannot recover reliably
 	ERROR                 // System is in error state but can recover and continue reliably
@@ -41,6 +42,7 @@ var _LEVEL_NAMES = []string{
 	ERROR:   "ERROR",
 	SEVERE:  "SEVERE",
 	FATAL:   "FATAL",
+	AUDIT:   "AUDIT",
 	NONE:    "NONE",
 }
 
@@ -53,6 +55,7 @@ var _LEVEL_MAP = map[string]Level{
 	"error":   ERROR,
 	"severe":  SEVERE,
 	"fatal":   FATAL,
+	"audit":   AUDIT,
 	"none":    NONE,
 }
 
@@ -66,6 +69,7 @@ var (
 	cachedError   bool
 	cachedSevere  bool
 	cachedFatal   bool
+	cachedAudit   bool
 )
 
 // maintain the cached logging state
@@ -78,6 +82,7 @@ func cacheLoggingChange() {
 	cachedError = !skipLogging(ERROR)
 	cachedSevere = !skipLogging(SEVERE)
 	cachedFatal = !skipLogging(FATAL)
+	cachedAudit = !skipLogging(AUDIT)
 }
 
 func ParseLevel(name string) (level Level, ok bool) {
@@ -97,6 +102,7 @@ type Logger interface {
 	Errora(f func() string)
 	Severea(f func() string)
 	Fatala(f func() string)
+	Audita(f func() string)
 
 	// Printf style
 	Logf(level Level, fmt string, args ...interface{})
@@ -108,6 +114,9 @@ type Logger interface {
 	Errorf(fmt string, args ...interface{})
 	Severef(fmt string, args ...interface{})
 	Fatalf(fmt string, args ...interface{})
+	Auditf(fmt string, args ...interface{})
+
+	Stringf(level Level, format string, args ...interface{}) string
 
 	/*
 		These APIs control the logging level
@@ -234,6 +243,15 @@ func Fatala(f func() string) {
 	logger.Fatala(f)
 }
 
+func Audita(f func() string) {
+	if !cachedAudit {
+		return
+	}
+	loggerMutex.Lock()
+	defer loggerMutex.Unlock()
+	logger.Audita(f)
+}
+
 // printf-style variants
 
 func Logf(level Level, fmt string, args ...interface{}) {
@@ -317,6 +335,15 @@ func Fatalf(fmt string, args ...interface{}) {
 	logger.Fatalf(fmt, args...)
 }
 
+func Auditf(fmt string, args ...interface{}) {
+	if !cachedAudit {
+		return
+	}
+	loggerMutex.Lock()
+	defer loggerMutex.Unlock()
+	logger.Auditf(fmt, args...)
+}
+
 func SetLevel(level Level) {
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
@@ -342,4 +369,10 @@ func Stackf(level Level, fmt string, args ...interface{}) {
 	defer loggerMutex.Unlock()
 	logger.Logf(level, fmt, args...)
 	logger.Logf(level, s)
+}
+
+func Stringf(level Level, fmt string, args ...interface{}) string {
+	loggerMutex.RLock()
+	defer loggerMutex.RUnlock()
+	return logger.Stringf(level, fmt, args...)
 }
