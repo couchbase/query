@@ -77,7 +77,7 @@ type simpleAuditable struct {
 }
 
 func (this *simpleAuditable) EventErrorMessage() []errors.Error {
-    return this.errors
+	return this.errors
 }
 
 func (sa *simpleAuditable) EventGenericFields() adt.GenericFields {
