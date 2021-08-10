@@ -117,12 +117,6 @@ func NewDuplicateKeyError(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewTransactionQueueFull() Error {
-	return &err{level: EXCEPTION, ICode: 17013, IKey: "transaction.queue.full",
-		InternalMsg:    "Transaction queue is full",
-		InternalCaller: CallerN(1)}
-}
-
 func NewTransactionInuse() Error {
 	return &err{level: EXCEPTION, ICode: 17013, IKey: "transaction.parallel.disallowed",
 		InternalMsg:    "Parallel execution of the statements are not allowed within the transaction",
@@ -162,15 +156,6 @@ func NewPostCommitTransactionError(e error, c interface{}) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewPostCommitTransactionWarning(e error, c interface{}) Error {
-	msg := "Failed post commit"
-	if e != nil {
-		msg = fmt.Sprintf("%s: %v", msg, e)
-	}
-	return &err{level: WARNING, ICode: 17018, IKey: "transaction.statement.postcommit",
-		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
-}
-
 func NewAmbiguousCommitTransactionError(e error, c interface{}) Error {
 	msg := "Commit was ambiguous"
 	if e != nil {
@@ -186,5 +171,20 @@ func NewWriteTransactionError(e error, c interface{}) Error {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
 	return &err{level: EXCEPTION, ICode: 17020, IKey: "transaction.write.error",
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
+}
+
+func NewTransactionQueueFull() Error {
+	return &err{level: EXCEPTION, ICode: 17021, IKey: "transaction.queue.full",
+		InternalMsg:    "Transaction queue is full",
+		InternalCaller: CallerN(1)}
+}
+
+func NewPostCommitTransactionWarning(e error, c interface{}) Error {
+	msg := "Failed post commit"
+	if e != nil {
+		msg = fmt.Sprintf("%s: %v", msg, e)
+	}
+	return &err{level: WARNING, ICode: 17022, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
