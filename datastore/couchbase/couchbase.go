@@ -1887,12 +1887,13 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
 				if err != nil {
+					retry, err = processIfMCError(retry, err)
 					err = errors.NewError(err, "Key "+key)
 				} else {
 					err = errors.NewDuplicateKeyError(key)
+					retry = value.FALSE
 				}
-				retry = value.FALSE
-			} else if err == nil {
+			} else { // if err != nil then added is false
 				// refresh local meta CAS value
 				logging.Debuga(func() string { return fmt.Sprintf("After insert: key {<ud>%v</ud>} CAS %v", key, cas) })
 				SetMetaCas(kv.Value, cas)
@@ -1905,10 +1906,14 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			cas, flags, _, err = getMeta(key, kv.Value, true)
 			if err != nil { // Don't perform the update if the meta values are not found
 				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
-				retry = value.TRUE
+				if retry == value.NONE {
+					retry = value.TRUE
+				}
 			} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
 				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
-				retry = value.TRUE
+				if retry == value.NONE {
+					retry = value.TRUE
+				}
 			} else {
 				logging.Debuga(func() string {
 					return fmt.Sprintf("Before update: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud>",
@@ -1926,6 +1931,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 		case MOP_UPSERT:
 			if err = setPreserveExpiry(present, context, clientContext...); err != nil {
 				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
+				if retry == value.NONE {
+					retry = value.TRUE
+				}
 			} else {
 				newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
 				b.checkRefresh(err)
@@ -1951,6 +1959,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					casMismatch++
 					retry = value.FALSE
 				}
+				retry, err = processIfMCError(retry, err)
 			} else if isNotFoundError(err) {
 				err = errors.NewKeyNotFoundError(key, nil)
 				retry = value.FALSE
@@ -1958,6 +1967,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				// err contains key, redact
 				logging.Errorf("Failed to perform %s on key <ud>%s</ud> for Keyspace %s. Error - <ud>%v</ud>",
 					MutateOpToName(op), key, qualifiedName, err)
+				retry, err = processIfMCError(retry, err)
 			}
 		} else {
 			mPairs = append(mPairs, kv)
@@ -1969,16 +1979,22 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			return mPairs, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 		}
 	} else if len(mPairs) == 0 {
-		if mcr, ok := err.(*gomemcached.MCResponse); ok {
-			err = errors.NewCbDMLMCError(mcr.Status.String())
-			if retry == value.NONE && gomemcached.IsFatal(err) {
-				retry = value.FALSE
-			}
-		}
 		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op), casMismatch, retry)
 	}
 
 	return mPairs, nil
+}
+
+func processIfMCError(retry value.Tristate, err error) (value.Tristate, error) {
+	if mcr, ok := err.(*gomemcached.MCResponse); ok {
+		if gomemcached.IsFatal(mcr) {
+			retry = value.FALSE
+		} else if retry == value.NONE {
+			retry = value.TRUE
+		}
+		err = errors.NewCbDMLMCError(mcr.Status.String())
+	}
+	return retry, err
 }
 
 func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
