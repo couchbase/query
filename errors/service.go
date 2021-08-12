@@ -121,3 +121,23 @@ func NewServiceShutDownError() Error {
 	return &err{level: EXCEPTION, ICode: 1181, IKey: "service.shutdown",
 		InternalMsg: "Service shut down", InternalCaller: CallerN(1)}
 }
+
+func NewServiceUserRequestExceededError() Error {
+	return &err{level: EXCEPTION, ICode: 1191, IKey: "service.requests.exceeded",
+		InternalMsg: "User has more requests running than allowed", InternalCaller: CallerN(1)}
+}
+
+func NewServiceUserRequestRateExceededError() Error {
+	return &err{level: EXCEPTION, ICode: 1192, IKey: "service.request.rate.exceeded",
+		InternalMsg: "User has exceeded request rate limit", InternalCaller: CallerN(1)}
+}
+
+func NewServiceUserRequestSizeExceededError() Error {
+	return &err{level: EXCEPTION, ICode: 1193, IKey: "service.request.size.exceeded",
+		InternalMsg: "User has exceeded input network traffic limit", InternalCaller: CallerN(1)}
+}
+
+func NewServiceUserResultsSizeExceededError() Error {
+	return &err{level: EXCEPTION, ICode: 1194, IKey: "service.result.size.exceeded",
+		InternalMsg: "User has exceeded results size limit", InternalCaller: CallerN(1)}
+}

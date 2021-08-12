@@ -17,9 +17,11 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/couchbase/cbauth"
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
@@ -33,21 +35,36 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type userMetrics struct {
+	uuid           string
+	activeRequests int32
+	requestMeter   accounting.Meter
+	payloadMeter   accounting.Meter
+	outputMeter    accounting.Meter
+}
+
 type HttpEndpoint struct {
-	server        *server.Server
-	metrics       bool
-	httpAddr      string
-	httpsAddr     string
-	certFile      string
-	keyFile       string
-	bufpool       BufferPool
-	listener      map[string]net.Listener
-	listenerTLS   map[string]net.Listener
-	mux           *mux.Router
-	actives       server.ActiveRequests
-	options       server.ServerOptions
-	connSecConfig datastore.ConnectionSecurityConfig
-	internalUser  string
+	server               *server.Server
+	metrics              bool
+	httpAddr             string
+	httpsAddr            string
+	certFile             string
+	keyFile              string
+	bufpool              BufferPool
+	listener             map[string]net.Listener
+	listenerTLS          map[string]net.Listener
+	mux                  *mux.Router
+	actives              server.ActiveRequests
+	options              server.ServerOptions
+	connSecConfig        datastore.ConnectionSecurityConfig
+	internalUser         string
+	trackUsers           bool
+	trackedUsers         map[string]*userMetrics
+	userRequestsLimit    int32
+	userRequestRateLimit float64
+	userPayloadLimit     float64
+	userOutputLimit      float64
+	usersLock            sync.RWMutex
 }
 
 const (
@@ -107,6 +124,32 @@ func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
 		if ok {
 			this.bufpool.SetBufferCapacity(val)
 		}
+		/*
+			case "enforce_limits":
+				val, ok := v.(string)
+				if ok {
+					switch val {
+					case "on":
+						this.trackUsers = true
+					case "off":
+						this.trackUsers = false
+
+						// get rid of user cache:
+						this.usersLock.Lock()
+						for u, _ := range this.trackedUsers {
+							delete(this.trackedUsers, u)
+						}
+						this.usersLock.Unlock()
+					case "reload":
+						if this.trackUsers {
+						        this.userRequestsLimit = datastore.GetUserLimit("num_concurrent_requests").(int)
+						        this.userRequestRateLimit = datastore.GetUserLimit("num_queries_per_min").(float64)
+						        this.userPayloadLimit = datastore.GetUserLimit("ingress_mib_per_min").(float64) * 1024 * 1024
+						        this.userOutputLimit = datastore.GetUserLimit("egress_mib_per_min").(float64) * 1024 * 1024
+						}
+					}
+				}
+		*/
 	}
 }
 
@@ -263,6 +306,47 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	defer func() {
 		requestPool.Put(request)
 	}()
+
+	if this.trackUsers {
+		userName := datastore.CredsStringHTTP(request.Credentials())
+		this.usersLock.Lock()
+		user := this.trackedUsers[userName]
+		if user == nil {
+			user = &userMetrics{
+				// uuid: datastore.GetUserUUID(userName),
+				activeRequests: 1,
+				requestMeter:   this.server.AccountingStore().NewMeter(),
+				payloadMeter:   this.server.AccountingStore().NewMeter(),
+				outputMeter:    this.server.AccountingStore().NewMeter(),
+			}
+			this.trackedUsers[userName] = user
+			this.usersLock.Unlock()
+		} else {
+			this.usersLock.Unlock()
+			if this.userRequestsLimit > 0 && user.activeRequests >= this.userRequestsLimit {
+				request.Fail(errors.NewServiceUserRequestExceededError())
+				return
+			} else if this.userRequestRateLimit > 0 && user.requestMeter.Rate1() >= this.userRequestRateLimit {
+				request.Fail(errors.NewServiceUserRequestRateExceededError())
+				return
+			} else if this.userPayloadLimit > 0 && user.payloadMeter.Rate1() >= this.userPayloadLimit {
+				request.Fail(errors.NewServiceUserRequestSizeExceededError())
+				return
+			} else if this.userOutputLimit > 0 && user.outputMeter.Rate1() >= this.userOutputLimit {
+				request.Fail(errors.NewServiceUserResultsSizeExceededError())
+				return
+			}
+			atomic.AddInt32(&user.activeRequests, 1)
+		}
+		reqSize := req.ContentLength
+
+		// if we didn't have a request size we approximate to the statement length
+		if reqSize <= 0 {
+			reqSize = int64(len(request.Statement()))
+		}
+		user.requestMeter.Mark(1)
+		user.payloadMeter.Mark(reqSize)
+	}
 
 	defer this.doStats(request, this.server)
 
@@ -488,6 +572,16 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.errorCount, request.req, srvr)
+	if this.trackUsers {
+		userName := datastore.CredsStringHTTP(request.Credentials())
+		this.usersLock.RLock()
+		user := this.trackedUsers[userName]
+		this.usersLock.RUnlock()
+		if user != nil {
+			atomic.AddInt32(&user.activeRequests, -1)
+			user.outputMeter.Mark(int64(request.resultSize))
+		}
+	}
 
 	audit.Submit(request)
 }

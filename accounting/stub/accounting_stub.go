@@ -51,6 +51,26 @@ func (AccountingStoreStub) Vitals() (interface{}, errors.Error) {
 	return nil, nil
 }
 
+func (AccountingStoreStub) NewCounter() accounting.Counter {
+	return CounterStub{}
+}
+
+func (AccountingStoreStub) NewGauge() accounting.Gauge {
+	return GaugeStub{}
+}
+
+func (AccountingStoreStub) NewMeter() accounting.Meter {
+	return MeterStub{}
+}
+
+func (AccountingStoreStub) NewTimer() accounting.Timer {
+	return TimerStub{}
+}
+
+func (AccountingStoreStub) NewHistogram() accounting.Histogram {
+	return HistogramStub{}
+}
+
 // CounterStub is a stub implementation of Counter
 type CounterStub struct{}
 

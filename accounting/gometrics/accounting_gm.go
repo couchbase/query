@@ -158,6 +158,26 @@ type VitalsRecord struct {
 	// FIXME Active vs Queued threads, local time, version, direct vs prepared, network
 }
 
+func (g *gometricsAccountingStore) NewCounter() accounting.Counter {
+	return metrics.NewCounter()
+}
+
+func (g *gometricsAccountingStore) NewGauge() accounting.Gauge {
+	return metrics.NewGauge()
+}
+
+func (g *gometricsAccountingStore) NewMeter() accounting.Meter {
+	return metrics.NewMeter()
+}
+
+func (g *gometricsAccountingStore) NewTimer() accounting.Timer {
+	return metrics.NewTimer()
+}
+
+func (g *gometricsAccountingStore) NewHistogram() accounting.Histogram {
+	return metrics.NewHistogram(metrics.NewExpDecaySample(1028, 0.015))
+}
+
 type goMetricRegistry struct {
 }
 

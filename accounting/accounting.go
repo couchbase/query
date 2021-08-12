@@ -24,6 +24,11 @@ type AccountingStore interface {
 	MetricRegistry() MetricRegistry      // The MetricRegistry that this AccountingStore is managing
 	MetricReporter() MetricReporter      // The MetricReporter that this AccountingStore is using
 	Vitals() (interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
+	NewCounter() Counter                 // Create individual metrics
+	NewGauge() Gauge
+	NewMeter() Meter
+	NewTimer() Timer
+	NewHistogram() Histogram
 }
 
 // Metric types
@@ -309,7 +314,7 @@ var acctstore AccountingStore
 var counters []Counter = make([]Counter, len(metricNames))
 var requestTimer Timer
 
-// Use the give AccountingStore to create counters for all the metrics we are interested in:
+// Use the given AccountingStore to create counters for all the metrics we are interested in:
 func RegisterMetrics(acctStore AccountingStore) {
 	acctstore = acctStore
 	ms := acctstore.MetricRegistry()

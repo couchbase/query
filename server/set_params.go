@@ -206,6 +206,11 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	/*
+	   	"enforce_limits": func(s *Server, o interface{}) errors.Error {
+	                   s.SettingsCallback()("enforce_limits", o)
+	                   return nil
+	*/
 }
 
 func getNumber(o interface{}) float64 {

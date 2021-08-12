@@ -49,3 +49,29 @@ func CredsArray(creds *auth.Credentials) []string {
 func CredsString(creds *auth.Credentials) string {
 	return strings.Join(CredsArray(creds), ",")
 }
+
+func CredsStringHTTP(creds *auth.Credentials) string {
+	ds := GetDatastore()
+	if ds != nil && creds != nil {
+		return ds.CredsString(creds.HttpRequest)
+	}
+	return ""
+}
+
+/*
+func GetUserUUID(user string) string {
+	ds := GetDatastore()
+	if ds != nil {
+		return ds.GetUserUUID(user)
+	}
+	return ""
+}
+
+func GetUserLimit(limit string) int64 {
+	ds := GetDatastore()
+	if ds != nil {
+		return ds.GetUserLimit(limit)
+	}
+	return 0
+}
+*/
