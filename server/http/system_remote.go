@@ -22,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -46,6 +47,12 @@ type systemRemoteHttp struct {
 type commParameters struct {
 	client        *http.Client
 	useSecurePort bool
+}
+
+type preparedAdminOp struct {
+	endpoint string
+	user     string
+	password string
 }
 
 // Returns nil if SetConnectionSecurityConfig has never been called.
@@ -421,73 +428,35 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 	}
 }
 
-// Performs an operation on all provided nodes (or all nodes if none provided) *including* the local node
-func (this *systemRemoteHttp) DoAdminOps(nodes []string, endpoint string, command string, key string, data string, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) ([][]byte, []errors.Error) {
-
-	if nodes == nil {
-		nodes = make([]string, 0, 16)
-	}
+func (this *systemRemoteHttp) PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) (interface{}, errors.Error) {
 
 	if key != "" {
 		endpoint = endpoint + "/" + key
 	}
 
 	cp := this.getCommParams()
-	// no nodes means all nodes
-	if len(nodes) == 0 {
-
-		clusters, err := this.configStore.ClusterNames()
-		if err != nil {
-			if warnFn != nil {
-				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
-			}
-			errs := make([]errors.Error, 1)
-			errs[0] = err
-			return nil, errs
+	queryNode, err := this.getQueryNode(node, "scan", endpoint)
+	if err != nil {
+		if warnFn != nil {
+			warnFn(err)
 		}
-
-		for c, _ := range clusters {
-			cl, err := this.configStore.ClusterByName(clusters[c])
-			if err != nil {
-				if warnFn != nil {
-					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
-				}
-				continue
-			}
-			queryNodeNames, err := cl.QueryNodeNames()
-			if err != nil {
-				if warnFn != nil {
-					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
-				}
-				continue
-			}
-
-			for _, nn := range queryNodeNames {
-				nodes = append(nodes, nn)
-			}
-		}
+		return nil, err
 	}
 
-	results := make([][]byte, len(nodes))
-	errs := make([]errors.Error, len(nodes))
+	fullEndpoint, u, p := this.getFullEndpoint(queryNode, endpoint, creds, cp)
 
-	for i, node := range nodes {
-		var queryNode clustering.QueryNode
-		queryNode, errs[i] = this.getQueryNode(node, "scan", endpoint)
-		if errs[i] != nil {
-			if warnFn != nil {
-				warnFn(errs[i])
-			}
-			continue
-		}
+	return &preparedAdminOp{fullEndpoint, u, p}, nil
+}
 
-		results[i], errs[i] = this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
-		if warnFn != nil && errs[i] != nil {
-			warnFn(errs[i])
-		}
+func (this *systemRemoteHttp) ExecutePreparedAdminOp(op interface{}, command string, data string,
+	warnFn func(warn errors.Error), creds distributed.Creds, authToken string) ([]byte, errors.Error) {
+
+	pop, ok := op.(*preparedAdminOp)
+	if !ok {
+		return nil, errors.NewInvalidPreparedAdminOp()
 	}
-
-	return results, errs
+	cp := this.getCommParams()
+	return this.doRemoteEndpointOp(pop.endpoint, command, data, command, creds, authToken, cp, pop.user, pop.password)
 }
 
 func credsAsJSON(creds distributed.Creds) string {
@@ -513,44 +482,68 @@ func credsAsJSON(creds distributed.Creds) string {
 // helper for the REST op
 func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint string, command string, data string, op string,
 	creds distributed.Creds, authToken string, cp *commParameters) ([]byte, errors.Error) {
-	var reader io.Reader
 
 	if node == nil {
 		return nil, errors.NewSystemRemoteWarning(goErr.New("missing node"), op, endpoint)
 	}
-	if data != "" {
-		reader = strings.NewReader(data)
-	}
+	fullEndpoint, u, p := this.getFullEndpoint(node, endpoint, creds, cp)
 
-	numCredentials := len(creds)
+	return this.doRemoteEndpointOp(fullEndpoint, command, data, op, creds, authToken, cp, u, p)
+}
+
+func (this *systemRemoteHttp) getFullEndpoint(node clustering.QueryNode, endpoint string, creds distributed.Creds,
+	cp *commParameters) (string, string, string) {
+
 	var fullEndpoint string
 	if cp.useSecurePort {
 		fullEndpoint = node.ClusterSecure() + "/" + endpoint
 	} else {
 		fullEndpoint = node.ClusterEndpoint() + "/" + endpoint
 	}
+	numCredentials := len(creds)
 	if numCredentials > 0 {
 		fullEndpoint += "?creds=" + credsAsJSON(creds)
 	}
-	authenticator := cbauth.Default
-
 	// Here, I'm leveraging the fact that the node name is the host:port of the mgmt
 	// endpoint associated with the node. This is the same hostport pair that allows us
 	// to access the admin creds for that node.
+	authenticator := cbauth.Default
 	u, p, _ := authenticator.GetHTTPServiceAuth(node.Name())
+
+	return fullEndpoint, u, p
+}
+
+func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command string, data string, op string,
+	creds distributed.Creds, authToken string, cp *commParameters, u string, p string) ([]byte, errors.Error) {
+
+	var reader io.Reader
+	if data != "" {
+		reader = strings.NewReader(data)
+	}
+
 	request, _ := http.NewRequest(command, fullEndpoint, reader)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.SetBasicAuth(u, p)
 
 	resp, err := cp.client.Do(request)
 	if err != nil {
-		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
+		ep := ""
+		u, e := url.Parse(fullEndpoint)
+		if e == nil {
+			ep = u.Path
+		}
+		return nil, errors.NewSystemRemoteWarning(err, op, ep)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.NewSystemRemoteWarning(err, op, endpoint)
+		ep := ""
+		u, e := url.Parse(fullEndpoint)
+		if e == nil {
+			ep = u.Path
+		}
+		return nil, errors.NewSystemRemoteWarning(err, op, ep)
 	}
 
 	// we got a response, but the operation failed: extract the error
@@ -562,7 +555,12 @@ func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint str
 
 			// MB-28264 we could not unmarshal an error from a remote node
 			// just create an error from th body
-			return nil, errors.NewSystemRemoteWarning(goErr.New(string(body)), op, endpoint)
+			ep := ""
+			u, e := url.Parse(fullEndpoint)
+			if e == nil {
+				ep = u.Path
+			}
+			return nil, errors.NewSystemRemoteWarning(goErr.New(string(body)), op, ep)
 		}
 		return nil, opErr
 	}

@@ -51,8 +51,13 @@ func (this systemRemoteStub) DoRemoteOps(nodes []string, endpoint string, comman
 	// nothing to see here
 }
 
-func (this *systemRemoteStub) DoAdminOps(nodes []string, endpoint string, command string, key string, data string, warnFn func(warn errors.Error), creds Creds, authToken string) ([][]byte, []errors.Error) {
-	// nothing to see here
+func (this *systemRemoteStub) PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds Creds,
+	authToken string) (interface{}, errors.Error) {
+	return nil, nil
+}
+
+func (this *systemRemoteStub) ExecutePreparedAdminOp(op interface{}, command string, data string,
+	warnFn func(warn errors.Error), creds Creds, authToken string) ([]byte, errors.Error) {
 	return nil, nil
 }
 

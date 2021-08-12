@@ -1382,13 +1382,13 @@ func (this *Server) ShutDown() bool {
 	return rv
 }
 
-func (this *Server) InitiateShutdown() {
+func (this *Server) InitiateShutdown(timeout time.Duration) {
 	this.Lock()
 	if this.shutdown == _SERVER_RUNNING {
 		this.shutdown = _REQUESTED
 		this.Unlock()
 		logging.Infof("Graceful shutdown initiated.")
-		go this.monitorShutdown()
+		go this.monitorShutdown(timeout)
 	} else {
 		this.Unlock()
 	}
@@ -1397,9 +1397,8 @@ func (this *Server) InitiateShutdown() {
 const _SHUTDOWN_WAIT_LIMIT = 10 * time.Minute
 
 func (this *Server) InitiateShutdownAndWait() {
-	this.InitiateShutdown()
-	start := time.Now()
-	for !this.ShutDown() && time.Now().Sub(start) < _SHUTDOWN_WAIT_LIMIT {
+	this.InitiateShutdown(_SHUTDOWN_WAIT_LIMIT)
+	for !this.ShutDown() {
 		time.Sleep(time.Second)
 	}
 }
@@ -1413,26 +1412,32 @@ const (
 	_REPORT_INTERVAL = 10000
 )
 
-func (this *Server) monitorShutdown() {
+func (this *Server) monitorShutdown(timeout time.Duration) {
 	// wait for existing requests to complete
 	ar := this.activeRequests()
 	at := transactions.CountTransContext()
 	if ar > 0 || at > 0 {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
+		reportStart := start
 		for {
 			ar = this.activeRequests()
 			at = transactions.CountTransContext()
 			if ar == 0 && at == 0 {
+				logging.Infof("Shutdown: All requests and transactions completed.")
 				break
 			}
-			if time.Now().Sub(start) > time.Millisecond*_REPORT_INTERVAL {
+			now := time.Now()
+			if now.Sub(reportStart) > time.Millisecond*_REPORT_INTERVAL {
 				logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
-				start = time.Now()
+				reportStart = now
+			}
+			if timeout > 0 && now.Sub(start) > timeout {
+				logging.Infof("Shutdown: Timeout (%v) exceeded.", timeout)
+				break
 			}
 			time.Sleep(time.Millisecond * _CHECK_INTERVAL)
 		}
-		logging.Infof("Shutdown: All requests and transactions completed.")
 	} else {
 		logging.Infof("Shutdown: No active requests or transactions.")
 	}

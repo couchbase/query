@@ -15,11 +15,13 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/couchbase/cbauth/service"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 type Manager interface {
@@ -35,9 +37,9 @@ type ServiceMgr struct {
 
 type state struct {
 	rev      uint64
-	servers  []service.NodeID
 	changeID string
-	eject    []string
+	servers  []service.NodeInfo
+	eject    []service.NodeInfo
 }
 
 type waiter chan state
@@ -56,14 +58,13 @@ func NewManager() Manager {
 			eject:    nil,
 			changeID: "",
 		},
+		nodeInfo: &service.NodeInfo{
+			NodeID:   service.NodeID(distributed.RemoteAccess().WhoAmI()),
+			Priority: service.Priority(0),
+		},
 	}
 
 	mgr.waiters = make(waiters)
-
-	mgr.nodeInfo = &service.NodeInfo{
-		NodeID:   service.NodeID(distributed.RemoteAccess().WhoAmI()),
-		Priority: service.Priority(0),
-	}
 
 	mgr.setInitialNodeList()
 	go mgr.registerWithServer() // Note: doesn't complete unless an error occurs
@@ -78,9 +79,10 @@ func (m *ServiceMgr) setInitialNodeList() {
 	// our topology is just the list of nodes in the cluster (or ourselves)
 	topology := distributed.RemoteAccess().GetNodeNames()
 
-	nodeList := make([]service.NodeID, 0)
+	nodeList := make([]service.NodeInfo, 0)
 	for _, nn := range topology {
-		nodeList = append(nodeList, service.NodeID(nn))
+		ps, _ := distributed.RemoteAccess().PrepareAdminOp(string(nn), "shutdown", "", nil, distributed.NO_CREDS, "")
+		nodeList = append(nodeList, service.NodeInfo{service.NodeID(nn), service.Priority(0), ps})
 	}
 
 	m.updateState(func(s *state) {
@@ -135,25 +137,30 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 	tasks.Tasks = make([]service.Task, 0)
 
 	m.mu.Lock()
+	changeID := m.state.changeID
 	eject := m.eject
 	m.mu.Unlock()
-	if eject != nil { // we are the master
+	if changeID != "" { // master
 		running := 0
-		res, errs := distributed.RemoteAccess().DoAdminOps(eject, "shutdown", "GET", "", "", nil, distributed.NO_CREDS, "")
-		for i, r := range res {
-			remove := true
-			if r != nil && errs[i] == nil {
-				var status struct {
-					Code int32 `json:"code"`
+		if eject != nil {
+			for _, e := range eject {
+				if e.Opaque == nil {
+					continue
 				}
-				err = json.Unmarshal(r, &status)
-				if err == nil && status.Code != ssd.Code() {
-					running++
-					remove = false
+				res, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.Opaque, "GET", "", nil, distributed.NO_CREDS, "")
+				if res != nil && err == nil {
+					var status struct {
+						Code int32 `json:"code"`
+					}
+					jerr := json.Unmarshal(res, &status)
+					if jerr == nil && status.Code != ssd.Code() {
+						running++
+					} else {
+						e.Opaque = nil
+					}
+				} else {
+					e.Opaque = nil
 				}
-			}
-			if remove {
-				eject[i] = ""
 			}
 		}
 		if running == 0 {
@@ -208,17 +215,18 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	topology.Rev = EncodeRev(state.rev)
 	m.mu.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
-		topology.Nodes = append([]service.NodeID(nil), m.servers...)
+		for _, s := range m.servers {
+			topology.Nodes = append(topology.Nodes, s.NodeID)
+		}
 	} else {
-		topology.Nodes = append([]service.NodeID(nil), m.nodeInfo.NodeID)
+		topology.Nodes = append(topology.Nodes, m.nodeInfo.NodeID)
 	}
 	m.mu.Unlock()
 	topology.IsBalanced = true
 	topology.Messages = nil
 
 	logging.Debuga(func() string {
-		return fmt.Sprintf("ServiceMgr::GetCurrentTopology exit: %v - %v eject: %v",
-			DecodeRev(rev), topology, m.eject)
+		return fmt.Sprintf("ServiceMgr::GetCurrentTopology exit: %v - %v eject: %v", DecodeRev(rev), topology, m.eject)
 	})
 
 	return topology, nil
@@ -233,65 +241,118 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 		return service.ErrNotSupported
 	}
 
-	servers := make([]service.NodeID, 0)
+	// for each node we know about, cache its shutdown URL
+	info := make([]rune, 0, len(change.KeepNodes)*32)
+	servers := make([]service.NodeInfo, 0)
 	for _, n := range change.KeepNodes {
-		servers = append(servers, n.NodeInfo.NodeID)
+		ps, _ := distributed.RemoteAccess().PrepareAdminOp(string(n.NodeInfo.NodeID), "shutdown", "", nil, distributed.NO_CREDS, "")
+		servers = append(servers, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps})
+		info = append(info, []rune(n.NodeInfo.NodeID)...)
+		info = append(info, ' ')
+	}
+
+	// always keep a local list of servers that are no longer present; only the master will ever act upon this list
+	var eject []service.NodeInfo
+	m.mu.Lock()
+	s := m.servers
+	m.mu.Unlock()
+	for _, o := range s {
+		found := false
+		for _, n := range servers {
+			if o.NodeID == n.NodeID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			eject = append(eject, o)
+		}
+	}
+	if len(eject) == 0 {
+		eject = nil
+	} else {
+		eject = eject[0:len(eject):len(eject)]
 	}
 
 	m.updateState(func(s *state) {
 		s.servers = servers
+		s.eject = eject
 	})
 
-	logging.Infof("Topology change: %v ", servers)
+	logging.Infof("Topology changed to: %s", string(info))
 	return nil
 }
+
+//const _FAILOVER_LIMIT = 120 * time.Second
 
 // This is only invoked on the master which is then responsible for initiating changes on other nodes
 func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::StartTopologyChange %v", change) })
 	defer logging.Debugf("ServiceMgr::StartTopologyChange exit")
 
-	if change.Type != service.TopologyChangeTypeFailover &&
-		change.Type != service.TopologyChangeTypeRebalance {
+	timeout := time.Duration(0)
+	data := ""
+	switch change.Type {
+	case service.TopologyChangeTypeFailover:
+		// if we want to implement a timeout, this is how we'd do it:
+		// data = fmt.Sprintf("deadline=%v", time.Now().Add(_FAILOVER_LIMIT).Unix())
+		// timeout = _FAILOVER_LIMIT
+	case service.TopologyChangeTypeRebalance:
+	default:
 		return service.ErrNotSupported
 	}
 
-	if len(change.EjectNodes) == 0 {
-		logging.Debugf("ServiceMgr::StartTopologyChange no nodes to eject")
-		return nil
-	}
-
 	m.mu.Lock()
-
-	candidates := make([]string, 0, len(change.EjectNodes))
-	for _, n := range change.EjectNodes {
-		candidates = append(candidates, string(n.NodeID))
-	}
-
-	_, errs := distributed.RemoteAccess().DoAdminOps(candidates, "shutdown", "POST", "", "", nil, distributed.NO_CREDS, "")
-	eject := make([]string, 0, len(errs)) // errs will be the same length as candidates
-	for i, _ := range errs {
-		if errs[i] == nil {
-			eject = append(eject, candidates[i])
-			logging.Debuga(func() string {
-				return fmt.Sprintf(
-					"ServiceMgr::StartTopologyChange initiated shutdown down on '%s'", candidates[i])
-			})
-		} else {
-			logging.Infof("ServiceMgr::StartTopologyChange failed start shudown on '%s': %v", candidates[i], errs[i])
+	if m.eject != nil {
+		info := make([]rune, 0, len(m.eject)*32)
+		eject := make([]service.NodeInfo, 0, len(m.eject))
+		done := util.WaitCount{}
+		mutex := &sync.Mutex{}
+		// in parallel in case some take time to reach
+		for _, e := range m.eject {
+			go func() {
+				_, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.Opaque, "POST", data, nil, distributed.NO_CREDS, "")
+				if err == nil {
+					mutex.Lock()
+					if eject != nil {
+						eject = append(eject, e)
+						info = append(info, []rune(e.NodeID)...)
+						info = append(info, ' ')
+					}
+					mutex.Unlock()
+					logging.Debuga(func() string {
+						return fmt.Sprintf("ServiceMgr::StartTopologyChange initiated shutdown down on '%s'", string(e.NodeID))
+					})
+				} else {
+					logging.Infof("ServiceMgr::StartTopologyChange failed start shudown on '%s': %v", string(e.NodeID), err)
+				}
+				done.Incr()
+			}()
 		}
-	}
-	eject = eject[:len(eject):len(eject)]
-	logging.Infof("Topology change: shutdown initiated on: %v", eject)
-	m.updateStateLOCKED(func(s *state) {
+		// wait for completion
+		if !done.Until(int32(len(m.eject)), timeout) {
+			mutex.Lock()
+			eject = eject[:0] // don't report any tasks
+			mutex.Unlock()
+			logging.Infof("ServiceMgr::StartTopologyChange failed initiate shutdown on nodes within time limit.")
+		}
 		if len(eject) > 0 {
-			s.changeID = change.ID
-			s.eject = eject
+			logging.Infof("Topology change: shutdown initiated on: %s", string(info))
 		} else {
-			s.changeID = ""
-			s.eject = nil
+			mutex.Lock()
+			eject = nil
+			mutex.Unlock()
 		}
-	})
+		m.updateStateLOCKED(func(s *state) {
+			if len(eject) > 0 {
+				s.changeID = change.ID
+				s.eject = eject
+			} else {
+				s.changeID = ""
+				s.eject = nil
+			}
+		})
+	}
 	m.mu.Unlock()
 
 	return nil

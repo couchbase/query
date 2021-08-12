@@ -97,3 +97,8 @@ func NewSystemNoBuckets() Error {
 		InternalMsg:    "The system namespace contains no buckets that contain scopes.",
 		InternalCaller: CallerN(1)}
 }
+
+func NewInvalidPreparedAdminOp() Error {
+	return &err{level: EXCEPTION, ICode: 11014, IKey: "datastore.system.remote.invalid_prepared_op", ICause: nil,
+		InternalMsg: "System datastore : Invalid prepared admin operation", InternalCaller: CallerN(1)}
+}

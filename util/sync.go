@@ -275,3 +275,37 @@ func (p *LocklessPool) Put(s unsafe.Pointer) {
 	l := (atomic.AddUint32(&p.putNext, 1) - 1) % _POOL_SIZE
 	atomic.StorePointer(&p.pool[l], s)
 }
+
+type WaitCount struct {
+	count int32
+}
+
+func (this *WaitCount) Value() int32 {
+	return atomic.LoadInt32(&this.count)
+}
+
+func (this *WaitCount) Incr() {
+	atomic.AddInt32(&this.count, 1)
+}
+
+func (this *WaitCount) Decr() {
+	atomic.AddInt32(&this.count, -1)
+}
+
+func (this *WaitCount) Set(v int32) {
+	atomic.StoreInt32(&this.count, v)
+}
+
+var _WAIT_TIME = 100 * time.Millisecond
+
+func (this *WaitCount) Until(v int32, limit time.Duration) bool {
+	useTimeout := limit.Nanoseconds() != 0
+	start := Now()
+	for !atomic.CompareAndSwapInt32(&this.count, v, this.count) {
+		if useTimeout && Since(start).Nanoseconds() > limit.Nanoseconds() {
+			return false
+		}
+		time.Sleep(_WAIT_TIME)
+	}
+	return true
+}

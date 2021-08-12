@@ -64,9 +64,13 @@ type SystemRemoteAccess interface {
 	// Update TLS or node-to-node encryption settings.
 	SetConnectionSecurityConfig(certFile string, encryptNodeToNodeComms bool)
 
-	// Perform an (admin) operation on all nodes, returning all results (and errors)
-	DoAdminOps(nodes []string, endpoint string, command string, key string, data string,
-		warnFn func(warn errors.Error), creds Creds, authToken string) ([][]byte, []errors.Error)
+	// Prepare an opaque type that represents this admin endpoint and necessary authentication
+	PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds Creds,
+		authToken string) (interface{}, errors.Error)
+
+	// Execute an operation against previously prepared admin endpoint
+	ExecutePreparedAdminOp(op interface{}, command string, data string, warnFn func(warn errors.Error), creds Creds,
+		authToken string) ([]byte, errors.Error)
 }
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,

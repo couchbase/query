@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/pprof"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -545,8 +546,15 @@ func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 	switch req.Method {
 	case "POST":
+		timeout := time.Duration(0)
+		deadline, e := strconv.ParseInt(req.FormValue("deadline"), 10, 64)
+		if e != nil {
+			timeout, e = time.ParseDuration(req.FormValue("timeout"))
+		} else {
+			timeout = time.Unix(deadline, 0).Sub(time.Now())
+		}
 		if !endpoint.server.ShutDown() {
-			endpoint.server.InitiateShutdown()
+			endpoint.server.InitiateShutdown(timeout)
 			return textPlain("shutdown requested\n"), nil
 		} else {
 			return errors.NewServiceShuttingDownError(), nil
