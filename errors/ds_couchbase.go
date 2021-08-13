@@ -57,7 +57,7 @@ func NewCbBulkGetError(e error, msg string) Error {
 
 func NewCbDMLError(e error, msg string, casMismatch int, r value.Tristate) Error {
 	if casMismatch != 0 {
-		e = newCASMismatchError(nil)
+		e = newCASMismatchError()
 		r = value.FALSE
 		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
 			InternalMsg: "DML Error, possible causes include CAS mismatch " + msg, InternalCaller: CallerN(1)}
@@ -190,12 +190,12 @@ func NewPreserveExpiryNotSupported() Error {
 }
 
 // this is only embedded in 12009
-func newCASMismatchError(e error) Error {
+func newCASMismatchError() Error {
 	return &err{level: EXCEPTION, ICode: 12033, IKey: "datastore.couchbase.CAS_mismatch",
-		InternalMsg: "CAS mismatch", cause: e, InternalCaller: CallerN(2)} // note caller level
+		InternalMsg: "CAS mismatch", InternalCaller: CallerN(2)} // note caller level
 }
 
 func NewCbDMLMCError(s string) Error {
 	return &err{level: EXCEPTION, ICode: 12034, IKey: "datastore.couchbase.mc_error",
-		InternalMsg: "MC error", cause: s, InternalCaller: CallerN(1)}
+		InternalMsg: "MC error " + s, cause: s, InternalCaller: CallerN(1)}
 }

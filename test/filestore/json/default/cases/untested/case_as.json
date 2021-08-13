@@ -223,12 +223,12 @@
 
     {
         "statements": "SELECT details.* AS D FROM catalog",
-        "error":"Parse Error - syntax error"
+        "error": "syntax error - line 1, column 18, near 'SELECT details.*', at: AS"
     },
 
     {
         "statements": "SELECT title AS `$2`, details.title AS `$2` FROM catalog LIMIT 1",
-        "error": "alias $2 is defined more than once"
+        "error": "Duplicate result alias $2 (near line 1, column 30)."
     }
 
 ]

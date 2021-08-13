@@ -17,6 +17,7 @@ package errors
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"regexp"
@@ -52,6 +53,7 @@ type Error interface {
 	Retry() value.Tristate
 	Cause() interface{}
 	SetCause(cause interface{})
+	ContainsText(text string) bool
 }
 
 type AbortError struct {
@@ -132,6 +134,8 @@ func (e *err) Error() string {
 		return e.InternalMsg
 	case e.ICause != nil:
 		return e.ICause.Error()
+	case e.cause != nil:	// only as a last resort if InternalMsg & ICause aren't set
+		return fmt.Sprintf("%v", e.cause)
 	}
 }
 
@@ -185,7 +189,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 	e.retry = _unmarshalled.Retry
 	e.cause = _unmarshalled.Cause
 	if _unmarshalled.ICause != "" {
-		e.ICause = fmt.Errorf("%v", _unmarshalled.ICause)
+		e.ICause = errors.New(_unmarshalled.ICause)
 	}
 	return nil
 }
@@ -285,4 +289,29 @@ func IsScopeNotFoundError(e error) bool {
 
 func IsCollectionNotFoundError(e error) bool {
 	return IsNotFoundError("Collection", e)
+}
+
+// to support unit testing
+func (e *err) ContainsText(text string) bool {
+	s := e.Error()
+	if strings.Contains(s, text) {
+		return true
+	}
+	// search causes
+	eo := e.Object()
+	for {
+		if cause, ok := eo["cause"]; ok {
+			s = fmt.Sprintf("%v", cause)
+			if strings.Contains(s, text) {
+				return true
+			}
+			if cwo, ok := cause.(interface{ Object() map[string]interface{} }); ok {
+				eo = cwo.Object()
+			} else {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
 }

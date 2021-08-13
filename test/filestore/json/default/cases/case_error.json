@@ -1,14 +1,14 @@
 [
     {
         "statements": "this isn't a query",
-        "error": "this is a bad query"
+        "errorCode": 3000
     },
     {
         "statements": "SELECT * FROM",
-        "error": "missing a FROM bucket"
+        "errorCode": 3000
     },
     {
         "statements": "SELECT * FROM default:contacts USE KEYS [\"dave\", \"jane\", \"ian\"] UNNEST contacts.contacts",
-        "error" : "Duplicate UNNEST alias contacts"
+        "errorCode" : 4020
     }
 ]

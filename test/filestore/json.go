@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -271,6 +272,11 @@ func addResultsEntry(newResults, results []interface{}, entry interface{}) {
 func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
+	ffname, e := filepath.Abs(fname)
+	if e != nil {
+		ffname = fname
+	}
+
 	/* Reads the input file and returns its contents in the form
 	   of a byte array.
 	*/
@@ -301,7 +307,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			preStatements := v.(string)
 			_, _, err := Run(qc, true, preStatements, nil, nil, namespace)
 			if err != nil {
-				go_er.New(fmt.Sprintf("preStatements resulted in error: %v, for case file: %v, index: %v", err, fname, i))
+				go_er.New(fmt.Sprintf("preStatements resulted in error: %v, for case file: %v, index: %v%s", err, ffname, i, findIndex(b, i)))
 				return
 			}
 		}
@@ -332,7 +338,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		/* Handles all queries to be run against CBServer and Datastore */
 		v, ok = c["statements"]
 		if !ok || v == nil {
-			errstring = go_er.New(fmt.Sprintf("missing statements for case file: %v, index: %v", fname, i))
+			errstring = go_er.New(fmt.Sprintf("missing statements for case file: %v, index: %v%s", ffname, i, findIndex(b, i)))
 			return
 		}
 		statements := v.(string)
@@ -340,6 +346,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		fin_stmt = strconv.Itoa(i) + ": " + statements
 		resultsActual, _, errActual := Run(qc, true, statements, namedArgs, positionalArgs, namespace)
 
+		errCodeExpected := int(0)
 		errExpected := ""
 
 		v, ok = c["postStatements"]
@@ -347,7 +354,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			postStatements := v.(string)
 			_, _, err := Run(qc, true, postStatements, nil, nil, namespace)
 			if err != nil {
-				errstring = go_er.New(fmt.Sprintf("postStatements resulted in error: %v, for case file: %v, index: %v", err, fname, i))
+				errstring = go_er.New(fmt.Sprintf("postStatements resulted in error: %v\nfor case file: %v, index: %v%s", err, ffname, i, findIndex(b, i)))
 				return
 			}
 		}
@@ -357,9 +364,9 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			matchStatements := v.(string)
 			resultsMatch, _, errMatch := Run(qc, true, matchStatements, nil, nil, namespace)
 			if !reflect.DeepEqual(errActual, errActual) {
-				errstring = go_er.New(fmt.Sprintf("errors don't match, actual: %#v, expected: %#v"+
-					", for case file: %v, index: %v",
-					errActual, errMatch, fname, i))
+				errstring = go_er.New(fmt.Sprintf("errors don't match\n  actual: %#v\nexpected: %#v\n"+
+					" for case file: %v, index: %v%s",
+					errActual, errMatch, ffname, i, findIndex(b, i)))
 				return
 			}
 			doResultsMatch(resultsActual, resultsMatch, fname, i, b)
@@ -370,19 +377,32 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			errExpected = v.(string)
 		}
 
+		if v, ok = c["errorCode"]; ok {
+			errCodeExpectedf, _ := v.(float64)
+			errCodeExpected = int(errCodeExpectedf)
+		}
+
 		if errActual != nil {
+			if errCodeExpected == int(errActual.Code()) {
+				continue
+			}
+
 			if errExpected == "" {
-				errstring = go_er.New(fmt.Sprintf("unexpected err: %v, statements: %v"+
-					", for case file: %v, index: %v", errActual, statements, fname, i))
+				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
+					" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
 				return
 			}
-			// TODO: Check that the actual err matches the expected err.
+			if !errActual.ContainsText(errExpected) {
+				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
+					" for case file: %v, index: %v%s", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
+				return
+			}
 			continue
 		}
 
 		if errExpected != "" {
-			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v, statements: %v"+
-				", for case file: %v, index: %v", errActual, statements, fname, i))
+			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
+				" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
 			return
 		}
 
@@ -481,9 +501,9 @@ func findIndex(content []byte, index int) string {
 	skipNext := false
 	for _, b := range content {
 		if skipNext {
+			skipNext = false
 			continue
 		}
-		skipNext = false
 		if quote != byte(0) {
 			if b == byte('\\') {
 				skipNext = true

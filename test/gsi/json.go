@@ -457,6 +457,11 @@ func addResultsEntry(newResults, results []interface{}, entry interface{}) {
 func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
+	ffname, e := filepath.Abs(fname)
+	if e != nil {
+		ffname = fname
+	}
+
 	/* Reads the input file and returns its contents in the form
 	   of a byte array.
 	*/
@@ -485,7 +490,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		/* Handles all queries to be run against CBServer and Datastore */
 		v, ok := c["statements"]
 		if !ok || v == nil {
-			errstring = go_er.New(fmt.Sprintf("missing statements for case file: %v, index: %v", fname, i))
+			errstring = go_er.New(fmt.Sprintf("missing statements for case file: %v, index: %v%s", ffname, i, findIndex(b, i)))
 			return
 		}
 		statements := strings.TrimSpace(v.(string))
@@ -574,13 +579,13 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					" for case file: %v, index: %v%s", errActual, statements, fname, i, findIndex(b, i)))
+					" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 
-			if errExpected != errActual.Error() && !strings.Contains(errActual.Error(), errExpected) {
+			if !errActual.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					" for case file: %v, index: %v%s", errExpected, errActual.Error(), fname, i, findIndex(b, i)))
+					" for case file: %v, index: %v%s", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
 				return
 			}
 
@@ -589,7 +594,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 
 		if errExpected != "" || errCodeExpected != 0 {
 			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
-				" for case file: %v, index: %v%s", errActual, statements, fname, i, findIndex(b, i)))
+				" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
 			return
 		}
 
@@ -716,9 +721,9 @@ func findIndex(content []byte, index int) string {
 	skipNext := false
 	for _, b := range content {
 		if skipNext {
+			skipNext = false
 			continue
 		}
-		skipNext = false
 		if quote != byte(0) {
 			if b == byte('\\') {
 				skipNext = true

@@ -6,11 +6,11 @@
 {
     "description":"error for array functions",
     "statements":"SELECT array_vg(LENGTH(id)) FROM orders WHERE test_id=\"err_cases\" ORDER BY id",
-    "error": "Invalid function array_vg (near line 1, column 15) (resolving to default:array_vg)"
+    "error": "Invalid function array_vg (near line 1, column 15) (resolving to dimestore:array_vg)"
 },
 {
 	  "statements": "SELECT META(1,2) FROM orders AS ord UNNEST ord.lineItems.product AS prod WHERE test_id=\"err_cases\"",
-    "error": "Number of arguments to function meta (near line 1, column 11) must be between 0 and 1."
+    "error": "Number of arguments to function META (near line 1, column 11) must be between 0 and 1."
 },
 {
     "statements": "SELECT id, custId AS id FROM orders WHERE test_id=\"err_cases\" ORDER BY title",
