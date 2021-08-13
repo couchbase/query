@@ -55,8 +55,8 @@ func optDefLikeSelec(keyspace, key string, advisorValidate bool) float64 {
 }
 
 func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
-	condition expression.Expression, unnestAlias string, baseKeyspace *base.BaseKeyspace) {
-	optutil.MarkIndexFilters(keys, spans, condition, unnestAlias, baseKeyspace)
+	condition expression.Expression, unnestAliases []string, baseKeyspace *base.BaseKeyspace) {
+	optutil.MarkIndexFilters(keys, spans, condition, unnestAliases, baseKeyspace)
 }
 
 func optMinCost() float64 {
