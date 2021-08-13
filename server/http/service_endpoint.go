@@ -90,7 +90,6 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	server.SetActives(rv.actives)
 	server.SetOptions(rv.options)
 
-	rv.setupSSL()
 	rv.registerHandlers(staticPath)
 	_ENDPOINT = rv
 	return rv
@@ -373,7 +372,7 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 func (this *HttpEndpoint) UpdateNodeToNodeEncryptionLevel() {
 }
 
-func (this *HttpEndpoint) setupSSL() {
+func (this *HttpEndpoint) SetupSSL() error {
 
 	err := cbauth.RegisterConfigRefreshCallback(func(configChange uint64) error {
 		// Both flags could be set here.
@@ -415,20 +414,23 @@ func (this *HttpEndpoint) setupSSL() {
 				closeErr := this.Close()
 				if closeErr != nil {
 					logging.Errora(func() string {
-						return fmt.Sprintf("ERROR: Closing HTTP listener - %s", closeErr.Error())
+						return fmt.Sprintf("Closing HTTP listener failed- %s", closeErr.Error())
 					})
 				}
 			} else {
-				listenErr := this.Listen()
-				if listenErr != nil {
-					logging.Errora(func() string {
-						return fmt.Sprintf("ERROR: Starting HTTP listener - %s", listenErr.Error())
-					})
+				if len(this.listener) == 0 {
+					listenErr := this.Listen()
+					if listenErr != nil {
+						logging.Errora(func() string {
+							return fmt.Sprintf("Starting HTTP listener failed - %s", listenErr.Error())
+						})
+					}
 				}
+
 			}
 
 			// Temporary log message.
-			logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)
+			logging.Infof("Updating node-to-node encryption level: %+v", cryptoConfig)
 			settingsUpdated = true
 
 		}
@@ -452,8 +454,9 @@ func (this *HttpEndpoint) setupSSL() {
 		return nil
 	})
 	if err != nil {
-		logging.Infof("Error with refreshing client certificate : %v", err.Error())
+		return err
 	}
+	return nil
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
