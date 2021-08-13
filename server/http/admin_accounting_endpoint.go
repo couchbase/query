@@ -318,14 +318,21 @@ func doUserStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	switch req.Method {
 	case "GET":
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
-		stats := make(map[string]interface{})
+		stats := make([]interface{}, 0, len(endpoint.trackedUsers))
 		for _, user := range endpoint.trackedUsers {
 			stat := make(map[string]interface{})
+			stat["uuid"] = user.uuid
 			stat["requests"] = user.activeRequests
+			stat["totatlRequests"] = user.requestMeter.Count()
 			stat["requestRate"] = user.requestMeter
 			stat["ingresRate"] = user.payloadMeter.Rate1() / 1024 / 1024
+			stat["totalIngress"] = user.payloadMeter.Count() / 1024 / 1024
 			stat["egressRate"] = user.outputMeter.Rate1() / 1024 / 1024
-			stats[user.uuid] = stat
+			stat["totalEgress"] = user.outputMeter.Count() / 1024 / 1024
+			stat["requestsFailures"] = user.requestsFailures
+			stat["requestRateFailures"] = user.requestRateFailures
+			stat["ingressRateFailures"] = user.payloadRateFailures
+			stat["egressRateFailures"] = user.outputRateFailures
 		}
 		return stats, nil
 	default:

@@ -18,10 +18,10 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth"
-	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
@@ -36,11 +36,15 @@ import (
 )
 
 type userMetrics struct {
-	uuid           string
-	activeRequests int32
-	requestMeter   accounting.Meter
-	payloadMeter   accounting.Meter
-	outputMeter    accounting.Meter
+	uuid                string
+	activeRequests      int32
+	requestMeter        accounting.Meter
+	payloadMeter        accounting.Meter
+	outputMeter         accounting.Meter
+	requestsFailures    int64
+	requestRateFailures int64
+	payloadRateFailures int64
+	outputRateFailures  int64
 }
 
 type HttpEndpoint struct {
@@ -137,6 +141,9 @@ func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
 						// get rid of user cache:
 						this.usersLock.Lock()
 						for u, _ := range this.trackedUsers {
+							this.trackedUsers[u].requestsMeter.Stop()
+							this.trackedUsers[u].payloadMeter.Stop()
+							this.trackedUsers[u].outputMeter.Stop()
 							delete(this.trackedUsers, u)
 						}
 						this.usersLock.Unlock()
@@ -324,15 +331,19 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		} else {
 			this.usersLock.Unlock()
 			if this.userRequestsLimit > 0 && user.activeRequests >= this.userRequestsLimit {
+				atomic.AddInt64(&user.requestsFailures, 1)
 				request.Fail(errors.NewServiceUserRequestExceededError())
 				return
 			} else if this.userRequestRateLimit > 0 && user.requestMeter.Rate1() >= this.userRequestRateLimit {
+				atomic.AddInt64(&user.requestRateFailures, 1)
 				request.Fail(errors.NewServiceUserRequestRateExceededError())
 				return
 			} else if this.userPayloadLimit > 0 && user.payloadMeter.Rate1() >= this.userPayloadLimit {
+				atomic.AddInt64(&user.payloadRateFailures, 1)
 				request.Fail(errors.NewServiceUserRequestSizeExceededError())
 				return
 			} else if this.userOutputLimit > 0 && user.outputMeter.Rate1() >= this.userOutputLimit {
+				atomic.AddInt64(&user.outputRateFailures, 1)
 				request.Fail(errors.NewServiceUserResultsSizeExceededError())
 				return
 			}
