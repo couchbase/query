@@ -293,6 +293,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 
 	var sargKey, origSargKey expression.Expression
 	var err error
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+	advisorValidate := this.advisorValidate()
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 
 	newArrayKey := arrayKey
 	array, ok := arrayKey.Array().(*expression.Array)
@@ -359,6 +362,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 				if op != nil {
 					newArrayKey = expression.NewAll(expression.NewArray(nArrayKey,
 						expression.Bindings{binding}, when), arrayKey.Distinct())
+					if useCBO {
+						baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
+					}
 					return op, un, newArrayKey, n + 1, err
 				}
 			}
@@ -384,9 +390,6 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		sargKey = unnestIdent
 	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
-	advisorValidate := this.advisorValidate()
-	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	if useCBO {
 		keyspaces := make(map[string]string, 1)
 		keyspaces[node.Alias()] = node.Keyspace()

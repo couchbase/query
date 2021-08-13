@@ -1259,13 +1259,13 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base
 		return err
 	}
 
-	var unnestAlias string
+	var unnestAliases []string
 	unnestIndexes := baseKeyspace.GetUnnestIndexes()
 	if a, ok := unnestIndexes[index]; ok {
-		unnestAlias = a
+		unnestAliases = a
 	}
 
-	optMarkIndexFilters(keys, spans, condition, unnestAlias, baseKeyspace)
+	optMarkIndexFilters(keys, spans, condition, unnestAliases, baseKeyspace)
 
 	return nil
 }

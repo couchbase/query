@@ -35,7 +35,7 @@ type BaseKeyspace struct {
 	ksFlags       uint32
 	docCount      int64
 	unnests       map[string]string
-	unnestIndexes map[datastore.Index]string
+	unnestIndexes map[datastore.Index][]string
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path) *BaseKeyspace {
@@ -139,9 +139,11 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				dest[kspace.name].unnests[a] = k
 			}
 			if len(kspace.unnestIndexes) > 0 {
-				dest[kspace.name].unnestIndexes = make(map[datastore.Index]string, len(kspace.unnestIndexes))
+				dest[kspace.name].unnestIndexes = make(map[datastore.Index][]string, len(kspace.unnestIndexes))
 				for i, a := range kspace.unnestIndexes {
-					dest[kspace.name].unnestIndexes[i] = a
+					a2 := make([]string, len(a))
+					copy(a2, a)
+					dest[kspace.name].unnestIndexes[i] = a2
 				}
 			}
 		}
@@ -246,14 +248,28 @@ func (this *BaseKeyspace) GetUnnests() map[string]string {
 	return this.unnests
 }
 
+// if an UNNEST SCAN is used, this.unnestIndexes is a map that points to
+// the UNNEST aliases for the UNNEST SCAN. In case of multiple levels of
+// UNNEST with a nested array index key, the array of UNNEST aliases is
+// populated in an inside-out fashion. E.g.:
+//   ALL ARRAY (ALL ARRAY u FOR u IN v.arr2 END) FOR v IN arr1 END
+//   ... UNNEST d.arr1 AS a UNNEST a.arr2 AS b
+// the array of aliases will be ["b", "a"]
 func (this *BaseKeyspace) AddUnnestIndex(index datastore.Index, alias string) {
 	if this.unnestIndexes == nil {
-		this.unnestIndexes = make(map[datastore.Index]string, len(this.unnests))
+		this.unnestIndexes = make(map[datastore.Index][]string, len(this.unnests))
 	}
-	this.unnestIndexes[index] = alias
+	aliases, _ := this.unnestIndexes[index]
+	for _, a := range aliases {
+		if a == alias {
+			// already exists
+			return
+		}
+	}
+	this.unnestIndexes[index] = append(aliases, alias)
 }
 
-func (this *BaseKeyspace) GetUnnestIndexes() map[datastore.Index]string {
+func (this *BaseKeyspace) GetUnnestIndexes() map[datastore.Index][]string {
 	return this.unnestIndexes
 }
 
