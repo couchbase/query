@@ -134,7 +134,7 @@ func (e *err) Error() string {
 		return e.InternalMsg
 	case e.ICause != nil:
 		return e.ICause.Error()
-	case e.cause != nil:	// only as a last resort if InternalMsg & ICause aren't set
+	case e.cause != nil: // only as a last resort if InternalMsg & ICause aren't set
 		return fmt.Sprintf("%v", e.cause)
 	}
 }

@@ -375,6 +375,13 @@ func main() {
 		logging.Errorf("cbq-engine (HTTP_ADDR %v) exiting with error: %v", *HTTP_ADDR, er)
 		os.Exit(1)
 	}
+
+	er = endpoint.SetupSSL()
+	if er != nil {
+		logging.Errorf("Error with Setting up SSL endpoints : %v", err.Error())
+		os.Exit(1)
+	}
+
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 	constructor.Init(endpoint.Mux())
 
